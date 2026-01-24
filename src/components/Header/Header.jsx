@@ -80,14 +80,14 @@ const Header = () => {
           <Col
             lg={6}
             md={6}
-            className="headerLeftBox mt-2 h-100 d-none d-md-block"
+            className="headerLeftBox h-100 d-none d-md-block"
           >
-            <div className="newOrderBtn h-100 d-flex align-items-center justify-content-end">
+            <div className="right-tools-container h-100 d-flex align-items-center justify-content-end  pe-2">
               {/* New Order Button */}
-              <button className="create-order-btn">
+              <button className="create-order-btn small-btn">
                 <svg
-                  width="20"
-                  height="20"
+                  width="18"
+                  height="18"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -104,18 +104,18 @@ const Header = () => {
               </button>
 
               {/* Checks */}
-              <div className="ms-3 header-action-item">
+              <div className="header-action-item small-item">
                 <span>Çeklər</span>
                 <span className="count-badge">4</span>
               </div>
 
-              <div className="vertical-divider"></div>
+              <div className="tools-divider"></div>
 
               {/* Menu Hamburger */}
-              <button className="header-icon-btn">
+              <button className="header-icon-btn small-icon-btn">
                 <svg
-                  width="24"
-                  height="24"
+                  width="20"
+                  height="20"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -129,14 +129,14 @@ const Header = () => {
                 </svg>
               </button>
 
-              <div className="vertical-divider"></div>
+              <div className="tools-divider"></div>
 
               {/* Waiter/Exit Icon */}
-              <button className="header-icon-btn">
+              <button className="header-icon-btn small-icon-btn waiter-btn">
                 <div className="d-flex align-items-center gap-2">
                   <svg
-                    width="24"
-                    height="24"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -162,13 +162,13 @@ const Header = () => {
                 </div>
               </button>
 
-              <div className="vertical-divider"></div>
+              <div className="tools-divider"></div>
 
               {/* Notification Bell */}
-              <button className="header-icon-btn">
+              <button className="header-icon-btn small-icon-btn">
                 <svg
-                  width="24"
-                  height="24"
+                  width="20"
+                  height="20"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -183,13 +183,13 @@ const Header = () => {
                 </svg>
               </button>
 
-              <div className="vertical-divider"></div>
+              <div className="tools-divider"></div>
 
               {/* Wifi Icon */}
-              <div className="header-icon-btn wifi-icon">
+              <div className="header-icon-btn small-icon-btn wifi-icon">
                 <svg
-                  width="24"
-                  height="24"
+                  width="20"
+                  height="20"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"

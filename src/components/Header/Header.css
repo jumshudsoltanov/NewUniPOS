@@ -56,79 +56,103 @@
 /* Header Actions       */
 /* ==================== */
 
+.right-tools-container {
+  height: 100%;
+}
+
+/* Make all action items match .hall-btn style EXCEPT the button */
+.header-action-item,
+.header-icon-btn {
+  height: 58px;
+  /* Match hall-btn height */
+  padding: 0 clamp(10px, 1.5vw, 16px);
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(12px, 1.5vw, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  min-width: auto;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: 0;
+  margin: 0;
+}
+
+/* Hover State matching hall-btn */
+.header-action-item:hover,
+.header-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: none;
+}
+
+/* Special Button Style for New Order */
 .create-order-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #28a745;
+  background: #6F9FFA;
+  /* Requested color */
   color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 6px 12px;
+  /* Rounded button look */
+  padding: 0 16px;
   font-family: "Poppins", sans-serif;
-  font-size: clamp(12px, 2vw, 14px);
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
+  /* Slightly bolder */
   cursor: pointer;
   transition: all 0.2s ease;
-  height: clamp(32px, 5vh, 40px);
+  height: 40px;
+  /* Distinct button height */
+  margin-right: 8px;
+  /* Spacing from tabs */
 }
 
-.create-order-btn:hover {
-  background: #218838;
+
+
+/* Icon sizing */
+.create-order-btn svg,
+.header-icon-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
-.vertical-divider {
+/* Divider Styling */
+.tools-divider {
   width: 1px;
   height: 24px;
   background: rgba(255, 255, 255, 0.2);
-  margin: 0 16px;
+  margin: 0;
 }
 
-.header-action-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #fff;
-  font-family: "Poppins", sans-serif;
-  font-size: 14px;
-  cursor: pointer;
-}
-
+/* Count Badge for Checks */
 .count-badge {
   background: #28a745;
   color: #fff;
   border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  min-width: 20px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  margin-left: 6px;
   text-align: center;
+  line-height: normal;
 }
 
-.header-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  padding: 6px;
-
-  transition: all 0.2s ease;
-  height: clamp(32px, 5vh, 40px);
-  width: clamp(32px, 5vh, 40px);
+/* Remove specific widths or transforms from previous edits */
+.waiter-btn {
+  width: auto;
 }
 
-.header-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.header-icon-btn span {
-  font-family: "Poppins", sans-serif;
-  font-size: clamp(12px, 2vw, 14px);
-  font-weight: 400;
-}
+/* .wifi-icon svg path { } */
 
 
 /* ==================== */
