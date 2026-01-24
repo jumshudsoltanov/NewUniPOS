@@ -1,0 +1,274 @@
+.table-wrapper {
+    position: relative;
+    width: 200px;
+    /* Big enough for table (140) + chairs */
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px;
+}
+
+/* Table Types */
+.table-square,
+.table-round,
+.table-rectangle {
+    background: var(--Greyscale-Surface-Subtle, #FFF);
+    box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.12);
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.table-square {
+    width: 140px;
+    height: 140px;
+    border-radius: 24px;
+}
+
+.table-round {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+}
+
+.table-rectangle {
+    width: 140px;
+    height: 240px;
+    border-radius: 24px;
+}
+
+/* Wrapper adjustments based on type */
+.wrapper-rectangle {
+    height: 300px;
+    /* Taller wrapper for rectangle */
+}
+
+/* Common Seat Styles */
+.seat {
+    position: absolute;
+    /* background-color: #E0E7FF; */
+    background-color: #6F9FFA;
+    border-radius: 8px;
+    z-index: 1;
+}
+
+/* Square/Round Seat Positions (4 seats) */
+.seat-top {
+    width: 60px;
+    height: 20px;
+    top: 20px;
+    /* Strong overlap */
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.seat-bottom {
+    width: 60px;
+    height: 20px;
+    bottom: 20px;
+    /* Strong overlap */
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.seat-left {
+    width: 20px;
+    height: 60px;
+    left: 20px;
+    /* Strong overlap */
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.seat-right {
+    width: 20px;
+    height: 60px;
+    right: 20px;
+    /* Strong overlap */
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Rectangle Seat Positions (6 seats: 3 left, 3 right) */
+.seat-left-1,
+.seat-left-2,
+.seat-left-3 {
+    width: 20px;
+    height: 50px;
+    left: 20px;
+    /* Strong overlap */
+}
+
+.seat-right-1,
+.seat-right-2,
+.seat-right-3 {
+    width: 20px;
+    height: 50px;
+    right: 20px;
+    /* Strong overlap */
+}
+
+/* Evenly space vertical seats */
+.seat-left-1,
+.seat-right-1 {
+    top: 40px;
+}
+
+.seat-left-2,
+.seat-right-2 {
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.seat-left-3,
+.seat-right-3 {
+    bottom: 40px;
+}
+
+/* Inner Table Content Styles */
+.status-dot {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 12px;
+    height: 12px;
+    background-color: #D97706;
+    border-radius: 50%;
+}
+
+.table-content {
+    text-align: center;
+    width: 100%;
+}
+
+.table-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1E3A8A;
+    margin: 0;
+}
+
+.table-amount {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1E3A8A;
+    margin: 5px 0 10px 0;
+}
+
+.waiter-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #3B82F6;
+    font-size: 14px;
+}
+
+.print-action {
+    position: absolute;
+    bottom: -10px;
+    right: -10px;
+    background: white;
+    padding: 5px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: red;
+    color: white;
+    font-size: 10px;
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mobile Styles (xs and sm - typically under 576px, but let's cover up to 768px for safety or stick to standard xs boundary) */
+@media (max-width: 575.98px) {
+    .table-wrapper {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1.75 / 1;
+        margin: 0;
+    }
+
+    /* Hide visuals that are not needed on mobile */
+    .seat,
+    .status-dot,
+    .print-action,
+    .waiter-info i {
+        display: none !important;
+    }
+
+    /* Simple Card Style */
+    .table-surface {
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 12px !important;
+        box-shadow: none !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 6px;
+        border: none !important;
+    }
+
+    /* Flat Colors - Deeper/Richer */
+    .table-surface.occupied {
+        background: #2563EB !important;
+        /* Richer Blue */
+    }
+
+    .table-surface.pending {
+        background: #9333EA !important;
+        /* Richer Purple */
+    }
+
+    .table-surface.free {
+        background: #6B7280 !important;
+        /* Solid Gray */
+    }
+
+    /* Simple Text Styling */
+    .table-name {
+        color: white !important;
+        font-size: 14px !important;
+        margin-bottom: 2px !important;
+        font-weight: 600 !important;
+        text-shadow: none !important;
+    }
+
+    .table-amount {
+        color: white !important;
+        font-size: 13px !important;
+        margin: 0 !important;
+        font-weight: 500 !important;
+    }
+
+    .waiter-info {
+        color: rgba(255, 255, 255, 0.9) !important;
+        font-size: 11px !important;
+        margin-top: 4px;
+        background: transparent;
+        padding: 0;
+    }
+
+    /* Reset specific wrapper heights */
+    .wrapper-rectangle {
+        height: auto !important;
+    }
+}

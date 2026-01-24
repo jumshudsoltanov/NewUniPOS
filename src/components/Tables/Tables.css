@@ -1,0 +1,30 @@
+.tables-scroll-container {
+    height: calc(100vh - 80px);
+    /* Fill remaining space (assuming ~80px header) */
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+    padding-bottom: 20px;
+    padding-top: 24px;
+    background-color: #F3F4F6;
+    /* Ensure background is gray */
+}
+
+/* Optional: Custom Scrollbar Styling */
+.tables-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tables-scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.tables-scroll-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.tables-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #bbb;
+}
