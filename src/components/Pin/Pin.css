@@ -1,0 +1,598 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
+/* ==================== */
+/* Main Containers      */
+/* ==================== */
+
+.RightBoxContainer {
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.LeftBoxContainer {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0;
+  padding-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ==================== */
+/* Header Section       */
+/* ==================== */
+
+.infoHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  width: 100%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.statusIcons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.burgerMenuBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: #f8f9fa;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+
+
+.burgerMenuBtn:active {
+  transform: scale(0.95);
+}
+
+.supportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #fff;
+  color: #2979ff;
+  border: 1.5px solid #8bb2ff;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+
+
+.supportBtn svg {
+  display: block;
+}
+
+/* ==================== */
+/* Logo Section         */
+/* ==================== */
+
+.logoContainer {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: clamp(10px, 2vh, 24px);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.logoContainer img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ==================== */
+/* PIN Container        */
+/* ==================== */
+
+.pinContainer {
+  width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(16px, 2vh, 40px);
+  margin-bottom: 0;
+  border-radius: 20px;
+  background: #fff;
+}
+
+/* PIN Header */
+.pinHeader {
+  text-align: center;
+  margin-bottom: clamp(12px, 2.5vh, 24px);
+}
+
+.pinText {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #053796;
+}
+
+/* ==================== */
+/* PIN Dots             */
+/* ==================== */
+
+.pinDots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: clamp(20px, 4vh, 36px);
+}
+
+.pin-dot {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.pin-dot svg {
+  width: 32px;
+  height: 32px;
+}
+
+.pin-dot.filled {
+  animation: dotPop 0.2s ease;
+}
+
+.pin-dot.error {
+  animation: shake 0.4s ease;
+}
+
+@keyframes dotPop {
+  0% {
+    transform: scale(0.8);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+/* ==================== */
+/* PIN Keypad           */
+/* ==================== */
+
+.pinKeypad {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 2vh, 16px);
+  width: 100%;
+}
+
+.pinKeypadRow {
+  display: flex;
+  justify-content: center;
+  gap: clamp(8px, 2vw, 16px);
+}
+
+/* Base button style */
+.pin-btn {
+  width: clamp(80px, 15vh, 100px);
+  height: clamp(50px, 8vh, 70px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 12px;
+  background: #007AFF;
+  /* Logo Blue */
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.pin-btn:active {
+  transform: scale(0.98);
+}
+
+
+
+
+
+/* Default number buttons */
+.pin-btn-default {
+  background: #007AFF;
+  color: #fff;
+}
+
+
+/* Secondary button (backspace) */
+.pin-btn-secondary {
+  background: #7f8c8d;
+  color: #fff;
+}
+
+/* Danger button (clear/cancel) */
+.pin-btn-danger {
+  background: #7f8c8d;
+  color: #fff;
+}
+
+
+
+
+/* ==================== */
+/* Terminal Info Footer */
+/* ==================== */
+
+.terminalInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 10px 20px;
+  margin-top: auto;
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  color: #6c757d;
+  flex-shrink: 0;
+}
+
+.terminalId {
+  color: #053796;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.terminalDivider {
+  color: #dee2e6;
+}
+
+.terminalName,
+.terminalBranch {
+  color: #6c757d;
+}
+
+.terminalName strong,
+.terminalBranch strong {
+  color: #053796;
+  font-weight: 600;
+}
+
+/* ==================== */
+/* Responsive           */
+/* ==================== */
+
+/* Tablet və kiçik desktop (768px - 1200px) */
+@media (min-width: 768px) and (max-width: 1200px) {
+  .LeftBoxContainer {
+    justify-content: flex-start;
+    padding: 5px 0;
+  }
+
+  .infoHeader {
+    position: relative;
+    padding: 6px 10px;
+  }
+
+  .supportBtn {
+    padding: 6px 10px;
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .burgerMenuBtn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .burgerMenuBtn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .statusIcons {
+    gap: 8px;
+  }
+
+  .logoContainer {
+    width: clamp(40px, 8vh, 50px);
+    height: clamp(40px, 8vh, 50px);
+    margin-bottom: 4px;
+    margin-top: 0;
+  }
+
+  .pinContainer {
+    width: 280px;
+    padding: 12px 12px;
+    margin-top: 4px;
+  }
+
+  .pinHeader {
+    margin-bottom: 8px;
+  }
+
+  .pinText {
+    font-size: 10px;
+  }
+
+  .pinDots {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .pin-dot {
+    width: 18px;
+    height: 18px;
+  }
+
+  .pin-dot svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .pinKeypad {
+    gap: 6px;
+  }
+
+  .pinKeypadRow {
+    gap: 6px;
+  }
+
+  .pin-btn {
+    width: 60px;
+    height: 40px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+
+  .terminalInfo {
+    padding: 6px 10px;
+    margin-top: 4px;
+    font-size: 9px;
+    gap: 6px;
+  }
+
+  .terminalId {
+    font-size: 10px;
+  }
+}
+
+/* Kiçik ekranlar (şəkil gizlənəndə) - tam ekran PIN */
+@media (max-width: 767.98px) {
+  .LeftBoxContainer {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2vh 4vw;
+    background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
+    overflow: hidden;
+  }
+
+  .infoHeader {
+    position: relative;
+    width: 100%;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .supportBtn {
+    padding: 2vh 4vw;
+    font-size: 3.5vw;
+  }
+
+  .statusIcons svg {
+    width: 6vw;
+    height: 6vw;
+  }
+
+  .logoContainer {
+    width: 15vw;
+    height: 15vw;
+    min-width: 60px;
+    min-height: 60px;
+    margin: 1vh 0;
+    flex-shrink: 0;
+  }
+
+  .logoContainer img {
+    width: 100%;
+    height: 100%;
+  }
+
+  .pinContainer {
+    width: 100%;
+    max-width: none;
+    padding: 3vh 5vw;
+    margin: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .pinHeader {
+    margin-bottom: 2vh;
+  }
+
+  .pinText {
+    font-size: 3.5vw;
+  }
+
+  .pinDots {
+    gap: 4vw;
+    margin-bottom: 4vh;
+  }
+
+  .pin-dot {
+    width: 7vw;
+    height: 7vw;
+    min-width: 28px;
+    min-height: 28px;
+  }
+
+  .pin-dot svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .pinKeypad {
+    gap: 2.5vh;
+  }
+
+  .pinKeypadRow {
+    gap: 4vw;
+  }
+
+  .pin-btn {
+    width: 22vw;
+    height: 10vh;
+    min-width: 70px;
+    min-height: 55px;
+    max-width: 100px;
+    max-height: 75px;
+    font-size: 6vw;
+    border-radius: 3vw;
+  }
+
+  .terminalInfo {
+    width: 100%;
+    padding: 1.5vh 4vw;
+    margin-top: 0;
+    flex-shrink: 0;
+    background: rgba(248, 250, 255, 0.95);
+    border-top: 1px solid #e9ecef;
+    font-size: 3vw;
+    gap: 3vw;
+    padding-bottom: max(1.5vh, env(safe-area-inset-bottom));
+  }
+
+  .terminalId {
+    font-size: 3.5vw;
+  }
+}
+
+/* Kiçik hündürlük - Landscape */
+@media (max-height: 500px) and (orientation: landscape) {
+  .LeftBoxContainer {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+    padding: 16px;
+  }
+
+  .infoHeader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .logoContainer {
+    display: block;
+    width: 80px;
+    height: 80px;
+    margin: 0;
+  }
+
+  .pinContainer {
+    margin: 0;
+    padding: 12px 16px;
+    flex: none;
+  }
+
+  .pin-btn {
+    width: 52px;
+    height: 42px;
+    font-size: 16px;
+    min-width: unset;
+    min-height: unset;
+    max-width: unset;
+    max-height: unset;
+  }
+
+  .pinKeypad {
+    gap: 6px;
+  }
+
+  .pinKeypadRow {
+    gap: 6px;
+  }
+
+  .terminalInfo {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+  }
+}
+
+/* Safe area insets for notched iPhones */
+@supports (padding: max(0px)) {
+  @media (max-width: 767.98px) {
+    .infoHeader {
+      padding-top: max(8px, env(safe-area-inset-top));
+    }
+
+    .terminalInfo {
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+  }
+}

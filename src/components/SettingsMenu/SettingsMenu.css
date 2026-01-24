@@ -1,0 +1,254 @@
+/* ==================== */
+/* Settings Menu Overlay */
+/* ==================== */
+
+.settings-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* ==================== */
+/* Settings Menu        */
+/* ==================== */
+
+.settings-menu {
+    background: #fff;
+    border-radius: 16px;
+    width: 280px;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+    animation: slideIn 0.25s ease;
+    margin-top: 60px;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ==================== */
+/* Menu Header          */
+/* ==================== */
+
+.settings-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #2979ff 0%, #1565c0 100%);
+}
+
+.settings-menu-title {
+    font-family: "Poppins", sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.settings-menu-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+
+/* ==================== */
+/* Menu Items           */
+/* ==================== */
+
+.settings-menu-items {
+    padding: 8px;
+}
+
+.settings-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.settings-menu-item:active {
+    background: #eef1f5;
+    transform: scale(0.98);
+}
+
+.settings-menu-item-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f4f8;
+    border-radius: 10px;
+    color: #495057;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+
+.settings-menu-item-label {
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a2e;
+}
+
+/* Danger item (Exit) */
+.settings-menu-item.danger .settings-menu-item-icon {
+    background: #fff0f0;
+    color: #dc3545;
+}
+
+
+
+.settings-menu-item.danger .settings-menu-item-label {
+    color: #dc3545;
+}
+
+/* ==================== */
+/* Responsive           */
+/* ==================== */
+
+/* Tablet */
+@media (max-width: 1024px) {
+    .settings-menu {
+        width: 260px;
+        margin-top: 50px;
+    }
+
+    .settings-menu-header {
+        padding: 14px 16px;
+    }
+
+    .settings-menu-title {
+        font-size: 14px;
+    }
+
+    .settings-menu-item {
+        padding: 12px 14px;
+        gap: 12px;
+    }
+
+    .settings-menu-item-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .settings-menu-item-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .settings-menu-item-label {
+        font-size: 13px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .settings-menu-overlay {
+        padding: 16px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .settings-menu {
+        width: 100%;
+        max-width: 340px;
+        margin-top: 0;
+        border-radius: 16px;
+    }
+
+    .settings-menu-header {
+        padding: 18px 20px;
+    }
+
+    .settings-menu-title {
+        font-size: 16px;
+    }
+
+    .settings-menu-close {
+        width: 36px;
+        height: 36px;
+    }
+
+    .settings-menu-items {
+        padding: 12px;
+    }
+
+    .settings-menu-item {
+        padding: 16px 18px;
+        gap: 14px;
+    }
+
+    .settings-menu-item-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+    }
+
+    .settings-menu-item-label {
+        font-size: 15px;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+    .settings-menu-item {
+        padding: 14px 14px;
+        gap: 12px;
+    }
+
+    .settings-menu-item-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .settings-menu-item-label {
+        font-size: 14px;
+    }
+}

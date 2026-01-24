@@ -1,0 +1,199 @@
+.header {
+  width: 100%;
+  height: clamp(48px, 8vh, 60px);
+  background: var(--Surface-Default, #053796);
+  padding: 0 clamp(8px, 2vw, 16px);
+}
+
+/* Background container for the tabs */
+.hallsTab {
+  display: flex;
+  align-items: center;
+  /* background: rgba(0, 0, 0, 0.2); */
+  width: fit-content;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Individual Tab Button */
+.hall-btn {
+  height: 58px;
+  padding: 0 clamp(10px, 1.5vw, 16px);
+  border: none;
+  background: var(--Surface-Default, #053796);
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(12px, 1.5vw, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  min-width: auto;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* Hover State */
+.hall-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  height: 58px;
+}
+
+/* Active State */
+.hall-btn.active {
+  background: #021c4c;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: 58px;
+}
+
+/* ==================== */
+/* Header Actions       */
+/* ==================== */
+
+.create-order-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(12px, 2vw, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: clamp(32px, 5vh, 40px);
+}
+
+.create-order-btn:hover {
+  background: #218838;
+}
+
+.vertical-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 16px;
+}
+
+.header-action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.count-badge {
+  background: #28a745;
+  color: #fff;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+.header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 6px;
+
+  transition: all 0.2s ease;
+  height: clamp(32px, 5vh, 40px);
+  width: clamp(32px, 5vh, 40px);
+}
+
+.header-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.header-icon-btn span {
+  font-family: "Poppins", sans-serif;
+  font-size: clamp(12px, 2vw, 14px);
+  font-weight: 400;
+}
+
+
+/* ==================== */
+/* Mobile Specific      */
+/* ==================== */
+
+.mobile-header-title {
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mobile-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--Surface-Default, #053796);
+  /* Match header color */
+  display: flex;
+  align-items: stretch;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-tab-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  /* Visual separator */
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-tab-btn.active {
+  background: rgba(255, 255, 255, 0.15);
+  /* Semi-transparent white for active */
+  color: #fff;
+  font-weight: 600;
+}
+
+.mobile-add-btn {
+  width: 56px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  /* Ensure it stands out slightly or keep flat */
+}
+
+@media (max-width: 768px) {
+  .header {
+    height: 50px;
+    padding: 0;
+    /* On mobile, possibly darker or different background */
+  }
+}
