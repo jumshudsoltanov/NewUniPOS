@@ -541,126 +541,181 @@
     color: #555;
 }
 
-/* CheckBottom */
+
 .checkBottom {
+    display: flex;
+    flex-direction: column;
+    /* Default Flex column for desktop */
     background-color: #4F85F4;
     color: white;
-    padding: 16px 20px 20px 20px;
-    /* Increased padding for aesthetics */
+    padding: 10px 12px;
     flex-shrink: 0;
     width: 100%;
     z-index: 5;
-    border-top-left-radius: 24px;
-    /* Curved top corners */
-    border-top-right-radius: 24px;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-    /* Soft shadow */
-    margin-top: -10px;
-    /* Overlap slightly with content for floating effect */
+    box-shadow: none;
+    border-top: none;
 }
 
-/* Wavy top removed - going for clean sheet look */
+
 .checkBottom::before {
+    /* If original had this */
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: radial-gradient(circle, #4F85F4 5px, transparent 6px);
+    background-size: 10px 10px;
+    background-position: bottom;
+    border-top: 2px dashed #fff;
     display: none;
+    /* User might have wanted this hidden though? Or maybe only for desktop? Let's leave hidden for now as it was hidden in recent edits */
 }
 
+
+/* Restored Desktop Summary Styles */
 .summary-section {
-    margin-bottom: 12px;
-    padding: 0 4px;
+    margin-bottom: 8px;
+    padding: 0 10px;
 }
 
 .summary-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 4px;
-    font-size: 0.9rem;
-    /* Slightly larger readable text */
-    color: rgba(255, 255, 255, 0.85);
-    /* Slightly transparent labels */
-}
-
-.summary-row span:last-child {
-    font-weight: 600;
-    color: #fff;
-    /* Values are bright white */
-}
-
-
-.qty-price {
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-.x-sign {
+    margin-bottom: 3px;
     font-size: 0.8rem;
-    margin: 0 4px;
-    opacity: 0.6;
+    opacity: 0.95;
+    color: rgba(255, 255, 255, 0.9);
 }
 
-.old-price {
-    text-decoration: line-through;
-    color: #999;
+.summary-row.total-row {
+    font-weight: 700;
     font-size: 0.9rem;
-    margin-left: 8px;
+    margin-top: 6px;
+    opacity: 1;
+    color: #fff;
+    /* Bright white text */
 }
 
-.total-price {
-    font-weight: 600;
-    color: #2c3e50;
-    min-width: 70px;
-    text-align: right;
-    font-size: 0.95rem;
-}
-
-
-
-/* Restored footer buttons */
+/* Restored Desktop Buttons */
 .action-buttons {
     display: flex;
-    gap: 12px;
-    /* Increased gap */
+    gap: 10px;
 }
 
 .btn-send,
 .btn-pay {
     flex: 1;
     border: none;
-    border-radius: 12px;
-    /* Softer corners */
-    padding: 14px;
-    /* Taller buttons */
+    border-radius: 8px;
+    padding: 12px;
     font-weight: 600;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: 0.2s;
     font-size: 1rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    /* Subtle button shadow */
 }
 
 .btn-send {
     background-color: #fff;
-    color: #4F85F4;
-    /* Match theme color */
+    color: #333;
 }
 
 .btn-send:hover {
-    background-color: #f8f9fa;
-    transform: translateY(-1px);
+    background-color: #f0f0f0;
 }
 
 .btn-pay {
     background-color: #053796;
-    /* Dark Blue */
     color: #fff;
 }
 
 .btn-pay:hover {
     background-color: #042d7a;
-    transform: translateY(-1px);
+}
+
+/* Mobile View Only - Neat White Design */
+@media (max-width: 991.98px) {
+    .checkBottom {
+        background-color: #fff;
+        padding: 12px 16px;
+        border-top: 1px solid #f0f0f0;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.03);
+    }
+
+    .action-buttons-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .action-left-group {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-icon-gray {
+        width: 50px;
+        height: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #8D99AE;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.4rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .btn-icon-gray:hover {
+        background-color: #717d91;
+    }
+
+    .btn-pay-custom {
+        flex-grow: 1;
+        background-color: #053796;
+        /* Original Blue */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        overflow: hidden;
+        height: 50px;
+    }
+
+    .btn-pay-custom:hover {
+        background-color: #042d7a;
+    }
+
+    .pay-icon-box {
+        width: 50px;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5rem;
+    }
+
+    .pay-amount {
+        flex-grow: 1;
+        text-align: center;
+        font-size: 1.2rem;
+        font-weight: 700;
+        padding-right: 15px;
+    }
 }
 
 /* Updated Check Header Styling - Circular Badge */
@@ -743,6 +798,59 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Mobile Bottom Bar New Implementation */
+.checkBottomMobile {
+    background-color: #fff;
+    padding: 12px;
+    gap: 12px;
+    border-top: 1px solid #f0f0f0;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+    position: relative;
+    z-index: 50;
+    align-items: stretch;
+}
+
+.mobile-icon-btn {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.mobile-icon-btn.gray-btn {
+    background-color: #EBF2FE;
+    color: #053796;
+}
+
+
+
+.mobile-pay-btn {
+    flex-grow: 1;
+    background-color: #053796;
+    border: none;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 10px rgba(5, 55, 150, 0.3);
+}
+
+
+
+.pay-amount {
+    font-size: 1.25rem;
+}
+
 
 .header-left-section {
     display: flex;

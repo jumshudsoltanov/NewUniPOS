@@ -83,7 +83,7 @@ const Header = () => {
             md={6}
             className="headerLeftBox h-100 d-none d-md-block"
           >
-            <div className="right-tools-container h-100 d-flex align-items-center justify-content-end  pe-2">
+            <div className="right-tools-container h-100 d-flex align-items-center justify-content-end">
               {/* New Order Button */}
               <button className="create-order-btn small-btn">
                 <svg
