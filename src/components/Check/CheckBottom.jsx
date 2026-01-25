@@ -12,13 +12,9 @@ const CheckBottom = () => {
                     <span>Endirim:</span>
                     <span>275.00 ₼ (~18%)</span>
                 </div>
-                <div className="summary-row total-row" style={{ fontSize: '1.2rem', marginTop: '10px' }}>
-                    <span>Yekun:</span>
-                    <span style={{ fontSize: '1.4rem' }}>1,225.00 ₼</span>
-                </div>
             </div>
 
-            <div className="action-buttons">
+            <div className="pt-3 action-buttons">
                 <button className="btn-send">
                     <i className="bi bi-send"></i>
                     <span>Göndər</span>

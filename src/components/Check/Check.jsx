@@ -335,29 +335,13 @@ const Check = () => {
         <Col
           md={12}
           lg={8}
-          className={`h-100 bg-light border-start ${activeMobileTab !== "menu" ? "d-none d-lg-block" : ""}`}
+          className={`h-100 bg-light ${activeMobileTab !== "menu" ? "d-none d-lg-block" : ""}`}
         >
           <div className="checkRightBox h-100 d-flex flex-column bg-light mobile-content-adjust">
             {/* Top Info Bar (Dark Blue) */}
             <div
-              className="right-top-header d-flex justify-content-end align-items-center px-3 py-2 text-white"
-              style={{ backgroundColor: "#3f51b5" }}
+              className="right-top-header d-none d-md-flex justify-content-end align-items-center px-3 py-2 text-white"
             >
-              {/* Timer Icon (placeholder from image) */}
-              <i className="bi bi-speedometer2 me-3 cursor-pointer"></i>
-
-              {/* New Order Button */}
-              <div className="d-flex align-items-center gap-2 px-3 py-1 rounded bg-success text-white cursor-pointer me-3">
-                <i className="bi bi-plus-lg"></i>
-                <span className="fw-medium">Yeni sifariş</span>
-              </div>
-
-              {/* Checks Label */}
-              <div className="d-flex align-items-center gap-2 cursor-pointer me-3">
-                <span className="fw-bold">Çeklər</span>
-                <span className="badge rounded-pill bg-success">10</span>
-              </div>
-
               <div className="tools-divider"></div>
 
               {/* Menu Hamburger */}
@@ -420,7 +404,7 @@ const Check = () => {
             {/* Bottom Action Bar (White) */}
             <div className="CheckRightboxHeader d-flex justify-content-between align-items-center p-2 bg-white border-bottom">
               {/* Left Side: Home Button */}
-              <div className="header-left d-flex align-items-center gap-3">
+              <div className="ms-2 header-left d-flex align-items-center gap-3">
                 <div
                   className="home-btn btn-primary d-flex align-items-center justify-content-center"
                   style={{ width: "50px" }}

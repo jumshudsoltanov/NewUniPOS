@@ -11,7 +11,7 @@ const CheckHeader = () => {
                 </div>
                 <div className="header-info-text">
                     <span className="header-title">Takeaway</span>
-                    <span className="header-subtitle">salam</span>
+                    {/* <span className="header-subtitle">salam</span> */}
                 </div>
             </div>
 

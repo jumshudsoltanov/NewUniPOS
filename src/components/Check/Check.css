@@ -1,7 +1,7 @@
 /* Main Container */
 .check-container {
     background-color: #fff;
-    border-right: 1px solid #e0e0e0;
+    /* border-right removed for seamless header */
 }
 
 /* Sidebar Styling */
@@ -79,6 +79,18 @@
     height: 100%;
     overflow: hidden;
     position: relative;
+}
+
+/* Border for content only (skipping header) */
+.check-content::after {
+    content: "";
+    position: absolute;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: #e0e0e0;
+    z-index: 10;
 }
 
 /* Scrollable Order List Wrapper */
@@ -533,55 +545,49 @@
 .checkBottom {
     background-color: #4F85F4;
     color: white;
-    padding: 10px 12px 10px 12px;
+    padding: 16px 20px 20px 20px;
+    /* Increased padding for aesthetics */
     flex-shrink: 0;
     width: 100%;
     z-index: 5;
+    border-top-left-radius: 24px;
+    /* Curved top corners */
+    border-top-right-radius: 24px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    /* Soft shadow */
+    margin-top: -10px;
+    /* Overlap slightly with content for floating effect */
 }
 
-/* Wavy top for bottom section */
+/* Wavy top removed - going for clean sheet look */
 .checkBottom::before {
-    content: "";
-    position: absolute;
-    top: -5px;
-    left: 0;
-    right: 0;
-    height: 10px;
-    background: radial-gradient(circle, #4F85F4 5px, transparent 6px);
-    background-size: 10px 10px;
-    background-position: bottom;
-    border-top: 2px dashed #fff;
     display: none;
 }
 
 .summary-section {
-    margin-bottom: 8px;
-    padding: 0 10px;
-    /* Added padding */
+    margin-bottom: 12px;
+    padding: 0 4px;
 }
 
 .summary-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 3px;
-    font-size: 0.8rem;
-    opacity: 0.95;
-    color: rgba(255, 255, 255, 0.9);
-    /* White text */
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    /* Slightly larger readable text */
+    color: rgba(255, 255, 255, 0.85);
+    /* Slightly transparent labels */
 }
 
-.summary-row.total-row {
-    font-weight: 700;
-    font-size: 0.9rem;
-    margin-top: 6px;
-    opacity: 1;
+.summary-row span:last-child {
+    font-weight: 600;
     color: #fff;
-    /* Bright white text */
+    /* Values are bright white */
 }
+
 
 .qty-price {
     color: #6c757d;
-    /* Grey color for qty x price */
     font-size: 0.9rem;
 }
 
@@ -600,10 +606,8 @@
 
 .total-price {
     font-weight: 600;
-    /* Bold total */
     color: #2c3e50;
     min-width: 70px;
-    /* Align totals */
     text-align: right;
     font-size: 0.95rem;
 }
@@ -613,32 +617,39 @@
 /* Restored footer buttons */
 .action-buttons {
     display: flex;
-    gap: 10px;
+    gap: 12px;
+    /* Increased gap */
 }
 
 .btn-send,
 .btn-pay {
     flex: 1;
     border: none;
-    border-radius: 8px;
-    padding: 12px;
+    border-radius: 12px;
+    /* Softer corners */
+    padding: 14px;
+    /* Taller buttons */
     font-weight: 600;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    transition: 0.2s;
+    transition: all 0.2s ease;
     font-size: 1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* Subtle button shadow */
 }
 
 .btn-send {
     background-color: #fff;
-    color: #333;
+    color: #4F85F4;
+    /* Match theme color */
 }
 
 .btn-send:hover {
-    background-color: #f0f0f0;
+    background-color: #f8f9fa;
+    transform: translateY(-1px);
 }
 
 .btn-pay {
@@ -649,6 +660,7 @@
 
 .btn-pay:hover {
     background-color: #042d7a;
+    transform: translateY(-1px);
 }
 
 /* Updated Check Header Styling - Circular Badge */
@@ -718,7 +730,7 @@
 
 /* New Check Header Design (Footer Color Match) - Compact */
 .check-header-bar {
-    background: var(--Surface-Default, #053796);
+    background: var(--Surface-Default, #4F85F4);
     /* Matched to right header */
     color: white;
     display: flex;
