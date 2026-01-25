@@ -5,14 +5,15 @@ import DefaultLogo from "../../assets/images/unipos_logo.png";
 import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 
 const PIN_LENGTH = 4;
-
 const Pin = () => {
   const [pin, setPin] = useState("");
   const [isError, setIsError] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Settings menu handlers
   const handleRefresh = () => {
@@ -62,6 +63,7 @@ const Pin = () => {
     const correctPin = "1234";
     if (submittedPin === correctPin) {
       console.log("PIN düzgündür!");
+      navigate("/tables");
     } else {
       setIsError(true);
       setTimeout(() => {
@@ -178,7 +180,10 @@ const Pin = () => {
             <div className="LeftBoxContainer">
               {/* Header */}
               <div className="infoHeader">
-                <button className="supportBtn" onClick={() => setIsSupportModalOpen(true)}>
+                <button
+                  className="supportBtn"
+                  onClick={() => setIsSupportModalOpen(true)}
+                >
                   <svg
                     width="20"
                     height="20"
@@ -209,7 +214,10 @@ const Pin = () => {
                 </button>
 
                 <div className="statusIcons">
-                  <button className="burgerMenuBtn" onClick={() => setIsSettingsMenuOpen(true)}>
+                  <button
+                    className="burgerMenuBtn"
+                    onClick={() => setIsSettingsMenuOpen(true)}
+                  >
                     <svg
                       width="24"
                       height="24"
@@ -367,9 +375,13 @@ const Pin = () => {
               <div className="terminalInfo">
                 <span className="terminalId">P3257</span>
                 <span className="terminalDivider">•</span>
-                <span className="terminalName">Terminal: <strong>Terminal 1</strong></span>
+                <span className="terminalName">
+                  Terminal: <strong>Terminal 1</strong>
+                </span>
                 <span className="terminalDivider">•</span>
-                <span className="terminalBranch">Filial: <strong>Main</strong></span>
+                <span className="terminalBranch">
+                  Filial: <strong>Main</strong>
+                </span>
               </div>
             </div>
           </Col>

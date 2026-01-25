@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./Header.css";
 import { Col, Row, Container } from "react-bootstrap";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   const halls = ["Zal", "Əsas Zal", "Teras", "zal 5", "zal 10"];
@@ -32,7 +33,7 @@ const Header = () => {
           >
             <div className="mobile-header-title">Ofisiant</div>
             <div className="d-flex align-items-center gap-2">
-              <button className="header-icon-btn">
+              <Link className="header-icon-btn"  to="/">
                 <svg
                   width="24"
                   height="24"
@@ -57,7 +58,7 @@ const Header = () => {
                     strokeLinejoin="round"
                   />
                 </svg>
-              </button>
+              </Link>
               <button className="header-icon-btn">
                 <svg
                   width="24"
@@ -132,7 +133,7 @@ const Header = () => {
               <div className="tools-divider"></div>
 
               {/* Waiter/Exit Icon */}
-              <button className="header-icon-btn small-icon-btn waiter-btn">
+              <Link className="header-icon-btn small-icon-btn waiter-btn" to="/">
                 <div className="d-flex align-items-center gap-2">
                   <svg
                     width="20"
@@ -160,7 +161,7 @@ const Header = () => {
                   </svg>
                   <span>Ofisiant</span>
                 </div>
-              </button>
+              </Link>
 
               <div className="tools-divider"></div>
 

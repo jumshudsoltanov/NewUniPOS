@@ -1,0 +1,977 @@
+/* Main Container */
+.check-container {
+    background-color: #fff;
+    border-right: 1px solid #e0e0e0;
+}
+
+/* Sidebar Styling */
+.check-sidebar {
+    width: 64px;
+    /* Fixed width */
+    background: var(--Surface-Subtle, #EBF2FE);
+    /* Light blue background */
+    padding: 20px 0;
+    flex-shrink: 0;
+    border-right: 1px dashed #A5B4FC;
+    /* Dashed border as per image hint */
+}
+
+/* Icons */
+.sidebar-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    color: #5A6A85;
+    /* Grayish icon color */
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1.25rem;
+}
+
+.sidebar-icon:hover {
+    background-color: rgba(5, 55, 150, 0.1);
+    color: var(--Surface-Default, #053796);
+}
+
+/* Back Button (Active Look) */
+.checkBackBtn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    background: var(--Surface-Default, #053796);
+    color: white;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+/* Badge for Printer */
+.icon-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #D946EF;
+    /* Pink/Purple badge */
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #EBF2FE;
+}
+
+
+/* Content Area - Fixed Layout */
+.check-content {
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Scrollable Order List Wrapper */
+.checkMainContent {
+    flex: 1 1 auto;
+    /* Grow and shrink */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Prevent double scrollbars */
+    min-height: 0;
+    /* Important for flex scrolling */
+}
+
+/* Right Box Area */
+.checkRightBox {
+    background-color: #F8F9FA;
+    /* Light background */
+}
+
+.right-top-header {
+    background: var(--Surface-Default, #053796);
+    color: white;
+    height: 60px;
+    /* Match left header height */
+    display: flex;
+    align-items: center;
+}
+
+.tools-divider {
+    width: 1px;
+    height: 24px;
+    background-color: rgba(255, 255, 255, 0.2);
+    margin: 0 12px;
+}
+
+.CheckRightboxHeader {
+    height: 60px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+}
+
+/* Home Button */
+.home-btn {
+    display: flex;
+    padding: var(--Full-Padding, 8px);
+    justify-content: center;
+    align-items: center;
+    gap: var(--Spacing, 4px);
+    border-radius: var(--Radius, 8px);
+    background: var(--Surface-Default, #053796);
+}
+
+
+
+
+/* Header Icons */
+.header-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    /* Rounded or just clean hover */
+    color: #053796;
+    /* Blue text color for icons */
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.header-icon:hover {
+    background-color: rgba(5, 55, 150, 0.05);
+}
+
+/* Status Badge (Deaktiv) */
+.status-badge {
+    background-color: transparent;
+    color: #5A6A85;
+    border: 1px solid transparent;
+    /* If specifically outlined in design, add here. 
+       The image shows a look simpler than a full button, 
+       just icon + text */
+    cursor: pointer;
+}
+
+.status-badge i {
+    font-size: 1.2rem;
+    color: #053796;
+}
+
+/* Exit Button */
+.exit-btn {
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    color: #DC3545;
+}
+
+.exit-btn:hover {
+    background-color: #FFF5F5;
+}
+
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    /* Initial circle size */
+    height: 40px;
+    border-radius: 8px;
+    /* Not round (yumuru olmasin) */
+    background: transparent;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.search-wrapper.expanded {
+    width: 300px;
+    /* Default width logic */
+    background: #fff;
+    border: 1px solid #053796;
+    padding: 0 10px;
+    justify-content: flex-start;
+}
+
+@media (min-width: 992px) {
+    .search-wrapper.expanded {
+        width: 550px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .CheckRightboxHeader {
+        position: relative;
+    }
+
+    .search-wrapper.expanded {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        border: none;
+        border-bottom: 2px solid #053796;
+        border-radius: 0;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+.search-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    flex-grow: 1;
+    color: #343434;
+    font-size: 14px;
+    opacity: 0;
+    animation: appear 0.2s ease forwards 0.3s;
+    /* Delay appearance until expanded */
+}
+
+.clear-btn {
+    cursor: pointer;
+    font-size: 12px;
+    color: #DC3545;
+    /* Red clear button */
+    white-space: nowrap;
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0;
+    animation: appear 0.2s ease forwards 0.3s;
+    /* Delay appearance until expanded */
+}
+
+.clear-btn:hover {
+    background: rgba(220, 53, 69, 0.1);
+}
+
+@keyframes appear {
+    to {
+        opacity: 1;
+    }
+}
+
+.header-icon {
+    /* Ensure icon is centered inside wrapper when collapsed */
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Menu Card Styling */
+.menu-card {
+    position: relative;
+    height: 90px;
+    /* Matching the "tidy" look of the image */
+    border-radius: 8px;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.menu-card-strip {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 70%;
+    width: 4px;
+    background-color: #22c55e;
+    /* Bright Green */
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    top: 15%;
+    /* Offset from top */
+    transform: none;
+    z-index: 2;
+}
+
+/* Actually looking closer at image, it's a small green tag on top-left edge */
+
+.menu-card-price {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 2px 6px;
+    border-bottom-left-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 2;
+}
+
+.menu-card-content {
+    background: rgba(0, 0, 0, 0.4);
+    /* Dark overlay */
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 15px;
+    /* Padding to avoid text hitting edges */
+}
+
+/* Mobile Bottom Nav */
+.mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: #fff;
+    border-top: 1px solid #e0e0e0;
+    z-index: 1050;
+    display: flex;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #5A6A85;
+    cursor: pointer;
+    font-size: 0.9rem;
+    gap: 4px;
+    transition: all 0.2s;
+}
+
+.mobile-nav-item i {
+    font-size: 1.5rem;
+}
+
+.mobile-nav-item.active {
+    color: #053796;
+    background-color: rgba(5, 55, 150, 0.05);
+}
+
+/* Adjust content height on mobile to prevent overlap with nav */
+@media (max-width: 991.98px) {
+
+    /* < lg */
+    .mobile-content-adjust {
+        height: calc(100% - 60px) !important;
+    }
+}
+
+/* User asked for NO hover transform */
+.menu-card:hover {
+    transform: none;
+}
+
+.text-shadow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.checkRightBoxContent {
+    background-color: #F8F9FA;
+    overflow-y: auto;
+}
+
+/* =========================================
+   NEW CHECK COMPONENTS STYLING
+   ========================================= */
+
+/* CheckHeader */
+.checkHeader {
+    background-color: #fff;
+    padding: 25px 15px 10px 15px;
+    position: relative;
+    border-bottom: 2px dashed #dce5ef;
+    /* Or wavy border? Image shows wavy. */
+    /* Let's try to mimic the wavy border with radial gradient */
+    background-image: radial-gradient(circle, transparent 0%, transparent 0%);
+    /* Placeholder */
+    z-index: 2;
+    flex-shrink: 0;
+    margin-top: 40px;
+    /* Space for the badge */
+    margin-left: 10px;
+    margin-right: 10px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+/* The circle badge "Masa 1" */
+.checkHeader .circle-badge {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 80px;
+    background-color: #4F85F4;
+    /* Blue circle */
+    border: 4px solid #EBF2FE;
+    /* Match background */
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(79, 133, 244, 0.3);
+}
+
+/* Wavy top visual for the whole card? */
+/* Actually the image shows the blue background is BEHIND. 
+   And the "Check" is a white paper-like object on top. */
+
+.header-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.header-info-row .info-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.header-info-row .label {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.header-info-row .value {
+    font-weight: bold;
+    color: #053796;
+}
+
+/* CheckMain */
+.checkMain {
+    background-color: #fff;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px 15px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.order-table-header {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #dce5ef;
+    font-size: 0.85rem;
+    color: #555;
+    font-weight: 600;
+}
+
+.col-name {
+    flex: 2;
+    text-align: left;
+}
+
+.col-qty {
+    flex: 1;
+    text-align: center;
+}
+
+.col-price {
+    flex: 1;
+    text-align: right;
+}
+
+.order-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px dashed #eef2f6;
+    font-size: 0.9rem;
+    color: #333;
+    align-items: center;
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+.order-item .col-name {
+    font-size: 0.85rem;
+    color: #555;
+}
+
+/* CheckBottom */
+.checkBottom {
+    background-color: #4F85F4;
+    color: white;
+    padding: 10px 12px 10px 12px;
+    flex-shrink: 0;
+    width: 100%;
+    z-index: 5;
+}
+
+/* Wavy top for bottom section */
+.checkBottom::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background: radial-gradient(circle, #4F85F4 5px, transparent 6px);
+    background-size: 10px 10px;
+    background-position: bottom;
+    border-top: 2px dashed #fff;
+    display: none;
+}
+
+.summary-section {
+    margin-bottom: 8px;
+    padding: 0 10px;
+    /* Added padding */
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+    font-size: 0.8rem;
+    opacity: 0.95;
+    color: rgba(255, 255, 255, 0.9);
+    /* White text */
+}
+
+.summary-row.total-row {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-top: 6px;
+    opacity: 1;
+    color: #fff;
+    /* Bright white text */
+}
+
+.qty-price {
+    color: #6c757d;
+    /* Grey color for qty x price */
+    font-size: 0.9rem;
+}
+
+.x-sign {
+    font-size: 0.8rem;
+    margin: 0 4px;
+    opacity: 0.6;
+}
+
+.old-price {
+    text-decoration: line-through;
+    color: #999;
+    font-size: 0.9rem;
+    margin-left: 8px;
+}
+
+.total-price {
+    font-weight: 600;
+    /* Bold total */
+    color: #2c3e50;
+    min-width: 70px;
+    /* Align totals */
+    text-align: right;
+    font-size: 0.95rem;
+}
+
+
+
+/* Restored footer buttons */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-send,
+.btn-pay {
+    flex: 1;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 1rem;
+}
+
+.btn-send {
+    background-color: #fff;
+    color: #333;
+}
+
+.btn-send:hover {
+    background-color: #f0f0f0;
+}
+
+.btn-pay {
+    background-color: #053796;
+    /* Dark Blue */
+    color: #fff;
+}
+
+.btn-pay:hover {
+    background-color: #042d7a;
+}
+
+/* Updated Check Header Styling - Circular Badge */
+.check-header-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+    width: 100%;
+    background-color: transparent;
+}
+
+.table-badge-circle {
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, #4F85F4 0%, #053796 100%);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 6px 16px rgba(5, 55, 150, 0.2);
+    border: 4px solid #ffffff;
+    transition: all 0.3s ease;
+}
+
+.table-badge-circle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 20px rgba(5, 55, 150, 0.3);
+}
+
+.table-badge-circle .table-label {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+    margin-bottom: -2px;
+}
+
+.table-badge-circle .table-num {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .check-header-container {
+        padding: 15px 0;
+    }
+
+    .table-badge-circle {
+        width: 75px;
+        height: 75px;
+        border-width: 3px;
+    }
+
+    .table-badge-circle .table-label {
+        font-size: 0.75rem;
+    }
+
+    .table-badge-circle .table-num {
+        font-size: 1.4rem;
+    }
+}
+
+/* New Check Header Design (Footer Color Match) - Compact */
+.check-header-bar {
+    background: var(--Surface-Default, #053796);
+    /* Matched to right header */
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 12px;
+    height: 60px;
+    /* Matched height */
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-left-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-edit-btn {
+    width: 32px;
+    /* Smaller button */
+    height: 32px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-edit-btn:hover {
+    background-color: rgba(255, 255, 255, 0.35);
+    transform: scale(1.05);
+}
+
+.header-edit-btn i {
+    font-size: 0.85rem;
+    color: white;
+}
+
+.header-info-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0px;
+    /* Tighter text */
+}
+
+.header-title {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+.header-subtitle {
+    font-size: 0.95rem;
+    /* Smaller subtitle */
+    font-weight: 700;
+    color: white;
+    line-height: 1.2;
+}
+
+.header-center-section {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.15);
+    padding: 2px 10px;
+    /* Smaller pill */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-time {
+    font-size: 0.95rem;
+    /* Smaller time */
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.5px;
+}
+
+.header-right-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-order-id {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: white;
+    opacity: 0.95;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.header-toggle-btn {
+    width: 32px;
+    /* Smaller toggle */
+    height: 32px;
+    background-color: white;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.header-toggle-btn:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+}
+
+.header-toggle-btn i {
+    font-size: 1rem;
+    color: #4F85F4;
+}
+
+
+
+
+/* Main Content - Tidy Spacing */
+.order-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px 15px;
+    background-color: #fff;
+    /* Ensure white background for the list */
+}
+
+/* Custom Scrollbar */
+.order-list-container::-webkit-scrollbar {
+    width: 5px;
+}
+
+.order-list-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.order-list-container::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 10px;
+}
+
+.order-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 5px;
+    /* Comfortable padding */
+    border-bottom: 1px dashed #e0e0e0;
+    /* Dotted separator as in image */
+    font-size: 0.95rem;
+    color: #333;
+    align-items: flex-start;
+    /* Align top for multi-line text */
+    background-color: transparent;
+}
+
+.order-item:hover {
+    background-color: #f8faff;
+    /* Visualize row on hover */
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+.col-name {
+    flex: 1;
+    text-align: left;
+    padding-right: 15px;
+    color: #2c3e50;
+    font-weight: 400;
+    /* Regular weight */
+    line-height: 1.4;
+    font-size: 0.95rem;
+    /* Readable font size */
+}
+
+.col-right-details {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 15px;
+    /* Space between qty/price/total */
+    color: #333;
+    white-space: nowrap;
+}
+
+
+
+/* Mobile specific tweaks */
+@media (max-width: 576px) {
+
+    /* Compact Footer */
+    .checkBottom {
+        padding: 8px 10px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .summary-section {
+        margin-bottom: 5px;
+    }
+
+    .summary-row {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+    }
+
+    .summary-row.total-row {
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+
+    .action-buttons {
+        gap: 8px;
+    }
+
+    .btn-send,
+    .btn-pay {
+        padding: 8px;
+        font-size: 0.9rem;
+    }
+
+    /* Order List Adjustments */
+    .order-item {
+        font-size: 0.8rem;
+        padding: 10px 0;
+    }
+
+    .col-name {
+        font-size: 0.8rem;
+        padding-right: 8px;
+    }
+
+    .col-right-details {
+        gap: 8px;
+        font-size: 0.8rem;
+    }
+
+    .qty-price {
+        font-size: 0.75rem;
+    }
+
+    .total-price {
+        font-size: 0.85rem;
+        min-width: 50px;
+    }
+}

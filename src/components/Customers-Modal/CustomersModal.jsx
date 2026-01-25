@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import "./CustomersModal.css";
+import { useNavigate } from "react-router-dom";
 
 const CustomersModal = ({ show, onHide }) => {
   const [guestCount, setGuestCount] = useState("5");
+  const navigate = useNavigate();
 
   const handleNumberClick = (num) => {
     if (guestCount === "0") {
@@ -23,7 +25,11 @@ const CustomersModal = ({ show, onHide }) => {
 
   const handleClear = () => {
     setGuestCount("0");
-  }
+  };
+
+  const goCheck = () => {
+    navigate("/check");
+  };
 
   const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -89,7 +95,13 @@ const CustomersModal = ({ show, onHide }) => {
       </Modal.Body>
 
       <Modal.Footer className="justify-content-center p-2 border-0">
-        <Button className="w-100 save-btn" onClick={onHide}>
+        <Button
+          className="w-100 save-btn"
+          onClick={() => {
+            onHide;
+            goCheck();
+          }}
+        >
           Yadda saxla
         </Button>
       </Modal.Footer>
