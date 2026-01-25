@@ -2,10 +2,17 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  /* Safari */
+  -moz-user-select: none !important;
+  /* Firefox */
+  -ms-user-select: none !important;
+  /* IE10+ */
 }
 
 
-.a{
+.a {
   text-decoration: none;
 }
 

@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { Container, Col, Row } from "react-bootstrap";
 import Card from "react-bootstrap/Card";
+import { useDispatch, useSelector } from "react-redux";
+import { addProducts } from "../../redux/Slices/OrdersSlice";
 const Menu = () => {
+  const dispatch = useDispatch();
+
   const foods = [
     {
       name: "Zeytun",
@@ -78,18 +82,6 @@ const Menu = () => {
     },
   ];
 
-  const [products, setProducts] = useState({});
-
-  const handleAddProducts = (data) => {
-    setProducts((data) => {
-      products.find((product) => {
-        product.name == data.name;
-      });
-    });
-
-    console.log(products.data);
-  };
-
   return (
     <Container fluid className="p-0">
       <Row className="g-2">
@@ -105,7 +97,7 @@ const Menu = () => {
                 backgroundImage: food.img ? `url(${food.img})` : "none",
                 backgroundColor: food.img ? "transparent" : "#555", // Gray if no image
               }}
-              onClick={() => handleAddProducts(food)}
+              onClick={() => dispatch(addProducts(food))}
             >
               <div className="menu-card-price">{food.price} ₼</div>
 
