@@ -40,16 +40,27 @@ const Login = () => {
   };
 
   const senToLoginBrand = () => {
-    dispatch(
-      authPos({ username: brand, terminalId: terminalId, password: password }),
-    );
+    const profileData = {
+      username: brand,
+      terminalId: terminalId,
+      password: password,
+      login: true,
+    };
+
+    localStorage.setItem("profile", JSON.stringify(profileData));
+    dispatch(authPos(profileData));
   };
 
-  // useEffect(() => {
-  //   navigate("/");
-  // }, []);
 
-  console.log(loginedProfileData.data);
+  useEffect(() => {
+    const storageData = JSON.parse(localStorage.getItem("profile"));
+    if (!storageData) return;
+
+    if (storageData.login === true) {
+      dispatch(authPos(storageData));
+      navigate("/pin");
+    }
+  }, [dispatch]);
 
   return (
     <>
