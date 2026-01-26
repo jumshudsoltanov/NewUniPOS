@@ -6,16 +6,24 @@ import CheckHeader from "./CheckHeader";
 import CheckMain from "./CheckMain";
 import CheckBottom from "./CheckBottom";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [activeMobileTab, setActiveMobileTab] = useState("menu");
+  const [showOpeationsModal, setShowOperationsModal] = useState(false);
   const navigate = useNavigate();
-
+  const { products } = useSelector((state) => state.OrderSlice);
   const goTables = () => {
     navigate("/tables");
   };
+
+  const handleShowOperationsTab = () => {
+    setShowOperationsModal(true);
+    console.log(showOpeationsModal);
+  };
+
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
       <Row className="h-100 g-0">
@@ -288,7 +296,10 @@ const Check = () => {
                   <span className="icon-badge">8</span>
                 </div>
 
-                <div className="sidebar-icon">
+                <div
+                  className="sidebar-icon operations"
+                  onClick={handleShowOperationsTab}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -339,9 +350,7 @@ const Check = () => {
         >
           <div className="checkRightBox h-100 d-flex flex-column bg-light mobile-content-adjust">
             {/* Top Info Bar (Dark Blue) */}
-            <div
-              className="right-top-header d-none d-md-flex justify-content-end align-items-center px-3 py-2 text-white"
-            >
+            <div className="right-top-header d-none d-md-flex justify-content-end align-items-center px-3 py-2 text-white">
               <div className="tools-divider"></div>
 
               {/* Menu Hamburger */}
@@ -518,7 +527,17 @@ const Check = () => {
             setIsSidebarOpen(false);
           }}
         >
-          <i className="bi bi-receipt"></i>
+          <div className="position-relative d-inline-flex">
+            <i className="bi bi-receipt"></i>
+            {products?.length > 0 && (
+              <span
+                className="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+                style={{ backgroundColor: "#053796" }}
+              >
+                {products.length}
+              </span>
+            )}
+          </div>
         </div>
         <div
           className={`mobile-nav-item ${activeMobileTab === "menu" ? "active" : ""}`}

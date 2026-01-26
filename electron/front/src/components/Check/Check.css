@@ -600,16 +600,23 @@
 
 /* Restored Desktop Buttons */
 .action-buttons {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* Exactly 50% each */
     gap: 10px;
+    width: 100%;
 }
 
 .btn-send,
 .btn-pay {
-    flex: 1;
+    width: 100%;
+    /* Fill the grid cell */
+    min-width: 0;
+    /* Allow shrinking below content size if needed */
+    height: 50px;
     border: none;
     border-radius: 8px;
-    padding: 12px;
+    padding: 0;
     font-weight: 600;
     display: flex;
     justify-content: center;
@@ -618,6 +625,7 @@
     cursor: pointer;
     transition: 0.2s;
     font-size: 1rem;
+    white-space: nowrap;
 }
 
 .btn-send {
@@ -872,10 +880,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.header-edit-btn:hover {
-    background-color: rgba(255, 255, 255, 0.35);
-    transform: scale(1.05);
-}
+
 
 .header-edit-btn i {
     font-size: 0.85rem;
@@ -971,7 +976,7 @@
 .order-list-container {
     flex-grow: 1;
     overflow-y: auto;
-    padding: 10px 15px;
+    /* padding: 10px 15px; */
     background-color: #fff;
     /* Ensure white background for the list */
 }
@@ -1093,5 +1098,102 @@
     .total-price {
         font-size: 0.85rem;
         min-width: 50px;
+    }
+}
+
+/* New Order Table Layout */
+.order-table-header {
+    display: flex;
+    padding: 10px 15px;
+    background-color: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.header-col {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.75rem;
+}
+
+.col-name-header,
+.col-name {
+    flex: 2;
+    /* 50% roughly */
+    text-align: left;
+}
+
+.col-qty-header,
+.col-qty {
+    flex: 1;
+    /* 25% */
+    text-align: center;
+}
+
+.col-total-header,
+.col-total {
+    flex: 1;
+    /* 25% */
+    text-align: right;
+}
+
+/* Update order item for grid alignment */
+.order-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.col-qty {
+    font-size: 0.9rem;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.col-total {
+    font-weight: 600;
+    color: #053796;
+    font-size: 0.95rem;
+}
+
+/* Highlight for new order items */
+.new-order-highlight .col-name,
+.new-order-highlight .col-qty,
+.new-order-highlight .col-total {
+    color: #053796 !important;
+    /* Header Blue */
+    font-weight: 600;
+}
+
+.new-order-highlight {
+    background-color: #EBF2FE;
+    /* Surface Subtle - Light Blue */
+    border-left: 3px solid #053796;
+    /* Header Blue Accent */
+}
+
+/* Adjust mobile styles */
+@media (max-width: 576px) {
+    .order-table-header {
+        padding: 8px 10px;
+    }
+
+    .order-item {
+        padding: 10px;
+    }
+
+    .col-name {
+        font-size: 0.85rem;
+    }
+
+    .col-qty,
+    .col-total {
+        font-size: 0.85rem;
     }
 }
