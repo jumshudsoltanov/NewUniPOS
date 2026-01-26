@@ -36,12 +36,11 @@ export const OrderSlice = createSlice({
       }));
     },
 
-    clearNewOrders: (state, action) => {
-      let isNewOrders = action.payload.filter((item) => item.newOrder !== 0);
-      console.log(isNewOrders);
+    clearOrders: (state, action) => {
+      state.products = [];
     },
   },
 });
 
-export const { addProducts, sendOrders, clearNewOrders } = OrderSlice.actions;
+export const { addProducts, sendOrders, clearOrders } = OrderSlice.actions;
 export default OrderSlice.reducer;

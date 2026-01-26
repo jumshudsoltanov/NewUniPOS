@@ -1,0 +1,316 @@
+/* Modal Container */
+.editmodal .modal-dialog {
+    max-width: 420px !important;
+    /* "withi cox dur biraz alat" - Reduced width */
+    margin: 1.75rem auto;
+}
+
+.editmodal .modal-content {
+    border-radius: 0 !important;
+    /* Kvadrat */
+    border: none;
+    overflow: hidden;
+    padding: 0;
+    background-color: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.editmodal .modal-body {
+    padding: 0;
+}
+
+.edit-modal-layout {
+    display: flex;
+    height: 600px;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+/* LEFT SIDEBAR */
+.edit-sidebar {
+    width: 85px;
+    background-color: #0062CC;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+}
+
+.edit-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.sidebar-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px 0;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    width: 100%;
+    margin: 0;
+    outline: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    /* Clear separator */
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    /* Slight separation from content */
+}
+
+.sidebar-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    /* Subtle hover for feedback */
+}
+
+.sidebar-btn:first-child {
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-btn.active {
+    background: #fff;
+    color: #0062CC;
+    border-radius: 0 !important;
+    margin: 0;
+    width: 100%;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
+    /* Very subtle depth */
+    border-right: none;
+    /* Connects to content */
+    border-bottom: 1px solid #E9ECEF;
+    /* Matches content internal borders */
+    position: relative;
+    z-index: 5;
+    /* Above the sidebar line if any */
+}
+
+.sidebar-btn i {
+    font-size: 1.4rem;
+    /* Slightly larger icon */
+    margin-bottom: 6px;
+}
+
+.sidebar-btn span {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.3px;
+}
+
+.sidebar-btn.active {
+    background-color: #fff;
+    color: #0062CC;
+    border-radius: 0 !important;
+    margin: 0;
+    width: 100%;
+    box-shadow: none;
+}
+
+/* Sidebar Bottom (Delete Button Area) */
+.sidebar-bottom {
+    margin-top: auto;
+    width: 100%;
+    /* No padding to let button fill space nicely if colored */
+}
+
+/* "sil duymeside aydin olsun" - Make it red background or very visible */
+.btn-delete {
+    color: #fff;
+    background-color: #DC3545;
+    /* Red background for clear visibility */
+    border-bottom: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    opacity: 1;
+    /* Ensure full visibility */
+}
+
+.btn-delete:hover {
+    /* No hover effects requested, but keep static red */
+    background-color: #DC3545;
+    color: white;
+}
+
+/* RIGHT CONTENT */
+.edit-main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    position: relative;
+}
+
+/* Header */
+.edit-header {
+    background-color: #0062CC;
+    color: white;
+    height: 60px;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.edit-product-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%;
+}
+
+.btn-close-custom {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    opacity: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Body Content Wrapper */
+.edit-form-wrapper {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+/* Price/Input Box */
+.input-display-box {
+    background-color: #fff;
+    border-radius: 0;
+    padding: 12px 16px;
+    position: relative;
+    border: 1px solid #E9ECEF;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.super-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: #1F2937;
+    outline: none;
+}
+
+.input-label {
+    font-size: 0.8rem;
+    color: #6B7280;
+    margin-top: 2px;
+}
+
+.currency-icon {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.4rem;
+    color: #9CA3AF;
+    font-weight: bold;
+}
+
+/* Stepper */
+.stepper-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #fff;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+    margin-bottom: 5px;
+    gap: 10px;
+}
+
+.stepper-btn {
+    width: 60px;
+    height: 50px;
+    border-radius: 0;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.btn-minus {
+    background-color: #6B7280;
+}
+
+.btn-plus {
+    background-color: #0062CC;
+}
+
+.stepper-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1F2937;
+    flex-grow: 1;
+    text-align: center;
+    background: #F8F9FA;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #E9ECEF;
+}
+
+/* Numpad */
+.numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 8px;
+    flex-grow: 1;
+}
+
+.num-key {
+    background-color: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 0;
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+}
+
+/* Save Button */
+.save-action-btn {
+    width: 100%;
+    background-color: #0062CC;
+    /* PRIMARY BLUE */
+    color: white;
+    border: none;
+    padding: 16px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    border-radius: 0;
+}

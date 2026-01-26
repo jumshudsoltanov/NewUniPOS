@@ -1,6 +1,6 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { sendOrders, clearNewOrders } from "../../redux/Slices/OrdersSlice";
+import { sendOrders, clearOrders } from "../../redux/Slices/OrdersSlice";
 
 const CheckBottom = () => {
   const dispatch = useDispatch();
@@ -11,8 +11,7 @@ const CheckBottom = () => {
     0,
   );
 
-  console.log(products);
-
+  
   return (
     <>
       {/* Desktop View */}
@@ -53,7 +52,7 @@ const CheckBottom = () => {
         </button>
         <button
           className="mobile-icon-btn gray-btn"
-          onClick={() => dispatch(clearNewOrders(products))}
+          onClick={() => dispatch(clearOrders())}
         >
           <i className="bi bi-trash-fill"></i>
         </button>

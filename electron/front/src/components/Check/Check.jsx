@@ -10,6 +10,8 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import CheckLockModal from "../Check-Lock/CheckLockModal";
 import CommentModal from "../CommentModal/CommentModal";
+import ClearCheck from "../ClearCheck/ClearCheck";
+import DiscountModal from "../DiscountModal/DiscountModal";
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -18,9 +20,11 @@ const Check = () => {
   const [showOpeationsModal, setShowOperationsModal] = useState(false);
   const [lockCheck, setLockCheck] = useState(false);
   const [comment, setComment] = useState(false);
-
+  const [onShowClearModal, setOnShowClearModal] = useState(false);
+  const [onShowDiscount, setOnShowDiscount] = useState(false);
   const navigate = useNavigate();
   const { products } = useSelector((state) => state.OrderSlice);
+
   const goTables = () => {
     navigate("/tables");
   };
@@ -28,6 +32,25 @@ const Check = () => {
   const handleShowOperationsTab = () => {
     setShowOperationsModal(true);
     console.log(showOpeationsModal);
+  };
+
+  const clearCheck = () => {
+    if (products.length == 0) {
+      setShowOperationsModal(false);
+      return;
+    }
+    setShowOperationsModal(false);
+    setOnShowClearModal(true);
+  };
+
+  const openCommentModal = () => {
+    setShowOperationsModal(false);
+    setComment(true);
+  };
+
+  const openDiscountModal = () => {
+    setShowOperationsModal(false);
+    setOnShowDiscount(true);
   };
 
   return (
@@ -173,7 +196,10 @@ const Check = () => {
                   </svg>
                 </div>
 
-                <div className="sidebar-icon comment-button" onClick={() => setComment(true)}>
+                <div
+                  className="sidebar-icon comment-button"
+                  onClick={() => setComment(true)}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -563,6 +589,9 @@ const Check = () => {
       <OperationsModal
         show={showOpeationsModal}
         onHide={() => setShowOperationsModal(false)}
+        clearCheck={clearCheck}
+        openCommentModal={openCommentModal}
+        openDiscountModal={openDiscountModal}
       />
 
       <CheckLockModal
@@ -576,6 +605,16 @@ const Check = () => {
         onClose={() => {
           setComment(false);
         }}
+      />
+
+      <ClearCheck
+        show={onShowClearModal}
+        onClose={() => setOnShowClearModal(false)}
+      />
+
+      <DiscountModal
+        show={onShowDiscount}
+        onClose={() => setOnShowDiscount(false)}
       />
     </Container>
   );
