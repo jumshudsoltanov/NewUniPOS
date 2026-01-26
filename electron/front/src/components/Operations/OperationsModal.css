@@ -1,0 +1,110 @@
+.operations-modal .modal-content {
+    border: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    background-color: #ffffff;
+}
+
+.operations-modal .modal-dialog {
+    /* Default bootstrap center/margins */
+}
+
+.operation-item {
+    transition: all 0.2s ease;
+    user-select: none;
+    background-color: transparent;
+    border-radius: 12px;
+    padding: 12px 16px !important;
+}
+
+
+.close-btn i {
+    font-size: 20px !important;
+}
+
+.operation-item:hover {
+    background-color: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.operation-icon {
+    color: #5E5CB5;
+    font-size: 1.5rem;
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    margin-right: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+/* .operation-item:hover .operation-icon {
+    color: #5E5CB5;
+    background-color: transparent;
+    transform: scale(1.1);
+} */
+
+.close-operation-btn {
+    background-color: #f1f1f1;
+    color: #333;
+    font-weight: 600;
+    border-radius: 12px;
+    padding: 12px;
+    transition: all 0.2s;
+}
+
+.close-operation-btn:hover {
+    background-color: #e2e2e2;
+}
+
+
+
+@media (max-width: 768px) {
+    .operations-modal .modal-dialog {
+        max-width: 100%;
+        margin: 1rem;
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 2rem);
+    }
+
+    .operation-item span {
+        font-size: 1rem;
+    }
+}
+
+/* Desktop positioning (Bottom-Left) */
+@media (min-width: 992px) {
+    .operations-modal .modal-dialog {
+        position: fixed;
+        bottom: 60px !important;
+        /* User preference */
+        left: 20px !important;
+        /* User preference */
+        margin: 0;
+        max-width: 500px !important;
+        /* User preference */
+        transform: none !important;
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .operations-modal.modal.fade .modal-dialog {
+        transform: translate(0, 20px);
+        transition: transform 0.3s ease-out;
+    }
+
+    .operations-modal.modal.show .modal-dialog {
+        transform: none;
+    }
+
+    .operations-modal .modal-content {
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 0 !important;
+        position: relative;
+        /* For X button positioning */
+    }
+
+    .operation-item {
+        padding: 8px 12px !important;
+    }
+}

@@ -1,0 +1,44 @@
+.modal-header .btn-close {
+    width: 1rem;
+    height: 1rem;
+    background-color: transparent;
+    border: none;
+    opacity: 1;
+    filter: none;
+}
+
+
+.modal-header .btn-close::before,
+.modal-header .btn-close::after {
+    background-color: white;
+}
+
+
+.modal-header .btn-close:hover,
+.modal-header .btn-close:focus {
+    background-color: transparent;
+    filter: none;
+    filter: invert(1);
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+.lockIcon {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-direction: column !important;
+    background: var(--Primitive-color-Blue-100, #C2D6FD);
+    margin: 0 auto;
+}
+
+
+.lockIcon svg {
+    width: 40px;
+    height: 40px;
+}

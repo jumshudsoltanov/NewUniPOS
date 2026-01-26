@@ -1,0 +1,45 @@
+const axios = require("axios");
+const LoginModel = require("../model/LoginModel");
+let token =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9maWxlX2lkIjoxNCwidGVybWluYWxfaWQiOjYwMTUyNzM1LCJ0ZXJtaW5hbF9ncm91cF9pZCI6MjExLCJpc19tYXN0ZXIiOjEsInVzZXJuYW1lIjoidW5pcG9zIiwicmVzdGF1cmFudF9uYW1lIjoiVW5pUE9TIFRlY2hub2xvZ2llcyBSZXN0b3JhbiAiLCJpYXQiOjE3Njk0NDYwMDMsImV4cCI6MTgwMDk4MjAwM30.5xADfX7YasOcKKC9oP-w-949SAxbM_fUq_p13zSf4_8";
+
+const getLogin = async (req, res) => {
+  try {
+    const { username, terminalId, password } = req.body;
+
+    const response = await axios.get(
+      "http://46.224.8.157:35627/api/terminal/me",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        params: {
+          username,
+          terminal_id: terminalId,
+          terminal_password: password,
+        },
+      },
+    );
+
+    const profile = response.data?.data?.profile;
+
+    if (!profile) {
+      return res.status(400).json({ message: "Profile tapılmadı" });
+    }
+
+    await LoginModel.upsert({
+      profile_id: profile.id,
+      ...profile,
+    });
+
+    res.status(200).json(response.data);
+  } catch (error) {
+    res.status(500).json({
+      message: "Login zamanı xəta baş verdi",
+      error: error.response?.data || error.message,
+    });
+  }
+};
+
+module.exports = { getLogin };

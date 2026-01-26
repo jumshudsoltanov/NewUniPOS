@@ -5,14 +5,20 @@ import Menu from "../Menu/Menu";
 import CheckHeader from "./CheckHeader";
 import CheckMain from "./CheckMain";
 import CheckBottom from "./CheckBottom";
+import OperationsModal from "../Operations/OperationsModal";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import CheckLockModal from "../Check-Lock/CheckLockModal";
+import CommentModal from "../CommentModal/CommentModal";
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [activeMobileTab, setActiveMobileTab] = useState("menu");
   const [showOpeationsModal, setShowOperationsModal] = useState(false);
+  const [lockCheck, setLockCheck] = useState(false);
+  const [comment, setComment] = useState(false);
+
   const navigate = useNavigate();
   const { products } = useSelector((state) => state.OrderSlice);
   const goTables = () => {
@@ -167,7 +173,7 @@ const Check = () => {
                   </svg>
                 </div>
 
-                <div className="sidebar-icon">
+                <div className="sidebar-icon comment-button" onClick={() => setComment(true)}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -209,7 +215,12 @@ const Check = () => {
               </div>
 
               <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
-                <div className="sidebar-icon">
+                <div
+                  className="sidebar-icon check-lock"
+                  onClick={() => {
+                    setLockCheck(true);
+                  }}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -549,6 +560,23 @@ const Check = () => {
           <i className="bi bi-grid-fill"></i>
         </div>
       </div>
+      <OperationsModal
+        show={showOpeationsModal}
+        onHide={() => setShowOperationsModal(false)}
+      />
+
+      <CheckLockModal
+        show={lockCheck}
+        onClose={() => {
+          setLockCheck(false);
+        }}
+      />
+      <CommentModal
+        show={comment}
+        onClose={() => {
+          setComment(false);
+        }}
+      />
     </Container>
   );
 };
