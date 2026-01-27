@@ -1,11 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Header.css";
 import { Col, Row, Container } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  getTableGroups,
+  currentTableList,
+} from "../../redux/Slices/TablesSlice";
 
 const Header = () => {
-  const halls = ["Zal", "Əsas Zal", "Teras", "zal 5", "zal 10"];
-  const [activeHall, setActiveHall] = useState(0);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { tableGroups } = useSelector((state) => state.TablesSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const [activeHall, setActiveHall] = useState(null);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const getTable = async () => {
+      try {
+        await dispatch(
+          getTableGroups(loginedProfileData.data.profile.id),
+        ).unwrap();
+      } catch (err) {
+        console.error("Error fetching table groups:", err);
+      }
+    };
+
+    getTable();
+  }, []);
+
+  useEffect(() => {
+    if (tableGroups?.data?.length) {
+      setActiveHall(tableGroups.data[0].id);
+    }
+  }, [tableGroups]);
+
+  useEffect(() => {
+    dispatch(currentTableList({ hallId: activeHall }));
+  }, [activeHall]);
 
   return (
     <>
@@ -14,15 +46,16 @@ const Header = () => {
           {/* DESKTOP HALL TABS (Hidden on mobile) */}
           <Col lg={6} md={6} className="p-0 m-o d-none d-md-block">
             <ul className="hallsTab">
-              {halls.map((hall, index) => (
-                <li
-                  key={index}
-                  className={`hall-btn ${activeHall === index ? "active" : ""}`}
-                  onClick={() => setActiveHall(index)}
-                >
-                  {hall}
-                </li>
-              ))}
+              {tableGroups &&
+                tableGroups?.data?.map((hall, index) => (
+                  <li
+                    key={index}
+                    className={`hall-btn ${activeHall === hall.id ? "active" : ""}`}
+                    onClick={() => setActiveHall(hall.id)}
+                  >
+                    {hall.name}
+                  </li>
+                ))}
             </ul>
           </Col>
 
@@ -31,9 +64,11 @@ const Header = () => {
             xs={12}
             className="p-0 d-md-none d-flex align-items-center justify-content-between px-3 h-100"
           >
-            <div className="mobile-header-title">Ofisiant</div>
+            <div className="mobile-header-title">
+              {loginedWaiter?.data?.name}
+            </div>
             <div className="d-flex align-items-center gap-2">
-              <Link className="header-icon-btn" to="/">
+              <Link className="header-icon-btn" to="/pin">
                 <svg
                   width="24"
                   height="24"
@@ -78,11 +113,7 @@ const Header = () => {
             </div>
           </Col>
 
-          <Col
-            lg={6}
-            md={6}
-            className="headerLeftBox h-100 d-none d-md-block"
-          >
+          <Col lg={6} md={6} className="headerLeftBox h-100 d-none d-md-block">
             <div className="right-tools-container h-100 d-flex align-items-center justify-content-end">
               {/* New Order Button */}
               {/* New Order Button */}
@@ -145,7 +176,10 @@ const Header = () => {
               <div className="tools-divider"></div>
 
               {/* Waiter/Exit Icon */}
-              <Link className="header-icon-btn small-icon-btn waiter-btn" to="/">
+              <Link
+                className="header-icon-btn small-icon-btn waiter-btn"
+                to="/pin"
+              >
                 <div className="d-flex align-items-center gap-2">
                   <svg
                     width="20"
@@ -171,7 +205,9 @@ const Header = () => {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span className="d-none d-xl-inline">Ofisiant</span>
+                  <span className="d-none d-xl-inline">
+                    {loginedWaiter?.data?.name}
+                  </span>
                 </div>
               </Link>
 
@@ -244,15 +280,16 @@ const Header = () => {
 
       {/* MOBILE FOOTER (Visible only on mobile) */}
       <div className="mobile-footer d-flex d-md-none">
-        {halls.map((hall, index) => (
-          <button
-            key={index}
-            className={`mobile-tab-btn ${activeHall === index ? "active" : ""}`}
-            onClick={() => setActiveHall(index)}
-          >
-            {hall}
-          </button>
-        ))}
+        {!tableGroups &&
+          tableGroups.map((hall, index) => (
+            <button
+              key={index}
+              className={`mobile-tab-btn ${activeHall === index ? "active" : ""}`}
+              onClick={() => setActiveHall(index)}
+            >
+              {tableGroups}
+            </button>
+          ))}
         <button className="mobile-add-btn">
           <svg
             width="24"

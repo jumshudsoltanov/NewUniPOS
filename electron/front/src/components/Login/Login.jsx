@@ -21,7 +21,7 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-  const [checkingLogin, setCheckingLogin] = useState(false);
+
 
   // Settings menu handlers
   const handleRefresh = () => {
@@ -49,15 +49,12 @@ const Login = () => {
     };
 
     try {
-      setCheckingLogin(true); // Show loader while logging in
       await dispatch(authPos(profileData)).unwrap();
       localStorage.setItem("profile", JSON.stringify(profileData));
       navigate("/pin");
     } catch (err) {
       console.error("Manual login failed:", err);
       setIsError(true);
-    } finally {
-      setCheckingLogin(false);
     }
   };
 
@@ -191,15 +188,7 @@ const Login = () => {
 
               {/* Login Container */}
               <div className="loginFormContainer">
-                {checkingLogin ? (
-                  <div className="loginLoadingState">
-                    <div className="premium-loader">
-                      <div className="loader-ring"></div>
-                      <div className="loader-dot"></div>
-                    </div>
-                    <p className="loadingText">Məlumatlar yoxlanılır...</p>
-                  </div>
-                ) : step === 1 ? (
+                {step === 1 ? (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();

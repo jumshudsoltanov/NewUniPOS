@@ -16,3 +16,88 @@ body,
     -ms-user-select: none;
     /* Old Edge */
 }
+
+/* ==================== */
+/* GLOBAL LOADING STATE */
+/* ==================== */
+
+.loginLoadingState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    animation: fadeInGlobal 1.2s ease-out;
+}
+
+.premium-loader {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 24px;
+}
+
+.loader-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007AFF;
+    border-radius: 50%;
+    animation: spinGlobal 3s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.loader-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    background-color: #007AFF;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulseGlobal 3s ease-in-out infinite;
+}
+
+.loadingText {
+    font-size: 18px;
+    color: #555;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+@keyframes spinGlobal {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulseGlobal {
+
+    0%,
+    100% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInGlobal {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

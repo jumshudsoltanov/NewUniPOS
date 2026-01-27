@@ -7,7 +7,7 @@ import Tables from "./components/Tables/Tables";
 import CustomerModal from "./components/Customers-Modal/CustomersModal";
 import Check from "./components/Check/Check";
 import { useDispatch } from "react-redux";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authPos } from "./redux/Slices/LoginSlice";
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
@@ -15,22 +15,48 @@ import Login from "./components/Login/Login";
 function AppContent() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    const storageData = JSON.parse(localStorage.getItem("profile"));
+    const initApp = async () => {
+      const storageData = JSON.parse(localStorage.getItem("profile"));
 
-    if (isFirstLoad.current) {
-      if (storageData) {
-        dispatch(authPos(storageData));
-        navigate("/pin");
+      if (isFirstLoad.current) {
+        if (storageData) {
+          try {
+            await dispatch(authPos(storageData)).unwrap();
+            navigate("/pin");
+          } catch (err) {
+            console.error("Auto-login failed:", err);
+            navigate("/");
+          }
+        } else {
+          navigate("/");
+        }
+        isFirstLoad.current = false;
+        // Animasiyanı hiss etmək üçün qısa fasilə
+        setTimeout(() => setIsInitializing(false), 1000);
       } else {
-        navigate("/");
+        setIsInitializing(false);
       }
-      isFirstLoad.current = false;
-    }
+    };
+
+    initApp();
   }, [dispatch, navigate]);
+
+  if (isInitializing) {
+    return (
+      <div className="loginLoadingState" style={{ height: "100vh", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div className="premium-loader">
+          <div className="loader-ring"></div>
+          <div className="loader-dot"></div>
+        </div>
+        <p className="loadingText">Sistem yüklənir...</p>
+      </div>
+    );
+  }
 
   return (
     <Routes>

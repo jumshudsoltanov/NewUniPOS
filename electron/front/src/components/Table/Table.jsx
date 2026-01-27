@@ -3,7 +3,7 @@ import "./Table.css";
 import CustomersModal from "../Customers-Modal/CustomersModal";
 
 const Table = ({ table }) => {
-  const { name, amount, currency, waiter, status, type } = table || {};
+  const { name, status, type } = table || {};
   const [selectedTable, setSelectedTable] = useState(null);
 
   const renderSeats = () => {
@@ -33,7 +33,7 @@ const Table = ({ table }) => {
   const [showModal, setShowModal] = useState(false);
 
   const handleTableClick = (table) => {
-    setSelectedTable(table)
+    setSelectedTable(table);
     setShowModal(true);
   };
 
@@ -87,7 +87,11 @@ const Table = ({ table }) => {
         </div>
       </div>
 
-      <CustomersModal show={showModal} onHide={() => setShowModal(false)} table={selectedTable} />
+      <CustomersModal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        table={selectedTable}
+      />
     </>
   );
 };

@@ -6,6 +6,8 @@ import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { getWaiter } from "../../redux/Slices/WaitersSlice";
 
 const PIN_LENGTH = 4;
 const Pin = () => {
@@ -13,6 +15,8 @@ const Pin = () => {
   const [isError, setIsError] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const dispatch = useDispatch();
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const navigate = useNavigate();
 
   // Settings menu handlers
@@ -58,11 +62,9 @@ const Pin = () => {
     setIsError(false);
   }, []);
 
-  const handlePinSubmit = (submittedPin) => {
-    console.log("PIN submitted:", submittedPin);
-    const correctPin = "1234";
-    if (submittedPin === correctPin) {
-      console.log("PIN düzgündür!");
+  const handlePinSubmit = async (submittedPin) => {
+    const result = await dispatch(getWaiter(submittedPin)).unwrap();
+    if (result.message === "success") {
       navigate("/tables");
     } else {
       setIsError(true);
