@@ -14,15 +14,12 @@
   "build": {
     "appId": "com.pos.redesing",
     "productName": "POS Redesing",
-    "directories": {
-      "output": "dist_electron"
-    },
+    "asar": true,
     "files": [
       "electron/server/**/*",
       "electron/backend/**/*",
       "electron/front/dist/**/*",
-      "package.json",
-      "node_modules/**/*"
+      "package.json"
     ],
     "win": {
       "target": "dir"
