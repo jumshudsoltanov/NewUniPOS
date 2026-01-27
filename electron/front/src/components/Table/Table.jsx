@@ -3,11 +3,11 @@ import "./Table.css";
 import CustomersModal from "../Customers-Modal/CustomersModal";
 
 const Table = ({ table }) => {
-  const { name, status, type } = table || {};
+  const { name, status, shape_type } = table || {};
   const [selectedTable, setSelectedTable] = useState(null);
 
   const renderSeats = () => {
-    if (type === "rectangle") {
+    if (shape_type === "rectangle") {
       return (
         <>
           <div className="seat seat-left-1"></div>
@@ -40,7 +40,7 @@ const Table = ({ table }) => {
   return (
     <>
       <div
-        className={`table-wrapper wrapper-${type || "square"}`}
+        className={`table-wrapper wrapper-${shape_type || "square"}`}
         onClick={() => handleTableClick(table)}
         style={{ cursor: "pointer" }}
       >
@@ -48,20 +48,20 @@ const Table = ({ table }) => {
         {renderSeats()}
 
         {/* Table Surface/Body */}
-        <div className={`table-surface table-${type || "square"} ${status}`}>
+        <div
+          className={`table-surface table-${shape_type || "square"} ${status}`}
+        >
           {/* Status Dot */}
           <div className="status-dot"></div>
 
           {/* Center Content */}
           <div className="table-content">
             <h3 className="table-name">{name}</h3>
-            <p className="table-amount">
-              {amount} {currency}
-            </p>
+            <p className="table-amount">0 ₼</p>
 
             <div className="table-waiter-info">
               <i className="bi bi-people"></i>
-              <span>{waiter}</span>
+              <span>Tural</span>
             </div>
           </div>
 

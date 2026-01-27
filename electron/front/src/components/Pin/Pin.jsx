@@ -10,6 +10,114 @@ import { useSelector, useDispatch } from "react-redux";
 import { getWaiter } from "../../redux/Slices/WaitersSlice";
 
 const PIN_LENGTH = 4;
+
+const PinDot = ({ filled, isError }) => (
+  <div
+    className={`pin-dot ${filled ? "filled" : ""} ${isError ? "error" : ""}`}
+  >
+    {filled ? (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 16 16"
+        fill="none"
+      >
+        <circle cx="8" cy="8" r="6" fill={isError ? "#ff4757" : "#053796"} />
+      </svg>
+    ) : (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 16 16"
+        fill="none"
+      >
+        <circle
+          cx="8"
+          cy="8"
+          r="5.5"
+          stroke={isError ? "#ff4757" : "#053796"}
+          strokeWidth="1"
+          fill="none"
+        />
+      </svg>
+    )}
+  </div>
+);
+
+const NumberButton = ({ value, onClick, children, variant = "default" }) => (
+  <button
+    className={`pin-btn pin-btn-${variant}`}
+    onClick={() => onClick(value)}
+    type="button"
+  >
+    {children || value}
+  </button>
+);
+
+const BackspaceIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+  >
+    <path
+      d="M9.57 5.93L3.5 12L9.57 18.07"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeMiterlimit="10"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M20.5 12H3.67"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeMiterlimit="10"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ClearIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+  >
+    <path
+      d="M18 6L6 18M6 6L18 18"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ImageSection = React.memo(() => {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <Col md={6} lg={7} xl={8} className="d-none d-md-block p-0 h-100" style={{ background: '#f8f9fa' }}>
+      <div className="RightBoxContainer" style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+        <img
+          src={RightBoxContainerImg2}
+          alt="Background"
+          onLoad={() => setLoaded(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </div>
+    </Col>
+  );
+});
+
 const Pin = () => {
   const [pin, setPin] = useState("");
   const [isError, setIsError] = useState(false);
@@ -75,107 +183,14 @@ const Pin = () => {
     }
   };
 
-  const PinDot = ({ filled, isError }) => (
-    <div
-      className={`pin-dot ${filled ? "filled" : ""} ${isError ? "error" : ""}`}
-    >
-      {filled ? (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 16 16"
-          fill="none"
-        >
-          <circle cx="8" cy="8" r="6" fill={isError ? "#ff4757" : "#053796"} />
-        </svg>
-      ) : (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 16 16"
-          fill="none"
-        >
-          <circle
-            cx="8"
-            cy="8"
-            r="5.5"
-            stroke={isError ? "#ff4757" : "#053796"}
-            strokeWidth="1"
-            fill="none"
-          />
-        </svg>
-      )}
-    </div>
-  );
 
-  const NumberButton = ({ value, onClick, children, variant = "default" }) => (
-    <button
-      className={`pin-btn pin-btn-${variant}`}
-      onClick={() => onClick(value)}
-      type="button"
-    >
-      {children || value}
-    </button>
-  );
-
-  const BackspaceIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      <path
-        d="M9.57 5.93L3.5 12L9.57 18.07"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeMiterlimit="10"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M20.5 12H3.67"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeMiterlimit="10"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-
-  const ClearIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      <path
-        d="M18 6L6 18M6 6L18 18"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 
   return (
     <>
       <Container fluid className="p-0 vh-100 overflow-hidden">
         <Row className="g-0 h-100">
           {/* IMAGE SECTION */}
-          <Col md={6} lg={7} xl={8} className="d-none d-md-block p-0 h-100">
-            <div
-              className="RightBoxContainer"
-              style={{ backgroundImage: `url(${RightBoxContainerImg2})` }}
-            />
-          </Col>
+          <ImageSection />
 
           {/* INFO SECTION */}
           <Col xs={12} md={6} lg={5} xl={4} className="p-0 h-100">

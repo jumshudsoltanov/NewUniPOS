@@ -224,18 +224,17 @@
     }
 }
 
-/* Mobile Styles (xs and sm - typically under 576px, but let's cover up to 768px for safety or stick to standard xs boundary) */
-@media (max-width: 575.98px) {
+/* Mobile Styles (up to 768px) */
+@media (max-width: 767.98px) {
     .table-wrapper {
         width: 100%;
-        height: auto;
-        aspect-ratio: 1.75 / 1;
+        height: 100px;
+        /* Slightly taller for better padding */
         margin: 0;
+        transform: none !important;
     }
 
-    /* ... rest of existing mobile styles ... */
-
-    /* Hide visuals that are not needed on mobile */
+    /* Hide desktop decorations */
     .seat,
     .status-dot,
     .print-action,
@@ -243,62 +242,105 @@
         display: none !important;
     }
 
-    /* Simple Card Style */
+    /* Premium Card Style */
     .table-surface {
         width: 100% !important;
         height: 100% !important;
         border-radius: 12px !important;
-        box-shadow: none !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        /* Center content vertically */
+        align-items: center !important;
+        /* Center content horizontally */
+        padding: 10px !important;
+        border: 1px solid rgba(0, 0, 0, 0.04) !important;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .table-surface:active {
+        transform: scale(0.96);
+    }
+
+    /* Richer Status Colors with better gradients */
+    .table-surface.occupied {
+        background: linear-gradient(145deg, #2563EB, #1E40AF) !important;
+    }
+
+    .table-surface.pending {
+        background: linear-gradient(145deg, #9333EA, #6B21A8) !important;
+    }
+
+    .table-surface.free {
+        background: #FFFFFF !important;
+        border: 1px solid #E5E7EB !important;
+    }
+
+    .table-content {
+        text-align: center !important;
+        /* Center text */
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        padding: 6px;
-        border: none !important;
+        height: 100%;
+        width: 100%;
     }
 
-    /* Flat Colors - Deeper/Richer */
-    .table-surface.occupied {
-        background: #2563EB !important;
-        /* Richer Blue */
-    }
-
-    .table-surface.pending {
-        background: #9333EA !important;
-        /* Richer Purple */
-    }
-
-    .table-surface.free {
-        background: #6B7280 !important;
-        /* Solid Gray */
-    }
-
-    /* Simple Text Styling */
+    /* Text Styling */
     .table-name {
-        color: white !important;
-        font-size: 14px !important;
-        margin-bottom: 2px !important;
-        font-weight: 600 !important;
-        text-shadow: none !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 4px 0 !important;
+    }
+
+    .table-surface.occupied .table-name,
+    .table-surface.pending .table-name {
+        color: rgba(255, 255, 255, 0.95) !important;
+    }
+
+    .table-surface.free .table-name {
+        color: #1F2937 !important;
     }
 
     .table-amount {
-        color: white !important;
-        font-size: 13px !important;
+        font-size: 16px !important;
         margin: 0 !important;
-        font-weight: 500 !important;
+        font-weight: 800 !important;
+    }
+
+    .table-surface.occupied .table-amount,
+    .table-surface.pending .table-amount {
+        color: #FFFFFF !important;
+    }
+
+    .table-surface.free .table-amount {
+        color: #2563EB !important;
     }
 
     .table-waiter-info {
-        color: rgba(255, 255, 255, 0.9) !important;
         font-size: 11px !important;
-        margin-top: 4px;
-        background: transparent;
-        padding: 0;
+        margin-top: 6px !important;
+        font-weight: 500 !important;
+        opacity: 0.8;
+    }
+
+    .table-surface.occupied .table-waiter-info,
+    .table-surface.pending .table-waiter-info {
+        color: rgba(255, 255, 255, 0.85) !important;
+    }
+
+    .table-surface.free .table-waiter-info {
+        color: #6B7280 !important;
     }
 
     /* Reset specific wrapper heights */
     .wrapper-rectangle {
-        height: auto !important;
+        height: 100px !important;
     }
 }

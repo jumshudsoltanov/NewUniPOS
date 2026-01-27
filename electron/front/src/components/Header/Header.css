@@ -185,33 +185,53 @@ ul li {
   right: 0;
   height: 56px;
   background: var(--Surface-Default, #053796);
-  /* Match header color */
   display: flex;
   align-items: stretch;
   z-index: 1000;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.mobile-footer::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
 }
 
 .mobile-tab-btn {
-  flex: 1;
+  flex: 0 0 auto;
+  min-width: 100px;
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.6);
   font-family: "Poppins", sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
+  padding: 0 15px;
   cursor: pointer;
-  /* transition: all 0.2s ease; */
   position: relative;
-  /* Visual separator */
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
 }
 
 .mobile-tab-btn.active {
-  background: rgba(255, 255, 255, 0.15);
-  /* Semi-transparent white for active */
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
   font-weight: 600;
+}
+
+.mobile-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #6F9FFA;
 }
 
 .mobile-add-btn {

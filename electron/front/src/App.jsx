@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { authPos } from "./redux/Slices/LoginSlice";
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
+import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -20,6 +21,10 @@ function AppContent() {
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
+    // Preload PIN background image
+    const img = new Image();
+    img.src = PinBackground;
+
     const initApp = async () => {
       const storageData = JSON.parse(localStorage.getItem("profile"));
 

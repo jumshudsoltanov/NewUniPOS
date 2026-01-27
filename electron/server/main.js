@@ -13,6 +13,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    // fullscreen: true,
     webPreferences: {
       preload: preloadPath,
       nodeIntegration: false,
@@ -61,7 +62,6 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-
 });
 
 app.on("window-all-closed", () => {

@@ -280,14 +280,14 @@ const Header = () => {
 
       {/* MOBILE FOOTER (Visible only on mobile) */}
       <div className="mobile-footer d-flex d-md-none">
-        {!tableGroups &&
-          tableGroups.map((hall, index) => (
+        {tableGroups &&
+          tableGroups?.data?.map((hall, index) => (
             <button
               key={index}
-              className={`mobile-tab-btn ${activeHall === index ? "active" : ""}`}
-              onClick={() => setActiveHall(index)}
+              className={`mobile-tab-btn ${activeHall === hall.id ? "active" : ""}`}
+              onClick={() => setActiveHall(hall.id)}
             >
-              {tableGroups}
+              {hall.name}
             </button>
           ))}
         <button className="mobile-add-btn">
