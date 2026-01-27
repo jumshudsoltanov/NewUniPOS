@@ -6,29 +6,55 @@ import Header from "./components/Header/Header";
 import Tables from "./components/Tables/Tables";
 import CustomerModal from "./components/Customers-Modal/CustomersModal";
 import Check from "./components/Check/Check";
-import { HashRouter, Routes, Route, Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { useEffect, useRef } from "react";
+import { authPos } from "./redux/Slices/LoginSlice";
+import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
+
+function AppContent() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const isFirstLoad = useRef(true);
+
+  useEffect(() => {
+    const storageData = JSON.parse(localStorage.getItem("profile"));
+
+    if (isFirstLoad.current) {
+      if (storageData) {
+        dispatch(authPos(storageData));
+        navigate("/pin");
+      } else {
+        navigate("/");
+      }
+      isFirstLoad.current = false;
+    }
+  }, [dispatch, navigate]);
+
+  return (
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/pin" element={<Pin />} />
+      <Route
+        path="/tables"
+        element={
+          <>
+            <Header />
+            <Tables />
+          </>
+        }
+      />
+      <Route path="/check/:id" element={<Check />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
-    <>
-      <HashRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/pin" element={<Pin />} />
-          <Route
-            path="/tables"
-            element={
-              <>
-                <Header />
-                <Tables />
-              </>
-            }
-          />
-          <Route path="/check/:id" element={<Check />} />
-        </Routes>
-      </HashRouter>
-    </>
+    <HashRouter>
+      <AppContent />
+    </HashRouter>
   );
 }
 

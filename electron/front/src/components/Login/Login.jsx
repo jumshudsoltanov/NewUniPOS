@@ -21,7 +21,7 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-  const [checkingLogin, setCheckingLogin] = useState(true);
+  const [checkingLogin, setCheckingLogin] = useState(false);
 
   // Settings menu handlers
   const handleRefresh = () => {
@@ -61,26 +61,7 @@ const Login = () => {
     }
   };
 
-  useEffect(() => {
-    const storageData = JSON.parse(localStorage.getItem("profile"));
-    if (!storageData) {
-      setCheckingLogin(false);
-      return;
-    }
 
-    const loginAndRedirect = async () => {
-      try {
-        await dispatch(authPos(storageData)).unwrap();
-        navigate("/pin");
-      } catch (err) {
-        console.log("Login failed", err);
-      } finally {
-        setCheckingLogin(false);
-      }
-    };
-
-    loginAndRedirect();
-  }, [dispatch, navigate]);
 
   return (
     <>

@@ -31,7 +31,11 @@ const CustomersModal = ({ show, onHide, table }) => {
     setGuestCount("0");
   };
 
+  const [isCreating, setIsCreating] = useState(false);
+
   const createOrder = async () => {
+    if (isCreating) return;
+    setIsCreating(true);
     try {
       const result = await dispatch(saleNewOrders(table)).unwrap();
       if (result.message === "success") {
@@ -40,6 +44,8 @@ const CustomersModal = ({ show, onHide, table }) => {
       console.log(result);
     } catch (err) {
       console.log("Cek yaradilmadi:", err);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -70,6 +76,7 @@ const CustomersModal = ({ show, onHide, table }) => {
                   variant="light"
                   className="keypad-btn"
                   onClick={() => handleNumberClick(num)}
+                  disabled={isCreating}
                 >
                   {num}
                 </Button>
@@ -80,6 +87,7 @@ const CustomersModal = ({ show, onHide, table }) => {
                 variant="light"
                 className="keypad-btn"
                 onClick={() => handleNumberClick(".")}
+                disabled={isCreating}
               >
                 .
               </Button>
@@ -89,6 +97,7 @@ const CustomersModal = ({ show, onHide, table }) => {
                 variant="light"
                 className="keypad-btn"
                 onClick={() => handleNumberClick(0)}
+                disabled={isCreating}
               >
                 0
               </Button>
@@ -98,6 +107,7 @@ const CustomersModal = ({ show, onHide, table }) => {
                 variant="light"
                 className="keypad-btn backspace-btn"
                 onClick={handleBackspace}
+                disabled={isCreating}
               >
                 <i className="bi bi-backspace"></i>
               </Button>
@@ -109,12 +119,19 @@ const CustomersModal = ({ show, onHide, table }) => {
       <Modal.Footer className="justify-content-center p-2 border-0">
         <Button
           className="w-100 save-btn"
+          disabled={isCreating}
           onClick={() => {
-            onHide;
             createOrder();
           }}
         >
-          Yadda saxla
+          {isCreating ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              Yaradılır...
+            </>
+          ) : (
+            "Yadda saxla"
+          )}
         </Button>
       </Modal.Footer>
     </Modal>

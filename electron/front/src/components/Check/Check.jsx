@@ -29,6 +29,7 @@ const Check = () => {
   const [showWaitersModal, setShowWaitersModal] = useState(false);
   const navigate = useNavigate();
   const { products } = useSelector((state) => state.OrderSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
   const goTables = () => {
     navigate("/tables");
@@ -67,6 +68,8 @@ const Check = () => {
     setShowOperationsModal(false);
     setShowWaitersModal(true);
   };
+
+  console.log(loginedProfileData);
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
