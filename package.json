@@ -8,29 +8,37 @@
     "dev-react": "npm run dev --prefix electron/front",
     "start-electron": "wait-on http://localhost:5173 && electron .",
     "build-front": "npm run build --prefix electron/front",
-    "dist": "npm run build-front && electron ."
+    "dist": "npm run build-front && electron .",
+    "pack": "npm run build-front && electron-builder --win --dir"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/unipostech/POS-ReDesing.git"
+  "build": {
+    "appId": "com.pos.redesing",
+    "productName": "POS Redesing",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "files": [
+      "electron/server/**/*",
+      "electron/backend/**/*",
+      "electron/front/dist/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "dir"
+    }
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/unipostech/POS-ReDesing/issues"
-  },
-  "homepage": "https://github.com/unipostech/POS-ReDesing#readme",
   "devDependencies": {
     "concurrently": "^9.2.1",
     "electron": "^40.0.0",
+    "electron-builder": "^24.13.3",
     "wait-on": "^9.0.3"
   },
   "dependencies": {
     "axios": "^1.13.3",
     "cors": "^2.8.6",
-    "dotevn": "^0.0.1-security",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "mariadb": "^3.4.5",
     "sequelize": "^6.37.7"
   }
