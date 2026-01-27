@@ -1,8 +1,11 @@
 .header {
   width: 100%;
-  height: clamp(48px, 8vh, 60px);
+  height: 60px;
+  /* Fixed height to match children */
   background: var(--Surface-Default, #053796);
   padding: 0 clamp(8px, 2vw, 16px);
+  overflow: hidden;
+  /* Prevent spillover */
 }
 
 /* Background container for the tabs */
@@ -18,7 +21,7 @@
 
 /* Individual Tab Button */
 .hall-btn {
-  height: 58px;
+  height: 60px;
   padding: 0 clamp(10px, 1.5vw, 16px);
   border: none;
   background: var(--Surface-Default, #053796);
@@ -48,8 +51,10 @@
   background: #021c4c;
   color: #fff;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  height: 58px;
+  box-shadow: none;
+  /* Removed shadow/border-look */
+  /* Ensure no border */
+  height: 60px;
 }
 
 /* ==================== */

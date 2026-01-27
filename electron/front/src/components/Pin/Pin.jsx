@@ -168,7 +168,7 @@ const Pin = () => {
       <Container fluid className="p-0 vh-100 overflow-hidden">
         <Row className="g-0 h-100">
           {/* IMAGE SECTION */}
-          <Col md={8} className="d-none d-md-block p-0 h-100">
+          <Col md={6} lg={7} xl={8} className="d-none d-md-block p-0 h-100">
             <div
               className="RightBoxContainer"
               style={{ backgroundImage: `url(${RightBoxContainerImg2})` }}
@@ -176,7 +176,7 @@ const Pin = () => {
           </Col>
 
           {/* INFO SECTION */}
-          <Col xs={12} md={4} className="p-0 h-100">
+          <Col xs={12} md={6} lg={5} xl={4} className="p-0 h-100">
             <div className="LeftBoxContainer">
               {/* Header */}
               <div className="infoHeader">

@@ -197,6 +197,33 @@
     justify-content: center;
 }
 
+@media (min-width: 576px) and (max-width: 1399.98px) {
+
+    /* Restore wrapper size for seats but scale down */
+    .table-wrapper {
+        transform: scale(0.75);
+        margin: -25px -25px !important;
+        /* Counteract scaling whitespace */
+        width: 200px;
+        /* Full size for seats */
+        height: 200px;
+    }
+
+    .wrapper-rectangle {
+        height: 300px;
+        /* Full height for rectangle wrapper */
+    }
+
+    /* Make table textual content slightly smaller */
+    .table-name {
+        font-size: 14px;
+    }
+
+    .table-amount {
+        font-size: 16px;
+    }
+}
+
 /* Mobile Styles (xs and sm - typically under 576px, but let's cover up to 768px for safety or stick to standard xs boundary) */
 @media (max-width: 575.98px) {
     .table-wrapper {
@@ -205,6 +232,8 @@
         aspect-ratio: 1.75 / 1;
         margin: 0;
     }
+
+    /* ... rest of existing mobile styles ... */
 
     /* Hide visuals that are not needed on mobile */
     .seat,

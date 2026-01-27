@@ -262,7 +262,7 @@ const Tables = () => {
     <Container fluid className="tables-scroll-container">
       <Row className="g-3">
         {tables.map((table, index) => (
-          <Col xs={6} sm={6} md={4} lg={3} xl={3} xxl={2} key={index} className="mb-3 d-flex justify-content-center">
+          <Col xs={6} sm={4} md={3} lg={2} xl={2} xxl={2} key={index} className="mb-3 d-flex justify-content-center">
             <Table table={table} />
           </Col>
         ))}

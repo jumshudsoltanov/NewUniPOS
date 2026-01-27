@@ -314,97 +314,47 @@
 /* ==================== */
 
 /* Tablet və kiçik desktop (768px - 1200px) */
-@media (min-width: 768px) and (max-width: 1200px) {
-  .LeftBoxContainer {
-    justify-content: flex-start;
-    padding: 5px 0;
-  }
-
-  .infoHeader {
-    position: relative;
-    padding: 6px 10px;
-  }
-
-  .supportBtn {
-    padding: 6px 10px;
-    font-size: 11px;
-    gap: 4px;
-  }
-
-  .burgerMenuBtn {
-    width: 32px;
-    height: 32px;
-  }
-
-  .burgerMenuBtn svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .statusIcons {
-    gap: 8px;
-  }
-
-  .logoContainer {
-    width: clamp(40px, 8vh, 50px);
-    height: clamp(40px, 8vh, 50px);
-    margin-bottom: 4px;
-    margin-top: 0;
-  }
-
+/* Tablet Vertical / Small Desktop (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991.98px) {
   .pinContainer {
     width: 280px;
     padding: 12px 12px;
-    margin-top: 4px;
-  }
-
-  .pinHeader {
-    margin-bottom: 8px;
-  }
-
-  .pinText {
-    font-size: 10px;
-  }
-
-  .pinDots {
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  .pin-dot {
-    width: 18px;
-    height: 18px;
-  }
-
-  .pin-dot svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .pinKeypad {
-    gap: 6px;
-  }
-
-  .pinKeypadRow {
-    gap: 6px;
   }
 
   .pin-btn {
     width: 60px;
     height: 40px;
     font-size: 16px;
-    border-radius: 8px;
   }
 
-  .terminalInfo {
-    padding: 6px 10px;
-    margin-top: 4px;
-    font-size: 9px;
-    gap: 6px;
+  .supportBtn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}
+
+/* Tablet Landscape / Medium Desktop (992px - 1300px) - Optimized for 1024px */
+@media (min-width: 992px) and (max-width: 1299.98px) {
+  .pinContainer {
+    width: 360px;
+    /* Comfortable width for 1024px split */
+    padding: 24px;
   }
 
-  .terminalId {
-    font-size: 10px;
+  .pin-btn {
+    width: 80px;
+    height: 55px;
+    /* Slightly smaller than full desktop but readable */
+    font-size: 22px;
+  }
+
+  .pinDots {
+    gap: 16px;
+  }
+
+  .logoContainer {
+    width: 90px;
+    height: 90px;
   }
 }
 
