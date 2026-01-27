@@ -6,6 +6,8 @@ const db = require("./database/config");
 app.use(express.json());
 const LoginModel = require("./model/LoginModel");
 const OrdersModel = require("./model/OdersModel");
+const WaitersModel = require("./model/WaitersModel");
+const { getWaitersList } = require("./data/WaitersData");
 
 // Allow Cors
 app.use(
@@ -33,6 +35,7 @@ let creaedtToTabel = async () => {
   try {
     await LoginModel.sync();
     await OrdersModel.sync();
+    await WaitersModel.sync();
     console.log("Created Table Success!");
   } catch (error) {
     console.log("Table Created Error", error);
@@ -41,6 +44,10 @@ let creaedtToTabel = async () => {
 
 connectToDatabase();
 creaedtToTabel();
+
+// Insert Pos Data
+getWaitersList();
+
 
 app.listen(55667, () => {
   console.log("Express Server Is Running");

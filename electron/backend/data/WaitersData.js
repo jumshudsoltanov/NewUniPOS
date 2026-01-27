@@ -1,0 +1,46 @@
+const { default: axios } = require("axios");
+const LoginModel = require("../model/LoginModel");
+const WaitersModel = require("../model/WaitersModel");
+
+const profileData = async () => {
+  const profile = await LoginModel.findOne({ attributes: ["id"], raw: true });
+  return profile ? profile.id : null;
+};
+
+const getWaitersList = async () => {
+  try {
+    const profile_id = await profileData();
+    if (!profile_id) throw new Error("Profile ID tapılmadı");
+
+    const response = await axios.get(
+      `http://46.224.8.157:35627/api/waiters/${profile_id}`,
+    );
+
+    if (response.data && Array.isArray(response.data.data)) {
+      const apiWaiters = response.data.data.map((w) => {
+        Object.keys(w).forEach((k) => {
+          if (w[k] === undefined) w[k] = 0;
+        });
+        return w;
+      });
+
+      const apiIds = apiWaiters.map((w) => w.id);
+
+      // DB-də olub, API-da olmayanları sil
+      await WaitersModel.destroy({ where: { id: { [Op.notIn]: apiIds } } });
+
+      // Insert / update
+      await WaitersModel.bulkCreate(apiWaiters, {
+        updateOnDuplicate: Object.keys(apiWaiters[0]),
+      });
+
+      console.log("DB sync olundu: insert/update + silindi");
+    }
+  } catch (err) {
+    console.error("Xəta:", err.message);
+  }
+};
+
+getWaitersList();
+
+module.exports = { profileData, getWaitersList };

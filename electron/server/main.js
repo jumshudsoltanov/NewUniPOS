@@ -23,7 +23,13 @@ function createWindow() {
   if (isDev) {
     win.loadURL("http://localhost:5173/");
   } else {
-    const indexPath = path.join(appPath, "electron", "front", "dist", "index.html");
+    const indexPath = path.join(
+      appPath,
+      "electron",
+      "front",
+      "dist",
+      "index.html",
+    );
     if (fs.existsSync(indexPath)) {
       win.loadFile(indexPath);
     } else {
@@ -55,6 +61,7 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
+
 });
 
 app.on("window-all-closed", () => {
