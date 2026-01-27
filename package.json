@@ -4,10 +4,11 @@
   "description": "",
   "main": "electron/server/main.js",
   "scripts": {
-    "start": "concurrently \"npm run dev-react\" \"npm run start-backend\" \"npm run start-electron\"",
+    "start": "concurrently \"npm run dev-react\" \"npm run start-electron\"",
     "dev-react": "npm run dev --prefix electron/front",
-    "start-backend": "node electron/backend/app.js",
-    "start-electron": "wait-on http://localhost:5173 && electron ."
+    "start-electron": "wait-on http://localhost:5173 && electron .",
+    "build-front": "npm run build --prefix electron/front",
+    "dist": "npm run build-front && electron ."
   },
   "repository": {
     "type": "git",

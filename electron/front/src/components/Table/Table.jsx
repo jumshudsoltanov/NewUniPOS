@@ -65,7 +65,7 @@ const Table = ({ table }) => {
 
           {/* Print Action */}
           <div className="print-action">
-            <div className="notification-badge">8</div>
+            <div className="notification-badge fw-bold">8</div>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
