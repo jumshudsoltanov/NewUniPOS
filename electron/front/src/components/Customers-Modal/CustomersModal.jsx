@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import "./CustomersModal.css";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 
-const CustomersModal = ({ show, onHide }) => {
-  const [guestCount, setGuestCount] = useState("5");
+const CustomersModal = ({ show, onHide, table }) => {
+  const [guestCount, setGuestCount] = useState("0");
+  const dispatch = useDispatch();
+  const { newSale } = useSelector((state) => state.SaleSlice);
   const navigate = useNavigate();
 
   const handleNumberClick = (num) => {
@@ -27,8 +31,16 @@ const CustomersModal = ({ show, onHide }) => {
     setGuestCount("0");
   };
 
-  const goCheck = () => {
-    navigate("/check");
+  const createOrder = async () => {
+    try {
+      const result = await dispatch(saleNewOrders(table)).unwrap();
+      if (result.message === "success") {
+        navigate(`/check/${result.data.id}`);
+      }
+      console.log(result);
+    } catch (err) {
+      console.log("Cek yaradilmadi:", err);
+    }
   };
 
   const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -99,7 +111,7 @@ const CustomersModal = ({ show, onHide }) => {
           className="w-100 save-btn"
           onClick={() => {
             onHide;
-            goCheck();
+            createOrder();
           }}
         >
           Yadda saxla

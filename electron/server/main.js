@@ -1,15 +1,20 @@
-const { BrowserWindow, app } = require("electron/main");
+const { BrowserWindow, app } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 const isDev = !app.isPackaged;
 
 function createWindow() {
+  const appPath = app.getAppPath();
+  const preloadPath = isDev
+    ? path.join(__dirname, "preload.js")
+    : path.join(appPath, "electron", "server", "preload.js");
+
   const win = new BrowserWindow({
-    width: 800,
-    height: 600,
-    fullscreen: false,
+    width: 1200,
+    height: 800,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: preloadPath,
       nodeIntegration: false,
       contextIsolation: true,
     },
@@ -18,12 +23,29 @@ function createWindow() {
   if (isDev) {
     win.loadURL("http://localhost:5173/");
   } else {
-    win.loadFile(path.join(__dirname, "../front/dist/index.html"));
+    const indexPath = path.join(appPath, "electron", "front", "dist", "index.html");
+    if (fs.existsSync(indexPath)) {
+      win.loadFile(indexPath);
+    } else {
+      console.error("Index file not found:", indexPath);
+    }
   }
 }
 
-// Start backend server
-require("../backend/app.js");
+// Start backend server with error handling
+try {
+  const appPath = app.getAppPath();
+  const backendPath = isDev
+    ? path.join(__dirname, "..", "backend", "app.js")
+    : path.join(appPath, "electron", "backend", "app.js");
+  if (fs.existsSync(backendPath)) {
+    require(backendPath);
+  } else {
+    console.error("Backend file not found:", backendPath);
+  }
+} catch (err) {
+  console.error("Failed to start backend:", err);
+}
 
 app.whenReady().then(() => {
   createWindow();

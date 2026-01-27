@@ -139,7 +139,7 @@
   color: #1A1A1A;
   background-color: #FFFFFF;
   font-family: inherit;
-  border:  1px solid #007AFF;
+  border: 1px solid #007AFF;
 }
 
 .customInput:focus {
@@ -231,5 +231,79 @@ form {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ==================== */
+/* Loading State        */
+/* ==================== */
+
+.loginLoadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  animation: fadeIn 1.2s ease-out;
+}
+
+.premium-loader {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 24px;
+}
+
+.loader-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007AFF;
+  border-radius: 50%;
+  animation: spin 4s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.loader-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background-color: #007AFF;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+.loadingText {
+  font-size: 16px;
+  color: #666;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  animation: fadeIn 2.5s ease-out;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
   }
 }

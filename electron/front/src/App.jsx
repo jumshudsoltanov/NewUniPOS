@@ -6,18 +6,16 @@ import Header from "./components/Header/Header";
 import Tables from "./components/Tables/Tables";
 import CustomerModal from "./components/Customers-Modal/CustomersModal";
 import Check from "./components/Check/Check";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { HashRouter, Routes, Route, Link } from "react-router-dom";
 import Login from "./components/Login/Login";
-
 
 function App() {
   return (
     <>
-    
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Login />} />
-           <Route path="/pin" element={<Pin />}  />
+          <Route path="/pin" element={<Pin />} />
           <Route
             path="/tables"
             element={
@@ -27,9 +25,9 @@ function App() {
               </>
             }
           />
-          <Route path="/check" element={<Check />} />
+          <Route path="/check/:id" element={<Check />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </>
   );
 }

@@ -4,6 +4,7 @@ import CustomersModal from "../Customers-Modal/CustomersModal";
 
 const Table = ({ table }) => {
   const { name, amount, currency, waiter, status, type } = table || {};
+  const [selectedTable, setSelectedTable] = useState(null);
 
   const renderSeats = () => {
     if (type === "rectangle") {
@@ -31,7 +32,8 @@ const Table = ({ table }) => {
 
   const [showModal, setShowModal] = useState(false);
 
-  const handleTableClick = () => {
+  const handleTableClick = (table) => {
+    setSelectedTable(table)
     setShowModal(true);
   };
 
@@ -39,7 +41,7 @@ const Table = ({ table }) => {
     <>
       <div
         className={`table-wrapper wrapper-${type || "square"}`}
-        onClick={handleTableClick}
+        onClick={() => handleTableClick(table)}
         style={{ cursor: "pointer" }}
       >
         {/* Seats */}
@@ -85,7 +87,7 @@ const Table = ({ table }) => {
         </div>
       </div>
 
-      <CustomersModal show={showModal} onHide={() => setShowModal(false)} />
+      <CustomersModal show={showModal} onHide={() => setShowModal(false)} table={selectedTable} />
     </>
   );
 };

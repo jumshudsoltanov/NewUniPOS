@@ -15,14 +15,17 @@
     "appId": "com.pos.redesing",
     "productName": "POS Redesing",
     "asar": true,
+    "extraResources": [
+      ".env"
+    ],
     "files": [
-      "electron/server/**/*",
-      "electron/backend/**/*",
-      "electron/front/dist/**/*",
-      "package.json"
+      "electron/**/*",
+      "package.json",
+      "node_modules/**/*"
     ],
     "win": {
-      "target": "dir"
+      "target": "dir",
+      "requestedExecutionLevel": "asInvoker"
     }
   },
   "devDependencies": {

@@ -21,6 +21,7 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const [checkingLogin, setCheckingLogin] = useState(true);
 
   // Settings menu handlers
   const handleRefresh = () => {
@@ -39,7 +40,7 @@ const Login = () => {
     console.log("Terminaldan çıx");
   };
 
-  const senToLoginBrand = () => {
+  const senToLoginBrand = async () => {
     const profileData = {
       username: brand,
       terminalId: terminalId,
@@ -47,20 +48,39 @@ const Login = () => {
       login: true,
     };
 
-    localStorage.setItem("profile", JSON.stringify(profileData));
-    dispatch(authPos(profileData));
+    try {
+      setCheckingLogin(true); // Show loader while logging in
+      await dispatch(authPos(profileData)).unwrap();
+      localStorage.setItem("profile", JSON.stringify(profileData));
+      navigate("/pin");
+    } catch (err) {
+      console.error("Manual login failed:", err);
+      setIsError(true);
+    } finally {
+      setCheckingLogin(false);
+    }
   };
-
 
   useEffect(() => {
     const storageData = JSON.parse(localStorage.getItem("profile"));
-    if (!storageData) return;
-
-    if (storageData.login === true) {
-      dispatch(authPos(storageData));
-      navigate("/pin");
+    if (!storageData) {
+      setCheckingLogin(false);
+      return;
     }
-  }, [dispatch]);
+
+    const loginAndRedirect = async () => {
+      try {
+        await dispatch(authPos(storageData)).unwrap();
+        navigate("/pin");
+      } catch (err) {
+        console.log("Login failed", err);
+      } finally {
+        setCheckingLogin(false);
+      }
+    };
+
+    loginAndRedirect();
+  }, [dispatch, navigate]);
 
   return (
     <>
@@ -190,7 +210,15 @@ const Login = () => {
 
               {/* Login Container */}
               <div className="loginFormContainer">
-                {step === 1 ? (
+                {checkingLogin ? (
+                  <div className="loginLoadingState">
+                    <div className="premium-loader">
+                      <div className="loader-ring"></div>
+                      <div className="loader-dot"></div>
+                    </div>
+                    <p className="loadingText">Məlumatlar yoxlanılır...</p>
+                  </div>
+                ) : step === 1 ? (
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -199,7 +227,7 @@ const Login = () => {
                   >
                     <div className="inputGroup">
                       <div className="inputIcon">
-                        <i class="bi bi-microsoft"></i>
+                        <i className="bi bi-microsoft"></i>
                       </div>
                       <input
                         type="text"
@@ -218,11 +246,7 @@ const Login = () => {
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      console.log("Login attempt", {
-                        brand,
-                        terminalId,
-                        password,
-                      });
+                      senToLoginBrand();
                     }}
                   >
                     <div className="inputGroup mb-3">

@@ -5,6 +5,7 @@ const cors = require("cors");
 const db = require("./database/config");
 app.use(express.json());
 const LoginModel = require("./model/LoginModel");
+const OrdersModel = require("./model/OdersModel");
 
 // Allow Cors
 app.use(
@@ -31,6 +32,7 @@ let connectToDatabase = async () => {
 let creaedtToTabel = async () => {
   try {
     await LoginModel.sync();
+    await OrdersModel.sync();
     console.log("Created Table Success!");
   } catch (error) {
     console.log("Table Created Error", error);
