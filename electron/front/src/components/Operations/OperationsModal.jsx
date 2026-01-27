@@ -8,6 +8,8 @@ export const OperationsModal = ({
   clearCheck,
   openCommentModal,
   openDiscountModal,
+  openServiceFee,
+  openWaitersModal,
 }) => {
   const operations = [
     { icon: "bi-arrows-angle-expand", text: "Çeki böl" },
@@ -22,8 +24,12 @@ export const OperationsModal = ({
     { icon: "bi-collection", text: "Çeki birləşdir" },
     { icon: "bi-person-check", text: "Satıcı təyin et" },
     { icon: "bi-arrow-left-right", text: "Satış üsulunu dəyiş" },
-    { icon: "bi-bell", text: "Xidmət haqqı əlavə et" },
-    { icon: "bi-people", text: "Əməkdaş dəyiş" },
+    {
+      icon: "bi-bell",
+      text: "Xidmət haqqı əlavə et",
+      functions: openServiceFee,
+    },
+    { icon: "bi-people", text: "Əməkdaş dəyiş", functions: openWaitersModal },
   ];
 
   return (

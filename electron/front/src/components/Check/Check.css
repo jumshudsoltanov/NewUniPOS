@@ -1121,24 +1121,28 @@
     font-size: 0.75rem;
 }
 
+/* Update Detail Columns */
 .col-name-header,
 .col-name {
-    flex: 2;
-    /* 50% roughly */
+    flex: 1.8;
+    /* Reduced from 2 to give space to others */
     text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 5px;
 }
 
 .col-qty-header,
 .col-qty {
-    flex: 1;
-    /* 25% */
+    flex: 1.2;
+    /* Increased from 1 */
     text-align: center;
 }
 
 .col-total-header,
 .col-total {
     flex: 1;
-    /* 25% */
     text-align: right;
 }
 
@@ -1146,12 +1150,14 @@
 .order-item {
     display: flex;
     align-items: center;
-    padding: 12px 15px;
+    padding: 12px 10px;
+    /* Reduced side padding */
     border-bottom: 1px dashed #e2e8f0;
 }
 
 .col-qty {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    /* Slightly smaller */
     color: #64748b;
     white-space: nowrap;
 }
@@ -1159,7 +1165,7 @@
 .col-total {
     font-weight: 600;
     color: #053796;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
 }
 
 /* Highlight for new order items */

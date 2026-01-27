@@ -57,7 +57,7 @@ const Table = ({ table }) => {
               {amount} {currency}
             </p>
 
-            <div className="waiter-info">
+            <div className="table-waiter-info">
               <i className="bi bi-people"></i>
               <span>{waiter}</span>
             </div>

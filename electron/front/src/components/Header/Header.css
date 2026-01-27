@@ -228,3 +228,20 @@ ul li {
     /* On mobile, possibly darker or different background */
   }
 }
+
+@media (max-width: 1199.98px) {
+
+  .create-order-btn,
+  .waiter-btn {
+    padding: 0;
+    width: 40px;
+    /* Square button */
+    justify-content: center;
+  }
+
+  .create-order-btn span,
+  .waiter-btn span {
+    display: none;
+    /* Redundant but safe */
+  }
+}

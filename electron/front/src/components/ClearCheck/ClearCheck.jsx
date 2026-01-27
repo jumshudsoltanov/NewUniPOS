@@ -12,7 +12,7 @@ const ClearCheck = ({ show, onClose }) => {
       <Modal.Header closeButton style={{ backgroundColor: "#0062CC" }}>
         <Modal.Title className="text-white">Xəbərdarlıq</Modal.Title>
       </Modal.Header>
-      <Modal.Body className="text-center">
+      <Modal.Body className="text-center fw-bold">
         Qəbzi təmizləmək istədiyinizə əminsiniz?
       </Modal.Body>
       <Modal.Footer>

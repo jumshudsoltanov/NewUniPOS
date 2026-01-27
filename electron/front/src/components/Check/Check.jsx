@@ -6,12 +6,15 @@ import CheckHeader from "./CheckHeader";
 import CheckMain from "./CheckMain";
 import CheckBottom from "./CheckBottom";
 import OperationsModal from "../Operations/OperationsModal";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import CheckLockModal from "../Check-Lock/CheckLockModal";
 import CommentModal from "../CommentModal/CommentModal";
 import ClearCheck from "../ClearCheck/ClearCheck";
 import DiscountModal from "../DiscountModal/DiscountModal";
+import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
+import WaitersModal from "../Waiters/WaitersModal";
+
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -22,6 +25,8 @@ const Check = () => {
   const [comment, setComment] = useState(false);
   const [onShowClearModal, setOnShowClearModal] = useState(false);
   const [onShowDiscount, setOnShowDiscount] = useState(false);
+  const [onShowServiceFee, setOnShowServiceFee] = useState(false);
+  const [showWaitersModal, setShowWaitersModal] = useState(false);
   const navigate = useNavigate();
   const { products } = useSelector((state) => state.OrderSlice);
 
@@ -53,12 +58,23 @@ const Check = () => {
     setOnShowDiscount(true);
   };
 
+  const openServiceFee = () => {
+    setShowOperationsModal(false);
+    setOnShowServiceFee(true);
+  };
+
+  const openWaitersModal = () => {
+    setShowOperationsModal(false);
+    setShowWaitersModal(true);
+  };
+
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
       <Row className="h-100 g-0">
         <Col
           md={12}
-          lg={4}
+          lg={5}
+          xl={4}
           className={`h-100 ${activeMobileTab !== "check" ? "d-none d-lg-block" : ""}`}
         >
           <div className="check-container h-100 d-flex mobile-content-adjust">
@@ -382,69 +398,168 @@ const Check = () => {
         {/* Menu Section */}
         <Col
           md={12}
-          lg={8}
+          lg={7}
+          xl={8}
           className={`h-100 bg-light ${activeMobileTab !== "menu" ? "d-none d-lg-block" : ""}`}
         >
           <div className="checkRightBox h-100 d-flex flex-column bg-light mobile-content-adjust">
             {/* Top Info Bar (Dark Blue) */}
             <div className="right-top-header d-none d-md-flex justify-content-end align-items-center px-3 py-2 text-white">
-              <div className="tools-divider"></div>
+              <button className="create-order-btn small-btn">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 5V19M5 12H19"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span className="d-none d-xl-inline">Yeni sifariş</span>
+              </button>
 
-              {/* Menu Hamburger */}
-              <i className="bi bi-list fs-4 cursor-pointer mx-2"></i>
-
-              <div className="tools-divider"></div>
-
-              {/* Waiter */}
-              <div className="d-flex align-items-center gap-2 cursor-pointer mx-2">
-                <i className="bi bi-box-arrow-in-right fs-5"></i>
-                <span className="fw-bold">Anar Rasulov</span>
+              {/* Checks */}
+              <div className="header-action-item small-item">
+                <span className="d-none d-xl-inline">Çeklər</span>
+                <svg
+                  className="d-xl-none"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51z" />
+                  <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" />
+                </svg>
+                <span className="count-badge">4</span>
               </div>
 
               <div className="tools-divider"></div>
 
-              {/* Bell */}
-              <i className="bi bi-bell fs-5 cursor-pointer mx-2"></i>
+              {/* Menu Hamburger */}
+              <button className="header-icon-btn small-icon-btn">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M3 12H21M3 6H21M3 18H21"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+
+              {/* Waiter */}
+              <div className="tools-divider"></div>
+
+              {/* Waiter/Exit Icon */}
+              <Link
+                className="header-icon-btn small-icon-btn waiter-btn"
+                to="/"
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M16 17L21 12L16 7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M21 12H9"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <span className="d-none d-xl-inline">Ofisiant</span>
+                </div>
+              </Link>
 
               <div className="tools-divider"></div>
 
-              {/* Wifi */}
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
-                  stroke="#00FF6A"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
-                  stroke="#00FF6A"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
-                  stroke="#00FF6A"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
-                  stroke="#00FF6A"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              {/* Notification Bell */}
+              <button className="header-icon-btn small-icon-btn">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    d="M18 8A6 6 0 0 0 6 8C6 15 3 21 3 21H21S18 15 18 8Z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M13.73 21A2 2 0 0 1 10.27 21" />
+                </svg>
+              </button>
+
+              <div className="tools-divider"></div>
+
+              {/* Wifi Icon */}
+              <div className="header-icon-btn small-icon-btn wifi-icon">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
+                    stroke="#00FF6A"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
+                    stroke="#00FF6A"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
+                    stroke="#00FF6A"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
+                    stroke="#00FF6A"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
             </div>
 
             {/* Bottom Action Bar (White) */}
@@ -592,6 +707,8 @@ const Check = () => {
         clearCheck={clearCheck}
         openCommentModal={openCommentModal}
         openDiscountModal={openDiscountModal}
+        openServiceFee={openServiceFee}
+        openWaitersModal={openWaitersModal}
       />
 
       <CheckLockModal
@@ -615,6 +732,16 @@ const Check = () => {
       <DiscountModal
         show={onShowDiscount}
         onClose={() => setOnShowDiscount(false)}
+      />
+
+      <ServiceFeeModal
+        show={onShowServiceFee}
+        onClose={() => setOnShowServiceFee(false)}
+      />
+
+      <WaitersModal
+        show={showWaitersModal}
+        onClose={() => setShowWaitersModal(false)}
       />
     </Container>
   );
