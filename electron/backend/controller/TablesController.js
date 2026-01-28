@@ -1,6 +1,7 @@
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
 const OrdersModel = require("../model/OdersModel");
+const WaitersModel = require("../model/WaitersModel");
 
 const getTables = async (req, res) => {
   const { profileId } = req.params;
@@ -11,6 +12,10 @@ const getTables = async (req, res) => {
         model: TablesModel,
         include: {
           model: OrdersModel,
+          include: {
+            model: WaitersModel,
+            as: "waiter",
+          },
           as: "orders",
         },
       },

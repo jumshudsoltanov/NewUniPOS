@@ -42,6 +42,6 @@ const getWaitersList = async () => {
   }
 };
 
-getWaitersList();
+
 
 module.exports = { profileData, getWaitersList };

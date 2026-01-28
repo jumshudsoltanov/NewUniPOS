@@ -1,5 +1,7 @@
 const axios = require("axios");
 const LoginModel = require("../model/LoginModel");
+const { getWaitersList } = require("../data/WaitersData");
+const { getTableGroups, getTables } = require("../data/TablesData");
 let token =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9maWxlX2lkIjoxNCwidGVybWluYWxfaWQiOjYwMTUyNzM1LCJ0ZXJtaW5hbF9ncm91cF9pZCI6MjExLCJpc19tYXN0ZXIiOjEsInVzZXJuYW1lIjoidW5pcG9zIiwicmVzdGF1cmFudF9uYW1lIjoiVW5pUE9TIFRlY2hub2xvZ2llcyBSZXN0b3JhbiAiLCJpYXQiOjE3Njk0NDYwMDMsImV4cCI6MTgwMDk4MjAwM30.5xADfX7YasOcKKC9oP-w-949SAxbM_fUq_p13zSf4_8";
 
@@ -32,6 +34,11 @@ const getLogin = async (req, res) => {
       profile_id: profile.id,
       ...profile,
     });
+
+    // Fetch initial data after login
+    await getWaitersList();
+    await getTableGroups();
+    await getTables();
 
     res.status(200).json(response.data);
   } catch (error) {

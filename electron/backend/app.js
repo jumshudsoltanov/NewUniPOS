@@ -9,6 +9,7 @@ const TableGroupsModel = require("./model/TableGroupsModel");
 const OrdersModel = require("./model/OdersModel");
 const OrdersItemsModel = require("./model/OrdersItemsModel");
 const WaitersModel = require("./model/WaitersModel");
+const LoginModel = require("./model/LoginModel");
 const { getWaitersList } = require("./data/WaitersData");
 const { getTableGroups, getTables } = require("./data/TablesData");
 
@@ -44,8 +45,14 @@ let creaedtToTabel = async () => {
     OrdersModel.belongsTo(TablesModel, { foreignKey: "table_id" });
 
     //Waiters Relations
-    OrdersModel.hasMany(WaitersModel, { foreignKey: "waiter_id" });
-    WaitersModel.belongsTo(OrdersModel, { foreignKey: "waiter_id" });
+    WaitersModel.hasMany(OrdersModel, {
+      foreignKey: "waiter_id",
+      as: "orders",
+    });
+    OrdersModel.belongsTo(WaitersModel, {
+      foreignKey: "waiter_id",
+      as: "waiter",
+    });
 
     // Ordered Items
     OrdersModel.hasMany(OrdersItemsModel, {
@@ -75,12 +82,12 @@ const InsertData = async () => {
   }
 };
 
-connectToDatabase();
-creaedtToTabel();
+(async () => {
+  await connectToDatabase();
+  await creaedtToTabel();
+  await InsertData();
 
-// Insert Pos Data
-InsertData();
-
-app.listen(55667, () => {
-  console.log("Express Server Is Running");
-});
+  app.listen(55667, () => {
+    console.log("Express Server Is Running");
+  });
+})();
