@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import "./Table.css";
 import CustomersModal from "../Customers-Modal/CustomersModal";
+import { useNavigate } from "react-router-dom";
 
-const Table = ({ table }) => {
-  const { name, status, shape_type } = table || {};
+const Table = React.memo(({ table }) => {
+  const { name, status, shape_type, orders, current_waiter } = table || {};
   const [selectedTable, setSelectedTable] = useState(null);
-
+  const [showModal, setShowModal] = useState(false);
+  const navigate = useNavigate();
   const renderSeats = () => {
     if (shape_type === "rectangle") {
       return (
@@ -19,7 +21,6 @@ const Table = ({ table }) => {
         </>
       );
     }
-    // Default for square and round (4 seats)
     return (
       <>
         <div className="seat seat-top"></div>
@@ -30,11 +31,14 @@ const Table = ({ table }) => {
     );
   };
 
-  const [showModal, setShowModal] = useState(false);
-
-  const handleTableClick = (table) => {
-    setSelectedTable(table);
-    setShowModal(true);
+  const handleTableClick = (tableData) => {
+    setSelectedTable(tableData);
+    if (orders?.length > 0) {
+      setShowModal(false);
+      navigate(`/check/${orders[0].id}`);
+    } else {
+      setShowModal(true);
+    }
   };
 
   return (
@@ -44,30 +48,41 @@ const Table = ({ table }) => {
         onClick={() => handleTableClick(table)}
         style={{ cursor: "pointer" }}
       >
-        {/* Seats */}
         {renderSeats()}
 
-        {/* Table Surface/Body */}
         <div
-          className={`table-surface table-${shape_type || "square"} ${status}`}
+          className={`table-surface table-${shape_type || "square"} ${status} ${orders?.length > 0 ? "" : ""}`}
         >
           {/* Status Dot */}
-          <div className="status-dot"></div>
+          <div
+            className={`status-dot ${orders?.length > 0 ? "has-orders" : ""}`}
+          ></div>
 
           {/* Center Content */}
           <div className="table-content">
-            <h3 className="table-name">{name}</h3>
-            <p className="table-amount">0 ₼</p>
+            <h3
+              className={`table-name ${status} ${orders?.length > 0 ? "" : ""}`}
+            >
+              {name}
+            </h3>
+            <p
+              className={`table-amount ${status} ${orders?.length > 0 ? "" : ""}`}
+            >
+              0 ₼
+            </p>
 
-            <div className="table-waiter-info">
+            <div
+              className={`table-waiter-info ${status} ${orders?.length > 0 ? "" : ""}`}
+            >
               <i className="bi bi-people"></i>
-              <span>Tural</span>
+              <span>{current_waiter || "—"}</span>
             </div>
           </div>
 
-          {/* Print Action */}
           <div className="print-action">
-            <div className="notification-badge fw-bold">8</div>
+            <div className="notification-badge fw-bold">
+              {orders?.length || 0}
+            </div>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -94,6 +109,6 @@ const Table = ({ table }) => {
       />
     </>
   );
-};
+});
 
 export default Table;

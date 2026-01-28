@@ -4,7 +4,7 @@ import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault
 import DefaultLogo from "../../assets/images/unipos_logo.png";
 import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getWaiter } from "../../redux/Slices/WaitersSlice";
@@ -101,17 +101,30 @@ const ClearIcon = () => (
   </svg>
 );
 
-const ImageSection = React.memo(() => {
+const ImageSection = React.memo((backgroundImg) => {
   const [loaded, setLoaded] = useState(false);
 
   return (
-    <Col md={6} lg={7} xl={8} className="d-none d-md-block p-0 h-100" style={{ background: '#f8f9fa' }}>
-      <div className="RightBoxContainer" style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+    <Col
+      md={6}
+      lg={7}
+      xl={8}
+      className="d-none d-md-block p-0 h-100"
+      style={{ background: "#f8f9fa" }}
+    >
+      <div
+        className="RightBoxContainer"
+        style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.5s ease" }}
+      >
         <img
-          src={RightBoxContainerImg2}
+          src={
+            backgroundImg?.backgroundImg
+              ? `https://unipos.tech/${backgroundImg.backgroundImg}`
+              : RightBoxContainerImg2
+          }
           alt="Background"
           onLoad={() => setLoaded(true)}
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </div>
     </Col>
@@ -125,6 +138,7 @@ const Pin = () => {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const dispatch = useDispatch();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const navigate = useNavigate();
 
   // Settings menu handlers
@@ -183,14 +197,14 @@ const Pin = () => {
     }
   };
 
-
-
   return (
     <>
       <Container fluid className="p-0 vh-100 overflow-hidden">
         <Row className="g-0 h-100">
           {/* IMAGE SECTION */}
-          <ImageSection />
+          <ImageSection
+            backgroundImg={loginedProfileData.data.profile.background_img}
+          />
 
           {/* INFO SECTION */}
           <Col xs={12} md={6} lg={5} xl={4} className="p-0 h-100">

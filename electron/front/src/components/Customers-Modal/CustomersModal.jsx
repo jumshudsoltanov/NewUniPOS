@@ -1,15 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import "./CustomersModal.css";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
+import {
+  getTableGroups,
+  currentTableList,
+} from "../../redux/Slices/TablesSlice";
 
 const CustomersModal = ({ show, onHide, table }) => {
   const [guestCount, setGuestCount] = useState("0");
   const dispatch = useDispatch();
-  const { newSale } = useSelector((state) => state.SaleSlice);
+  // const { newSale } = useSelector((state) => state.SaleSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { currentHallId } = useSelector((state) => state.TablesSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
   const navigate = useNavigate();
 
   const handleNumberClick = (num) => {
@@ -33,11 +41,24 @@ const CustomersModal = ({ show, onHide, table }) => {
 
   const [isCreating, setIsCreating] = useState(false);
 
-  const createOrder = async () => {
+  const createOrder = useCallback(async () => {
     if (isCreating) return;
     setIsCreating(true);
+
+    const payload = {
+      guestCount,
+      tableId: table.id,
+      waiterId: loginedWaiter.data.id,
+      terminalId: loginedProfileData.data.terminal.terminal_id,
+      profileId: loginedProfileData.data.profile.id,
+      sale_type: 0,
+      hallId: currentHallId,
+      status: 1,
+      is_selected: 1,
+    };
+
     try {
-      const result = await dispatch(saleNewOrders(table)).unwrap();
+      const result = await dispatch(saleNewOrders(payload)).unwrap();
       if (result.message === "success") {
         navigate(`/check/${result.data.id}`);
       }
@@ -47,7 +68,21 @@ const CustomersModal = ({ show, onHide, table }) => {
     } finally {
       setIsCreating(false);
     }
-  };
+  }, [
+    dispatch,
+    guestCount,
+    table?.id,
+    loginedWaiter.data.id,
+    loginedProfileData.data.terminal.terminal_id,
+    loginedProfileData.data.profile.id,
+    currentHallId,
+    navigate,
+    isCreating,
+  ]);
+
+  // useEffect(() => {
+  //   dispatch(currentTableList(currentHallId));
+  // }, [dispatch, currentHallId]);
 
   const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
@@ -126,7 +161,11 @@ const CustomersModal = ({ show, onHide, table }) => {
         >
           {isCreating ? (
             <>
-              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
               Yaradılır...
             </>
           ) : (

@@ -6,6 +6,8 @@ const db = require("./database/config");
 app.use(express.json());
 const TablesModel = require("./model/TablesModel");
 const TableGroupsModel = require("./model/TableGroupsModel");
+const OrdersModel = require("./model/OdersModel");
+const OrdersItemsModel = require("./model/OrdersItemsModel");
 const { getWaitersList } = require("./data/WaitersData");
 const { getTableGroups, getTables } = require("./data/TablesData");
 
@@ -36,6 +38,21 @@ let creaedtToTabel = async () => {
     // Tables and Halls
     TableGroupsModel.hasMany(TablesModel, { foreignKey: "hall_id" });
     TablesModel.belongsTo(TableGroupsModel, { foreignKey: "hall_id" });
+    // Orders
+    TablesModel.hasMany(OrdersModel, { foreignKey: "table_id", as: "orders" });
+    OrdersModel.belongsTo(TablesModel, { foreignKey: "table_id" });
+
+    // Ordered Items
+    OrdersModel.hasMany(OrdersItemsModel, {
+      foreignKey: "order_id",
+      sourceKey: "uuid",
+      as: "orders_items",
+    });
+    OrdersItemsModel.belongsTo(OrdersModel, {
+      foreignKey: "order_id",
+      targetKey: "uuid",
+    });
+
     db.sequelize.sync();
     console.log("Created Table Success!");
   } catch (error) {

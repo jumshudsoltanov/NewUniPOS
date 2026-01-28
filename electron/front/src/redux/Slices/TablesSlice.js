@@ -19,23 +19,20 @@ const TablesSlice = createSlice({
   name: "tables",
   initialState: {
     tableGroups: {},
-    tables: {},
+    currentHallId: null,
   },
   reducers: {
     currentTableList: (state, action) => {
-      const { hallId } = action.payload;
-      if (state.tableGroups?.data) {
-        state.tables = state.tableGroups.data.filter(
-          (table) => table.id == hallId,
-        );
-      } else {
-        state.tables = [];
-      }
+      state.currentHallId = action.payload.hallId;
     },
   },
   extraReducers: (builder) => {
     builder.addCase(getTableGroups.fulfilled, (state, action) => {
       state.tableGroups = action.payload;
+      // Set default hall if not set
+      if (!state.currentHallId && action.payload?.data?.length > 0) {
+        state.currentHallId = action.payload.data[0].id;
+      }
     });
   },
 });

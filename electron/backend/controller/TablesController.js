@@ -1,12 +1,18 @@
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
+const OrdersModel = require("../model/OdersModel");
 
 const getTables = async (req, res) => {
   const { profileId } = req.params;
   try {
     const tables = await TableGroupsModel.findAll({
       where: { profile_id: profileId },
-      include: { model: TablesModel },
+      include: {
+        model: TablesModel,
+        include: {
+          model: OrdersModel, as: "orders",
+        },
+      },
     });
     if (tables.length === 0) {
       res

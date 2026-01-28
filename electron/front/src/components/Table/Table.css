@@ -344,3 +344,7 @@
         height: 100px !important;
     }
 }
+
+.has-orders {
+    background-color: #047857;
+}

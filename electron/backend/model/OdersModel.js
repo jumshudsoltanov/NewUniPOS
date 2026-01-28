@@ -16,7 +16,6 @@ const OrdersModel = db.sequelize.define(
       unique: true,
     },
 
-    local_id: { type: DataTypes.INTEGER, allowNull: true },
     profile_id: { type: DataTypes.INTEGER, allowNull: true },
     sale_type: { type: DataTypes.INTEGER, allowNull: true },
     terminal_id: { type: DataTypes.TEXT, allowNull: true },
@@ -29,7 +28,6 @@ const OrdersModel = db.sequelize.define(
 
     end_date: { type: DataTypes.DATE, allowNull: true },
     hall_id: { type: DataTypes.INTEGER, allowNull: true },
-    table_id: { type: DataTypes.INTEGER, allowNull: true },
 
     amount: { type: DataTypes.FLOAT, allowNull: true },
     service_charge: { type: DataTypes.FLOAT, allowNull: true },
