@@ -47,7 +47,7 @@ const OrdersModel = db.sequelize.define(
     total: { type: DataTypes.FLOAT, allowNull: true },
     status: { type: DataTypes.INTEGER, allowNull: true },
     guest_count: { type: DataTypes.INTEGER, allowNull: true },
-    waiter_id: { type: DataTypes.INTEGER, allowNull: true },
+    // waiter_id: { type: DataTypes.INTEGER, allowNull: true },
 
     is_selected: { type: DataTypes.INTEGER, allowNull: true },
     deposit: { type: DataTypes.FLOAT, allowNull: true },

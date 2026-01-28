@@ -9,7 +9,7 @@ const Tables = () => {
 
   const currentTables = useMemo(() => {
     if (!tableGroups?.data || !currentHallId) {
-      return tableGroups?.data?.[0]?.tables || []; // Fallback to first hall if none selected
+      return tableGroups?.data?.[0]?.tables || []; //
     }
     const selectedHall = tableGroups.data.find((hall) => hall.id === currentHallId);
     return selectedHall?.tables || [];

@@ -6,11 +6,12 @@ const getTables = async (req, res) => {
   const { profileId } = req.params;
   try {
     const tables = await TableGroupsModel.findAll({
-      where: { profile_id: profileId },
+      where: { profile_id: profileId, status: 1 },
       include: {
         model: TablesModel,
         include: {
-          model: OrdersModel, as: "orders",
+          model: OrdersModel,
+          as: "orders",
         },
       },
     });

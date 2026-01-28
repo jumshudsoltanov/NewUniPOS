@@ -8,6 +8,7 @@ const TablesModel = require("./model/TablesModel");
 const TableGroupsModel = require("./model/TableGroupsModel");
 const OrdersModel = require("./model/OdersModel");
 const OrdersItemsModel = require("./model/OrdersItemsModel");
+const WaitersModel = require("./model/WaitersModel");
 const { getWaitersList } = require("./data/WaitersData");
 const { getTableGroups, getTables } = require("./data/TablesData");
 
@@ -41,6 +42,10 @@ let creaedtToTabel = async () => {
     // Orders
     TablesModel.hasMany(OrdersModel, { foreignKey: "table_id", as: "orders" });
     OrdersModel.belongsTo(TablesModel, { foreignKey: "table_id" });
+
+    //Waiters Relations
+    OrdersModel.hasMany(WaitersModel, { foreignKey: "waiter_id" });
+    WaitersModel.belongsTo(OrdersModel, { foreignKey: "waiter_id" });
 
     // Ordered Items
     OrdersModel.hasMany(OrdersItemsModel, {
