@@ -2,11 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Container, Col, Row } from "react-bootstrap";
 import Card from "react-bootstrap/Card";
 import { useDispatch, useSelector } from "react-redux";
-import { addProducts } from "../../redux/Slices/OrdersSlice";
-import { data } from "react-router-dom";
-const Menu = () => {
-  const dispatch = useDispatch();
+import { addProducts, menuData } from "../../redux/Slices/OrdersSlice";
 
+const Menu = () => {
   const foods = [
     {
       id: 1,
@@ -146,6 +144,11 @@ const Menu = () => {
       img: "https://images.unsplash.com/photo-1606755962778-7768f3a2d2fc?auto=format&fit=crop&q=80&w=300",
     },
   ];
+
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(menuData(foods));
+  }, []);
 
   return (
     <Container fluid className="p-0">

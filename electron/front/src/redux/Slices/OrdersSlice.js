@@ -22,6 +22,7 @@ export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
     products: [],
+    menu: [],
   },
 
   reducers: {
@@ -39,7 +40,7 @@ export const OrderSlice = createSlice({
         existingProduct.newOrder = (existingProduct.newOrder || 0) + 1;
         newQuantity = existingProduct.quantity;
       } else {
-        state.products.push({ ...action.payload, quantity: 1, newOrder: 1 });
+        state.menu.push({ ...action.payload, quantity: 1, newOrder: 1 });
         oldQuantity = 0;
         newQuantity = 1;
       }
@@ -55,13 +56,17 @@ export const OrderSlice = createSlice({
     clearOrders: (state, action) => {
       state.products = [];
     },
+
+    menuData: (state, action) => {
+      state.menu = action.payload;
+    },
   },
-  // extraReducers: (builders) => {
-  //   builders.addCase(sendOrdersItems.fulfilled, (state, action) => {
-  //     state.products = action.payload;
-  //   });
-  // },
+  extraReducers: (builders) => {
+    builders.addCase(sendOrdersItems.fulfilled, (state, action) => {
+      state.products = action.payload;
+    });
+  },
 });
 
-export const { addProducts, sendOrders, clearOrders } = OrderSlice.actions;
+export const { addProducts, sendOrders, clearOrders,menuData } = OrderSlice.actions;
 export default OrderSlice.reducer;

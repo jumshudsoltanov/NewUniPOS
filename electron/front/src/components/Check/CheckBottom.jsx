@@ -24,11 +24,6 @@ const CheckBottom = () => {
 
 
 
-  let total = products.reduce(
-    (sum, p) => sum + Number(p.price * p.quantity || 0),
-    0,
-  );
-
   return (
     <>
       {/* Desktop View */}
@@ -36,7 +31,7 @@ const CheckBottom = () => {
         <div className="summary-section">
           <div className="summary-row">
             <span>Cəm:</span>
-            <span>{total.toFixed(2)} ₼</span>
+            <span>00.00 ₼</span>
           </div>
           <div className="summary-row">
             <span>Endirim:</span>
@@ -54,7 +49,7 @@ const CheckBottom = () => {
           </button>
           <button className="btn-pay">
             <i className="bi bi-check2-all"></i>
-            <span>{total.toFixed(2)} ₼</span>
+            <span>00.00 ₼</span>
           </button>
         </div>
       </div>
@@ -75,7 +70,7 @@ const CheckBottom = () => {
         </button>
         <button className="mobile-pay-btn">
           <i className="bi bi-check2-all fs-4 text-white"></i>
-          <span className="pay-amount">{total.toFixed(2)} ₼</span>
+          <span className="pay-amount">00.00 ₼</span>
         </button>
       </div>
     </>
