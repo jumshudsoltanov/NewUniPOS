@@ -2,17 +2,21 @@ import React, { useCallback, useState } from "react";
 import "./OtherChecks.css";
 import { Button, Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
 const OtherChecks = ({ show, onClose, table }) => {
   const { currentHallId } = useSelector((state) => state.TablesSlice);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { id } = useParams();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [guestCount, setGuestCount] = useState("0");
   const [isCreating, setIsCreating] = useState(false);
+
+  const filteredOrders = table?.orders?.filter((o) => o.uuid != id) || [];
 
   const createOrder = useCallback(async () => {
     if (isCreating) return;
@@ -33,6 +37,7 @@ const OtherChecks = ({ show, onClose, table }) => {
     try {
       const result = await dispatch(saleNewOrders(payload)).unwrap();
       if (result.message === "success") {
+        await dispatch(getTableGroups(payload.profileId));
         navigate(`/check/${result.data.uuid}?tableId=${table.id}`);
         onClose(false);
       }
@@ -66,11 +71,16 @@ const OtherChecks = ({ show, onClose, table }) => {
       centered
     >
       <Modal.Header closeButton style={{ background: "#4F85F4" }}>
-        <Modal.Title style={{ fontSize: "18px" }}>Açıq çeklər</Modal.Title>
+        <Modal.Title style={{ fontSize: "18px" }}>
+          Açıq çeklər
+          <span className="ms-2 badge bg-light text-primary rounded-pill">
+            {table?.orders?.length || 0}
+          </span>
+        </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <div className="check-list-container">
-          {table?.orders?.map((item, index) => (
+          {filteredOrders.map((item, index) => (
             <button
               key={index}
               className="check-item"

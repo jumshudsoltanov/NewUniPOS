@@ -2,12 +2,15 @@ import React, { useState } from "react";
 import "./Table.css";
 import CustomersModal from "../Customers-Modal/CustomersModal";
 import { useNavigate } from "react-router-dom";
+import OtherChecks from "../OtherChecks/OtherChecks";
 
 const Table = React.memo(({ table }) => {
   const { name, status, shape_type, orders } = table || {};
   const [selectedTable, setSelectedTable] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showOtherChecks, setShowOtherChecks] = useState(false);
   const navigate = useNavigate();
+
   const renderSeats = () => {
     if (shape_type === "rectangle") {
       return (
@@ -33,7 +36,9 @@ const Table = React.memo(({ table }) => {
 
   const handleTableClick = (tableData) => {
     setSelectedTable(tableData);
-    if (orders?.length > 0) {
+    if (orders?.length > 1) {
+      setShowOtherChecks(true);
+    } else if (orders?.length === 1) {
       setShowModal(false);
       navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
     } else {
@@ -75,7 +80,7 @@ const Table = React.memo(({ table }) => {
               className={`table-waiter-info ${status} ${orders?.length > 0 ? "" : ""}`}
             >
               <i className="bi bi-people"></i>
-              <span>{orders[0]?.waiter?.name || "—"}</span>
+              <span>{orders?.[0]?.waiter?.name || "—"}</span>
             </div>
           </div>
 
@@ -105,6 +110,12 @@ const Table = React.memo(({ table }) => {
       <CustomersModal
         show={showModal}
         onHide={() => setShowModal(false)}
+        table={selectedTable}
+      />
+
+      <OtherChecks
+        show={showOtherChecks}
+        onClose={() => setShowOtherChecks(false)}
         table={selectedTable}
       />
     </>

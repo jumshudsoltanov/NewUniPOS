@@ -99,7 +99,7 @@ const Check = () => {
     const orders = tableObj.orders.find((o) => o.uuid == id);
 
     setCurrentOrder(orders);
-  }, [tableGroups, currentHallId, tableId]);
+  }, [tableGroups, currentHallId, tableId, id]);
 
   useEffect(() => {
     initialOrderOnTable();
