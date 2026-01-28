@@ -43,8 +43,6 @@ export const OrderSlice = createSlice({
         oldQuantity = 0;
         newQuantity = 1;
       }
-
-      console.log(`Eski Miktar: ${oldQuantity} - Yeni Miktar: ${newQuantity}`);
     },
 
     sendOrders: (state, action) => {

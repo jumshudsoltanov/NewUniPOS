@@ -42,7 +42,7 @@ const OtherChecks = ({ show, onClose, table }) => {
         onClose(false);
       }
     } catch (err) {
-      console.log("Cek yaradilmadi:", err);
+      console.error("Check created error:", err);
     } finally {
       setIsCreating(false);
     }

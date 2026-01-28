@@ -51,7 +51,6 @@ const Check = () => {
 
   const handleShowOperationsTab = () => {
     setShowOperationsModal(true);
-    console.log(showOpeationsModal);
   };
 
   const clearCheck = () => {

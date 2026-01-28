@@ -4,10 +4,11 @@ import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
 import { useParams, useSearchParams } from "react-router-dom";
 
-const CheckMain = () => {
+const CheckMain = ({orders}) => {
   const { products } = useSelector((state) => state.OrderSlice);
   const [editItemModal, setEditItemModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
 
 
   const handleItemClick = (item) => {

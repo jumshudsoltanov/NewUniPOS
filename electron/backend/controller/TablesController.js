@@ -39,7 +39,7 @@ const getTables = async (req, res) => {
 
     res.status(200).json({ message: "success", data: tables });
   } catch (error) {
-    console.log("Tables Controller Error:", error);
+    console.error("Tables Controller Error:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };

@@ -62,7 +62,7 @@ const CustomersModal = ({ show, onHide, table }) => {
         navigate(`/check/${result.data.uuid}?tableId=${table.id}`);
       }
     } catch (err) {
-      console.log("Cek yaradilmadi:", err);
+      console.error("Check created error:", err);
     } finally {
       setIsCreating(false);
     }

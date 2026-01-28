@@ -6,7 +6,7 @@ export const saleNewOrders = createAsyncThunk("pos/sales", async (data) => {
     const response = await axios.post("http://localhost:55667/api/sale", data);
     return response.data;
   } catch (error) {
-    console.log("SaleError", error);
+    console.error("SaleError", error);
   }
 });
 const SaleSlice = createSlice({

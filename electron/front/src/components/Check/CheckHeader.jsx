@@ -6,7 +6,7 @@ const CheckHeader = ({ orders, hall, table }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
 
-  console.log(hall);
+
 
   const getTimeDifference = (startDate) => {
     if (!startDate) return { hours: "00", minutes: "00" };
