@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
-
-
-
+import { useParams, useSearchParams } from "react-router-dom";
 
 const CheckMain = () => {
   const { products } = useSelector((state) => state.OrderSlice);
   const [editItemModal, setEditItemModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
 
   const handleItemClick = (item) => {
     setSelectedProduct(item);

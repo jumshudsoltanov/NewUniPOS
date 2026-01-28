@@ -13,7 +13,6 @@ import {
 const CustomersModal = ({ show, onHide, table }) => {
   const [guestCount, setGuestCount] = useState("0");
   const dispatch = useDispatch();
-  // const { newSale } = useSelector((state) => state.SaleSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { currentHallId } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -60,9 +59,8 @@ const CustomersModal = ({ show, onHide, table }) => {
     try {
       const result = await dispatch(saleNewOrders(payload)).unwrap();
       if (result.message === "success") {
-        navigate(`/check/${result.data.id}`);
+        navigate(`/check/${result.data.uuid}?tableId=${table.id}`);
       }
-      console.log(result);
     } catch (err) {
       console.log("Cek yaradilmadi:", err);
     } finally {
@@ -79,10 +77,6 @@ const CustomersModal = ({ show, onHide, table }) => {
     navigate,
     isCreating,
   ]);
-
-  // useEffect(() => {
-  //   dispatch(currentTableList(currentHallId));
-  // }, [dispatch, currentHallId]);
 
   const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 

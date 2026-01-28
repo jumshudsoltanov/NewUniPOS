@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Container, Col, Row } from "react-bootstrap";
 import "./Check.css";
 import Menu from "../Menu/Menu";
@@ -6,7 +6,12 @@ import CheckHeader from "./CheckHeader";
 import CheckMain from "./CheckMain";
 import CheckBottom from "./CheckBottom";
 import OperationsModal from "../Operations/OperationsModal";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import CheckLockModal from "../Check-Lock/CheckLockModal";
 import CommentModal from "../CommentModal/CommentModal";
@@ -30,6 +35,15 @@ const Check = () => {
   const navigate = useNavigate();
   const { products } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { tableGroups, currentHallId } = useSelector(
+    (state) => state.TablesSlice,
+  );
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const tableId = searchParams.get("tableId");
+  const [currentOrder, setCurrentOrder] = useState(null);
+  const [currentHall, setCurrentHall] = useState(null);
+  const [currentTable, setCurrentTable] = useState(null);
 
   const goTables = () => {
     navigate("/tables");
@@ -69,7 +83,27 @@ const Check = () => {
     setShowWaitersModal(true);
   };
 
-  console.log(loginedProfileData);
+  // Load check Data
+
+  const initialOrderOnTable = useCallback(() => {
+    if (!tableGroups?.data) return;
+
+    const hall = tableGroups.data.find((item) => item.id == currentHallId);
+    setCurrentHall(hall);
+    if (!hall) return;
+
+    const tableObj = hall.tables.find((t) => t.id == tableId);
+    setCurrentTable(tableObj);
+    if (!tableObj) return;
+
+    const orders = tableObj.orders.find((o) => o.uuid == id);
+
+    setCurrentOrder(orders);
+  }, [tableGroups, currentHallId, tableId]);
+
+  useEffect(() => {
+    initialOrderOnTable();
+  }, [initialOrderOnTable]);
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
@@ -391,9 +425,12 @@ const Check = () => {
               <CheckHeader
                 isSidebarOpen={isSidebarOpen}
                 toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                orders={currentOrder}
+                table={currentTable}
+                hall={currentHall}
               />
-              <CheckMain />
-              <CheckBottom />
+              <CheckMain orders={currentOrder} />
+              <CheckBottom orders={currentOrder} />
             </div>
           </div>
         </Col>

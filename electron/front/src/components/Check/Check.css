@@ -896,7 +896,7 @@
 }
 
 .header-title {
-    font-size: 0.7rem;
+    font-size: 1rem !important;
     color: rgba(255, 255, 255, 0.85);
     font-weight: 500;
     text-transform: uppercase;
@@ -959,10 +959,6 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.header-toggle-btn:hover {
-    background-color: #f0f0f0;
-    transform: translateY(-2px);
-}
 
 .header-toggle-btn i {
     font-size: 1rem;

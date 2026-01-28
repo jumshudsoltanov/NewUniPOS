@@ -16,6 +16,11 @@ const TablesModel = db.sequelize.define(
       allowNull: true,
     },
 
+    hall_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
     is_active: {
       type: DataTypes.TINYINT,
       allowNull: true,

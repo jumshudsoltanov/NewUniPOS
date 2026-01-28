@@ -4,7 +4,7 @@ import CustomersModal from "../Customers-Modal/CustomersModal";
 import { useNavigate } from "react-router-dom";
 
 const Table = React.memo(({ table }) => {
-  const { name, status, shape_type, orders, current_waiter } = table || {};
+  const { name, status, shape_type, orders } = table || {};
   const [selectedTable, setSelectedTable] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ const Table = React.memo(({ table }) => {
     setSelectedTable(tableData);
     if (orders?.length > 0) {
       setShowModal(false);
-      navigate(`/check/${orders[0].id}`);
+      navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
     } else {
       setShowModal(true);
     }
@@ -68,14 +68,14 @@ const Table = React.memo(({ table }) => {
             <p
               className={`table-amount ${status} ${orders?.length > 0 ? "" : ""}`}
             >
-              0 ₼
+              0.00 ₼
             </p>
 
             <div
               className={`table-waiter-info ${status} ${orders?.length > 0 ? "" : ""}`}
             >
               <i className="bi bi-people"></i>
-              <span>{current_waiter || "—"}</span>
+              <span>{orders[0]?.waiter?.name || "—"}</span>
             </div>
           </div>
 

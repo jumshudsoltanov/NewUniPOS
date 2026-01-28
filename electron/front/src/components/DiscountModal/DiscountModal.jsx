@@ -27,7 +27,7 @@ const DiscountModal = ({ show, onClose }) => {
   };
 
 
-  console.log(value)
+
 
   return (
     <Modal

@@ -1,4 +1,22 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+
+export const sendOrdersItems = createAsyncThunk(
+  "pos/orders",
+  async (payload, thunkAPI) => {
+    try {
+      const { orderId, profileId, productList, waiterId } = payload;
+      const response = await axios.post(
+        `http://localhost:55667/api/orders-items/${orderId}/items`,
+        { productList: productList, profileId: profileId, waiterId: waiterId },
+      );
+      console.log(response.data);
+      return response.data;
+    } catch (err) {
+      return thunkAPI.rejectWithValue(err.response?.data || "Server error");
+    }
+  },
+);
 
 export const OrderSlice = createSlice({
   name: "orders",
@@ -40,6 +58,11 @@ export const OrderSlice = createSlice({
       state.products = [];
     },
   },
+  // extraReducers: (builders) => {
+  //   builders.addCase(sendOrdersItems.fulfilled, (state, action) => {
+  //     state.products = action.payload;
+  //   });
+  // },
 });
 
 export const { addProducts, sendOrders, clearOrders } = OrderSlice.actions;

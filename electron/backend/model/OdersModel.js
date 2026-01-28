@@ -28,6 +28,7 @@ const OrdersModel = db.sequelize.define(
 
     end_date: { type: DataTypes.DATE, allowNull: true },
     hall_id: { type: DataTypes.INTEGER, allowNull: true },
+    table_id: { type: DataTypes.INTEGER, allowNull: true },
 
     amount: { type: DataTypes.FLOAT, allowNull: true },
     service_charge: { type: DataTypes.FLOAT, allowNull: true },
@@ -47,7 +48,7 @@ const OrdersModel = db.sequelize.define(
     total: { type: DataTypes.FLOAT, allowNull: true },
     status: { type: DataTypes.INTEGER, allowNull: true },
     guest_count: { type: DataTypes.INTEGER, allowNull: true },
-    // waiter_id: { type: DataTypes.INTEGER, allowNull: true },
+    waiter_id: { type: DataTypes.INTEGER, allowNull: true },
 
     is_selected: { type: DataTypes.INTEGER, allowNull: true },
     deposit: { type: DataTypes.FLOAT, allowNull: true },

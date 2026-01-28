@@ -23,6 +23,7 @@ const getTableGroups = async () => {
         Object.keys(tg).forEach((k) => {
           if (tg[k] === undefined) tg[k] = 0;
         });
+        tg.profile_id = profile_id; // Inject profile_id
         return tg;
       });
 
@@ -57,6 +58,7 @@ const getTables = async () => {
         Object.keys(t).forEach((k) => {
           if (t[k] === undefined) t[k] = 0;
         });
+        t.profile_id = profile_id; // Inject profile_id
         return t;
       });
 

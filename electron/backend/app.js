@@ -65,7 +65,7 @@ let creaedtToTabel = async () => {
       targetKey: "uuid",
     });
 
-    db.sequelize.sync();
+    db.sequelize.sync({ alter: true });
     console.log("Created Table Success!");
   } catch (error) {
     console.log("Table Created Error", error);
@@ -82,12 +82,14 @@ const InsertData = async () => {
   }
 };
 
+// Initialize and start
 (async () => {
   await connectToDatabase();
   await creaedtToTabel();
-  await InsertData();
-
-  app.listen(55667, () => {
-    console.log("Express Server Is Running");
-  });
+  // Fetch initial data in background
+  InsertData();
 })();
+
+app.listen(55667, () => {
+  console.log("Express Server Is Running");
+});

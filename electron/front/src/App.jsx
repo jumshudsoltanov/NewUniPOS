@@ -21,7 +21,6 @@ function AppContent() {
   const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    // Preload PIN background image
     const img = new Image();
     img.src = PinBackground;
 
@@ -41,7 +40,6 @@ function AppContent() {
           navigate("/");
         }
         isFirstLoad.current = false;
-        // Animasiyanı hiss etmək üçün qısa fasilə
         setTimeout(() => setIsInitializing(false), 1000);
       } else {
         setIsInitializing(false);

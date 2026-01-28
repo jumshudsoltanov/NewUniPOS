@@ -22,6 +22,7 @@ const getWaitersList = async () => {
         Object.keys(w).forEach((k) => {
           if (w[k] === undefined) w[k] = 0;
         });
+        w.profile_id = profile_id; // Inject profile_id
         return w;
       });
 

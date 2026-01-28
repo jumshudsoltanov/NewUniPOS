@@ -1,17 +1,34 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { sendOrders, clearOrders } from "../../redux/Slices/OrdersSlice";
+import {
+  sendOrders,
+  clearOrders,
+  sendOrdersItems,
+} from "../../redux/Slices/OrdersSlice";
+import { useParams } from "react-router-dom";
 
 const CheckBottom = () => {
   const dispatch = useDispatch();
   const { products } = useSelector((state) => state.OrderSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { id } = useParams();
+
+  
+  const payload = {
+    orderId: id,
+    profileId: loginedProfileData?.data?.profile?.id,
+    productList: products,
+    waiterId: loginedWaiter?.data?.id
+  };
+
+
 
   let total = products.reduce(
     (sum, p) => sum + Number(p.price * p.quantity || 0),
     0,
   );
 
-  
   return (
     <>
       {/* Desktop View */}
@@ -30,7 +47,7 @@ const CheckBottom = () => {
         <div className="pt-3 action-buttons">
           <button
             className="btn-send"
-            onClick={() => dispatch(sendOrders(products))}
+            onClick={() => dispatch(sendOrdersItems(payload))}
           >
             <i className="bi bi-send"></i>
             <span>Göndər</span>
@@ -46,7 +63,7 @@ const CheckBottom = () => {
       <div className="checkBottomMobile d-flex d-lg-none">
         <button
           className="mobile-icon-btn gray-btn"
-          onClick={() => dispatch(sendOrders(products))}
+          onClick={() => dispatch(sendOrdersItems(products))}
         >
           <i className="bi bi-printer-fill"></i>
         </button>
