@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import "./OtherChecks.css";
 import { Button, Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
@@ -16,6 +16,10 @@ const OtherChecks = ({ show, onClose, table }) => {
   const [guestCount, setGuestCount] = useState("0");
   const [isCreating, setIsCreating] = useState(false);
 
+  useEffect(() => {
+    dispatch(getTableGroups(loginedProfileData?.data?.profile.id));
+  }, []);
+
   const filteredOrders = table?.orders?.filter((o) => o.uuid != id) || [];
 
   const createOrder = useCallback(async () => {
@@ -28,7 +32,7 @@ const OtherChecks = ({ show, onClose, table }) => {
       waiterId: loginedWaiter.data.id,
       terminalId: loginedProfileData.data.terminal.terminal_id,
       profileId: loginedProfileData.data.profile.id,
-      sale_type: 0,
+      sale_type: "dine_in",
       hallId: currentHallId,
       status: 1,
       is_selected: 1,
@@ -89,8 +93,8 @@ const OtherChecks = ({ show, onClose, table }) => {
               >
                 <span>
                   Çek #{item.id} / #{item.guest_count || 1} (
-                  {item.sale_type === 0 ? "Restoranda" : "Çatdırılma"}) (
-                  {item.waiter?.name || "terminal_user"})
+                  {item.sale_type === "dine_in" ? "Restoranda" : "Çatdırılma"})
+                  ({item.waiter?.name || "terminal_user"})
                 </span>
                 <span style={{ fontWeight: "bold" }}>
                   {item.total || item.amount || 0} ₼

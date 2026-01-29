@@ -1,0 +1,81 @@
+/* Sales Type Modal */
+.sales-type-modal .modal-content {
+  border: none;
+}
+
+/* Modal yuxarıda, solda - Yeni sifariş düyməsinin altında */
+.sales-type-dialog {
+  max-width: fit-content;
+  margin: 0;
+  position: absolute;
+  top: 55px;
+  left: 49%;
+  transform: translateX(-50%);
+}
+
+.sales-type-modal-body {
+  padding: 8px !important;
+}
+
+/* Options Container */
+.sales-type-options {
+  display: flex;
+  gap: 4px;
+}
+
+/* Option Button */
+.sales-type-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  border: none;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 90px;
+}
+
+.sales-type-option:active {
+  background: #f5f5f5;
+}
+
+/* Icon Container */
+.sales-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+/* Label */
+.sales-type-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sales-type-dialog {
+    right: 10px;
+    top: 48px;
+  }
+
+  .sales-type-option {
+    padding: 12px 14px;
+    min-width: 75px;
+  }
+
+  .sales-type-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sales-type-label {
+    font-size: 11px;
+  }
+}

@@ -1,12 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./Check.css";
 import TagModal from "../Modals/TagModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
+import { useDispatch, useSelector } from "react-redux";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
+
 const CheckHeader = ({ orders, hall, table }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const dispatch = useDispatch();
 
-
+  useEffect(() => {
+    dispatch(getTableGroups(loginedProfileData?.data.profile.id));
+  }, []);
 
   const getTimeDifference = (startDate) => {
     if (!startDate) return { hours: "00", minutes: "00" };

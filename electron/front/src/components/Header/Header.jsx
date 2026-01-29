@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./Header.css";
 import { Col, Row, Container } from "react-bootstrap";
 import { Link } from "react-router-dom";
@@ -7,12 +7,15 @@ import {
   getTableGroups,
   currentTableList,
 } from "../../redux/Slices/TablesSlice";
+import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 
 const Header = () => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [activeHall, setActiveHall] = useState(null);
+  const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false)
+  const newOrderBtnRef = useRef(null);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -122,7 +125,7 @@ const Header = () => {
             <div className="right-tools-container h-100 d-flex align-items-center justify-content-end">
               {/* New Order Button */}
               {/* New Order Button */}
-              <button className="create-order-btn small-btn">
+              <button ref={newOrderBtnRef} className="create-order-btn small-btn" onClick={() => setOnShowSalesTypeModal(true)}>
                 <svg
                   width="18"
                   height="18"
@@ -313,6 +316,15 @@ const Header = () => {
           </svg>
         </button>
       </div>
+
+      <SalesTypesModal
+        show={onShowSalesTypeModal}
+        onClose={() => setOnShowSalesTypeModal(false)}
+        onSelect={(type) => {
+          console.log("Seçilən satış tipi:", type);
+          // TODO: Burada seçilən tipə görə əməliyyat aparın
+        }}
+      />
     </>
   );
 };

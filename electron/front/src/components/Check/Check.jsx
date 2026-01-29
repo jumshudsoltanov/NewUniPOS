@@ -34,7 +34,7 @@ const Check = () => {
   const [onShowServiceFee, setOnShowServiceFee] = useState(false);
   const [showWaitersModal, setShowWaitersModal] = useState(false);
   const navigate = useNavigate();
-  const dispath = useDispatch();
+  const dispatch = useDispatch();
   const { products, menu } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { tableGroups, currentHallId } = useSelector(
@@ -48,7 +48,7 @@ const Check = () => {
   const [currentTable, setCurrentTable] = useState(null);
 
   const goTables = async () => {
-    await dispath(
+    await dispatch(
       getTableGroups(loginedProfileData?.data?.profile.id),
     ).unwrap();
     navigate("/tables");
@@ -708,7 +708,7 @@ const Check = () => {
 
             {/* Content placeholder for the rest of the right box */}
             <div className="checkRightBoxContent flex-grow-1 p-3">
-              <Menu />
+              <Menu  order={currentOrder}/>
             </div>
           </div>
         </Col>
@@ -767,6 +767,7 @@ const Check = () => {
         onClose={() => {
           setLockCheck(false);
         }}
+        order={currentOrder}
       />
       <CommentModal
         show={comment}

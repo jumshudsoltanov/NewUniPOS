@@ -50,7 +50,7 @@ const CustomersModal = ({ show, onHide, table }) => {
       waiterId: loginedWaiter.data.id,
       terminalId: loginedProfileData.data.terminal.terminal_id,
       profileId: loginedProfileData.data.profile.id,
-      sale_type: 0,
+      sale_type: "dine_in",
       hallId: currentHallId,
       status: 1,
       is_selected: 1,

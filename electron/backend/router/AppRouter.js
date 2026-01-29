@@ -28,4 +28,9 @@ router.patch(
   OrdersItemsController.onUpdateTableOrder,
 );
 
+router.patch(
+  "/orders-items/:orderId/lock-check",
+  OrdersItemsController.onLockCheck,
+);
+
 module.exports = router;

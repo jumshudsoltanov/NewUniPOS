@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Container, Col, Row } from "react-bootstrap";
+import { Container, Col, Row, Toast } from "react-bootstrap";
 import Card from "react-bootstrap/Card";
 import { useDispatch, useSelector } from "react-redux";
 import { addProducts, menuData } from "../../redux/Slices/OrdersSlice";
+import { toast } from "sonner";
 
-const Menu = () => {
+
+const Menu = ({ order }) => {
   const foods = [
     {
       id: 1,
@@ -146,9 +148,18 @@ const Menu = () => {
   ];
 
   const dispatch = useDispatch();
+
   useEffect(() => {
     dispatch(menuData(foods));
   }, []);
+
+  const handleAddProduct = (food) => {
+    if (order?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+    dispatch(addProducts(food));
+  };
 
   return (
     <Container fluid className="p-0">
@@ -165,7 +176,7 @@ const Menu = () => {
                 backgroundImage: food.img ? `url(${food.img})` : "none",
                 backgroundColor: food.img ? "transparent" : "#555", // Gray if no image
               }}
-              onClick={() => dispatch(addProducts(food))}
+              onClick={() => handleAddProduct(food)}
             >
               <div className="menu-card-price">{food.price} ₼</div>
 

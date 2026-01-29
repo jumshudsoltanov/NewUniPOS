@@ -48,6 +48,21 @@ export const updateTableOrders = createAsyncThunk(
   },
 );
 
+export const updateLockChecK = createAsyncThunk(
+  "orders/lock-check",
+  async ({ orderId, status }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/lock-check`,
+        { status },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -56,6 +71,7 @@ export const OrderSlice = createSlice({
     menu: [],
     discount: [],
     updateTable: [],
+    isLockCheck: {},
   },
 
   reducers: {
@@ -131,6 +147,9 @@ export const OrderSlice = createSlice({
       })
       .addCase(updateTableOrders.fulfilled, (state, action) => {
         state.updateTable = action.payload;
+      })
+      .addCase(updateLockChecK.fulfilled, (state, action) => {
+        state.isLockCheck = action.payload;
       });
   },
 });

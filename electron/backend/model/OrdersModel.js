@@ -17,7 +17,7 @@ const OrdersModel = db.sequelize.define(
     },
 
     profile_id: { type: DataTypes.INTEGER, allowNull: true },
-    sale_type: { type: DataTypes.INTEGER, allowNull: true },
+    sale_type: { type: DataTypes.TEXT, allowNull: true },
     terminal_id: { type: DataTypes.TEXT, allowNull: true },
 
     start_date: {
@@ -58,6 +58,7 @@ const OrdersModel = db.sequelize.define(
     is_return: { type: DataTypes.INTEGER, allowNull: true },
     is_print: { type: DataTypes.INTEGER, allowNull: true },
     is_tax: { type: DataTypes.INTEGER, allowNull: true },
+    is_locked: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
     is_synced: { type: DataTypes.INTEGER, allowNull: true },
   },
   {

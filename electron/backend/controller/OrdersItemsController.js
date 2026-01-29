@@ -164,8 +164,31 @@ const onUpdateTableOrder = async (req, res) => {
   }
 };
 
+const onLockCheck = async (req, res) => {
+  const { orderId } = req.params;
+  const { status } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const updateLockChecK = await OrdersModel.update(
+      { is_locked: status },
+      { where: { uuid: orderId } },
+    );
+
+    res
+      .status(200)
+      .json({ message: "table update success", data: updateLockChecK });
+  } catch (error) {
+    return res.status(400).json({ message: "Invalid discount type" });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
   onUpdateTableOrder,
+  onLockCheck,
 };

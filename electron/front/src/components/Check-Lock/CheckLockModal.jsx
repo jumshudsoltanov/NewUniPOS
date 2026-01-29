@@ -3,7 +3,44 @@ import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import "./CheckLockModal.css";
 import { Container, Col, Row } from "react-bootstrap";
-const CheckLockModal = ({ show, onClose }) => {
+import { useState } from "react";
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { updateLockChecK } from "../../redux/Slices/OrdersSlice";
+import { useCallback } from "react";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
+
+const CheckLockModal = ({ show, onClose, order }) => {
+  const [status, setStatus] = useState(0);
+  const dispatch = useDispatch();
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+  useEffect(() => {
+    setStatus(order?.is_locked);
+  }, [order]);
+
+  const handleUpdateStatus = useCallback(async () => {
+    onClose(false);
+    const newStatus = status === 0 ? 1 : 0;
+
+    setStatus(newStatus);
+
+    const result = await dispatch(
+      updateLockChecK({
+        orderId: order?.uuid,
+        status: newStatus,
+      }),
+    ).unwrap();
+
+    await dispatch(getTableGroups(loginedProfileData?.data.profile.id));
+  }, [
+    status,
+    order?.uuid,
+    loginedProfileData?.data.profile.id,
+    dispatch,
+    onClose,
+  ]);
+
   return (
     <Modal
       show={show}
@@ -54,14 +91,27 @@ const CheckLockModal = ({ show, onClose }) => {
               </div>
             </Col>
             <Col lg={12}>
-              <div className="lockTextHeader fw-bold text-center mt-3">
-                Qəbzi kilidləmək istədiyinizə əminsiniz?
-              </div>
+              {status == 0 ? (
+                <div className="lockTextHeader fw-bold text-center mt-3">
+                  Qəbzi kilidləmək istədiyinizə əminsiniz?
+                </div>
+              ) : (
+                <div className="lockTextHeader fw-bold text-center mt-3">
+                  Qəbzin kilidini açmaq istədiyinizə əminsiniz?
+                </div>
+              )}
             </Col>
             <Col>
-              <div className="lockTextHeader text-center mt-2">
-                "Kilidlənmiş qəbzlərdə dəyişiklik etmək mümkün olmayacaq."
-              </div>
+              {status == 0 ? (
+                <div className="lockTextHeader text-center mt-2">
+                  "Kilidlənmiş qəbzlərdə dəyişiklik etmək mümkün olmayacaq."
+                </div>
+              ) : (
+                <div className="lockTextHeader text-center mt-2">
+                  "Kilidlənmiş qəbzin kilidini açdıqdan sonra dəyişiklik etmək
+                  mümkün olacaq."
+                </div>
+              )}
             </Col>
           </Row>
         </Container>
@@ -71,8 +121,9 @@ const CheckLockModal = ({ show, onClose }) => {
           variant="primary"
           className="w-100"
           style={{ backgroundColor: "#0d6efd", height: "45px" }}
+          onClick={handleUpdateStatus}
         >
-          Qəbzi kilidləyin
+          {status == 0 ? "Qəbzi kilidləyin" : "Qəbzin kilidini açın"}
         </Button>
       </Modal.Footer>
     </Modal>
