@@ -1,5 +1,6 @@
 import React from "react";
 import "./Table.css";
+import { useParams } from "react-router-dom";
 
 const Table = React.memo(({ table, onTableClick }) => {
   const { name, status, shape_type, orders } = table || {};
@@ -60,7 +61,7 @@ const Table = React.memo(({ table, onTableClick }) => {
             <p
               className={`table-amount ${status} ${orders?.length > 0 ? "" : ""}`}
             >
-              {(orders?.[0]?.total?.toFixed(2)) ?? 0.00} ₼
+              {orders?.[0]?.total?.toFixed(2) ?? 0.0} ₼
             </p>
 
             <div
@@ -93,7 +94,6 @@ const Table = React.memo(({ table, onTableClick }) => {
           </div>
         </div>
       </div>
-
     </>
   );
 });

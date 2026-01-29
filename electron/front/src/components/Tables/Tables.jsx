@@ -3,42 +3,65 @@ import { Container, Row, Col, Alert } from "react-bootstrap";
 import "./Tables.css";
 import Table from "../Table/Table";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import CustomersModal from "../Customers-Modal/CustomersModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
+import { updateTableOrders } from "../../redux/Slices/OrdersSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
 const Tables = () => {
-  const { tableGroups, currentHallId } = useSelector((state) => state.TablesSlice);
+  const { tableGroups, currentHallId } = useSelector(
+    (state) => state.TablesSlice,
+  );
   const [selectedTable, setSelectedTable] = React.useState(null);
   const [showModal, setShowModal] = React.useState(false);
   const [showOtherChecks, setShowOtherChecks] = React.useState(false);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { id } = useParams();
 
   const currentTables = useMemo(() => {
     if (!tableGroups?.data || !currentHallId) {
       return tableGroups?.data?.[0]?.tables || []; //
     }
-    const selectedHall = tableGroups.data.find((hall) => hall.id === currentHallId);
+    const selectedHall = tableGroups.data.find(
+      (hall) => hall.id === currentHallId,
+    );
     return selectedHall?.tables || [];
   }, [tableGroups, currentHallId]);
 
-  const handleTableClick = (table) => {
+  const handleTableClick = async (table) => {
     const { orders } = table || {};
+
+    if (id) {
+      try {
+        const response = await dispatch(
+          updateTableOrders({
+            orderId: id,
+            newTableId: table?.id,
+            currentHallId,
+          }),
+        ).unwrap();
+        // await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+        navigate(`/check/${id}?tableId=${table?.id}`);
+        console.log(response);
+      } catch (error) {
+        console.log(error.response.error);
+      }
+      return;
+    }
 
     if (orders?.length > 1) {
       setSelectedTable(table);
       setShowOtherChecks(true);
     } else if (orders?.length === 1) {
-      // Birbasa check-e yonləndir
       navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
     } else {
       setSelectedTable(table);
       setShowModal(true);
     }
   };
-
-  // Data yoxdursa boş massiv göstər - loading Pin səhifəsində olur
-  // Tables-a gələndə data artıq yüklənmiş olmalıdır
 
   if (currentTables.length === 0) {
     return (

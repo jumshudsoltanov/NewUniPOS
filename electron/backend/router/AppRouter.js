@@ -23,4 +23,9 @@ router.patch(
   OrdersItemsController.onUpdateDiscountOrder,
 );
 
+router.patch(
+  "/orders-items/:orderId/update-table",
+  OrdersItemsController.onUpdateTableOrder,
+);
+
 module.exports = router;

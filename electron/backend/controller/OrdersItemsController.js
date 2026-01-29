@@ -38,9 +38,32 @@ const sendOrdersItemsToDb = async (req, res) => {
       0,
     );
 
+    // Get current order discount info to recalculate
+    const currentOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      attributes: ["discount_value", "discount_type"],
+    });
+
+    let discount = 0;
+    let netTotal = total;
+
+    if (currentOrder) {
+      const { discount_value, discount_type } = currentOrder;
+      const dValue = Number(discount_value || 0);
+
+      if (dValue > 0) {
+        if (discount_type === "percent") {
+          discount = (total * dValue) / 100;
+        } else if (discount_type === "cash") {
+          discount = dValue;
+        }
+      }
+      netTotal = total - discount;
+    }
+
     // Order update
     await OrdersModel.update(
-      { amount: total, total: total },
+      { amount: total, total: netTotal, discount: discount },
       { where: { uuid: orderId } },
     );
 
@@ -119,4 +142,30 @@ const onUpdateDiscountOrder = async (req, res) => {
   }
 };
 
-module.exports = { sendOrdersItemsToDb, onUpdateDiscountOrder };
+const onUpdateTableOrder = async (req, res) => {
+  const { orderId } = req.params;
+  const { newTableId, currentHallId } = req.body;
+
+  if (!newTableId || !orderId || !currentHallId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const updateTable = await OrdersModel.update(
+      { hall_id: currentHallId, table_id: newTableId },
+      { where: { uuid: orderId } },
+    );
+
+    res
+      .status(200)
+      .json({ message: "table update success", data: updateTable });
+  } catch (error) {
+    return res.status(400).json({ message: "Invalid discount type" });
+  }
+};
+
+module.exports = {
+  sendOrdersItemsToDb,
+  onUpdateDiscountOrder,
+  onUpdateTableOrder,
+};

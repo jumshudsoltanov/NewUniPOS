@@ -87,6 +87,12 @@ const Check = () => {
     setShowWaitersModal(true);
   };
 
+  // ChangeTables
+
+  const handleChangeTable = () => {
+    navigate(`/tables/${currentOrder.uuid}`);
+  };
+
   // Load check Data
 
   const initialOrderOnTable = useCallback(() => {
@@ -108,9 +114,6 @@ const Check = () => {
   useEffect(() => {
     initialOrderOnTable();
   }, [initialOrderOnTable]);
-
-
-  console.log(currentOrder)
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
@@ -756,6 +759,7 @@ const Check = () => {
         openDiscountModal={openDiscountModal}
         openServiceFee={openServiceFee}
         openWaitersModal={openWaitersModal}
+        handleChangeTable={handleChangeTable}
       />
 
       <CheckLockModal

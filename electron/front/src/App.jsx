@@ -58,7 +58,17 @@ function AppContent() {
 
   if (showInitialLoading) {
     return (
-      <div className="loginLoadingState" style={{ height: "100vh", background: "#F3F4F6", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div
+        className="loginLoadingState"
+        style={{
+          height: "100vh",
+          background: "#F3F4F6",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <div className="premium-loader">
           <div className="loader-ring"></div>
           <div className="loader-dot"></div>
@@ -74,6 +84,15 @@ function AppContent() {
       <Route path="/pin" element={<Pin />} />
       <Route
         path="/tables"
+        element={
+          <>
+            <Header />
+            <Tables />
+          </>
+        }
+      />
+      <Route
+        path="/tables/:id"
         element={
           <>
             <Header />

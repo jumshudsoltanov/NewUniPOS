@@ -80,22 +80,29 @@ const OtherChecks = ({ show, onClose, table }) => {
       </Modal.Header>
       <Modal.Body>
         <div className="check-list-container">
-          {filteredOrders.map((item, index) => (
-            <button
-              key={index}
-              className="check-item"
-              onClick={() => handleGoNewCheck(item.uuid, table.id)}
-            >
-              <span>
-                Çek #{item.id} / #{item.guest_count || 1} (
-                {item.sale_type === 0 ? "Restoranda" : "Çatdırılma"}) (
-                {item.waiter?.name || "terminal_user"})
-              </span>
-              <span style={{ fontWeight: "bold" }}>
-                {item.total || item.amount || 0} ₼
-              </span>
-            </button>
-          ))}
+          {filteredOrders.length > 0 ? (
+            filteredOrders.map((item, index) => (
+              <button
+                key={index}
+                className="check-item"
+                onClick={() => handleGoNewCheck(item.uuid, table.id)}
+              >
+                <span>
+                  Çek #{item.id} / #{item.guest_count || 1} (
+                  {item.sale_type === 0 ? "Restoranda" : "Çatdırılma"}) (
+                  {item.waiter?.name || "terminal_user"})
+                </span>
+                <span style={{ fontWeight: "bold" }}>
+                  {item.total || item.amount || 0} ₼
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="d-flex flex-column align-items-center justify-content-center text-muted py-5 text-center">
+              <i className="bi bi-receipt mb-2 fs-1"></i>
+              <span className="fs-5">Bu masada aktiv çek tapılmadı</span>
+            </div>
+          )}
         </div>
         <button
           className="check-item create-check-item"

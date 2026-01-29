@@ -10,6 +10,7 @@ export const OperationsModal = ({
   openDiscountModal,
   openServiceFee,
   openWaitersModal,
+  handleChangeTable
 }) => {
   const operations = [
     { icon: "bi-arrows-angle-expand", text: "Çeki böl" },
@@ -30,6 +31,7 @@ export const OperationsModal = ({
       functions: openServiceFee,
     },
     { icon: "bi-people", text: "Əməkdaş dəyiş", functions: openWaitersModal },
+    { icon: "bi-table", text: "Masanı dəyiş", functions: handleChangeTable },
   ];
 
   return (

@@ -82,11 +82,19 @@ const CheckBottom = ({ orders }) => {
         discountAmount = discountValue;
       }
     } else if (orders?.discount) {
-      // Fallback to legacy discount field if no discount_value (optional)
       discountAmount = Number(orders.discount);
     }
 
     let sumTotal = total - discountAmount;
+
+    // Calculate effective percentage for display
+    let effectivePercentage = 0;
+    if (total > 0 && discountAmount > 0) {
+      effectivePercentage = ((discountAmount / total) * 100).toFixed(1); // 1 decimal place
+      if (effectivePercentage.endsWith(".0")) {
+        effectivePercentage = parseInt(effectivePercentage);
+      }
+    }
 
     return {
       total: total.toFixed(2),
@@ -94,6 +102,7 @@ const CheckBottom = ({ orders }) => {
       discountAmount: discountAmount.toFixed(2),
       discountType,
       discountValue,
+      effectivePercentage,
     };
   }, [
     orders?.orders_items,
@@ -113,15 +122,16 @@ const CheckBottom = ({ orders }) => {
             <span>Cəm:</span>
             <span>{calcTotal.total} ₼</span>
           </div>
-          <div className="summary-row">
-            <span>Endirim:</span>
-            <span>
-              {calcTotal.discountAmount} ₼
-              {calcTotal.discountType === "percent" &&
-                calcTotal.discountValue > 0 &&
-                ` (~${calcTotal.discountValue}%)`}
-            </span>
-          </div>
+          {Number(calcTotal.discountAmount) > 0 && (
+            <div className="summary-row">
+              <span>Endirim:</span>
+              <span>
+                {calcTotal.discountAmount} ₼
+                {calcTotal.discountAmount > 0 &&
+                  ` (~${calcTotal.effectivePercentage}%)`}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="pt-3 action-buttons">
