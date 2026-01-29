@@ -12,6 +12,8 @@ import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
 import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
+import Toastify from "./components/Toastify/Toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -79,29 +81,32 @@ function AppContent() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<Login />} />
-      <Route path="/pin" element={<Pin />} />
-      <Route
-        path="/tables"
-        element={
-          <>
-            <Header />
-            <Tables />
-          </>
-        }
-      />
-      <Route
-        path="/tables/:id"
-        element={
-          <>
-            <Header />
-            <Tables />
-          </>
-        }
-      />
-      <Route path="/check/:id" element={<Check />} />
-    </Routes>
+    <>
+      <Toastify />
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/pin" element={<Pin />} />
+        <Route
+          path="/tables"
+          element={
+            <>
+              <Header />
+              <Tables />
+            </>
+          }
+        />
+        <Route
+          path="/tables/:id"
+          element={
+            <>
+              <Header />
+              <Tables />
+            </>
+          }
+        />
+        <Route path="/check/:id" element={<Check />} />
+      </Routes>
+    </>
   );
 }
 

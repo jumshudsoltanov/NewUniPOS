@@ -60,7 +60,7 @@ const CheckLockModal = ({ show, onClose }) => {
             </Col>
             <Col>
               <div className="lockTextHeader text-center mt-2">
-                "Kilidlənmiş qəbzlərdə dəyişiklik etmək mümkün olmayacaq.""  
+                "Kilidlənmiş qəbzlərdə dəyişiklik etmək mümkün olmayacaq."
               </div>
             </Col>
           </Row>

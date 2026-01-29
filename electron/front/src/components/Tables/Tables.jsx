@@ -8,6 +8,7 @@ import CustomersModal from "../Customers-Modal/CustomersModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import { updateTableOrders } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { toast } from "sonner";
 
 const Tables = () => {
   const { tableGroups, currentHallId } = useSelector(
@@ -28,26 +29,29 @@ const Tables = () => {
     const selectedHall = tableGroups.data.find(
       (hall) => hall.id === currentHallId,
     );
-    return selectedHall?.tables || [];
+    // Sort tables by ID to keep them stable
+    const tables = selectedHall?.tables || [];
+    return [...tables].sort((a, b) => a.id - b.id);
   }, [tableGroups, currentHallId]);
 
   const handleTableClick = async (table) => {
     const { orders } = table || {};
-
     if (id) {
       try {
-        const response = await dispatch(
+        await dispatch(
           updateTableOrders({
             orderId: id,
             newTableId: table?.id,
             currentHallId,
           }),
         ).unwrap();
-        // await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+
+        toast.success("Masa uğurla dəyişdirildi");
+        await dispatch(getTableGroups(loginedProfileData.data.profile.id));
         navigate(`/check/${id}?tableId=${table?.id}`);
-        console.log(response);
       } catch (error) {
-        console.log(error.response.error);
+        toast.error("Xəta baş verdi");
+        console.error(error);
       }
       return;
     }
