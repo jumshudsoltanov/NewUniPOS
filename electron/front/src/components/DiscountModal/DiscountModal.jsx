@@ -1,16 +1,22 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import "./DiscountModal.css";
 import Modal from "react-bootstrap/Modal";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { updateDiscountOnOrders } from "../../redux/Slices/OrdersSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
+
 const DiscountModal = ({ show, onClose, order }) => {
   const dispatch = useDispatch();
-  const [value, setValue] = useState(
-    order?.discount_value ? String(order.discount_value) : "0",
-  );
-  const [discountType, setDiscountType] = useState(
-    order?.discount_type || "percent",
-  );
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const [value, setValue] = useState("0");
+  const [discountType, setDiscountType] = useState("percent");
+
+  useEffect(() => {
+    if (order) {
+      setValue(order.discount_value ? String(order.discount_value) : "0");
+      setDiscountType(order.discount_type || "percent");
+    }
+  }, [order]);
 
   const handleNumClick = (num) => {
     if (String(value) === "0" && num !== ".") {
@@ -34,18 +40,23 @@ const DiscountModal = ({ show, onClose, order }) => {
 
   const handleUpdateDisCount = useCallback(async () => {
     try {
-      const result = await dispatch(
+      await dispatch(
         updateDiscountOnOrders({
           orderId: order?.uuid,
           discountValue: value,
           discountType,
         }),
       ).unwrap();
-      onclose(false);
+
+      // Refresh table data to update totals in UI
+      if (loginedProfileData?.data?.profile?.id) {
+        dispatch(getTableGroups(loginedProfileData.data.profile.id));
+      }
+
     } catch (error) {
       console.error("Discount update failed:", error);
     }
-  }, [dispatch, order, value, discountType, onclose]);
+  }, [dispatch, order, value, discountType, onClose, loginedProfileData]);
 
   return (
     <Modal
@@ -190,7 +201,10 @@ const DiscountModal = ({ show, onClose, order }) => {
                 />
               </svg>
             </button>
-            <button className="apply-btn" onClick={handleUpdateDisCount}>
+            <button
+              className="apply-btn"
+              onClick={() => (handleUpdateDisCount(), onClose(false))}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"

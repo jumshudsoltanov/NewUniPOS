@@ -26,6 +26,7 @@ export const updateDiscountOnOrders = createAsyncThunk(
         `http://localhost:55667/api/orders-items/${orderId}/discount`,
         { discountValue, discountType },
       );
+      console.log(response.data)
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data);

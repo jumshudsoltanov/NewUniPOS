@@ -60,7 +60,7 @@ const Table = React.memo(({ table, onTableClick }) => {
             <p
               className={`table-amount ${status} ${orders?.length > 0 ? "" : ""}`}
             >
-              {orders?.[0]?.total?.toFixed(2) ?? 0.0} ₼
+              {(orders?.[0]?.total?.toFixed(2)) ?? 0.00} ₼
             </p>
 
             <div

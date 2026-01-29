@@ -56,13 +56,67 @@ const sendOrdersItemsToDb = async (req, res) => {
 };
 
 const onUpdateDiscountOrder = async (req, res) => {
-  const { uuid } = req.params;
-  const { discountValue, discountType } = req.body;
+  const { orderId } = req.params;
+  let { discountValue, discountType } = req.body;
 
-  res.status(200).json({
-    message: "discount update success",
-    data: { uuid, discountType, discountValue },
-  });
+  if (!orderId || discountValue === undefined || !discountType) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const listOfProducts = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      attributes: ["count", "price"],
+    });
+
+    if (!listOfProducts || listOfProducts.length === 0) {
+      return res.status(404).json({ message: "Order items not found" });
+    }
+
+    const total = listOfProducts.reduce(
+      (sum, item) => sum + Number(item.count) * Number(item.price),
+      0,
+    );
+
+    discountValue = Number(discountValue);
+
+    if (isNaN(discountValue) || discountValue < 0) {
+      return res.status(400).json({ message: "Invalid discount value" });
+    }
+
+    let discount = 0;
+    let newTotal = total;
+
+    if (discountType === "percent") {
+      discount = (total * discountValue) / 100;
+    } else if (discountType === "cash") {
+      discount = discountValue;
+    } else {
+      return res.status(400).json({ message: "Invalid discount type" });
+    }
+
+    newTotal = total - discount;
+
+    newTotal = Math.max(newTotal, 0);
+
+    await OrdersModel.update(
+      {
+        discount: discount,
+        total: newTotal,
+        discount_type: discountType,
+        discount_value: discountValue,
+      },
+      { where: { uuid: orderId } },
+    );
+
+    return res.status(200).json({
+      message: "Discount updated successfully!",
+      data: { total, discount, newTotal, discountType, discountValue },
+    });
+  } catch (error) {
+    console.error("Discount update error:", error);
+    return res.status(500).json({ message: "Internal Server Error", error });
+  }
 };
 
 module.exports = { sendOrdersItemsToDb, onUpdateDiscountOrder };

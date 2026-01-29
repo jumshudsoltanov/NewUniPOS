@@ -8,6 +8,7 @@ import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getWaiter } from "../../redux/Slices/WaitersSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
 const PIN_LENGTH = 4;
 
@@ -141,9 +142,6 @@ const Pin = () => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const navigate = useNavigate();
 
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Settings menu handlers
   const handleRefresh = () => {
     window.location.reload();
   };
@@ -187,15 +185,13 @@ const Pin = () => {
   }, []);
 
   const handlePinSubmit = async (submittedPin) => {
-    setIsLoading(true);
     try {
-      // Minimum 2 saniyə gözləmə və sorğu
-      const [result] = await Promise.all([
-        dispatch(getWaiter(submittedPin)).unwrap(),
-        new Promise((resolve) => setTimeout(resolve, 2000)),
-      ]);
+      const waiterResult = await dispatch(getWaiter(submittedPin)).unwrap();
 
-      if (result.message === "success") {
+      if (waiterResult.message === "success") {
+        if (loginedProfileData?.data?.profile?.id) {
+          await dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap();
+        }
         navigate("/tables");
       } else {
         setIsError(true);
@@ -210,22 +206,8 @@ const Pin = () => {
         setIsError(false);
         setPin("");
       }, 500);
-    } finally {
-      setIsLoading(false);
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="loginLoadingState" style={{ height: "100vh", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-        <div className="premium-loader">
-          <div className="loader-ring"></div>
-          <div className="loader-dot"></div>
-        </div>
-        <p className="loadingText">Melumatlar yoxlanılır...</p>
-      </div>
-    );
-  }
 
   return (
     <>

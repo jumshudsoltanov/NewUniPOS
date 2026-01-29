@@ -17,6 +17,9 @@ const Header = () => {
 
   useEffect(() => {
     const getTable = async () => {
+      // Eger data artiq varsa tekrar yukleme
+      if (tableGroups?.data) return;
+
       try {
         await dispatch(
           getTableGroups(loginedProfileData.data.profile.id),

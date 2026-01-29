@@ -16,11 +16,16 @@ import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 function AppContent() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [isInitializing, setIsInitializing] = useState(true);
 
-  const isFirstLoad = useRef(true);
+  // Refs - re-render olmadan state saxlamaq üçün
+  const initStarted = useRef(false);
+  const [showInitialLoading, setShowInitialLoading] = useState(true);
 
   useEffect(() => {
+    // Əgər artıq init başlayıbsa, bir daha başlama
+    if (initStarted.current) return;
+    initStarted.current = true;
+
     const img = new Image();
     img.src = PinBackground;
 
@@ -28,35 +33,32 @@ function AppContent() {
       const storageData = JSON.parse(localStorage.getItem("profile"));
       const authResult = JSON.parse(localStorage.getItem("authResult"));
 
-      if (isFirstLoad.current) {
-        if (authResult) {
-          dispatch(setLoginData(authResult));
+      if (authResult) {
+        dispatch(setLoginData(authResult));
+        navigate("/pin");
+      } else if (storageData) {
+        try {
+          const data = await dispatch(authPos(storageData)).unwrap();
+          localStorage.setItem("authResult", JSON.stringify(data));
           navigate("/pin");
-        } else if (storageData) {
-          try {
-            const data = await dispatch(authPos(storageData)).unwrap();
-            localStorage.setItem("authResult", JSON.stringify(data));
-            navigate("/pin");
-          } catch (err) {
-            console.error("Auto-login failed:", err);
-            navigate("/");
-          }
-        } else {
+        } catch (err) {
+          console.error("Auto-login failed:", err);
           navigate("/");
         }
-        isFirstLoad.current = false;
-        setTimeout(() => setIsInitializing(false), 3000);
       } else {
-        setIsInitializing(false);
+        navigate("/");
       }
+
+      // Loading-i 1.5 saniyə sonra gizlət
+      setTimeout(() => setShowInitialLoading(false), 1500);
     };
 
     initApp();
   }, [dispatch, navigate]);
 
-  if (isInitializing) {
+  if (showInitialLoading) {
     return (
-      <div className="loginLoadingState" style={{ height: "100vh", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <div className="loginLoadingState" style={{ height: "100vh", background: "#F3F4F6", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <div className="premium-loader">
           <div className="loader-ring"></div>
           <div className="loader-dot"></div>

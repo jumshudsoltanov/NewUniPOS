@@ -65,13 +65,44 @@ const CheckBottom = ({ orders }) => {
       }
     });
 
-    return Array.from(listOfProducts.values())
-      .reduce(
-        (sum, item) => sum + Number(item.quantity) * Number(item.price),
-        0,
-      )
-      .toFixed(2);
-  }, [orders?.orders_items, products, sentProducts]);
+    let total = Array.from(listOfProducts.values()).reduce(
+      (sum, item) => sum + Number(item.quantity) * Number(item.price),
+      0,
+    );
+
+    // Calculate Dynamic Discount
+    const discountValue = Number(orders?.discount_value || 0);
+    const discountType = orders?.discount_type || "percent";
+    let discountAmount = 0;
+
+    if (discountValue > 0) {
+      if (discountType === "percent") {
+        discountAmount = (total * discountValue) / 100;
+      } else {
+        discountAmount = discountValue;
+      }
+    } else if (orders?.discount) {
+      // Fallback to legacy discount field if no discount_value (optional)
+      discountAmount = Number(orders.discount);
+    }
+
+    let sumTotal = total - discountAmount;
+
+    return {
+      total: total.toFixed(2),
+      sumTotal: sumTotal.toFixed(2),
+      discountAmount: discountAmount.toFixed(2),
+      discountType,
+      discountValue,
+    };
+  }, [
+    orders?.orders_items,
+    products,
+    sentProducts,
+    orders?.discount,
+    orders?.discount_value,
+    orders?.discount_type,
+  ]);
 
   return (
     <>
@@ -80,11 +111,16 @@ const CheckBottom = ({ orders }) => {
         <div className="summary-section">
           <div className="summary-row">
             <span>Cəm:</span>
-            <span>{calcTotal} ₼</span>
+            <span>{calcTotal.total} ₼</span>
           </div>
           <div className="summary-row">
             <span>Endirim:</span>
-            <span>275.00 ₼ (~18%)</span>
+            <span>
+              {calcTotal.discountAmount} ₼
+              {calcTotal.discountType === "percent" &&
+                calcTotal.discountValue > 0 &&
+                ` (~${calcTotal.discountValue}%)`}
+            </span>
           </div>
         </div>
 
@@ -95,7 +131,7 @@ const CheckBottom = ({ orders }) => {
           </button>
           <button className="btn-pay">
             <i className="bi bi-check2-all"></i>
-            <span>{calcTotal} ₼</span>
+            <span>{calcTotal.sumTotal} ₼</span>
           </button>
         </div>
       </div>
@@ -113,7 +149,7 @@ const CheckBottom = ({ orders }) => {
         </button>
         <button className="mobile-pay-btn">
           <i className="bi bi-check2-all fs-4 text-white"></i>
-          <span className="pay-amount">{calcTotal} ₼</span>
+          <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
         </button>
       </div>
     </>

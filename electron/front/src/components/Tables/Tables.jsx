@@ -9,6 +9,10 @@ import OtherChecks from "../OtherChecks/OtherChecks";
 
 const Tables = () => {
   const { tableGroups, currentHallId } = useSelector((state) => state.TablesSlice);
+  const [selectedTable, setSelectedTable] = React.useState(null);
+  const [showModal, setShowModal] = React.useState(false);
+  const [showOtherChecks, setShowOtherChecks] = React.useState(false);
+  const navigate = useNavigate();
 
   const currentTables = useMemo(() => {
     if (!tableGroups?.data || !currentHallId) {
@@ -17,33 +21,6 @@ const Tables = () => {
     const selectedHall = tableGroups.data.find((hall) => hall.id === currentHallId);
     return selectedHall?.tables || [];
   }, [tableGroups, currentHallId]);
-
-  if (!tableGroups?.data) {
-    return (
-      <div className="d-flex justify-content-center align-items-center py-5">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Yüklənir...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (currentTables.length === 0) {
-    return (
-      <Container className="mt-4">
-        <Alert variant="warning" className="text-center shadow-sm border-0">
-          <i className="bi bi-exclamation-triangle-fill me-2"></i>
-          Daxil etdiyiniz zalda aktiv masa tapılmadı. Zəhmət olmasa başqa zal
-          seçin və ya admin panelindən masalar əlavə edin.
-        </Alert>
-      </Container>
-    );
-  }
-
-  const [selectedTable, setSelectedTable] = React.useState(null);
-  const [showModal, setShowModal] = React.useState(false);
-  const [showOtherChecks, setShowOtherChecks] = React.useState(false);
-  const navigate = useNavigate();
 
   const handleTableClick = (table) => {
     const { orders } = table || {};
@@ -59,6 +36,21 @@ const Tables = () => {
       setShowModal(true);
     }
   };
+
+  // Data yoxdursa boş massiv göstər - loading Pin səhifəsində olur
+  // Tables-a gələndə data artıq yüklənmiş olmalıdır
+
+  if (currentTables.length === 0) {
+    return (
+      <Container className="mt-4">
+        <Alert variant="warning" className="text-center shadow-sm border-0">
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>
+          Daxil etdiyiniz zalda aktiv masa tapılmadı. Zəhmət olmasa başqa zal
+          seçin və ya admin panelindən masalar əlavə edin.
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
     <>
