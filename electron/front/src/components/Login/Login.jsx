@@ -49,8 +49,9 @@ const Login = () => {
     };
 
     try {
-      await dispatch(authPos(profileData)).unwrap();
+      const data = await dispatch(authPos(profileData)).unwrap();
       localStorage.setItem("profile", JSON.stringify(profileData));
+      localStorage.setItem("authResult", JSON.stringify(data));
       navigate("/pin");
     } catch (err) {
       console.error("Manual login failed:", err);

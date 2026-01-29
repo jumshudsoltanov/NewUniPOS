@@ -141,6 +141,8 @@ const Pin = () => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const navigate = useNavigate();
 
+  const [isLoading, setIsLoading] = useState(false);
+
   // Settings menu handlers
   const handleRefresh = () => {
     window.location.reload();
@@ -185,17 +187,45 @@ const Pin = () => {
   }, []);
 
   const handlePinSubmit = async (submittedPin) => {
-    const result = await dispatch(getWaiter(submittedPin)).unwrap();
-    if (result.message === "success") {
-      navigate("/tables");
-    } else {
+    setIsLoading(true);
+    try {
+      // Minimum 2 saniyə gözləmə və sorğu
+      const [result] = await Promise.all([
+        dispatch(getWaiter(submittedPin)).unwrap(),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]);
+
+      if (result.message === "success") {
+        navigate("/tables");
+      } else {
+        setIsError(true);
+        setTimeout(() => {
+          setIsError(false);
+          setPin("");
+        }, 500);
+      }
+    } catch (error) {
       setIsError(true);
       setTimeout(() => {
         setIsError(false);
         setPin("");
       }, 500);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="loginLoadingState" style={{ height: "100vh", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div className="premium-loader">
+          <div className="loader-ring"></div>
+          <div className="loader-dot"></div>
+        </div>
+        <p className="loadingText">Melumatlar yoxlanılır...</p>
+      </div>
+    );
+  }
 
   return (
     <>

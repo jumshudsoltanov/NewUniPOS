@@ -36,7 +36,9 @@ const Header = () => {
   }, [tableGroups]);
 
   useEffect(() => {
-    dispatch(currentTableList({ hallId: activeHall }));
+    if (activeHall) {
+      dispatch(currentTableList({ hallId: activeHall }));
+    }
   }, [activeHall]);
 
   return (

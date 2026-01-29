@@ -1,15 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import "./Table.css";
-import CustomersModal from "../Customers-Modal/CustomersModal";
-import { useNavigate } from "react-router-dom";
-import OtherChecks from "../OtherChecks/OtherChecks";
 
-const Table = React.memo(({ table }) => {
+const Table = React.memo(({ table, onTableClick }) => {
   const { name, status, shape_type, orders } = table || {};
-  const [selectedTable, setSelectedTable] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [showOtherChecks, setShowOtherChecks] = useState(false);
-  const navigate = useNavigate();
 
   const renderSeats = () => {
     if (shape_type === "rectangle") {
@@ -34,15 +27,9 @@ const Table = React.memo(({ table }) => {
     );
   };
 
-  const handleTableClick = (tableData) => {
-    setSelectedTable(tableData);
-    if (orders?.length > 1) {
-      setShowOtherChecks(true);
-    } else if (orders?.length === 1) {
-      setShowModal(false);
-      navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
-    } else {
-      setShowModal(true);
+  const handleTableClick = () => {
+    if (onTableClick) {
+      onTableClick(table);
     }
   };
 
@@ -107,17 +94,6 @@ const Table = React.memo(({ table }) => {
         </div>
       </div>
 
-      <CustomersModal
-        show={showModal}
-        onHide={() => setShowModal(false)}
-        table={selectedTable}
-      />
-
-      <OtherChecks
-        show={showOtherChecks}
-        onClose={() => setShowOtherChecks(false)}
-        table={selectedTable}
-      />
     </>
   );
 });

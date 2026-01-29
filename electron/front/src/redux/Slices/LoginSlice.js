@@ -23,7 +23,11 @@ const LoginSlice = createSlice({
     loginedProfileData: {},
   },
 
-  reducers: {},
+  reducers: {
+    setLoginData: (state, action) => {
+      state.loginedProfileData = action.payload;
+    },
+  },
 
   extraReducers: (builder) => {
     builder.addCase(authPos.fulfilled, (state, action) => {
@@ -32,4 +36,5 @@ const LoginSlice = createSlice({
   },
 });
 
+export const { setLoginData } = LoginSlice.actions;
 export default LoginSlice.reducer;
