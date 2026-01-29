@@ -12,7 +12,7 @@ import { useMemo } from "react";
 
 const CheckBottom = ({ orders }) => {
   const dispatch = useDispatch();
-  const { products } = useSelector((state) => state.OrderSlice);
+  const { products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { id } = useParams();
@@ -33,46 +33,45 @@ const CheckBottom = ({ orders }) => {
     }
   };
 
+  // Caclculate total
+
   const calcTotal = useMemo(() => {
     const listOfProducts = new Map();
 
     orders?.orders_items.forEach((item) => {
-      if (listOfProducts.has(item.product_id)) {
-        listOfProducts.set(item.product_id, {
-          ...item,
-          quantity:
-            listOfProducts.get(item.product_id).count + Number(item.count),
-        });
+      const id = item.product_id;
+      if (listOfProducts.has(id)) {
+        const exist = listOfProducts.get(id);
+        exist.quantity += Number(item.count);
+        exist.price = item.price;
       } else {
-        listOfProducts.set(item.product_id, {
-          ...item,
-          quantity: Number(item.count),
-        });
+        listOfProducts.set(id, { ...item, quantity: Number(item.count) });
       }
     });
 
-    products.forEach((product) => {
-      if (listOfProducts.has(product.id)) {
-        listOfProducts.set(product.id, {
-          ...listOfProducts.get(product.id),
-          quantity:
-            listOfProducts.get(product.id).count + Number(product.quantity),
-        });
+    const combinedLocal = [...products, ...(sentProducts || [])];
+
+    combinedLocal.forEach((product) => {
+      const id = product.id;
+      if (listOfProducts.has(id)) {
+        const exist = listOfProducts.get(id);
+        exist.quantity += Number(product.quantity);
+        exist.price = product.price;
       } else {
-        listOfProducts.set(product.id, {
+        listOfProducts.set(id, {
           ...product,
           quantity: Number(product.quantity),
         });
       }
     });
 
-    return listOfProducts
-      .values()
+    return Array.from(listOfProducts.values())
       .reduce(
         (sum, item) => sum + Number(item.quantity) * Number(item.price),
         0,
-      );
-  }, [orders?.orders_items, products]);
+      )
+      .toFixed(2);
+  }, [orders?.orders_items, products, sentProducts]);
 
   return (
     <>

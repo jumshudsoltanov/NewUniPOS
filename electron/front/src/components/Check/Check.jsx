@@ -19,6 +19,7 @@ import ClearCheck from "../ClearCheck/ClearCheck";
 import DiscountModal from "../DiscountModal/DiscountModal";
 import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
 import WaitersModal from "../Waiters/WaitersModal";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -33,6 +34,7 @@ const Check = () => {
   const [onShowServiceFee, setOnShowServiceFee] = useState(false);
   const [showWaitersModal, setShowWaitersModal] = useState(false);
   const navigate = useNavigate();
+  const dispath = useDispatch();
   const { products, menu } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { tableGroups, currentHallId } = useSelector(
@@ -45,7 +47,10 @@ const Check = () => {
   const [currentHall, setCurrentHall] = useState(null);
   const [currentTable, setCurrentTable] = useState(null);
 
-  const goTables = () => {
+  const goTables = async () => {
+    await dispath(
+      getTableGroups(loginedProfileData?.data?.profile.id),
+    ).unwrap();
     navigate("/tables");
   };
 
@@ -771,6 +776,7 @@ const Check = () => {
       <DiscountModal
         show={onShowDiscount}
         onClose={() => setOnShowDiscount(false)}
+        order={currentOrder}
       />
 
       <ServiceFeeModal

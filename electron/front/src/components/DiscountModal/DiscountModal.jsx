@@ -1,13 +1,19 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import "./DiscountModal.css";
 import Modal from "react-bootstrap/Modal";
-
-const DiscountModal = ({ show, onClose }) => {
-  const [value, setValue] = useState("0");
-  const [discountType, setDiscountType] = useState("percent");
+import { useDispatch } from "react-redux";
+import { updateDiscountOnOrders } from "../../redux/Slices/OrdersSlice";
+const DiscountModal = ({ show, onClose, order }) => {
+  const dispatch = useDispatch();
+  const [value, setValue] = useState(
+    order?.discount_value ? String(order.discount_value) : "0",
+  );
+  const [discountType, setDiscountType] = useState(
+    order?.discount_type || "percent",
+  );
 
   const handleNumClick = (num) => {
-    if (value === "0" && num !== ".") {
+    if (String(value) === "0" && num !== ".") {
       setValue(num.toString());
     } else {
       setValue(value + num.toString());
@@ -26,8 +32,20 @@ const DiscountModal = ({ show, onClose }) => {
     setValue("0");
   };
 
-
-
+  const handleUpdateDisCount = useCallback(async () => {
+    try {
+      const result = await dispatch(
+        updateDiscountOnOrders({
+          orderId: order?.uuid,
+          discountValue: value,
+          discountType,
+        }),
+      ).unwrap();
+      onclose(false);
+    } catch (error) {
+      console.error("Discount update failed:", error);
+    }
+  }, [dispatch, order, value, discountType, onclose]);
 
   return (
     <Modal
@@ -172,7 +190,7 @@ const DiscountModal = ({ show, onClose }) => {
                 />
               </svg>
             </button>
-            <button className="apply-btn">
+            <button className="apply-btn" onClick={handleUpdateDisCount}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"

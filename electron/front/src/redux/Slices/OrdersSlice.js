@@ -18,12 +18,28 @@ export const sendOrdersItems = createAsyncThunk(
   },
 );
 
+export const updateDiscountOnOrders = createAsyncThunk(
+  "pos/discount",
+  async ({ orderId, discountValue, discountType }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/discount`,
+        { discountValue, discountType },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
     products: [],
     sentProducts: [],
     menu: [],
+    discount: [],
   },
 
   reducers: {
@@ -93,6 +109,9 @@ export const OrderSlice = createSlice({
       })
       .addCase(getTableGroups.fulfilled, (state, action) => {
         state.sentProducts = [];
+      })
+      .addCase(updateDiscountOnOrders.fulfilled, (state, action) => {
+        state.discount = action.payload;
       });
   },
 });

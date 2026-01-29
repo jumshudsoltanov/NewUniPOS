@@ -18,5 +18,9 @@ router.post(
   OrdersItemsController.sendOrdersItemsToDb,
 );
 
+router.patch(
+  "/orders-items/:orderId/discount",
+  OrdersItemsController.onUpdateDiscountOrder,
+);
 
 module.exports = router;
