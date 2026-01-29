@@ -46,6 +46,8 @@ const Table = React.memo(({ table }) => {
     }
   };
 
+
+
   return (
     <>
       <div
@@ -73,7 +75,7 @@ const Table = React.memo(({ table }) => {
             <p
               className={`table-amount ${status} ${orders?.length > 0 ? "" : ""}`}
             >
-              0.00 ₼
+              {orders?.[0]?.total?.toFixed(2) ?? 0.00} ₼
             </p>
 
             <div

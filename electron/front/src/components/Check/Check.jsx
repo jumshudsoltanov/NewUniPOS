@@ -33,7 +33,7 @@ const Check = () => {
   const [onShowServiceFee, setOnShowServiceFee] = useState(false);
   const [showWaitersModal, setShowWaitersModal] = useState(false);
   const navigate = useNavigate();
-  const { products } = useSelector((state) => state.OrderSlice);
+  const { products, menu } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { tableGroups, currentHallId } = useSelector(
     (state) => state.TablesSlice,
@@ -54,7 +54,7 @@ const Check = () => {
   };
 
   const clearCheck = () => {
-    if (products.length == 0) {
+    if (products.length == 0 || currentOrder?.orders_items.length == 0) {
       setShowOperationsModal(false);
       return;
     }

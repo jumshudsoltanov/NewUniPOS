@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
+import { updateCount } from "../../redux/Slices/OrdersSlice";
+import { useDispatch, useSelector } from "react-redux";
 
-const EditModal = ({ show, onClose, product }) => {
+const EditModal = ({ show, onClose, product, orders }) => {
   const [activeTab, setActiveTab] = useState("edit");
-  const [qty, setQty] = useState(product?.quantity || 1);
+  const [qty, setQty] = useState(product?.count || 1);
   const [price, setPrice] = useState(product?.price || 0);
+  const dispatch = useDispatch();
+  const { sentProducts, products } = useSelector((state) => state.OrderSlice);
   const [inputValue, setInputValue] = useState(
     product?.price ? product.price.toString() : "0",
   );
@@ -17,6 +21,9 @@ const EditModal = ({ show, onClose, product }) => {
       setInputValue((prev) => prev + val);
     }
   };
+
+
+  console.log(orders.orders_items)
 
   return (
     <Modal
@@ -149,7 +156,23 @@ const EditModal = ({ show, onClose, product }) => {
                 </div>
 
                 {/* Footer Action Button */}
-                <button className="save-action-btn">
+                <button
+                  className="save-action-btn"
+                  onClick={() => {
+                    const savedQty = product.savedQuantity || 0;
+                    const newLocalQty = qty - savedQty;
+
+                    dispatch(
+                      updateCount({
+                        productId: product.product_id || product.id,
+                        count: newLocalQty,
+                        price: inputValue,
+                        name: product.name,
+                      }),
+                    );
+                    onClose(true);
+                  }}
+                >
                   <i className="bi bi-check-lg"></i>
                   Saxla
                 </button>

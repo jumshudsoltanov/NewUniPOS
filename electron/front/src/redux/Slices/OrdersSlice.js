@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import { getTableGroups } from "./TablesSlice";
 
 export const sendOrdersItems = createAsyncThunk(
   "pos/orders",
@@ -10,7 +11,6 @@ export const sendOrdersItems = createAsyncThunk(
         `http://localhost:55667/api/orders-items/${orderId}/items`,
         { productList: productList, profileId: profileId, waiterId: waiterId },
       );
-      console.log(response.data);
       return response.data;
     } catch (err) {
       return thunkAPI.rejectWithValue(err.response?.data || "Server error");
@@ -22,13 +22,14 @@ export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
     products: [],
+    sentProducts: [],
     menu: [],
   },
 
   reducers: {
     addProducts: (state, action) => {
       const existingProduct = state.products.find(
-        (product) => product.name === action.payload.name,
+        (product) => product.id === action.payload.id,
       );
 
       let oldQuantity = 0;
@@ -40,7 +41,7 @@ export const OrderSlice = createSlice({
         existingProduct.newOrder = (existingProduct.newOrder || 0) + 1;
         newQuantity = existingProduct.quantity;
       } else {
-        state.menu.push({ ...action.payload, quantity: 1, newOrder: 1 });
+        state.products.push({ ...action.payload, quantity: 1, newOrder: 1 });
         oldQuantity = 0;
         newQuantity = 1;
       }
@@ -55,6 +56,29 @@ export const OrderSlice = createSlice({
 
     clearOrders: (state, action) => {
       state.products = [];
+      state.sentProducts = [];
+    },
+
+    updateCount: (state, action) => {
+      const { productId, count, price, name } = action.payload;
+
+      const product = state.products.find((item) => item.id === productId);
+
+      if (product) {
+        if (count !== undefined) product.quantity = count;
+        if (price !== undefined) product.price = price;
+      } else {
+        if (count !== undefined) {
+          state.products.push({
+            id: productId,
+            name: name || "Məhsul",
+            price: price || 0,
+            quantity: count,
+            newOrder: 1,
+            isNew: true,
+          });
+        }
+      }
     },
 
     menuData: (state, action) => {
@@ -62,11 +86,17 @@ export const OrderSlice = createSlice({
     },
   },
   extraReducers: (builders) => {
-    builders.addCase(sendOrdersItems.fulfilled, (state, action) => {
-      state.products = action.payload;
-    });
+    builders
+      .addCase(sendOrdersItems.fulfilled, (state, action) => {
+        state.sentProducts = state.products;
+        state.products = [];
+      })
+      .addCase(getTableGroups.fulfilled, (state, action) => {
+        state.sentProducts = [];
+      });
   },
 });
 
-export const { addProducts, sendOrders, clearOrders,menuData } = OrderSlice.actions;
+export const { addProducts, sendOrders, clearOrders, menuData, updateCount } =
+  OrderSlice.actions;
 export default OrderSlice.reducer;

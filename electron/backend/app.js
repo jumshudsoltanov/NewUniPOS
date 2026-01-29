@@ -6,7 +6,7 @@ const db = require("./database/config");
 app.use(express.json());
 const TablesModel = require("./model/TablesModel");
 const TableGroupsModel = require("./model/TableGroupsModel");
-const OrdersModel = require("./model/OdersModel");
+const OrdersModel = require("./model/OrdersModel");
 const OrdersItemsModel = require("./model/OrdersItemsModel");
 const WaitersModel = require("./model/WaitersModel");
 const LoginModel = require("./model/LoginModel");

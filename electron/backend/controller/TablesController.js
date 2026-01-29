@@ -1,6 +1,6 @@
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
-const OrdersModel = require("../model/OdersModel");
+const OrdersModel = require("../model/OrdersModel");
 const WaitersModel = require("../model/WaitersModel");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
 

@@ -7,16 +7,64 @@ import { useParams, useSearchParams } from "react-router-dom";
 const CheckMain = ({ orders }) => {
   const [editItemModal, setEditItemModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const { menu } = useSelector((state) => state.OrderSlice);
+  const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
 
-  const MenuData = menu
-    ?.filter((item) =>
-      orders?.orders_items?.some((o) => o.product_id === item.id),
-    )
-    .map((item) => ({
-      ...item,
-      ...orders.orders_items.find((o) => o.product_id === item.id),
-    }));
+  const allItems = useMemo(() => {
+    const groupedMap = new Map();
+
+    // 1. Process Saved items
+    if (orders?.orders_items) {
+      orders.orders_items.forEach((orderItem) => {
+        const prodId = Number(orderItem.product_id);
+        const existing = groupedMap.get(prodId);
+
+        if (existing) {
+          existing.count += Number(orderItem.count);
+          existing.savedQuantity = (existing.savedQuantity || 0) + Number(orderItem.count);
+          existing.price = orderItem.price || orderItem.amount;
+        } else {
+          const menuItem = menu.find((item) => item.id === prodId);
+          groupedMap.set(prodId, {
+            ...orderItem,
+            product_id: prodId,
+            name: menuItem?.name || orderItem.product_name || "Məhsul",
+            count: Number(orderItem.count),
+            savedQuantity: Number(orderItem.count),
+            localQuantity: 0,
+            price: orderItem.price || orderItem.amount,
+            isNew: false,
+          });
+        }
+      });
+    }
+
+    // 2. Process New (Local) & Just Sent items
+    const combinedLocal = [...products, ...(sentProducts || [])];
+
+    combinedLocal.forEach((item) => {
+      const prodId = Number(item.id);
+      const existing = groupedMap.get(prodId);
+
+      if (existing) {
+        existing.count += item.quantity;
+        existing.localQuantity = (existing.localQuantity || 0) + item.quantity;
+        existing.price = item.price;
+        existing.isNew = true;
+      } else {
+        groupedMap.set(prodId, {
+          product_id: prodId,
+          name: item.name,
+          count: item.quantity,
+          savedQuantity: 0,
+          localQuantity: item.quantity,
+          price: item.price,
+          isNew: true,
+        });
+      }
+    });
+
+    return Array.from(groupedMap.values());
+  }, [orders, menu, products, sentProducts]);
 
   const handleItemClick = (item) => {
     setSelectedProduct(item);
@@ -35,24 +83,23 @@ const CheckMain = ({ orders }) => {
 
         {/* Scrollable List */}
         <div className="order-list-container">
-          {MenuData.length > 0 &&
-            MenuData.map((item, index) => (
+          {allItems.length > 0 &&
+            allItems.map((item, index) => (
               <div
                 onClick={() => handleItemClick(item)}
-                className={`order-item ${item.newOrder ? "new-order-highlight" : ""}`}
-                key={index}
+                className={`order-item ${item.isNew ? "new-order-highlight" : ""}`}
+                key={item.product_id || index}
               >
                 <div className="col-name">{item.name}</div>
                 <div className="col-qty">
                   {item.count} <span className="x-sign">×</span>{" "}
-                  {item.price.toFixed(2)} ₼
+                  {Number(item.price).toFixed(2)} ₼
                 </div>
                 <div className="col-total">
-                  {(item.price * item.count).toFixed(2)} ₼
+                  {(Number(item.price) * Number(item.count)).toFixed(2)} ₼
                 </div>
               </div>
             ))}
-          {/* Dotted separator at the end of list if needed, but css borders handle items */}
         </div>
       </div>
       {editItemModal && (
@@ -60,6 +107,7 @@ const CheckMain = ({ orders }) => {
           show={editItemModal}
           onClose={() => setEditItemModal(false)}
           product={selectedProduct}
+          orders={orders}
         />
       )}
     </>

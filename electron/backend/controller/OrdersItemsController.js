@@ -1,4 +1,5 @@
 const OrdersItemsModel = require("../model/OrdersItemsModel");
+const OrdersModel = require("../model/OrdersModel");
 
 const sendOrdersItemsToDb = async (req, res) => {
   const { orderId } = req.params;
@@ -20,9 +21,19 @@ const sendOrdersItemsToDb = async (req, res) => {
       profile_id: profileId,
     }));
 
+    let total = ordersItemsData.reduce(
+      (sum, item) => sum + Number(item.count) * Number(item.price),
+      0,
+    );
+
     const savedItems = await OrdersItemsModel.bulkCreate(ordersItemsData, {
-      updateOnDuplicate: ["count", "price"],
+      updateOnDuplicate: ["count", "price", "product_id", "order_id"],
     });
+
+    const updateOrders = await OrdersModel.update(
+      { amount: total, total: total },
+      { where: { uuid: orderId } },
+    );
 
     return res
       .status(201)

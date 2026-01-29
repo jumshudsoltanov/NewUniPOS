@@ -1,18 +1,16 @@
 /* Modal Container */
 .editmodal .modal-dialog {
     max-width: 420px !important;
-    /* "withi cox dur biraz alat" - Reduced width */
     margin: 1.75rem auto;
 }
 
 .editmodal .modal-content {
-    border-radius: 0 !important;
-    /* Kvadrat */
+    border-radius: 20px !important;
     border: none;
     overflow: hidden;
     padding: 0;
     background-color: #fff;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
 }
 
 .editmodal .modal-body {
@@ -29,7 +27,7 @@
 /* LEFT SIDEBAR */
 .edit-sidebar {
     width: 85px;
-    background-color: #0062CC;
+    background-color: #4F85F4;
     display: flex;
     flex-direction: column;
     padding: 0;
@@ -58,14 +56,11 @@
     margin: 0;
     outline: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    /* Clear separator */
     border-right: 1px solid rgba(255, 255, 255, 0.1);
-    /* Slight separation from content */
 }
 
 .sidebar-btn:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-    /* Subtle hover for feedback */
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-btn:first-child {
@@ -74,24 +69,19 @@
 
 .sidebar-btn.active {
     background: #fff;
-    color: #0062CC;
+    color: #4F85F4;
     border-radius: 0 !important;
     margin: 0;
     width: 100%;
     box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
-    /* Very subtle depth */
     border-right: none;
-    /* Connects to content */
     border-bottom: 1px solid #E9ECEF;
-    /* Matches content internal borders */
     position: relative;
     z-index: 5;
-    /* Above the sidebar line if any */
 }
 
 .sidebar-btn i {
     font-size: 1.4rem;
-    /* Slightly larger icon */
     margin-bottom: 6px;
 }
 
@@ -102,36 +92,22 @@
     letter-spacing: 0.3px;
 }
 
-.sidebar-btn.active {
-    background-color: #fff;
-    color: #0062CC;
-    border-radius: 0 !important;
-    margin: 0;
-    width: 100%;
-    box-shadow: none;
-}
-
 /* Sidebar Bottom (Delete Button Area) */
 .sidebar-bottom {
     margin-top: auto;
     width: 100%;
-    /* No padding to let button fill space nicely if colored */
 }
 
-/* "sil duymeside aydin olsun" - Make it red background or very visible */
 .btn-delete {
     color: #fff;
-    background-color: #DC3545;
-    /* Red background for clear visibility */
+    background-color: #FF4D4D;
     border-bottom: none;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     opacity: 1;
-    /* Ensure full visibility */
 }
 
 .btn-delete:hover {
-    /* No hover effects requested, but keep static red */
-    background-color: #DC3545;
+    background-color: #E60000;
     color: white;
 }
 
@@ -146,7 +122,7 @@
 
 /* Header */
 .edit-header {
-    background-color: #0062CC;
+    background-color: #4F85F4;
     color: white;
     height: 60px;
     padding: 0 20px;
@@ -190,7 +166,7 @@
 /* Price/Input Box */
 .input-display-box {
     background-color: #fff;
-    border-radius: 0;
+    border-radius: 12px;
     padding: 12px 16px;
     position: relative;
     border: 1px solid #E9ECEF;
@@ -230,7 +206,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: #fff;
+    background-color: transparent;
     padding: 0;
     border-radius: 0;
     border: none;
@@ -241,7 +217,7 @@
 .stepper-btn {
     width: 60px;
     height: 50px;
-    border-radius: 0;
+    border-radius: 12px;
     border: none;
     color: white;
     font-size: 1.5rem;
@@ -252,11 +228,11 @@
 }
 
 .btn-minus {
-    background-color: #6B7280;
+    background-color: #9CA3AF;
 }
 
 .btn-plus {
-    background-color: #0062CC;
+    background-color: #4F85F4;
 }
 
 .stepper-value {
@@ -271,6 +247,7 @@
     align-items: center;
     justify-content: center;
     border: 1px solid #E9ECEF;
+    border-radius: 12px;
 }
 
 /* Numpad */
@@ -285,7 +262,7 @@
 .num-key {
     background-color: #fff;
     border: 1px solid #E5E7EB;
-    border-radius: 0;
+    border-radius: 12px;
     font-size: 1.3rem;
     font-weight: 500;
     color: #374151;
@@ -296,11 +273,14 @@
     box-shadow: none;
 }
 
+.num-key:active {
+    background-color: #E9ECEF;
+}
+
 /* Save Button */
 .save-action-btn {
     width: 100%;
-    background-color: #0062CC;
-    /* PRIMARY BLUE */
+    background-color: #4F85F4;
     color: white;
     border: none;
     padding: 16px;
