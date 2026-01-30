@@ -142,6 +142,70 @@ const onUpdateDiscountOrder = async (req, res) => {
   }
 };
 
+const onUpdateServiceFeeOrder = async (req, res) => {
+  const { orderId } = req.params;
+  let { serviceValue, feeType } = req.body;
+
+  if (!orderId || serviceValue === undefined || !feeType) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const listOfProducts = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      attributes: ["count", "price"],
+    });
+
+    if (!listOfProducts || listOfProducts.length === 0) {
+      return res.status(404).json({ message: "Order items not found" });
+    }
+
+    const total = listOfProducts.reduce(
+      (sum, item) => sum + Number(item.count) * Number(item.price),
+      0,
+    );
+
+    feeType = Number(feeType);
+
+    if (isNaN(serviceValue) || serviceValue < 0) {
+      return res.status(400).json({ message: "Invalid service value" });
+    }
+
+    let service = 0;
+    let newTotal = total;
+
+    if (feeType === "percent") {
+      service = (total * serviceValue) / 100;
+    } else if (feeType === "cash") {
+      service = serviceValue;
+    } else {
+      return res.status(400).json({ message: "Invalid service type" });
+    }
+
+    newTotal = total + service;
+
+    newTotal = Math.max(newTotal, 0);
+
+    await OrdersModel.update(
+      {
+        service_charge: service,
+        total: newTotal,
+        service_type: feeType,
+        service_value: serviceValue,
+      },
+      { where: { uuid: orderId } },
+    );
+
+    return res.status(200).json({
+      message: "service updated successfully!",
+      data: { total, service, newTotal, feeType, serviceValue },
+    });
+  } catch (error) {
+    console.error("service update error:", error);
+    return res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
 const onUpdateTableOrder = async (req, res) => {
   const { orderId } = req.params;
   const { newTableId, currentHallId } = req.body;
@@ -231,4 +295,5 @@ module.exports = {
   onLockCheck,
   onUpdateCheckTags,
   onUpdateCheckComments,
+  onUpdateServiceFeeOrder,
 };

@@ -25,6 +25,11 @@ router.patch(
 );
 
 router.patch(
+  "/orders-items/:orderId/service-fee",
+  OrdersItemsController.onUpdateServiceFeeOrder,
+);
+
+router.patch(
   "/orders-items/:orderId/update-table",
   OrdersItemsController.onUpdateTableOrder,
 );

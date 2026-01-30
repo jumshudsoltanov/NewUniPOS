@@ -3,7 +3,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Remove animation */
+/* Remove all animations */
 .sales-type-modal {
   animation: none !important;
 }
@@ -11,6 +11,15 @@
 .sales-type-modal .modal-dialog {
   animation: none !important;
   transition: none !important;
+}
+
+.sales-type-modal.fade .modal-dialog {
+  transition: none !important;
+  transform: none !important;
+}
+
+.sales-type-modal.show .modal-dialog {
+  transform: none !important;
 }
 
 /* Modal yuxarıda, solda - Yeni sifariş düyməsinin altında */

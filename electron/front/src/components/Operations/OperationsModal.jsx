@@ -10,7 +10,7 @@ export const OperationsModal = ({
   openDiscountModal,
   openServiceFee,
   openWaitersModal,
-  handleChangeTable
+  handleChangeTable,
 }) => {
   const operations = [
     { icon: "bi-arrows-angle-expand", text: "Çeki böl" },
@@ -42,21 +42,26 @@ export const OperationsModal = ({
       size="lg"
       className="operations-modal"
     >
-      <Modal.Header className="bg-primary text-white border-0 py-3 px-4 d-flex align-items-center justify-content-between">
-        <h5 className="m-0">Əməliyyatlar</h5>
-        {/* Close X Button for Desktop */}
-        <div
-          className="close-btn cursor-pointer d-none d-lg-flex align-items-center justify-content-center p-1 rounded-circle"
-          onClick={onHide}
-          style={{
-            width: "32px",
-            height: "32px",
-            background: "rgba(255,255,255,0.2)",
-          }}
-        >
-          <i className="bi bi-x-lg text-white" style={{ fontSize: "16px" }}></i>
-        </div>
-      </Modal.Header>
+      {false && (
+        <Modal.Header className="bg-primary text-white border-0 py-3 px-4 d-flex align-items-center justify-content-between">
+          <h5 className="m-0"></h5>
+          {/* Close X Button for Desktop */}
+          <div
+            className="close-btn cursor-pointer d-none d-lg-flex align-items-center justify-content-center p-1 rounded-circle"
+            onClick={onHide}
+            style={{
+              width: "32px",
+              height: "32px",
+              background: "rgba(255,255,255,0.2)",
+            }}
+          >
+            <i
+              className="bi bi-x-lg text-white"
+              style={{ fontSize: "16px" }}
+            ></i>
+          </div>
+        </Modal.Header>
+      )}
       <Modal.Body className="p-3 position-relative">
         <Row className="g-2">
           {operations.map((op, index) => (

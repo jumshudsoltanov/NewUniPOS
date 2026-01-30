@@ -33,6 +33,21 @@ export const updateDiscountOnOrders = createAsyncThunk(
   },
 );
 
+export const updateServiceFeeOnOrders = createAsyncThunk(
+  "pos/serviceFee",
+  async ({ orderId, serviceValue, feeType }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/service-fee`,
+        { serviceValue, feeType },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  },
+);
+
 export const updateTableOrders = createAsyncThunk(
   "orders/updateTable",
   async ({ orderId, newTableId, currentHallId }, thunkAPI) => {
@@ -100,6 +115,7 @@ export const OrderSlice = createSlice({
     sentProducts: [],
     menu: [],
     discount: [],
+    service: [],
     updateTable: [],
     isLockCheck: {},
     tags: {},
@@ -176,6 +192,9 @@ export const OrderSlice = createSlice({
       })
       .addCase(updateDiscountOnOrders.fulfilled, (state, action) => {
         state.discount = action.payload;
+      })
+      .addCase(updateServiceFeeOnOrders.fulfilled, (state, action) => {
+        state.service = action.payload;
       })
       .addCase(updateTableOrders.fulfilled, (state, action) => {
         state.updateTable = action.payload;

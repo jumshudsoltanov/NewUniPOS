@@ -47,6 +47,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect }) => {
       className="sales-type-modal"
       backdrop={true}
       dialogClassName="sales-type-dialog"
+      animation={false}
     >
       <Modal.Body className="sales-type-modal-body">
         <div className="sales-type-options">

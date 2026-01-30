@@ -1,10 +1,24 @@
 import React, { useState } from "react";
 import "./ServiceFeeModal.css";
 import Modal from "react-bootstrap/Modal";
+import { useEffect } from "react";
+import { useCallback } from "react";
+import { updateServiceFeeOnOrders } from "../../redux/Slices/OrdersSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
-const ServiceFeeModal = ({ show, onClose }) => {
+const ServiceFeeModal = ({ show, onClose, order }) => {
   const [value, setValue] = useState("0");
   const [feeType, setFeeType] = useState("percent");
+  const dispatch = useDispatch();
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+  useEffect(() => {
+    if (order) {
+      setValue(order.service_value ? String(order.service_value) : "0");
+      setFeeType(order.service_type || "percent");
+    }
+  }, [order]);
 
   const handleNumClick = (num) => {
     if (value === "0" && num !== ".") {
@@ -25,6 +39,25 @@ const ServiceFeeModal = ({ show, onClose }) => {
   const handleClear = () => {
     setValue("0");
   };
+
+  const handleUpdateServiceFee = useCallback(async () => {
+    try {
+      await dispatch(
+        updateServiceFeeOnOrders({
+          orderId: order?.uuid,
+          serviceValue: value,
+          feeType,
+        }),
+      ).unwrap();
+
+      // Refresh table data to update totals in UI
+      if (loginedProfileData?.data?.profile?.id) {
+        dispatch(getTableGroups(loginedProfileData.data.profile.id));
+      }
+    } catch (error) {
+      console.error("service update failed:", error);
+    }
+  }, [dispatch, order, value, feeType, onClose, loginedProfileData]);
 
   return (
     <Modal
@@ -169,7 +202,7 @@ const ServiceFeeModal = ({ show, onClose }) => {
                 />
               </svg>
             </button>
-            <button className="apply-btn">
+            <button className="apply-btn" onClick={handleUpdateServiceFee}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="24"
