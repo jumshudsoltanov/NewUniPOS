@@ -39,10 +39,10 @@ let creaedtToTabel = async () => {
   try {
     // Tables and Halls
     TableGroupsModel.hasMany(TablesModel, { foreignKey: "hall_id" });
-    TablesModel.belongsTo(TableGroupsModel, { foreignKey: "hall_id" });
+    TablesModel.belongsTo(TableGroupsModel, { foreignKey: "hall_id", as: "hall" });
     // Orders
     TablesModel.hasMany(OrdersModel, { foreignKey: "table_id", as: "orders" });
-    OrdersModel.belongsTo(TablesModel, { foreignKey: "table_id" });
+    OrdersModel.belongsTo(TablesModel, { foreignKey: "table_id", as: "table" });
 
     //Waiters Relations
     WaitersModel.hasMany(OrdersModel, {

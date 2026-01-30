@@ -7,6 +7,7 @@ import {
   saleNewOtherOrders,
 } from "../../redux/Slices/SaleSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { useNavigate, useParams } from "react-router-dom";
 
 export const SalesTypesModal = ({ show, onClose, onSelect }) => {
@@ -65,6 +66,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect }) => {
         const result = await dispatch(saleNewOtherOrders(payload)).unwrap();
         if (result.message === "success") {
           await dispatch(getTableGroups(payload.profileId));
+          await dispatch(getActiveOrders({ profileId: payload.profileId }));
           navigate(`/check/${result.data.uuid}`);
           onClose(false);
         }

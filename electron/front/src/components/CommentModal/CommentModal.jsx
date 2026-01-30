@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateComments } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const CommentModal = ({ show, onClose, order }) => {
   const dispatch = useDispatch();
@@ -25,7 +26,14 @@ const CommentModal = ({ show, onClose, order }) => {
 
     console.log(result);
 
-    await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
+    // Refresh data
+    if (loginedProfileData?.data?.profile?.id) {
+      if (order?.table_id) {
+        await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+      } else {
+        await dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+      }
+    }
 
     onClose(true);
   };

@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import { updateServiceFeeOnOrders } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const ServiceFeeModal = ({ show, onClose, order }) => {
   const [value, setValue] = useState("0");
@@ -53,7 +54,11 @@ const ServiceFeeModal = ({ show, onClose, order }) => {
 
       // Refresh table data to update totals in UI
       if (loginedProfileData?.data?.profile?.id) {
-        await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+        if (order?.table_id) {
+          await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+        } else {
+          await dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+        }
         // Small delay to ensure Redux state is fully committed before closing
         await new Promise(resolve => setTimeout(resolve, 100));
       }

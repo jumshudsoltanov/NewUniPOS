@@ -5,9 +5,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
-const OtherChecks = ({ show, onClose, table }) => {
-  const { currentHallId } = useSelector((state) => state.TablesSlice);
+const OtherChecks = ({ show, onClose, table, showAll = false }) => {
+  const { currentHallId, tableGroups } = useSelector((state) => state.TablesSlice);
+  const { books } = useSelector((state) => state.BooksSlice);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { id } = useParams();
@@ -18,9 +20,30 @@ const OtherChecks = ({ show, onClose, table }) => {
 
   useEffect(() => {
     dispatch(getTableGroups(loginedProfileData?.data?.profile.id));
-  }, []);
+    dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile.id }));
+  }, [dispatch, loginedProfileData]);
 
-  const filteredOrders = table?.orders?.filter((o) => o.uuid != id) || [];
+  const filteredOrders = (showAll || !table)
+    ? (books?.data?.filter((o) => o.uuid != id) || [])
+    : (table?.orders?.filter((o) => o.uuid != id) || []);
+
+  const currentHallName = tableGroups?.data?.find((h) => h.id === currentHallId)?.name;
+
+  const resolveNames = (item) => {
+    if (item.sale_type !== "dine_in") {
+      return item.sale_type === "delivery" ? "Çatdırılma" : "Takeaway";
+    }
+
+    if (item.table?.name) {
+      return `${item.table.hall?.name || "Zal"} / ${item.table.name}`;
+    }
+
+    if ((!showAll || item.table_id === table?.id) && table) {
+      return `${currentHallName || "Zal"} / ${table.name}`;
+    }
+
+    return "Zal / Masa";
+  };
 
   const createOrder = useCallback(async () => {
     if (isCreating) return;
@@ -28,7 +51,7 @@ const OtherChecks = ({ show, onClose, table }) => {
 
     const payload = {
       guestCount: 0,
-      tableId: table.id,
+      tableId: table?.id,
       waiterId: loginedWaiter.data.id,
       terminalId: loginedProfileData.data.terminal.terminal_id,
       profileId: loginedProfileData.data.profile.id,
@@ -42,6 +65,7 @@ const OtherChecks = ({ show, onClose, table }) => {
       const result = await dispatch(saleNewOrders(payload)).unwrap();
       if (result.message === "success") {
         await dispatch(getTableGroups(payload.profileId));
+        await dispatch(getActiveOrders({ profileId: payload.profileId }));
         navigate(`/check/${result.data.uuid}?tableId=${table.id}`);
         onClose(false);
       }
@@ -63,7 +87,11 @@ const OtherChecks = ({ show, onClose, table }) => {
   ]);
 
   const handleGoNewCheck = (orderId, tableId) => {
-    navigate(`/check/${orderId}?tableId=${tableId}`);
+    const url = tableId
+      ? `/check/${orderId}?tableId=${tableId}`
+      : `/check/${orderId}`;
+
+    navigate(url);
     onClose(false);
   };
 
@@ -78,7 +106,7 @@ const OtherChecks = ({ show, onClose, table }) => {
         <Modal.Title style={{ fontSize: "18px" }}>
           Açıq çeklər
           <span className="ms-2 badge bg-light text-primary rounded-pill">
-            {table?.orders?.length || 0}
+            {filteredOrders?.length || 0}
           </span>
         </Modal.Title>
       </Modal.Header>
@@ -89,12 +117,14 @@ const OtherChecks = ({ show, onClose, table }) => {
               <button
                 key={index}
                 className="check-item"
-                onClick={() => handleGoNewCheck(item.uuid, table.id)}
+                onClick={() => handleGoNewCheck(item.uuid, item.table_id)}
               >
                 <span>
-                  Çek #{item.id} / #{item.guest_count || 1} (
-                  {item.sale_type === "dine_in" ? "Restoranda" : "Çatdırılma"})
-                  ({item.waiter?.name || "terminal_user"})
+                  <span style={{ fontWeight: "bold", marginRight: "5px" }}>
+                    {resolveNames(item)}
+                  </span>
+                  - Çek #{item.id} / Qonaq: {item.guest_count || 1}
+                  <span className="ms-2">({item.waiter?.name || "terminal_user"})</span>
                 </span>
                 <span style={{ fontWeight: "bold" }}>
                   {item.total || item.amount || 0} ₼
@@ -104,19 +134,22 @@ const OtherChecks = ({ show, onClose, table }) => {
           ) : (
             <div className="d-flex flex-column align-items-center justify-content-center text-muted py-5 text-center">
               <i className="bi bi-receipt mb-2 fs-1"></i>
-              <span className="fs-5">Bu masada aktiv çek tapılmadı</span>
+              <span className="fs-5">Aktiv çek tapılmadı</span>
             </div>
           )}
         </div>
-        <button
-          className="check-item create-check-item"
-          onClick={() => createOrder()}
-        >
-          <span className="me-2 fw-bold" style={{ fontSize: "20px" }}>
-            +
-          </span>
-          <span className="fw-medium">Yeni yarat</span>
-        </button>
+
+        {table && (
+          <button
+            className="check-item create-check-item"
+            onClick={() => createOrder()}
+          >
+            <span className="me-2 fw-bold" style={{ fontSize: "20px" }}>
+              +
+            </span>
+            <span className="fw-medium">Yeni yarat</span>
+          </button>
+        )}
       </Modal.Body>
     </Modal>
   );

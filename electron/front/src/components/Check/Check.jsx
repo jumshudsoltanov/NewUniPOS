@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Container, Col, Row } from "react-bootstrap";
 import "./Check.css";
 import Menu from "../Menu/Menu";
@@ -23,6 +23,9 @@ import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
+
+
+
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -43,12 +46,11 @@ const Check = () => {
   const { tableGroups, currentHallId } = useSelector(
     (state) => state.TablesSlice,
   );
+
+
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get("tableId");
-  const [currentOrder, setCurrentOrder] = useState(null);
-  const [currentHall, setCurrentHall] = useState(null);
-  const [currentTable, setCurrentTable] = useState(null);
 
   const goTables = async () => {
     // Check if user came from /checks page
@@ -98,58 +100,90 @@ const Check = () => {
   // ChangeTables
 
   const handleChangeTable = () => {
-    navigate(`/tables/${currentOrder.uuid}`);
+    navigate(`/tables/${currentOrder?.uuid}`);
   };
-
-  // Load check Data
-
-  const initialOrderOnTable = useCallback(() => {
-    if (!tableGroups?.data || !tableId) return;
-
-    const hall = tableGroups.data.find((item) => item.id == currentHallId);
-    setCurrentHall(hall);
-    if (!hall) return;
-
-    const tableObj = hall.tables.find((t) => t.id == tableId);
-    setCurrentTable(tableObj);
-    if (!tableObj) return;
-
-    const orders = tableObj.orders.find((o) => o.uuid == id);
-
-    setCurrentOrder(orders);
-  }, [tableGroups, currentHallId, tableId, id]);
-
   // Re-introduce books selector for reactive updates
   const { books } = useSelector((state) => state.BooksSlice);
 
-  useEffect(() => {
-    if (!id) return;
 
-    // TABLE ORDER
-    if (tableId && tableId !== "null") {
-      initialOrderOnTable();
-      return;
+  const { currentOrder, currentHall, currentTable } = useMemo(() => {
+    if (!id) return { currentOrder: null, currentHall: null, currentTable: null };
+
+    // TABLE ORDER logic
+    if (tableId && tableId !== "null" && tableId !== "0") {
+      if (!tableGroups?.data) {
+        // Fallback: If tableGroups not loaded, try to find in books if possible (but books lacks hall/table structure usually needed here unless we use updated query)
+        if (books?.data) {
+          // Try to find in books
+          const order = books.data.find((item) => item.uuid == id);
+          if (order) {
+            return {
+              currentOrder: order,
+              currentHall: order.table?.hall || null, // Assuming backend populates this now
+              currentTable: order.table || null
+            };
+          }
+        }
+        return { currentOrder: null, currentHall: null, currentTable: null };
+      }
+
+      // Find hall and table by iterating all groups
+      let foundHall = null;
+      let foundTable = null;
+
+      for (const hall of tableGroups.data) {
+        const table = hall.tables.find((t) => t.id == tableId);
+        if (table) {
+          foundHall = hall;
+          foundTable = table;
+          break;
+        }
+      }
+
+      if (!foundTable) {
+        // Fallback to active orders if table not found in current groups (maybe archived or sync issue)
+        if (books?.data) {
+          const order = books.data.find((item) => item.uuid == id);
+          if (order) {
+            return {
+              currentOrder: order,
+              currentHall: order.table?.hall || null,
+              currentTable: order.table || null
+            };
+          }
+        }
+        return { currentOrder: null, currentHall: null, currentTable: null };
+      }
+
+      const order = foundTable.orders.find((o) => o.uuid == id);
+      // If order not found in table (e.g. moved?), try books
+      if (!order && books?.data) {
+        const bookOrder = books.data.find((item) => item.uuid == id);
+        return {
+          currentOrder: bookOrder || null,
+          currentHall: foundHall,
+          currentTable: foundTable
+        };
+      }
+
+      return { currentOrder: order, currentHall: foundHall, currentTable: foundTable };
     }
 
-    // Delivery And TakeAwey orders
-    // Use books from Redux state for reactive updates
+    // TABLELESS ORDER logic (Delivery/Takeaway)
     if (books?.data) {
-      const filteredOrder = books.data.find((item) => item.uuid == id);
-      if (filteredOrder) {
-        setCurrentOrder(filteredOrder);
-      }
-    } else {
-      // Initial fetch if books are empty (optional, kept for safety)
+      const order = books.data.find((item) => item.uuid == id);
+      return { currentOrder: order, currentHall: null, currentTable: null };
+    }
+
+    return { currentOrder: null, currentHall: null, currentTable: null };
+  }, [id, tableId, tableGroups, books]);
+
+  // Initial fetch if books are empty for tableless orders
+  useEffect(() => {
+    if ((!tableId || tableId === "null" || tableId === "0") && id && !books?.data) {
       dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
     }
-  }, [
-    id,
-    tableId,
-    initialOrderOnTable,
-    books, // Dependency added to trigger update when books change
-    dispatch,
-    loginedProfileData?.data?.profile?.id,
-  ]);
+  }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">

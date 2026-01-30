@@ -19,18 +19,22 @@ const CheckHeader = ({ orders, hall, table }) => {
     if (!startDate) return { hours: "00", minutes: "00" };
 
     const start = new Date(startDate);
+    if (isNaN(start.getTime())) return { hours: "00", minutes: "00" }; // Prevent NaN from invalid date
+
     const now = new Date();
 
     const diffMs = now - start;
+    if (diffMs < 0) return { hours: "00", minutes: "00" }; // Prevent negative time if clocks skew
+
     const diffMinutes = Math.floor(diffMs / 60000);
     const hours = Math.floor(diffMinutes / 60);
     const minutes = diffMinutes % 60;
+
     return {
       hours: String(hours).padStart(2, "0"),
       minutes: String(minutes).padStart(2, "0"),
     };
   };
-
 
   return (
     <>
@@ -44,9 +48,21 @@ const CheckHeader = ({ orders, hall, table }) => {
             <i className="bi bi-pencil-fill"></i>
           </div>
           <div className="header-info-text">
-            <span className="header-title">
-              {hall?.name} - {table?.name}
-            </span>
+            {orders?.sale_type == "dine_in" ? (
+              <span className="header-order-id">
+                {hall?.name} / {table?.name}
+              </span>
+            ) : (
+              <span className="header-order-id">
+                {(() => {
+                  const type = orders?.sale_type;
+                  if (!type) return "";
+                  if (type === "delivery") return "Çatdırılma";
+                  if (type === "takeaway") return "Takeaway";
+                  return type.charAt(0).toUpperCase() + type.slice(1);
+                })()}
+              </span>
+            )}
             {orders && orders?.tags ? (
               <span className="header-subtitle">{orders.tags}</span>
             ) : (
@@ -72,7 +88,7 @@ const CheckHeader = ({ orders, hall, table }) => {
             <i className="bi bi-chevron-down"></i>
           </div>
         </div>
-      </div>
+      </div >
       <TagModal
         show={openTagModal}
         onClose={() => setOpenTagModal(false)}
@@ -82,6 +98,7 @@ const CheckHeader = ({ orders, hall, table }) => {
         show={openOtherCheckModal}
         onClose={() => setOpenOtherCheckModal(false)}
         table={table}
+        showAll={true}
       />
     </>
   );

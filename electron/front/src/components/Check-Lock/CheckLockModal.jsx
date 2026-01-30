@@ -9,6 +9,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateLockChecK } from "../../redux/Slices/OrdersSlice";
 import { useCallback } from "react";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const CheckLockModal = ({ show, onClose, order }) => {
   const [status, setStatus] = useState(0);
@@ -32,11 +33,18 @@ const CheckLockModal = ({ show, onClose, order }) => {
       }),
     ).unwrap();
 
-    await dispatch(getTableGroups(loginedProfileData?.data.profile.id));
+    if (loginedProfileData?.data?.profile?.id) {
+      if (order?.table_id) {
+        await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+      } else {
+        await dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+      }
+    }
   }, [
     status,
     order?.uuid,
-    loginedProfileData?.data.profile.id,
+    order?.table_id,
+    loginedProfileData?.data?.profile?.id,
     dispatch,
     onClose,
   ]);

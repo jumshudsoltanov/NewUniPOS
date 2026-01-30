@@ -9,6 +9,7 @@ import { updateTags } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useCallback } from "react";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const TagModal = ({ show, onClose, order }) => {
   const [tag, setTag] = useState(null);
@@ -20,11 +21,19 @@ const TagModal = ({ show, onClose, order }) => {
   }, [order?.tags]);
 
   const handleUpdateTags = async () => {
-    const result = await dispatch(
-      updateTags({ orderId: order?.uuid, tags: tag }),
-    ).unwrap();
-    await dispatch(getTableGroups(loginedProfileData.data.profile.id));
-    onClose(true);
+    try {
+      await dispatch(
+        updateTags({ orderId: order?.uuid, tags: tag }),
+      ).unwrap();
+
+      // Update both table groups (for dine-in) and active orders (for delivery/takeaway)
+      await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+      await dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+
+      onClose(true);
+    } catch (error) {
+      console.error("Failed to update tags:", error);
+    }
   };
 
   return (
