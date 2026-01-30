@@ -85,7 +85,22 @@ const CheckBottom = ({ orders }) => {
       discountAmount = Number(orders.discount);
     }
 
-    let sumTotal = total - discountAmount;
+    // Calculate Service Fee
+    const serviceValue = Number(orders?.service_value || 0);
+    const serviceType = orders?.service_type || "percent";
+    let serviceAmount = 0;
+
+    if (serviceValue > 0) {
+      if (serviceType === "percent") {
+        serviceAmount = (total * serviceValue) / 100;
+      } else {
+        serviceAmount = serviceValue;
+      }
+    } else if (orders?.service_charge) {
+      serviceAmount = Number(orders.service_charge);
+    }
+
+    let sumTotal = total - discountAmount + serviceAmount;
 
     // Calculate effective percentage for display
     let effectivePercentage = 0;
@@ -96,6 +111,15 @@ const CheckBottom = ({ orders }) => {
       }
     }
 
+    // Calculate effective service percentage for display
+    let effectiveServicePercentage = 0;
+    if (total > 0 && serviceAmount > 0) {
+      effectiveServicePercentage = ((serviceAmount / total) * 100).toFixed(1);
+      if (effectiveServicePercentage.endsWith(".0")) {
+        effectiveServicePercentage = parseInt(effectiveServicePercentage);
+      }
+    }
+
     return {
       total: total.toFixed(2),
       sumTotal: sumTotal.toFixed(2),
@@ -103,6 +127,8 @@ const CheckBottom = ({ orders }) => {
       discountType,
       discountValue,
       effectivePercentage,
+      serviceAmount: serviceAmount.toFixed(2),
+      effectiveServicePercentage
     };
   }, [
     orders?.orders_items,
@@ -111,6 +137,9 @@ const CheckBottom = ({ orders }) => {
     orders?.discount,
     orders?.discount_value,
     orders?.discount_type,
+    orders?.service_value,
+    orders?.service_type,
+    orders?.service_charge
   ]);
 
   return (
@@ -127,8 +156,18 @@ const CheckBottom = ({ orders }) => {
               <span>Endirim:</span>
               <span>
                 {calcTotal.discountAmount} ₼
-                {calcTotal.discountAmount > 0 &&
+                {Number(calcTotal.discountAmount) > 0 &&
                   ` (~${calcTotal.effectivePercentage}%)`}
+              </span>
+            </div>
+          )}
+          {Number(calcTotal.serviceAmount) > 0 && (
+            <div className="summary-row">
+              <span>Servis haqqı:</span>
+              <span>
+                {calcTotal.serviceAmount} ₼
+                {Number(calcTotal.serviceAmount) > 0 &&
+                  ` (~${calcTotal.effectiveServicePercentage}%)`}
               </span>
             </div>
           )}

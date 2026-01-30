@@ -41,15 +41,17 @@ const sendOrdersItemsToDb = async (req, res) => {
     // Get current order discount info to recalculate
     const currentOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
-      attributes: ["discount_value", "discount_type"],
+      attributes: ["discount_value", "discount_type", "service_value", "service_type"],
     });
 
     let discount = 0;
-    let netTotal = total;
+    let service = 0;
+
 
     if (currentOrder) {
-      const { discount_value, discount_type } = currentOrder;
+      const { discount_value, discount_type, service_value, service_type } = currentOrder;
       const dValue = Number(discount_value || 0);
+      const sValue = Number(service_value || 0);
 
       if (dValue > 0) {
         if (discount_type === "percent") {
@@ -58,12 +60,22 @@ const sendOrdersItemsToDb = async (req, res) => {
           discount = dValue;
         }
       }
-      netTotal = total - discount;
+
+      if (sValue > 0) {
+        if (service_type === "percent") {
+          service = (total * sValue) / 100;
+        } else if (service_type === "cash") {
+          service = sValue;
+        }
+      }
     }
+
+    let netTotal = total - discount + service;
+    netTotal = Math.max(netTotal, 0);
 
     // Order update
     await OrdersModel.update(
-      { amount: total, total: netTotal, discount: discount },
+      { amount: total, total: netTotal, discount: discount, service_charge: service },
       { where: { uuid: orderId } },
     );
 
@@ -165,7 +177,7 @@ const onUpdateServiceFeeOrder = async (req, res) => {
       0,
     );
 
-    feeType = Number(feeType);
+    serviceValue = Number(serviceValue);
 
     if (isNaN(serviceValue) || serviceValue < 0) {
       return res.status(400).json({ message: "Invalid service value" });

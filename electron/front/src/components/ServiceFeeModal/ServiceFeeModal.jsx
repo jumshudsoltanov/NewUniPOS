@@ -40,6 +40,8 @@ const ServiceFeeModal = ({ show, onClose, order }) => {
     setValue("0");
   };
 
+  console.log(order)
+
   const handleUpdateServiceFee = useCallback(async () => {
     try {
       await dispatch(
@@ -52,8 +54,9 @@ const ServiceFeeModal = ({ show, onClose, order }) => {
 
       // Refresh table data to update totals in UI
       if (loginedProfileData?.data?.profile?.id) {
-        dispatch(getTableGroups(loginedProfileData.data.profile.id));
+        await dispatch(getTableGroups(loginedProfileData.data.profile.id));
       }
+      onClose();
     } catch (error) {
       console.error("service update failed:", error);
     }
