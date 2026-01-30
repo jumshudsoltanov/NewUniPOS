@@ -55,6 +55,11 @@ router.patch(
   OrdersItemsController.onDeleteOrderItems,
 );
 
+router.patch(
+  "/orders-items/:currentOrderId/merge-orders",
+  OrdersItemsController.onMergeChecks,
+);
+
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 

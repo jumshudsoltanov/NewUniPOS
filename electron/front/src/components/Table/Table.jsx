@@ -34,6 +34,7 @@ const Table = React.memo(({ table, onTableClick }) => {
     }
   };
 
+
   return (
     <>
       <div

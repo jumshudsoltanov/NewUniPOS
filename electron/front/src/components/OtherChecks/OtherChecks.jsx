@@ -6,9 +6,20 @@ import { useNavigate, useParams } from "react-router-dom";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { mergeChecks } from "../../redux/Slices/OrdersSlice";
 
-const OtherChecks = ({ show, onClose, table, showAll = false }) => {
-  const { currentHallId, tableGroups } = useSelector((state) => state.TablesSlice);
+const OtherChecks = ({
+  show,
+  onClose,
+  table,
+  showAll = false,
+  type,
+  order,
+}) => {
+  const { currentHallId, tableGroups } = useSelector(
+    (state) => state.TablesSlice,
+  );
+
   const { books } = useSelector((state) => state.BooksSlice);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -20,14 +31,19 @@ const OtherChecks = ({ show, onClose, table, showAll = false }) => {
 
   useEffect(() => {
     dispatch(getTableGroups(loginedProfileData?.data?.profile.id));
-    dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile.id }));
+    dispatch(
+      getActiveOrders({ profileId: loginedProfileData?.data?.profile.id }),
+    );
   }, [dispatch, loginedProfileData]);
 
-  const filteredOrders = (showAll || !table)
-    ? (books?.data?.filter((o) => o.uuid != id) || [])
-    : (table?.orders?.filter((o) => o.uuid != id) || []);
+  const filteredOrders =
+    showAll || !table
+      ? books?.data?.filter((o) => o.uuid != id) || []
+      : table?.orders?.filter((o) => o.uuid != id) || [];
 
-  const currentHallName = tableGroups?.data?.find((h) => h.id === currentHallId)?.name;
+  const currentHallName = tableGroups?.data?.find(
+    (h) => h.id === currentHallId,
+  )?.name;
 
   const resolveNames = (item) => {
     if (item.sale_type !== "dine_in") {
@@ -95,6 +111,27 @@ const OtherChecks = ({ show, onClose, table, showAll = false }) => {
     onClose(false);
   };
 
+  const handleMergeCheck = async (currentOrderId, newOrderId) => {
+    try {
+      await dispatch(mergeChecks({ currentOrderId, newOrderId })).unwrap();
+      await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
+      await dispatch(
+        getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }),
+      );
+      onClose(true);
+    } catch (err) {
+      console.error("Merge failed", err);
+    }
+  };
+
+  const onMultiFunctionOtherChecs = async (type, orderId, tableId) => {
+    if (type !== "merge") {
+      handleGoNewCheck(orderId, tableId);
+    } else {
+      handleMergeCheck(order.uuid, orderId);
+    }
+  };
+
   return (
     <Modal
       show={show}
@@ -117,14 +154,18 @@ const OtherChecks = ({ show, onClose, table, showAll = false }) => {
               <button
                 key={index}
                 className="check-item"
-                onClick={() => handleGoNewCheck(item.uuid, item.table_id)}
+                onClick={() =>
+                  onMultiFunctionOtherChecs(type, item.uuid, item.table_id)
+                }
               >
                 <span>
                   <span style={{ fontWeight: "bold", marginRight: "5px" }}>
                     {resolveNames(item)}
                   </span>
                   - Çek #{item.id} / Qonaq: {item.guest_count || 1}
-                  <span className="ms-2">({item.waiter?.name || "terminal_user"})</span>
+                  <span className="ms-2">
+                    ({item.waiter?.name || "terminal_user"})
+                  </span>
                 </span>
                 <span style={{ fontWeight: "bold" }}>
                   {item.total || item.amount || 0} ₼

@@ -1,3 +1,4 @@
+const { sequelize } = require("../database/config");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
 const OrdersModel = require("../model/OrdersModel");
 
@@ -333,6 +334,129 @@ const onDeleteOrderItems = async (req, res) => {
   }
 };
 
+const onMergeChecks = async (req, res) => {
+  const { currentOrderId } = req.params;
+  const { newOrderId } = req.body;
+
+  if (!currentOrderId || !newOrderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const mergedItemsMap = new Map();
+
+    // Get Order Meta
+    const currentOrder = await OrdersModel.findOne({
+      where: { uuid: currentOrderId },
+      transaction,
+    });
+
+    if (!currentOrder) throw new Error("Current order not found");
+
+    const { discount_value, discount_type, service_value, service_type } =
+      currentOrder;
+
+    // Move Items from newOrder to currentOrder
+    await OrdersItemsModel.update(
+      { order_id: currentOrderId },
+      { where: { order_id: newOrderId }, transaction },
+    );
+
+    // Get all items now belonging to currentOrder
+    const newCurrentItems = await OrdersItemsModel.findAll({
+      where: { order_id: currentOrderId },
+      transaction,
+    });
+
+    // Merge duplicates (sum quantities by product_id)
+    newCurrentItems.forEach((item) => {
+      const key = item.product_id;
+
+      if (mergedItemsMap.has(key)) {
+        const existing = mergedItemsMap.get(key);
+        existing.quantity = (existing.quantity || 0) + (item.quantity || 0);
+        mergedItemsMap.set(key, existing);
+      } else {
+        mergedItemsMap.set(key, { ...item.dataValues });
+      }
+    });
+
+    // Upsert merged results
+    for (const item of mergedItemsMap.values()) {
+      await OrdersItemsModel.upsert(item, { transaction });
+    }
+
+    // Build merged items array for totals
+    const mergedItems = Array.from(mergedItemsMap.values());
+
+    // 1) Subtotal (sum of all prices * qty)
+    const subtotal = mergedItems.reduce((sum, item) => {
+      const price = parseFloat(item.price) || 0;
+      const qty = parseFloat(item.quantity) || 0;
+      return sum + price * qty;
+    }, 0);
+
+    // 2) Discount total
+    let discountAmount = 0;
+    if (discount_value > 0) {
+      if (discount_type === "percent") {
+        discountAmount = (subtotal * discount_value) / 100;
+      } else {
+        discountAmount = discount_value;
+      }
+    }
+
+    // 3) Service charge total
+    let serviceCharge = 0;
+    if (service_value > 0) {
+      if (service_type === "percent") {
+        serviceCharge = (subtotal * service_value) / 100;
+      } else {
+        serviceCharge = service_value;
+      }
+    }
+
+    // 4) Final total
+    const total = subtotal - discountAmount + serviceCharge;
+
+    // Update the order
+    await OrdersModel.update(
+      {
+        amount: subtotal,
+        discount: discountAmount,
+        service_charge: serviceCharge,
+        total: total,
+      },
+      { where: { uuid: currentOrderId }, transaction },
+    );
+
+    // Delete the merged (old) order
+    await OrdersModel.destroy({
+      where: { uuid: newOrderId },
+      transaction,
+    });
+
+    // Commit
+    await transaction.commit();
+
+    return res.status(200).json({
+      message: "Merge success",
+      data: {
+        amount: subtotal,
+        discount: discountAmount,
+        service_charge: serviceCharge,
+        total: total,
+      },
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -342,4 +466,5 @@ module.exports = {
   onUpdateCheckComments,
   onUpdateServiceFeeOrder,
   onDeleteOrderItems,
+  onMergeChecks,
 };

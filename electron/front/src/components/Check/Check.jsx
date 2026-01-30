@@ -22,6 +22,7 @@ import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
 import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import OtherChecks from "../OtherChecks/OtherChecks";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -35,6 +36,7 @@ const Check = () => {
   const [onShowDiscount, setOnShowDiscount] = useState(false);
   const [onShowServiceFee, setOnShowServiceFee] = useState(false);
   const [showWaitersModal, setShowWaitersModal] = useState(false);
+  const [openACtiveChecks, setOpenActiveChecks] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -68,7 +70,9 @@ const Check = () => {
       Array.isArray(currentOrder?.orders_items) &&
       currentOrder.orders_items.length > 0;
 
-    if (!hasOrderItems) {
+    const hasLocalProducts = Array.isArray(products) && products.length > 0;
+
+    if (!hasOrderItems && !hasLocalProducts) {
       setShowOperationsModal(false);
       return;
     }
@@ -97,8 +101,12 @@ const Check = () => {
     setShowWaitersModal(true);
   };
 
-  // ChangeTables
+  const openACtiveCheck = () => {
+    setShowOperationsModal(false);
+    setOpenActiveChecks(true);
+  };
 
+  // ChangeTables
   const handleChangeTable = () => {
     navigate(`/tables/${currentOrder?.uuid}`);
   };
@@ -187,6 +195,8 @@ const Check = () => {
       );
     }
   }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
+
+  console.log(currentOrder);
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
@@ -833,6 +843,7 @@ const Check = () => {
         openServiceFee={openServiceFee}
         openWaitersModal={openWaitersModal}
         handleChangeTable={handleChangeTable}
+        openACtiveCheck={openACtiveCheck}
       />
 
       <CheckLockModal
@@ -871,6 +882,13 @@ const Check = () => {
       <WaitersModal
         show={showWaitersModal}
         onClose={() => setShowWaitersModal(false)}
+      />
+
+      <OtherChecks
+        type={"merge"}
+        order={currentOrder}
+        show={openACtiveChecks}
+        onClose={() => setOpenActiveChecks(false)}
       />
     </Container>
   );

@@ -124,6 +124,21 @@ export const deleteOrderItems = createAsyncThunk(
   },
 );
 
+export const mergeChecks = createAsyncThunk(
+  "orders/merge-check",
+  async ({ currentOrderId, newOrderId }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${currentOrderId}/merge-orders`,
+        { newOrderId },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -137,6 +152,7 @@ export const OrderSlice = createSlice({
     tags: {},
     comments: {},
     deleteItems: {},
+    mergeChecs: {},
   },
 
   reducers: {
@@ -229,7 +245,10 @@ export const OrderSlice = createSlice({
         state.comments = action.payload;
       })
       .addCase(deleteOrderItems.fulfilled, (state, action) => {
-        state.deleteItems = [];
+        state.products = [];
+      })
+      .addCase(mergeChecks.fulfilled, (state, action) => {
+        state.mergeChecs = action.payload;
       });
   },
 });
