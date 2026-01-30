@@ -109,6 +109,21 @@ export const updateComments = createAsyncThunk(
   },
 );
 
+export const deleteOrderItems = createAsyncThunk(
+  "orders/delete-items",
+  async ({ orderId }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/delete-items`,
+        {},
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -121,6 +136,7 @@ export const OrderSlice = createSlice({
     isLockCheck: {},
     tags: {},
     comments: {},
+    deleteItems: {},
   },
 
   reducers: {
@@ -211,6 +227,9 @@ export const OrderSlice = createSlice({
       })
       .addCase(updateComments.fulfilled, (state, action) => {
         state.comments = action.payload;
+      })
+      .addCase(deleteOrderItems.fulfilled, (state, action) => {
+        state.deleteItems = [];
       });
   },
 });

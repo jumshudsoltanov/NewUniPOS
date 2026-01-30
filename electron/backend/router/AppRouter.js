@@ -50,6 +50,11 @@ router.patch(
   OrdersItemsController.onUpdateCheckComments,
 );
 
+router.patch(
+  "/orders-items/:orderId/delete-items",
+  OrdersItemsController.onDeleteOrderItems,
+);
+
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 

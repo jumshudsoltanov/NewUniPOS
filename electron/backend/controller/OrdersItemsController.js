@@ -41,15 +41,20 @@ const sendOrdersItemsToDb = async (req, res) => {
     // Get current order discount info to recalculate
     const currentOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
-      attributes: ["discount_value", "discount_type", "service_value", "service_type"],
+      attributes: [
+        "discount_value",
+        "discount_type",
+        "service_value",
+        "service_type",
+      ],
     });
 
     let discount = 0;
     let service = 0;
 
-
     if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const { discount_value, discount_type, service_value, service_type } =
+        currentOrder;
       const dValue = Number(discount_value || 0);
       const sValue = Number(service_value || 0);
 
@@ -75,7 +80,12 @@ const sendOrdersItemsToDb = async (req, res) => {
 
     // Order update
     await OrdersModel.update(
-      { amount: total, total: netTotal, discount: discount, service_charge: service },
+      {
+        amount: total,
+        total: netTotal,
+        discount: discount,
+        service_charge: service,
+      },
       { where: { uuid: orderId } },
     );
 
@@ -300,6 +310,29 @@ const onUpdateCheckComments = async (req, res) => {
   }
 };
 
+const onDeleteOrderItems = async (req, res) => {
+  const { orderId } = req.params;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const deleteItems = await OrdersItemsModel.destroy({
+      where: { order_id: orderId },
+    });
+    const updateTotal = await OrdersModel.update(
+      { total: 0 },
+      {
+        where: { uuid: orderId },
+      },
+    );
+    res.status(200).json({ message: "delete all items" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -308,4 +341,5 @@ module.exports = {
   onUpdateCheckTags,
   onUpdateCheckComments,
   onUpdateServiceFeeOrder,
+  onDeleteOrderItems,
 };

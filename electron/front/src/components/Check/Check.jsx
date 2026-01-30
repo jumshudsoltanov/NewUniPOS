@@ -23,9 +23,6 @@ import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
-
-
-
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -47,13 +44,11 @@ const Check = () => {
     (state) => state.TablesSlice,
   );
 
-
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get("tableId");
 
   const goTables = async () => {
-    // Check if user came from /checks page
     if (location.state?.from === "/checks") {
       navigate("/checks");
     } else {
@@ -69,10 +64,15 @@ const Check = () => {
   };
 
   const clearCheck = () => {
-    if (products.length == 0 || currentOrder?.orders_items.length == 0) {
+    const hasOrderItems =
+      Array.isArray(currentOrder?.orders_items) &&
+      currentOrder.orders_items.length > 0;
+
+    if (!hasOrderItems) {
       setShowOperationsModal(false);
       return;
     }
+
     setShowOperationsModal(false);
     setOnShowClearModal(true);
   };
@@ -102,32 +102,29 @@ const Check = () => {
   const handleChangeTable = () => {
     navigate(`/tables/${currentOrder?.uuid}`);
   };
-  // Re-introduce books selector for reactive updates
+
   const { books } = useSelector((state) => state.BooksSlice);
 
-
   const { currentOrder, currentHall, currentTable } = useMemo(() => {
-    if (!id) return { currentOrder: null, currentHall: null, currentTable: null };
+    if (!id)
+      return { currentOrder: null, currentHall: null, currentTable: null };
 
     // TABLE ORDER logic
     if (tableId && tableId !== "null" && tableId !== "0") {
       if (!tableGroups?.data) {
-        // Fallback: If tableGroups not loaded, try to find in books if possible (but books lacks hall/table structure usually needed here unless we use updated query)
         if (books?.data) {
-          // Try to find in books
           const order = books.data.find((item) => item.uuid == id);
           if (order) {
             return {
               currentOrder: order,
-              currentHall: order.table?.hall || null, // Assuming backend populates this now
-              currentTable: order.table || null
+              currentHall: order.table?.hall || null,
+              currentTable: order.table || null,
             };
           }
         }
         return { currentOrder: null, currentHall: null, currentTable: null };
       }
 
-      // Find hall and table by iterating all groups
       let foundHall = null;
       let foundTable = null;
 
@@ -141,14 +138,13 @@ const Check = () => {
       }
 
       if (!foundTable) {
-        // Fallback to active orders if table not found in current groups (maybe archived or sync issue)
         if (books?.data) {
           const order = books.data.find((item) => item.uuid == id);
           if (order) {
             return {
               currentOrder: order,
               currentHall: order.table?.hall || null,
-              currentTable: order.table || null
+              currentTable: order.table || null,
             };
           }
         }
@@ -156,20 +152,22 @@ const Check = () => {
       }
 
       const order = foundTable.orders.find((o) => o.uuid == id);
-      // If order not found in table (e.g. moved?), try books
       if (!order && books?.data) {
         const bookOrder = books.data.find((item) => item.uuid == id);
         return {
           currentOrder: bookOrder || null,
           currentHall: foundHall,
-          currentTable: foundTable
+          currentTable: foundTable,
         };
       }
 
-      return { currentOrder: order, currentHall: foundHall, currentTable: foundTable };
+      return {
+        currentOrder: order,
+        currentHall: foundHall,
+        currentTable: foundTable,
+      };
     }
 
-    // TABLELESS ORDER logic (Delivery/Takeaway)
     if (books?.data) {
       const order = books.data.find((item) => item.uuid == id);
       return { currentOrder: order, currentHall: null, currentTable: null };
@@ -178,10 +176,15 @@ const Check = () => {
     return { currentOrder: null, currentHall: null, currentTable: null };
   }, [id, tableId, tableGroups, books]);
 
-  // Initial fetch if books are empty for tableless orders
   useEffect(() => {
-    if ((!tableId || tableId === "null" || tableId === "0") && id && !books?.data) {
-      dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+    if (
+      (!tableId || tableId === "null" || tableId === "0") &&
+      id &&
+      !books?.data
+    ) {
+      dispatch(
+        getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }),
+      );
     }
   }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
 
@@ -850,6 +853,7 @@ const Check = () => {
       <ClearCheck
         show={onShowClearModal}
         onClose={() => setOnShowClearModal(false)}
+        order={currentOrder}
       />
 
       <DiscountModal
