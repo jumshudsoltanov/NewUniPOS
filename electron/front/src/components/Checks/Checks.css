@@ -1,8 +1,10 @@
 .checks-container {
     padding: 0;
-    min-height: 100vh;
+    height: 100vh;
     background: #f5f6f8;
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Navigation Tabs */
@@ -13,6 +15,7 @@
     padding: 0 24px;
     border-bottom: 2px solid #e8eaed;
     gap: 0;
+    flex-shrink: 0;
 }
 
 .checks-nav-tab {
@@ -56,6 +59,7 @@
     padding: 16px 24px;
     border-bottom: 1px solid #e8eaed;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    flex-shrink: 0;
 }
 
 .checks-filter-dropdown {
@@ -119,6 +123,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .checks-summary-left,
@@ -169,7 +174,45 @@
 
 /* Checks List */
 .checks-list {
-    padding: 8px 0;
+    padding: 8px 0 60px 0;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+.checks-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.checks-list::-webkit-scrollbar-track {
+    background: #f5f6f8;
+}
+
+.checks-list::-webkit-scrollbar-thumb {
+    background: #dadce0;
+    border-radius: 4px;
+}
+
+.checks-list::-webkit-scrollbar-thumb:hover {
+    background: #80868b;
+}
+
+/* Empty State */
+.checks-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 40px 20px;
+}
+
+.checks-empty-state p {
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    color: #80868b;
+    font-weight: 500;
+    margin: 0;
 }
 
 /* Date Header */
@@ -190,7 +233,7 @@
 .checks-check-item {
     background: #fff;
     padding: 18px 20px;
-    margin: 8px 16px;
+    margin: 8px 16px 16px 16px;
     border: 1.5px solid #e8eaed;
     border-radius: 10px;
     display: flex;
@@ -202,9 +245,7 @@
 }
 
 .checks-check-item:hover {
-    border-color: #053796;
-    box-shadow: 0 4px 12px rgba(5, 55, 150, 0.12);
-    transform: translateY(-2px);
+    background: #f8f9fa;
 }
 
 .checks-check-left {
@@ -263,6 +304,35 @@
     background: linear-gradient(135deg, #fce8f3 0%, #f8bbd0 100%);
     color: #9c27b0;
     border-color: #f8bbd0;
+}
+
+.checks-check-badge.checks-badge-open {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #d68910;
+    border-color: #ffd54f;
+    font-weight: 700;
+}
+
+/* Sale Type Badges */
+.checks-check-badge.checks-badge-dine_in {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+    border-color: #c3e6cb;
+    font-weight: 600;
+}
+
+.checks-check-badge.checks-badge-takeaway {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+    color: #856404;
+    border-color: #ffe69c;
+    font-weight: 600;
+}
+
+.checks-check-badge.checks-badge-delivery {
+    background: linear-gradient(135deg, #e7d6f5 0%, #d9c2ec 100%);
+    color: #6a1b9a;
+    border-color: #d9c2ec;
+    font-weight: 600;
 }
 
 /* Check Info */

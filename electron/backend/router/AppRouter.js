@@ -5,6 +5,7 @@ const SalesController = require("../controller/SalesController");
 const WaitersController = require("../controller/WaitersController");
 const TablesController = require("../controller/TablesController");
 const OrdersItemsController = require("../controller/OrdersItemsController");
+const BooksController = require("../controller/BooksController");
 
 // Routers lists
 router.post("/login", LoginController.getLogin);
@@ -42,5 +43,8 @@ router.patch(
   "/orders-items/:orderId/check-comments",
   OrdersItemsController.onUpdateCheckComments,
 );
+
+// All Orders Controllerj
+router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 
 module.exports = router;

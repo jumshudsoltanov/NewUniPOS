@@ -11,6 +11,7 @@ import {
   useNavigate,
   useParams,
   useSearchParams,
+  useLocation,
 } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import CheckLockModal from "../Check-Lock/CheckLockModal";
@@ -34,6 +35,7 @@ const Check = () => {
   const [onShowServiceFee, setOnShowServiceFee] = useState(false);
   const [showWaitersModal, setShowWaitersModal] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   const { products, menu } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -48,10 +50,15 @@ const Check = () => {
   const [currentTable, setCurrentTable] = useState(null);
 
   const goTables = async () => {
-    await dispatch(
-      getTableGroups(loginedProfileData?.data?.profile.id),
-    ).unwrap();
-    navigate("/tables");
+    // Check if user came from /checks page
+    if (location.state?.from === "/checks") {
+      navigate("/checks");
+    } else {
+      await dispatch(
+        getTableGroups(loginedProfileData?.data?.profile.id),
+      ).unwrap();
+      navigate("/tables");
+    }
   };
 
   const handleShowOperationsTab = () => {
