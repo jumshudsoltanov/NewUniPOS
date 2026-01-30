@@ -9,6 +9,7 @@ import { useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useCallback } from "react";
 import { useMemo } from "react";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const CheckBottom = ({ orders }) => {
   const dispatch = useDispatch();
@@ -27,7 +28,12 @@ const CheckBottom = ({ orders }) => {
   const handleSendOrders = async () => {
     try {
       await dispatch(sendOrdersItems(payload)).unwrap();
-      dispatch(getTableGroups(payload.profileId));
+
+      if (orders?.table_id) {
+        dispatch(getTableGroups(payload.profileId));
+      } else {
+        dispatch(getActiveOrders({ profileId: payload.profileId }));
+      }
     } catch (e) {
       console.error(e);
     }

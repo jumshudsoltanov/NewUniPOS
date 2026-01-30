@@ -10,6 +10,7 @@ const BooksController = require("../controller/BooksController");
 // Routers lists
 router.post("/login", LoginController.getLogin);
 router.post("/sale", SalesController.CreateNewOrders);
+router.post("/other-sale", SalesController.CreateNewOtherOrders);
 router.get("/waiters/:pin", WaitersController.getWaiterInfo);
 router.get("/tables/:profileId", TablesController.getTables);
 

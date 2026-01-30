@@ -40,7 +40,6 @@ const ServiceFeeModal = ({ show, onClose, order }) => {
     setValue("0");
   };
 
-  console.log(order)
 
   const handleUpdateServiceFee = useCallback(async () => {
     try {

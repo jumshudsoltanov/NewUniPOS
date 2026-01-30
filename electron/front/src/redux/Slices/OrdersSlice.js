@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { getTableGroups } from "./TablesSlice";
+import { getActiveOrders } from "./BooksSlice";
 
 export const sendOrdersItems = createAsyncThunk(
   "pos/orders",
@@ -188,6 +189,9 @@ export const OrderSlice = createSlice({
         state.products = [];
       })
       .addCase(getTableGroups.fulfilled, (state, action) => {
+        state.sentProducts = [];
+      })
+      .addCase(getActiveOrders.fulfilled, (state, action) => {
         state.sentProducts = [];
       })
       .addCase(updateDiscountOnOrders.fulfilled, (state, action) => {

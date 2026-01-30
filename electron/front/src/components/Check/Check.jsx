@@ -21,6 +21,7 @@ import DiscountModal from "../DiscountModal/DiscountModal";
 import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
 import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -103,7 +104,7 @@ const Check = () => {
   // Load check Data
 
   const initialOrderOnTable = useCallback(() => {
-    if (!tableGroups?.data) return;
+    if (!tableGroups?.data || !tableId) return;
 
     const hall = tableGroups.data.find((item) => item.id == currentHallId);
     setCurrentHall(hall);
@@ -118,9 +119,37 @@ const Check = () => {
     setCurrentOrder(orders);
   }, [tableGroups, currentHallId, tableId, id]);
 
+  // Re-introduce books selector for reactive updates
+  const { books } = useSelector((state) => state.BooksSlice);
+
   useEffect(() => {
-    initialOrderOnTable();
-  }, [initialOrderOnTable]);
+    if (!id) return;
+
+    // TABLE ORDER
+    if (tableId && tableId !== "null") {
+      initialOrderOnTable();
+      return;
+    }
+
+    // Delivery And TakeAwey orders
+    // Use books from Redux state for reactive updates
+    if (books?.data) {
+      const filteredOrder = books.data.find((item) => item.uuid == id);
+      if (filteredOrder) {
+        setCurrentOrder(filteredOrder);
+      }
+    } else {
+      // Initial fetch if books are empty (optional, kept for safety)
+      dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+    }
+  }, [
+    id,
+    tableId,
+    initialOrderOnTable,
+    books, // Dependency added to trigger update when books change
+    dispatch,
+    loginedProfileData?.data?.profile?.id,
+  ]);
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">

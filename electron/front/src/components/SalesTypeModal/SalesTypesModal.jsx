@@ -2,7 +2,10 @@ import React, { useCallback, useState } from "react";
 import { Modal } from "react-bootstrap";
 import "./SalesTypesModal.css";
 import { useDispatch, useSelector } from "react-redux";
-import { saleNewOrders } from "../../redux/Slices/SaleSlice";
+import {
+  saleNewOrders,
+  saleNewOtherOrders,
+} from "../../redux/Slices/SaleSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -44,45 +47,48 @@ export const SalesTypesModal = ({ show, onClose, onSelect }) => {
     },
   ];
 
-  const createOrder = useCallback(async () => {
-    if (isCreating) return;
-    setIsCreating(true);
+  const createOrder = useCallback(
+    async (saleTypeId) => {
+      if (isCreating) return;
+      setIsCreating(true);
 
-    const payload = {
-      tableId: 0,
-      waiterId: loginedWaiter.data.id,
-      terminalId: loginedProfileData.data.terminal.terminal_id,
-      profileId: loginedProfileData.data.profile.id,
-      sale_type: saleType,
-      hallId: 0,
-      status: 1,
-      is_selected: 1,
-    };
+      const payload = {
+        waiterId: loginedWaiter.data.id,
+        terminalId: loginedProfileData.data.terminal.terminal_id,
+        profileId: loginedProfileData.data.profile.id,
+        sale_type: saleTypeId,
+        status: 1,
+        is_selected: 1,
+      };
 
-    try {
-      const result = await dispatch(saleNewOrders(payload)).unwrap();
-      if (result.message === "success") {
-        await dispatch(getTableGroups(payload.profileId));
-        navigate(`/check/${result.data.uuid}?tableId=${table.id}`);
-        onClose(false);
+      try {
+        const result = await dispatch(saleNewOtherOrders(payload)).unwrap();
+        if (result.message === "success") {
+          await dispatch(getTableGroups(payload.profileId));
+          navigate(`/check/${result.data.uuid}`);
+          onClose(false);
+        }
+      } catch (err) {
+        console.error("Check created error:", err);
+      } finally {
+        setIsCreating(false);
       }
-    } catch (err) {
-      console.error("Check created error:", err);
-    } finally {
-      setIsCreating(false);
-    }
-  }, [
-    dispatch,
-    loginedWaiter.data.id,
-    loginedProfileData.data.terminal.terminal_id,
-    loginedProfileData.data.profile.id,
-    navigate,
-    isCreating,
-  ]);
+    },
+    [
+      dispatch,
+      loginedWaiter.data.id,
+      loginedProfileData.data.terminal.terminal_id,
+      loginedProfileData.data.profile.id,
+      navigate,
+      isCreating,
+    ],
+  );
 
   const handleSelect = (type) => {
     setSaleType(type.id);
-    createOrder();
+    if (type.id !== "dine_in") {
+      createOrder(type.id);
+    }
     onClose(true);
   };
 

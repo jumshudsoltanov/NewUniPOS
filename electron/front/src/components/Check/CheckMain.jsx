@@ -9,9 +9,11 @@ const CheckMain = ({ orders }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
 
+  // console.log(orders)
+
   const allItems = useMemo(() => {
     const groupedMap = new Map();
-
+  
     // 1. Process Saved items
     if (orders?.orders_items) {
       orders.orders_items.forEach((orderItem) => {
