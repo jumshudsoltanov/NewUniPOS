@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import "./Header.css";
 import { Col, Row, Container } from "react-bootstrap";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getTableGroups,
@@ -17,12 +17,14 @@ const Header = () => {
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false)
   const newOrderBtnRef = useRef(null);
   const dispatch = useDispatch();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isChecksPage = location.pathname === "/checks";
 
   useEffect(() => {
     const getTable = async () => {
-      // Eger data artiq varsa tekrar yukleme
       if (tableGroups?.data) return;
-
       try {
         await dispatch(
           getTableGroups(loginedProfileData.data.profile.id),
@@ -51,20 +53,42 @@ const Header = () => {
     <>
       <Container fluid className="header d-flex align-items-center p-0">
         <Row className="w-100 m-0">
-          {/* DESKTOP HALL TABS (Hidden on mobile) */}
+          {/* DESKTOP HALL TABS OR BACK BUTTON (Hidden on mobile) */}
           <Col lg={6} md={6} className="p-0 m-o d-none d-md-block">
-            <ul className="hallsTab">
-              {tableGroups &&
-                tableGroups?.data?.map((hall, index) => (
-                  <li
-                    key={index}
-                    className={`hall-btn ${activeHall === hall.id ? "active" : ""}`}
-                    onClick={() => setActiveHall(hall.id)}
+            {isChecksPage ? (
+              <div className="checks-header-left">
+                <button className="back-button" onClick={() => navigate("/tables")}>
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
                   >
-                    {hall.name}
-                  </li>
-                ))}
-            </ul>
+                    <path
+                      d="M19 12H5M12 19L5 12L12 5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                <span className="checks-page-title">Çeklər</span>
+              </div>
+            ) : (
+              <ul className="hallsTab">
+                {tableGroups &&
+                  tableGroups?.data?.map((hall, index) => (
+                    <li
+                      key={index}
+                      className={`hall-btn ${activeHall === hall.id ? "active" : ""}`}
+                      onClick={() => setActiveHall(hall.id)}
+                    >
+                      {hall.name}
+                    </li>
+                  ))}
+              </ul>
+            )}
           </Col>
 
           {/* MOBILE TOP HEADER (Visible only on mobile) */}
@@ -124,7 +148,6 @@ const Header = () => {
           <Col lg={6} md={6} className="headerLeftBox h-100 d-none d-md-block">
             <div className="right-tools-container h-100 d-flex align-items-center justify-content-end">
               {/* New Order Button */}
-              {/* New Order Button */}
               <button ref={newOrderBtnRef} className="create-order-btn small-btn" onClick={() => setOnShowSalesTypeModal(true)}>
                 <svg
                   width="18"
@@ -145,7 +168,7 @@ const Header = () => {
               </button>
 
               {/* Checks */}
-              <div className="header-action-item small-item">
+              <Link to="/checks" className="header-action-item small-item">
                 <span className="d-none d-xl-inline">Çeklər</span>
                 <svg
                   className="d-xl-none"
@@ -159,7 +182,7 @@ const Header = () => {
                   <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" />
                 </svg>
                 <span className="count-badge">4</span>
-              </div>
+              </Link>
 
               <div className="tools-divider"></div>
 

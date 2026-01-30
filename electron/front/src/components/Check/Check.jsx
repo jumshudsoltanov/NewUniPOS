@@ -708,7 +708,7 @@ const Check = () => {
 
             {/* Content placeholder for the rest of the right box */}
             <div className="checkRightBoxContent flex-grow-1 p-3">
-              <Menu  order={currentOrder}/>
+              <Menu order={currentOrder} />
             </div>
           </div>
         </Col>
@@ -774,6 +774,7 @@ const Check = () => {
         onClose={() => {
           setComment(false);
         }}
+        order={currentOrder}
       />
 
       <ClearCheck

@@ -160,7 +160,7 @@ const onUpdateTableOrder = async (req, res) => {
       .status(200)
       .json({ message: "table update success", data: updateTable });
   } catch (error) {
-    return res.status(400).json({ message: "Invalid discount type" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -182,7 +182,45 @@ const onLockCheck = async (req, res) => {
       .status(200)
       .json({ message: "table update success", data: updateLockChecK });
   } catch (error) {
-    return res.status(400).json({ message: "Invalid discount type" });
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const onUpdateCheckTags = async (req, res) => {
+  const { orderId } = req.params;
+  const { tags } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const updateTags = await OrdersModel.update(
+      { tags: tags },
+      { where: { uuid: orderId } },
+    );
+    res.status(200).json({ message: "tags update" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const onUpdateCheckComments = async (req, res) => {
+  const { orderId } = req.params;
+  const { comments } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const updateComments = await OrdersModel.update(
+      { note: comments },
+      { where: { uuid: orderId } },
+    );
+    res.status(200).json({ message: "comment update" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -191,4 +229,6 @@ module.exports = {
   onUpdateDiscountOrder,
   onUpdateTableOrder,
   onLockCheck,
+  onUpdateCheckTags,
+  onUpdateCheckComments,
 };

@@ -31,6 +31,7 @@ const CheckHeader = ({ orders, hall, table }) => {
     };
   };
 
+
   return (
     <>
       <div className="check-header-bar">
@@ -46,7 +47,11 @@ const CheckHeader = ({ orders, hall, table }) => {
             <span className="header-title">
               {hall?.name} - {table?.name}
             </span>
-            {/* <span className="header-subtitle">salam</span> */}
+            {orders && orders?.tags ? (
+              <span className="header-subtitle">{orders.tags}</span>
+            ) : (
+              ""
+            )}
           </div>
         </div>
 
@@ -68,7 +73,11 @@ const CheckHeader = ({ orders, hall, table }) => {
           </div>
         </div>
       </div>
-      <TagModal show={openTagModal} onClose={() => setOpenTagModal(false)} />
+      <TagModal
+        show={openTagModal}
+        onClose={() => setOpenTagModal(false)}
+        order={orders}
+      />
       <OtherChecks
         show={openOtherCheckModal}
         onClose={() => setOpenOtherCheckModal(false)}

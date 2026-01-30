@@ -6,6 +6,7 @@ import Header from "./components/Header/Header";
 import Tables from "./components/Tables/Tables";
 import CustomerModal from "./components/Customers-Modal/CustomersModal";
 import Check from "./components/Check/Check";
+import Checks from "./components/Checks/Checks";
 import { useDispatch } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
@@ -101,6 +102,15 @@ function AppContent() {
             <>
               <Header />
               <Tables />
+            </>
+          }
+        />
+        <Route
+          path="/checks"
+          element={
+            <>
+              <Header />
+              <Checks />
             </>
           }
         />

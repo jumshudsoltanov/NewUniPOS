@@ -33,4 +33,14 @@ router.patch(
   OrdersItemsController.onLockCheck,
 );
 
+router.patch(
+  "/orders-items/:orderId/check-tags",
+  OrdersItemsController.onUpdateCheckTags,
+);
+
+router.patch(
+  "/orders-items/:orderId/check-comments",
+  OrdersItemsController.onUpdateCheckComments,
+);
+
 module.exports = router;

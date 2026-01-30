@@ -53,7 +53,7 @@ const OrdersModel = db.sequelize.define(
     is_selected: { type: DataTypes.INTEGER, allowNull: true },
     deposit: { type: DataTypes.FLOAT, allowNull: true },
     note: { type: DataTypes.TEXT, allowNull: true },
-
+    tags: { type: DataTypes.TEXT, allowNull: true },
     check_reason: { type: DataTypes.INTEGER, allowNull: true },
     is_return: { type: DataTypes.INTEGER, allowNull: true },
     is_print: { type: DataTypes.INTEGER, allowNull: true },

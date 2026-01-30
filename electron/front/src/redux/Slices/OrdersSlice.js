@@ -63,6 +63,36 @@ export const updateLockChecK = createAsyncThunk(
   },
 );
 
+export const updateTags = createAsyncThunk(
+  "orders/check-tags",
+  async ({ orderId, tags }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/check-tags`,
+        { tags },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
+export const updateComments = createAsyncThunk(
+  "orders/check-comments",
+  async ({ orderId, comments }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/check-comments`,
+        { comments },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -72,6 +102,8 @@ export const OrderSlice = createSlice({
     discount: [],
     updateTable: [],
     isLockCheck: {},
+    tags: {},
+    comments: {},
   },
 
   reducers: {
@@ -150,6 +182,12 @@ export const OrderSlice = createSlice({
       })
       .addCase(updateLockChecK.fulfilled, (state, action) => {
         state.isLockCheck = action.payload;
+      })
+      .addCase(updateTags.fulfilled, (state, action) => {
+        state.tags = action.payload;
+      })
+      .addCase(updateComments.fulfilled, (state, action) => {
+        state.comments = action.payload;
       });
   },
 });
