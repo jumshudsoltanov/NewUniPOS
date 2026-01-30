@@ -42,14 +42,25 @@ const CustomersModal = ({ show, onHide, table }) => {
 
   const createOrder = useCallback(async () => {
     if (isCreating) return;
+
+    const waiterId = loginedWaiter?.data?.id;
+    const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
+    const profileId = loginedProfileData?.data?.profile?.id;
+
+    if (!waiterId || !terminalId || !profileId) {
+      console.error("Missing required user data for creating order");
+      // Optionally show toast error here
+      return;
+    }
+
     setIsCreating(true);
 
     const payload = {
       guestCount,
       tableId: table.id,
-      waiterId: loginedWaiter.data.id,
-      terminalId: loginedProfileData.data.terminal.terminal_id,
-      profileId: loginedProfileData.data.profile.id,
+      waiterId,
+      terminalId,
+      profileId,
       sale_type: "dine_in",
       hallId: currentHallId,
       status: 1,
@@ -58,8 +69,8 @@ const CustomersModal = ({ show, onHide, table }) => {
 
     try {
       const result = await dispatch(saleNewOrders(payload)).unwrap();
-      if (result.message === "success") {
-        navigate(`/check/${result.data.uuid}?tableId=${table.id}`);
+      if (result?.message === "success") {
+        navigate(`/check/${result?.data?.uuid}?tableId=${table.id}`);
       }
     } catch (err) {
       console.error("Check created error:", err);
@@ -70,9 +81,8 @@ const CustomersModal = ({ show, onHide, table }) => {
     dispatch,
     guestCount,
     table?.id,
-    loginedWaiter.data.id,
-    loginedProfileData.data.terminal.terminal_id,
-    loginedProfileData.data.profile.id,
+    loginedWaiter,
+    loginedProfileData,
     currentHallId,
     navigate,
     isCreating,

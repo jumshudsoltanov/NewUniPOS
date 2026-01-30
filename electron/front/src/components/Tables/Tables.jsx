@@ -34,38 +34,41 @@ const Tables = () => {
     return [...tables].sort((a, b) => a.id - b.id);
   }, [tableGroups, currentHallId]);
 
-  const handleTableClick = async (table) => {
-    const { orders } = table || {};
-    if (id) {
-      try {
-        await dispatch(
-          updateTableOrders({
-            orderId: id,
-            newTableId: table?.id,
-            currentHallId,
-          }),
-        ).unwrap();
+  const handleTableClick = React.useCallback(
+    async (table) => {
+      const { orders } = table || {};
+      if (id) {
+        try {
+          await dispatch(
+            updateTableOrders({
+              orderId: id,
+              newTableId: table?.id,
+              currentHallId,
+            }),
+          ).unwrap();
 
-        toast.success("Masa uğurla dəyişdirildi");
-        await dispatch(getTableGroups(loginedProfileData.data.profile.id));
-        navigate(`/check/${id}?tableId=${table?.id}`);
-      } catch (error) {
-        toast.error("Xəta baş verdi");
-        console.error(error);
+          toast.success("Masa uğurla dəyişdirildi");
+          await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+          navigate(`/check/${id}?tableId=${table?.id}`);
+        } catch (error) {
+          toast.error("Xəta baş verdi");
+          console.error(error);
+        }
+        return;
       }
-      return;
-    }
 
-    if (orders?.length > 1) {
-      setSelectedTable(table);
-      setShowOtherChecks(true);
-    } else if (orders?.length === 1) {
-      navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
-    } else {
-      setSelectedTable(table);
-      setShowModal(true);
-    }
-  };
+      if (orders?.length > 1) {
+        setSelectedTable(table);
+        setShowOtherChecks(true);
+      } else if (orders?.length === 1) {
+        navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
+      } else {
+        setSelectedTable(table);
+        setShowModal(true);
+      }
+    },
+    [id, dispatch, currentHallId, loginedProfileData, navigate],
+  );
 
   if (currentTables.length === 0) {
     return (

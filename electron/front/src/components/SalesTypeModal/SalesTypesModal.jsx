@@ -51,12 +51,22 @@ export const SalesTypesModal = ({ show, onClose, onSelect }) => {
   const createOrder = useCallback(
     async (saleTypeId) => {
       if (isCreating) return;
+
+      const waiterId = loginedWaiter?.data?.id;
+      const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
+      const profileId = loginedProfileData?.data?.profile?.id;
+
+      if (!waiterId || !terminalId || !profileId) {
+        console.error("Missing required user data for creating order");
+        return;
+      }
+
       setIsCreating(true);
 
       const payload = {
-        waiterId: loginedWaiter.data.id,
-        terminalId: loginedProfileData.data.terminal.terminal_id,
-        profileId: loginedProfileData.data.profile.id,
+        waiterId,
+        terminalId,
+        profileId,
         sale_type: saleTypeId,
         status: 1,
         is_selected: 1,
@@ -64,10 +74,10 @@ export const SalesTypesModal = ({ show, onClose, onSelect }) => {
 
       try {
         const result = await dispatch(saleNewOtherOrders(payload)).unwrap();
-        if (result.message === "success") {
+        if (result?.message === "success") {
           await dispatch(getTableGroups(payload.profileId));
           await dispatch(getActiveOrders({ profileId: payload.profileId }));
-          navigate(`/check/${result.data.uuid}`);
+          navigate(`/check/${result?.data?.uuid}`);
           onClose(false);
         }
       } catch (err) {
@@ -78,11 +88,11 @@ export const SalesTypesModal = ({ show, onClose, onSelect }) => {
     },
     [
       dispatch,
-      loginedWaiter.data.id,
-      loginedProfileData.data.terminal.terminal_id,
-      loginedProfileData.data.profile.id,
+      loginedWaiter,
+      loginedProfileData,
       navigate,
       isCreating,
+      onClose
     ],
   );
 

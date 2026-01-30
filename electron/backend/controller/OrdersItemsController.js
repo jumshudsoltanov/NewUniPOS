@@ -376,50 +376,70 @@ const onMergeChecks = async (req, res) => {
 
       if (mergedItemsMap.has(key)) {
         const existing = mergedItemsMap.get(key);
-        existing.quantity = (existing.quantity || 0) + (item.quantity || 0);
+        // Ensure quantity is treated as number
+        existing.count = (Number(existing.count) || 0) + (Number(item.count) || 0);
         mergedItemsMap.set(key, existing);
       } else {
-        mergedItemsMap.set(key, { ...item.dataValues });
+        // Create a clean object for insertion
+        const newItem = {
+          order_id: currentOrderId,
+          product_id: item.product_id,
+          count: Number(item.count) || 0,
+          price: item.price,
+          operator_id: item.operator_id,
+          profile_id: item.profile_id,
+          is_print: item.is_print,
+          is_gift: item.is_gift,
+        };
+        mergedItemsMap.set(key, newItem);
       }
     });
 
-    // Upsert merged results
-    for (const item of mergedItemsMap.values()) {
-      await OrdersItemsModel.upsert(item, { transaction });
+    // DELETE all items for this order to avoid duplicates in DB
+    await OrdersItemsModel.destroy({
+      where: { order_id: currentOrderId },
+      transaction,
+    });
+
+    // BULK CREATE the consolidated items
+    const itemsToCreate = Array.from(mergedItemsMap.values());
+    if (itemsToCreate.length > 0) {
+      await OrdersItemsModel.bulkCreate(itemsToCreate, { transaction });
     }
 
-    // Build merged items array for totals
-    const mergedItems = Array.from(mergedItemsMap.values());
-
-    // 1) Subtotal (sum of all prices * qty)
-    const subtotal = mergedItems.reduce((sum, item) => {
+    // Recalculate Totals based on merged items
+    // 1) Subtotal (sum of all prices * count)
+    const subtotal = itemsToCreate.reduce((sum, item) => {
       const price = parseFloat(item.price) || 0;
-      const qty = parseFloat(item.quantity) || 0;
-      return sum + price * qty;
+      const count = parseFloat(item.count) || 0;
+      return sum + price * count;
     }, 0);
 
     // 2) Discount total
     let discountAmount = 0;
-    if (discount_value > 0) {
+    const dValue = Number(discount_value || 0);
+    if (dValue > 0) {
       if (discount_type === "percent") {
-        discountAmount = (subtotal * discount_value) / 100;
+        discountAmount = (subtotal * dValue) / 100;
       } else {
-        discountAmount = discount_value;
+        discountAmount = dValue;
       }
     }
 
     // 3) Service charge total
     let serviceCharge = 0;
-    if (service_value > 0) {
+    const sValue = Number(service_value || 0);
+    if (sValue > 0) {
       if (service_type === "percent") {
-        serviceCharge = (subtotal * service_value) / 100;
+        serviceCharge = (subtotal * sValue) / 100;
       } else {
-        serviceCharge = service_value;
+        serviceCharge = sValue;
       }
     }
 
-    // 4) Final total
-    const total = subtotal - discountAmount + serviceCharge;
+    // Final total
+    let total = subtotal - discountAmount + serviceCharge;
+    total = Math.max(total, 0);
 
     // Update the order
     await OrdersModel.update(

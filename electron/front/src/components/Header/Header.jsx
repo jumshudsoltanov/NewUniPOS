@@ -345,7 +345,10 @@ const Header = () => {
               {hall.name}
             </button>
           ))}
-        <button className="mobile-add-btn">
+        <button
+          className="mobile-add-btn"
+          onClick={() => setOnShowSalesTypeModal(true)}
+        >
           <svg
             width="24"
             height="24"

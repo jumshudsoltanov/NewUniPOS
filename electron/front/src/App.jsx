@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
+import Layout from "./components/Layout/Layout";
 import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 import Toastify from "./components/Toastify/Toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -87,33 +88,13 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/pin" element={<Pin />} />
-        <Route
-          path="/tables"
-          element={
-            <>
-              <Header />
-              <Tables />
-            </>
-          }
-        />
-        <Route
-          path="/tables/:id"
-          element={
-            <>
-              <Header />
-              <Tables />
-            </>
-          }
-        />
-        <Route
-          path="/checks"
-          element={
-            <>
-              <Header />
-              <Checks />
-            </>
-          }
-        />
+
+        <Route element={<Layout />}>
+          <Route path="/tables" element={<Tables />} />
+          <Route path="/tables/:id" element={<Tables />} />
+          <Route path="/checks" element={<Checks />} />
+        </Route>
+
         <Route path="/check/:id" element={<Check />} />
       </Routes>
     </>

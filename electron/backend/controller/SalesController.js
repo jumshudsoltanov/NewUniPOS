@@ -14,13 +14,20 @@ const CreateNewOrders = async (req, res) => {
       is_selected,
     } = req.body;
 
-    if (!tableId) {
-      res.status(400).json({ message: "false", data: "Required table id" });
+    if (!tableId || !waiterId || !terminalId || !profileId) {
+      res.status(400).json({
+        message: "false",
+        data: "Required fields missing (table, waiter, terminal, or profile)",
+      });
       return;
     }
-    let { count } = await OrdersModel.findAndCountAll();
+
+    // Use MAX(id) + 1 to avoid conflicts with deleted rows
+    const maxId = await OrdersModel.max('id', { paranoid: false });
+    const newId = (maxId || 0) + 1;
+
     let newSale = await OrdersModel.create({
-      id: count + 1,
+      id: newId,
       table_id: tableId ?? 0,
       guest_count: guestCount ?? 0,
       waiter_id: waiterId,
@@ -32,7 +39,7 @@ const CreateNewOrders = async (req, res) => {
       is_selected: is_selected,
     });
 
-    res.status(200).json({ message: "success", data: newSale, count: count });
+    res.status(200).json({ message: "success", data: newSale, count: newId });
   } catch (error) {
     res.status(500).json({ message: "false", data: error.message });
   }
@@ -49,13 +56,19 @@ const CreateNewOtherOrders = async (req, res) => {
       is_selected,
     } = req.body;
 
-    if (!profileId && !sale_type) {
-      res.status(400).json({ message: "false", data: "Required table id" });
+    if (!profileId || !sale_type || !waiterId || !terminalId) {
+      res
+        .status(400)
+        .json({ message: "false", data: "Required fields missing" });
       return;
     }
-    let { count } = await OrdersModel.findAndCountAll();
+
+    // Use MAX(id) + 1 to avoid conflicts with deleted rows
+    const maxId = await OrdersModel.max('id');
+    const newId = (maxId || 0) + 1;
+
     let newSale = await OrdersModel.create({
-      id: count + 1,
+      id: newId,
       waiter_id: waiterId,
       profile_id: profileId,
       terminal_id: terminalId,
@@ -64,10 +77,10 @@ const CreateNewOtherOrders = async (req, res) => {
       is_selected: is_selected,
     });
 
-    res.status(200).json({ message: "success", data: newSale, count: count });
+    res.status(200).json({ message: "success", data: newSale, count: newId });
   } catch (error) {
     res.status(500).json({ message: "false", data: error.message });
   }
 };
 
-module.exports = { CreateNewOrders,CreateNewOtherOrders };
+module.exports = { CreateNewOrders, CreateNewOtherOrders };
