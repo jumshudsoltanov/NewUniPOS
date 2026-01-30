@@ -8,17 +8,19 @@ import {
   currentTableList,
 } from "../../redux/Slices/TablesSlice";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const Header = () => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [activeHall, setActiveHall] = useState(null);
-  const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false)
+  const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const newOrderBtnRef = useRef(null);
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
+  const [checkCount, setCheckCount] = useState(0);
 
   const isChecksPage = location.pathname === "/checks";
 
@@ -49,6 +51,21 @@ const Header = () => {
     }
   }, [activeHall]);
 
+  useEffect(() => {
+    const handleGetCount = async () => {
+      await dispatch(
+        getTableGroups(loginedProfileData?.data?.profile?.id),
+      ).unwrap();
+      const count = await dispatch(
+        getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }),
+      ).unwrap();
+
+      setCheckCount(count.data);
+    };
+
+    handleGetCount();
+  }, []);
+
   return (
     <>
       <Container fluid className="header d-flex align-items-center p-0">
@@ -57,7 +74,10 @@ const Header = () => {
           <Col lg={6} md={6} className="p-0 m-o d-none d-md-block">
             {isChecksPage ? (
               <div className="checks-header-left">
-                <button className="back-button" onClick={() => navigate("/tables")}>
+                <button
+                  className="back-button"
+                  onClick={() => navigate("/tables")}
+                >
                   <svg
                     width="20"
                     height="20"
@@ -148,7 +168,11 @@ const Header = () => {
           <Col lg={6} md={6} className="headerLeftBox h-100 d-none d-md-block">
             <div className="right-tools-container h-100 d-flex align-items-center justify-content-end">
               {/* New Order Button */}
-              <button ref={newOrderBtnRef} className="create-order-btn small-btn" onClick={() => setOnShowSalesTypeModal(true)}>
+              <button
+                ref={newOrderBtnRef}
+                className="create-order-btn small-btn"
+                onClick={() => setOnShowSalesTypeModal(true)}
+              >
                 <svg
                   width="18"
                   height="18"
@@ -181,7 +205,7 @@ const Header = () => {
                   <path d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51z" />
                   <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" />
                 </svg>
-                <span className="count-badge">4</span>
+                <span className="count-badge text-white" style={{background: "#A5B4FC"}}>{checkCount.length}</span>
               </Link>
 
               <div className="tools-divider"></div>
