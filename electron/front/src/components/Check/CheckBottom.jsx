@@ -38,36 +38,30 @@ const CheckBottom = ({ orders }) => {
   const calcTotal = useMemo(() => {
     const listOfProducts = new Map();
 
-    orders?.orders_items.forEach((item) => {
-      const id = item.product_id;
-      if (listOfProducts.has(id)) {
-        const exist = listOfProducts.get(id);
-        exist.quantity += Number(item.count);
-        exist.price = item.price;
-      } else {
-        listOfProducts.set(id, { ...item, quantity: Number(item.count) });
-      }
-    });
+    const addItems = (items) => {
+      if (!items) return;
+      items.forEach((item) => {
+        const id = item.product_id || item.id;
+        const count = Number(item.count || item.quantity || 0);
+        const price = Number(item.price || 0);
 
-    const combinedLocal = [...products, ...(sentProducts || [])];
+        if (listOfProducts.has(id)) {
+          const exist = listOfProducts.get(id);
+          exist.quantity += count;
+          exist.price = price;
+        } else {
+          listOfProducts.set(id, { ...item, quantity: count, price });
+        }
+      });
+    };
 
-    combinedLocal.forEach((product) => {
-      const id = product.id;
-      if (listOfProducts.has(id)) {
-        const exist = listOfProducts.get(id);
-        exist.quantity += Number(product.quantity);
-        exist.price = product.price;
-      } else {
-        listOfProducts.set(id, {
-          ...product,
-          quantity: Number(product.quantity),
-        });
-      }
-    });
+    addItems(orders?.orders_items);
+    addItems(products);
+    addItems(sentProducts);
 
     let total = Array.from(listOfProducts.values()).reduce(
       (sum, item) => sum + Number(item.quantity) * Number(item.price),
-      0,
+      0
     );
 
     // Calculate Dynamic Discount

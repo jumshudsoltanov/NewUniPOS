@@ -14,20 +14,20 @@ const CreateNewOrders = async (req, res) => {
       is_selected,
     } = req.body;
 
-    if (!tableId) {
+    if (!profileId) {
       res.status(400).json({ message: "false", data: "Required table id" });
       return;
     }
     let { count } = await OrdersModel.findAndCountAll();
     let newSale = await OrdersModel.create({
       id: count + 1,
-      table_id: tableId,
-      guest_count: guestCount,
+      table_id: tableId ?? 0,
+      guest_count: guestCount ?? 0,
       waiter_id: waiterId,
       profile_id: profileId,
       terminal_id: terminalId,
       sale_type: sale_type,
-      hall_id: hallId,
+      hall_id: hallId ?? 0,
       status: status,
       is_selected: is_selected,
     });

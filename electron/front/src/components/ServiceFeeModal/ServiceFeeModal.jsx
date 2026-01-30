@@ -55,6 +55,8 @@ const ServiceFeeModal = ({ show, onClose, order }) => {
       // Refresh table data to update totals in UI
       if (loginedProfileData?.data?.profile?.id) {
         await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+        // Small delay to ensure Redux state is fully committed before closing
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
       onClose();
     } catch (error) {
