@@ -11,6 +11,7 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [showTableModal, setShowTableModal] = useState(false);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
+
   const saleType = [
     { id: "dine_in", name: "Yerində" },
     { id: "delivery", name: "Çatdırılma" },
@@ -27,11 +28,11 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
     hallId = null,
   ) => {
     try {
-      if (saleType == "dine_in") {
+      if (saleType == "dine_in" && !tableId) {
         setShowTableModal(true);
         return;
       }
-      //   onClose(true);
+      onClose(true);
       const result = await dispatch(
         changeSaleType({ orderId: order.uuid, saleType, tableId, hallId }),
       ).unwrap();
@@ -49,7 +50,7 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
 
   return (
     <>
-      <Modal show={show} onHide={onClose} size="md">
+      <Modal show={show && !showTableModal} onHide={onClose} size="md">
         <Modal.Header
           closeButton
           className="text-white"
@@ -76,7 +77,16 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
 
       <TableGroupsModal
         show={showTableModal}
-        onClose={() => setShowTableModal(false)}
+        onClose={(selectedTable) => {
+          setShowTableModal(false);
+          if (selectedTable && selectedTable.id) {
+            handleChnageSaleType(
+              "dine_in",
+              selectedTable.id,
+              selectedTable.hall_id,
+            );
+          }
+        }}
         tableGroups={tableGroups}
       />
     </>

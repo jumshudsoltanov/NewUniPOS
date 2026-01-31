@@ -185,7 +185,11 @@ const Check = () => {
 
     if (books?.data) {
       const order = books.data.find((item) => item.uuid == id);
-      return { currentOrder: order, currentHall: null, currentTable: null };
+      return {
+        currentOrder: order,
+        currentHall: order?.table?.hall || null,
+        currentTable: order?.table || null,
+      };
     }
 
     return { currentOrder: null, currentHall: null, currentTable: null };
