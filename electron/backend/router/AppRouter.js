@@ -6,6 +6,7 @@ const WaitersController = require("../controller/WaitersController");
 const TablesController = require("../controller/TablesController");
 const OrdersItemsController = require("../controller/OrdersItemsController");
 const BooksController = require("../controller/BooksController");
+const MenuController = require("../controller/MenuController");
 
 // Routers lists
 router.post("/login", LoginController.getLogin);
@@ -67,5 +68,16 @@ router.patch(
 
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
+
+// MenuData
+router.get(
+  "/menu/:profileId/all-menu",
+  MenuController.getMenuWithGeneralCategories,
+);
+
+router.get(
+  "/menu/:profileId/menu-with-categories",
+  MenuController.getMenuWithCategories,
+);
 
 module.exports = router;

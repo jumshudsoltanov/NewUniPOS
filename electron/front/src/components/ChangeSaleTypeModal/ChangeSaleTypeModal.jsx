@@ -19,7 +19,7 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
   ];
 
   const filteredSaleType = saleType.filter((item) => {
-    return item.id !== order.sale_type;
+    return item.id !== order?.sale_type;
   });
 
   const handleChnageSaleType = async (

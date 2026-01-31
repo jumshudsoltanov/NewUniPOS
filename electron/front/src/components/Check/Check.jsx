@@ -887,6 +887,7 @@ const Check = () => {
         show={onShowServiceFee}
         onClose={() => setOnShowServiceFee(false)}
         order={currentOrder}
+        hall={currentHall}
       />
 
       <WaitersModal

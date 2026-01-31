@@ -8,7 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
-const ServiceFeeModal = ({ show, onClose, order }) => {
+const ServiceFeeModal = ({ show, onClose, order, hall }) => {
   const [value, setValue] = useState("0");
   const [feeType, setFeeType] = useState("percent");
   const dispatch = useDispatch();
@@ -16,10 +16,16 @@ const ServiceFeeModal = ({ show, onClose, order }) => {
 
   useEffect(() => {
     if (order) {
-      setValue(order.service_value ? String(order.service_value) : "0");
+      if (order.service_value && Number(order.service_value) > 0) {
+        setValue(String(order.service_value));
+      } else if (hall?.service_fee) {
+        setValue(String(hall.service_fee));
+      } else {
+        setValue("0");
+      }
       setFeeType(order.service_type || "percent");
     }
-  }, [order]);
+  }, [order, hall]);
 
   const handleNumClick = (num) => {
     if (value === "0" && num !== ".") {

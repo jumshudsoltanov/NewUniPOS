@@ -4,9 +4,37 @@ import Card from "react-bootstrap/Card";
 import { useDispatch, useSelector } from "react-redux";
 import { addProducts, menuData } from "../../redux/Slices/OrdersSlice";
 import { toast } from "sonner";
-
+import {
+  menuWithGeneralCategories,
+  menuWithCategories,
+} from "../../redux/Slices/MenuSlice";
 
 const Menu = ({ order }) => {
+  const { menuDataWithGeneralCategories, menuDataWithCategories } = useSelector(
+    (state) => state.MenuSlice,
+  );
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const dispatch = useDispatch();
+  const CategoriesListData = [
+    ...menuDataWithGeneralCategories.data,
+    ...menuDataWithCategories.data,
+  ];
+
+  useEffect(() => {
+    const getMenu = async () => {
+      await dispatch(
+        menuWithGeneralCategories(loginedProfileData?.data?.profile?.id),
+      ).unwrap();
+      await dispatch(
+        menuWithCategories(loginedProfileData?.data?.profile?.id),
+      ).unwrap();
+    };
+
+    getMenu();
+  }, [dispatch, loginedProfileData]);
+
+  console.log(CategoriesListData);
+
   const foods = [
     {
       id: 1,
@@ -147,8 +175,6 @@ const Menu = ({ order }) => {
     },
   ];
 
-  const dispatch = useDispatch();
-
   useEffect(() => {
     dispatch(menuData(foods));
   }, []);
@@ -161,13 +187,34 @@ const Menu = ({ order }) => {
     dispatch(addProducts(food));
   };
 
+
   return (
     <Container fluid className="p-0">
       <Row className="g-2">
-        {" "}
+        {/* General Categories And Categories */}
+        {CategoriesListData.map((item) => (
+          <Col key={item.id} xs={6} md={4} lg={3} xl={3}>
+            <div
+              className="menu-card"
+              style={{
+                backgroundImage: item.img
+                  ? `url(https://unipos.tech/${item.img})`
+                  : "none",
+                backgroundColor: item.img ? "transparent" : "#555",
+              }}
+            >
+              {/* Overlay Content */}
+              <div className="menu-card-content">
+                <span className="text-center fw-bold text-white text-shadow">
+                  {item.name}
+                </span>
+              </div>
+            </div>
+          </Col>
+        ))}
         {/* Tighter gutter as per image */}
         {foods.map((food, index) => (
-          <Col key={index} xs={6} md={4} lg={3} xl={3}>
+          <Col className="d-none" key={index} xs={6} md={4} lg={3} xl={3}>
             {" "}
             {/* LG=3 means 4 items per row, matches image better */}
             <div
