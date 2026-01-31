@@ -16,6 +16,11 @@ const CategoriesModel = db.sequelize.define(
       allowNull: true,
     },
 
+    general_categorie_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
     name: {
       type: DataTypes.TEXT,
       allowNull: true,

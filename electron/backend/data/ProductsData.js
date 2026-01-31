@@ -10,9 +10,9 @@ const profileData = async () => {
   return profile ? profile.id : null;
 };
 
-const getGeneralCategories = async () => {
+const getGeneralCategories = async (passedProfileId) => {
   try {
-    const profile_id = await profileData();
+    const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
     const response = await axios.get(
@@ -28,6 +28,9 @@ const getGeneralCategories = async () => {
         return g;
       });
 
+
+      if (generalCategories.length === 0) return;
+
       const apiIds = generalCategories.map((g) => g.id);
 
       // DB-də olub, API-da olmayanları sil
@@ -36,34 +39,43 @@ const getGeneralCategories = async () => {
       });
 
       // Insert / update
+      const updateGeneralCategoryKeys = Object.keys(generalCategories[0]).filter(
+        (key) => GeneralCategoriesModel.rawAttributes[key],
+      );
+
+
       await GeneralCategoriesModel.bulkCreate(generalCategories, {
-        updateOnDuplicate: Object.keys(generalCategories[0]),
+        updateOnDuplicate: updateGeneralCategoryKeys,
       });
 
       console.log("DB sync olundu: insert/update + silindi");
     }
   } catch (err) {
-    console.error("Xəta:", err.message);
+    console.error("General Categories Error:", err);
   }
 };
 
-const getCategories = async () => {
+const getCategories = async (passedProfileId) => {
   try {
-    const profile_id = await profileData();
+    const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
     const response = await axios.get(
       `http://46.224.8.157:35627/api/pos/categories/${profile_id}`,
     );
 
-    if (response.data && Array.isArray(response.data.data)) {
-      const categories = response.data.data.map((c) => {
+    const categoriesData = response.data.categories || response.data.data;
+
+    if (categoriesData && Array.isArray(categoriesData)) {
+      const categories = categoriesData.map((c) => {
         Object.keys(c).forEach((k) => {
           if (c[k] === undefined) c[k] = 0;
         });
         c.profile_id = profile_id;
         return c;
       });
+
+      if (categories.length === 0) return;
 
       const apiIds = categories.map((c) => c.id);
 
@@ -73,20 +85,24 @@ const getCategories = async () => {
       });
 
       // Insert / update
+      const updateCategoryKeys = Object.keys(categories[0]).filter(
+        (key) => CategoriesModel.rawAttributes[key],
+      );
+
       await CategoriesModel.bulkCreate(categories, {
-        updateOnDuplicate: Object.keys(categories[0]),
+        updateOnDuplicate: updateCategoryKeys,
       });
 
       console.log("DB sync olundu: insert/update + silindi");
     }
   } catch (err) {
-    console.error("Xəta:", err.message);
+    console.error("Categories Error:", err);
   }
 };
 
-const getProducts = async () => {
+const getProducts = async (passedProfileId) => {
   try {
-    const profile_id = await profileData();
+    const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
     const response = await axios.get(
@@ -102,6 +118,8 @@ const getProducts = async () => {
         return p;
       });
 
+      if (products.length === 0) return;
+
       const apiIds = products.map((p) => p.id);
 
       // DB-də olub, API-da olmayanları sil
@@ -110,8 +128,12 @@ const getProducts = async () => {
       });
 
       // Insert / update
+      const updateProductKeys = Object.keys(products[0]).filter(
+        (key) => ProductsModel.rawAttributes[key],
+      );
+
       await ProductsModel.bulkCreate(products, {
-        updateOnDuplicate: Object.keys(products[0]),
+        updateOnDuplicate: updateProductKeys,
       });
 
       console.log("DB sync olundu: insert/update + silindi");

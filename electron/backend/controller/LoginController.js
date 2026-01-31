@@ -41,12 +41,12 @@ const getLogin = async (req, res) => {
     });
 
     // Fetch initial data after login
-    await getWaitersList();
-    await getTableGroups();
-    await getTables();
-    await getGeneralCategories();
-    await getCategories();
-    await getProducts();
+    await getWaitersList(profile.id);
+    await getTableGroups(profile.id);
+    await getTables(profile.id);
+    await getGeneralCategories(profile.id);
+    await getCategories(profile.id);
+    await getProducts(profile.id);
 
     res.status(200).json(response.data);
   } catch (error) {

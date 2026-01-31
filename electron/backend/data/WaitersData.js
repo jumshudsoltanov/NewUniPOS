@@ -8,9 +8,9 @@ const profileData = async () => {
   return profile ? profile.id : null;
 };
 
-const getWaitersList = async () => {
+const getWaitersList = async (passedProfileId) => {
   try {
-    const profile_id = await profileData();
+    const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
     const response = await axios.get(

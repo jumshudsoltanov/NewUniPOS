@@ -16,6 +16,11 @@ const ProductsModel = db.sequelize.define(
       allowNull: true,
     },
 
+    category_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+
     name: {
       type: DataTypes.TEXT,
       allowNull: true,

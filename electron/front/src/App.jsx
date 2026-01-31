@@ -37,10 +37,7 @@ function AppContent() {
       const storageData = JSON.parse(localStorage.getItem("profile"));
       const authResult = JSON.parse(localStorage.getItem("authResult"));
 
-      if (authResult) {
-        dispatch(setLoginData(authResult));
-        navigate("/pin");
-      } else if (storageData) {
+      if (storageData) {
         try {
           const data = await dispatch(authPos(storageData)).unwrap();
           localStorage.setItem("authResult", JSON.stringify(data));

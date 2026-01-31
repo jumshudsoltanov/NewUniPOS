@@ -9,9 +9,9 @@ const profileData = async () => {
   return profile ? profile.id : null;
 };
 
-const getTableGroups = async () => {
+const getTableGroups = async (passedProfileId) => {
   try {
-    const profile_id = await profileData();
+    const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
     const response = await axios.get(
@@ -44,9 +44,9 @@ const getTableGroups = async () => {
   }
 };
 
-const getTables = async () => {
+const getTables = async (passedProfileId) => {
   try {
-    const profile_id = await profileData();
+    const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
     const response = await axios.get(

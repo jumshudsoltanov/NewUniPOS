@@ -112,7 +112,7 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
-    await db.sequelize.sync({force: true});
+    await db.sequelize.sync({ alter: true });
     console.log("Created Table Success!");
   } catch (error) {
     console.log("Table Created Error", error);
