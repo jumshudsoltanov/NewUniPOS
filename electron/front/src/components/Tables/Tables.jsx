@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Container, Row, Col, Alert } from "react-bootstrap";
 import "./Tables.css";
 import Table from "../Table/Table";
@@ -21,15 +21,16 @@ const Tables = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
+  const [ currentHallData, setCurrentHallData ] = React.useState(null);
 
   const currentTables = useMemo(() => {
     if (!tableGroups?.data || !currentHallId) {
-      return tableGroups?.data?.[0]?.tables || []; //
+      return tableGroups?.data?.[0]?.tables || [];
     }
     const selectedHall = tableGroups.data.find(
       (hall) => hall.id === currentHallId,
     );
-    // Sort tables by ID to keep them stable
+    setCurrentHallData(selectedHall);
     const tables = selectedHall?.tables || [];
     return [...tables].sort((a, b) => a.id - b.id);
   }, [tableGroups, currentHallId]);
@@ -108,6 +109,7 @@ const Tables = () => {
         show={showModal}
         onHide={() => setShowModal(false)}
         table={selectedTable}
+        selectedHall={currentHallData}
       />
 
       <OtherChecks

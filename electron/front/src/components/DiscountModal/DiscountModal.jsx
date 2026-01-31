@@ -4,6 +4,7 @@ import Modal from "react-bootstrap/Modal";
 import { useDispatch, useSelector } from "react-redux";
 import { updateDiscountOnOrders } from "../../redux/Slices/OrdersSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
 const DiscountModal = ({ show, onClose, order }) => {
   const dispatch = useDispatch();
@@ -53,11 +54,13 @@ const DiscountModal = ({ show, onClose, order }) => {
         if (order?.table_id) {
           await dispatch(getTableGroups(loginedProfileData.data.profile.id));
         } else {
-          await dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+          await dispatch(
+            getActiveOrders({ profileId: loginedProfileData.data.profile.id }),
+          );
         }
 
         // Small delay to ensure Redux state is fully committed before closing
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     } catch (error) {
       console.error("Discount update failed:", error);
@@ -209,7 +212,10 @@ const DiscountModal = ({ show, onClose, order }) => {
             </button>
             <button
               className="apply-btn"
-              onClick={() => (handleUpdateDisCount(), onClose(false))}
+              onClick={async () => {
+                await handleUpdateDisCount();
+                onClose(false);
+              }}
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

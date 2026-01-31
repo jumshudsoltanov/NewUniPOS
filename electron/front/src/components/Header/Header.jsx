@@ -369,10 +369,10 @@ const Header = () => {
 
       <SalesTypesModal
         show={onShowSalesTypeModal}
+        target={newOrderBtnRef.current}
         onClose={() => setOnShowSalesTypeModal(false)}
         onSelect={(type) => {
           console.log("Seçilən satış tipi:", type);
-          // TODO: Burada seçilən tipə görə əməliyyat aparın
         }}
       />
     </>

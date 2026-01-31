@@ -29,6 +29,10 @@ const getTables = async (req, res) => {
           as: "orders",
         },
       },
+      order: [
+        ["ordering", "ASC"],
+        [TablesModel, "id", "ASC"],
+      ],
     });
     if (tables.length === 0) {
       res

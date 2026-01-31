@@ -196,8 +196,6 @@ const Check = () => {
     }
   }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
 
-  console.log(currentOrder);
-
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
       <Row className="h-100 g-0">

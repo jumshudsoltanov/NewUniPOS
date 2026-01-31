@@ -10,14 +10,25 @@ import {
   currentTableList,
 } from "../../redux/Slices/TablesSlice";
 
-const CustomersModal = ({ show, onHide, table }) => {
+const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   const [guestCount, setGuestCount] = useState("0");
   const dispatch = useDispatch();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { currentHallId } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const [serviceValue, setServiceValue] = useState(0);
 
+  useEffect(() => {
+    const hallFee = selectedHall?.service_fee;
+    const hasServiceType = selectedHall?.service_type !== null && selectedHall?.service_type !== undefined;
+    if (hasServiceType && hallFee !== null && hallFee !== undefined && hallFee !== "") {
+      setServiceValue(Number(hallFee));
+    } else {
+      setServiceValue(0);
+    }
+  }, [selectedHall]);
   const navigate = useNavigate();
+
 
   const handleNumberClick = (num) => {
     if (guestCount === "0") {
@@ -40,6 +51,7 @@ const CustomersModal = ({ show, onHide, table }) => {
 
   const [isCreating, setIsCreating] = useState(false);
 
+
   const createOrder = useCallback(async () => {
     if (isCreating) return;
 
@@ -49,7 +61,6 @@ const CustomersModal = ({ show, onHide, table }) => {
 
     if (!waiterId || !terminalId || !profileId) {
       console.error("Missing required user data for creating order");
-      // Optionally show toast error here
       return;
     }
 
@@ -64,6 +75,8 @@ const CustomersModal = ({ show, onHide, table }) => {
       sale_type: "dine_in",
       hallId: currentHallId,
       status: 1,
+      serviceType: serviceValue ? "percent" : null,
+      serviceValue: serviceValue,
       is_selected: 1,
     };
 
@@ -89,6 +102,7 @@ const CustomersModal = ({ show, onHide, table }) => {
   ]);
 
   const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
 
   return (
     <Modal show={show} onHide={onHide} centered className="customers-modal">

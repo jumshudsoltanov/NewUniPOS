@@ -20,6 +20,10 @@ const OtherChecks = ({
     (state) => state.TablesSlice,
   );
 
+  const currentHallData = tableGroups?.data?.find(
+    (item) => item.id === currentHallId,
+  );
+
   const { books } = useSelector((state) => state.BooksSlice);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -28,7 +32,18 @@ const OtherChecks = ({
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [guestCount, setGuestCount] = useState("0");
   const [isCreating, setIsCreating] = useState(false);
+  const [serviceValue, setserviceValue] = useState(0);
 
+  useEffect(() => {
+    const hallFee = currentHallData?.service_fee;
+    const hasServiceType = currentHallData?.service_type !== null && currentHallData?.service_type !== undefined;
+
+    if (hasServiceType && hallFee !== null && hallFee !== undefined && hallFee !== "") {
+      setserviceValue(Number(hallFee));
+    } else {
+      setserviceValue(0);
+    }
+  }, [currentHallData]);
   useEffect(() => {
     dispatch(getTableGroups(loginedProfileData?.data?.profile.id));
     dispatch(
@@ -74,6 +89,8 @@ const OtherChecks = ({
       sale_type: "dine_in",
       hallId: currentHallId,
       status: 1,
+      serviceType: serviceValue ? "percent" : null,
+      serviceValue: serviceValue,
       is_selected: 1,
     };
 

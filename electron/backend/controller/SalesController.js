@@ -12,6 +12,8 @@ const CreateNewOrders = async (req, res) => {
       hallId,
       status,
       is_selected,
+      serviceValue,
+      serviceType,
     } = req.body;
 
     if (!tableId || !waiterId || !terminalId || !profileId) {
@@ -23,7 +25,7 @@ const CreateNewOrders = async (req, res) => {
     }
 
     // Use MAX(id) + 1 to avoid conflicts with deleted rows
-    const maxId = await OrdersModel.max('id', { paranoid: false });
+    const maxId = await OrdersModel.max("id", { paranoid: false });
     const newId = (maxId || 0) + 1;
 
     let newSale = await OrdersModel.create({
@@ -37,6 +39,8 @@ const CreateNewOrders = async (req, res) => {
       hall_id: hallId ?? 0,
       status: status,
       is_selected: is_selected,
+      service_type: serviceType,
+      service_value: serviceValue,
     });
 
     res.status(200).json({ message: "success", data: newSale, count: newId });
@@ -47,14 +51,8 @@ const CreateNewOrders = async (req, res) => {
 
 const CreateNewOtherOrders = async (req, res) => {
   try {
-    const {
-      waiterId,
-      terminalId,
-      profileId,
-      sale_type,
-      status,
-      is_selected,
-    } = req.body;
+    const { waiterId, terminalId, profileId, sale_type, status, is_selected } =
+      req.body;
 
     if (!profileId || !sale_type || !waiterId || !terminalId) {
       res
@@ -64,7 +62,7 @@ const CreateNewOtherOrders = async (req, res) => {
     }
 
     // Use MAX(id) + 1 to avoid conflicts with deleted rows
-    const maxId = await OrdersModel.max('id');
+    const maxId = await OrdersModel.max("id", { paranoid: false });
     const newId = (maxId || 0) + 1;
 
     let newSale = await OrdersModel.create({

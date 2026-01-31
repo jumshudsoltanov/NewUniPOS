@@ -1,25 +1,27 @@
-/* Main Modal Wrapper */
-.sales-type-modal .modal-content {
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  width: auto !important;
-  min-width: 360px;
+/* Popover Container */
+.sales-type-popover {
+  position: absolute;
   background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  z-index: 1060;
+  width: max-content;
+  border: 1px solid rgba(0,0,0,0.04);
 }
 
-/* Remove default Bootstrap Modal animations/transitions to simplify custom positioning */
-.sales-type-modal.fade .modal-dialog {
-  transition: transform 0.2s ease-out;
-  transform: scale(0.95);
-}
-
-.sales-type-modal.show .modal-dialog {
-  transform: scale(1);
-}
-
-.sales-type-modal-body {
-  padding: 0 !important;
+/* Arrow */
+.popover-arrow {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: white;
+  top: -8px;
+  transform: rotate(45deg);
+  border-top: 1px solid rgba(0,0,0,0.04);
+  border-left: 1px solid rgba(0,0,0,0.04);
+  margin-left: -8px; /* Center adjustment */
+  z-index: -1;
 }
 
 /* Options Container - Horizontal Flex */
@@ -37,13 +39,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding: 24px 20px;
   border: none;
   background: white;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
   position: relative;
-  min-width: 100px;
+  min-width: 110px;
 }
 
 .sales-type-option:first-child {
@@ -69,88 +71,42 @@
   content: "";
   position: absolute;
   right: 0;
-  top: 20%;
-  bottom: 20%;
+  top: 25%;
+  bottom: 25%;
   width: 1px;
-  background-color: #e0e0e0;
+  background-color: #e9ecef;
 }
 
 /* Icon Styling */
 .sales-type-icon {
   margin-bottom: 12px;
-  color: #2c3e50; /* Darker, premium color */
+  color: #2c3e50; 
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .sales-type-icon svg {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   stroke-width: 1.5;
 }
 
 /* Label Styling */
 .sales-type-label {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   color: #333;
-  font-family: inherit;
 }
 
-/* =========================================
-   DESKTOP STYLES (Min-width: 769px) 
-   ========================================= */
-@media (min-width: 769px) {
-  .sales-type-dialog {
-    position: absolute;
-    top: 60px; /* Below the header */
-    left: 58%; /* Adjust to align with the 'New Order' button area */
-    transform: translateX(-50%) !important;
-    margin: 0;
-    max-width: fit-content;
-  }
-
-  /* Triangle Pointer for Desktop (Optional, adds premium feel) */
-  .sales-type-modal .modal-content::before {
-    content: "";
-    position: absolute;
-    top: -6px;
-    left: 50%;
-    transform: translateX(-50%) rotate(45deg);
-    width: 12px;
-    height: 12px;
-    background: white;
-    box-shadow: -2px -2px 5px rgba(0, 0, 0, 0.05);
-  }
-}
-
-/* =========================================
-   MOBILE STYLES (Max-width: 768px) 
-   ========================================= */
+/* Mobile Adjustments */
 @media (max-width: 768px) {
-  .sales-type-dialog {
-    position: fixed;
-    bottom: 85px; /* Above the bottom navigation bar */
-    left: 50%;
-    transform: translateX(-50%) !important;
-    margin: 0;
-    width: 90%; /* Occupy most of the width */
-    max-width: 400px;
-  }
-
-  .sales-type-modal .modal-content {
-      border-radius: 16px; /* Rounder on mobile */
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-  }
-
-  .sales-type-option:first-child {
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
-  }
-
-  .sales-type-option:last-child {
-    border-top-right-radius: 16px;
-    border-bottom-right-radius: 16px;
+  /* On mobile, we might want it to behave differently? 
+     For now, relying on Overlay might place it off screen if not careful.
+     But 'popper' often handles flip/preventOverflow.
+  */
+  .sales-type-popover {
+    width: 90vw;
+    max-width: 360px;
   }
 }

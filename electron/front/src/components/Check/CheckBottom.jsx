@@ -67,7 +67,7 @@ const CheckBottom = ({ orders }) => {
 
     let total = Array.from(listOfProducts.values()).reduce(
       (sum, item) => sum + Number(item.quantity) * Number(item.price),
-      0
+      0,
     );
 
     // Calculate Dynamic Discount
@@ -128,7 +128,7 @@ const CheckBottom = ({ orders }) => {
       discountValue,
       effectivePercentage,
       serviceAmount: serviceAmount.toFixed(2),
-      effectiveServicePercentage
+      effectiveServicePercentage,
     };
   }, [
     orders?.orders_items,
@@ -139,8 +139,10 @@ const CheckBottom = ({ orders }) => {
     orders?.discount_type,
     orders?.service_value,
     orders?.service_type,
-    orders?.service_charge
+    orders?.service_charge,
   ]);
+
+  console.log(orders);
 
   return (
     <>
@@ -161,7 +163,7 @@ const CheckBottom = ({ orders }) => {
               </span>
             </div>
           )}
-          {Number(calcTotal.serviceAmount) > 0 && (
+          {orders?.service_type !== null && (
             <div className="summary-row">
               <span>Servis haqqı:</span>
               <span>

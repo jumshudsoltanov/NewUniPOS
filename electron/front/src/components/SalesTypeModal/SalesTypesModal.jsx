@@ -1,16 +1,15 @@
 import React, { useCallback, useState } from "react";
-import { Modal } from "react-bootstrap";
+import { Overlay } from "react-bootstrap";
 import "./SalesTypesModal.css";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  saleNewOrders,
   saleNewOtherOrders,
 } from "../../redux/Slices/SaleSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-export const SalesTypesModal = ({ show, onClose, onSelect }) => {
+export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -100,33 +99,44 @@ export const SalesTypesModal = ({ show, onClose, onSelect }) => {
     setSaleType(type.id);
     if (type.id !== "dine_in") {
       createOrder(type.id);
+    } else {
+      // Yerində (Dine in) seçiləndə masalar səhifəsinə yönləndiririk
+      navigate("/tables");
+      onClose(false);
     }
-    onClose(true);
   };
 
   return (
-    <Modal
+    <Overlay
       show={show}
-      onHide={onClose}
-      className="sales-type-modal"
-      backdrop={true}
-      dialogClassName="sales-type-dialog"
-      animation={false}
+      target={target}
+      placement="bottom"
+      rootClose={true}
+      onHide={() => onClose()}
     >
-      <Modal.Body className="sales-type-modal-body">
-        <div className="sales-type-options">
-          {salesTypes.map((type) => (
-            <button
-              key={type.id}
-              className="sales-type-option"
-              onClick={() => handleSelect(type)}
-            >
-              <div className="sales-type-icon">{type.icon}</div>
-              <span className="sales-type-label">{type.label}</span>
-            </button>
-          ))}
+      {({ placement, arrowProps, show: _show, popper, ...props }) => (
+        <div
+          {...props}
+          className="sales-type-popover"
+          style={{
+            ...props.style,
+          }}
+        >
+          <div className="popover-arrow" style={arrowProps.style}></div>
+          <div className="sales-type-options">
+            {salesTypes.map((type) => (
+              <button
+                key={type.id}
+                className="sales-type-option"
+                onClick={() => handleSelect(type)}
+              >
+                <div className="sales-type-icon">{type.icon}</div>
+                <span className="sales-type-label">{type.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </Modal.Body>
-    </Modal>
+      )}
+    </Overlay>
   );
 };
