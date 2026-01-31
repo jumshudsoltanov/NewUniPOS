@@ -90,7 +90,7 @@ const ProductsModel = db.sequelize.define(
     },
   },
   {
-    tableName: "general_categories",
+    tableName: "products",
     timestamps: true,
     paranoid: true,
     underscored: true,

@@ -90,7 +90,7 @@ const getProducts = async () => {
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
     const response = await axios.get(
-      `http://46.224.8.157:35627/api/pos/products/${profile_id}`,
+      `http://46.224.8.157:35627/api/products/${profile_id}`,
     );
 
     if (response.data && Array.isArray(response.data.data)) {
