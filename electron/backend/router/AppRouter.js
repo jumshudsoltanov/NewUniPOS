@@ -60,6 +60,11 @@ router.patch(
   OrdersItemsController.onMergeChecks,
 );
 
+router.patch(
+  "/orders-items/:orderId/change-saletype",
+  OrdersItemsController.onChangeSaleType,
+);
+
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 

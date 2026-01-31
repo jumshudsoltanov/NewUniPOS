@@ -13,6 +13,7 @@ export const OperationsModal = ({
   openWaitersModal,
   handleChangeTable,
   openACtiveCheck,
+  handleOpenChangeSaleType,
 }) => {
   const operations = [
     { icon: "bi-arrows-angle-expand", text: "Çeki böl" },
@@ -24,9 +25,17 @@ export const OperationsModal = ({
     { icon: "bi-person-plus", text: "Müştəri əlavə et" },
     { icon: "bi-journal-x", text: "Çeki təmizləmə", functions: clearCheck },
     { icon: "bi-percent", text: "Endirim", functions: openDiscountModal },
-    { icon: "bi-collection", text: "Çeki birləşdir", functions: openACtiveCheck },
+    {
+      icon: "bi-collection",
+      text: "Çeki birləşdir",
+      functions: openACtiveCheck,
+    },
     { icon: "bi-person-check", text: "Satıcı təyin et" },
-    { icon: "bi-arrow-left-right", text: "Satış üsulunu dəyiş" },
+    {
+      icon: "bi-arrow-left-right",
+      text: "Satış üsulunu dəyiş",
+      functions: handleOpenChangeSaleType,
+    },
     {
       icon: "bi-bell",
       text: "Xidmət haqqı əlavə et",

@@ -142,8 +142,6 @@ const CheckBottom = ({ orders }) => {
     orders?.service_charge,
   ]);
 
-  console.log(orders);
-
   return (
     <>
       {/* Desktop View */}

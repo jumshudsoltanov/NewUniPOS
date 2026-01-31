@@ -1,0 +1,17 @@
+.saleTypeModalBtn {
+    width: 100%;
+    padding: 20px 0;
+    font-size: 18px;
+    color: #333;
+    border-bottom: 1px solid #e9ecef;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.saleTypeModalBtn:last-child {
+    border-bottom: none;
+}
+
+.saleTypeModalBtn:hover {
+    background-color: #f8f9fa;
+}

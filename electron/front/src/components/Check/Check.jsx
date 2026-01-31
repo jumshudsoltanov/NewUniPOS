@@ -23,6 +23,7 @@ import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
+import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -37,6 +38,7 @@ const Check = () => {
   const [onShowServiceFee, setOnShowServiceFee] = useState(false);
   const [showWaitersModal, setShowWaitersModal] = useState(false);
   const [openACtiveChecks, setOpenActiveChecks] = useState(false);
+  const [openChangeSaleType, setOpenChangeSaleType] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -104,6 +106,11 @@ const Check = () => {
   const openACtiveCheck = () => {
     setShowOperationsModal(false);
     setOpenActiveChecks(true);
+  };
+
+  const handleOpenChangeSaleType = () => {
+    setShowOperationsModal(false);
+    setOpenChangeSaleType(true);
   };
 
   // ChangeTables
@@ -842,6 +849,7 @@ const Check = () => {
         openWaitersModal={openWaitersModal}
         handleChangeTable={handleChangeTable}
         openACtiveCheck={openACtiveCheck}
+        handleOpenChangeSaleType={handleOpenChangeSaleType}
       />
 
       <CheckLockModal
@@ -887,6 +895,12 @@ const Check = () => {
         order={currentOrder}
         show={openACtiveChecks}
         onClose={() => setOpenActiveChecks(false)}
+      />
+
+      <ChangeSaleTypeModal
+        show={openChangeSaleType}
+        onClose={() => setOpenChangeSaleType(false)}
+        order={currentOrder}
       />
     </Container>
   );

@@ -377,7 +377,8 @@ const onMergeChecks = async (req, res) => {
       if (mergedItemsMap.has(key)) {
         const existing = mergedItemsMap.get(key);
         // Ensure quantity is treated as number
-        existing.count = (Number(existing.count) || 0) + (Number(item.count) || 0);
+        existing.count =
+          (Number(existing.count) || 0) + (Number(item.count) || 0);
         mergedItemsMap.set(key, existing);
       } else {
         // Create a clean object for insertion
@@ -477,6 +478,25 @@ const onMergeChecks = async (req, res) => {
   }
 };
 
+const onChangeSaleType = async (req, res) => {
+  const { orderId } = req.params;
+  const { saleType, tableId, hallId } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const updateSaleType = await OrdersModel.update(
+      { sale_type: saleType, table_id: tableId, hall_id: hallId },
+      { where: { uuid: orderId } },
+    );
+    res.status(200).json({ message: "sale-type  update" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -487,4 +507,5 @@ module.exports = {
   onUpdateServiceFeeOrder,
   onDeleteOrderItems,
   onMergeChecks,
+  onChangeSaleType,
 };
