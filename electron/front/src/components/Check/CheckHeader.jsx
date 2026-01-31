@@ -12,8 +12,10 @@ const CheckHeader = ({ orders, hall, table }) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    dispatch(getTableGroups(loginedProfileData?.data.profile.id));
-  }, []);
+    if (loginedProfileData?.data?.profile?.id) {
+      dispatch(getTableGroups(loginedProfileData.data.profile.id));
+    }
+  }, [dispatch, loginedProfileData]);
 
   const getTimeDifference = (startDate) => {
     if (!startDate) return { hours: "00", minutes: "00" };

@@ -146,6 +146,48 @@
     border-color: #053796;
 }
 
+/* Hall Fee Shortcut */
+.hall-fee-shortcut {
+    display: flex;
+    align-items: center;
+    background-color: #EBF2FE;
+    /* Brand light blue */
+    border: 1px solid #053796;
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    gap: 12px;
+    transition: all 0.2s;
+}
+
+.hall-fee-shortcut:hover {
+    background-color: #D9E8FF;
+}
+
+.shortcut-icon {
+    color: #053796;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+}
+
+.shortcut-text {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+}
+
+.shortcut-text strong {
+    color: #053796;
+}
+
+.shortcut-action {
+    font-size: 12px;
+    font-weight: 600;
+    color: #053796;
+    text-transform: uppercase;
+}
+
 /* Keypad Grid */
 .keypad-grid {
     display: grid;

@@ -15,15 +15,15 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
   useEffect(() => {
-    if (order) {
-      if (order.service_value && Number(order.service_value) > 0) {
+    if (order || hall) {
+      if (order?.service_value !== undefined && order?.service_value !== null) {
         setValue(String(order.service_value));
       } else if (hall?.service_fee) {
         setValue(String(hall.service_fee));
       } else {
         setValue("0");
       }
-      setFeeType(order.service_type || "percent");
+      setFeeType(order?.service_type || "percent");
     }
   }, [order, hall]);
 
@@ -50,9 +50,16 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
 
   const handleUpdateServiceFee = useCallback(async () => {
     try {
+      if (!order?.uuid) {
+        // If no saved order, we might just close or handle differently. 
+        // But usually there's an order if we are here.
+        onClose();
+        return;
+      }
+
       await dispatch(
         updateServiceFeeOnOrders({
-          orderId: order?.uuid,
+          orderId: order.uuid,
           serviceValue: value,
           feeType,
         }),
@@ -158,6 +165,25 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
               </button>
             </div>
           </div>
+
+          {/* Hall Fee Shortcut */}
+          {hall?.service_fee && (
+            <div
+              className="hall-fee-shortcut"
+              onClick={() => {
+                setValue(String(hall.service_fee));
+                setFeeType("percent");
+              }}
+            >
+              <div className="shortcut-icon">
+                <i className="bi bi-info-circle-fill"></i>
+              </div>
+              <div className="shortcut-text">
+                Zal üzrə servis haqqı: <strong>{hall.service_fee}%</strong>
+              </div>
+              <div className="shortcut-action">Tətbiq et</div>
+            </div>
+          )}
 
           {/* Keypad */}
           <div className="keypad-grid">

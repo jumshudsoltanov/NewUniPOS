@@ -11,7 +11,7 @@ import { useCallback } from "react";
 import { useMemo } from "react";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
-const CheckBottom = ({ orders }) => {
+const CheckBottom = ({ orders, hall }) => {
   const dispatch = useDispatch();
   const { products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -86,8 +86,16 @@ const CheckBottom = ({ orders }) => {
     }
 
     // Calculate Service Fee
-    const serviceValue = Number(orders?.service_value || 0);
-    const serviceType = orders?.service_type || "percent";
+    let serviceValue = 0;
+    let serviceType = orders?.service_type || "percent";
+
+    if (orders?.service_value !== undefined && orders?.service_value !== null) {
+      serviceValue = Number(orders.service_value);
+    } else if (hall?.service_fee) {
+      serviceValue = Number(hall.service_fee);
+      serviceType = "percent"; // Default for hall fee
+    }
+
     let serviceAmount = 0;
 
     if (serviceValue > 0) {

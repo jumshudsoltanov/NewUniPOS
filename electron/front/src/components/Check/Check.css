@@ -27,13 +27,7 @@
     color: #5A6A85;
     /* Grayish icon color */
     cursor: pointer;
-    transition: all 0.2s ease;
     font-size: 1.25rem;
-}
-
-.sidebar-icon:hover {
-    background-color: rgba(5, 55, 150, 0.1);
-    color: var(--Surface-Default, #053796);
 }
 
 /* Back Button (Active Look) */
@@ -46,7 +40,6 @@
     border-radius: 8px;
     background: var(--Surface-Default, #053796);
     color: white;
-    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
     cursor: pointer;
     margin-bottom: 10px;
 }
@@ -73,7 +66,8 @@
 
 /* Content Area - Fixed Layout */
 .check-content {
-    background-color: #fff;
+    background-color: #EBF2FE;
+    /* Brand light blue background */
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -107,8 +101,8 @@
 
 /* Right Box Area */
 .checkRightBox {
-    background-color: #F8F9FA;
-    /* Light background */
+    background-color: #EBF2FE;
+    /* Brand light blue background */
 }
 
 .right-top-header {
@@ -127,167 +121,196 @@
     margin: 0 12px;
 }
 
+/* Ensure Header is a positioning context */
 .CheckRightboxHeader {
-    height: 60px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-
-}
-
-/* Home Button */
-.home-btn {
-    display: flex;
-    padding: var(--Full-Padding, 8px);
-    justify-content: center;
-    align-items: center;
-    gap: var(--Spacing, 4px);
-    border-radius: var(--Radius, 8px);
-    background: var(--Surface-Default, #053796);
-}
-
-
-
-
-/* Header Icons */
-.header-icon {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 50%;
-    /* Rounded or just clean hover */
-    color: #053796;
-    /* Blue text color for icons */
-    font-size: 1.4rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.header-icon:hover {
-    background-color: rgba(5, 55, 150, 0.05);
-}
-
-/* Status Badge (Deaktiv) */
-.status-badge {
-    background-color: transparent;
-    color: #5A6A85;
-    border: 1px solid transparent;
-    /* If specifically outlined in design, add here. 
-       The image shows a look simpler than a full button, 
-       just icon + text */
-    cursor: pointer;
-}
-
-.status-badge i {
-    font-size: 1.2rem;
-    color: #053796;
-}
-
-/* Exit Button */
-.exit-btn {
-    cursor: pointer;
-    padding: 5px 10px;
-    border-radius: 8px;
-    transition: background-color 0.2s;
-    color: #DC3545;
-}
-
-.exit-btn:hover {
-    background-color: #FFF5F5;
-}
-
-.search-wrapper {
+    position: relative !important;
+    z-index: 10;
+    height: 50px;
+    margin-top: 5px;
+    /* Added separation from blue top bar */
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 40px;
-    /* Initial circle size */
-    height: 40px;
-    border-radius: 8px;
-    /* Not round (yumuru olmasin) */
-    background: transparent;
-    transition: all 0.3s ease;
+    background-color: #EBF2FE;
+    border-bottom: 1px solid #d1d5db;
     overflow: hidden;
-    cursor: pointer;
 }
 
-.search-wrapper.expanded {
-    width: 300px;
-    /* Default width logic */
-    background: #fff;
-    border: 1px solid #053796;
-    padding: 0 10px;
-    justify-content: flex-start;
-}
-
-@media (min-width: 992px) {
-    .search-wrapper.expanded {
-        width: 550px;
-    }
-}
-
-@media (max-width: 991.98px) {
-    .CheckRightboxHeader {
-        position: relative;
-    }
-
-    .search-wrapper.expanded {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 10;
-        border: none;
-        border-bottom: 2px solid #053796;
-        border-radius: 0;
-        padding-left: 20px;
-        padding-right: 20px;
-    }
-}
-
-.search-input {
-    border: none;
-    background: transparent;
-    outline: none;
+/* Breadcrumb Styles */
+.breadcrumb-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 5px;
     flex-grow: 1;
-    color: #343434;
-    font-size: 14px;
-    opacity: 0;
-    animation: appear 0.2s ease forwards 0.3s;
-    /* Delay appearance until expanded */
+    flex-shrink: 1;
+    /* Allow it to shrink if needed */
+    min-width: 0;
+    /* Allow Flexbox to shrink it properly */
 }
 
-.clear-btn {
+.breadcrumb-tab {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 38px;
+    background-color: #053796;
+    /* Brand Blue Background */
+    color: #fff;
+    /* White Text */
+    font-weight: 600;
+    font-size: 0.95rem;
+    font-style: italic;
+    /* Italic text as requested */
     cursor: pointer;
-    font-size: 12px;
-    color: #DC3545;
-    /* Red clear button */
-    white-space: nowrap;
-    padding: 2px 6px;
+    padding: 0 20px;
     border-radius: 4px;
-    opacity: 0;
-    animation: appear 0.2s ease forwards 0.3s;
-    /* Delay appearance until expanded */
+    transform: skewX(-15deg);
+    border: none;
+    margin-left: 0;
 }
 
-.clear-btn:hover {
-    background: rgba(220, 53, 69, 0.1);
+/* Un-skew the content inside */
+.breadcrumb-tab svg,
+.breadcrumb-tab span,
+.breadcrumb-tab div {
+    transform: skewX(15deg);
 }
 
-@keyframes appear {
-    to {
-        opacity: 1;
-    }
-}
-
-.header-icon {
-    /* Ensure icon is centered inside wrapper when collapsed */
-    width: 40px;
-    height: 40px;
+/* Home Tab Specifics */
+.breadcrumb-tab.home {
+    width: 50px;
+    /* Smaller home */
+    padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.breadcrumb-tab svg {
+    font-size: 1.25rem;
+    color: #fff;
+    /* White Icon for Blue Background */
+    fill: currentColor;
+}
+
+/* ============================
+   MODERN SEARCH BAR STYLES 
+   ============================ */
+.search-wrapper {
+    /* Collapsed State Visuals - Matched to Breadcrumb Tabs */
+    width: 48px;
+    height: 38px;
+    background-color: #053796;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    transform: skewX(-15deg);
+    border: none;
+    box-shadow: none;
+    flex-shrink: 0;
+    /* Prevent invisible/shrunk icon */
+}
+
+/* Un-skew the search icon as well */
+.search-wrapper svg,
+.search-wrapper i {
+    transform: skewX(15deg);
+    font-size: 1.2rem;
+}
+
+.search-wrapper.expanded-modern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #EBF2FE;
+    /* Match header background */
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    transform: none;
+    /* No skew when expanded */
+}
+
+.modern-search-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-input-group {
+    background-color: #fff;
+    /* White Background for Input Area */
+    border: 1px solid #053796;
+    /* Blue Border */
+    border-radius: 6px;
+    overflow: hidden;
+    height: 38px;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+.modern-search-input {
+    border: none !important;
+    box-shadow: none !important;
+    height: 100% !important;
+    padding-left: 15px;
+    font-size: 1rem;
+    color: #053796 !important;
+    /* Blue Text on White Background */
+    outline: none !important;
+    flex-grow: 1;
+    background: transparent !important;
+}
+
+.modern-search-input::placeholder {
+    color: rgba(5, 55, 150, 0.4) !important;
+    /* Blue-ish placeholder */
+}
+
+.search-btn-clear {
+    height: 100%;
+    background-color: #053796 !important;
+    color: white !important;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    border: none !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.2) !important;
+    /* Divider */
+}
+
+.search-btn-close {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 6px;
+    background: #fff;
+    /* White Background */
+    color: #053796;
+    /* Blue Icon */
+    cursor: pointer;
+    border: 1px solid #053796;
+    /* Blue Border */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    padding: 0;
+    flex-shrink: 0;
 }
 
 /* Menu Card Styling */
@@ -371,7 +394,6 @@
     cursor: pointer;
     font-size: 0.9rem;
     gap: 4px;
-    transition: all 0.2s;
 }
 
 .mobile-nav-item i {
@@ -393,16 +415,14 @@
 }
 
 /* User asked for NO hover transform */
-.menu-card:hover {
-    transform: none;
-}
 
 .text-shadow {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .checkRightBoxContent {
-    background-color: #F8F9FA;
+    background-color: #EBF2FE;
+    /* Brand light blue background */
     overflow-y: auto;
 }
 
@@ -484,7 +504,8 @@
 
 /* CheckMain */
 .checkMain {
-    background-color: #fff;
+    background-color: #EBF2FE;
+    /* Brand light blue background */
     flex-grow: 1;
     overflow-y: auto;
     padding: 10px 15px;
@@ -623,7 +644,6 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    transition: 0.2s;
     font-size: 1rem;
     white-space: nowrap;
 }
@@ -633,17 +653,9 @@
     color: #333;
 }
 
-.btn-send:hover {
-    background-color: #f0f0f0;
-}
-
 .btn-pay {
     background-color: #053796;
     color: #fff;
-}
-
-.btn-pay:hover {
-    background-color: #042d7a;
 }
 
 /* Mobile View Only - Neat White Design */
@@ -679,11 +691,6 @@
         border-radius: 8px;
         font-size: 1.4rem;
         cursor: pointer;
-        transition: background-color 0.2s;
-    }
-
-    .btn-icon-gray:hover {
-        background-color: #717d91;
     }
 
     .btn-pay-custom {
@@ -698,13 +705,8 @@
         justify-content: space-between;
         padding: 0;
         cursor: pointer;
-        transition: background-color 0.2s;
         overflow: hidden;
         height: 50px;
-    }
-
-    .btn-pay-custom:hover {
-        background-color: #042d7a;
     }
 
     .pay-icon-box {
@@ -749,12 +751,6 @@
     font-weight: 700;
     box-shadow: 0 6px 16px rgba(5, 55, 150, 0.2);
     border: 4px solid #ffffff;
-    transition: all 0.3s ease;
-}
-
-.table-badge-circle:hover {
-    transform: scale(1.05);
-    box-shadow: 0 8px 20px rgba(5, 55, 150, 0.3);
 }
 
 .table-badge-circle .table-label {
@@ -789,6 +785,88 @@
     .table-badge-circle .table-num {
         font-size: 1.4rem;
     }
+}
+
+
+
+/* ============================
+   MODERN SEARCH BAR STYLES 
+   ============================ */
+.search-wrapper.expanded-modern {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 10px;
+    right: 10px;
+    height: 55px;
+    background: #fff;
+    z-index: 1000;
+    width: auto;
+    border-radius: 8px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-search-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-input-group {
+    background-color: #fff;
+    border: 2px solid #6C9EFF;
+    /* Light blue border */
+    border-radius: 6px;
+    overflow: hidden;
+    height: 45px;
+    flex-grow: 1;
+}
+
+.modern-search-input {
+    border: none;
+    box-shadow: none;
+    height: 100%;
+    padding-left: 15px;
+    font-size: 1rem;
+    color: #555;
+    outline: none;
+    width: 100%;
+}
+
+.modern-search-input::placeholder {
+    color: #999;
+}
+
+.modern-search-input:focus {
+    box-shadow: none;
+    background: transparent;
+}
+
+.search-btn-clear {
+    height: 100%;
+    background-color: #6C757D;
+    color: white;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    border-left: 1px solid #ddd;
+}
+
+.search-btn-close {
+    width: 45px !important;
+    height: 45px !important;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    border: 1px solid #ddd;
 }
 
 /* New Check Header Design (Footer Color Match) - Compact */
@@ -876,7 +954,6 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    transition: all 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -937,6 +1014,14 @@
     gap: 10px;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    /* Anchor the search and actions */
+}
+
 .header-order-id {
     font-size: 0.9rem;
     font-weight: 600;
@@ -955,7 +1040,6 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    transition: all 0.2s ease;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
@@ -1003,11 +1087,6 @@
     align-items: flex-start;
     /* Align top for multi-line text */
     background-color: transparent;
-}
-
-.order-item:hover {
-    background-color: #f8faff;
-    /* Visualize row on hover */
 }
 
 .order-item:last-child {
@@ -1198,100 +1277,6 @@
     .col-total {
         font-size: 0.85rem;
     }
-}
-
-/* === RE-ADDED & OPTIMIZED SEARCH STYLES === */
-.CheckRightboxHeader {
-    background-color: #fff;
-    border-bottom: 2px solid #eef2f6;
-    height: 60px;
-    padding: 0 10px;
-}
-
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* Base State: Small Icon-Only Button */
-/* Base State: Medium Icon-Only Button */
-.search-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #eef2f6;
-    border-radius: 10px;
-    background-color: #fff;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    width: 42px;
-    /* Increased from 36px */
-    height: 42px;
-    /* Increased from 36px */
-    padding: 0;
-    color: #053796;
-}
-
-/* Expanded State: Medium Search Input */
-.search-wrapper.expanded {
-    width: 280px;
-    padding: 0 20px;
-    justify-content: flex-start;
-    border-color: #053796;
-    cursor: text;
-}
-
-.search-input {
-    border: none;
-    outline: none;
-    flex-grow: 1;
-    width: auto;
-    height: 100%;
-    color: #333;
-    font-size: 0.9rem;
-    background: transparent;
-    margin: 0 8px;
-    padding: 0;
-}
-
-.search-input::placeholder {
-    color: #8898aa;
-}
-
-.clear-btn {
-    color: #dc3545;
-    cursor: pointer;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    margin-left: auto;
-    font-weight: 600;
-}
-
-/* Center the Icon */
-.search-wrapper i {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-    font-weight: bold;
-    height: 100%;
-}
-
-/* Ensure icon takes full width ONLY when button is collapsed */
-.search-wrapper:not(.expanded) i {
-    width: 100%;
-}
-
-.home-btn {
-    width: 42px;
-    /* Matched size */
-    height: 42px;
-    border-radius: 10px;
-    background-color: #053796;
-    flex-shrink: 0;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(5, 55, 150, 0.2);
 }
 
 /* Tablet/Mobile Footer Layout Fix */

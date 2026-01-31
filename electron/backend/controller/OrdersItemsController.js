@@ -24,7 +24,7 @@ const sendOrdersItemsToDb = async (req, res) => {
 
     // insert / updates items
     const savedItems = await OrdersItemsModel.bulkCreate(ordersItemsData, {
-      updateOnDuplicate: ["count", "price", "product_id", "order_id"],
+      updateOnDuplicate: ["product_id", "order_id"],
     });
 
     // All order on backend

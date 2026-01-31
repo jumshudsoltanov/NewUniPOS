@@ -57,7 +57,7 @@ const Check = () => {
       navigate("/checks");
     } else {
       await dispatch(
-        getTableGroups(loginedProfileData?.data?.profile.id),
+        getTableGroups(loginedProfileData?.data?.profile?.id),
       ).unwrap();
       navigate("/tables");
     }
@@ -206,6 +206,30 @@ const Check = () => {
       );
     }
   }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
+
+
+  console.log(currentOrder)
+
+
+  const [menuViewMode, setMenuViewMode] = useState("ROOT");
+  const [selectedGenCat, setSelectedGenCat] = useState(null);
+  const [selectedCat, setSelectedCat] = useState(null);
+
+  const handleMenuHome = () => {
+    setMenuViewMode("ROOT");
+    setSelectedGenCat(null);
+    setSelectedCat(null);
+    setSearchText("");
+  };
+
+  const getMenuBreadcrumbTitle = () => {
+    if (searchText) return "Axtarış nəticələri";
+    if (menuViewMode === "ROOT") return "Kateqoriyalar";
+    if (menuViewMode === "CATEGORIES") return selectedGenCat?.name;
+    if (menuViewMode === "PRODUCTS") return selectedCat?.name;
+    return "";
+  };
+
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
@@ -532,7 +556,7 @@ const Check = () => {
                 hall={currentHall}
               />
               <CheckMain orders={currentOrder} />
-              <CheckBottom orders={currentOrder} />
+              <CheckBottom orders={currentOrder} hall={currentHall} />
             </div>
           </div>
         </Col>
@@ -705,37 +729,27 @@ const Check = () => {
             </div>
 
             {/* Bottom Action Bar (White) */}
-            <div className="CheckRightboxHeader d-flex justify-content-between align-items-center p-2 bg-white border-bottom">
+            <div className="CheckRightboxHeader d-flex justify-content-between align-items-center p-2 border-bottom">
               {/* Left Side: Home Button */}
+              {/* Left Side: Home Button & Breadcrumb */}
               <div className="ms-2 header-left d-flex align-items-center gap-3">
-                <div
-                  className="home-btn btn-primary d-flex align-items-center justify-content-center"
-                  style={{ width: "50px" }}
-                >
-                  {" "}
-                  {/* Styled like image */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 20 20"
-                    fill="none"
+                <div className="breadcrumb-container">
+                  {/* Home Tab - Always Visible */}
+                  <div
+                    className={`breadcrumb-tab home`}
+                    onClick={handleMenuHome}
                   >
-                    <path
-                      d="M10 15V12.5"
-                      stroke="white"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M8.39166 2.35004L2.61666 6.97504C1.96666 7.4917 1.55 8.58337 1.69166 9.40004L2.8 16.0334C3 17.2167 4.13333 18.175 5.33333 18.175H14.6667C15.8583 18.175 17 17.2084 17.2 16.0334L18.3083 9.40004C18.4417 8.58337 18.025 7.4917 17.3833 6.97504L11.6083 2.35837C10.7167 1.6417 9.275 1.6417 8.39166 2.35004Z"
-                      stroke="white"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-house-door-fill" viewBox="0 0 16 16">
+                      <path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.495v3.505a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5" />
+                    </svg>
+                  </div>
+
+                  {/* Second Tab - Only Visible if NOT Root or Search Active */}
+                  {(menuViewMode !== "ROOT" || (searchText && searchText.length > 0)) && (
+                    <div className="breadcrumb-tab next">
+                      {getMenuBreadcrumbTitle()}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -743,35 +757,59 @@ const Check = () => {
               <div className="header-right d-flex align-items-center gap-2">
                 {/* Search */}
                 <div
-                  className={`search-wrapper ${isSearchExpanded ? "expanded" : ""}`}
-                  onClick={() => setIsSearchExpanded(true)}
+                  className={`search-wrapper ${isSearchExpanded ? "expanded-modern" : ""}`}
+                  onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
                 >
                   {!isSearchExpanded ? (
-                    <div className="header-icon bg-light text-primary rounded p-2">
-                      <i className="bi bi-search"></i>
-                    </div>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
                   ) : (
-                    <>
-                      <i className="bi bi-search text-primary"></i>
-                      <input
-                        type="text"
-                        className="search-input mx-2"
-                        placeholder="Axtarış..."
-                        autoFocus
-                        value={searchText}
-                        onChange={(e) => setSearchText(e.target.value)}
-                      />
-                      <span
-                        className="clear-btn fw-bold"
+                    <div className="modern-search-container d-flex align-items-center gap-2">
+                      <div className="search-input-group d-flex align-items-center flex-grow-1">
+                        {/* Search Icon inside input ?? No, image shows just text */}
+                        <input
+                          type="text"
+                          className="form-control modern-search-input" // Use bootstrap form-control base
+                          placeholder="Axtar..."
+                          autoFocus
+                          value={searchText}
+                          onChange={(e) => setSearchText(e.target.value)}
+                        />
+                        <div
+                          className="search-btn-clear d-flex align-items-center justify-content-center px-3"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSearchText("");
+                          }}
+                        >
+                          Təmizlə
+                        </div>
+                      </div>
+
+                      {/* Close Button X */}
+                      <div
+                        className="search-btn-close"
                         onClick={(e) => {
                           e.stopPropagation();
                           setIsSearchExpanded(false);
                           setSearchText("");
                         }}
                       >
-                        Təmizlə
-                      </span>
-                    </>
+                        <i className="bi bi-x-lg"></i>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -800,7 +838,16 @@ const Check = () => {
 
             {/* Content placeholder for the rest of the right box */}
             <div className="checkRightBoxContent flex-grow-1 p-3">
-              <Menu order={currentOrder} />
+              <Menu
+                order={currentOrder}
+                searchText={searchText}
+                menuViewMode={menuViewMode}
+                setMenuViewMode={setMenuViewMode}
+                selectedGenCat={selectedGenCat}
+                setSelectedGenCat={setSelectedGenCat}
+                selectedCat={selectedCat}
+                setSelectedCat={setSelectedCat}
+              />
             </div>
           </div>
         </Col>

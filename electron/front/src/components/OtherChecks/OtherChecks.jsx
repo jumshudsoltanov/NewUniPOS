@@ -185,7 +185,7 @@ const OtherChecks = ({
                   </span>
                 </span>
                 <span style={{ fontWeight: "bold" }}>
-                  {item.total || item.amount || 0} ₼
+                  {item.total || 0} ₼
                 </span>
               </button>
             ))

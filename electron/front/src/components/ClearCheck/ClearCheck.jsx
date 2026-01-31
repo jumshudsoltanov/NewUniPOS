@@ -15,10 +15,10 @@ const ClearCheck = ({ show, onClose, order }) => {
       deleteOrderItems({ orderId: order.uuid }),
     ).unwrap();
     await dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap()
-     await dispatch(
-        getActiveOrders({ profileId: loginedProfileData.data.profile.id }),
-      ).unwrap;
-    console.log(result.data);
+    await dispatch(
+      getActiveOrders({ profileId: loginedProfileData.data.profile.id }),
+    ).unwrap;
+
   };
 
   return (
