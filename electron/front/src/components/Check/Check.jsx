@@ -237,10 +237,24 @@ const Check = () => {
 
 
   const handleSplitOrder = async (splitData) => {
-    const result = dispatch({ data: splitData, profileId: loginedProfileData?.data?.profile?.id, profile: loginedProfileData?.data?.profile }).unwrap()
-    console.log(result)
-    setOpenSplitModal(false);
+    const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table.hall_id })
+    try {
+      const result = await dispatch(
+        splitOrder({
+          data: splitData,
+          profileId: loginedProfileData?.data?.profile?.id,
+          profile: loginedProfileData?.data?.profile,
+          hallData: hallServiceFee
+        })
+      ).unwrap();
+
+      console.log("Split result:", result);
+      setOpenSplitModal(false);
+    } catch (error) {
+      console.error("Split order error:", error);
+    }
   };
+
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">

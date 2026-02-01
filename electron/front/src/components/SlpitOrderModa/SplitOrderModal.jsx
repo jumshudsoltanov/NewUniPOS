@@ -85,6 +85,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
         if (itemsToSplit.length > 0) {
             // Include selected metadata
             onSplit({
+                orderId: order.uuid,
                 items: itemsToSplit,
                 salesType: selectedSalesType,
                 table: selectedTable,

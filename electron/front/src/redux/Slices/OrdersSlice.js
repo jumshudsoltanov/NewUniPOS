@@ -171,11 +171,11 @@ export const changeWaiter = createAsyncThunk(
 
 export const splitOrder = createAsyncThunk(
   "orders/split",
-  async ({ data, profileId, profile }, thunkAPI) => {
+  async ({ data, profileId, profile, hallData }, thunkAPI) => {
     try {
       const response = await axios.post(
         `http://localhost:55667/api/orders-items/${profileId}/split-order`,
-        { data, profile },
+        { data, profile, hallData },
       );
       return response.data;
     } catch (error) {

@@ -93,11 +93,13 @@ let creaedtToTabel = async () => {
 
     ProductsModel.hasMany(OrdersItemsModel, {
       foreignKey: "product_id",
+      constraints: false,
     });
 
     OrdersItemsModel.belongsTo(ProductsModel, {
       foreignKey: "product_id",
       as: "product",
+      constraints: false,
     });
 
     // Products Data
@@ -134,19 +136,19 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const InsertData = async () => {
   try {
     await getWaitersList();
-    await sleep(500);
+    await sleep(2000);
 
     await getTableGroups();
-    await sleep(500);
+    await sleep(2000);
 
     await getTables();
-    await sleep(500);
+    await sleep(2000);
 
     await getGeneralCategories();
-    await sleep(500);
+    await sleep(2000);
 
     await getCategories();
-    await sleep(500);
+    await sleep(2000);
 
     await getProducts();
   } catch (error) {

@@ -535,7 +535,7 @@ const onUpdateWaiter = async (req, res) => {
 
 const onSplitOrder = async (req, res) => {
   const { profileId } = req.params;
-  const { data, profile } = req.body;
+  const { data, profile, hallData } = req.body;
 
   res
     .status(200)
