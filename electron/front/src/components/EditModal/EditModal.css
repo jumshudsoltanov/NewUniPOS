@@ -294,3 +294,75 @@
     flex-shrink: 0;
     border-radius: 0;
 }
+
+/* Select Box for Transfer */
+.custom-select-box {
+    background-color: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 1rem;
+    color: #374151;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.custom-select-box:hover {
+    border-color: #4F85F4;
+}
+
+.custom-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    margin-top: 5px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.dropdown-item-custom {
+    padding: 12px 16px;
+    cursor: pointer;
+}
+
+.dropdown-item-custom:hover {
+    background-color: #F3F4F6;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    width: 44px;
+    height: 24px;
+    background-color: #E5E7EB;
+    border-radius: 99px;
+    position: relative;
+    transition: background-color 0.2s;
+}
+
+.toggle-switch.active {
+    background-color: #4F85F4;
+}
+
+.toggle-knob {
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.active .toggle-knob {
+    transform: translateX(20px);
+}

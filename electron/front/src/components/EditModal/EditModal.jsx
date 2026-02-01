@@ -1,8 +1,13 @@
 import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
-import { updateCount } from "../../redux/Slices/OrdersSlice";
+import { updateCount, splitOrder } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
+import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const EditModal = ({ show, onClose, product, orders }) => {
   const [activeTab, setActiveTab] = useState("edit");
@@ -14,6 +19,80 @@ const EditModal = ({ show, onClose, product, orders }) => {
     product?.price ? product.price.toString() : "0",
   );
 
+  // Transfer States
+  const [transferQty, setTransferQty] = useState(1);
+  const [showTableSelect, setShowTableSelect] = useState(false);
+  const [showWaiterSelect, setShowWaiterSelect] = useState(false);
+  const [showSalesTypeSelect, setShowSalesTypeSelect] = useState(false);
+  const [selectedSalesType, setSelectedSalesType] = useState('dine_in');
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [selectedWaiter, setSelectedWaiter] = useState(null);
+  const [createNewOrder, setCreateNewOrder] = useState(false);
+
+  const navigate = useNavigate();
+  const { tableGroups } = useSelector((state) => state.TablesSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+  const salesTypes = [
+    { id: "dine_in", label: "Yerində" },
+    { id: "takeaway", label: "Takeaway" },
+    { id: "delivery", label: "Çatdırılma" }
+  ];
+
+  const handleTransfer = async () => {
+    const hallServiceFee = tableGroups?.data?.find(item => item?.id == selectedTable?.hall_id);
+
+    // Validate
+    if (selectedSalesType === 'dine_in' && !selectedTable) {
+      alert("Please select a table");
+      return;
+    }
+
+    const payload = {
+      orderId: orders.uuid,
+      items: [{ id: product.product_id || product.id, qty: transferQty }],
+      salesType: selectedSalesType,
+      table: selectedTable,
+      waiter: selectedWaiter,
+      createNewOrder: createNewOrder // Pass the flag
+    };
+
+    try {
+      const result = await dispatch(
+        splitOrder({
+          data: payload,
+          profileId: loginedProfileData?.data?.profile?.id,
+          profile: loginedProfileData?.data?.profile,
+          hallData: hallServiceFee
+        })
+      ).unwrap();
+
+      if (result?.data?.newOrder?.uuid) {
+        await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
+        await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+
+        if (result.data.status === 'merged') {
+          // Stay on check page if merged might be better? Or navigate to the merged check?
+          // Assuming result.data.newOrder is the merged order
+          if (result.data.newOrder.sale_type === 'dine_in') {
+            navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
+          } else {
+            navigate(`/check/${result.data.newOrder.uuid}`);
+          }
+        } else {
+          if (result.data.newOrder.sale_type === 'dine_in') {
+            navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
+          } else {
+            navigate(`/check/${result.data.newOrder.uuid}`);
+          }
+        }
+        onClose();
+      }
+    } catch (error) {
+      console.error("Transfer error:", error);
+    }
+  };
+
   const handleNumpad = (val) => {
     if (val === "backspace") {
       setInputValue((prev) => prev.slice(0, -1));
@@ -22,9 +101,6 @@ const EditModal = ({ show, onClose, product, orders }) => {
     }
   };
 
-
-  console.log(orders.orders_items)
-
   return (
     <Modal
       show={show}
@@ -32,6 +108,7 @@ const EditModal = ({ show, onClose, product, orders }) => {
       centered
       className="editmodal"
       backdrop="static"
+      animation={false}
     >
       <Modal.Body>
         <div className="edit-modal-layout">
@@ -178,13 +255,88 @@ const EditModal = ({ show, onClose, product, orders }) => {
                   Saxla
                 </button>
               </>
+            ) : activeTab === "transfer" ? (
+              <>
+                <div className="edit-form-wrapper">
+                  {/* Quantity Selector for Transfer */}
+                  <div className="stepper-control mb-2">
+                    <button className="stepper-btn btn-minus" onClick={() => setTransferQty(q => Math.max(1, q - 1))}>
+                      <i className="bi bi-dash"></i>
+                    </button>
+                    <span className="stepper-value">{transferQty}</span>
+                    <button className="stepper-btn btn-plus" onClick={() => setTransferQty(q => Math.min(product?.count || 1, q + 1))}>
+                      <i className="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
+
+                  {/* Sales Type */}
+                  <div className="custom-select-box" onClick={() => setShowSalesTypeSelect(!showSalesTypeSelect)}>
+                    <span>Satış üsulu : {salesTypes.find(t => t.id === selectedSalesType)?.label}</span>
+                    <i className="bi bi-chevron-down"></i>
+                    {showSalesTypeSelect && (
+                      <div className="custom-dropdown-menu">
+                        {salesTypes.map(type => (
+                          <div key={type.id} className="dropdown-item-custom" onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSalesType(type.id);
+                            setShowSalesTypeSelect(false);
+                          }}>
+                            {type.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Table Select */}
+                  {selectedSalesType === "dine_in" && (
+                    <div className="custom-select-box" onClick={() => setShowTableSelect(true)}>
+                      <span>{selectedTable ? `${selectedTable.hall_name || ''} - ${selectedTable.number || selectedTable.name}` : "Masa seç"}</span>
+                      <i className="bi bi-grid-3x3-gap-fill"></i>
+                    </div>
+                  )}
+
+                  {/* Waiter Select */}
+                  <div className="custom-select-box" onClick={() => setShowWaiterSelect(true)}>
+                    <span className={selectedWaiter ? "text-primary fw-bold" : ""}>{selectedWaiter ? selectedWaiter.name : "Əməkdaş seç"}</span>
+                    <i className="bi bi-person-badge-fill"></i>
+                  </div>
+
+                  {/* New Order Toggle - Only show if Table/Dine-in is selected */}
+                  {selectedSalesType === 'dine_in' && selectedTable && (
+                    <div className="d-flex align-items-center justify-content-between px-2 mt-2" onClick={() => setCreateNewOrder(!createNewOrder)} style={{ cursor: 'pointer' }}>
+                      <span className="text-secondary fw-500">Yeni sifariş yarat</span>
+                      <div className={`toggle-switch ${createNewOrder ? 'active' : ''}`}>
+                        <div className="toggle-knob"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button className="save-action-btn" onClick={handleTransfer}>
+                  <i className="bi bi-arrow-left-right me-2"></i> Köçür
+                </button>
+              </>
             ) : (
-              <div className="empty-tab-content">
+              <div className="empty-tab-content p-4 text-center text-muted">
+                <i className="bi bi-cone-striped fs-1 d-block mb-3"></i>
                 Bu bölmə tezliklə hazır olacaq
               </div>
             )}
           </div>
         </div>
+
+        {/* Modals */}
+        <SplitTableSelect
+          show={showTableSelect}
+          onClose={() => setShowTableSelect(false)}
+          onSelect={(table) => { setSelectedTable(table); setShowTableSelect(false); }}
+        />
+        <SplitWaiterSelect
+          show={showWaiterSelect}
+          onClose={() => setShowWaiterSelect(false)}
+          onSelect={(waiter) => { setSelectedWaiter(waiter); setShowWaiterSelect(false); }}
+        />
       </Modal.Body>
     </Modal>
   );

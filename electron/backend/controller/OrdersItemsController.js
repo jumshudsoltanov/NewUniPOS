@@ -549,40 +549,63 @@ const onSplitOrder = async (req, res) => {
       throw new Error("Original order not found");
     }
 
-    // 2. Create New Order
-    const maxId = await OrdersModel.max("id", { paranoid: false });
-    const newId = (maxId || 0) + 1;
+    // 2. Determine Logic: Create New or Merge
+    let targetOrder = null;
+    let isMerge = false;
 
-    // Service Fee Logic
-    let serviceValue = null;
-    let serviceType = null;
+    // Check if we should try to merge
+    if (data.salesType === "dine_in" && data.table && !data.createNewOrder) {
+      // Look for existing active order on this table
+      targetOrder = await OrdersModel.findOne({
+        where: {
+          table_id: data.table.id,
+          status: 1 // assuming 1 is Active
+        },
+        transaction
+      });
 
-    if (data.salesType === "dine_in") {
-      serviceType = "percent";
-      serviceValue = 0;
-      if (hallData && Number(hallData.service_fee) > 0) {
-        serviceValue = Number(hallData.service_fee);
-      } else if (profile && profile.service_fee) {
-        serviceValue = Number(profile.service_fee);
+      if (targetOrder) {
+        isMerge = true;
       }
     }
 
-    const newOrder = await OrdersModel.create(
-      {
-        id: newId,
-        profile_id: profileId,
-        waiter_id: data.waiter ? data.waiter.id : originalOrder.waiter_id,
-        table_id: data.table ? data.table.id : null,
-        hall_id: data.table ? data.table.hall_id : null,
-        sale_type: data.salesType,
-        status: 1,
-        service_type: serviceType,
-        service_value: serviceValue,
-        guest_count: 0,
-        terminal_id: originalOrder.terminal_id,
-      },
-      { transaction },
-    );
+    if (!targetOrder) {
+      // CREATE NEW ORDER logic
+      const maxId = await OrdersModel.max("id", { paranoid: false });
+      const newId = (maxId || 0) + 1;
+
+      // Service Fee Logic
+      let serviceValue = null;
+      let serviceType = null;
+
+      if (data.salesType === "dine_in") {
+        serviceType = "percent";
+        serviceValue = 0;
+        if (hallData && Number(hallData.service_fee) > 0) {
+          serviceValue = Number(hallData.service_fee);
+        } else if (profile && profile.service_fee) {
+          serviceValue = Number(profile.service_fee);
+        }
+      }
+
+      targetOrder = await OrdersModel.create(
+        {
+          id: newId,
+          profile_id: profileId,
+          waiter_id: data.waiter ? data.waiter.id : originalOrder.waiter_id,
+          table_id: data.table ? data.table.id : null,
+          hall_id: data.table ? data.table.hall_id : null,
+          sale_type: data.salesType,
+          status: 1,
+          service_type: serviceType,
+          service_value: serviceValue,
+          guest_count: 0,
+          terminal_id: originalOrder.terminal_id,
+        },
+        { transaction },
+      );
+    }
+    // else we have targetOrder and isMerge=true
 
     for (const item of data.items) {
       const originalItem = await OrdersItemsModel.findOne({
@@ -592,6 +615,7 @@ const onSplitOrder = async (req, res) => {
 
       if (originalItem) {
         const moveQty = Number(item.qty);
+        // Reduce from original
         if (originalItem.count > moveQty) {
           originalItem.count -= moveQty;
           await originalItem.save({ transaction });
@@ -599,14 +623,25 @@ const onSplitOrder = async (req, res) => {
           await originalItem.destroy({ transaction });
         }
 
-        await OrdersItemsModel.create({
-          order_id: newOrder.uuid,
-          product_id: item.id,
-          count: moveQty,
-          price: originalItem.price,
-          operator_id: newOrder.waiter_id,
-          profile_id: profileId,
-        }, { transaction });
+        // Add to Target Order
+        const existingTargetItem = await OrdersItemsModel.findOne({
+          where: { order_id: targetOrder.uuid, product_id: item.id },
+          transaction
+        });
+
+        if (existingTargetItem) {
+          existingTargetItem.count = Number(existingTargetItem.count) + moveQty;
+          await existingTargetItem.save({ transaction });
+        } else {
+          await OrdersItemsModel.create({
+            order_id: targetOrder.uuid,
+            product_id: item.id,
+            count: moveQty,
+            price: originalItem.price,
+            operator_id: targetOrder.waiter_id, 
+            profile_id: profileId,
+          }, { transaction });
+        }
       }
     }
 
@@ -660,14 +695,15 @@ const onSplitOrder = async (req, res) => {
     };
 
     await recalculateOrder(data.orderId, transaction);
-    await recalculateOrder(newOrder.uuid, transaction);
+    await recalculateOrder(targetOrder.uuid, transaction);
 
     await transaction.commit();
 
     res.status(200).json({
       message: "success",
       data: {
-        newOrder,
+        newOrder: targetOrder,
+        status: isMerge ? 'merged' : 'created',
         profile,
         profileId
       }

@@ -13,7 +13,12 @@ const getAllActiveOrders = async (req, res) => {
       order: [["start_date", "DESC"]],
       include: [
         { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        { model: OrdersItemsModel, as: "orders_items" },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]]
+        },
         {
           model: TablesModel,
           as: "table",
