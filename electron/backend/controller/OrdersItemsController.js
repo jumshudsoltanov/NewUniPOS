@@ -537,9 +537,147 @@ const onSplitOrder = async (req, res) => {
   const { profileId } = req.params;
   const { data, profile, hallData } = req.body;
 
-  res
-    .status(200)
-    .json({ message: "success", data: { data, profile, profileId } });
+  const transaction = await sequelize.transaction();
+
+  try {
+    // 1. Validate Original Order
+    const originalOrder = await OrdersModel.findOne({
+      where: { uuid: data.orderId },
+      transaction,
+    });
+    if (!originalOrder) {
+      throw new Error("Original order not found");
+    }
+
+    // 2. Create New Order
+    const maxId = await OrdersModel.max("id", { paranoid: false });
+    const newId = (maxId || 0) + 1;
+
+    // Service Fee Logic
+    let serviceValue = null;
+    let serviceType = null;
+
+    if (data.salesType === "dine_in") {
+      serviceType = "percent";
+      serviceValue = 0;
+      if (hallData && Number(hallData.service_fee) > 0) {
+        serviceValue = Number(hallData.service_fee);
+      } else if (profile && profile.service_fee) {
+        serviceValue = Number(profile.service_fee);
+      }
+    }
+
+    const newOrder = await OrdersModel.create(
+      {
+        id: newId,
+        profile_id: profileId,
+        waiter_id: data.waiter ? data.waiter.id : originalOrder.waiter_id,
+        table_id: data.table ? data.table.id : null,
+        hall_id: data.table ? data.table.hall_id : null,
+        sale_type: data.salesType,
+        status: 1,
+        service_type: serviceType,
+        service_value: serviceValue,
+        guest_count: 0,
+        terminal_id: originalOrder.terminal_id,
+      },
+      { transaction },
+    );
+
+    for (const item of data.items) {
+      const originalItem = await OrdersItemsModel.findOne({
+        where: { order_id: data.orderId, product_id: item.id },
+        transaction,
+      });
+
+      if (originalItem) {
+        const moveQty = Number(item.qty);
+        if (originalItem.count > moveQty) {
+          originalItem.count -= moveQty;
+          await originalItem.save({ transaction });
+        } else {
+          await originalItem.destroy({ transaction });
+        }
+
+        await OrdersItemsModel.create({
+          order_id: newOrder.uuid,
+          product_id: item.id,
+          count: moveQty,
+          price: originalItem.price,
+          operator_id: newOrder.waiter_id,
+          profile_id: profileId,
+        }, { transaction });
+      }
+    }
+
+    const recalculateOrder = async (orderId, targetTransaction) => {
+      const items = await OrdersItemsModel.findAll({
+        where: { order_id: orderId },
+        attributes: ["count", "price"],
+        transaction: targetTransaction,
+      });
+
+      const totalAmount = items.reduce(
+        (sum, it) => sum + Number(it.count) * Number(it.price),
+        0
+      );
+
+      const ord = await OrdersModel.findOne({
+        where: { uuid: orderId },
+        transaction: targetTransaction
+      });
+
+      if (!ord) return;
+
+      let discount = 0;
+      let service = 0;
+
+      if (Number(ord.discount_value) > 0) {
+        if (ord.discount_type === "percent") {
+          discount = (totalAmount * Number(ord.discount_value)) / 100;
+        } else {
+          discount = Number(ord.discount_value);
+        }
+      }
+
+      if (Number(ord.service_value) > 0) {
+        if (ord.service_type === "percent") {
+          service = (totalAmount * Number(ord.service_value)) / 100;
+        } else {
+          service = Number(ord.service_value);
+        }
+      }
+
+      let netTotal = totalAmount - discount + service;
+      netTotal = Math.max(netTotal, 0);
+
+      await OrdersModel.update({
+        amount: totalAmount,
+        discount: discount,
+        service_charge: service,
+        total: netTotal
+      }, { where: { uuid: orderId }, transaction: targetTransaction });
+    };
+
+    await recalculateOrder(data.orderId, transaction);
+    await recalculateOrder(newOrder.uuid, transaction);
+
+    await transaction.commit();
+
+    res.status(200).json({
+      message: "success",
+      data: {
+        newOrder,
+        profile,
+        profileId
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Split Order Error:", error);
+    res.status(500).json({ message: "Split failed", error: error.message });
+  }
 };
 
 module.exports = {

@@ -237,7 +237,7 @@ const Check = () => {
 
 
   const handleSplitOrder = async (splitData) => {
-    const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table.hall_id })
+    const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table?.hall_id })
     try {
       const result = await dispatch(
         splitOrder({
@@ -250,6 +250,18 @@ const Check = () => {
 
       console.log("Split result:", result);
       setOpenSplitModal(false);
+
+      if (result?.data?.newOrder?.uuid) {
+        await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
+        await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+
+        if (result.data.newOrder.sale_type === 'dine_in') {
+          navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
+        } else {
+          navigate(`/check/${result.data.newOrder.uuid}`);
+        }
+      }
+
     } catch (error) {
       console.error("Split order error:", error);
     }
