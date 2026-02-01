@@ -15,17 +15,13 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
   useEffect(() => {
-    if (order || hall) {
+    if (order) {
       if (order?.service_value !== undefined && order?.service_value !== null) {
         setValue(String(order.service_value));
-      } else if (hall?.service_fee) {
-        setValue(String(hall.service_fee));
-      } else {
-        setValue("0");
+        setFeeType(order?.service_type || "percent");
       }
-      setFeeType(order?.service_type || "percent");
     }
-  }, [order, hall]);
+  }, [order]);
 
   const handleNumClick = (num) => {
     if (value === "0" && num !== ".") {
@@ -47,12 +43,9 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
     setValue("0");
   };
 
-
   const handleUpdateServiceFee = useCallback(async () => {
     try {
       if (!order?.uuid) {
-        // If no saved order, we might just close or handle differently. 
-        // But usually there's an order if we are here.
         onClose();
         return;
       }
@@ -70,10 +63,12 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
         if (order?.table_id) {
           await dispatch(getTableGroups(loginedProfileData.data.profile.id));
         } else {
-          await dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+          await dispatch(
+            getActiveOrders({ profileId: loginedProfileData.data.profile.id }),
+          );
         }
         // Small delay to ensure Redux state is fully committed before closing
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
       onClose();
     } catch (error) {
@@ -167,7 +162,7 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
           </div>
 
           {/* Hall Fee Shortcut */}
-          {hall?.service_fee && (
+          {/* {hall?.service_fee && (
             <div
               className="hall-fee-shortcut"
               onClick={() => {
@@ -183,7 +178,7 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
               </div>
               <div className="shortcut-action">Tətbiq et</div>
             </div>
-          )}
+          )} */}
 
           {/* Keypad */}
           <div className="keypad-grid">

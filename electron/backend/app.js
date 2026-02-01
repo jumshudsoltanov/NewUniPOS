@@ -119,13 +119,25 @@ let creaedtToTabel = async () => {
   }
 };
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const InsertData = async () => {
   try {
     await getWaitersList();
+    await sleep(500);
+
     await getTableGroups();
+    await sleep(500);
+
     await getTables();
+    await sleep(500);
+
     await getGeneralCategories();
+    await sleep(500);
+
     await getCategories();
+    await sleep(500);
+
     await getProducts();
   } catch (error) {
     console.log("error insert", error);

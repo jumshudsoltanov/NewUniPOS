@@ -17,17 +17,17 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   const { currentHallId } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [serviceValue, setServiceValue] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const hallFee = selectedHall?.service_fee;
-    const hasServiceType = selectedHall?.service_type !== null && selectedHall?.service_type !== undefined;
-    if (hasServiceType && hallFee !== null && hallFee !== undefined && hallFee !== "") {
+
+    if (hallFee !== 0) {
       setServiceValue(Number(hallFee));
     } else {
-      setServiceValue(0);
+      setServiceValue(Number(loginedProfileData?.data?.profile?.service_fee));
     }
   }, [selectedHall]);
-  const navigate = useNavigate();
 
 
   const handleNumberClick = (num) => {
@@ -50,7 +50,6 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   };
 
   const [isCreating, setIsCreating] = useState(false);
-
 
   const createOrder = useCallback(async () => {
     if (isCreating) return;
@@ -102,7 +101,6 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   ]);
 
   const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
 
   return (
     <Modal show={show} onHide={onHide} centered className="customers-modal">

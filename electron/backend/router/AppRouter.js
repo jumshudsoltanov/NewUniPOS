@@ -14,6 +14,7 @@ router.post("/sale", SalesController.CreateNewOrders);
 router.post("/other-sale", SalesController.CreateNewOtherOrders);
 router.get("/waiters/:pin", WaitersController.getWaiterInfo);
 router.get("/tables/:profileId", TablesController.getTables);
+router.get("/waiters/:profileId/list", WaitersController.getWaiterLists);
 
 // Ordered Items Routers
 router.post(
@@ -64,6 +65,11 @@ router.patch(
 router.patch(
   "/orders-items/:orderId/change-saletype",
   OrdersItemsController.onChangeSaleType,
+);
+
+router.patch(
+  "/orders-items/:orderId/update-waiter",
+  OrdersItemsController.onUpdateWaiter,
 );
 
 // All Orders Controllerj

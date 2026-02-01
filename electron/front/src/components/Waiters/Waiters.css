@@ -256,3 +256,27 @@
 .waiter-apply-btn:hover {
     background-color: #042d7a;
 }
+
+.current-waiter-badge {
+    padding: 2px 8px;
+    font-size: 12px;
+    background-color: #e7f1ff;
+    color: #053796;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.select-btn {
+    min-width: 60px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+
+.select-btn.selected {
+    background-color: #dc3545;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

@@ -13,19 +13,36 @@ const sendOrdersItemsToDb = async (req, res) => {
   }
 
   try {
-    const ordersItemsData = productList.map((item) => ({
-      order_id: orderId,
-      product_id: item.id,
-      count: item.quantity,
-      price: item.price,
-      operator_id: waiterId,
-      profile_id: profileId,
-    }));
-
     // insert / updates items
-    const savedItems = await OrdersItemsModel.bulkCreate(ordersItemsData, {
-      updateOnDuplicate: ["product_id", "order_id"],
-    });
+    const savedItems = [];
+    for (const item of productList) {
+      const existingItem = await OrdersItemsModel.findOne({
+        where: {
+          order_id: orderId,
+          product_id: item.id,
+        },
+      });
+
+      if (existingItem) {
+        // Update existing item (increment count and update price)
+        existingItem.count += Number(item.quantity || 0);
+        existingItem.price = item.price;
+        existingItem.operator_id = waiterId;
+        await existingItem.save();
+        savedItems.push(existingItem);
+      } else {
+        // Create new item
+        const newItem = await OrdersItemsModel.create({
+          order_id: orderId,
+          product_id: item.id,
+          count: item.quantity,
+          price: item.price,
+          operator_id: waiterId,
+          profile_id: profileId,
+        });
+        savedItems.push(newItem);
+      }
+    }
 
     // All order on backend
     const listOfProducts = await OrdersItemsModel.findAll({
@@ -497,6 +514,25 @@ const onChangeSaleType = async (req, res) => {
   }
 };
 
+const onUpdateWaiter = async (req, res) => {
+  const { orderId } = req.params;
+  const { waiterId } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const updateWaiter = await OrdersModel.update(
+      { waiter_id: waiterId },
+      { where: { uuid: orderId } },
+    );
+    res.status(200).json({ message: "waiter  update" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -508,4 +544,5 @@ module.exports = {
   onDeleteOrderItems,
   onMergeChecks,
   onChangeSaleType,
+  onUpdateWaiter,
 };

@@ -36,14 +36,15 @@ const OtherChecks = ({
 
   useEffect(() => {
     const hallFee = currentHallData?.service_fee;
-    const hasServiceType = currentHallData?.service_type !== null && currentHallData?.service_type !== undefined;
-
-    if (hasServiceType && hallFee !== null && hallFee !== undefined && hallFee !== "") {
+    if (hallFee !== 0) {
       setserviceValue(Number(hallFee));
     } else {
-      setserviceValue(0);
+      setserviceValue(Number(loginedProfileData?.data?.profile?.service_fee));
     }
   }, [currentHallData]);
+
+
+
   useEffect(() => {
     dispatch(getTableGroups(loginedProfileData?.data?.profile.id));
     dispatch(
@@ -184,9 +185,7 @@ const OtherChecks = ({
                     ({item.waiter?.name || "terminal_user"})
                   </span>
                 </span>
-                <span style={{ fontWeight: "bold" }}>
-                  {item.total || 0} ₼
-                </span>
+                <span style={{ fontWeight: "bold" }}>{item.total || 0} ₼</span>
               </button>
             ))
           ) : (

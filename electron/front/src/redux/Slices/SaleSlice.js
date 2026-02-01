@@ -9,7 +9,6 @@ export const saleNewOrders = createAsyncThunk(
         "http://localhost:55667/api/sale",
         data,
       );
-      console.log(data)
       return response.data;
     } catch (error) {
       console.error("SaleError", error);

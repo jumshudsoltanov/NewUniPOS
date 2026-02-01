@@ -154,6 +154,21 @@ export const changeSaleType = createAsyncThunk(
   },
 );
 
+export const changeWaiter = createAsyncThunk(
+  "orders/waiters",
+  async ({ orderId, waiterId }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/change-saletype`,
+        { waiterId },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -169,6 +184,7 @@ export const OrderSlice = createSlice({
     deleteItems: {},
     mergeChecs: {},
     changeSaleTypeData: {},
+    updateWaiter: {},
   },
 
   reducers: {
@@ -205,17 +221,19 @@ export const OrderSlice = createSlice({
     },
 
     updateCount: (state, action) => {
-      const { productId, count, price, name } = action.payload;
+      const { productId, count, price, name, orderItemId } = action.payload;
 
       const product = state.products.find((item) => item.id === productId);
 
       if (product) {
         if (count !== undefined) product.quantity = count;
         if (price !== undefined) product.price = price;
+        if (orderItemId !== undefined) product.orderItemId = orderItemId;
       } else {
         if (count !== undefined) {
           state.products.push({
             id: productId,
+            orderItemId: orderItemId, // Store the DB record ID
             name: name || "Məhsul",
             price: price || 0,
             quantity: count,
@@ -268,6 +286,9 @@ export const OrderSlice = createSlice({
       })
       .addCase(changeSaleType.fulfilled, (state, action) => {
         state.changeSaleTypeData = action.payload;
+      })
+      .addCase(changeWaiter.fulfilled, (state, action) => {
+        state.updateWaiter = action.payload;
       });
   },
 });

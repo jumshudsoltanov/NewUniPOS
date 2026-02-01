@@ -1,28 +1,61 @@
 import React, { useState } from "react";
 import "./Waiters.css";
 import Modal from "react-bootstrap/Modal";
+import { useDispatch, useSelector } from "react-redux";
+import { useEffect } from "react";
+import { getWaitersList } from "../../redux/Slices/WaitersSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { changeWaiter } from "../../redux/Slices/OrdersSlice";
 
-const WaitersModal = ({ show, onClose }) => {
+const WaitersModal = ({ show, onClose, order }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { waitersLists } = useSelector((state) => state.WaitersSlice);
+  const [selectedWaiterId, setSelectedWaiterId] = useState(null);
+  const dispatch = useDispatch();
 
-  const waiters = [
-    { id: 1, name: "Məhəmmədəli Məmmədov", role: "Kassir", status: "Müsait" },
-    { id: 2, name: "Məhəmmədəli Məmmədov", role: "Ofisiant", status: "Müsait" },
-    { id: 3, name: "Məhəmmədəli Məmmədov", role: "Menecer", status: "Məşğul" },
-    { id: 4, name: "Orxan Əliyev", role: "Ofisiant", status: "Müsait" },
-    { id: 5, name: "Tural Həsənov", role: "Kassir", status: "Məşğul" },
-    { id: 6, name: "Elvin Quliyev", role: "Ofisiant", status: "Müsait" },
-  ];
+  useEffect(() => {
+    if (!show) return;
 
-  const filteredWaiters = waiters.filter((waiter) =>
-    waiter.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    if (waitersLists?.data?.length) return;
+
+    const getWaiters = async () => {
+      try {
+        await dispatch(getWaitersList(loginedProfileData.data.profile.id));
+      } catch (error) {
+        console.log("Error waiters list", error);
+      }
+    };
+
+    getWaiters();
+  }, [show]);
+
+  const filteredWaiters = Array.isArray(waitersLists?.data)
+    ? waitersLists.data.filter((waiter) =>
+      waiter?.name?.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+    : [];
+
+
+  const handleClickUpdateWaiter = async () => {
+    try {
+      const res = await dispatch(changeWaiter({ orderId: order.uuid, waiterId: selectedWaiterId })).unwrap()
+      if (res.length !== 0) {
+        await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id))
+        await dispatch(getActiveOrders({ profile_id: loginedProfileData?.data?.profile?.id }))
+      }
+      onClose(false)
+    } catch (error) {
+      console.error("ChangeWaiter", error)
+    }
+
+  }
 
   return (
     <Modal
       show={show}
       onHide={onClose}
-      centered
       animation={false}
       dialogClassName="waiters-modal-dialog"
       contentClassName="waiters-modal-content"
@@ -102,34 +135,57 @@ const WaitersModal = ({ show, onClose }) => {
                   >
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
-                    <path d="M18 10a2 2 0 0 0 2-2M22 10a2 2 0 0 0-2-2" opacity="0.5" />
+                    <path
+                      d="M18 10a2 2 0 0 0 2-2M22 10a2 2 0 0 0-2-2"
+                      opacity="0.5"
+                    />
                     {/* Simplified user icon with a subtle hint, or just user */}
                   </svg>
                 </div>
                 <div className="waiter-info">
                   <span className="waiter-name">{waiter.name}</span>
-                  <span className="waiter-role">{waiter.role}</span>
+                  {order?.waiter?.id === waiter.id && (
+                    <span className="current-waiter-badge">
+                      Cari ofisiant
+                    </span>
+                  )}
                 </div>
                 <div className="waiter-actions">
-                  <span
-                    className={`status-badge ${waiter.status === "Müsait" ? "available" : "busy"
-                      }`}
-                  >
-                    {waiter.status}
-                  </span>
                   <button
-                    className={`select-btn ${waiter.status === "Məşğul" ? "secondary" : ""
+                    onClick={() =>
+                      setSelectedWaiterId(
+                        selectedWaiterId === waiter.id ? null : waiter.id
+                      )
+                    }
+                    className={`select-btn ${selectedWaiterId === waiter.id ? "selected" : ""
                       }`}
                   >
-                    Seç
+                    {selectedWaiterId === waiter.id ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    ) : (
+                      "Seç"
+                    )}
                   </button>
+
                 </div>
               </div>
             ))}
           </div>
 
           {/* Apply Button */}
-          <button className="waiter-apply-btn">Tətbiq et</button>
+          <button className="waiter-apply-btn" onClick={handleClickUpdateWaiter}>Tətbiq et</button>
         </div>
       </div>
     </Modal>

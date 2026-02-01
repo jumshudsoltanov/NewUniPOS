@@ -165,6 +165,7 @@ const EditModal = ({ show, onClose, product, orders }) => {
                     dispatch(
                       updateCount({
                         productId: product.product_id || product.id,
+                        orderItemId: product.isNew ? undefined : product.id, // Only send if it exists in DB
                         count: newLocalQty,
                         price: inputValue,
                         name: product.name,

@@ -207,10 +207,6 @@ const Check = () => {
     }
   }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
 
-
-  console.log(currentOrder)
-
-
   const [menuViewMode, setMenuViewMode] = useState("ROOT");
   const [selectedGenCat, setSelectedGenCat] = useState(null);
   const [selectedCat, setSelectedCat] = useState(null);
@@ -229,7 +225,6 @@ const Check = () => {
     if (menuViewMode === "PRODUCTS") return selectedCat?.name;
     return "";
   };
-
 
   return (
     <Container fluid className="p-0 vh-100 overflow-hidden">
@@ -739,13 +734,21 @@ const Check = () => {
                     className={`breadcrumb-tab home`}
                     onClick={handleMenuHome}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" className="bi bi-house-door-fill" viewBox="0 0 16 16">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      fill="currentColor"
+                      className="bi bi-house-door-fill"
+                      viewBox="0 0 16 16"
+                    >
                       <path d="M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.495v3.505a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5" />
                     </svg>
                   </div>
 
                   {/* Second Tab - Only Visible if NOT Root or Search Active */}
-                  {(menuViewMode !== "ROOT" || (searchText && searchText.length > 0)) && (
+                  {(menuViewMode !== "ROOT" ||
+                    (searchText && searchText.length > 0)) && (
                     <div className="breadcrumb-tab next">
                       {getMenuBreadcrumbTitle()}
                     </div>
@@ -940,6 +943,7 @@ const Check = () => {
       <WaitersModal
         show={showWaitersModal}
         onClose={() => setShowWaitersModal(false)}
+        order={currentOrder}
       />
 
       <OtherChecks
