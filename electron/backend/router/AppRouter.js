@@ -72,6 +72,16 @@ router.patch(
   OrdersItemsController.onUpdateWaiter,
 );
 
+router.patch(
+  "/orders-items/:orderId/update-waiter",
+  OrdersItemsController.onUpdateWaiter,
+);
+
+router.post(
+  "/orders-items/:profileId/split-order",
+  OrdersItemsController.onSplitOrder,
+);
+
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 

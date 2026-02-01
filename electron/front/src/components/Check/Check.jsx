@@ -25,6 +25,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
+import { splitOrder } from "../../redux/Slices/OrdersSlice";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -234,8 +235,10 @@ const Check = () => {
     setOpenSplitModal(true)
   }
 
-  const handleSplitOrder = (splitData) => {
-    console.log("Splitting Order Data:", splitData);
+
+  const handleSplitOrder = async (splitData) => {
+    const result = dispatch({ data: splitData, profileId: loginedProfileData?.data?.profile?.id, profile: loginedProfileData?.data?.profile }).unwrap()
+    console.log(result)
     setOpenSplitModal(false);
   };
 
@@ -763,7 +766,7 @@ const Check = () => {
                   {(menuViewMode !== "ROOT" ||
                     (searchText && searchText.length > 0)) && (
                       <div className="breadcrumb-tab next">
-                        {getMenuBreadcrumbTitle()}
+                        <span>{getMenuBreadcrumbTitle()}</span>
                       </div>
                     )}
                 </div>

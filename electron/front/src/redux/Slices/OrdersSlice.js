@@ -169,6 +169,21 @@ export const changeWaiter = createAsyncThunk(
   },
 );
 
+export const splitOrder = createAsyncThunk(
+  "orders/split",
+  async ({ data, profileId, profile }, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:55667/api/orders-items/${profileId}/split-order`,
+        { data, profile },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -185,6 +200,7 @@ export const OrderSlice = createSlice({
     mergeChecs: {},
     changeSaleTypeData: {},
     updateWaiter: {},
+    splitOrderData: {},
   },
 
   reducers: {
@@ -289,6 +305,9 @@ export const OrderSlice = createSlice({
       })
       .addCase(changeWaiter.fulfilled, (state, action) => {
         state.updateWaiter = action.payload;
+      })
+      .addCase(splitOrder.fulfilled, (state, action) => {
+        state.splitOrderData = action.payload;
       });
   },
 });

@@ -533,6 +533,15 @@ const onUpdateWaiter = async (req, res) => {
   }
 };
 
+const onSplitOrder = async (req, res) => {
+  const { profileId } = req.params;
+  const { data, profile } = req.body;
+
+  res
+    .status(200)
+    .json({ message: "success", data: { data, profile, profileId } });
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -545,4 +554,5 @@ module.exports = {
   onMergeChecks,
   onChangeSaleType,
   onUpdateWaiter,
+  onSplitOrder,
 };

@@ -160,8 +160,8 @@
     /* White Text */
     font-weight: 600;
     font-size: 0.95rem;
-    font-style: italic;
-    /* Italic text as requested */
+    font-weight: 600;
+    /* font-style: italic; removed */
     cursor: pointer;
     padding: 0 20px;
     border-radius: 4px;
