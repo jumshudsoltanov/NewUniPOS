@@ -13,7 +13,7 @@ const CheckMain = ({ orders }) => {
 
   const allItems = useMemo(() => {
     const groupedMap = new Map();
-  
+
     // 1. Process Saved items
     if (orders?.orders_items) {
       orders.orders_items.forEach((orderItem) => {
@@ -65,7 +65,7 @@ const CheckMain = ({ orders }) => {
       }
     });
 
-    return Array.from(groupedMap.values());
+    return Array.from(groupedMap.values()).sort((a, b) => Number(a.product_id) - Number(b.product_id));
   }, [orders, menu, products, sentProducts]);
 
   const handleItemClick = (item) => {

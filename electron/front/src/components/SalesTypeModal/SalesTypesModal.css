@@ -1,112 +1,64 @@
-/* Popover Container */
-.sales-type-popover {
-  position: absolute;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
-  padding: 4px;
-  z-index: 1060;
-  width: max-content;
-  border: 1px solid rgba(0,0,0,0.04);
+/* Modal Customization */
+.sales-modal-header {
+  background-color: #5D99FF;
+  /* Light blue similar to image */
+  color: white;
+  border-bottom: none;
+  border-top-left-radius: 8px;
+  /* Ensure rounded corners match modal */
+  border-top-right-radius: 8px;
 }
 
-/* Arrow */
-.popover-arrow {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  background: white;
-  top: -8px;
-  transform: rotate(45deg);
-  border-top: 1px solid rgba(0,0,0,0.04);
-  border-left: 1px solid rgba(0,0,0,0.04);
-  margin-left: -8px; /* Center adjustment */
-  z-index: -1;
+.sales-modal-header .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+  /* Make close button white */
 }
 
-/* Options Container - Horizontal Flex */
-.sales-type-options {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  justify-content: center;
+.sales-modal-title {
+  font-weight: 500;
+  font-size: 1.1rem;
 }
 
-/* Option Button */
-.sales-type-option {
-  flex: 1;
+/* List Container */
+.sales-type-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px 20px;
-  border: none;
+}
+
+/* List Item Button */
+.sales-type-list-item {
   background: white;
+  border: none;
+  padding: 20px;
+  font-size: 16px;
+  color: #333;
   cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  min-width: 110px;
+  transition: background-color 0.2s;
+  text-align: center;
+  width: 100%;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.sales-type-option:first-child {
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
+.sales-type-list-item:last-child {
+  border-bottom: none;
+  border-bottom-left-radius: 6px;
+  /* Match modal body radius if needed, though body handles it usually */
+  border-bottom-right-radius: 6px;
 }
 
-.sales-type-option:last-child {
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
-}
-
-.sales-type-option:hover {
+.sales-type-list-item:hover {
   background-color: #f8f9fa;
 }
 
-.sales-type-option:active {
+.sales-type-list-item:active {
   background-color: #e9ecef;
 }
 
-/* Vertical Divider */
-.sales-type-option:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 25%;
-  bottom: 25%;
-  width: 1px;
-  background-color: #e9ecef;
-}
-
-/* Icon Styling */
-.sales-type-icon {
-  margin-bottom: 12px;
-  color: #2c3e50; 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sales-type-icon svg {
-  width: 36px;
-  height: 36px;
-  stroke-width: 1.5;
-}
-
-/* Label Styling */
-.sales-type-label {
-  font-size: 15px;
-  font-weight: 500;
-  color: #333;
-}
-
-/* Mobile Adjustments */
-@media (max-width: 768px) {
-  /* On mobile, we might want it to behave differently? 
-     For now, relying on Overlay might place it off screen if not careful.
-     But 'popper' often handles flip/preventOverflow.
-  */
-  .sales-type-popover {
-    width: 90vw;
-    max-width: 360px;
-  }
+/* Ensure modal content has rounded corners */
+.sales-type-modal .modal-content {
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  /* Important for header corners */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Overlay } from "react-bootstrap";
+import { Modal } from "react-bootstrap";
 import "./SalesTypesModal.css";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -106,36 +106,27 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
   };
 
   return (
-    <Overlay
+    <Modal
       show={show}
-      target={target}
-      placement="bottom"
-      rootClose={true}
       onHide={() => onClose()}
+      className="sales-type-modal"
     >
-      {({ placement, arrowProps, show: _show, popper, ...props }) => (
-        <div
-          {...props}
-          className="sales-type-popover"
-          style={{
-            ...props.style,
-          }}
-        >
-          <div className="popover-arrow" style={arrowProps.style}></div>
-          <div className="sales-type-options">
-            {salesTypes.map((type) => (
-              <button
-                key={type.id}
-                className="sales-type-option"
-                onClick={() => handleSelect(type)}
-              >
-                <div className="sales-type-icon">{type.icon}</div>
-                <span className="sales-type-label">{type.label}</span>
-              </button>
-            ))}
-          </div>
+      <Modal.Header closeButton className="sales-modal-header">
+        <Modal.Title className="sales-modal-title">Satış üsulu</Modal.Title>
+      </Modal.Header>
+      <Modal.Body className="p-0">
+        <div className="sales-type-list">
+          {salesTypes.map((type) => (
+            <button
+              key={type.id}
+              className="sales-type-list-item"
+              onClick={() => handleSelect(type)}
+            >
+              <span className="sales-type-label">{type.label}</span>
+            </button>
+          ))}
         </div>
-      )}
-    </Overlay>
+      </Modal.Body>
+    </Modal>
   );
 };
