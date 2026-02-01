@@ -87,6 +87,11 @@ router.post(
   OrdersItemsController.onGiftItem,
 );
 
+router.post(
+  "/orders-items/:orderId/discount-item",
+  OrdersItemsController.onUpdateItemDiscount,
+);
+
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 

@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
-import { updateCount, splitOrder, giftItem } from "../../redux/Slices/OrdersSlice";
+import { splitOrder, giftItem, updateItemDiscount, updateCount } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
 import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -19,6 +20,10 @@ const EditModal = ({ show, onClose, product, orders }) => {
   const [inputValue, setInputValue] = useState(
     product?.price ? product.price.toString() : "0",
   );
+
+  // Discount States
+  const [discountValue, setDiscountValue] = useState("0");
+  const [discountType, setDiscountType] = useState("percent"); // percent | amount
 
   // Transfer States
   const [transferQty, setTransferQty] = useState(1);
@@ -180,7 +185,7 @@ const EditModal = ({ show, onClose, product, orders }) => {
             {/* Dynamic Content */}
             {activeTab === "edit" ? (
               <>
-                <div className="edit-form-wrapper">
+                <div className="edit-form-wrapper-flush">
                   {/* Price / Input Display */}
                   <div className="input-display-box">
                     <input
@@ -320,83 +325,148 @@ const EditModal = ({ show, onClose, product, orders }) => {
               </>
             ) : activeTab === "gift" ? (
               <>
-                <div className="edit-form-wrapper">
-                  {/* Quantity Selector for Gift/Ungift */}
-                  <div className="stepper-control mb-4">
-                    <button
-                      className="stepper-btn btn-minus"
-                      onClick={() => setTransferQty((q) => Math.max(1, q - 1))}
-                    >
-                      <i className="bi bi-dash"></i>
-                    </button>
-                    <span className="stepper-value">{transferQty}</span>
-                    <button
-                      className="stepper-btn btn-plus"
-                      onClick={() =>
-                        setTransferQty((q) =>
-                          Math.min(product?.count || 1, q + 1),
-                        )
-                      }
-                    >
-                      <i className="bi bi-plus-lg"></i>
-                    </button>
+                <div className="d-flex flex-column h-100">
+                  <div className="content-with-padding d-flex flex-column">
+                    <div className="stepper-control mb-4">
+                      <button
+                        className="stepper-btn btn-minus"
+                        onClick={() => setTransferQty(Math.max(1, transferQty - 1))}
+                      >
+                        <i className="bi bi-dash"></i>
+                      </button>
+                      <div className="stepper-value">
+                        {transferQty}
+                      </div>
+                      <button
+                        className="stepper-btn btn-plus"
+                        onClick={() => setTransferQty(Math.min(product?.count || 1, transferQty + 1))}
+                      >
+                        <i className="bi bi-plus"></i>
+                      </button>
+                    </div>
+
+                    <div className="text-center text-muted mb-4 fs-6">
+                      <i className="bi bi-info-circle me-2"></i>
+                      {product?.is_gift === 1
+                        ? "Seçilən miqdar ikramdan çıxarılacaq"
+                        : "Seçilən miqdar ikram olunacaq"}
+                    </div>
                   </div>
 
-                  <div className="text-center text-muted mb-4 fs-6">
-                    <i className="bi bi-info-circle me-2"></i>
-                    {product?.is_gift === 1
-                      ? "Seçilən miqdar ikramdan çıxarılacaq"
-                      : "Seçilən miqdar ikram olunacaq"}
+                  <div className="d-flex flex-column gap-2 mt-auto">
+                    {product?.is_gift === 1 ? (
+                      <button
+                        className="save-action-btn red"
+                        onClick={() => {
+                          dispatch(giftItem({
+                            orderId: orders.uuid,
+                            itemId: product.product_id || product.id,
+                            qty: transferQty,
+                            isGift: false // Remove gift status
+                          })).then((res) => {
+                            if (res.type.endsWith('fulfilled')) {
+                              onClose();
+                              toast.success("İkram ləğv edildi");
+                            } else {
+                              toast.error("Xəta baş verdi");
+                            }
+                          });
+                        }}
+                      >
+                        <i className="bi bi-x-circle me-2"></i>
+                        İkramı Ləğv Et
+                      </button>
+                    ) : (
+                      <button
+                        className="save-action-btn"
+                        onClick={() => {
+                          dispatch(giftItem({
+                            orderId: orders.uuid,
+                            itemId: product.product_id || product.id,
+                            qty: transferQty,
+                            isGift: true // Add gift status
+                          })).then((res) => {
+                            if (res.type.endsWith('fulfilled')) {
+                              // getActiveOrders remove - handled by reducer
+                              onClose();
+                              toast.success("Məhsul ikram edildi");
+                            } else {
+                              toast.error("Xəta baş verdi");
+                            }
+                          });
+                        }}
+                      >
+                        <i className="bi bi-gift-fill me-2"></i>
+                        İkram Et
+                      </button>
+                    )}
                   </div>
                 </div>
+              </>
+            ) : activeTab === "discount" ? (
+              <>
+                <div className="discount-wrapper">
+                  <div className="discount-content">
+                    <div className="discount-input-container">
+                      <div className="discount-display">
+                        {discountValue || "0"}
+                      </div>
+                      <div className="discount-type-toggles">
+                        <button
+                          className={`discount-type-btn ${discountType === 'percent' ? 'active' : ''}`}
+                          onClick={() => setDiscountType('percent')}
+                        >%</button>
+                        <button
+                          className={`discount-type-btn ${discountType === 'amount' ? 'active' : ''}`}
+                          onClick={() => setDiscountType('amount')}
+                        >₼</button>
+                      </div>
+                    </div>
 
-                <div className="d-flex flex-column gap-2 mt-auto">
-                  {product?.is_gift === 1 ? (
-                    <button
-                      className="save-action-btn bg-danger"
-                      onClick={() => {
-                        dispatch(giftItem({
-                          orderId: orders.uuid,
-                          itemId: product.product_id || product.id,
-                          qty: transferQty,
-                          isGift: false // Remove gift status
-                        })).then((res) => {
-                          if (res.type.endsWith('fulfilled')) {
-                            onClose();
-                            toast.success("İkram ləğv edildi");
-                          } else {
-                            toast.error("Xəta baş verdi");
-                          }
-                        });
-                      }}
-                    >
-                      <i className="bi bi-x-circle me-2"></i>
-                      İkramı Ləğv Et
-                    </button>
-                  ) : (
-                    <button
-                      className="save-action-btn"
-                      onClick={() => {
-                        dispatch(giftItem({
-                          orderId: orders.uuid,
-                          itemId: product.product_id || product.id,
-                          qty: transferQty,
-                          isGift: true // Add gift status
-                        })).then((res) => {
-                          if (res.type.endsWith('fulfilled')) {
-                            // getActiveOrders remove - handled by reducer
-                            onClose();
-                            toast.success("Məhsul ikram edildi");
-                          } else {
-                            toast.error("Xəta baş verdi");
-                          }
-                        });
-                      }}
-                    >
-                      <i className="bi bi-gift-fill me-2"></i>
-                      İkram Et
-                    </button>
-                  )}
+                    <div className="numpad-grid">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'back'].map((key) => (
+                        <button
+                          key={key}
+                          className={`numpad-btn ${key === 'back' ? 'numpad-back' : ''}`}
+                          onClick={() => {
+                            if (key === 'back') {
+                              setDiscountValue(prev => prev.length > 1 ? prev.slice(0, -1) : "0");
+                            } else {
+                              // If currently 0, replace. Else append. Avoid multiple dots.
+                              if (key === '.') {
+                                if (!discountValue.includes('.')) setDiscountValue(prev => prev + key);
+                              } else {
+                                setDiscountValue(prev => prev === "0" ? String(key) : prev + String(key));
+                              }
+                            }
+                          }}
+                        >
+                          {key === 'back' ? <i className="bi bi-backspace"></i> : key}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    className="save-action-btn mt-3"
+                    onClick={() => {
+                      dispatch(updateItemDiscount({
+                        orderId: orders.uuid,
+                        itemId: product.product_id || product.id,
+                        discountValue: discountValue,
+                        discountType: discountType
+                      })).then((res) => {
+                        if (res.type.endsWith('fulfilled')) {
+                          onClose();
+                          toast.success("Endirim tətbiq edildi");
+                        } else {
+                          toast.error("Xəta baş verdi");
+                        }
+                      });
+                    }}
+                  >
+                    Tətbiq et
+                  </button>
                 </div>
               </>
             ) : (

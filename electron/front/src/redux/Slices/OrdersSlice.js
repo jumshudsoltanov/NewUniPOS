@@ -199,6 +199,21 @@ export const giftItem = createAsyncThunk(
   },
 );
 
+export const updateItemDiscount = createAsyncThunk(
+  "orders/itemDiscount",
+  async ({ orderId, itemId, discountValue, discountType }, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:55667/api/orders-items/${orderId}/discount-item`,
+        { itemId, discountValue, discountType },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -282,8 +297,8 @@ export const OrderSlice = createSlice({
   extraReducers: (builders) => {
     builders
       .addCase(sendOrdersItems.fulfilled, (state, action) => {
-        state.sentProducts = state.products;
         state.products = [];
+        state.sentProducts = []; // Ensure no duplicates are shown
       })
       .addCase(getTableGroups.fulfilled, (state, action) => {
         state.sentProducts = [];

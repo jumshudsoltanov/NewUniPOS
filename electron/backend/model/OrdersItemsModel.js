@@ -43,6 +43,24 @@ const OrdersItemsModel = db.sequelize.define(
       defaultValue: 0,
     },
 
+    discount_value: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 0
+    },
+
+    // 1 = percent, 2 = amount
+    discount_type: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0
+    },
+
+    original_price: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+
     operator_id: {
       type: DataTypes.INTEGER,
       allowNull: false,

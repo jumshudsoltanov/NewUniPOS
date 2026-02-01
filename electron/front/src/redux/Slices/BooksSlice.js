@@ -26,17 +26,38 @@ const BooksSlice = createSlice({
     builder.addCase(getActiveOrders.fulfilled, (state, action) => {
       state.books = action.payload;
     });
+    // Listen for giftItem and discount (and sendOrdersItems if applicable)
     builder.addMatcher(
-      (action) => action.type === 'orders/gift/fulfilled',
+      (action) =>
+        action.type === "orders/gift/fulfilled" ||
+        action.type === "orders/itemDiscount/fulfilled" ||
+        action.type === "pos/orders/fulfilled",
       (state, action) => {
-        if (state.books && state.books.data) {
-          const updatedOrder = action.payload;
-          const index = state.books.data.findIndex(o => o.uuid === updatedOrder.uuid);
+        const updatedOrder = action.payload; // Payload is the full Order object
+        if (!updatedOrder || !updatedOrder.uuid) return;
+
+        // Determine where the list is
+        let ordersList = null;
+        if (Array.isArray(state.books)) {
+          ordersList = state.books;
+        } else if (state.books && Array.isArray(state.books.data)) {
+          ordersList = state.books.data;
+        }
+
+        if (ordersList) {
+          const index = ordersList.findIndex(
+            (o) => o.uuid === updatedOrder.uuid,
+          );
           if (index !== -1) {
-            state.books.data[index] = updatedOrder;
+            ordersList[index] = updatedOrder;
+          } else {
+            // If it's a new order not in list (rare for 'update'), push it?
+            // Usually we only update existing.
+            // But for 'sendOrdersItems', maybe it's just created?
+            ordersList.push(updatedOrder);
           }
         }
-      }
+      },
     );
   },
 });

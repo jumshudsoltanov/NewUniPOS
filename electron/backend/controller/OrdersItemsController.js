@@ -53,9 +53,13 @@ const sendOrdersItemsToDb = async (req, res) => {
       attributes: ["count", "price"],
     });
 
-    // Calc total
+    // Calc total (Robust)
     const total = listOfProducts.reduce(
-      (sum, item) => sum + Number(item.count) * Number(item.price),
+      (sum, item) => {
+        const qty = parseFloat(item.count) || 0;
+        const prc = parseFloat(item.price) || 0;
+        return sum + (qty * prc);
+      },
       0,
     );
 
@@ -74,10 +78,9 @@ const sendOrdersItemsToDb = async (req, res) => {
     let service = 0;
 
     if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } =
-        currentOrder;
-      const dValue = Number(discount_value || 0);
-      const sValue = Number(service_value || 0);
+      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const dValue = parseFloat(discount_value || 0);
+      const sValue = parseFloat(service_value || 0);
 
       if (dValue > 0) {
         if (discount_type === "percent") {
@@ -110,9 +113,29 @@ const sendOrdersItemsToDb = async (req, res) => {
       { where: { uuid: orderId } },
     );
 
-    return res
-      .status(201)
-      .json({ message: "Orders items saved successfully!", data: savedItems });
+    // Return the full updated order for frontend state sync
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
+          ]
+        },
+      ],
+    });
+
+    return res.status(200).json(updatedOrder);
   } catch (error) {
     console.error(error);
     return res
@@ -776,12 +799,30 @@ const onGiftItem = async (req, res) => {
       await targetItem.save({ transaction });
     } else {
       // Create new
-      let newPrice = originalItem.price;
+      let newPrice = originalItem.price; // This might be 0 if original was gift
+
       if (targetIsGift === 1) {
         newPrice = 0;
       } else {
-        const sibling = await OrdersItemsModel.findOne({ where: { order_id: orderId, product_id: itemId, is_gift: 0 }, paranoid: false, transaction });
-        if (sibling && sibling.price > 0) newPrice = sibling.price;
+        // Try to find the price from a non-gift sibling OR use original_price if available
+        const sibling = await OrdersItemsModel.findOne({
+          where: { order_id: orderId, product_id: itemId, is_gift: 0 },
+          paranoid: false,
+          transaction
+        });
+
+        if (sibling && parseFloat(sibling.price) > 0) {
+          newPrice = parseFloat(sibling.price);
+        } else if (originalItem.original_price && parseFloat(originalItem.original_price) > 0) {
+          newPrice = parseFloat(originalItem.original_price);
+        } else if (originalItem.price > 0) {
+          newPrice = parseFloat(originalItem.price);
+        } else {
+          // Last resort: we might have 0 price if we are ungifting the last gift item and no original price stored.
+          // We should try to allow content to have price 0 or handle it gracefully.
+          // Usually original_price should be set when discounting/gifting.
+          newPrice = 0; // Or keep it 0 if unknown
+        }
       }
 
       await OrdersItemsModel.create({
@@ -789,16 +830,16 @@ const onGiftItem = async (req, res) => {
         product_id: itemId,
         count: moveQty,
         price: newPrice,
+        discount_value: 0,
+        discount_type: 0,
+        original_price: newPrice > 0 ? newPrice : null, // If we found a price, set it as original
         operator_id: originalItem.operator_id,
         profile_id: originalItem.profile_id,
         is_gift: targetIsGift
       }, { transaction });
     }
 
-    // Recalculate Totals
-    // Reuse recalculation logic from sendOrdersItemsToDb or similar?
-    // I'll copy the logic briefly or use shared function if I refactored.
-    // I'll inline a simple recalc for now to be safe.
+    // Recalculate Totals (Robust)
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
@@ -806,21 +847,30 @@ const onGiftItem = async (req, res) => {
     });
 
     const total = allItems.reduce(
-      (sum, item) => sum + Number(item.count) * Number(item.price),
+      (sum, item) => {
+        const qty = parseFloat(item.count) || 0;
+        const prc = parseFloat(item.price) || 0;
+        return sum + (qty * prc);
+      },
       0
     );
 
     const ord = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
     let discount = 0; let service = 0;
     if (ord) {
-      if (Number(ord.discount_value) > 0) {
-        discount = (ord.discount_type === "percent") ? (total * Number(ord.discount_value)) / 100 : Number(ord.discount_value);
+      const globDiscVal = parseFloat(ord.discount_value) || 0;
+      const globServVal = parseFloat(ord.service_value) || 0;
+
+      if (globDiscVal > 0) {
+        discount = (ord.discount_type === "percent") ? (total * globDiscVal) / 100 : globDiscVal;
       }
-      if (Number(ord.service_value) > 0) {
-        service = (ord.service_type === "percent") ? (total * Number(ord.service_value)) / 100 : Number(ord.service_value);
+      if (globServVal > 0) {
+        service = (ord.service_type === "percent") ? (total * globServVal) / 100 : globServVal;
       }
     }
-    let netTotal = Math.max(total - discount + service, 0);
+
+    let netTotal = total - discount + service;
+    if (netTotal < 0) netTotal = 0;
 
     await OrdersModel.update({
       amount: total, total: netTotal, discount, service_charge: service
@@ -858,6 +908,133 @@ const onGiftItem = async (req, res) => {
   }
 };
 
+const onUpdateItemDiscount = async (req, res) => {
+  const { orderId } = req.params;
+  const { itemId, discountValue, discountType } = req.body;
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const item = await OrdersItemsModel.findOne({
+      where: { order_id: orderId, product_id: itemId, is_gift: 0 },
+      transaction,
+    });
+
+    if (!item) {
+      throw new Error("Item not found");
+    }
+
+    // Ensure numeric values
+    let currentPrice = parseFloat(item.price);
+    let originalPrice = item.original_price ? parseFloat(item.original_price) : 0;
+
+    // Initialize original_price if it's not set (first discount)
+    // If originalPrice is 0 (and currentPrice > 0), assume first time.
+    if (!originalPrice && currentPrice > 0) {
+      originalPrice = currentPrice;
+      item.original_price = originalPrice;
+    } else if (!originalPrice) {
+      // logic fallback if both 0
+      originalPrice = 0;
+    }
+
+    let newPrice = originalPrice;
+    let discVal = parseFloat(discountValue) || 0;
+
+    if (discountType === 'percent') {
+      let discountAmt = (originalPrice * discVal) / 100;
+      newPrice = originalPrice - discountAmt;
+    } else {
+      newPrice = originalPrice - discVal;
+    }
+
+    if (newPrice < 0) newPrice = 0;
+
+    // Update Item
+    item.price = newPrice;
+    item.discount_value = discVal;
+    item.discount_type = (discountType === 'percent') ? 1 : 2;
+
+    await item.save({ transaction });
+
+    // Recalculate Totals
+    // Fetch ALL items to sum standard 'price' * 'count'
+    const allItems = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      attributes: ["count", "price"],
+      transaction,
+    });
+
+    const total = allItems.reduce(
+      (sum, item) => {
+        const qty = parseFloat(item.count) || 0;
+        const prc = parseFloat(item.price) || 0;
+        return sum + (qty * prc);
+      },
+      0
+    );
+
+    // Global Order Discount / Service Logic
+    const ord = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
+    let discount = 0;
+    let service = 0;
+
+    if (ord) {
+      const globDiscVal = parseFloat(ord.discount_value) || 0;
+      const globServVal = parseFloat(ord.service_value) || 0;
+
+      if (globDiscVal > 0) {
+        discount = (ord.discount_type === "percent") ? (total * globDiscVal) / 100 : globDiscVal;
+      }
+      if (globServVal > 0) {
+        service = (ord.service_type === "percent") ? (total * globServVal) / 100 : globServVal;
+      }
+    }
+
+    let netTotal = total - discount + service;
+    if (netTotal < 0) netTotal = 0;
+
+    await OrdersModel.update({
+      amount: total,
+      total: netTotal,
+      discount: discount,
+      service_charge: service
+    }, { where: { uuid: orderId }, transaction });
+
+    await transaction.commit();
+
+    // Fetch and return logic continues...
+
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
+          ]
+        },
+      ],
+    });
+
+    res.status(200).json(updatedOrder);
+
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    console.error("Discount Error:", error);
+    res.status(500).json({ message: "Error", error: error.message });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -872,4 +1049,5 @@ module.exports = {
   onUpdateWaiter,
   onSplitOrder,
   onGiftItem,
+  onUpdateItemDiscount,
 };

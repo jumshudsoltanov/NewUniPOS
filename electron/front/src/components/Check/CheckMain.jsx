@@ -112,6 +112,11 @@ const CheckMain = ({ orders }) => {
                   <div className="col-name">
                     {item.name}
                     {item.is_gift === 1 && <i className="bi bi-gift-fill text-danger ms-2"></i>}
+                    {item.discount_value > 0 && item.discount_type !== 0 && (
+                      <span className="discount-badge">
+                        Endirim: {item.discount_type === 1 ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
+                      </span>
+                    )}
                   </div>
                   <div className="col-qty">
                     {item.count} <span className="x-sign">×</span>{" "}
@@ -119,6 +124,11 @@ const CheckMain = ({ orders }) => {
                       <>
                         <span className="text-decoration-line-through text-muted me-1">{Number(originalPrice).toFixed(2)}</span>
                         <span>0.00 ₼</span>
+                      </>
+                    ) : item.discount_value > 0 ? (
+                      <>
+                        <span className="text-decoration-line-through text-muted me-1">{Number(originalPrice).toFixed(2)}</span>
+                        <>{Number(item.price).toFixed(2)} ₼</>
                       </>
                     ) : (
                       <>{Number(item.price).toFixed(2)} ₼</>

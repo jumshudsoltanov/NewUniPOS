@@ -42,33 +42,20 @@ const CheckBottom = ({ orders, hall }) => {
   // Caclculate total
 
   const calcTotal = useMemo(() => {
-    const listOfProducts = new Map();
+    let total = 0;
 
     const addItems = (items) => {
       if (!items) return;
       items.forEach((item) => {
-        const id = item.product_id || item.id;
         const count = Number(item.count || item.quantity || 0);
         const price = Number(item.price || 0);
-
-        if (listOfProducts.has(id)) {
-          const exist = listOfProducts.get(id);
-          exist.quantity += count;
-          exist.price = price;
-        } else {
-          listOfProducts.set(id, { ...item, quantity: count, price });
-        }
+        total += count * price;
       });
     };
 
     addItems(orders?.orders_items);
     addItems(products);
     addItems(sentProducts);
-
-    let total = Array.from(listOfProducts.values()).reduce(
-      (sum, item) => sum + Number(item.quantity) * Number(item.price),
-      0,
-    );
 
     // Calculate Dynamic Discount
     const discountValue = Number(orders?.discount_value || 0);
