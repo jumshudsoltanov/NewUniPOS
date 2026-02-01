@@ -159,7 +159,7 @@ export const changeWaiter = createAsyncThunk(
   async ({ orderId, waiterId }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/change-saletype`,
+        `http://localhost:55667/api/orders-items/${orderId}/update-waiter`,
         { waiterId },
       );
       return response.data;

@@ -40,12 +40,13 @@ const WaitersModal = ({ show, onClose, order }) => {
 
   const handleClickUpdateWaiter = async () => {
     try {
+      onClose(false)
       const res = await dispatch(changeWaiter({ orderId: order.uuid, waiterId: selectedWaiterId })).unwrap()
       if (res.length !== 0) {
         await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id))
         await dispatch(getActiveOrders({ profile_id: loginedProfileData?.data?.profile?.id }))
       }
-      onClose(false)
+      setSelectedWaiterId(null)
     } catch (error) {
       console.error("ChangeWaiter", error)
     }
