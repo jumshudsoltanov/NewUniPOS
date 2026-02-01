@@ -26,6 +26,18 @@ const BooksSlice = createSlice({
     builder.addCase(getActiveOrders.fulfilled, (state, action) => {
       state.books = action.payload;
     });
+    builder.addMatcher(
+      (action) => action.type === 'orders/gift/fulfilled',
+      (state, action) => {
+        if (state.books && state.books.data) {
+          const updatedOrder = action.payload;
+          const index = state.books.data.findIndex(o => o.uuid === updatedOrder.uuid);
+          if (index !== -1) {
+            state.books.data[index] = updatedOrder;
+          }
+        }
+      }
+    );
   },
 });
 

@@ -169,18 +169,14 @@ const Check = () => {
         return { currentOrder: null, currentHall: null, currentTable: null };
       }
 
-      const order = foundTable.orders.find((o) => o.uuid == id);
-      if (!order && books?.data) {
-        const bookOrder = books.data.find((item) => item.uuid == id);
-        return {
-          currentOrder: bookOrder || null,
-          currentHall: foundHall,
-          currentTable: foundTable,
-        };
+      let order = books?.data?.find((item) => item.uuid == id);
+
+      if (!order) {
+        order = foundTable.orders.find((o) => o.uuid == id);
       }
 
       return {
-        currentOrder: order,
+        currentOrder: order || null,
         currentHall: foundHall,
         currentTable: foundTable,
       };

@@ -259,6 +259,21 @@
     flex-grow: 1;
 }
 
+.cancel-gift-btn {
+    background: transparent;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.cancel-gift-btn:hover {
+    background: #dc3545;
+    color: white;
+}
+
 .num-key {
     background-color: #fff;
     border: 1px solid #E5E7EB;

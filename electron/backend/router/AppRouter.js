@@ -82,6 +82,11 @@ router.post(
   OrdersItemsController.onSplitOrder,
 );
 
+router.post(
+  "/orders-items/:orderId/gift-item",
+  OrdersItemsController.onGiftItem,
+);
+
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 

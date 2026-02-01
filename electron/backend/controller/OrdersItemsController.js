@@ -1,6 +1,9 @@
 const { sequelize } = require("../database/config");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
 const OrdersModel = require("../model/OrdersModel");
+const WaitersModel = require("../model/WaitersModel");
+const TablesModel = require("../model/TablesModel");
+const TableGroupsModel = require("../model/TableGroupsModel");
 
 const sendOrdersItemsToDb = async (req, res) => {
   const { orderId } = req.params;
@@ -638,7 +641,7 @@ const onSplitOrder = async (req, res) => {
             product_id: item.id,
             count: moveQty,
             price: originalItem.price,
-            operator_id: targetOrder.waiter_id, 
+            operator_id: targetOrder.waiter_id,
             profile_id: profileId,
           }, { transaction });
         }
@@ -716,6 +719,145 @@ const onSplitOrder = async (req, res) => {
   }
 };
 
+const onGiftItem = async (req, res) => {
+  const { orderId } = req.params;
+  const { itemId, qty, isGift } = req.body;
+
+  if (!orderId || !itemId || !qty) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const originalItem = await OrdersItemsModel.findOne({
+      where: { order_id: orderId, product_id: itemId, is_gift: isGift ? 0 : 1 },
+      transaction,
+    });
+
+    if (!originalItem) {
+      throw new Error("Item not found or quantity invalid");
+    }
+
+    const moveQty = Number(qty);
+    if (originalItem.count < moveQty) {
+      throw new Error("Invalid quantity");
+    }
+
+    // 1. Reduce count from original item or destroy if fully moved
+    if (Number(originalItem.count) === moveQty) {
+      await originalItem.destroy({ transaction });
+    } else {
+      originalItem.count = Number(originalItem.count) - moveQty;
+      await originalItem.save({ transaction });
+    }
+
+    // 2. Add to Target Item (Gift or Normal)
+    const targetIsGift = isGift ? 1 : 0;
+    const targetItem = await OrdersItemsModel.findOne({
+      where: { order_id: orderId, product_id: itemId, is_gift: targetIsGift },
+      transaction
+    });
+
+    if (targetItem) {
+      targetItem.count = Number(targetItem.count) + moveQty;
+
+      if (targetIsGift === 1) {
+        targetItem.price = 0;
+      } else {
+        // Restore price - wait, if original was gift, it had price 0. Steps: Find product.
+        const product = await OrdersItemsModel.findOne({ where: { order_id: orderId, product_id: itemId, is_gift: 0 }, transaction });
+        // If there is another non-gift item, copy its price? 
+        if (product) targetItem.price = product.price;
+        else {
+          console.log("Error")
+        }
+      }
+      await targetItem.save({ transaction });
+    } else {
+      // Create new
+      let newPrice = originalItem.price;
+      if (targetIsGift === 1) {
+        newPrice = 0;
+      } else {
+        const sibling = await OrdersItemsModel.findOne({ where: { order_id: orderId, product_id: itemId, is_gift: 0 }, paranoid: false, transaction });
+        if (sibling && sibling.price > 0) newPrice = sibling.price;
+      }
+
+      await OrdersItemsModel.create({
+        order_id: orderId,
+        product_id: itemId,
+        count: moveQty,
+        price: newPrice,
+        operator_id: originalItem.operator_id,
+        profile_id: originalItem.profile_id,
+        is_gift: targetIsGift
+      }, { transaction });
+    }
+
+    // Recalculate Totals
+    // Reuse recalculation logic from sendOrdersItemsToDb or similar?
+    // I'll copy the logic briefly or use shared function if I refactored.
+    // I'll inline a simple recalc for now to be safe.
+    const allItems = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      attributes: ["count", "price"],
+      transaction,
+    });
+
+    const total = allItems.reduce(
+      (sum, item) => sum + Number(item.count) * Number(item.price),
+      0
+    );
+
+    const ord = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
+    let discount = 0; let service = 0;
+    if (ord) {
+      if (Number(ord.discount_value) > 0) {
+        discount = (ord.discount_type === "percent") ? (total * Number(ord.discount_value)) / 100 : Number(ord.discount_value);
+      }
+      if (Number(ord.service_value) > 0) {
+        service = (ord.service_type === "percent") ? (total * Number(ord.service_value)) / 100 : Number(ord.service_value);
+      }
+    }
+    let netTotal = Math.max(total - discount + service, 0);
+
+    await OrdersModel.update({
+      amount: total, total: netTotal, discount, service_charge: service
+    }, { where: { uuid: orderId }, transaction });
+
+    await transaction.commit();
+
+    // Fetch full order data to return
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
+          ]
+        },
+      ],
+    });
+
+    res.status(200).json(updatedOrder);
+
+  } catch (error) {
+    await transaction.rollback();
+    res.status(500).json({ message: "Error", error: error.message });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -729,4 +871,5 @@ module.exports = {
   onChangeSaleType,
   onUpdateWaiter,
   onSplitOrder,
+  onGiftItem,
 };

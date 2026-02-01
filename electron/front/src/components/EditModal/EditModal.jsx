@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
-import { updateCount, splitOrder } from "../../redux/Slices/OrdersSlice";
+import { updateCount, splitOrder, giftItem } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
 import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -317,6 +318,87 @@ const EditModal = ({ show, onClose, product, orders }) => {
                   <i className="bi bi-arrow-left-right me-2"></i> Köçür
                 </button>
               </>
+            ) : activeTab === "gift" ? (
+              <>
+                <div className="edit-form-wrapper">
+                  {/* Quantity Selector for Gift/Ungift */}
+                  <div className="stepper-control mb-4">
+                    <button
+                      className="stepper-btn btn-minus"
+                      onClick={() => setTransferQty((q) => Math.max(1, q - 1))}
+                    >
+                      <i className="bi bi-dash"></i>
+                    </button>
+                    <span className="stepper-value">{transferQty}</span>
+                    <button
+                      className="stepper-btn btn-plus"
+                      onClick={() =>
+                        setTransferQty((q) =>
+                          Math.min(product?.count || 1, q + 1),
+                        )
+                      }
+                    >
+                      <i className="bi bi-plus-lg"></i>
+                    </button>
+                  </div>
+
+                  <div className="text-center text-muted mb-4 fs-6">
+                    <i className="bi bi-info-circle me-2"></i>
+                    {product?.is_gift === 1
+                      ? "Seçilən miqdar ikramdan çıxarılacaq"
+                      : "Seçilən miqdar ikram olunacaq"}
+                  </div>
+                </div>
+
+                <div className="d-flex flex-column gap-2 mt-auto">
+                  {product?.is_gift === 1 ? (
+                    <button
+                      className="save-action-btn bg-danger"
+                      onClick={() => {
+                        dispatch(giftItem({
+                          orderId: orders.uuid,
+                          itemId: product.product_id || product.id,
+                          qty: transferQty,
+                          isGift: false // Remove gift status
+                        })).then((res) => {
+                          if (res.type.endsWith('fulfilled')) {
+                            onClose();
+                            toast.success("İkram ləğv edildi");
+                          } else {
+                            toast.error("Xəta baş verdi");
+                          }
+                        });
+                      }}
+                    >
+                      <i className="bi bi-x-circle me-2"></i>
+                      İkramı Ləğv Et
+                    </button>
+                  ) : (
+                    <button
+                      className="save-action-btn"
+                      onClick={() => {
+                        dispatch(giftItem({
+                          orderId: orders.uuid,
+                          itemId: product.product_id || product.id,
+                          qty: transferQty,
+                          isGift: true // Add gift status
+                        })).then((res) => {
+                          if (res.type.endsWith('fulfilled')) {
+                            // getActiveOrders remove - handled by reducer
+                            onClose();
+                            toast.success("Məhsul ikram edildi");
+                          } else {
+                            toast.error("Xəta baş verdi");
+                          }
+                        });
+                      }}
+                    >
+                      <i className="bi bi-gift-fill me-2"></i>
+                      İkram Et
+                    </button>
+                  )}
+                </div>
+              </>
             ) : (
               <div className="empty-tab-content p-4 text-center text-muted">
                 <i className="bi bi-cone-striped fs-1 d-block mb-3"></i>
@@ -338,7 +420,7 @@ const EditModal = ({ show, onClose, product, orders }) => {
           onSelect={(waiter) => { setSelectedWaiter(waiter); setShowWaiterSelect(false); }}
         />
       </Modal.Body>
-    </Modal>
+    </Modal >
   );
 };
 

@@ -184,6 +184,21 @@ export const splitOrder = createAsyncThunk(
   },
 );
 
+export const giftItem = createAsyncThunk(
+  "orders/gift",
+  async ({ orderId, itemId, qty, isGift }, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:55667/api/orders-items/${orderId}/gift-item`,
+        { itemId, qty, isGift },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -308,6 +323,9 @@ export const OrderSlice = createSlice({
       })
       .addCase(splitOrder.fulfilled, (state, action) => {
         state.splitOrderData = action.payload;
+      })
+      .addCase(giftItem.fulfilled, (state, action) => {
+        // Optional: Update state if needed
       });
   },
 });
