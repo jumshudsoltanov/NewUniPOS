@@ -84,10 +84,20 @@ let creaedtToTabel = async () => {
       as: "orders_items",
       constraints: false,
     });
+
     OrdersItemsModel.belongsTo(OrdersModel, {
       foreignKey: "order_id",
       targetKey: "uuid",
       constraints: false,
+    });
+
+    ProductsModel.hasMany(OrdersItemsModel, {
+      foreignKey: "product_id",
+    });
+
+    OrdersItemsModel.belongsTo(ProductsModel, {
+      foreignKey: "product_id",
+      as: "product",
     });
 
     // Products Data

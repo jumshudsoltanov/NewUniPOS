@@ -24,6 +24,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
+import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -39,6 +40,7 @@ const Check = () => {
   const [showWaitersModal, setShowWaitersModal] = useState(false);
   const [openACtiveChecks, setOpenActiveChecks] = useState(false);
   const [openChangeSaleType, setOpenChangeSaleType] = useState(false);
+  const [openSplitModal, setOpenSplitModal] = useState(false)
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -224,6 +226,17 @@ const Check = () => {
     if (menuViewMode === "CATEGORIES") return selectedGenCat?.name;
     if (menuViewMode === "PRODUCTS") return selectedCat?.name;
     return "";
+  };
+
+
+  const handleOpenSplitModel = () => {
+    setShowOperationsModal(false);
+    setOpenSplitModal(true)
+  }
+
+  const handleSplitOrder = (splitData) => {
+    console.log("Splitting Order Data:", splitData);
+    setOpenSplitModal(false);
   };
 
   return (
@@ -749,10 +762,10 @@ const Check = () => {
                   {/* Second Tab - Only Visible if NOT Root or Search Active */}
                   {(menuViewMode !== "ROOT" ||
                     (searchText && searchText.length > 0)) && (
-                    <div className="breadcrumb-tab next">
-                      {getMenuBreadcrumbTitle()}
-                    </div>
-                  )}
+                      <div className="breadcrumb-tab next">
+                        {getMenuBreadcrumbTitle()}
+                      </div>
+                    )}
                 </div>
               </div>
 
@@ -904,6 +917,7 @@ const Check = () => {
         handleChangeTable={handleChangeTable}
         openACtiveCheck={openACtiveCheck}
         handleOpenChangeSaleType={handleOpenChangeSaleType}
+        handleOpenSplitModel={handleOpenSplitModel}
       />
 
       <CheckLockModal
@@ -958,6 +972,8 @@ const Check = () => {
         onClose={() => setOpenChangeSaleType(false)}
         order={currentOrder}
       />
+
+      <SplitOrderModal show={openSplitModal} onClose={() => setOpenSplitModal(false)} order={currentOrder} onSplit={handleSplitOrder} />
     </Container>
   );
 };

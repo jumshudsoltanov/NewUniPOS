@@ -54,7 +54,7 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
         <Modal.Header
           closeButton
           className="text-white"
-          style={{ backgroundColor: "#0062CC", border: "none" }}
+          style={{ backgroundColor: "#5D99FF", border: "none" }}
         >
           <Modal.Title className="fs-5">Satış üsulu</Modal.Title>
         </Modal.Header>

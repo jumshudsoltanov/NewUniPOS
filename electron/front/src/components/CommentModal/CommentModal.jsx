@@ -40,7 +40,7 @@ const CommentModal = ({ show, onClose, order }) => {
 
   return (
     <Modal show={show} onHide={onClose} backdrop="static" keyboard={false}>
-      <Modal.Header closeButton style={{ backgroundColor: "#0d6efd" }}>
+      <Modal.Header closeButton style={{ backgroundColor: "#5D99FF" }}>
         <Modal.Title className="text-white">Çekə şərh yaz</Modal.Title>
       </Modal.Header>
       <Modal.Body>
@@ -57,7 +57,7 @@ const CommentModal = ({ show, onClose, order }) => {
         </Button>
         <Button
           variant="primary"
-          style={{ backgroundColor: "#0d6efd !important" }}
+          style={{ backgroundColor: "#5D99FF !important" }}
           onClick={handleUpdateComment}
         >
           Saxla

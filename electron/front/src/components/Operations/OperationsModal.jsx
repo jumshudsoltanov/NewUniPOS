@@ -14,9 +14,10 @@ export const OperationsModal = ({
   handleChangeTable,
   openACtiveCheck,
   handleOpenChangeSaleType,
+  handleOpenSplitModel
 }) => {
   const operations = [
-    { icon: "bi-arrows-angle-expand", text: "Çeki böl" },
+    { icon: "bi-arrows-angle-expand", text: "Çeki böl", functions: handleOpenSplitModel },
     {
       icon: "bi-chat-left-text",
       text: "Çekə şərh yaz",

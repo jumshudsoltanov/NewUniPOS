@@ -100,7 +100,6 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
     if (type.id !== "dine_in") {
       createOrder(type.id);
     } else {
-      // Yerində (Dine in) seçiləndə masalar səhifəsinə yönləndiririk
       navigate("/tables");
       onClose(false);
     }
