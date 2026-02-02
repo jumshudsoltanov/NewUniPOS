@@ -230,7 +230,6 @@
   border: none;
   border-radius: 12px;
   background: #007AFF;
-  /* Logo Blue */
   color: #fff;
   font-family: "Poppins", sans-serif;
   font-size: 28px;
@@ -241,9 +240,9 @@
   overflow: hidden;
 }
 
-.pin-btn:active {
+/* .pin-btn:active {
   transform: scale(0.98);
-}
+} */
 
 
 
