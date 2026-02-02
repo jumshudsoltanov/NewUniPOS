@@ -34,6 +34,35 @@ const TablesSlice = createSlice({
         state.currentHallId = action.payload.data[0].id;
       }
     });
+
+    builder.addMatcher(
+      (action) =>
+        action.type === "orders/lock-check/fulfilled" ||
+        action.type === "orders/gift/fulfilled" ||
+        action.type === "orders/itemDiscount/fulfilled",
+      (state, action) => {
+        const updatedOrder = action.payload?.data || action.payload;
+        if (!updatedOrder || !updatedOrder.uuid) return;
+
+        if (state.tableGroups?.data) {
+          state.tableGroups.data.forEach((hall) => {
+            hall.tables.forEach((table) => {
+              if (table.orders) {
+                const index = table.orders.findIndex(
+                  (o) => o.uuid === updatedOrder.uuid,
+                );
+                if (index !== -1) {
+                  table.orders[index] = {
+                    ...table.orders[index],
+                    ...updatedOrder,
+                  };
+                }
+              }
+            });
+          });
+        }
+      },
+    );
   },
 });
 

@@ -10,6 +10,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useCallback } from "react";
 import { useMemo } from "react";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { toast } from "react-toastify";
 
 const CheckBottom = ({ orders, hall }) => {
   const dispatch = useDispatch();
@@ -169,11 +170,24 @@ const CheckBottom = ({ orders, hall }) => {
         </div>
 
         <div className="pt-3 action-buttons">
-          <button className="btn-send" onClick={handleSendOrders}>
+          <button
+            className={`btn-send ${(orders?.is_locked == 1 || products.length === 0) ? 'disabled' : ''}`}
+            onClick={() => {
+              if (orders?.is_locked == 1) {
+                toast.error("Qəbz kilidlidir!");
+                return;
+              }
+              handleSendOrders();
+            }}
+            disabled={orders?.is_locked == 1 || products.length === 0}
+          >
             <i className="bi bi-send"></i>
             <span>Göndər</span>
           </button>
-          <button className="btn-pay">
+          <button
+            className={`btn-pay ${orders?.is_locked == 1 ? 'disabled' : ''}`}
+            disabled={orders?.is_locked == 1}
+          >
             <i className="bi bi-check2-all"></i>
             <span>{calcTotal.sumTotal} ₼</span>
           </button>
@@ -182,16 +196,36 @@ const CheckBottom = ({ orders, hall }) => {
 
       {/* Mobile View */}
       <div className="checkBottomMobile d-flex d-lg-none">
-        <button className="mobile-icon-btn gray-btn" onClick={handleSendOrders}>
+        <button
+          className="mobile-icon-btn gray-btn"
+          onClick={() => {
+            if (orders?.is_locked == 1) {
+              toast.error("Qəbz kilidlidir!");
+              return;
+            }
+            handleSendOrders();
+          }}
+          disabled={orders?.is_locked == 1 || products.length === 0}
+        >
           <i className="bi bi-printer-fill"></i>
         </button>
         <button
           className="mobile-icon-btn gray-btn"
-          onClick={() => dispatch(clearOrders())}
+          onClick={() => {
+            if (orders?.is_locked == 1) {
+              toast.error("Qəbz kilidlidir!");
+              return;
+            }
+            dispatch(clearOrders());
+          }}
+          disabled={orders?.is_locked == 1}
         >
           <i className="bi bi-trash-fill"></i>
         </button>
-        <button className="mobile-pay-btn">
+        <button
+          className="mobile-pay-btn"
+          disabled={orders?.is_locked == 1}
+        >
           <i className="bi bi-check2-all fs-4 text-white"></i>
           <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
         </button>

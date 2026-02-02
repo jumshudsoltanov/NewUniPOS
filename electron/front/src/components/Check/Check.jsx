@@ -26,6 +26,7 @@ import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
 import { splitOrder } from "../../redux/Slices/OrdersSlice";
+import { toast } from "sonner";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -71,6 +72,12 @@ const Check = () => {
   };
 
   const clearCheck = () => {
+
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
     const hasOrderItems =
       Array.isArray(currentOrder?.orders_items) &&
       currentOrder.orders_items.length > 0;
@@ -87,37 +94,75 @@ const Check = () => {
   };
 
   const openCommentModal = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
     setShowOperationsModal(false);
     setComment(true);
   };
 
   const openDiscountModal = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOnShowDiscount(true);
   };
 
   const openServiceFee = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOnShowServiceFee(true);
   };
 
   const openWaitersModal = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
     setShowOperationsModal(false);
     setShowWaitersModal(true);
   };
 
   const openACtiveCheck = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOpenActiveChecks(true);
   };
 
   const handleOpenChangeSaleType = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOpenChangeSaleType(true);
   };
 
   // ChangeTables
   const handleChangeTable = () => {
+
+    // lock check
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
+
     navigate(`/tables/${currentOrder?.uuid}`);
   };
 
@@ -227,6 +272,11 @@ const Check = () => {
 
 
   const handleOpenSplitModel = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOpenSplitModal(true)
   }
@@ -261,7 +311,7 @@ const Check = () => {
     } catch (error) {
       console.error("Split order error:", error);
     }
-  };
+  }
 
 
   return (
@@ -330,7 +380,13 @@ const Check = () => {
                   </svg>
                 </div>
 
-                <div className="sidebar-icon">
+                <div className="sidebar-icon discount" onClick={() => {
+                  if (currentOrder?.is_locked === 1) {
+                    toast.error("Qəbz kilidlidir!");
+                    return;
+                  }
+                  setOnShowDiscount(true);
+                }}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -369,7 +425,13 @@ const Check = () => {
                   </svg>
                 </div>
 
-                <div className="sidebar-icon">
+                <div className="sidebar-icon service_fee" onClick={() => {
+                  if (currentOrder?.is_locked === 1) {
+                    toast.error("Qəbz kilidlidir!");
+                    return;
+                  }
+                  setOnShowServiceFee(true);
+                }}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -410,7 +472,14 @@ const Check = () => {
 
                 <div
                   className="sidebar-icon comment-button"
-                  onClick={() => setComment(true)}
+                  onClick={() => {
+                    if (currentOrder?.is_locked === 1) {
+                      toast.error("Qəbz kilidlidir!");
+                      return;
+                    }
+                    setComment(true);
+                  }}
+
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -999,7 +1068,7 @@ const Check = () => {
       />
 
       <SplitOrderModal show={openSplitModal} onClose={() => setOpenSplitModal(false)} order={currentOrder} onSplit={handleSplitOrder} />
-    </Container>
+    </Container >
   );
 };
 

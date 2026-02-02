@@ -10,6 +10,7 @@ import { updateLockChecK } from "../../redux/Slices/OrdersSlice";
 import { useCallback } from "react";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { toast } from "react-toastify";
 
 const CheckLockModal = ({ show, onClose, order }) => {
   const [status, setStatus] = useState(0);
@@ -21,24 +22,30 @@ const CheckLockModal = ({ show, onClose, order }) => {
   }, [order]);
 
   const handleUpdateStatus = useCallback(async () => {
-    onClose(false);
-    const newStatus = status === 0 ? 1 : 0;
+    try {
+      const newStatus = status === 0 ? 1 : 0;
 
-    setStatus(newStatus);
+      await dispatch(
+        updateLockChecK({
+          orderId: order?.uuid,
+          status: newStatus,
+        }),
+      ).unwrap();
 
-    const result = await dispatch(
-      updateLockChecK({
-        orderId: order?.uuid,
-        status: newStatus,
-      }),
-    ).unwrap();
-
-    if (loginedProfileData?.data?.profile?.id) {
-      if (order?.table_id) {
-        await dispatch(getTableGroups(loginedProfileData.data.profile.id));
-      } else {
-        await dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+      if (loginedProfileData?.data?.profile?.id) {
+        const profileId = loginedProfileData.data.profile.id;
+        // Refresh both to be safe and ensure reactivity in all views
+        await Promise.all([
+          dispatch(getTableGroups(profileId)),
+          dispatch(getActiveOrders({ profileId }))
+        ]);
       }
+
+      toast.success(newStatus === 1 ? "Qəbz kilidləndi" : "Qəbz kilidi açıldı");
+      onClose(false);
+    } catch (error) {
+      toast.error("Xəta baş verdi");
+      console.error("Lock error:", error);
     }
   }, [
     status,

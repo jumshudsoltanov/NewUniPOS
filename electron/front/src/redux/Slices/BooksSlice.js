@@ -31,7 +31,8 @@ const BooksSlice = createSlice({
       (action) =>
         action.type === "orders/gift/fulfilled" ||
         action.type === "orders/itemDiscount/fulfilled" ||
-        action.type === "pos/orders/fulfilled",
+        action.type === "pos/orders/fulfilled" ||
+        action.type === "orders/lock-check/fulfilled",
       (state, action) => {
         const updatedOrder = action.payload; // Payload is the full Order object
         if (!updatedOrder || !updatedOrder.uuid) return;
