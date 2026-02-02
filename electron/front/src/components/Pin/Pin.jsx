@@ -155,7 +155,9 @@ const Pin = () => {
   };
 
   const handleExit = () => {
-    console.log("Terminaldan çıx");
+    localStorage.removeItem("profile");
+    localStorage.removeItem("authResult");
+    navigate("/");
   };
 
   const handleNumberClick = useCallback(

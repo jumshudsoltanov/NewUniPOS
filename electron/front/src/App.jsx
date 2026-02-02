@@ -38,13 +38,27 @@ function AppContent() {
       const authResult = JSON.parse(localStorage.getItem("authResult"));
 
       if (storageData) {
+        // Redux-da login datasını bərpa edirik (offline işləməsi üçün)
+        if (authResult) {
+          dispatch(setLoginData(authResult));
+        }
+
         try {
           const data = await dispatch(authPos(storageData)).unwrap();
           localStorage.setItem("authResult", JSON.stringify(data));
           navigate("/pin");
         } catch (err) {
           console.error("Auto-login failed:", err);
-          navigate("/");
+          // İnternet yoxdursa (network error: status null) və ya serverdə daxili xəta varsa (status 500)
+          // və əlimizdə köhnə authResult varsa, PIN səhifəsinə davam edirik
+          const isNetworkError = !err.status || err.status === 500;
+          if (isNetworkError && authResult) {
+            console.log("Offline mode: using cached authResult");
+            navigate("/pin");
+          } else {
+            console.log("Auth failure: redirecting to login");
+            navigate("/");
+          }
         }
       } else {
         navigate("/");

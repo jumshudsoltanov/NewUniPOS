@@ -12,7 +12,11 @@ export const authPos = createAsyncThunk(
 
       return response.data;
     } catch (err) {
-      return thunkAPI.rejectWithValue(err.response.data);
+      return thunkAPI.rejectWithValue({
+        data: err.response ? err.response.data : null,
+        status: err.response ? err.response.status : null,
+        message: err.message,
+      });
     }
   },
 );
