@@ -10,6 +10,7 @@ import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
 import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 const EditModal = ({ show, onClose, product, orders }) => {
   const [activeTab, setActiveTab] = useState("edit");
@@ -34,6 +35,7 @@ const EditModal = ({ show, onClose, product, orders }) => {
   const [selectedTable, setSelectedTable] = useState(null);
   const [selectedWaiter, setSelectedWaiter] = useState(null);
   const [createNewOrder, setCreateNewOrder] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const navigate = useNavigate();
   const { tableGroups } = useSelector((state) => state.TablesSlice);
@@ -78,8 +80,7 @@ const EditModal = ({ show, onClose, product, orders }) => {
         await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
 
         if (result.data.status === 'merged') {
-          // Stay on check page if merged might be better? Or navigate to the merged check?
-          // Assuming result.data.newOrder is the merged order
+
           if (result.data.newOrder.sale_type === 'dine_in') {
             navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
           } else {
@@ -163,7 +164,10 @@ const EditModal = ({ show, onClose, product, orders }) => {
             </div>
 
             <div className="sidebar-bottom">
-              <button className="sidebar-btn btn-delete">
+              <button
+                className="sidebar-btn btn-delete"
+                onClick={() => setShowDeleteModal(true)}
+              >
                 <i className="bi bi-trash3-fill"></i>
                 <span>Sil</span>
               </button>
@@ -481,6 +485,16 @@ const EditModal = ({ show, onClose, product, orders }) => {
           show={showWaiterSelect}
           onClose={() => setShowWaiterSelect(false)}
           onSelect={(waiter) => { setSelectedWaiter(waiter); setShowWaiterSelect(false); }}
+        />
+        <CheckDeleteModal
+          show={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={(data) => {
+            console.log("Delete confirmed:", data);
+            // Handle delete logic here
+            setShowDeleteModal(false);
+            onClose(); // Close the edit modal as well
+          }}
         />
       </Modal.Body>
     </Modal >

@@ -21,6 +21,8 @@ const {
   getProducts,
 } = require("./data/ProductsData");
 
+const { getTags } = require("./data/TagsData");
+
 // Allow Cors
 app.use(
   cors({
@@ -151,6 +153,9 @@ const InsertData = async () => {
     await sleep(2000);
 
     await getProducts();
+    await sleep(2000);
+
+    await getTags();
   } catch (error) {
     console.log("error insert", error);
   }

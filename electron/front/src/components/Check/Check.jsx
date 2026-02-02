@@ -12,6 +12,7 @@ import {
   useParams,
   useSearchParams,
   useLocation,
+  data,
 } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import CheckLockModal from "../Check-Lock/CheckLockModal";
@@ -25,8 +26,9 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { splitOrder } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder } from "../../redux/Slices/OrdersSlice";
 import { toast } from "sonner";
+import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -55,6 +57,7 @@ const Check = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get("tableId");
+  const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false)
 
   const goTables = async () => {
     if (location.state?.from === "/checks") {
@@ -310,6 +313,27 @@ const Check = () => {
 
     } catch (error) {
       console.error("Split order error:", error);
+    }
+  }
+
+  const handleDeleteCheckModal = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
+    setShowOperationsModal(false);
+    setOpenDeleteCheckModal(true)
+  }
+
+
+  const handleDeleteCheckFunction = async (reason, orderId) => {
+    const res = await dispatch(deleteCheck({ orderId, reason })).unwrap()
+    if (res.message == "success") {
+      await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id))
+      await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }))
+
+      navigate("/tables")
     }
   }
 
@@ -1012,6 +1036,7 @@ const Check = () => {
         openACtiveCheck={openACtiveCheck}
         handleOpenChangeSaleType={handleOpenChangeSaleType}
         handleOpenSplitModel={handleOpenSplitModel}
+        handleDeleteCheckModal={handleDeleteCheckModal}
       />
 
       <CheckLockModal
@@ -1068,6 +1093,7 @@ const Check = () => {
       />
 
       <SplitOrderModal show={openSplitModal} onClose={() => setOpenSplitModal(false)} order={currentOrder} onSplit={handleSplitOrder} />
+      <CheckDeleteModal show={openDeleCheckModal} onConfirm={(data) => handleDeleteCheckFunction(data.reason, data.orderId)} onClose={() => setOpenDeleteCheckModal(false)} order={currentOrder} type={"checks"} tagsType={1} />
     </Container >
   );
 };

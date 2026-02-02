@@ -54,14 +54,11 @@ const sendOrdersItemsToDb = async (req, res) => {
     });
 
     // Calc total (Robust)
-    const total = listOfProducts.reduce(
-      (sum, item) => {
-        const qty = parseFloat(item.count) || 0;
-        const prc = parseFloat(item.price) || 0;
-        return sum + (qty * prc);
-      },
-      0,
-    );
+    const total = listOfProducts.reduce((sum, item) => {
+      const qty = parseFloat(item.count) || 0;
+      const prc = parseFloat(item.price) || 0;
+      return sum + qty * prc;
+    }, 0);
 
     // Get current order discount info to recalculate
     const currentOrder = await OrdersModel.findOne({
@@ -78,7 +75,8 @@ const sendOrdersItemsToDb = async (req, res) => {
     let service = 0;
 
     if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const { discount_value, discount_type, service_value, service_type } =
+        currentOrder;
       const dValue = parseFloat(discount_value || 0);
       const sValue = parseFloat(service_value || 0);
 
@@ -122,15 +120,15 @@ const sendOrdersItemsToDb = async (req, res) => {
           model: OrdersItemsModel,
           as: "orders_items",
           separate: true,
-          order: [["id", "ASC"]]
+          order: [["id", "ASC"]],
         },
         {
           model: TablesModel,
           as: "table",
           attributes: ["id", "name"],
           include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
-          ]
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+          ],
         },
       ],
     });
@@ -585,9 +583,9 @@ const onSplitOrder = async (req, res) => {
       targetOrder = await OrdersModel.findOne({
         where: {
           table_id: data.table.id,
-          status: 1 // assuming 1 is Active
+          status: 1, // assuming 1 is Active
         },
-        transaction
+        transaction,
       });
 
       if (targetOrder) {
@@ -652,21 +650,24 @@ const onSplitOrder = async (req, res) => {
         // Add to Target Order
         const existingTargetItem = await OrdersItemsModel.findOne({
           where: { order_id: targetOrder.uuid, product_id: item.id },
-          transaction
+          transaction,
         });
 
         if (existingTargetItem) {
           existingTargetItem.count = Number(existingTargetItem.count) + moveQty;
           await existingTargetItem.save({ transaction });
         } else {
-          await OrdersItemsModel.create({
-            order_id: targetOrder.uuid,
-            product_id: item.id,
-            count: moveQty,
-            price: originalItem.price,
-            operator_id: targetOrder.waiter_id,
-            profile_id: profileId,
-          }, { transaction });
+          await OrdersItemsModel.create(
+            {
+              order_id: targetOrder.uuid,
+              product_id: item.id,
+              count: moveQty,
+              price: originalItem.price,
+              operator_id: targetOrder.waiter_id,
+              profile_id: profileId,
+            },
+            { transaction },
+          );
         }
       }
     }
@@ -680,12 +681,12 @@ const onSplitOrder = async (req, res) => {
 
       const totalAmount = items.reduce(
         (sum, it) => sum + Number(it.count) * Number(it.price),
-        0
+        0,
       );
 
       const ord = await OrdersModel.findOne({
         where: { uuid: orderId },
-        transaction: targetTransaction
+        transaction: targetTransaction,
       });
 
       if (!ord) return;
@@ -712,12 +713,15 @@ const onSplitOrder = async (req, res) => {
       let netTotal = totalAmount - discount + service;
       netTotal = Math.max(netTotal, 0);
 
-      await OrdersModel.update({
-        amount: totalAmount,
-        discount: discount,
-        service_charge: service,
-        total: netTotal
-      }, { where: { uuid: orderId }, transaction: targetTransaction });
+      await OrdersModel.update(
+        {
+          amount: totalAmount,
+          discount: discount,
+          service_charge: service,
+          total: netTotal,
+        },
+        { where: { uuid: orderId }, transaction: targetTransaction },
+      );
     };
 
     await recalculateOrder(data.orderId, transaction);
@@ -729,12 +733,11 @@ const onSplitOrder = async (req, res) => {
       message: "success",
       data: {
         newOrder: targetOrder,
-        status: isMerge ? 'merged' : 'created',
+        status: isMerge ? "merged" : "created",
         profile,
-        profileId
-      }
+        profileId,
+      },
     });
-
   } catch (error) {
     await transaction.rollback();
     console.error("Split Order Error:", error);
@@ -779,7 +782,7 @@ const onGiftItem = async (req, res) => {
     const targetIsGift = isGift ? 1 : 0;
     const targetItem = await OrdersItemsModel.findOne({
       where: { order_id: orderId, product_id: itemId, is_gift: targetIsGift },
-      transaction
+      transaction,
     });
 
     if (targetItem) {
@@ -789,11 +792,14 @@ const onGiftItem = async (req, res) => {
         targetItem.price = 0;
       } else {
         // Restore price - wait, if original was gift, it had price 0. Steps: Find product.
-        const product = await OrdersItemsModel.findOne({ where: { order_id: orderId, product_id: itemId, is_gift: 0 }, transaction });
-        // If there is another non-gift item, copy its price? 
+        const product = await OrdersItemsModel.findOne({
+          where: { order_id: orderId, product_id: itemId, is_gift: 0 },
+          transaction,
+        });
+        // If there is another non-gift item, copy its price?
         if (product) targetItem.price = product.price;
         else {
-          console.log("Error")
+          console.log("Error");
         }
       }
       await targetItem.save({ transaction });
@@ -808,12 +814,15 @@ const onGiftItem = async (req, res) => {
         const sibling = await OrdersItemsModel.findOne({
           where: { order_id: orderId, product_id: itemId, is_gift: 0 },
           paranoid: false,
-          transaction
+          transaction,
         });
 
         if (sibling && parseFloat(sibling.price) > 0) {
           newPrice = parseFloat(sibling.price);
-        } else if (originalItem.original_price && parseFloat(originalItem.original_price) > 0) {
+        } else if (
+          originalItem.original_price &&
+          parseFloat(originalItem.original_price) > 0
+        ) {
           newPrice = parseFloat(originalItem.original_price);
         } else if (originalItem.price > 0) {
           newPrice = parseFloat(originalItem.price);
@@ -825,18 +834,21 @@ const onGiftItem = async (req, res) => {
         }
       }
 
-      await OrdersItemsModel.create({
-        order_id: orderId,
-        product_id: itemId,
-        count: moveQty,
-        price: newPrice,
-        discount_value: 0,
-        discount_type: 0,
-        original_price: newPrice > 0 ? newPrice : null, // If we found a price, set it as original
-        operator_id: originalItem.operator_id,
-        profile_id: originalItem.profile_id,
-        is_gift: targetIsGift
-      }, { transaction });
+      await OrdersItemsModel.create(
+        {
+          order_id: orderId,
+          product_id: itemId,
+          count: moveQty,
+          price: newPrice,
+          discount_value: 0,
+          discount_type: 0,
+          original_price: newPrice > 0 ? newPrice : null, // If we found a price, set it as original
+          operator_id: originalItem.operator_id,
+          profile_id: originalItem.profile_id,
+          is_gift: targetIsGift,
+        },
+        { transaction },
+      );
     }
 
     // Recalculate Totals (Robust)
@@ -846,35 +858,48 @@ const onGiftItem = async (req, res) => {
       transaction,
     });
 
-    const total = allItems.reduce(
-      (sum, item) => {
-        const qty = parseFloat(item.count) || 0;
-        const prc = parseFloat(item.price) || 0;
-        return sum + (qty * prc);
-      },
-      0
-    );
+    const total = allItems.reduce((sum, item) => {
+      const qty = parseFloat(item.count) || 0;
+      const prc = parseFloat(item.price) || 0;
+      return sum + qty * prc;
+    }, 0);
 
-    const ord = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
-    let discount = 0; let service = 0;
+    const ord = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      transaction,
+    });
+    let discount = 0;
+    let service = 0;
     if (ord) {
       const globDiscVal = parseFloat(ord.discount_value) || 0;
       const globServVal = parseFloat(ord.service_value) || 0;
 
       if (globDiscVal > 0) {
-        discount = (ord.discount_type === "percent") ? (total * globDiscVal) / 100 : globDiscVal;
+        discount =
+          ord.discount_type === "percent"
+            ? (total * globDiscVal) / 100
+            : globDiscVal;
       }
       if (globServVal > 0) {
-        service = (ord.service_type === "percent") ? (total * globServVal) / 100 : globServVal;
+        service =
+          ord.service_type === "percent"
+            ? (total * globServVal) / 100
+            : globServVal;
       }
     }
 
     let netTotal = total - discount + service;
     if (netTotal < 0) netTotal = 0;
 
-    await OrdersModel.update({
-      amount: total, total: netTotal, discount, service_charge: service
-    }, { where: { uuid: orderId }, transaction });
+    await OrdersModel.update(
+      {
+        amount: total,
+        total: netTotal,
+        discount,
+        service_charge: service,
+      },
+      { where: { uuid: orderId }, transaction },
+    );
 
     await transaction.commit();
 
@@ -887,21 +912,20 @@ const onGiftItem = async (req, res) => {
           model: OrdersItemsModel,
           as: "orders_items",
           separate: true,
-          order: [["id", "ASC"]]
+          order: [["id", "ASC"]],
         },
         {
           model: TablesModel,
           as: "table",
           attributes: ["id", "name"],
           include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
-          ]
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+          ],
         },
       ],
     });
 
     res.status(200).json(updatedOrder);
-
   } catch (error) {
     await transaction.rollback();
     res.status(500).json({ message: "Error", error: error.message });
@@ -926,7 +950,9 @@ const onUpdateItemDiscount = async (req, res) => {
 
     // Ensure numeric values
     let currentPrice = parseFloat(item.price);
-    let originalPrice = item.original_price ? parseFloat(item.original_price) : 0;
+    let originalPrice = item.original_price
+      ? parseFloat(item.original_price)
+      : 0;
 
     // Initialize original_price if it's not set (first discount)
     // If originalPrice is 0 (and currentPrice > 0), assume first time.
@@ -941,7 +967,7 @@ const onUpdateItemDiscount = async (req, res) => {
     let newPrice = originalPrice;
     let discVal = parseFloat(discountValue) || 0;
 
-    if (discountType === 'percent') {
+    if (discountType === "percent") {
       let discountAmt = (originalPrice * discVal) / 100;
       newPrice = originalPrice - discountAmt;
     } else {
@@ -953,7 +979,7 @@ const onUpdateItemDiscount = async (req, res) => {
     // Update Item
     item.price = newPrice;
     item.discount_value = discVal;
-    item.discount_type = (discountType === 'percent') ? 1 : 2;
+    item.discount_type = discountType === "percent" ? 1 : 2;
 
     await item.save({ transaction });
 
@@ -965,17 +991,17 @@ const onUpdateItemDiscount = async (req, res) => {
       transaction,
     });
 
-    const total = allItems.reduce(
-      (sum, item) => {
-        const qty = parseFloat(item.count) || 0;
-        const prc = parseFloat(item.price) || 0;
-        return sum + (qty * prc);
-      },
-      0
-    );
+    const total = allItems.reduce((sum, item) => {
+      const qty = parseFloat(item.count) || 0;
+      const prc = parseFloat(item.price) || 0;
+      return sum + qty * prc;
+    }, 0);
 
     // Global Order Discount / Service Logic
-    const ord = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
+    const ord = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      transaction,
+    });
     let discount = 0;
     let service = 0;
 
@@ -984,22 +1010,31 @@ const onUpdateItemDiscount = async (req, res) => {
       const globServVal = parseFloat(ord.service_value) || 0;
 
       if (globDiscVal > 0) {
-        discount = (ord.discount_type === "percent") ? (total * globDiscVal) / 100 : globDiscVal;
+        discount =
+          ord.discount_type === "percent"
+            ? (total * globDiscVal) / 100
+            : globDiscVal;
       }
       if (globServVal > 0) {
-        service = (ord.service_type === "percent") ? (total * globServVal) / 100 : globServVal;
+        service =
+          ord.service_type === "percent"
+            ? (total * globServVal) / 100
+            : globServVal;
       }
     }
 
     let netTotal = total - discount + service;
     if (netTotal < 0) netTotal = 0;
 
-    await OrdersModel.update({
-      amount: total,
-      total: netTotal,
-      discount: discount,
-      service_charge: service
-    }, { where: { uuid: orderId }, transaction });
+    await OrdersModel.update(
+      {
+        amount: total,
+        total: netTotal,
+        discount: discount,
+        service_charge: service,
+      },
+      { where: { uuid: orderId }, transaction },
+    );
 
     await transaction.commit();
 
@@ -1013,25 +1048,43 @@ const onUpdateItemDiscount = async (req, res) => {
           model: OrdersItemsModel,
           as: "orders_items",
           separate: true,
-          order: [["id", "ASC"]]
+          order: [["id", "ASC"]],
         },
         {
           model: TablesModel,
           as: "table",
           attributes: ["id", "name"],
           include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
-          ]
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+          ],
         },
       ],
     });
 
     res.status(200).json(updatedOrder);
-
   } catch (error) {
     if (transaction) await transaction.rollback();
     console.error("Discount Error:", error);
     res.status(500).json({ message: "Error", error: error.message });
+  }
+};
+
+const onDeleteCheck = async (req, res) => {
+  const { orderId } = req.params;
+  const { reason } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const updateCheckStatus = await OrdersModel.update(
+      { status: 3 },
+      { where: { uuid: orderId } },
+    );
+    res.status(200).json({ message: "success" });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
@@ -1050,4 +1103,5 @@ module.exports = {
   onSplitOrder,
   onGiftItem,
   onUpdateItemDiscount,
+  onDeleteCheck,
 };

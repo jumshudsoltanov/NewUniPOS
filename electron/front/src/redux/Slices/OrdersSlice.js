@@ -214,6 +214,21 @@ export const updateItemDiscount = createAsyncThunk(
   },
 );
 
+export const deleteCheck = createAsyncThunk(
+  "orders/deleteCheck",
+  async ({ orderId, reason }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/delete-check`,
+        { reason },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -279,7 +294,7 @@ export const OrderSlice = createSlice({
         if (count !== undefined) {
           state.products.push({
             id: productId,
-            orderItemId: orderItemId, // Store the DB record ID
+            orderItemId: orderItemId,
             name: name || "Məhsul",
             price: price || 0,
             quantity: count,
@@ -298,7 +313,7 @@ export const OrderSlice = createSlice({
     builders
       .addCase(sendOrdersItems.fulfilled, (state, action) => {
         state.products = [];
-        state.sentProducts = []; // Ensure no duplicates are shown
+        state.sentProducts = [];
       })
       .addCase(getTableGroups.fulfilled, (state, action) => {
         state.sentProducts = [];
@@ -341,7 +356,8 @@ export const OrderSlice = createSlice({
       })
       .addCase(giftItem.fulfilled, (state, action) => {
         // Optional: Update state if needed
-      });
+      })
+      .addCase(deleteCheck.fulfilled, (state, action) => {});
   },
 });
 

@@ -59,9 +59,7 @@
     border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.sidebar-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
+
 
 .sidebar-btn:first-child {
     border-top: 1px solid rgba(255, 255, 255, 0.3);
@@ -106,10 +104,6 @@
     opacity: 1;
 }
 
-.btn-delete:hover {
-    background-color: #E60000;
-    color: white;
-}
 
 /* RIGHT CONTENT */
 .edit-main-content {
@@ -268,10 +262,6 @@
     transition: all 0.2s;
 }
 
-.cancel-gift-btn:hover {
-    background: #dc3545 !important;
-    color: white !important;
-}
 
 .numpad-back {
     color: #dc3545 !important;
@@ -381,10 +371,6 @@
     flex-shrink: 0;
 }
 
-.save-action-btn:hover {
-    background-color: #3b6fd4;
-    filter: brightness(1.1);
-}
 
 .save-action-btn:active {
     transform: scale(0.99);
@@ -394,9 +380,6 @@
     background-color: #FF4D4D;
 }
 
-.save-action-btn.red:hover {
-    background-color: #E60000;
-}
 
 .save-action-btn i {
     font-size: 1.3rem;
@@ -417,9 +400,6 @@
     position: relative;
 }
 
-.custom-select-box:hover {
-    border-color: #4F85F4;
-}
 
 .custom-dropdown-menu {
     position: absolute;
@@ -440,9 +420,6 @@
     cursor: pointer;
 }
 
-.dropdown-item-custom:hover {
-    background-color: #F3F4F6;
-}
 
 /* Toggle Switch */
 .toggle-switch {

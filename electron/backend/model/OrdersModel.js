@@ -55,6 +55,7 @@ const OrdersModel = db.sequelize.define(
     note: { type: DataTypes.TEXT, allowNull: true },
     tags: { type: DataTypes.TEXT, allowNull: true },
     check_reason: { type: DataTypes.INTEGER, allowNull: true },
+    is_delete_reason_id: { type: DataTypes.INTEGER, allowNull: true },
     is_return: { type: DataTypes.INTEGER, allowNull: true },
     is_print: { type: DataTypes.INTEGER, allowNull: true },
     is_tax: { type: DataTypes.INTEGER, allowNull: true },
