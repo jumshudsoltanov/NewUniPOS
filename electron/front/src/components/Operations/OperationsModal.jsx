@@ -33,7 +33,7 @@ export const OperationsModal = ({
       text: "Çeki birləşdir",
       functions: openACtiveCheck,
     },
-    { icon: "bi-person-check", text: "Satıcı təyin et" },
+    // { icon: "bi-person-check", text: "Satıcı təyin et" },
     {
       icon: "bi-arrow-left-right",
       text: "Satış üsulunu dəyiş",

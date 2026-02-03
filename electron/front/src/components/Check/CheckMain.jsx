@@ -10,8 +10,6 @@ const CheckMain = ({ orders }) => {
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
 
 
-  console.log(orders)
-
   // console.log(orders)
 
   const allItems = useMemo(() => {
@@ -53,7 +51,7 @@ const CheckMain = ({ orders }) => {
 
     combinedLocal.forEach((item, idx) => {
       const prodId = Number(item.id);
-      const isGift = 0; // Local items are not gifts yet usually
+      const isGift = 0;
       const key = `${prodId}-${isGift}`;
       const existing = groupedMap.get(key);
 
@@ -72,7 +70,7 @@ const CheckMain = ({ orders }) => {
           price: item.price,
           isNew: true,
           is_gift: 0,
-          firstId: 999999999 + idx // Assign high ID for new items to appear at bottom, preserve add order
+          firstId: 999999999 + idx
         });
       }
     });
