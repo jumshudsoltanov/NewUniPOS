@@ -13,7 +13,7 @@ const OrdersModel = db.sequelize.define(
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       allowNull: false,
-      unique: true,
+      unique: "orders_uuid_unique",
     },
 
     profile_id: { type: DataTypes.INTEGER, allowNull: true },

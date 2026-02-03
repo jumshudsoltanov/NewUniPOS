@@ -51,13 +51,11 @@ const DiscountModal = ({ show, onClose, order }) => {
 
       // Refresh data
       if (loginedProfileData?.data?.profile?.id) {
-        if (order?.table_id) {
-          await dispatch(getTableGroups(loginedProfileData.data.profile.id));
-        } else {
-          await dispatch(
-            getActiveOrders({ profileId: loginedProfileData.data.profile.id }),
-          );
-        }
+        const profileId = loginedProfileData.data.profile.id;
+        await Promise.all([
+          dispatch(getTableGroups(profileId)),
+          dispatch(getActiveOrders({ profileId }))
+        ]);
 
         // Small delay to ensure Redux state is fully committed before closing
         await new Promise((resolve) => setTimeout(resolve, 100));
