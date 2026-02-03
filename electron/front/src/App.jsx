@@ -36,6 +36,7 @@ function AppContent() {
     const initApp = async () => {
       const storageData = JSON.parse(localStorage.getItem("profile"));
       const authResult = JSON.parse(localStorage.getItem("authResult"));
+      const currentPath = window.location.hash.replace("#", "") || "/";
 
       if (storageData) {
         // Redux-da login datasını bərpa edirik (offline işləməsi üçün)
@@ -46,26 +47,37 @@ function AppContent() {
         try {
           const data = await dispatch(authPos(storageData)).unwrap();
           localStorage.setItem("authResult", JSON.stringify(data));
-          navigate("/pin");
+
+          // Yalnız root-dursa /pin-ə yönləndir, yoxsa olduğu yerdə qalsın
+          if (currentPath === "/") {
+            navigate("/pin");
+          }
         } catch (err) {
           console.error("Auto-login failed:", err);
-          // İnternet yoxdursa (network error: status null) və ya serverdə daxili xəta varsa (status 500)
-          // və əlimizdə köhnə authResult varsa, PIN səhifəsinə davam edirik
-          const isNetworkError = !err.status || err.status === 500;
+
+          const isNetworkError = !err.status || err.status === 500 || err.code === "ERR_NETWORK";
+
           if (isNetworkError && authResult) {
             console.log("Offline mode: using cached authResult");
-            navigate("/pin");
+            if (currentPath === "/") {
+              navigate("/pin");
+            }
           } else {
+            // Əgər həqiqətən yetki yoxdursa (401/403) və ya profil silinibsə
             console.log("Auth failure: redirecting to login");
-            navigate("/");
+            if (currentPath !== "/") {
+              navigate("/");
+            }
           }
         }
       } else {
-        navigate("/");
+        if (currentPath !== "/") {
+          navigate("/");
+        }
       }
 
       // Loading-i 1.5 saniyə sonra gizlət
-      setTimeout(() => setShowInitialLoading(false), 1500);
+      setTimeout(() => setShowInitialLoading(false), 1000);
     };
 
     initApp();

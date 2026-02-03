@@ -60,7 +60,6 @@ const sendOrdersItemsToDb = async (req, res) => {
       return sum + qty * prc;
     }, 0);
 
-    // Get current order discount info to recalculate
     const currentOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
       attributes: [
@@ -68,11 +67,13 @@ const sendOrdersItemsToDb = async (req, res) => {
         "discount_type",
         "service_value",
         "service_type",
+        "deposit",
       ],
     });
 
     let discount = 0;
     let service = 0;
+    const deposit = parseFloat(currentOrder?.deposit || 0);
 
     if (currentOrder) {
       const { discount_value, discount_type, service_value, service_type } =
@@ -97,7 +98,7 @@ const sendOrdersItemsToDb = async (req, res) => {
       }
     }
 
-    let netTotal = total - discount + service;
+    let netTotal = total - discount + service + deposit;
     netTotal = Math.max(netTotal, 0);
 
     // Order update
@@ -174,6 +175,14 @@ const onUpdateDiscountOrder = async (req, res) => {
     let discount = 0;
     let newTotal = total;
 
+    // Fetch current service and deposit to keep them in total
+    const currentOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      attributes: ["service_charge", "deposit"],
+    });
+    const serviceCharge = parseFloat(currentOrder?.service_charge || 0);
+    const deposit = parseFloat(currentOrder?.deposit || 0);
+
     if (discountType === "percent") {
       discount = (total * discountValue) / 100;
     } else if (discountType === "cash") {
@@ -182,7 +191,7 @@ const onUpdateDiscountOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid discount type" });
     }
 
-    newTotal = total - discount;
+    newTotal = total - discount + serviceCharge + deposit;
 
     newTotal = Math.max(newTotal, 0);
 
@@ -238,6 +247,14 @@ const onUpdateServiceFeeOrder = async (req, res) => {
     let service = 0;
     let newTotal = total;
 
+    // Fetch current discount and deposit to keep them in total
+    const currentOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      attributes: ["discount", "deposit"],
+    });
+    const discountAmount = parseFloat(currentOrder?.discount || 0);
+    const deposit = parseFloat(currentOrder?.deposit || 0);
+
     if (feeType === "percent") {
       service = (total * serviceValue) / 100;
     } else if (feeType === "cash") {
@@ -246,7 +263,7 @@ const onUpdateServiceFeeOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid service type" });
     }
 
-    newTotal = total + service;
+    newTotal = total + service - discountAmount + deposit;
 
     newTotal = Math.max(newTotal, 0);
 
@@ -1103,16 +1120,33 @@ const onUpdateDepositOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid deposit value" });
     }
 
+    // Recalculate total with the new deposit
+    const currentOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      attributes: ["amount", "discount", "service_charge"],
+    });
+
+    if (!currentOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const amount = parseFloat(currentOrder.amount || 0);
+    const discount = parseFloat(currentOrder.discount || 0);
+    const service_charge = parseFloat(currentOrder.service_charge || 0);
+
+    const newTotal = Math.max(amount - discount + service_charge + depositValue, 0);
+
     await OrdersModel.update(
       {
         deposit: depositValue,
+        total: newTotal,
       },
       { where: { uuid: orderId } },
     );
 
     return res.status(200).json({
       message: "Deposit updated successfully!",
-      data: { depositValue },
+      data: { depositValue, total: newTotal },
     });
   } catch (error) {
     console.error("Deposit update error:", error);
