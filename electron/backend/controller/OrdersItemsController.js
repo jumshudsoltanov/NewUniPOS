@@ -1088,6 +1088,38 @@ const onDeleteCheck = async (req, res) => {
   }
 };
 
+const onUpdateDepositOrder = async (req, res) => {
+  const { orderId } = req.params;
+  let { depositValue } = req.body;
+
+  if (!orderId || depositValue === undefined) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    depositValue = Number(depositValue);
+
+    if (isNaN(depositValue) || depositValue < 0) {
+      return res.status(400).json({ message: "Invalid deposit value" });
+    }
+
+    await OrdersModel.update(
+      {
+        deposit: depositValue,
+      },
+      { where: { uuid: orderId } },
+    );
+
+    return res.status(200).json({
+      message: "Deposit updated successfully!",
+      data: { depositValue },
+    });
+  } catch (error) {
+    console.error("Deposit update error:", error);
+    return res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -1104,4 +1136,5 @@ module.exports = {
   onGiftItem,
   onUpdateItemDiscount,
   onDeleteCheck,
+  onUpdateDepositOrder,
 };

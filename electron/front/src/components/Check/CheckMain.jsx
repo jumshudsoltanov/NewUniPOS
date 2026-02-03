@@ -9,6 +9,9 @@ const CheckMain = ({ orders }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
 
+
+  console.log(orders)
+
   // console.log(orders)
 
   const allItems = useMemo(() => {

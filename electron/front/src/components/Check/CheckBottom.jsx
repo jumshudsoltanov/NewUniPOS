@@ -96,7 +96,10 @@ const CheckBottom = ({ orders, hall }) => {
       serviceAmount = Number(orders.service_charge);
     }
 
-    let sumTotal = total - discountAmount + serviceAmount;
+    const depositAmount = Number(orders?.deposit || 0);
+
+    let sumTotal = total - discountAmount + serviceAmount + depositAmount;
+    if (sumTotal < 0) sumTotal = 0;
 
     // Calculate effective percentage for display
     let effectivePercentage = 0;
@@ -125,6 +128,7 @@ const CheckBottom = ({ orders, hall }) => {
       effectivePercentage,
       serviceAmount: serviceAmount.toFixed(2),
       effectiveServicePercentage,
+      depositAmount: depositAmount.toFixed(2),
     };
   }, [
     orders?.orders_items,
@@ -136,6 +140,7 @@ const CheckBottom = ({ orders, hall }) => {
     orders?.service_value,
     orders?.service_type,
     orders?.service_charge,
+    orders?.deposit,
   ]);
 
   return (
@@ -165,6 +170,12 @@ const CheckBottom = ({ orders, hall }) => {
                 {Number(calcTotal.serviceAmount) > 0 &&
                   ` (~${calcTotal.effectiveServicePercentage}%)`}
               </span>
+            </div>
+          )}
+          {Number(calcTotal.depositAmount) > 0 && (
+            <div className="summary-row">
+              <span>Depozit:</span>
+              <span>{calcTotal.depositAmount} ₼</span>
             </div>
           )}
         </div>

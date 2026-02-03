@@ -16,6 +16,7 @@ export const OperationsModal = ({
   handleOpenChangeSaleType,
   handleOpenSplitModel,
   handleDeleteCheckModal,
+  openDepositModal,
 }) => {
   const operations = [
     { icon: "bi-arrows-angle-expand", text: "Çeki böl", functions: handleOpenSplitModel },
@@ -46,6 +47,7 @@ export const OperationsModal = ({
     { icon: "bi-people", text: "Əməkdaş dəyiş", functions: openWaitersModal },
     { icon: "bi-table", text: "Masanı dəyiş", functions: handleChangeTable },
     { icon: "bi-trash", text: "Çeki sil", functions: handleDeleteCheckModal },
+    { icon: "bi-cash-coin", text: "Depozit", functions: openDepositModal },
   ];
 
   return (

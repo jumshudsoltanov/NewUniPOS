@@ -49,6 +49,21 @@ export const updateServiceFeeOnOrders = createAsyncThunk(
   },
 );
 
+export const updateDepositOnOrders = createAsyncThunk(
+  "pos/deposit",
+  async ({ orderId, depositValue }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/deposit`,
+        { depositValue },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response.data);
+    }
+  },
+);
+
 export const updateTableOrders = createAsyncThunk(
   "orders/updateTable",
   async ({ orderId, newTableId, currentHallId }, thunkAPI) => {
@@ -357,7 +372,10 @@ export const OrderSlice = createSlice({
       .addCase(giftItem.fulfilled, (state, action) => {
         // Optional: Update state if needed
       })
-      .addCase(deleteCheck.fulfilled, (state, action) => {});
+      .addCase(updateDepositOnOrders.fulfilled, (state, action) => {
+        // You can add state field for deposit if needed
+      })
+      .addCase(deleteCheck.fulfilled, (state, action) => { });
   },
 });
 

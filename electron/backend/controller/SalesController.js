@@ -28,6 +28,11 @@ const CreateNewOrders = async (req, res) => {
     const maxId = await OrdersModel.max("id", { paranoid: false });
     const newId = (maxId || 0) + 1;
 
+    // Check if the table has a deposit
+    const table = await require("../model/TablesModel").findOne({
+      where: { id: tableId },
+    });
+
     let newSale = await OrdersModel.create({
       id: newId,
       table_id: tableId ?? 0,
@@ -41,6 +46,7 @@ const CreateNewOrders = async (req, res) => {
       is_selected: is_selected,
       service_type: serviceType,
       service_value: serviceValue,
+      deposit: table?.deposit || 0, // Include table deposit if exists
     });
 
     res.status(200).json({ message: "success", data: newSale, count: newId });

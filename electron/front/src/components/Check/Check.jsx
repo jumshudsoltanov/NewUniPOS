@@ -20,6 +20,7 @@ import CommentModal from "../CommentModal/CommentModal";
 import ClearCheck from "../ClearCheck/ClearCheck";
 import DiscountModal from "../DiscountModal/DiscountModal";
 import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
+import DepositModal from "../DepositModal/DepositModal";
 import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
@@ -41,6 +42,7 @@ const Check = () => {
   const [onShowClearModal, setOnShowClearModal] = useState(false);
   const [onShowDiscount, setOnShowDiscount] = useState(false);
   const [onShowServiceFee, setOnShowServiceFee] = useState(false);
+  const [onShowDeposit, setOnShowDeposit] = useState(false);
   const [showWaitersModal, setShowWaitersModal] = useState(false);
   const [openACtiveChecks, setOpenActiveChecks] = useState(false);
   const [openChangeSaleType, setOpenChangeSaleType] = useState(false);
@@ -124,6 +126,16 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowServiceFee(true);
+  };
+
+  const openDepositModal = () => {
+    if (currentOrder?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
+
+    setShowOperationsModal(false);
+    setOnShowDeposit(true);
   };
 
   const openWaitersModal = () => {
@@ -1037,6 +1049,7 @@ const Check = () => {
         handleOpenChangeSaleType={handleOpenChangeSaleType}
         handleOpenSplitModel={handleOpenSplitModel}
         handleDeleteCheckModal={handleDeleteCheckModal}
+        openDepositModal={openDepositModal}
       />
 
       <CheckLockModal
@@ -1071,6 +1084,12 @@ const Check = () => {
         onClose={() => setOnShowServiceFee(false)}
         order={currentOrder}
         hall={currentHall}
+      />
+
+      <DepositModal
+        show={onShowDeposit}
+        onClose={() => setOnShowDeposit(false)}
+        order={currentOrder}
       />
 
       <WaitersModal

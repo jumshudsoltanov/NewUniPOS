@@ -34,6 +34,11 @@ router.patch(
 );
 
 router.patch(
+  "/orders-items/:orderId/deposit",
+  OrdersItemsController.onUpdateDepositOrder,
+);
+
+router.patch(
   "/orders-items/:orderId/update-table",
   OrdersItemsController.onUpdateTableOrder,
 );
