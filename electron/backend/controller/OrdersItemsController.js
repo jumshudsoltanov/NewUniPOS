@@ -1097,7 +1097,7 @@ const onDeleteCheck = async (req, res) => {
 
   try {
     const updateCheckStatus = await OrdersModel.update(
-      { status: 3 },
+      { status: 3, end_date: new Date() },
       { where: { uuid: orderId } },
     );
     res.status(200).json({ message: "success" });
@@ -1117,10 +1117,10 @@ const onCloseOrder = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    // 1. Update Order Status and Note
+    // 1. Update Order Status, Note, and End Date
     await OrdersModel.update(
-      { status: status, note: note || "" },
-      { where: { uuid: orderId }, transaction }
+      { status: status, note: note || "", end_date: new Date() },
+      { where: { uuid: orderId }, transaction },
     );
 
     // 2. Insert Payments if provided
@@ -1144,7 +1144,9 @@ const onCloseOrder = async (req, res) => {
   } catch (error) {
     if (transaction) await transaction.rollback();
     console.error("Close Order Error:", error);
-    res.status(500).json({ message: "Internal server error", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Internal server error", error: error.message });
   }
 };
 
@@ -1177,7 +1179,10 @@ const onUpdateDepositOrder = async (req, res) => {
     const discount = parseFloat(currentOrder.discount || 0);
     const service_charge = parseFloat(currentOrder.service_charge || 0);
 
-    const newTotal = Math.max(amount - discount + service_charge + depositValue, 0);
+    const newTotal = Math.max(
+      amount - discount + service_charge + depositValue,
+      0,
+    );
 
     await OrdersModel.update(
       {

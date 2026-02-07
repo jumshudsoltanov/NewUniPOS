@@ -1,114 +1,222 @@
-import { Container, Row, Col } from "react-bootstrap";
+import { Container, Modal, Form, Row, Col, Spinner } from "react-bootstrap";
 import "./Checks.css";
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, getArchivedOrders } from "../../redux/Slices/BooksSlice";
+import { getWaitersList } from "../../redux/Slices/WaitersSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useNavigate } from "react-router-dom";
+import CheckDetailModal from "./CheckDetailModal";
 
 const Checks = () => {
   const [activeTab, setActiveTab] = useState("open");
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-  const [orders, setOrders] = useState([]);
+  const { archivedBooks, status } = useSelector((state) => state.BooksSlice);
+  const { waitersLists } = useSelector((state) => state.WaitersSlice);
+  const { tableGroups } = useSelector((state) => state.TablesSlice);
+
+  const [openOrders, setOpenOrders] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
   const navigate = useNavigate();
-  // Fetch active orders
+
+  // Filter States
+  const [searchId, setSearchId] = useState("");
+  const [filterSaleType, setFilterSaleType] = useState("");
+  const [filterWaiter, setFilterWaiter] = useState("");
+  const [filterHall, setFilterHall] = useState("");
+  const [filterTable, setFilterTable] = useState("");
+  const [filterCourier, setFilterCourier] = useState("");
+
+  const profileId = loginedProfileData?.data?.profile?.id;
+
+  // Debounce searchID
+  const [debouncedSearchId, setDebouncedSearchId] = useState(searchId);
+
   useEffect(() => {
-    const getChecks = async () => {
-      if (!loginedProfileData?.data?.profile?.id) return;
+    const handler = setTimeout(() => {
+      setDebouncedSearchId(searchId);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchId]);
 
+  // Fetch reference data (waiters, tables)
+  useEffect(() => {
+    if (profileId) {
+      dispatch(getWaitersList(profileId));
+      dispatch(getTableGroups(profileId));
+    }
+  }, [profileId, dispatch]);
+
+  const waiters = useMemo(() => waitersLists?.data || [], [waitersLists]);
+  const halls = useMemo(() => tableGroups?.data || [], [tableGroups]);
+  const tables = useMemo(() => {
+    if (!filterHall) return [];
+    const hall = halls.find(h => h.id.toString() === filterHall);
+    return hall ? hall.tables : [];
+  }, [halls, filterHall]);
+
+  // Fetch orders based on tab, date, and filters
+  useEffect(() => {
+    if (!profileId) return;
+
+    const fetchData = async () => {
       try {
-        const result = await dispatch(
-          getActiveOrders({
-            profileId: loginedProfileData.data.profile.id,
-          }),
-        ).unwrap();
+        const filters = {
+          profileId,
+          id: debouncedSearchId,
+          sale_type: filterSaleType,
+          waiter_id: filterWaiter,
+          hall_id: filterHall,
+          table_id: filterTable,
+          courier_id: filterCourier
+        };
 
-        setOrders(result.data || []);
+        if (activeTab === "open") {
+          const result = await dispatch(getActiveOrders(filters)).unwrap();
+          setOpenOrders(result.data || []);
+        } else {
+          // Send YYYY-MM-DD format for the date parameter
+          // Send YYYY-MM-DD format for the date parameter using local time to avoid timezone issues
+          const offsetCallback = (date) => {
+            const offset = date.getTimezoneOffset();
+            const resultDate = new Date(date.getTime() - (offset * 60 * 1000));
+            return resultDate.toISOString().split('T')[0];
+          }
+
+          let dateStr;
+          if (activeTab === "offline") {
+            // For offline mode, force today's date and ignore other filters if needed
+            dateStr = offsetCallback(new Date());
+          } else {
+            dateStr = offsetCallback(selectedDate);
+          }
+
+          await dispatch(getArchivedOrders({ ...filters, type: activeTab, date: dateStr })).unwrap();
+        }
       } catch (err) {
         console.error("Error fetching orders:", err);
       }
     };
 
-    getChecks();
-  }, []);
+    fetchData();
 
-  const hanldeGoCheck = (orderId, tableId) => {
-    navigate(`/check/${orderId}?tableId=${tableId}`, {
-      state: { from: "/checks" },
-    });
-  };
+  }, [activeTab, profileId, dispatch, selectedDate, debouncedSearchId, filterSaleType, filterWaiter, filterHall, filterTable, filterCourier]);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => order.status === 1);
-  }, [orders]);
+  const currentDisplayOrders = useMemo(() => {
+    if (activeTab === "open") return openOrders;
+    return archivedBooks;
+  }, [activeTab, openOrders, archivedBooks]);
 
-  // Total amount calculation
   const totalAmount = useMemo(
-    () =>
-      filteredOrders.reduce((sum, order) => sum + Number(order?.total || 0), 0),
-    [filteredOrders],
+    () => currentDisplayOrders.reduce((sum, order) => sum + Number(order?.total || 0), 0),
+    [currentDisplayOrders],
   );
 
-  // Helper to format date for display: "30 yanvar 2026"
   const formatDisplayDate = (date) => {
     if (!date) return "";
-
     const d = new Date(date);
     const day = d.getDate();
-    const monthNames = [
-      "yanvar",
-      "fevral",
-      "mart",
-      "aprel",
-      "may",
-      "iyun",
-      "iyul",
-      "avqust",
-      "sentyabr",
-      "oktyabr",
-      "noyabr",
-      "dekabr",
-    ];
-    const month = monthNames[d.getMonth()];
-    const year = d.getFullYear();
-
-    return `${day} ${month} ${year}`;
+    const monthNames = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avqust", "sentyabr", "oktyabr", "noyabr", "dekabr"];
+    return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
   };
 
-  // Helper to get only date part for comparison
-  const formatDateKey = (date) => {
-    if (!date) return "";
-    return new Date(date).toISOString().split("T")[0];
-  };
+  const formatDateKey = (date) => (date ? new Date(date).toISOString().split("T")[0] : "");
 
-  // Helper to format time: "5 dəq" or "1 Saat"
   const formatTime = (startDate) => {
     if (!startDate) return "";
-    const now = new Date();
-    const start = new Date(startDate);
-    const diffMs = now - start;
-    const diffMins = Math.floor(diffMs / 60000);
-
-    if (diffMins < 60) {
-      return `${diffMins} dəq`;
-    } else {
-      const hours = Math.floor(diffMins / 60);
-      return `${hours} Saat`;
-    }
+    const diffMins = Math.floor((new Date() - new Date(startDate)) / 60000);
+    return diffMins < 60 ? `${diffMins} dəq` : `${Math.floor(diffMins / 60)} Saat`;
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 1: // Active
-        return "#2196F3";
-      case 2: // Closed
-        return "#28a745";
-      case 3: // Deleted
-        return "#9E9E9E";
-      default:
-        return "#9E9E9E";
+      case 1: return "#053796";
+      case 2: return "#28a745";
+      case 3: return "#9E9E9E";
+      default: return "#9E9E9E";
     }
   };
+
+  const handleOrderClick = (order) => {
+    if (activeTab === "open") {
+      navigate(`/check/${order.uuid}?tableId=${order.table_id}`, { state: { from: "/checks" } });
+    } else {
+      setSelectedOrder(order);
+      setShowModal(true);
+    }
+  };
+
+  const changeDay = (delta) => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + delta);
+    setSelectedDate(newDate);
+  };
+
+  const formatFilterDate = (date) => {
+    const d = new Date(date);
+    const months = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avq", "sen", "okt", "noy", "dek"];
+    return `${d.getDate()} ${months[d.getMonth()]}, ${d.getFullYear()}`;
+  };
+
+  // Calendar logic
+  const [calendarViewDate, setCalendarViewDate] = useState(new Date());
+
+  const daysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = (month, year) => {
+    let day = new Date(year, month, 1).getDay();
+    return day === 0 ? 6 : day - 1; // Mon=0, Sun=6
+  };
+
+  const renderCalendarDays = () => {
+    const month = calendarViewDate.getMonth();
+    const year = calendarViewDate.getFullYear();
+    const totalDays = daysInMonth(month, year);
+    const startOffset = firstDayOfMonth(month, year);
+    const days = [];
+
+    // Empty spots for previous month
+    for (let i = 0; i < startOffset; i++) {
+      days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
+    }
+
+    // Actual days
+    for (let i = 1; i <= totalDays; i++) {
+      const isSelected = selectedDate.getDate() === i &&
+        selectedDate.getMonth() === month &&
+        selectedDate.getFullYear() === year;
+
+      const isToday = new Date().getDate() === i &&
+        new Date().getMonth() === month &&
+        new Date().getFullYear() === year;
+
+      days.push(
+        <div
+          key={i}
+          className={`calendar-day ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
+          onClick={() => {
+            const newDate = new Date(year, month, i);
+            setSelectedDate(newDate);
+            setShowCalendar(false);
+          }}
+        >
+          {i}
+        </div>
+      );
+    }
+    return days;
+  };
+
+  const changeCalendarMonth = (delta) => {
+    const newViewDate = new Date(calendarViewDate);
+    newViewDate.setMonth(newViewDate.getMonth() + delta);
+    setCalendarViewDate(newViewDate);
+  };
+
+  const monthNamesAz = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "İyun", "İyul", "Avqust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr"];
 
   return (
     <Container fluid className="checks-container">
@@ -134,11 +242,96 @@ const Checks = () => {
         </button>
       </div>
 
+      {/* Date Filter Bar & Advanced Filters - Show for ALL tabs, but hide Date part for 'open' tab if not needed */}
+      {/* Date Filter Bar & Advanced Filters - Show for ALL tabs, but hide Date part for 'open' tab if not needed */}
+      {(activeTab !== "offline") && (
+        <div className="checks-filter-container">
+          <div className="checks-advanced-filters">
+            <Form.Control
+              type="text"
+              placeholder="ID"
+              value={searchId}
+              onChange={(e) => setSearchId(e.target.value)}
+              className="filter-input-id"
+            />
+            <Form.Select
+              value={filterSaleType}
+              onChange={(e) => setFilterSaleType(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Satış üsulu</option>
+              <option value="dine_in">Restoranda</option>
+              <option value="takeaway">Gəl götür</option>
+              <option value="delivery">Çatdırılma</option>
+            </Form.Select>
+
+            <Form.Select
+              value={filterWaiter}
+              onChange={(e) => setFilterWaiter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Əməkdaş</option>
+              {waiters.map(w => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </Form.Select>
+
+            <Form.Select
+              value={filterHall}
+              onChange={(e) => { setFilterHall(e.target.value); setFilterTable(""); }}
+              className="filter-select"
+            >
+              <option value="">Zal</option>
+              {halls.map(h => (
+                <option key={h.id} value={h.id}>{h.name}</option>
+              ))}
+            </Form.Select>
+
+            <Form.Select
+              value={filterTable}
+              onChange={(e) => setFilterTable(e.target.value)}
+              className="filter-select"
+              disabled={!filterHall}
+            >
+              <option value="">Masa</option>
+              {tables.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </Form.Select>
+
+            <Form.Select
+              value={filterCourier}
+              onChange={(e) => setFilterCourier(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Kuryer</option>
+              {waiters.map(w => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </Form.Select>
+          </div>
+
+          {(activeTab === "archive") && (
+            <div className="date-nav-wrapper">
+              <button className="date-nav-btn" onClick={() => changeDay(-1)}>
+                <i className="bi bi-chevron-left"></i>
+              </button>
+              <div className="date-display" onClick={() => { setCalendarViewDate(selectedDate); setShowCalendar(true); }}>
+                {formatFilterDate(selectedDate)}
+              </div>
+              <button className="date-nav-btn" onClick={() => changeDay(1)}>
+                <i className="bi bi-chevron-right"></i>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Summary Bar */}
       <div className="checks-summary-bar">
         <div className="checks-summary-left">
           <span className="checks-summary-label">Çek sayı:</span>
-          <span className="checks-summary-value">{filteredOrders.length}</span>
+          <span className="checks-summary-value">{currentDisplayOrders.length}</span>
         </div>
         <div className="checks-summary-right">
           <span className="checks-summary-label">Cəm:</span>
@@ -150,68 +343,46 @@ const Checks = () => {
 
       {/* Checks List */}
       <div className="checks-list">
-        {filteredOrders.length === 0 ? (
-          <div className="checks-empty-state">
-            <p>Heç bir çek tapılmadı</p>
+        {status === 'loading' && (
+          <div className="checks-loading-overlay">
+            <Spinner animation="border" variant="primary" />
+            <span className="checks-loading-text">Yüklənir...</span>
           </div>
+        )}
+
+        {currentDisplayOrders.length === 0 ? (
+          <div className="checks-empty-state"><p>Heç bir çek tapılmadı</p></div>
         ) : (
-          filteredOrders.map((check, index) => {
-            const showDateHeader =
-              index === 0 ||
-              formatDateKey(filteredOrders[index - 1]?.start_date) !==
-                formatDateKey(check?.start_date);
+          currentDisplayOrders.map((check, index) => {
+            const showDateHeader = index === 0 || formatDateKey(currentDisplayOrders[index - 1]?.start_date) !== formatDateKey(check?.start_date);
 
             return (
               <div key={check.id}>
-                {showDateHeader && (
-                  <div className="checks-date-header">
-                    {formatDisplayDate(check?.start_date)}
-                  </div>
-                )}
-
-                <div
-                  className="checks-check-item"
-                  onClick={() => {
-                    hanldeGoCheck(check?.uuid, check?.table_id);
-                  }}
-                >
+                {showDateHeader && <div className="checks-date-header">{formatDisplayDate(check?.start_date)}</div>}
+                <div className="checks-check-item" onClick={() => handleOrderClick(check)}>
                   <div className="checks-check-left">
                     <div className="checks-check-id-row">
-                      <span
-                        className="checks-status-dot"
-                        style={{
-                          backgroundColor: getStatusColor(check.status),
-                        }}
-                      ></span>
+                      <span className="checks-status-dot" style={{ backgroundColor: getStatusColor(check.status) }}></span>
                       <span className="checks-check-id">#{check.id}</span>
-                      <span className="checks-check-badge checks-badge-open">
-                        Açıq
-                      </span>
+
+                      {check.status === 1 ? (
+                        <span className="checks-check-badge checks-badge-open">Açıq</span>
+                      ) : (
+                        <span className={`checks-check-badge ${check.status === 3 ? "warning" : ""}`}>
+                          {check.status === 2 ? "Bağlanmış" : "Silinib"}
+                        </span>
+                      )}
+
                       {check.sale_type && (
-                        <span
-                          className={`checks-check-badge checks-badge-${check.sale_type}`}
-                        >
-                          {check.sale_type === "dine_in"
-                            ? "Restoranda"
-                            : check.sale_type === "takeaway"
-                              ? "Gəl götür"
-                              : check.sale_type === "delivery"
-                                ? "Çatdırılma"
-                                : ""}
+                        <span className={`checks-check-badge checks-badge-${check.sale_type}`}>
+                          {check.sale_type === "dine_in" ? "Restoranda" : check.sale_type === "takeaway" ? "Gəl götür" : "Çatdırılma"}
                         </span>
                       )}
                     </div>
                     <div className="checks-check-info">
-                      <span className="checks-check-time">
-                        {formatTime(check.start_date)}
-                      </span>
+                      <span className="checks-check-time">{formatTime(check.start_date)}</span>
                       <span className="checks-check-user">
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 16 16"
-                          fill="currentColor"
-                        >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
                           <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z" />
                         </svg>
                         {check?.waiter?.name || "Naməlum"}
@@ -219,9 +390,16 @@ const Checks = () => {
                     </div>
                   </div>
                   <div className="checks-check-right">
-                    <span className="checks-check-amount">
-                      {Number(check.total || 0).toFixed(2)} ₼
-                    </span>
+                    <span className="checks-check-amount">{Number(check.total || 0).toFixed(2)} ₼</span>
+                    {check.status !== 1 && check.order_payments?.length > 0 && (
+                      <div className="mt-1 d-flex flex-wrap justify-content-end">
+                        {check.order_payments.map((p, idx) => (
+                          <span key={idx} className="payment-method-tag">
+                            {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Naməlum")}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -229,6 +407,43 @@ const Checks = () => {
           })
         )}
       </div>
+
+      {/* Calendar Modal */}
+      <Modal show={showCalendar} onHide={() => setShowCalendar(false)} centered className="calendar-modal">
+        <Modal.Header closeButton>
+          <Modal.Title>Təqvim</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="calendar-header">
+            <div className="calendar-view-title">
+              {monthNamesAz[calendarViewDate.getMonth()]} {calendarViewDate.getFullYear()}
+            </div>
+            <div className="calendar-nav-btns">
+              <button className="cal-nav-btn" onClick={() => changeCalendarMonth(-1)}>
+                <i className="bi bi-chevron-left"></i>
+              </button>
+              <button className="cal-nav-btn" onClick={() => changeCalendarMonth(1)}>
+                <i className="bi bi-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+          <div className="calendar-weekdays">
+            {["B.E", "Ç.A", "Ç.", "C.A", "C.", "Ş.", "B."].map(day => (
+              <div key={day} className="weekday">{day}</div>
+            ))}
+          </div>
+          <div className="calendar-days-grid">
+            {renderCalendarDays()}
+          </div>
+        </Modal.Body>
+      </Modal>
+
+      {/* Check Detail Modal */}
+      <CheckDetailModal
+        show={showModal}
+        onHide={() => setShowModal(false)}
+        order={selectedOrder}
+      />
     </Container>
   );
 };

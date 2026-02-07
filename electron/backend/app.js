@@ -15,6 +15,7 @@ const CategoriesModel = require("./model/CategoriesModel");
 const ProductsModel = require("./model/ProductsModel");
 const OrderPaymentsModel = require("./model/OrderPaymentsModel");
 const PaymentMethodsModel = require("./model/PaymentMethodsModel");
+const TagsModel = require("./model/TagsModel");
 const { getWaitersList } = require("./data/WaitersData");
 const { getTableGroups, getTables } = require("./data/TablesData");
 const {
@@ -117,6 +118,18 @@ let creaedtToTabel = async () => {
     OrderPaymentsModel.belongsTo(OrdersModel, {
       foreignKey: "order_id",
       targetKey: "uuid",
+      constraints: false,
+    });
+
+    OrderPaymentsModel.belongsTo(PaymentMethodsModel, {
+      foreignKey: "payment_method_id",
+      as: "payment_method",
+      constraints: false,
+    });
+
+    OrderPaymentsModel.belongsTo(TagsModel, {
+      foreignKey: "without_payment_method_id",
+      as: "tag",
       constraints: false,
     });
 

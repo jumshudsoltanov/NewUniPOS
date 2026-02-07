@@ -112,6 +112,7 @@ router.post(
 
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
+router.get("/orders/:profileId/archived-checks", BooksController.getArchivedOrders);
 
 // MenuData
 router.get(
