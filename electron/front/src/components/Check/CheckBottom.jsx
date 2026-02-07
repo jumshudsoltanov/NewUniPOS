@@ -44,6 +44,7 @@ const CheckBottom = ({ orders, hall }) => {
   // Close Check
 
   const goCloseCheck = () => {
+    handleSendOrders()
     navigate(`/closecheck/${id}`)
   }
 
