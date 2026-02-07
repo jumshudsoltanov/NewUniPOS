@@ -4,6 +4,7 @@ const OrdersModel = require("../model/OrdersModel");
 const WaitersModel = require("../model/WaitersModel");
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
+const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 
 const sendOrdersItemsToDb = async (req, res) => {
   const { orderId } = req.params;
@@ -1105,6 +1106,48 @@ const onDeleteCheck = async (req, res) => {
   }
 };
 
+const onCloseOrder = async (req, res) => {
+  const { orderId } = req.params;
+  const { payments, status, profileId, waiterId, note } = req.body;
+
+  if (!orderId || !status || !profileId || !waiterId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    // 1. Update Order Status and Note
+    await OrdersModel.update(
+      { status: status, note: note || "" },
+      { where: { uuid: orderId }, transaction }
+    );
+
+    // 2. Insert Payments if provided
+    if (payments && payments.length > 0) {
+      const paymentRecords = payments.map((p) => ({
+        profile_id: profileId,
+        order_id: orderId,
+        status: status.toString(),
+        operator_id: waiterId,
+        payment_method_id: p.payment_method_id || 0,
+        without_payment_method_id: p.without_payment_method_id || 0,
+        paid: parseFloat(p.amount) || 0,
+        note: note || "",
+      }));
+
+      await OrderPaymentsModel.bulkCreate(paymentRecords, { transaction });
+    }
+
+    await transaction.commit();
+    res.status(200).json({ message: "Order closed successfully" });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    console.error("Close Order Error:", error);
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
 const onUpdateDepositOrder = async (req, res) => {
   const { orderId } = req.params;
   let { depositValue } = req.body;
@@ -1171,4 +1214,5 @@ module.exports = {
   onUpdateItemDiscount,
   onDeleteCheck,
   onUpdateDepositOrder,
+  onCloseOrder,
 };

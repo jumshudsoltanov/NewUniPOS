@@ -244,6 +244,21 @@ export const deleteCheck = createAsyncThunk(
   },
 );
 
+export const closeOrder = createAsyncThunk(
+  "orders/close",
+  async ({ orderId, payments, status, profileId, waiterId, note }, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:55667/api/orders-items/${orderId}/close`,
+        { payments, status, profileId, waiterId, note },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data || "Server error");
+    }
+  },
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {

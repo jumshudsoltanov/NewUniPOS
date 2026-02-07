@@ -105,6 +105,11 @@ router.patch(
   OrdersItemsController.onDeleteCheck,
 );
 
+router.post(
+  "/orders-items/:orderId/close",
+  OrdersItemsController.onCloseOrder,
+);
+
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 

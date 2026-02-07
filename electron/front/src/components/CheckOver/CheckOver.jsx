@@ -6,6 +6,7 @@ import Header from "../Header/Header";
 import "./CheckOver.css";
 import { getTagsList } from '../../redux/Slices/TagsSlice';
 import { getPaymentMethods } from '../../redux/Slices/PaymentMethodsSlice';
+import { closeOrder } from '../../redux/Slices/OrdersSlice';
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -182,6 +183,48 @@ const CheckOver = () => {
 
     const isSplitActive = selectedMethods.length > 1;
 
+    const handleConfirmClose = async () => {
+        const profileId = loginedProfileData?.data?.profile?.id;
+        const waiterId = currentOrder?.waiter_id;
+
+        if (!profileId || !waiterId || !id) return;
+
+        let payments = [];
+        let status = 2; // Closed
+        let noteStr = comment;
+
+        if (viewMode === "PAYMENT") {
+            payments = selectedMethods.map(m => ({
+                payment_method_id: m.id,
+                amount: m.amount || (selectedMethods.length === 1 ? calcTotal.sumTotal : 0)
+            }));
+        } else {
+            // Unpaid mode
+            const tag = tagsListData.find(t => (t.name || t.text) === unpaidReason);
+            payments = [{
+                without_payment_method_id: tag?.id || 0,
+                amount: calcTotal.sumTotal
+            }];
+            noteStr = `Ödənişsiz: ${unpaidReason}. ${comment}`;
+        }
+
+        try {
+            await dispatch(closeOrder({
+                orderId: id,
+                payments,
+                status,
+                profileId,
+                waiterId,
+                note: noteStr
+            })).unwrap();
+
+            // Navigation on success
+            navigate("/tables");
+        } catch (err) {
+            console.error("Close order failed:", err);
+        }
+    };
+
     return (
         <div className="check-over-page">
             <Header showBack={true} onBack={() => navigate(-1)} />
@@ -301,7 +344,12 @@ const CheckOver = () => {
                                     <button className="unpaid-mode-btn" onClick={() => setViewMode("UNPAID")}>
                                         Ödənişsiz bağla
                                     </button>
-                                    <button className="confirm-close-btn green-btn">Bağla</button>
+                                    <button
+                                        className="confirm-close-btn green-btn"
+                                        onClick={handleConfirmClose}
+                                    >
+                                        Bağla
+                                    </button>
                                 </div>
                             </>
                         ) : (
@@ -365,7 +413,12 @@ const CheckOver = () => {
                                     <button className="back-to-payment-btn" onClick={() => setViewMode("PAYMENT")}>
                                         Ödənişə qayıt
                                     </button>
-                                    <button className="confirm-close-btn maroon-btn">Bağla</button>
+                                    <button
+                                        className="confirm-close-btn maroon-btn"
+                                        onClick={handleConfirmClose}
+                                    >
+                                        Bağla
+                                    </button>
                                 </div>
                             </>
                         )}
