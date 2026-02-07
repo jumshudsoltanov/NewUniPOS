@@ -3,6 +3,7 @@ const WaitersModel = require("../model/WaitersModel");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
+const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 
 const getAllActiveOrders = async (req, res) => {
   const { profileId } = req.params;
@@ -18,6 +19,10 @@ const getAllActiveOrders = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]]
+        },
+        {
+          model: OrderPaymentsModel,
+          as: "order_payments",
         },
         {
           model: TablesModel,

@@ -4,6 +4,7 @@ const OrdersModel = require("../model/OrdersModel");
 const WaitersModel = require("../model/WaitersModel");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
 const ProductsModel = require("../model/ProductsModel");
+const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 
 const getTables = async (req, res) => {
   const { profileId } = req.params;
@@ -32,6 +33,10 @@ const getTables = async (req, res) => {
                   attributes: ["id", "name"],
                 },
               ],
+            },
+            {
+              model: OrderPaymentsModel,
+              as: "order_payments",
             },
           ],
           as: "orders",

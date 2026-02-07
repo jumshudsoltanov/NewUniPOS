@@ -13,6 +13,8 @@ const LoginModel = require("./model/LoginModel");
 const GeneralCategoriesModel = require("./model/GeneralCategoriesModel");
 const CategoriesModel = require("./model/CategoriesModel");
 const ProductsModel = require("./model/ProductsModel");
+const OrderPaymentsModel = require("./model/OrderPaymentsModel");
+const PaymentMethodsModel = require("./model/PaymentMethodsModel");
 const { getWaitersList } = require("./data/WaitersData");
 const { getTableGroups, getTables } = require("./data/TablesData");
 const {
@@ -20,7 +22,7 @@ const {
   getCategories,
   getProducts,
 } = require("./data/ProductsData");
-
+const { getPaymentMethods } = require("./data/PaymentMethodsData");
 const { getTags } = require("./data/TagsData");
 
 // Allow Cors
@@ -104,6 +106,20 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
+    // Order Payments
+    OrdersModel.hasMany(OrderPaymentsModel, {
+      foreignKey: "order_id",
+      sourceKey: "uuid",
+      as: "order_payments",
+      constraints: false,
+    });
+
+    OrderPaymentsModel.belongsTo(OrdersModel, {
+      foreignKey: "order_id",
+      targetKey: "uuid",
+      constraints: false,
+    });
+
     // Products Data
     GeneralCategoriesModel.hasMany(CategoriesModel, {
       foreignKey: "general_categorie_id",
@@ -156,6 +172,9 @@ const InsertData = async () => {
     await sleep(2000);
 
     await getTags();
+    await sleep(2000);
+
+    await getPaymentMethods();
   } catch (error) {
     console.log("error insert", error);
   }
