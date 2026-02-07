@@ -43,8 +43,10 @@ const CheckBottom = ({ orders, hall }) => {
 
   // Close Check
 
-  const goCloseCheck = () => {
-    handleSendOrders()
+  const goCloseCheck = async () => {
+    if (products.length > 0) {
+      await handleSendOrders()
+    }
     navigate(`/closecheck/${id}`)
   }
 

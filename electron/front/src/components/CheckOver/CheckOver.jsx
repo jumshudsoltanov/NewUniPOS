@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Container, Col, Row, Form } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Header from "../Header/Header";
 import "./CheckOver.css";
+import { getTagsList } from '../../redux/Slices/TagsSlice';
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -12,10 +13,40 @@ const CheckOver = () => {
     const [selectedPayment, setSelectedPayment] = useState("Nağd");
     const [viewMode, setViewMode] = useState("PAYMENT"); // 'PAYMENT' or 'UNPAID'
     const [printCheck, setPrintCheck] = useState(false);
-    const [unpaidReason, setUnpaidReason] = useState("Qarson səhvi");
+    const [unpaidReason, setUnpaidReason] = useState("");
     const [comment, setComment] = useState("");
-
+    const [tagsListData, setTagsListData] = useState([])
     const { books } = useSelector((state) => state.BooksSlice);
+    const { loginedProfileData } = useSelector((state) => state.LoginSlice)
+    const dispatch = useDispatch()
+
+    useEffect(() => {
+        const getTagsData = async () => {
+            const profileId = loginedProfileData?.data?.profile?.id;
+            if (!profileId) return;
+
+            try {
+                // Fetch tags only once or when profileId changes
+                const res = await dispatch(getTagsList(profileId)).unwrap();
+                const fetchedTags = Array.isArray(res.data)
+                    ? res.data.filter(tag => Number(tag.type) === 3)
+                    : [];
+                setTagsListData(fetchedTags);
+
+                // Set default reason (the 0th one)
+                if (fetchedTags.length > 0) {
+                    setUnpaidReason(fetchedTags[0].name || fetchedTags[0].text);
+                }
+            } catch (err) {
+                console.error("tags fetch error:", err);
+                setTagsListData([]);
+            }
+        };
+
+        getTagsData();
+    }, [dispatch, loginedProfileData?.data?.profile?.id]);
+
+
 
     const currentOrder = useMemo(() => {
         if (!books?.data) return null;
@@ -32,8 +63,8 @@ const CheckOver = () => {
             total += count * price;
         });
 
-        // Robust Calculation matching CheckBottom.jsx
-        // Calculate Discount
+
+
         const discountValue = Number(currentOrder.discount_value || 0);
         const discountType = currentOrder.discount_type || "percent";
         let discountAmount = 0;
@@ -219,22 +250,25 @@ const CheckOver = () => {
                                 </div>
 
                                 <div className="unpaid-reasons gap-1 d-flex flex-column">
-                                    {["Qonaq tərk etdi", "Şirkət hesabına", "Qarson səhvi"].map((reason) => (
-                                        <div
-                                            key={reason}
-                                            className={`unpaid-reason-item d-flex justify-content-between align-items-center py-3 ${unpaidReason === reason ? "active" : ""}`}
-                                            onClick={() => setUnpaidReason(reason)}
-                                        >
-                                            <span className="reason-label">{reason}</span>
-                                            <Form.Check
-                                                type="radio"
-                                                name="unpaidReason"
-                                                id={`reason-${reason}`}
-                                                checked={unpaidReason === reason}
-                                                onChange={() => setUnpaidReason(reason)}
-                                            />
-                                        </div>
-                                    ))}
+                                    {(tagsListData.length > 0 ? tagsListData : [{ name: "Qonaq tərk etdi" }, { name: "Şirkət hesabına" }, { name: "Qarson səhvi" }]).map((tag, index) => {
+                                        const reasonName = tag.name || tag.text || `Reason ${index + 1}`;
+                                        return (
+                                            <div
+                                                key={tag.id || index}
+                                                className={`unpaid-reason-item d-flex justify-content-between align-items-center py-3 ${unpaidReason === reasonName ? "active" : ""}`}
+                                                onClick={() => setUnpaidReason(reasonName)}
+                                            >
+                                                <span className="reason-label">{reasonName}</span>
+                                                <Form.Check
+                                                    type="radio"
+                                                    name="unpaidReason"
+                                                    id={`reason-${tag.id || index}`}
+                                                    checked={unpaidReason === reasonName}
+                                                    onChange={() => setUnpaidReason(reasonName)}
+                                                />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="comment-section mt-4">
