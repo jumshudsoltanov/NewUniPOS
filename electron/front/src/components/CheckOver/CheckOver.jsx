@@ -5,48 +5,57 @@ import { useDispatch, useSelector } from "react-redux";
 import Header from "../Header/Header";
 import "./CheckOver.css";
 import { getTagsList } from '../../redux/Slices/TagsSlice';
+import { getPaymentMethods } from '../../redux/Slices/PaymentMethodsSlice';
 
 const CheckOver = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const [calcValue, setCalcValue] = useState("");
-    const [selectedPayment, setSelectedPayment] = useState("Nağd");
+
+    // Payment State
+    const [selectedMethods, setSelectedMethods] = useState([]); // [{id, name, amount, is_split}]
+
     const [viewMode, setViewMode] = useState("PAYMENT"); // 'PAYMENT' or 'UNPAID'
     const [printCheck, setPrintCheck] = useState(false);
     const [unpaidReason, setUnpaidReason] = useState("");
     const [comment, setComment] = useState("");
     const [tagsListData, setTagsListData] = useState([])
+
     const { books } = useSelector((state) => state.BooksSlice);
-    const { loginedProfileData } = useSelector((state) => state.LoginSlice)
-    const dispatch = useDispatch()
+    const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const { paymentMethods } = useSelector((state) => state.PaymentMethodsSlice);
+    const dispatch = useDispatch();
 
     useEffect(() => {
-        const getTagsData = async () => {
+        const fetchData = async () => {
             const profileId = loginedProfileData?.data?.profile?.id;
             if (!profileId) return;
 
             try {
-                // Fetch tags only once or when profileId changes
-                const res = await dispatch(getTagsList(profileId)).unwrap();
-                const fetchedTags = Array.isArray(res.data)
-                    ? res.data.filter(tag => Number(tag.type) === 3)
+                // Fetch tags
+                const tagRes = await dispatch(getTagsList(profileId)).unwrap();
+                const fetchedTags = Array.isArray(tagRes.data)
+                    ? tagRes.data.filter(tag => Number(tag.type) === 3)
                     : [];
                 setTagsListData(fetchedTags);
-
-                // Set default reason (the 0th one)
                 if (fetchedTags.length > 0) {
                     setUnpaidReason(fetchedTags[0].name || fetchedTags[0].text);
                 }
+
+                // Fetch payment methods
+                const payRes = await dispatch(getPaymentMethods(profileId)).unwrap();
+                if (payRes.data && payRes.data.length > 0) {
+                    const cashMethod = payRes.data.find(m => m.name.toLowerCase().includes("nağd") || m.name.toLowerCase().includes("cash"));
+                    const defaultMethod = cashMethod || payRes.data[0];
+                    setSelectedMethods([{ ...defaultMethod, amount: "" }]);
+                }
             } catch (err) {
-                console.error("tags fetch error:", err);
-                setTagsListData([]);
+                console.error("fetch error:", err);
             }
         };
 
-        getTagsData();
+        fetchData();
     }, [dispatch, loginedProfileData?.data?.profile?.id]);
-
-
 
     const currentOrder = useMemo(() => {
         if (!books?.data) return null;
@@ -54,7 +63,7 @@ const CheckOver = () => {
     }, [books, id]);
 
     const calcTotal = useMemo(() => {
-        if (!currentOrder) return { total: 0, sumTotal: 0 };
+        if (!currentOrder) return { total: 0, sumTotal: "0.00" };
 
         let total = 0;
         currentOrder.orders_items?.forEach((item) => {
@@ -62,8 +71,6 @@ const CheckOver = () => {
             const price = Number(item.price || 0);
             total += count * price;
         });
-
-
 
         const discountValue = Number(currentOrder.discount_value || 0);
         const discountType = currentOrder.discount_type || "percent";
@@ -79,7 +86,6 @@ const CheckOver = () => {
             discountAmount = Number(currentOrder.discount);
         }
 
-        // Calculate Service Fee
         let serviceValue = Number(currentOrder.service_value || 0);
         let serviceType = currentOrder.service_type || "percent";
         let serviceAmount = 0;
@@ -95,7 +101,6 @@ const CheckOver = () => {
         }
 
         const depositAmount = Number(currentOrder.deposit || 0);
-
         let sumTotal = total - discountAmount + serviceAmount + depositAmount;
         if (sumTotal < 0) sumTotal = 0;
 
@@ -108,12 +113,51 @@ const CheckOver = () => {
         };
     }, [currentOrder]);
 
-    const remainingBalance = useMemo(() => {
-        const paid = Number(calcValue || 0);
-        const toPay = Number(calcTotal.sumTotal);
-        const remaining = paid - toPay;
-        return remaining.toFixed(2);
-    }, [calcValue, calcTotal.sumTotal]);
+    const handleMethodSelect = (method) => {
+        const isAlreadySelected = selectedMethods.find(m => m.id === method.id);
+
+        if (isAlreadySelected) {
+            if (selectedMethods.length > 1) {
+                const remaining = selectedMethods.filter(m => m.id !== method.id);
+                // Reset the remaining one to full amount
+                remaining[0].amount = calcTotal.sumTotal;
+                setSelectedMethods(remaining);
+            }
+            return;
+        }
+
+        const canSplit = selectedMethods.some(m => Number(m.is_split) === 1) || Number(method.is_split) === 1;
+
+        if (canSplit && selectedMethods.length < 2) {
+            const firstAmount = Number(selectedMethods[0]?.amount || (calcTotal.sumTotal / 2)).toFixed(2);
+            const secondAmount = (Number(calcTotal.sumTotal) - Number(firstAmount)).toFixed(2);
+
+            const newMethods = [
+                { ...selectedMethods[0], amount: firstAmount },
+                { ...method, amount: secondAmount }
+            ];
+            setSelectedMethods(newMethods);
+        } else {
+            setSelectedMethods([{ ...method, amount: "" }]);
+        }
+    };
+
+    const handleAmountChange = (index, value) => {
+        const newMethods = [...selectedMethods];
+        const numValue = Number(value);
+        const total = Number(calcTotal.sumTotal);
+
+        newMethods[index].amount = value;
+
+        // Auto-calculate the other method if in split mode
+        if (newMethods.length === 2) {
+            const otherIndex = index === 0 ? 1 : 0;
+            const remainder = Math.max(0, total - numValue).toFixed(2);
+            newMethods[otherIndex].amount = remainder;
+        }
+
+        setSelectedMethods(newMethods);
+    };
 
     const handleNumClick = (val) => {
         if (val === "." && calcValue.includes(".")) return;
@@ -126,12 +170,23 @@ const CheckOver = () => {
 
     const numpadButtons = ["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "DEL"];
 
+    const totalPaidInMethods = useMemo(() => {
+        return selectedMethods.reduce((sum, m) => sum + Number(m.amount || 0), 0);
+    }, [selectedMethods]);
+
+    const remainingBalance = useMemo(() => {
+        const paid = Number(calcValue || totalPaidInMethods || 0);
+        const toPay = Number(calcTotal.sumTotal);
+        return (paid - toPay).toFixed(2);
+    }, [calcValue, totalPaidInMethods, calcTotal.sumTotal]);
+
+    const isSplitActive = selectedMethods.length > 1;
+
     return (
         <div className="check-over-page">
             <Header showBack={true} onBack={() => navigate(-1)} />
             <Container fluid className="check-over-content p-0">
                 <Row className="g-0 h-100">
-                    {/* Left side: Calculator */}
                     <Col lg={5} md={6} className="calculator-section p-4 d-none d-md-flex flex-column">
                         <div className="calc-display-container mb-4">
                             <Form.Control
@@ -151,7 +206,7 @@ const CheckOver = () => {
                             </div>
                             <div className="calc-info-card highlighted">
                                 <span className="label">Ödənilən</span>
-                                <span className="value">{Number(calcValue || 0).toFixed(2)} ₼</span>
+                                <span className="value">{(Number(calcValue) || totalPaidInMethods || 0).toFixed(2)} ₼</span>
                             </div>
                             <div className={`calc-info-card ${Number(remainingBalance) >= 0 ? 'positive' : 'negative'}`}>
                                 <span className="label">Qalıq</span>
@@ -177,7 +232,6 @@ const CheckOver = () => {
                         </div>
                     </Col>
 
-                    {/* Right side: Payment details */}
                     <Col lg={7} md={6} xs={12} className="payment-section p-4 bg-white d-flex flex-column">
                         {viewMode === "PAYMENT" ? (
                             <>
@@ -190,32 +244,43 @@ const CheckOver = () => {
                                 </div>
 
                                 <div className="payment-methods gap-3 d-flex flex-column">
-                                    <div
-                                        className={`payment-method-item ${selectedPayment === "Nağd" ? "active" : ""}`}
-                                        onClick={() => setSelectedPayment("Nağd")}
-                                    >
-                                        <span className="method-name">Nağd</span>
-                                        <div className="method-amount">
-                                            <span>{calcTotal.sumTotal}</span>
-                                            <span className="symbol">₼</span>
-                                        </div>
-                                    </div>
-                                    <div
-                                        className={`payment-method-item ${selectedPayment === "Müştəri Balansı" ? "active" : ""}`}
-                                        onClick={() => setSelectedPayment("Müştəri Balansı")}
-                                    >
-                                        <span className="method-name">Müştəri Balansı</span>
-                                        <div className="method-amount">
-                                            <span>0.00</span>
-                                            <span className="symbol">₼</span>
-                                        </div>
-                                    </div>
-                                    <div
-                                        className={`payment-method-item card-method ${selectedPayment === "Kart" ? "active" : ""}`}
-                                        onClick={() => setSelectedPayment("Kart")}
-                                    >
-                                        <span className="method-name">Kart</span>
-                                    </div>
+                                    {paymentMethods?.map((method) => {
+                                        const isSelected = selectedMethods.find(m => m.id === method.id);
+                                        return (
+                                            <div key={method.id}>
+                                                <div
+                                                    className={`payment-method-item ${isSelected ? "active" : ""} ${method.name.toLowerCase().includes("kart") ? "card-method" : ""}`}
+                                                    onClick={() => handleMethodSelect(method)}
+                                                >
+                                                    <span className="method-name">{method.name}</span>
+                                                    {isSelected && (
+                                                        <div className="method-right-content">
+                                                            {isSplitActive ? (
+                                                                <div className="split-input-wrapper" onClick={(e) => e.stopPropagation()}>
+                                                                    <Form.Control
+                                                                        type="number"
+                                                                        className="split-amount-input"
+                                                                        value={isSelected.amount}
+                                                                        onChange={(e) => {
+                                                                            const idx = selectedMethods.findIndex(m => m.id === method.id);
+                                                                            handleAmountChange(idx, e.target.value);
+                                                                        }}
+                                                                        autoFocus
+                                                                    />
+                                                                    <span className="currency-sym">₼</span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="method-amount">
+                                                                    <span>{isSelected.amount || calcTotal.sumTotal}</span>
+                                                                    <span className="symbol">₼</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
                                 <div
