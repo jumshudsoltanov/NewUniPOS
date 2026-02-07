@@ -10,7 +10,7 @@ import {
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
-const Header = () => {
+const Header = ({ showBack, backPath, onBack }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -65,11 +65,19 @@ const Header = () => {
         <Row className="w-100 m-0">
           {/* DESKTOP HALL TABS OR BACK BUTTON (Hidden on mobile) */}
           <Col lg={6} md={6} className="p-0 m-o d-none d-md-block">
-            {isChecksPage ? (
+            {isChecksPage || showBack ? (
               <div className="checks-header-left">
                 <button
                   className="back-button"
-                  onClick={() => navigate("/tables")}
+                  onClick={() => {
+                    if (onBack) {
+                      onBack();
+                    } else if (backPath) {
+                      navigate(backPath);
+                    } else {
+                      navigate(-1);
+                    }
+                  }}
                 >
                   <svg
                     width="20"
@@ -86,7 +94,9 @@ const Header = () => {
                     />
                   </svg>
                 </button>
-                <span className="checks-page-title">Çeklər</span>
+                <span className="checks-page-title">
+                  {showBack ? "" : "Çeklər"}
+                </span>
               </div>
             ) : (
               <ul className="hallsTab">

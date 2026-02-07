@@ -16,6 +16,7 @@ import Layout from "./components/Layout/Layout";
 import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 import Toastify from "./components/Toastify/Toastify";
 import "react-toastify/dist/ReactToastify.css";
+import CheckOver from "./components/CheckOver/CheckOver";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -110,7 +111,7 @@ function AppContent() {
       <Toastify />
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/pin" element={<Pin />} />
+        <Route path="/pin" element={<CheckOver />} />
 
         <Route element={<Layout />}>
           <Route path="/tables" element={<Tables />} />

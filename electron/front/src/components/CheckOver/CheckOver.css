@@ -1,0 +1,356 @@
+.check-over-page {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #F3F4F6;
+    overflow: hidden;
+}
+
+.check-over-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Calculator Section */
+.calculator-section {
+    background-color: #F3F4F6;
+    height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+    padding: 24px !important;
+}
+
+.calc-display-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.calc-input {
+    height: 75px;
+    background: #FFF !important;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 0 65px 0 20px;
+    font-size: 22px;
+    font-weight: 400;
+    color: #343434;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.calc-input::placeholder {
+    color: #9CA3AF;
+    font-size: 16px;
+}
+
+.currency-symbol {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 22px;
+    color: #343434;
+    font-weight: 400;
+}
+
+.numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 12px;
+    width: 100%;
+    flex-grow: 1;
+}
+
+.numpad-btn {
+    background: #FFF;
+    border: 1px solid #E5E7EB;
+    /* Added border for better visibility */
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    /* Slightly larger numbers */
+    font-weight: 500;
+    color: #111827;
+    /* Darker for better contrast */
+    cursor: pointer;
+    height: 100%;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+}
+
+.numpad-btn:active {
+    background: #F3F4F6;
+    transform: scale(0.98);
+}
+
+.del-btn {
+    color: #1F2937;
+}
+
+.del-btn svg {
+    width: 32px;
+    height: 32px;
+}
+
+/* Payment Section */
+.payment-section {
+    height: calc(100vh - 60px);
+    border-left: 1px solid #E5E7EB;
+}
+
+.payment-title {
+    font-size: 32px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.total-amount-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #053796;
+}
+
+.total-amount-display .amount {
+    font-size: 40px;
+    font-weight: 600;
+}
+
+.total-amount-display .symbol {
+    font-size: 32px;
+}
+
+.payment-methods {
+    width: 100%;
+}
+
+.payment-method-item {
+    background: #F3F4F6;
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    padding: 16px 20px;
+    background: #F3F4F6;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.payment-method-item:hover {
+    background: #E5E7EB;
+}
+
+.payment-method-item.active {
+    background: #EBF2FE;
+    border-color: #3B82F6;
+}
+
+.payment-method-item.card-method {
+    background: transparent;
+    border: 1px solid #E5E7EB;
+    justify-content: center;
+}
+
+.method-name {
+    font-size: 18px;
+    color: #374151;
+    /* Darker gray for better contrast */
+    font-weight: 500;
+}
+
+.payment-method-item.active .method-name {
+    color: #053796;
+    /* Darker blue for active state */
+}
+
+.method-amount {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    /* Near black for readability */
+}
+
+/* Toggle Styles */
+.print-toggle-section {
+    border-top: 1px solid #E5E7EB;
+}
+
+.toggle-label {
+    font-size: 18px;
+    color: #111827;
+    /* Near black */
+    font-weight: 500;
+}
+
+/* Clickable Row Helper */
+.clickable-row {
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 4px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.clickable-row:hover {
+    background-color: #F9FAFB;
+}
+
+.clickable-row:active {
+    background-color: #F3F4F6;
+}
+
+/* Larger Toggle */
+.large-switch .form-check-input {
+    width: 60px !important;
+    height: 30px !important;
+    cursor: pointer;
+    background-color: #D1D5DB;
+    border-color: #D1D5DB;
+}
+
+.large-switch .form-check-input:checked {
+    background-color: #00D26A !important;
+    border-color: #00D26A !important;
+}
+
+.large-switch .form-check-input:focus {
+    box-shadow: none;
+}
+
+/* Unpaid Reasons */
+.unpaid-reason-item {
+    width: 100%;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 4px;
+    padding: 0 12px;
+    /* Added some horizontal padding for the hover effect */
+}
+
+.unpaid-reason-item:hover {
+    background-color: #F9FAFB;
+}
+
+.unpaid-reason-item.active {
+    background-color: #F3F4F6;
+}
+
+.reason-label {
+    font-size: 18px;
+    color: #374151;
+    /* Darker gray */
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.unpaid-reason-item.active .reason-label {
+    color: #111827;
+    /* Near black for active state */
+    font-weight: 600;
+}
+
+.unpaid-reason-item .form-check-input {
+    width: 24px;
+    height: 24px;
+    margin-top: 0;
+    cursor: pointer;
+    border-color: #9CA3AF;
+}
+
+/* Comment Section */
+.comment-textarea {
+    border: 1px solid #9CA3AF;
+    /* Darker border */
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 16px;
+    color: #111827;
+    resize: none;
+    box-shadow: none !important;
+}
+
+.comment-textarea::placeholder {
+    color: #6B7280;
+}
+
+.comment-textarea:focus {
+    border-color: #374151;
+}
+
+/* Action Buttons */
+.action-buttons-section {
+    gap: 20px;
+}
+
+.unpaid-mode-btn,
+.back-to-payment-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.unpaid-mode-btn {
+    color: #B91C1C;
+    /* Stronger red */
+}
+
+.back-to-payment-btn {
+    color: #053796;
+    /* Stronger blue */
+}
+
+.confirm-close-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 14px 70px;
+    /* Slightly larger */
+    font-size: 20px;
+    font-weight: 600;
+    color: #FFF;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.confirm-close-btn:disabled {
+    background-color: #E5E7EB;
+    color: #9CA3AF;
+    cursor: not-allowed;
+}
+
+.confirm-close-btn.green-btn {
+    background-color: #00D26A;
+    box-shadow: 0 4px 6px rgba(0, 210, 106, 0.2);
+}
+
+.confirm-close-btn.maroon-btn {
+    background-color: #8B2626;
+    box-shadow: 0 4px 6px rgba(139, 38, 38, 0.2);
+}
+
+@media (max-width: 768px) {
+    .payment-title {
+        font-size: 24px;
+    }
+
+    .total-amount-display .amount {
+        font-size: 32px;
+    }
+
+    .confirm-close-btn {
+        width: 100%;
+        padding: 12px;
+    }
+}
