@@ -13,27 +13,27 @@ const PaymentMethodsModel = db.sequelize.define(
 
     profile_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
 
     type: {
       type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true,
     },
 
     name: {
       type: DataTypes.TEXT,
-      allowNull: false,
+      allowNull: true,
     },
 
     is_split: {
       type: DataTypes.TINYINT,
-      allowNull: false,
+      allowNull: true,
     },
 
     is_tax: {
       type: DataTypes.TINYINT,
-      allowNull: false,
+      allowNull: true,
       defaultValue: 0,
     },
   },
