@@ -5,7 +5,7 @@ import {
   clearOrders,
   sendOrdersItems,
 } from "../../redux/Slices/OrdersSlice";
-import { useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useCallback } from "react";
 import { useMemo } from "react";
@@ -18,6 +18,7 @@ const CheckBottom = ({ orders, hall }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { id } = useParams();
+  const navigate = useNavigate()
 
   const payload = {
     orderId: id,
@@ -39,6 +40,12 @@ const CheckBottom = ({ orders, hall }) => {
       console.error(e);
     }
   };
+
+  // Close Check
+
+  const goCloseCheck = () => {
+    navigate(`/closecheck/${id}`)
+  }
 
   // Caclculate total
 
@@ -198,6 +205,7 @@ const CheckBottom = ({ orders, hall }) => {
           <button
             className={`btn-pay ${orders?.is_locked == 1 ? 'disabled' : ''}`}
             disabled={orders?.is_locked == 1}
+            onClick={goCloseCheck}
           >
             <i className="bi bi-check2-all"></i>
             <span>{calcTotal.sumTotal} ₼</span>

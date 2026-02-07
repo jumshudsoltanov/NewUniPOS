@@ -111,7 +111,7 @@ function AppContent() {
       <Toastify />
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path="/pin" element={<CheckOver />} />
+        <Route path="/pin" element={<Pin />} />
 
         <Route element={<Layout />}>
           <Route path="/tables" element={<Tables />} />
@@ -120,6 +120,7 @@ function AppContent() {
         </Route>
 
         <Route path="/check/:id" element={<Check />} />
+        <Route path="/closecheck/:id" element={<CheckOver />} />
       </Routes>
     </>
   );

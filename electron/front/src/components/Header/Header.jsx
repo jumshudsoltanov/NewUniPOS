@@ -74,6 +74,8 @@ const Header = ({ showBack, backPath, onBack }) => {
                       onBack();
                     } else if (backPath) {
                       navigate(backPath);
+                    } else if (isChecksPage) {
+                      navigate("/tables");
                     } else {
                       navigate(-1);
                     }

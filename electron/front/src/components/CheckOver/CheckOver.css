@@ -130,35 +130,40 @@
 
 .payment-method-item {
     background: #F3F4F6;
+    border: 2px solid transparent;
     border-radius: 12px;
-    padding: 24px;
+    padding: 20px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    transition: all 0.2s ease;
-    border: 2px solid transparent;
-    padding: 16px 20px;
-    background: #F3F4F6;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .payment-method-item:hover {
     background: #E5E7EB;
+    border-color: #D1D5DB;
 }
 
 .payment-method-item.active {
     background: #EBF2FE;
-    border-color: #3B82F6;
+    border-color: #053796;
 }
 
 .payment-method-item.card-method {
-    background: transparent;
-    border: 1px solid #E5E7EB;
     justify-content: center;
+    background: #FFF;
+    border: 1px solid #E5E7EB;
+}
+
+.payment-method-item.card-method:hover {
+    background: #F9FAFB;
+    border-color: #D1D5DB;
+}
+
+.payment-method-item.card-method.active {
+    background: #EBF2FE;
+    border-color: #053796;
 }
 
 .method-name {
@@ -197,8 +202,8 @@
     cursor: pointer;
     transition: all 0.2s;
     border-radius: 4px;
-    padding-left: 12px;
-    padding-right: 12px;
+    margin: 0 -24px;
+    padding: 16px 24px;
 }
 
 .clickable-row:hover {
@@ -219,8 +224,8 @@
 }
 
 .large-switch .form-check-input:checked {
-    background-color: #00D26A !important;
-    border-color: #00D26A !important;
+    background-color: #053796 !important;
+    border-color: #053796 !important;
 }
 
 .large-switch .form-check-input:focus {
@@ -331,8 +336,8 @@
 }
 
 .confirm-close-btn.green-btn {
-    background-color: #00D26A;
-    box-shadow: 0 4px 6px rgba(0, 210, 106, 0.2);
+    background-color: #053796;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
 }
 
 .confirm-close-btn.maroon-btn {
@@ -340,9 +345,76 @@
     box-shadow: 0 4px 6px rgba(139, 38, 38, 0.2);
 }
 
+/* Calc Info Grid */
+.calc-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.calc-info-card {
+    background: #FFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.calc-info-card .label {
+    font-size: 12px;
+    color: #6B7280;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.calc-info-card .value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.calc-info-card.highlighted {
+    background: #EBF2FE;
+    border-color: #053796;
+}
+
+.calc-info-card.highlighted .value {
+    color: #053796;
+}
+
+.calc-info-card:hover {
+    border-color: #D1D5DB;
+    background-color: #F9FAFB;
+}
+
+.calc-info-card.highlighted:hover {
+    background-color: #EBF2FE;
+    border-color: #053796;
+}
+
+.calc-info-card.positive .value {
+    color: #00D26A;
+}
+
+.calc-info-card.negative .value {
+    color: #B91C1C;
+}
+
 @media (max-width: 768px) {
     .payment-title {
         font-size: 24px;
+    }
+
+    .status-badge {
+        font-size: 14px;
+        padding: 4px 10px;
+    }
+
+    .calc-info-grid {
+        grid-template-columns: 1fr;
     }
 
     .total-amount-display .amount {

@@ -1,17 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Container, Col, Row, Form } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Header from "../Header/Header";
 import "./CheckOver.css";
 
 const CheckOver = () => {
     const navigate = useNavigate();
+    const { id } = useParams();
     const [calcValue, setCalcValue] = useState("");
     const [selectedPayment, setSelectedPayment] = useState("Nağd");
     const [viewMode, setViewMode] = useState("PAYMENT"); // 'PAYMENT' or 'UNPAID'
     const [printCheck, setPrintCheck] = useState(false);
     const [unpaidReason, setUnpaidReason] = useState("Qarson səhvi");
     const [comment, setComment] = useState("");
+
+    const { books } = useSelector((state) => state.BooksSlice);
+
+    const currentOrder = useMemo(() => {
+        if (!books?.data) return null;
+        return books.data.find(o => o.uuid === id);
+    }, [books, id]);
+
+    const calcTotal = useMemo(() => {
+        if (!currentOrder) return { total: 0, sumTotal: 0 };
+
+        let total = 0;
+        currentOrder.orders_items?.forEach((item) => {
+            const count = Number(item.count || item.quantity || 0);
+            const price = Number(item.price || 0);
+            total += count * price;
+        });
+
+        // Robust Calculation matching CheckBottom.jsx
+        // Calculate Discount
+        const discountValue = Number(currentOrder.discount_value || 0);
+        const discountType = currentOrder.discount_type || "percent";
+        let discountAmount = 0;
+
+        if (discountValue > 0) {
+            if (discountType === "percent") {
+                discountAmount = (total * discountValue) / 100;
+            } else {
+                discountAmount = discountValue;
+            }
+        } else if (currentOrder.discount) {
+            discountAmount = Number(currentOrder.discount);
+        }
+
+        // Calculate Service Fee
+        let serviceValue = Number(currentOrder.service_value || 0);
+        let serviceType = currentOrder.service_type || "percent";
+        let serviceAmount = 0;
+
+        if (serviceValue > 0) {
+            if (serviceType === "percent") {
+                serviceAmount = (total * serviceValue) / 100;
+            } else {
+                serviceAmount = serviceValue;
+            }
+        } else if (currentOrder.service_charge) {
+            serviceAmount = Number(currentOrder.service_charge);
+        }
+
+        const depositAmount = Number(currentOrder.deposit || 0);
+
+        let sumTotal = total - discountAmount + serviceAmount + depositAmount;
+        if (sumTotal < 0) sumTotal = 0;
+
+        return {
+            total: total.toFixed(2),
+            sumTotal: sumTotal.toFixed(2),
+            discountAmount: discountAmount.toFixed(2),
+            serviceAmount: serviceAmount.toFixed(2),
+            depositAmount: depositAmount.toFixed(2)
+        };
+    }, [currentOrder]);
+
+    const remainingBalance = useMemo(() => {
+        const paid = Number(calcValue || 0);
+        const toPay = Number(calcTotal.sumTotal);
+        const remaining = paid - toPay;
+        return remaining.toFixed(2);
+    }, [calcValue, calcTotal.sumTotal]);
 
     const handleNumClick = (val) => {
         if (val === "." && calcValue.includes(".")) return;
@@ -35,11 +106,26 @@ const CheckOver = () => {
                             <Form.Control
                                 type="text"
                                 className="calc-input text-end"
-                                placeholder="Qalıq hesablayıcı"
-                                value={calcValue || "0.00"}
+                                placeholder="Məbləği daxil edin"
+                                value={calcValue}
                                 readOnly
                             />
                             <span className="currency-symbol">₼</span>
+                        </div>
+
+                        <div className="calc-info-grid mb-4">
+                            <div className="calc-info-card">
+                                <span className="label">Ödənilməli</span>
+                                <span className="value">{calcTotal.sumTotal} ₼</span>
+                            </div>
+                            <div className="calc-info-card highlighted">
+                                <span className="label">Ödənilən</span>
+                                <span className="value">{Number(calcValue || 0).toFixed(2)} ₼</span>
+                            </div>
+                            <div className={`calc-info-card ${Number(remainingBalance) >= 0 ? 'positive' : 'negative'}`}>
+                                <span className="label">Qalıq</span>
+                                <span className="value">{remainingBalance} ₼</span>
+                            </div>
                         </div>
                         <div className="numpad-grid">
                             {numpadButtons.map((btn, idx) => (
@@ -67,7 +153,7 @@ const CheckOver = () => {
                                 <div className="payment-header d-flex justify-content-between align-items-center mb-4">
                                     <h2 className="payment-title">Ödənilməli</h2>
                                     <div className="total-amount-display">
-                                        <span className="amount">400.00</span>
+                                        <span className="amount">{calcTotal.sumTotal}</span>
                                         <span className="symbol">₼</span>
                                     </div>
                                 </div>
@@ -79,7 +165,7 @@ const CheckOver = () => {
                                     >
                                         <span className="method-name">Nağd</span>
                                         <div className="method-amount">
-                                            <span>400.00</span>
+                                            <span>{calcTotal.sumTotal}</span>
                                             <span className="symbol">₼</span>
                                         </div>
                                     </div>
@@ -127,7 +213,7 @@ const CheckOver = () => {
                                 <div className="payment-header d-flex justify-content-between align-items-center mb-4">
                                     <h2 className="payment-title">Ödənişsiz bağla</h2>
                                     <div className="total-amount-display strikethrough">
-                                        <span className="amount">400.00</span>
+                                        <span className="amount">{calcTotal.sumTotal}</span>
                                         <span className="symbol">₼</span>
                                     </div>
                                 </div>
