@@ -139,6 +139,21 @@ export const deleteOrderItems = createAsyncThunk(
   },
 );
 
+export const deleteOrderItem = createAsyncThunk(
+  "orders/delete-item",
+  async ({ orderId, itemId, reasonId, qty }, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:55667/api/orders-items/${orderId}/delete-item`,
+        { itemId, reasonId, qty },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const mergeChecks = createAsyncThunk(
   "orders/merge-check",
   async ({ currentOrderId, newOrderId }, thunkAPI) => {
@@ -276,9 +291,17 @@ export const OrderSlice = createSlice({
     changeSaleTypeData: {},
     updateWaiter: {},
     splitOrderData: {},
+    pendingDeletions: [],
   },
 
   reducers: {
+    addPendingDeletion: (state, action) => {
+      // payload: { orderId, itemId, reasonId, qty, type: 'full'|'partial', name, originalQty, price }
+      state.pendingDeletions.push(action.payload);
+    },
+    clearPendingDeletions: (state) => {
+      state.pendingDeletions = [];
+    },
     addProducts: (state, action) => {
       const existingProduct = state.products.find(
         (product) => product.id === action.payload.id,
@@ -330,6 +353,7 @@ export const OrderSlice = createSlice({
             quantity: count,
             newOrder: 1,
             isNew: true,
+            is_gift: true,
           });
         }
       }
@@ -354,9 +378,11 @@ export const OrderSlice = createSlice({
       })
       .addCase(getTableGroups.fulfilled, (state, action) => {
         state.sentProducts = [];
+        state.pendingDeletions = [];
       })
       .addCase(getActiveOrders.fulfilled, (state, action) => {
         state.sentProducts = [];
+        state.pendingDeletions = [];
       })
       .addCase(updateDiscountOnOrders.fulfilled, (state, action) => {
         state.discount = action.payload;
@@ -375,6 +401,14 @@ export const OrderSlice = createSlice({
       })
       .addCase(updateComments.fulfilled, (state, action) => {
         state.comments = action.payload;
+      })
+      .addCase(deleteOrderItem.fulfilled, (state, action) => {
+        if (state.pendingDeletions) {
+          // We use loose comparison or ensure types match. itemId usually matches product_id.
+          // action.meta.arg contains the arguments passed to the thunk.
+          const { itemId } = action.meta.arg;
+          state.pendingDeletions = state.pendingDeletions.filter(item => Number(item.itemId) !== Number(itemId));
+        }
       })
       .addCase(deleteOrderItems.fulfilled, (state, action) => {
         state.products = [];
@@ -401,6 +435,6 @@ export const OrderSlice = createSlice({
   },
 });
 
-export const { addProducts, sendOrders, clearOrders, menuData, updateCount, removeProduct } =
+export const { addProducts, sendOrders, clearOrders, menuData, updateCount, removeProduct, addPendingDeletion, clearPendingDeletions } =
   OrderSlice.actions;
 export default OrderSlice.reducer;

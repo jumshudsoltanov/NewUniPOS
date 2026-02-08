@@ -1120,7 +1120,15 @@ const Check = () => {
       />
 
       <SplitOrderModal show={openSplitModal} onClose={() => setOpenSplitModal(false)} order={currentOrder} onSplit={handleSplitOrder} />
-      <CheckDeleteModal show={openDeleCheckModal} onConfirm={(data) => handleDeleteCheckFunction(data.reason, data.orderId)} onClose={() => setOpenDeleteCheckModal(false)} order={currentOrder} type={"checks"} tagsType={1} />
+      <CheckDeleteModal
+        show={openDeleCheckModal}
+        onConfirm={(data) => handleDeleteCheckFunction(data.reason, data.orderId)}
+        onClose={() => setOpenDeleteCheckModal(false)}
+        order={currentOrder}
+        type={"checks"}
+        tagsType={4}
+        actionName="Sil"
+      />
       <SalesTypesModal
         show={onShowSalesTypeModal}
         target={newOrderBtnRef.current}

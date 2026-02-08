@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
-import { splitOrder, giftItem, updateItemDiscount, updateCount } from "../../redux/Slices/OrdersSlice";
+import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from 'react-toastify';
@@ -12,7 +12,8 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
-const EditModal = ({ show, onClose, product, orders }) => {
+const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
+  console.log("EditModal render:", { show, product, orders });
   const [activeTab, setActiveTab] = useState("edit");
   const [qty, setQty] = useState(product?.count || 1);
   const [price, setPrice] = useState(product?.price || 0);
@@ -35,7 +36,6 @@ const EditModal = ({ show, onClose, product, orders }) => {
   const [selectedTable, setSelectedTable] = useState(null);
   const [selectedWaiter, setSelectedWaiter] = useState(null);
   const [createNewOrder, setCreateNewOrder] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const navigate = useNavigate();
   const { tableGroups } = useSelector((state) => state.TablesSlice);
@@ -166,7 +166,25 @@ const EditModal = ({ show, onClose, product, orders }) => {
             <div className="sidebar-bottom">
               <button
                 className="sidebar-btn btn-delete"
-                onClick={() => setShowDeleteModal(true)}
+                onClick={() => {
+                  if (product.isNew) {
+                    // Find index in products array. 
+                    // Since product prop is constructed in CheckMain, we rely on product_id matches.
+                    // But duplicates might exist if we added same product twice?
+                    // CheckMain merges them: "Process New (Local) ... combinedLocal.forEach..."
+                    // A local product in `products` array has `id` (productId).
+                    // `updateCount` handles finding by productId.
+                    // So we can just find index by productId.
+
+                    const index = products.findIndex(p => p.id === (product.product_id || product.id));
+                    if (index !== -1) {
+                      dispatch(removeProduct(index));
+                    }
+                    onClose();
+                  } else {
+                    onOpenDeleteModal('full', product);
+                  }
+                }}
               >
                 <i className="bi bi-trash3-fill"></i>
                 <span>Sil</span>
@@ -248,6 +266,12 @@ const EditModal = ({ show, onClose, product, orders }) => {
                   onClick={() => {
                     const savedQty = product.savedQuantity || 0;
                     const newLocalQty = qty - savedQty;
+
+                    if (newLocalQty < 0) {
+                      // Reducing quantity of saved items
+                      onOpenDeleteModal('partial', product, Math.abs(newLocalQty));
+                      return;
+                    }
 
                     dispatch(
                       updateCount({
@@ -485,16 +509,6 @@ const EditModal = ({ show, onClose, product, orders }) => {
           show={showWaiterSelect}
           onClose={() => setShowWaiterSelect(false)}
           onSelect={(waiter) => { setSelectedWaiter(waiter); setShowWaiterSelect(false); }}
-        />
-        <CheckDeleteModal
-          show={showDeleteModal}
-          onClose={() => setShowDeleteModal(false)}
-          onConfirm={(data) => {
-            console.log("Delete confirmed:", data);
-            // Handle delete logic here
-            setShowDeleteModal(false);
-            onClose(); // Close the edit modal as well
-          }}
         />
       </Modal.Body>
     </Modal >

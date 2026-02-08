@@ -45,6 +45,9 @@
 }
 
 /* Badge for Printer */
+/* Badge for Printer */
+
+
 .icon-badge {
     position: absolute;
     top: -5px;
@@ -631,12 +634,10 @@
 .btn-send,
 .btn-pay {
     width: 100%;
-    /* Fill the grid cell */
     min-width: 0;
-    /* Allow shrinking below content size if needed */
     height: 50px;
     border: none;
-    border-radius: 8px;
+    border-radius: 4px;
     padding: 0;
     font-weight: 600;
     display: flex;
@@ -685,7 +686,7 @@
     width: 50px;
     height: 50px;
     border: 1px solid #e8eaed;
-    border-radius: 8px;
+    border-radius: 4px;
     background-color: #fff;
     color: #6c757d;
     display: flex;
@@ -715,6 +716,7 @@
     flex: 1;
     position: relative;
     z-index: 1;
+    /* No gap for joined buttons */
 }
 
 .btn-send-group .btn-send {
@@ -722,6 +724,7 @@
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     border-right: none;
+    /* Remove right border so it merges with menu button */
     cursor: pointer;
     pointer-events: auto;
 }
@@ -736,6 +739,7 @@
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
     border-left: 1px solid #e8eaed;
+    /* Divider border */
     box-shadow: none;
     cursor: pointer;
     pointer-events: auto;

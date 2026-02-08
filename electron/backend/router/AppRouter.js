@@ -65,6 +65,11 @@ router.patch(
   OrdersItemsController.onDeleteOrderItems,
 );
 
+router.post(
+  "/orders-items/:orderId/delete-item",
+  OrdersItemsController.onDeleteItemWithReason,
+);
+
 router.patch(
   "/orders-items/:currentOrderId/merge-orders",
   OrdersItemsController.onMergeChecks,

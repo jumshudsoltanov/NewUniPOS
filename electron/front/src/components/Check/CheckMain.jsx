@@ -2,15 +2,24 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
+import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal"; // Import
+import { addPendingDeletion } from "../../redux/Slices/OrdersSlice"; // Import action
+import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
 
 const CheckMain = ({ orders }) => {
+  const dispatch = useDispatch(); // Add dispatch
   const [editItemModal, setEditItemModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // State for Product Delete Modal
+  const [openDeleteProductModal, setOpenDeleteProductModal] = useState(false);
+  const [deleteActionType, setDeleteActionType] = useState('full');
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [qtyToReduce, setQtyToReduce] = useState(0);
+
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
-
-
-  // console.log(orders)
+  const { pendingDeletions } = useSelector((state) => state.OrderSlice);
 
   const allItems = useMemo(() => {
     const groupedMap = new Map();
@@ -75,10 +84,53 @@ const CheckMain = ({ orders }) => {
       }
     });
 
-    return Array.from(groupedMap.values()).sort((a, b) => Number(a.firstId) - Number(b.firstId));
-  }, [orders, menu, products, sentProducts]);
+    let items = Array.from(groupedMap.values()).sort((a, b) => Number(a.firstId) - Number(b.firstId));
+
+    // 3. Apply Pending Deletions
+    // We need to return a list that includes:
+    // - Normal items (maybe with reduced count)
+    // - Deleted items (marked as deleted)
+
+    // Strategy:
+    // For each pending deletion, find the target item in `items`.
+    // If partial: reduce count of the target item. If count goes to 0, mark as fully deleted.
+    // If full: mark target item as deleted.
+
+    // NOTE: Pending deletions refer to `itemId` which matches `product_id` (or `id` in some contexts).
+    // But `items` are grouped by `product_id`.
+    // pendingDeletion.itemId matches product_id.
+
+    // To display "deleted" items visually (strikethrough), we might want to keep them in the list.
+    // But if we reduce count, we change the valid item.
+    // If we fully delete, we mark it.
+
+    // Let's create a new list for rendering that includes visual cues.
+
+    const renderedItems = items.map(item => ({ ...item, displayDetails: null }));
+
+    pendingDeletions.forEach(pd => {
+      const target = renderedItems.find(i => Number(i.product_id) === Number(pd.itemId));
+      if (target) {
+        if (pd.type === 'full') {
+          target.isDeleted = true;
+        } else if (pd.type === 'partial') {
+          // Reduce the displayed count
+          // We can show "5 -> 3" or just "3"
+          // User request: "typesini 1 ele yalniz oirda type bir olan gelsin ve men mehsul silende bir basa silinmesin ... gonder curandan sonra silsin ve check render olunski itsin"
+          // Translation: "when I delete product, don't delete immediately ... after sending, delete it and render check so it disappears"
+          target.count -= pd.qty;
+          target.partialDelete = (target.partialDelete || 0) + pd.qty;
+          if (target.count <= 0) target.isDeleted = true;
+        }
+      }
+    });
+
+    return renderedItems;
+
+  }, [orders, menu, products, sentProducts, pendingDeletions]);
 
   const handleItemClick = (item) => {
+    if (item.isDeleted) return; // Prevent clicking deleted items
     setSelectedProduct(item);
     setEditItemModal(true);
   };
@@ -104,15 +156,21 @@ const CheckMain = ({ orders }) => {
               const productInfo = menu.find(m => m.id === item.product_id);
               const originalPrice = productInfo?.price || 0;
 
+              // Visual styles for deleted items
+              const rowStyle = item.isDeleted ? { textDecoration: 'line-through', color: 'red', opacity: 0.7 } : {};
+
               return (
                 <div
                   onClick={() => handleItemClick(item)}
                   className={`order-item ${item.isNew ? "new-order-highlight" : ""}`}
                   key={`${item.product_id}-${item.is_gift}-${index}`}
+                  style={rowStyle}
                 >
                   <div className="col-name">
                     {item.name}
                     {item.is_gift === 1 && <i className="bi bi-gift-fill text-danger ms-2"></i>}
+                    {item.isDeleted && <span className="ms-2 badge bg-danger">Silinəcək</span>}
+                    {item.partialDelete > 0 && !item.isDeleted && <span className="ms-2 badge bg-warning text-dark">-{item.partialDelete}</span>}
                     {item.discount_value > 0 && item.discount_type !== 0 && (
                       <span className="discount-badge">
                         Endirim: {item.discount_type === 1 ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
@@ -143,14 +201,61 @@ const CheckMain = ({ orders }) => {
             })}
         </div>
       </div>
+
       {editItemModal && (
         <EditModal
           show={editItemModal}
           onClose={() => setEditItemModal(false)}
           product={selectedProduct}
           orders={orders}
+          onOpenDeleteModal={(type, product, qty) => {
+            setEditItemModal(false);
+            setDeleteActionType(type);
+            setProductToDelete(product);
+            setQtyToReduce(qty);
+            setOpenDeleteProductModal(true);
+          }}
         />
-      )}
+      )
+      }
+
+      {/* Product Delete Modal */}
+      <CheckDeleteModal
+        show={openDeleteProductModal}
+        onClose={() => setOpenDeleteProductModal(false)}
+        onConfirm={async (data) => {
+          setOpenDeleteProductModal(false);
+          const product = productToDelete;
+
+          if (deleteActionType === 'full') {
+            dispatch(addPendingDeletion({
+              orderId: orders.uuid,
+              itemId: product.product_id || product.id,
+              reasonId: data.reason,
+              type: 'full',
+              name: product.name,
+              originalQty: product.count,
+              price: product.price
+            }));
+            toast.success("Məhsul silinmək üçün işarələndi!");
+          } else if (deleteActionType === 'partial') {
+            dispatch(addPendingDeletion({
+              orderId: orders.uuid,
+              itemId: product.product_id || product.id,
+              reasonId: data.reason,
+              qty: qtyToReduce,
+              type: 'partial',
+              name: product.name,
+              originalQty: product.count,
+              price: product.price
+            }));
+            toast.success("Miqdar azalma üçün işarələndi!");
+          }
+        }}
+        order={orders}
+        tagsType={1}
+        actionName={deleteActionType === 'partial' ? `Azalt (${qtyToReduce})` : "Sil"}
+      />
     </>
   );
 };

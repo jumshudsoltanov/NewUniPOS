@@ -5,6 +5,8 @@ import {
   clearOrders,
   sendOrdersItems,
   removeProduct,
+  deleteOrderItem,
+  clearPendingDeletions
 } from "../../redux/Slices/OrdersSlice";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -16,7 +18,7 @@ import NewItemsModal from "../NewItemsModal/NewItemsModal";
 
 const CheckBottom = ({ orders, hall }) => {
   const dispatch = useDispatch();
-  const { products, sentProducts } = useSelector((state) => state.OrderSlice);
+  const { products, sentProducts, pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { id } = useParams();
@@ -33,22 +35,42 @@ const CheckBottom = ({ orders, hall }) => {
 
   const handleSendOrders = async () => {
     try {
-      await dispatch(sendOrdersItems(payload)).unwrap();
-
-      if (orders?.table_id) {
-        dispatch(getTableGroups(payload.profileId));
-      } else {
-        dispatch(getActiveOrders({ profileId: payload.profileId }));
+      // 1. Process Pending Deletions first
+      if (pendingDeletions && pendingDeletions.length > 0) {
+        for (const deletion of pendingDeletions) {
+          await dispatch(deleteOrderItem({
+            orderId: deletion.orderId,
+            itemId: deletion.itemId,
+            reasonId: deletion.reasonId,
+            qty: deletion.type === 'partial' ? deletion.qty : undefined
+          })).unwrap();
+        }
       }
+
+      // 2. Send New Items
+      if (products.length > 0) {
+        await dispatch(sendOrdersItems(payload)).unwrap();
+      }
+
+      // 3. Refresh Data
+      if (orders?.table_id) {
+        await dispatch(getTableGroups(payload.profileId));
+      } else {
+        await dispatch(getActiveOrders({ profileId: payload.profileId }));
+      }
+
+      toast.success("Əməliyyat uğurla tamamlandı!");
+
     } catch (e) {
       console.error(e);
+      toast.error("Xəta baş verdi");
     }
   };
 
   // Close Check
 
   const goCloseCheck = async () => {
-    if (products.length > 0) {
+    if (products.length > 0 || pendingDeletions.length > 0) {
       await handleSendOrders()
     }
     navigate(`/closecheck/${id}`)
@@ -71,6 +93,24 @@ const CheckBottom = ({ orders, hall }) => {
     addItems(orders?.orders_items);
     addItems(products);
     addItems(sentProducts);
+
+    // Subtract Pending Deletions
+    if (pendingDeletions && pendingDeletions.length > 0) {
+      pendingDeletions.forEach((del) => {
+        const delQty = del.type === 'partial' ? del.qty : del.originalQty;
+        const delPrice = Number(del.price || 0);
+
+        // We assume pending deletions are always from existing orders (orders_items).
+        // Since we added all orders_items above, we just need to subtract the value.
+        // NOTE: If we mark a 'new' (local) product for deletion, it is removed from 'products' array directly in EditModal logic.
+        // So pendingDeletions only contains server items.
+
+        total -= (delQty * delPrice);
+      });
+    }
+
+    // Ensure total doesn't go below zero (though logic should prevent it)
+    if (total < 0) total = 0;
 
     // Calculate Dynamic Discount
     const discountValue = Number(orders?.discount_value || 0);
@@ -155,7 +195,10 @@ const CheckBottom = ({ orders, hall }) => {
     orders?.service_type,
     orders?.service_charge,
     orders?.deposit,
+    pendingDeletions // Added dependency
   ]);
+
+  const totalChanges = products.length + (pendingDeletions?.length || 0);
 
   return (
     <>
@@ -197,7 +240,7 @@ const CheckBottom = ({ orders, hall }) => {
         <div className="pt-3 action-buttons">
           <div className="btn-send-group">
             <button
-              className={`btn-send ${(orders?.is_locked == 1 || products.length === 0) ? 'disabled' : ''}`}
+              className={`btn-send ${(orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0)) ? 'disabled' : ''}`}
               onClick={() => {
                 if (orders?.is_locked == 1) {
                   toast.error("Qəbz kilidlidir!");
@@ -205,17 +248,17 @@ const CheckBottom = ({ orders, hall }) => {
                 }
                 handleSendOrders();
               }}
-              disabled={orders?.is_locked == 1 || products.length === 0}
+              disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0)}
             >
               <i className="bi bi-send"></i>
               <span>Göndər</span>
-              {products.length > 0 && (
-                <span className="new-items-badge">{products.length}</span>
+              {totalChanges > 0 && (
+                <span className="new-items-badge">{totalChanges}</span>
               )}
             </button>
 
             {/* 3-dot menu button - attached to send */}
-            {products.length > 0 && (
+            {(products.length > 0 || pendingDeletions.length > 0) && (
               <button
                 className="btn-menu-dots"
                 onClick={() => setShowNewItemsModal(true)}
@@ -247,7 +290,7 @@ const CheckBottom = ({ orders, hall }) => {
             }
             handleSendOrders();
           }}
-          disabled={orders?.is_locked == 1 || products.length === 0}
+          disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0)}
         >
           <i className="bi bi-printer-fill"></i>
         </button>
@@ -278,6 +321,7 @@ const CheckBottom = ({ orders, hall }) => {
         show={showNewItemsModal}
         onClose={() => setShowNewItemsModal(false)}
         items={products}
+        pendingDeletions={pendingDeletions}
         onDeleteItem={(index) => dispatch(removeProduct(index))}
         onSend={handleSendOrders}
       />

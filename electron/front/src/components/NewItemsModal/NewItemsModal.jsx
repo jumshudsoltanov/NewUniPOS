@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Modal } from "react-bootstrap";
 import "./NewItemsModal.css";
 
-const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend }) => {
+const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDeletions }) => {
     const [comments, setComments] = useState({});
     const [openComments, setOpenComments] = useState({});
 
@@ -108,10 +108,36 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend }) => {
                     </div>
                 ))}
 
-                {items.length === 0 && (
+                {(items.length === 0 && (!pendingDeletions || pendingDeletions.length === 0)) && (
                     <div className="new-items-empty">
                         <i className="bi bi-inbox"></i>
                         <p>Hazırda yeni məhsul yoxdur</p>
+                    </div>
+                )}
+
+                {/* Pending Deletions Section */}
+                {pendingDeletions && pendingDeletions.length > 0 && (
+                    <div className="new-items-dept-section mt-4">
+                        <div className="new-items-dept-header">
+                            <span className="dept-name">Silinəcək məhsullar</span>
+                        </div>
+                        <div className="new-items-list">
+                            {pendingDeletions.map((item, idx) => (
+                                <div key={`del-${idx}`} className="new-item-card">
+                                    <div className="new-item-row">
+                                        <div className="item-count-badge">
+                                            {item.type === 'partial' ? item.qty : item.originalQty}
+                                        </div>
+                                        <div className="item-info">
+                                            <span className="item-name text-decoration-line-through">{item.name}</span>
+                                            <span className="item-portion text-danger small">
+                                                {item.type === 'partial' ? '(Qismən silinir)' : '(Tam silinir)'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </Modal.Body>

@@ -39,7 +39,8 @@ const TablesSlice = createSlice({
       (action) =>
         action.type === "orders/lock-check/fulfilled" ||
         action.type === "orders/gift/fulfilled" ||
-        action.type === "orders/itemDiscount/fulfilled",
+        action.type === "orders/itemDiscount/fulfilled" ||
+        action.type === "orders/delete-item/fulfilled",
       (state, action) => {
         const updatedOrder = action.payload?.data || action.payload;
         if (!updatedOrder || !updatedOrder.uuid) return;

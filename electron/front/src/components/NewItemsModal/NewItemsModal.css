@@ -11,7 +11,8 @@
 }
 
 .new-items-header {
-    background: #6366f1;
+    background: #4F85F4;
+    /* Brand Light Blue */
     padding: 18px 24px;
     display: flex;
     align-items: center;
@@ -102,7 +103,8 @@
 .item-count-badge {
     width: 42px;
     height: 42px;
-    border: 2px solid #6366f1;
+    border: 2px solid #4F85F4;
+    /* Brand Light Blue */
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -110,7 +112,8 @@
     font-family: "Poppins", sans-serif;
     font-size: 16px;
     font-weight: 600;
-    color: #6366f1;
+    color: #4F85F4;
+    /* Brand Light Blue */
     flex-shrink: 0;
 }
 
@@ -200,7 +203,8 @@
 }
 
 .item-comment-input:focus {
-    border-color: #6366f1;
+    border-color: #4F85F4;
+    /* Brand Light Blue */
 }
 
 /* Empty State */
@@ -235,7 +239,8 @@
     align-items: center;
     gap: 10px;
     padding: 14px 48px;
-    background: #6366f1;
+    background: #4F85F4;
+    /* Brand Light Blue */
     border: none;
     border-radius: 10px;
     color: #fff;
@@ -247,7 +252,8 @@
 }
 
 .send-all-btn:hover {
-    background: #4f46e5;
+    background: #3a6bc0;
+    /* Darker Shade */
 }
 
 .send-all-btn i {

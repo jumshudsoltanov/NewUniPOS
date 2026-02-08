@@ -1232,6 +1232,116 @@ const onReturnCheck = async (req, res) => {
   }
 };
 
+// Delete Item with Reason
+const onDeleteItemWithReason = async (req, res) => {
+  const { orderId } = req.params;
+  const { itemId, reasonId, qty } = req.body;
+
+  if (!orderId || !itemId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const item = await OrdersItemsModel.findOne({
+      where: { order_id: orderId, product_id: itemId, is_gift: 0 },
+      transaction,
+    });
+
+    if (!item) {
+      throw new Error("Item not found");
+    }
+
+    console.log(`[DELETE REASON] Order: ${orderId}, Item: ${itemId}, Reason: ${reasonId}, Qty: ${qty || 'ALL'}`);
+
+    if (qty && qty > 0 && qty < item.count) {
+      // Partial delete
+      item.count -= qty;
+      await item.save({ transaction });
+    } else {
+      // Full delete
+      await item.destroy({ transaction });
+    }
+
+    // Recalculate totals
+    const allItems = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      attributes: ["count", "price"],
+      transaction,
+    });
+
+    const total = allItems.reduce((sum, it) => {
+      const q = parseFloat(it.count) || 0;
+      const p = parseFloat(it.price) || 0;
+      return sum + q * p;
+    }, 0);
+
+    const ord = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      transaction,
+    });
+
+    let discount = 0;
+    let service = 0;
+
+    if (ord) {
+      const dVal = parseFloat(ord.discount_value) || 0;
+      const sVal = parseFloat(ord.service_value) || 0;
+
+      if (dVal > 0) {
+        discount = ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
+      }
+      if (sVal > 0) {
+        service = ord.service_type === "percent" ? (total * sVal) / 100 : sVal;
+      }
+    }
+
+    let netTotal = Math.max(0, total - discount + service);
+
+    await OrdersModel.update(
+      {
+        amount: total,
+        total: netTotal,
+        discount,
+        service_charge: service,
+      },
+      { where: { uuid: orderId }, transaction }
+    );
+
+    await transaction.commit();
+
+    // Return updated order
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]],
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+          ],
+        },
+      ],
+    });
+
+    res.status(200).json(updatedOrder);
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error("Delete Item Error:", error);
+    res.status(500).json({ message: "Error deleting item", error: error.message });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -1251,4 +1361,5 @@ module.exports = {
   onUpdateDepositOrder,
   onCloseOrder,
   onReturnCheck,
+  onDeleteItemWithReason,
 };
