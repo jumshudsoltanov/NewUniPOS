@@ -6,7 +6,9 @@ import {
   sendOrdersItems,
   removeProduct,
   deleteOrderItem,
-  clearPendingDeletions
+  clearPendingDeletions,
+  addLog,
+  saveLog
 } from "../../redux/Slices/OrdersSlice";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -35,6 +37,7 @@ const CheckBottom = ({ orders, hall }) => {
 
   const handleSendOrders = async () => {
     try {
+      const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || orders?.waiter?.name || "Naməlum";
       // 1. Process Pending Deletions first
       if (pendingDeletions && pendingDeletions.length > 0) {
         for (const deletion of pendingDeletions) {
@@ -42,14 +45,17 @@ const CheckBottom = ({ orders, hall }) => {
             orderId: deletion.orderId,
             itemId: deletion.itemId,
             reasonId: deletion.reasonId,
-            qty: deletion.type === 'partial' ? deletion.qty : undefined
+            qty: deletion.type === 'partial' ? deletion.qty : undefined,
+            reasonName: deletion.reasonName, // Pass reason name
+            productName: deletion.name, // Pass product name
+            waiterName
           })).unwrap();
         }
       }
 
       // 2. Send New Items
       if (products.length > 0) {
-        await dispatch(sendOrdersItems(payload)).unwrap();
+        await dispatch(sendOrdersItems({ ...payload, waiterName })).unwrap();
       }
 
       // 3. Refresh Data
@@ -288,6 +294,14 @@ const CheckBottom = ({ orders, hall }) => {
               toast.error("Qəbz kilidlidir!");
               return;
             }
+            // Log Print
+            const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || orders?.waiter?.name || "Naməlum";
+            dispatch(saveLog({
+              orderId: orders.uuid,
+              action: "Çek çap edildi",
+              waiterName,
+              details: "Mobil çeki"
+            }));
             handleSendOrders();
           }}
           disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0)}

@@ -476,9 +476,7 @@
     box-shadow: 0 4px 10px rgba(79, 133, 244, 0.3);
 }
 
-/* Wavy top visual for the whole card? */
-/* Actually the image shows the blue background is BEHIND. 
-   And the "Check" is a white paper-like object on top. */
+
 
 .header-info-row {
     display: flex;
@@ -579,7 +577,6 @@
     box-shadow: none;
     border-top: none;
 }
-
 
 .checkBottom::before {
     /* If original had this */

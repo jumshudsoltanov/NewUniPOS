@@ -21,6 +21,7 @@ const CheckMain = ({ orders }) => {
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
 
+
   const allItems = useMemo(() => {
     const groupedMap = new Map();
 
@@ -86,26 +87,6 @@ const CheckMain = ({ orders }) => {
 
     let items = Array.from(groupedMap.values()).sort((a, b) => Number(a.firstId) - Number(b.firstId));
 
-    // 3. Apply Pending Deletions
-    // We need to return a list that includes:
-    // - Normal items (maybe with reduced count)
-    // - Deleted items (marked as deleted)
-
-    // Strategy:
-    // For each pending deletion, find the target item in `items`.
-    // If partial: reduce count of the target item. If count goes to 0, mark as fully deleted.
-    // If full: mark target item as deleted.
-
-    // NOTE: Pending deletions refer to `itemId` which matches `product_id` (or `id` in some contexts).
-    // But `items` are grouped by `product_id`.
-    // pendingDeletion.itemId matches product_id.
-
-    // To display "deleted" items visually (strikethrough), we might want to keep them in the list.
-    // But if we reduce count, we change the valid item.
-    // If we fully delete, we mark it.
-
-    // Let's create a new list for rendering that includes visual cues.
-
     const renderedItems = items.map(item => ({ ...item, displayDetails: null }));
 
     pendingDeletions.forEach(pd => {
@@ -114,11 +95,7 @@ const CheckMain = ({ orders }) => {
         if (pd.type === 'full') {
           target.isDeleted = true;
         } else if (pd.type === 'partial') {
-          // Reduce the displayed count
-          // We can show "5 -> 3" or just "3"
-          // User request: "typesini 1 ele yalniz oirda type bir olan gelsin ve men mehsul silende bir basa silinmesin ... gonder curandan sonra silsin ve check render olunski itsin"
-          // Translation: "when I delete product, don't delete immediately ... after sending, delete it and render check so it disappears"
-          target.count -= pd.qty;
+           target.count -= pd.qty;
           target.partialDelete = (target.partialDelete || 0) + pd.qty;
           if (target.count <= 0) target.isDeleted = true;
         }
@@ -138,6 +115,9 @@ const CheckMain = ({ orders }) => {
     setSelectedProduct(item);
     setEditItemModal(true);
   };
+
+
+    console.log(orders)
 
   return (
     <>
@@ -236,6 +216,7 @@ const CheckMain = ({ orders }) => {
               orderId: orders.uuid,
               itemId: product.product_id || product.id,
               reasonId: data.reason,
+              reasonName: data.reasonName, // Add reason name
               type: 'full',
               name: product.name,
               originalQty: product.count,
@@ -247,6 +228,7 @@ const CheckMain = ({ orders }) => {
               orderId: orders.uuid,
               itemId: product.product_id || product.id,
               reasonId: data.reason,
+              reasonName: data.reasonName, // Add reason name
               qty: qtyToReduce,
               type: 'partial',
               name: product.name,

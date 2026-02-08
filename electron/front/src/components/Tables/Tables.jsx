@@ -41,11 +41,34 @@ const Tables = () => {
       const { orders } = table || {};
       if (id) {
         try {
+          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+          // Find old table and hall name
+          let oldTableName = "Naməlum";
+          let oldHallName = "Naməlum";
+          if (tableGroups?.data) {
+            for (const hall of tableGroups.data) {
+              const tableWithOrder = hall.tables.find(t => t.orders?.some(o => o.uuid === id));
+              if (tableWithOrder) {
+                oldTableName = tableWithOrder.name;
+                oldHallName = hall.name;
+                break;
+              }
+            }
+          }
+
+          const newHallName = currentHallData?.name || "Naməlum";
+
           await dispatch(
             updateTableOrders({
               orderId: id,
               newTableId: table?.id,
               currentHallId,
+              oldTableName,
+              newTableName: table?.name,
+              oldHallName,
+              newHallName,
+              waiterName
             }),
           ).unwrap();
 

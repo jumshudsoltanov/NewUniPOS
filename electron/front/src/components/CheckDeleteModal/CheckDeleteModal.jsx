@@ -4,7 +4,6 @@ import "./CheckDeleteModal.css";
 import { useDispatch, useSelector } from "react-redux"
 import { getTagsList } from "../../redux/Slices/TagsSlice";
 const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, actionName }) => {
-    console.log("CheckDeleteModal render:", { show, tagsType, actionName });
     let headerName = type == "checks" ? "Çeki sil" : "Məhsulu sil"
     const [selectedReason, setSelectedReason] = useState(null);
     const [isWaste, setIsWaste] = useState(false);
@@ -34,7 +33,12 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
 
     const handleConfirm = () => {
         if (selectedReason) {
-            onConfirm({ reason: selectedReason, orderId: order.uuid });
+            const reasonObj = reasons.find(r => r.id === selectedReason);
+            onConfirm({
+                reason: selectedReason,
+                reasonName: reasonObj?.name,
+                orderId: order.uuid
+            });
             onClose(false);
         }
     };

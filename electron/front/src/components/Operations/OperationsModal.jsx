@@ -17,9 +17,11 @@ export const OperationsModal = ({
   handleOpenSplitModel,
   handleDeleteCheckModal,
   openDepositModal,
+  openHistory
 }) => {
   const operations = [
     { icon: "bi-arrows-angle-expand", text: "Çeki böl", functions: handleOpenSplitModel },
+    { icon: "bi-clock-history", text: "Əməliyyat Tarixçəsi", functions: openHistory },
     {
       icon: "bi-chat-left-text",
       text: "Çekə şərh yaz",
@@ -33,7 +35,6 @@ export const OperationsModal = ({
       text: "Çeki birləşdir",
       functions: openACtiveCheck,
     },
-    // { icon: "bi-person-check", text: "Satıcı təyin et" },
     {
       icon: "bi-arrow-left-right",
       text: "Satış üsulunu dəyiş",
@@ -60,7 +61,7 @@ export const OperationsModal = ({
         className="operations-modal"
       >
         {false && (
-          <Modal.Header className="bg-primary text-white border-0 py-3 px-4 d-flex align-items-center justify-content-between">
+          <Modal.Header  className="bg-primary text-white border-0 py-3 px-4 d-flex align-items-center justify-content-between">
             <h5 className="m-0"></h5>
             {/* Close X Button for Desktop */}
             <div

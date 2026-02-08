@@ -13,6 +13,7 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
   const [feeType, setFeeType] = useState("percent");
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
 
   useEffect(() => {
     if (order) {
@@ -50,11 +51,13 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
         return;
       }
 
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       await dispatch(
         updateServiceFeeOnOrders({
           orderId: order.uuid,
           serviceValue: value,
           feeType,
+          waiterName
         }),
       ).unwrap();
 

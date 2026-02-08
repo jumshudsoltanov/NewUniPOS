@@ -9,6 +9,7 @@ import TableGroupsModal from "../TableGroupsModal/TableGroupsModal";
 const ChangeSaleTypeModal = ({ show, onClose, order }) => {
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const [showTableModal, setShowTableModal] = useState(false);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
 
@@ -23,18 +24,31 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
   });
 
   const handleChnageSaleType = async (
-    saleType,
+    selectedTypeId,
     tableId = null,
     hallId = null,
   ) => {
     try {
-      if (saleType == "dine_in" && !tableId) {
+      if (selectedTypeId == "dine_in" && !tableId) {
         setShowTableModal(true);
         return;
       }
       onClose(true);
+
+      const oldTypeName = saleType.find(t => t.id === order?.sale_type)?.name || 'Naməlum';
+      const newTypeName = saleType.find(t => t.id === selectedTypeId)?.name || 'Naməlum';
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
       const result = await dispatch(
-        changeSaleType({ orderId: order.uuid, saleType, tableId, hallId }),
+        changeSaleType({
+          orderId: order.uuid,
+          saleType: selectedTypeId,
+          tableId,
+          hallId,
+          oldTypeName,
+          newTypeName,
+          waiterName
+        }),
       ).unwrap();
 
       if (result) {

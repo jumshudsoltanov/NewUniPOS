@@ -16,6 +16,7 @@ const CheckLockModal = ({ show, onClose, order }) => {
   const [status, setStatus] = useState(0);
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
 
   useEffect(() => {
     setStatus(order?.is_locked);
@@ -24,11 +25,13 @@ const CheckLockModal = ({ show, onClose, order }) => {
   const handleUpdateStatus = useCallback(async () => {
     try {
       const newStatus = status === 0 ? 1 : 0;
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 
       await dispatch(
         updateLockChecK({
           orderId: order?.uuid,
           status: newStatus,
+          waiterName
         }),
       ).unwrap();
 

@@ -27,9 +27,11 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog } from "../../redux/Slices/OrdersSlice";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
+
+import OrderLogsModal from "./OrderLogsModal"; // Import Modal
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -65,6 +67,7 @@ const Check = () => {
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get("tableId");
   const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
 
   const goTables = async () => {
     if (location.state?.from === "/checks") {
@@ -304,12 +307,14 @@ const Check = () => {
   const handleSplitOrder = async (splitData) => {
     const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table?.hall_id })
     try {
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const result = await dispatch(
         splitOrder({
           data: splitData,
           profileId: loginedProfileData?.data?.profile?.id,
           profile: loginedProfileData?.data?.profile,
-          hallData: hallServiceFee
+          hallData: hallServiceFee,
+          waiterName
         })
       ).unwrap();
 
@@ -344,7 +349,8 @@ const Check = () => {
 
 
   const handleDeleteCheckFunction = async (reason, orderId) => {
-    const res = await dispatch(deleteCheck({ orderId, reason })).unwrap()
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    const res = await dispatch(deleteCheck({ orderId, reason, waiterName })).unwrap()
     if (res.message == "success") {
       await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id))
       await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }))
@@ -559,6 +565,25 @@ const Check = () => {
                     />
                   </svg>
                 </div>
+                <div
+                  className={`sidebar-icon history ${showHistoryModal ? 'active-sidebar-icon' : ''}`}
+                  onClick={() => setShowHistoryModal(true)}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#343434"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                </div>
               </div>
 
               <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
@@ -599,7 +624,22 @@ const Check = () => {
                   </svg>
                 </div>
 
-                <div className="sidebar-icon position-relative">
+                <div
+                  className="sidebar-icon position-relative"
+                  title="Çap et"
+                  onClick={() => {
+                    if (currentOrder?.uuid) {
+                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                      dispatch(saveLog({
+                        orderId: currentOrder.uuid,
+                        action: "Çek çap edildi",
+                        waiterName,
+                        details: "Sifariş çeki"
+                      }));
+                      toast.info("Çapa göndərildi...");
+                    }
+                  }}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -682,6 +722,7 @@ const Check = () => {
                     />
                   </svg>
                 </div>
+
               </div>
             </div>
 
@@ -969,24 +1010,27 @@ const Check = () => {
 
                 {/* Porsiya Button */}
                 {/* <div className="btn bg-white border d-flex align-items-center gap-2 text-secondary">
-                  <i className="bi bi-cup-hot"></i>
-                  <span>Porsiya</span>
-                </div> */}
+                    <i className="bi bi-cup-hot"></i>
+                    <span>Porsiya</span>
+                  </div> */}
+
+                {/* History/Logs Toggle */}
+
 
                 {/* Settings */}
                 {/* <div className="header-icon bg-white border rounded p-2 text-secondary cursor-pointer">
-                  <i className="bi bi-gear-fill"></i>
-                </div> */}
+                    <i className="bi bi-gear-fill"></i>
+                  </div> */}
 
                 {/* Star */}
                 {/* <div className="header-icon bg-white border rounded p-2 text-secondary cursor-pointer">
-                  <i className="bi bi-star"></i>
-                </div> */}
+                    <i className="bi bi-star"></i>
+                  </div> */}
 
                 {/* List */}
                 {/* <div className="header-icon bg-white border rounded p-2 text-secondary cursor-pointer">
-                  <i className="bi bi-list-ul"></i>
-                </div> */}
+                    <i className="bi bi-list-ul"></i>
+                  </div> */}
               </div>
             </div>
 
@@ -1058,6 +1102,10 @@ const Check = () => {
         handleOpenSplitModel={handleOpenSplitModel}
         handleDeleteCheckModal={handleDeleteCheckModal}
         openDepositModal={openDepositModal}
+        openHistory={() => {
+          setShowHistoryModal(true);
+          setShowOperationsModal(false);
+        }}
       />
 
       <CheckLockModal
@@ -1137,8 +1185,14 @@ const Check = () => {
           console.log("Seçilən satış tipi:", type);
         }}
       />
+      <OrderLogsModal
+        show={showHistoryModal}
+        onHide={() => setShowHistoryModal(false)}
+        order={currentOrder}
+      />
     </Container >
   );
 };
 
 export default Check;
+

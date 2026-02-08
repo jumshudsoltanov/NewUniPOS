@@ -40,6 +40,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const navigate = useNavigate();
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
 
   const salesTypes = [
     { id: "dine_in", label: "Yerində" },
@@ -65,13 +66,15 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
       createNewOrder: createNewOrder // Pass the flag
     };
 
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
     try {
       const result = await dispatch(
         splitOrder({
           data: payload,
           profileId: loginedProfileData?.data?.profile?.id,
           profile: loginedProfileData?.data?.profile,
-          hallData: hallServiceFee
+          hallData: hallServiceFee,
+          waiterName
         })
       ).unwrap();
 
@@ -384,11 +387,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                   <button
                     className="save-action-btn red"
                     onClick={() => {
+                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
                       dispatch(giftItem({
                         orderId: orders.uuid,
                         itemId: product.product_id || product.id,
                         qty: transferQty,
-                        isGift: false // Remove gift status
+                        isGift: false, // Remove gift status
+                        waiterName
                       })).then((res) => {
                         if (res.type.endsWith('fulfilled')) {
                           onClose();
@@ -406,11 +411,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                   <button
                     className="save-action-btn"
                     onClick={() => {
+                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
                       dispatch(giftItem({
                         orderId: orders.uuid,
                         itemId: product.product_id || product.id,
                         qty: transferQty,
-                        isGift: true // Add gift status
+                        isGift: true, // Add gift status
+                        waiterName
                       })).then((res) => {
                         if (res.type.endsWith('fulfilled')) {
                           onClose();

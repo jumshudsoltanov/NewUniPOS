@@ -6,7 +6,7 @@ import Header from "../Header/Header";
 import "./CheckOver.css";
 import { getTagsList } from '../../redux/Slices/TagsSlice';
 import { getPaymentMethods } from '../../redux/Slices/PaymentMethodsSlice';
-import { closeOrder } from '../../redux/Slices/OrdersSlice';
+import { closeOrder, addLog } from '../../redux/Slices/OrdersSlice';
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -25,6 +25,7 @@ const CheckOver = () => {
     const { books } = useSelector((state) => state.BooksSlice);
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const { paymentMethods } = useSelector((state) => state.PaymentMethodsSlice);
+    const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
     const dispatch = useDispatch();
 
     useEffect(() => {
@@ -185,7 +186,7 @@ const CheckOver = () => {
 
     const handleConfirmClose = async () => {
         const profileId = loginedProfileData?.data?.profile?.id;
-        const waiterId = currentOrder?.waiter_id;
+        const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || "Naməlum";
 
         if (!profileId || !waiterId || !id) return;
 
@@ -196,6 +197,7 @@ const CheckOver = () => {
         if (viewMode === "PAYMENT") {
             payments = selectedMethods.map(m => ({
                 payment_method_id: m.id,
+                name: m.name,
                 amount: m.amount || (selectedMethods.length === 1 ? calcTotal.sumTotal : 0)
             }));
         } else {
@@ -215,8 +217,27 @@ const CheckOver = () => {
                 status,
                 profileId,
                 waiterId,
-                note: noteStr
+                note: noteStr,
+                waiterName
             })).unwrap();
+
+            // Log Close
+            dispatch(addLog({
+                orderId: id,
+                action: "Çek bağlandı",
+                waiterName,
+                details: viewMode === "PAYMENT" ? `Ödəniş: ${calcTotal.sumTotal} ₼` : `Ödənişsiz: ${unpaidReason || 'Səbəb yoxdur'}`
+            }));
+
+            // Log Print if checked
+            if (printCheck) {
+                dispatch(addLog({
+                    orderId: id,
+                    action: "Çek çap edildi",
+                    waiterName,
+                    details: "Bağlanış çeki"
+                }));
+            }
 
             // Navigation on success
             navigate("/tables");

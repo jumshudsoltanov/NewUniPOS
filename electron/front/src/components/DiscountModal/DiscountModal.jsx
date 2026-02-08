@@ -9,6 +9,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 const DiscountModal = ({ show, onClose, order }) => {
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const [value, setValue] = useState("0");
   const [discountType, setDiscountType] = useState("percent");
 
@@ -41,11 +42,13 @@ const DiscountModal = ({ show, onClose, order }) => {
 
   const handleUpdateDisCount = useCallback(async () => {
     try {
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       await dispatch(
         updateDiscountOnOrders({
           orderId: order?.uuid,
           discountValue: value,
           discountType,
+          waiterName
         }),
       ).unwrap();
 

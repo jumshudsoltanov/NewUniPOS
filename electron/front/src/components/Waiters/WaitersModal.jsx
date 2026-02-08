@@ -11,7 +11,7 @@ import { changeWaiter } from "../../redux/Slices/OrdersSlice";
 const WaitersModal = ({ show, onClose, order }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-  const { waitersLists } = useSelector((state) => state.WaitersSlice);
+  const { waitersLists, loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const [selectedWaiterId, setSelectedWaiterId] = useState(null);
   const dispatch = useDispatch();
 
@@ -41,7 +41,17 @@ const WaitersModal = ({ show, onClose, order }) => {
   const handleClickUpdateWaiter = async () => {
     try {
       onClose(false)
-      const res = await dispatch(changeWaiter({ orderId: order.uuid, waiterId: selectedWaiterId })).unwrap()
+      const oldWaiterName = order?.waiter?.name || 'Naməlum';
+      const newWaiterName = filteredWaiters.find(w => w.id === selectedWaiterId)?.name || 'Naməlum';
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+      const res = await dispatch(changeWaiter({
+        orderId: order.uuid,
+        waiterId: selectedWaiterId,
+        oldWaiterName,
+        newWaiterName,
+        waiterName
+      })).unwrap()
       if (res.length !== 0) {
         await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id))
         await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }))

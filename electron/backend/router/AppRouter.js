@@ -136,4 +136,9 @@ router.get(
   MenuController.getMenuWithCategories,
 );
 
+// Order Logs
+const OrderLogsController = require("../controller/OrderLogsController");
+router.post("/orders-items/:orderId/logs", OrderLogsController.addLog);
+router.get("/orders-items/:orderId/logs", OrderLogsController.getLogs);
+
 module.exports = router;
