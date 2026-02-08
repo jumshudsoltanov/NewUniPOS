@@ -17,6 +17,7 @@ import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 import Toastify from "./components/Toastify/Toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CheckOver from "./components/CheckOver/CheckOver";
+import Settings from "./components/Settings/Settings";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -121,6 +122,7 @@ function AppContent() {
 
         <Route path="/check/:id" element={<Check />} />
         <Route path="/closecheck/:id" element={<CheckOver />} />
+        <Route path="/settings" element={<Settings />} />
       </Routes>
     </>
   );

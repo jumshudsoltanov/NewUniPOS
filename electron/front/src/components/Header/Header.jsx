@@ -151,7 +151,7 @@ const Header = ({ showBack, backPath, onBack }) => {
                   />
                 </svg>
               </Link>
-              <button className="header-icon-btn">
+              <button className="header-icon-btn" onClick={() => navigate("/settings")}>
                 <svg
                   width="24"
                   height="24"
@@ -216,7 +216,7 @@ const Header = ({ showBack, backPath, onBack }) => {
               <div className="tools-divider"></div>
 
               {/* Menu Hamburger */}
-              <button className="header-icon-btn small-icon-btn">
+              <button className="header-icon-btn small-icon-btn" onClick={() => navigate("/settings")}>
                 <svg
                   width="20"
                   height="20"
