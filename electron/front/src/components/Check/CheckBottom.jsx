@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   sendOrders,
   clearOrders,
   sendOrdersItems,
+  removeProduct,
 } from "../../redux/Slices/OrdersSlice";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -11,6 +12,7 @@ import { useCallback } from "react";
 import { useMemo } from "react";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
+import NewItemsModal from "../NewItemsModal/NewItemsModal";
 
 const CheckBottom = ({ orders, hall }) => {
   const dispatch = useDispatch();
@@ -18,7 +20,9 @@ const CheckBottom = ({ orders, hall }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { id } = useParams();
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+
+  const [showNewItemsModal, setShowNewItemsModal] = useState(false);
 
   const payload = {
     orderId: id,
@@ -191,20 +195,36 @@ const CheckBottom = ({ orders, hall }) => {
         </div>
 
         <div className="pt-3 action-buttons">
-          <button
-            className={`btn-send ${(orders?.is_locked == 1 || products.length === 0) ? 'disabled' : ''}`}
-            onClick={() => {
-              if (orders?.is_locked == 1) {
-                toast.error("Qəbz kilidlidir!");
-                return;
-              }
-              handleSendOrders();
-            }}
-            disabled={orders?.is_locked == 1 || products.length === 0}
-          >
-            <i className="bi bi-send"></i>
-            <span>Göndər</span>
-          </button>
+          <div className="btn-send-group">
+            <button
+              className={`btn-send ${(orders?.is_locked == 1 || products.length === 0) ? 'disabled' : ''}`}
+              onClick={() => {
+                if (orders?.is_locked == 1) {
+                  toast.error("Qəbz kilidlidir!");
+                  return;
+                }
+                handleSendOrders();
+              }}
+              disabled={orders?.is_locked == 1 || products.length === 0}
+            >
+              <i className="bi bi-send"></i>
+              <span>Göndər</span>
+              {products.length > 0 && (
+                <span className="new-items-badge">{products.length}</span>
+              )}
+            </button>
+
+            {/* 3-dot menu button - attached to send */}
+            {products.length > 0 && (
+              <button
+                className="btn-menu-dots"
+                onClick={() => setShowNewItemsModal(true)}
+              >
+                <i className="bi bi-three-dots"></i>
+              </button>
+            )}
+          </div>
+
           <button
             className={`btn-pay ${orders?.is_locked == 1 ? 'disabled' : ''}`}
             disabled={orders?.is_locked == 1}
@@ -252,6 +272,15 @@ const CheckBottom = ({ orders, hall }) => {
           <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
         </button>
       </div>
+
+      {/* New Items Modal */}
+      <NewItemsModal
+        show={showNewItemsModal}
+        onClose={() => setShowNewItemsModal(false)}
+        items={products}
+        onDeleteItem={(index) => dispatch(removeProduct(index))}
+        onSend={handleSendOrders}
+      />
     </>
   );
 };

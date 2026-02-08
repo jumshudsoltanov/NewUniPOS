@@ -338,6 +338,13 @@ export const OrderSlice = createSlice({
     menuData: (state, action) => {
       state.menu = action.payload;
     },
+
+    removeProduct: (state, action) => {
+      const index = action.payload;
+      if (index >= 0 && index < state.products.length) {
+        state.products.splice(index, 1);
+      }
+    },
   },
   extraReducers: (builders) => {
     builders
@@ -394,6 +401,6 @@ export const OrderSlice = createSlice({
   },
 });
 
-export const { addProducts, sendOrders, clearOrders, menuData, updateCount } =
+export const { addProducts, sendOrders, clearOrders, menuData, updateCount, removeProduct } =
   OrderSlice.actions;
 export default OrderSlice.reducer;
