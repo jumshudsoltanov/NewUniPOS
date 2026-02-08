@@ -1,14 +1,18 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import "./Settings.css";
 
 const Settings = () => {
     const navigate = useNavigate();
+    const [showReturnModal, setShowReturnModal] = useState(false);
 
     const topMenuItems = [
         {
             id: "refund",
             label: "Geri qaytarılma",
             icon: <i className="bi bi-arrow-counterclockwise"></i>,
+            onClick: () => setShowReturnModal(true),
         },
         {
             id: "report",
@@ -78,48 +82,56 @@ const Settings = () => {
     ];
 
     return (
-        <div className="settings-page">
-            {/* Header */}
-            <div className="settings-page-header">
-                <button className="settings-back-btn" onClick={() => navigate(-1)}>
-                    <i className="bi bi-arrow-left"></i>
-                </button>
-                <h1 className="settings-page-title">Kontrol panel</h1>
-            </div>
-
-            {/* Content */}
-            <div className="settings-page-content">
-                {/* Top Menu Grid */}
-                <div className="settings-grid settings-grid-top">
-                    {topMenuItems.map((item) => (
-                        <button
-                            key={item.id}
-                            className="settings-card"
-                            onClick={item.onClick}
-                        >
-                            <span className={`settings-card-icon ${item.highlight ? "highlight" : ""}`}>
-                                {item.icon}
-                            </span>
-                            <span className="settings-card-label">{item.label}</span>
-                        </button>
-                    ))}
+        <>
+            <div className="settings-page">
+                {/* Header */}
+                <div className="settings-page-header">
+                    <button className="settings-back-btn" onClick={() => navigate(-1)}>
+                        <i className="bi bi-arrow-left"></i>
+                    </button>
+                    <h1 className="settings-page-title">Kontrol panel</h1>
                 </div>
 
-                {/* Bottom Menu Row */}
-                <div className="settings-grid settings-grid-bottom">
-                    {bottomMenuItems.map((item) => (
-                        <button
-                            key={item.id}
-                            className="settings-card"
-                            onClick={item.onClick}
-                        >
-                            <span className="settings-card-icon">{item.icon}</span>
-                            <span className="settings-card-label">{item.label}</span>
-                        </button>
-                    ))}
+                {/* Content */}
+                <div className="settings-page-content">
+                    {/* Top Menu Grid */}
+                    <div className="settings-grid settings-grid-top">
+                        {topMenuItems.map((item) => (
+                            <button
+                                key={item.id}
+                                className="settings-card"
+                                onClick={item.onClick}
+                            >
+                                <span className={`settings-card-icon ${item.highlight ? "highlight" : ""}`}>
+                                    {item.icon}
+                                </span>
+                                <span className="settings-card-label">{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Bottom Menu Row */}
+                    <div className="settings-grid settings-grid-bottom">
+                        {bottomMenuItems.map((item) => (
+                            <button
+                                key={item.id}
+                                className="settings-card"
+                                onClick={item.onClick}
+                            >
+                                <span className="settings-card-icon">{item.icon}</span>
+                                <span className="settings-card-label">{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {/* Return Check Modal */}
+            <ReturnCheckModal
+                show={showReturnModal}
+                onClose={() => setShowReturnModal(false)}
+            />
+        </>
     );
 };
 

@@ -1202,6 +1202,36 @@ const onUpdateDepositOrder = async (req, res) => {
   }
 };
 
+// Return Check - marks as returned with reason and reopens
+const onReturnCheck = async (req, res) => {
+  const { orderId } = req.params;
+  const { is_return, is_delete_reason_id } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    await OrdersModel.update(
+      {
+        is_return: is_return || 1,
+        is_delete_reason_id: is_delete_reason_id,
+        status: 1, // Reopen the check
+        end_date: null, // Clear the end date
+      },
+      { where: { uuid: orderId } }
+    );
+
+    return res.status(200).json({
+      message: "Check returned and reopened successfully!",
+      data: { orderId, is_return, is_delete_reason_id, status: 1 },
+    });
+  } catch (error) {
+    console.error("Return check error:", error);
+    return res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateDiscountOrder,
@@ -1220,4 +1250,5 @@ module.exports = {
   onDeleteCheck,
   onUpdateDepositOrder,
   onCloseOrder,
+  onReturnCheck,
 };

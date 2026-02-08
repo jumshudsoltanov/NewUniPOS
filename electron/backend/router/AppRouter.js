@@ -110,9 +110,15 @@ router.post(
   OrdersItemsController.onCloseOrder,
 );
 
+router.patch(
+  "/orders-items/:orderId/return",
+  OrdersItemsController.onReturnCheck,
+);
+
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
 router.get("/orders/:profileId/archived-checks", BooksController.getArchivedOrders);
+router.get("/orders/:orderId", BooksController.getOrderById);
 
 // MenuData
 router.get(

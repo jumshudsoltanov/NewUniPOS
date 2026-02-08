@@ -183,4 +183,62 @@ const getArchivedOrders = async (req, res) => {
   }
 };
 
-module.exports = { getAllActiveOrders, getArchivedOrders };
+// Get single order by ID for return check modal
+const getOrderById = async (req, res) => {
+  const { orderId } = req.params;
+  const { profileId } = req.query;
+
+  try {
+    // First try to find by numeric ID
+    let whereClause = { profile_id: profileId };
+
+    // Check if orderId is numeric (check ID) or UUID
+    if (!isNaN(orderId)) {
+      whereClause.id = parseInt(orderId);
+    } else {
+      whereClause.uuid = orderId;
+    }
+
+    const order = await OrdersModel.findOne({
+      where: whereClause,
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+        },
+        {
+          model: OrderPaymentsModel,
+          as: "order_payments",
+          include: [
+            { model: require("../model/PaymentMethodsModel"), as: "payment_method" },
+            { model: require("../model/TagsModel"), as: "tag" }
+          ]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name", "hall_id"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
+          ]
+        }
+      ]
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found", data: null });
+    }
+
+    res.status(200).json({ message: "success", data: order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error", data: {} });
+  }
+};
+
+module.exports = { getAllActiveOrders, getArchivedOrders, getOrderById };
+
