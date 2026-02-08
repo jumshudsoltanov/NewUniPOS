@@ -130,6 +130,10 @@ const CheckMain = ({ orders }) => {
   }, [orders, menu, products, sentProducts, pendingDeletions]);
 
   const handleItemClick = (item) => {
+    if (orders?.is_locked == 1) {
+      toast.error("Qəbz kilidlidir!");
+      return;
+    }
     if (item.isDeleted) return; // Prevent clicking deleted items
     setSelectedProduct(item);
     setEditItemModal(true);

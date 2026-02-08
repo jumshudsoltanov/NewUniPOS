@@ -2,8 +2,12 @@ import React from "react";
 import "./Table.css";
 import { useParams } from "react-router-dom";
 
-const Table = React.memo(({ table, onTableClick }) => {
+const Table = React.memo(({ table, onTableClick, loginedWaiter }) => {
   const { name, status, shape_type, orders } = table || {};
+
+  const hasOrders = orders && orders.length > 0;
+  const isMyTable = hasOrders && loginedWaiter?.data?.id && (orders[0]?.waiter_id == loginedWaiter.data.id || orders[0]?.waiter?.id == loginedWaiter.data.id);
+  const isOtherTable = hasOrders && !isMyTable;
 
   const renderSeats = () => {
     if (shape_type === "rectangle") {
@@ -45,7 +49,7 @@ const Table = React.memo(({ table, onTableClick }) => {
         {renderSeats()}
 
         <div
-          className={`table-surface table-${shape_type || "square"} ${status} ${orders?.length > 0 ? "" : ""}`}
+          className={`table-surface table-${shape_type || "square"} ${status} ${hasOrders ? "has-orders" : ""} ${isMyTable ? "my-table" : ""} ${isOtherTable ? "other-waiter-table" : ""}`}
         >
           {/* Status Dot */}
           <div

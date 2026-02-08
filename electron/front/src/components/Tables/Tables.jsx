@@ -18,10 +18,11 @@ const Tables = () => {
   const [showModal, setShowModal] = React.useState(false);
   const [showOtherChecks, setShowOtherChecks] = React.useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
-  const [ currentHallData, setCurrentHallData ] = React.useState(null);
+  const [currentHallData, setCurrentHallData] = React.useState(null);
 
   const currentTables = useMemo(() => {
     if (!tableGroups?.data || !currentHallId) {
@@ -98,7 +99,7 @@ const Tables = () => {
               key={table.id || table.name}
               className="mb-3 d-flex justify-content-center"
             >
-              <Table table={table} onTableClick={handleTableClick} />
+              <Table table={table} onTableClick={handleTableClick} loginedWaiter={loginedWaiter} />
             </Col>
           ))}
         </Row>

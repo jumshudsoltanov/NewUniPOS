@@ -348,3 +348,62 @@
 .has-orders {
     background-color: #047857;
 }
+
+/* My Active Table - Very Light Chic Green (Mint) */
+.table-surface.my-table {
+    background: #ECFDF5 !important;
+    /* Emerald 50 - Very Light & Fresh */
+    border: 1px solid #10B981 !important;
+    /* Distinct but light border */
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1) !important;
+}
+
+/* Other Waiter's Table - Very Light Chic Red (Rose) */
+.table-surface.other-waiter-table {
+    background: #FEF2F2 !important;
+    /* Rose 50 - Very Light & Professional */
+    border: 1px solid #F87171 !important;
+    /* Distinct but light border */
+    box-shadow: 0 4px 12px rgba(248, 113, 113, 0.1) !important;
+    opacity: 1 !important;
+}
+
+/* Text Colors - Dark for readability on light background */
+.table-surface.my-table .table-name,
+.table-surface.my-table .table-amount {
+    color: #10B981 !important;
+    /* Emerald 500 */
+}
+
+.table-surface.other-waiter-table .table-name,
+.table-surface.other-waiter-table .table-amount {
+    color: #EF4444 !important;
+    /* Red 500 */
+}
+
+.table-surface.my-table .table-waiter-info,
+.table-surface.my-table .table-waiter-info i {
+    color: #059669 !important;
+    /* Darker Emerald for info */
+    opacity: 1 !important;
+    text-shadow: none !important;
+}
+
+.table-surface.other-waiter-table .table-waiter-info,
+.table-surface.other-waiter-table .table-waiter-info i {
+    color: #B91C1C !important;
+    /* Darker Red for info */
+    opacity: 1 !important;
+    text-shadow: none !important;
+}
+
+/* Hide status dot on colored tables */
+.table-surface.my-table .status-dot,
+.table-surface.other-waiter-table .status-dot {
+    display: none !important;
+}
+
+.table-surface.my-table .table-waiter-info span,
+.table-surface.other-waiter-table .table-waiter-info span {
+    font-weight: 600;
+}
