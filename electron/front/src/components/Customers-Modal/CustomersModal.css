@@ -15,9 +15,9 @@
 }
 
 .customers-modal .modal-content {
-    width: 320px;
-    /* Reduced width */
-    max-width: 85vw;
+    width: 360px;
+    /* Slightly increased width */
+    max-width: 90vw;
     margin: auto;
     border-radius: 20px;
     border: none;
@@ -25,7 +25,7 @@
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-.modal-header-custom {
+.customers-modal-header {
     background-color: #558df7;
     /* Light Blue/Periwinkle from image */
     color: white;
@@ -36,21 +36,19 @@
     position: relative;
 }
 
-/* ... (btn-close, header-content, icon-circle remain similar, maybe scale icon-circle down slightly if needed, but 40px is okay) ... */
-
-.modal-header-custom .btn-close {
+.customers-modal-header .btn-close {
     filter: invert(1) grayscale(100%) brightness(200%);
     opacity: 1;
 }
 
-.header-content {
+.customers-header-content {
     display: flex;
     align-items: center;
     gap: 12px;
     width: 100%;
 }
 
-.icon-circle {
+.customers-icon-circle {
     width: 36px;
     /* Slightly smaller */
     height: 36px;
@@ -62,7 +60,7 @@
     font-size: 18px;
 }
 
-.guest-count-display {
+.customers-guest-count-display {
     color: #1e3a8a;
     /* Dark Blue */
     font-weight: 700;
@@ -71,18 +69,19 @@
     margin-bottom: 0;
 }
 
-.keypad-container {
-    max-width: 300px;
-    /* Limit width on larger screens */
+.customers-keypad-container {
+    max-width: 340px;
+    /* Match modal width */
     margin: 0 auto;
+    padding: 8px 0;
 }
 
-.keypad-btn {
+.customers-keypad-btn {
     width: 100%;
     height: auto;
-    aspect-ratio: 1 / 1;
-    border-radius: 16px !important;
-    font-size: 1.8rem;
+    aspect-ratio: 1.15 / 1;
+    border-radius: 14px !important;
+    font-size: 2rem;
     /* Larger text */
     font-weight: 700;
     /* Bolder text */
@@ -99,34 +98,27 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.keypad-btn:active {
+.customers-keypad-btn:active {
     transform: scale(0.95);
     background-color: #f0f9ff;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.backspace-btn {
+.customers-backspace-btn {
     color: #6b7280;
 }
 
-.save-btn {
-    background-color: #0f3485;
-    /* Deep Blue from footer */
+.customers-save-btn {
+    background-color: #053796;
+    color: #fff;
     border: none;
     border-radius: 12px;
-    padding: 12px;
+    padding: 14px;
     font-size: 1.1rem;
-    font-weight: 500;
+    font-weight: 600;
 }
 
-.save-btn:hover {
+.customers-save-btn:hover {
     background-color: #1e40af;
-}
-
-/* Specific button styles from image */
-.keypad-btn.action {
-    background-color: transparent;
-    border: 1px solid #e5e7eb;
-    color: #9ca3af;
-    box-shadow: none;
+    color: #fff;
 }

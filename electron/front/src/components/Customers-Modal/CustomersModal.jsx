@@ -104,9 +104,9 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
 
   return (
     <Modal show={show} onHide={onHide} centered className="customers-modal">
-      <Modal.Header closeButton className="modal-header-custom">
-        <div className="header-content">
-          <div className="icon-circle">
+      <Modal.Header closeButton className="customers-modal-header">
+        <div className="customers-header-content">
+          <div className="customers-icon-circle">
             <i className="bi bi-people"></i>
           </div>
           <Modal.Title>Qonaq sayı</Modal.Title>
@@ -114,18 +114,18 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
       </Modal.Header>
 
       <Modal.Body className="p-0">
-        <div className="display-area text-center py-2">
-          <h1 className="guest-count-display">{guestCount}</h1>
+        <div className="text-center py-2">
+          <h1 className="customers-guest-count-display">{guestCount}</h1>
           <p className="text-muted mb-1">Qonaq sayını seçin</p>
         </div>
 
-        <Container className="keypad-container pb-3 px-3">
+        <Container className="customers-keypad-container pb-3 px-3">
           <Row className="g-2 justify-content-center">
             {numbers.map((num) => (
               <Col xs={4} key={num} className="d-flex justify-content-center">
                 <Button
                   variant="light"
-                  className="keypad-btn"
+                  className="customers-keypad-btn"
                   onClick={() => handleNumberClick(num)}
                   disabled={isCreating}
                 >
@@ -136,7 +136,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
             <Col xs={4} className="d-flex justify-content-center">
               <Button
                 variant="light"
-                className="keypad-btn"
+                className="customers-keypad-btn"
                 onClick={() => handleNumberClick(".")}
                 disabled={isCreating}
               >
@@ -146,7 +146,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
             <Col xs={4} className="d-flex justify-content-center">
               <Button
                 variant="light"
-                className="keypad-btn"
+                className="customers-keypad-btn"
                 onClick={() => handleNumberClick(0)}
                 disabled={isCreating}
               >
@@ -156,7 +156,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
             <Col xs={4} className="d-flex justify-content-center">
               <Button
                 variant="light"
-                className="keypad-btn backspace-btn"
+                className="customers-keypad-btn customers-backspace-btn"
                 onClick={handleBackspace}
                 disabled={isCreating}
               >
@@ -169,7 +169,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
 
       <Modal.Footer className="justify-content-center p-2 border-0">
         <Button
-          className="w-100 save-btn"
+          className="w-100 customers-save-btn"
           disabled={isCreating}
           onClick={() => {
             createOrder();
