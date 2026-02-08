@@ -141,4 +141,9 @@ const OrderLogsController = require("../controller/OrderLogsController");
 router.post("/orders-items/:orderId/logs", OrderLogsController.addLog);
 router.get("/orders-items/:orderId/logs", OrderLogsController.getLogs);
 
+router.patch(
+  "/orders-items/:orderId/update-price",
+  OrdersItemsController.onUpdateItemPrice,
+);
+
 module.exports = router;

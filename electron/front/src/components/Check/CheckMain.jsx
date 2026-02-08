@@ -6,6 +6,8 @@ import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal"; // Import
 import { addPendingDeletion } from "../../redux/Slices/OrdersSlice"; // Import action
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
 const CheckMain = ({ orders }) => {
   const dispatch = useDispatch(); // Add dispatch
@@ -20,6 +22,7 @@ const CheckMain = ({ orders }) => {
 
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
 
   const allItems = useMemo(() => {
@@ -95,7 +98,7 @@ const CheckMain = ({ orders }) => {
         if (pd.type === 'full') {
           target.isDeleted = true;
         } else if (pd.type === 'partial') {
-           target.count -= pd.qty;
+          target.count -= pd.qty;
           target.partialDelete = (target.partialDelete || 0) + pd.qty;
           if (target.count <= 0) target.isDeleted = true;
         }
@@ -117,7 +120,7 @@ const CheckMain = ({ orders }) => {
   };
 
 
-    console.log(orders)
+  console.log(orders)
 
   return (
     <>
@@ -189,7 +192,16 @@ const CheckMain = ({ orders }) => {
       {editItemModal && (
         <EditModal
           show={editItemModal}
-          onClose={() => setEditItemModal(false)}
+          onClose={async (shouldRefresh) => {
+            setEditItemModal(false);
+            if (shouldRefresh === true) {
+              const profileId = loginedProfileData?.data?.profile?.id;
+              if (profileId) {
+                await dispatch(getActiveOrders({ profileId }));
+                await dispatch(getTableGroups(profileId));
+              }
+            }
+          }}
           product={selectedProduct}
           orders={orders}
           onOpenDeleteModal={(type, product, qty) => {

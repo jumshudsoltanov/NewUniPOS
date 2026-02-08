@@ -34,7 +34,7 @@ export const sendOrdersItems = createAsyncThunk(
 
 export const updateDiscountOnOrders = createAsyncThunk(
   "pos/discount",
-  async ({ orderId, discountValue, discountType, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, discountValue, discountType, oldDiscountValue, oldDiscountType, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `http://localhost:55667/api/orders-items/${orderId}/discount`,
@@ -44,11 +44,13 @@ export const updateDiscountOnOrders = createAsyncThunk(
       // Persistent Log
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const oldValue = oldDiscountValue ? `${oldDiscountValue} ${oldDiscountType === 'percent' ? '%' : '₼'}` : '0';
+      const newValue = `${discountValue} ${discountType === 'percent' ? '%' : '₼'}`;
       thunkAPI.dispatch(saveLog({
         orderId,
-        action: "Endirim edildi",
+        action: "Endirim dəyişildi",
         waiterName,
-        details: `${discountValue} ${discountType === 'percent' ? '%' : 'AZN'}`
+        details: `${oldValue}-dən ${newValue}-ə dəyişdi`
       }));
 
       return response.data;
@@ -60,7 +62,7 @@ export const updateDiscountOnOrders = createAsyncThunk(
 
 export const updateServiceFeeOnOrders = createAsyncThunk(
   "pos/serviceFee",
-  async ({ orderId, serviceValue, feeType, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, serviceValue, feeType, oldServiceValue, oldFeeType, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `http://localhost:55667/api/orders-items/${orderId}/service-fee`,
@@ -70,16 +72,43 @@ export const updateServiceFeeOnOrders = createAsyncThunk(
       // Persistent Log
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const oldValue = oldServiceValue ? `${oldServiceValue} ${oldFeeType === 'percent' ? '%' : '₼'}` : '0';
+      const newValue = `${serviceValue} ${feeType === 'percent' ? '%' : '₼'}`;
       thunkAPI.dispatch(saveLog({
         orderId,
         action: "Servis haqqı dəyişildi",
         waiterName,
-        details: `${serviceValue} ${feeType === 'percent' ? '%' : 'AZN'}`
+        details: `${oldValue}-dən ${newValue}-ə dəyişdi`
       }));
 
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data);
+    }
+  },
+);
+
+export const reopenOrder = createAsyncThunk(
+  "orders/reopen",
+  async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders/${orderId}/reopen`
+      );
+
+      // Persistent Log
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Çek yenidən açıldı",
+        waiterName,
+        details: "Bağlı çek yenidən açıldı"
+      }));
+
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
     }
   },
 );
@@ -138,12 +167,23 @@ export const deleteOrderItem = createAsyncThunk(
 
 export const mergeChecks = createAsyncThunk(
   "orders/merge-check",
-  async ({ currentOrderId, newOrderId }, thunkAPI) => {
+  async ({ currentOrderId, newOrderId, currentCheckId, newCheckId, currentTotal, newTotal, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `http://localhost:55667/api/orders-items/${currentOrderId}/merge-orders`,
         { newOrderId },
       );
+
+      // Persistent Log
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      thunkAPI.dispatch(saveLog({
+        orderId: currentOrderId,
+        action: "Çeklər birləşdirildi",
+        waiterName,
+        details: `Çek #${currentCheckId} (${currentTotal || 0}₼) + Çek #${newCheckId} (${newTotal || 0}₼) = ${(Number(currentTotal || 0) + Number(newTotal || 0)).toFixed(2)}₼`
+      }));
+
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
@@ -257,12 +297,24 @@ export const giftItem = createAsyncThunk(
 
 export const updateItemDiscount = createAsyncThunk(
   "orders/itemDiscount",
-  async ({ orderId, itemId, discountValue, discountType }, thunkAPI) => {
+  async ({ orderId, itemId, discountValue, discountType, productName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
         `http://localhost:55667/api/orders-items/${orderId}/discount-item`,
         { itemId, discountValue, discountType },
       );
+
+      // Persistent Log
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const discountText = discountType === 'percent' ? `${discountValue}%` : `${discountValue}₼`;
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Məhsula endirim",
+        waiterName,
+        details: `${productName || 'Məhsul'} - ${discountText}`
+      }));
+
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
@@ -272,7 +324,7 @@ export const updateItemDiscount = createAsyncThunk(
 
 export const deleteCheck = createAsyncThunk(
   "orders/deleteCheck",
-  async ({ orderId, reason, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, reason, reasonText, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `http://localhost:55667/api/orders-items/${orderId}/delete-check`,
@@ -286,7 +338,33 @@ export const deleteCheck = createAsyncThunk(
         orderId,
         action: "Çek silindi",
         waiterName,
-        details: `Səbəb: ${reason}`
+        details: `Səbəb: ${reasonText || reason}`
+      }));
+
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
+export const updateItemPrice = createAsyncThunk(
+  "orders/updateItemPrice",
+  async ({ orderId, itemId, newPrice, oldPrice, productName, waiterName: passedWaiterName }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/update-price`,
+        { itemId, newPrice },
+      );
+
+      // Persistent Log
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Qiymət dəyişdirildi",
+        waiterName,
+        details: `${productName || 'Məhsul'}: ${oldPrice}₼-dən ${newPrice}₼-ə dəyişdi`
       }));
 
       return response.data;
@@ -435,12 +513,25 @@ export const deleteOrderItems = createAsyncThunk(
 
 export const updateDepositOnOrders = createAsyncThunk(
   "orders/updateDeposit",
-  async ({ orderId, depositValue, depositType }, thunkAPI) => {
+  async ({ orderId, depositValue, depositType, oldDepositValue, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `http://localhost:55667/api/orders-items/${orderId}/deposit`,
         { depositValue, depositType },
       );
+
+      // Persistent Log
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const oldValue = oldDepositValue ? `${oldDepositValue} ₼` : '0 ₼';
+      const newValue = `${depositValue} ₼`;
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Depozit dəyişildi",
+        waiterName,
+        details: `${oldValue}-dən ${newValue}-ə dəyişdi`
+      }));
+
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);

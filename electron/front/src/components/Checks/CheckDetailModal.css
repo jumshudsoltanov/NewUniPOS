@@ -1,6 +1,6 @@
 /* CheckDetailModal.css */
 .check-detail-modal-custom .modal-dialog {
-    max-width: 600px;
+    max-width: 800px;
 }
 
 .check-detail-modal-custom .modal-content {
@@ -38,8 +38,8 @@
 
 /* Sidebar Section (Left) */
 .check-detail-modal-custom .sidebar-section {
-    width: 400px;
-    min-width: 400px;
+    width: 321px;
+    min-width: 300px;
     background-color: #f8f9fa;
     border-right: 1px solid #dee2e6;
     display: flex;

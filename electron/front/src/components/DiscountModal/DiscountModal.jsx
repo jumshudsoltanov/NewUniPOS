@@ -48,6 +48,8 @@ const DiscountModal = ({ show, onClose, order }) => {
           orderId: order?.uuid,
           discountValue: value,
           discountType,
+          oldDiscountValue: order?.discount_value,
+          oldDiscountType: order?.discount_type,
           waiterName
         }),
       ).unwrap();

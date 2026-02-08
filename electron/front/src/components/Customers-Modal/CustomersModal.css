@@ -7,22 +7,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    /* Ensure full viewport height for centering */
-    margin: 0 auto;
-    padding: 20px;
-    /* Add padding for safe area */
+    margin: 1.75rem auto;
+    /* Match DiscountModal margin */
 }
 
 .customers-modal .modal-content {
-    width: 360px;
-    /* Slightly increased width */
+    width: 340px;
+    /* Match DiscountModal width */
     max-width: 90vw;
     margin: auto;
-    border-radius: 20px;
+    border-radius: 10px;
+    /* Match DiscountModal border radius */
     border: none;
     overflow: hidden;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+    /* Match DiscountModal shadow */
 }
 
 .customers-modal-header {

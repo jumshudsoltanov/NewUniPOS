@@ -186,6 +186,7 @@ const CheckOver = () => {
 
     const handleConfirmClose = async () => {
         const profileId = loginedProfileData?.data?.profile?.id;
+        const waiterId = currentOrder?.waiter_id || loginedWaiter?.data?.id;
         const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || "Naməlum";
 
         if (!profileId || !waiterId || !id) return;

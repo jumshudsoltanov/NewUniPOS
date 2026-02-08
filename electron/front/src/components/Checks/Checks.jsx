@@ -441,7 +441,7 @@ const Checks = () => {
       {/* Check Detail Modal */}
       <CheckDetailModal
         show={showModal}
-        onHide={() => setShowModal(false)}
+        onClose={() => setShowModal(false)}
         order={selectedOrder}
       />
     </Container>

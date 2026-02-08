@@ -348,9 +348,9 @@ const Check = () => {
   }
 
 
-  const handleDeleteCheckFunction = async (reason, orderId) => {
+  const handleDeleteCheckFunction = async ({ reason, reasonName, orderId }) => {
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-    const res = await dispatch(deleteCheck({ orderId, reason, waiterName })).unwrap()
+    const res = await dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName })).unwrap()
     if (res.message == "success") {
       await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id))
       await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }))

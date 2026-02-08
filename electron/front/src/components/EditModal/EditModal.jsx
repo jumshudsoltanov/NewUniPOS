@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
-import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion } from "../../redux/Slices/OrdersSlice";
+import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion, updateItemPrice } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from 'react-toastify';
@@ -266,25 +266,55 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 {/* Footer Action Button */}
                 <button
                   className="save-action-btn"
-                  onClick={() => {
+                  onClick={async () => {
                     const savedQty = product.savedQuantity || 0;
                     const newLocalQty = qty - savedQty;
 
                     if (newLocalQty < 0) {
-                      // Reducing quantity of saved items
                       onOpenDeleteModal('partial', product, Math.abs(newLocalQty));
                       return;
                     }
 
-                    dispatch(
-                      updateCount({
-                        productId: product.product_id || product.id,
-                        orderItemId: product.isNew ? undefined : product.id, // Only send if it exists in DB
-                        count: newLocalQty,
-                        price: inputValue,
-                        name: product.name,
-                      }),
-                    );
+                    if (product.isNew) {
+                      dispatch(
+                        updateCount({
+                          productId: product.product_id || product.id,
+                          orderItemId: product.isNew ? undefined : product.id,
+                          count: newLocalQty,
+                          price: inputValue,
+                          name: product.name,
+                        }),
+                      );
+                    } else {
+                      // For existing items, handle price and quantity separately if needed
+                      // Check if price changed
+                      if (parseFloat(inputValue) !== parseFloat(product.price)) {
+                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                        await dispatch(updateItemPrice({
+                          orderId: orders.uuid,
+                          itemId: product.id,
+                          newPrice: inputValue,
+                          oldPrice: product.price,
+                          productName: product.name,
+                          waiterName
+                        })).unwrap();
+                      }
+
+                      // Check if quantity changed
+                      if (newLocalQty !== product.count) {
+                        // If updateCount is indeed empty, we might need a real thunk for qty update too
+                        // But for now, let's keep dispatching it in case it's handled elsewhere or user only asked for price
+                        dispatch(
+                          updateCount({
+                            productId: product.product_id || product.id,
+                            orderItemId: product.id,
+                            count: newLocalQty,
+                            price: inputValue,
+                            name: product.name,
+                          }),
+                        );
+                      }
+                    }
                     onClose(true);
                   }}
                 >
@@ -393,6 +423,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         itemId: product.product_id || product.id,
                         qty: transferQty,
                         isGift: false, // Remove gift status
+                        productName: product.name || product.product?.name,
                         waiterName
                       })).then((res) => {
                         if (res.type.endsWith('fulfilled')) {
@@ -417,6 +448,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         itemId: product.product_id || product.id,
                         qty: transferQty,
                         isGift: true, // Add gift status
+                        productName: product.name || product.product?.name,
                         waiterName
                       })).then((res) => {
                         if (res.type.endsWith('fulfilled')) {
@@ -478,11 +510,14 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 <button
                   className="save-action-btn"
                   onClick={() => {
+                    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
                     dispatch(updateItemDiscount({
                       orderId: orders.uuid,
                       itemId: product.product_id || product.id,
                       discountValue: discountValue,
-                      discountType: discountType
+                      discountType: discountType,
+                      productName: product.name || product.product?.name,
+                      waiterName
                     })).then((res) => {
                       if (res.type.endsWith('fulfilled')) {
                         onClose();

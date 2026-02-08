@@ -129,9 +129,18 @@ const OtherChecks = ({
     onClose(false);
   };
 
-  const handleMergeCheck = async (currentOrderId, newOrderId) => {
+  const handleMergeCheck = async (currentOrderId, newOrderId, currentCheckData, newCheckData) => {
     try {
-      await dispatch(mergeChecks({ currentOrderId, newOrderId })).unwrap();
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      await dispatch(mergeChecks({
+        currentOrderId,
+        newOrderId,
+        currentCheckId: currentCheckData.id,
+        newCheckId: newCheckData.id,
+        currentTotal: currentCheckData.total,
+        newTotal: newCheckData.total,
+        waiterName
+      })).unwrap();
       await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
       await dispatch(
         getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }),
@@ -142,11 +151,11 @@ const OtherChecks = ({
     }
   };
 
-  const onMultiFunctionOtherChecs = async (type, orderId, tableId) => {
+  const onMultiFunctionOtherChecs = async (type, orderId, tableId, orderData) => {
     if (type !== "merge") {
       handleGoNewCheck(orderId, tableId);
     } else {
-      handleMergeCheck(order.uuid, orderId);
+      handleMergeCheck(order.uuid, orderId, order, orderData);
     }
   };
 
@@ -173,7 +182,7 @@ const OtherChecks = ({
                 key={index}
                 className="check-item"
                 onClick={() =>
-                  onMultiFunctionOtherChecs(type, item.uuid, item.table_id)
+                  onMultiFunctionOtherChecs(type, item.uuid, item.table_id, item)
                 }
               >
                 <span>

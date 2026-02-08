@@ -57,6 +57,8 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
           orderId: order.uuid,
           serviceValue: value,
           feeType,
+          oldServiceValue: order.service_charge,
+          oldFeeType: order.service_type,
           waiterName
         }),
       ).unwrap();

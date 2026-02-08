@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Modal, Row, Col } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import axios from "axios";
+import { saveLog } from "../../redux/Slices/OrdersSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import "./ReturnCheckModal.css";
 
 const ReturnCheckModal = ({ show, onClose }) => {
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
 
     const [checkId, setCheckId] = useState("");
     const [order, setOrder] = useState(null);
@@ -78,6 +80,16 @@ const ReturnCheckModal = ({ show, onClose }) => {
                     is_delete_reason_id: reason
                 }
             );
+
+            // Persistent Log
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            dispatch(saveLog({
+                orderId,
+                action: "Çek geri qaytarma",
+                waiterName,
+                details: `Çek #${order?.id} geri qaytarıldı`
+            }));
+
             setShowReasonModal(false);
             setOrder(null);
             setCheckId("");

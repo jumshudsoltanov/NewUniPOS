@@ -9,6 +9,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 const DepositModal = ({ show, onClose, order }) => {
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
     const [value, setValue] = useState("0");
 
     useEffect(() => {
@@ -46,9 +47,12 @@ const DepositModal = ({ show, onClose, order }) => {
                 return;
             }
 
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
             await dispatch(updateDepositOnOrders({
                 orderId: order.uuid,
-                depositValue: value
+                depositValue: value,
+                oldDepositValue: order.deposit,
+                waiterName
             })).unwrap();
 
             if (loginedProfileData?.data?.profile?.id) {

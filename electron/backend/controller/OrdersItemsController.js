@@ -1342,8 +1342,116 @@ const onDeleteItemWithReason = async (req, res) => {
   }
 };
 
+const onUpdateItemPrice = async (req, res) => {
+  const { orderId } = req.params;
+  const { itemId, newPrice } = req.body;
+
+  try {
+    const item = await OrdersItemsModel.findOne({
+      where: {
+        order_id: orderId,
+        id: itemId
+      }
+    });
+
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    // Ensure price is a number
+    item.price = parseFloat(newPrice);
+    await item.save();
+
+    // --- Recalculate Order Total (Logic from sendOrdersItemsToDb) ---
+
+    // 1. Get all items to sum up
+    const listOfProducts = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      attributes: ["count", "price"],
+    });
+
+    // 2. Calculate raw total
+    const total = listOfProducts.reduce((sum, item) => {
+      const qty = parseFloat(item.count) || 0;
+      const prc = parseFloat(item.price) || 0;
+      return sum + qty * prc;
+    }, 0);
+
+    // 3. Get Order details for discount/service/deposit
+    const currentOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      attributes: [
+        "discount_value",
+        "discount_type",
+        "service_value",
+        "service_type",
+        "deposit",
+      ],
+    });
+
+    let discount = 0;
+    let service = 0;
+    const deposit = parseFloat(currentOrder?.deposit || 0);
+
+    if (currentOrder) {
+      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const dValue = parseFloat(discount_value || 0);
+      const sValue = parseFloat(service_value || 0);
+
+      // Calculate Discount
+      if (dValue > 0) {
+        if (discount_type === "percent") {
+          discount = (total * dValue) / 100;
+        } else if (discount_type === "cash") {
+          discount = dValue;
+        }
+      }
+
+      // Calculate Service Fee
+      if (sValue > 0) {
+        if (service_type === "percent") {
+          service = (total * sValue) / 100;
+        } else if (service_type === "cash") {
+          service = sValue;
+        }
+      }
+    }
+
+    let netTotal = total - discount + service + deposit;
+    netTotal = Math.max(netTotal, 0);
+
+    // 4. Update OrdersModel
+    await OrdersModel.update(
+      {
+        amount: total,
+        total: netTotal,
+        discount: discount,
+        service_charge: service,
+      },
+      { where: { uuid: orderId } },
+    );
+
+    // Return success with necessary data for frontend updates
+    res.status(200).json({
+      message: "success",
+      itemId,
+      newPrice: item.price,
+      uuid: orderId, // Critical for TablesSlice matcher
+      total: netTotal,
+      amount: total,
+      discount,
+      service_charge: service
+    });
+
+  } catch (error) {
+    console.error("Update Price Error:", error);
+    res.status(500).json({ message: "Error updating price", error: error.message });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
+  onUpdateItemPrice,
   onUpdateDiscountOrder,
   onUpdateTableOrder,
   onLockCheck,

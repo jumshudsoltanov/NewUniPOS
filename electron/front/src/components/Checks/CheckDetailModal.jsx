@@ -2,27 +2,31 @@ import { Modal, Button, Row, Col, Form } from "react-bootstrap";
 import "./CheckDetailModal.css";
 import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchLogs } from "../../redux/Slices/OrdersSlice";
+import { fetchLogs, reopenOrder } from "../../redux/Slices/OrdersSlice";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "sonner";
 
-const CheckDetailModal = ({ show, onHide, order }) => {
+const CheckDetailModal = ({ show, onClose, order }) => {
     const dispatch = useDispatch();
-    const [activeView, setActiveView] = useState("details"); // 'details' | 'history'
+    const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+    const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const [currentView, setCurrentView] = useState("details"); // 'details' | 'history'
     const [logFilter, setLogFilter] = useState("all");
     const { orderLogs = [] } = useSelector((state) => state.OrderSlice);
 
     useEffect(() => {
         if (!show) {
-            setActiveView("details");
+            setCurrentView("details");
             setLogFilter("all");
         }
     }, [show]);
 
     useEffect(() => {
-        if (show && activeView === "history" && order?.uuid) {
+        if (show && currentView === "history" && order?.uuid) {
             dispatch(fetchLogs(order.uuid));
         }
-    }, [show, activeView, order?.uuid, dispatch]);
+    }, [show, currentView, order?.uuid, dispatch]);
 
     const filteredLogs = useMemo(() => {
         if (logFilter === "all") return orderLogs;
@@ -55,7 +59,7 @@ const CheckDetailModal = ({ show, onHide, order }) => {
     };
 
     return (
-        <Modal show={show} onHide={onHide} size="lg" centered className="check-detail-modal-custom">
+        <Modal show={show} onHide={onClose} size="lg" centered className="check-detail-modal-custom">
             <Modal.Header closeButton>
                 <Modal.Title>Çek #{order.id}</Modal.Title>
             </Modal.Header>
@@ -63,7 +67,7 @@ const CheckDetailModal = ({ show, onHide, order }) => {
                 <div className="d-flex flex-column flex-lg-row modal-body-split">
                     {/* Left Sidebar: Meta Info OR History */}
                     <div className="sidebar-section border-end-lg">
-                        {activeView === "details" ? (
+                        {currentView === "details" ? (
                             <div className="meta-items-container p-4">
                                 <div className="meta-item-box">
                                     <div className="meta-icon-col">
@@ -237,11 +241,11 @@ const CheckDetailModal = ({ show, onHide, order }) => {
                         <Button
                             variant="light"
                             className="w-100 h-100 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
-                            onClick={() => setActiveView(activeView === "details" ? "history" : "details")}
+                            onClick={() => setCurrentView(currentView === "details" ? "history" : "details")}
                             style={{ color: "#0d6efd", background: "transparent", fontWeight: 500 }}
                         >
-                            <i className={`bi ${activeView === "details" ? "bi-clock-history" : "bi-info-circle"} me-2 fs-5`}></i>
-                            {activeView === "details" ? "TARİXÇƏ" : "ÇEK MƏLUMATLARI"}
+                            <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me - 2 fs - 5`}></i>
+                            {currentView === "details" ? "TARİXÇƏ" : "ÇEK MƏLUMATLARI"}
                         </Button>
                     </div>
                     {/* Foot Right: Actions */}
@@ -249,7 +253,25 @@ const CheckDetailModal = ({ show, onHide, order }) => {
                         <Button
                             variant="warning"
                             className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
-                            onClick={() => console.log("Çeki yenidən aç")}
+                            onClick={async () => {
+                                try {
+                                    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                                    await dispatch(reopenOrder({ orderId: order.uuid, waiterName })).unwrap();
+
+                                    // Refresh data
+                                    if (loginedProfileData?.data?.profile?.id) {
+                                        const profileId = loginedProfileData.data.profile.id;
+                                        await Promise.all([
+                                            dispatch(getTableGroups(profileId)),
+                                            dispatch(getActiveOrders({ profileId }))
+                                        ]);
+                                    }
+
+                                    onClose();
+                                } catch (error) {
+                                    console.error("Çek yenidən açma xətası:", error);
+                                }
+                            }}
                             style={{ backgroundColor: "#f39c12", color: "#fff" }}
                         >
                             <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i> ÇEKİ YENİDƏN AÇ
