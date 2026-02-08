@@ -1,8 +1,10 @@
-const { BrowserWindow, app } = require("electron");
+const { BrowserWindow, app, ipcMain, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const { exec } = require("child_process");
 
 const isDev = !app.isPackaged;
+let mainWindow = null;
 
 function createWindow() {
   const appPath = app.getAppPath();
@@ -10,10 +12,10 @@ function createWindow() {
     ? path.join(__dirname, "preload.js")
     : path.join(appPath, "electron", "server", "preload.js");
 
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    // fullscreen: true,
+    fullscreen: true, // Start in fullscreen
     webPreferences: {
       preload: preloadPath,
       nodeIntegration: false,
@@ -22,7 +24,7 @@ function createWindow() {
   });
 
   if (isDev) {
-    win.loadURL("http://localhost:5173/");
+    mainWindow.loadURL("http://localhost:5173/");
   } else {
     const indexPath = path.join(
       appPath,
@@ -32,12 +34,50 @@ function createWindow() {
       "index.html",
     );
     if (fs.existsSync(indexPath)) {
-      win.loadFile(indexPath);
+      mainWindow.loadFile(indexPath);
     } else {
       console.error("Index file not found:", indexPath);
     }
   }
 }
+
+// IPC Handlers
+ipcMain.handle("toggle-fullscreen", () => {
+  if (mainWindow) {
+    const isFullScreen = mainWindow.isFullScreen();
+    mainWindow.setFullScreen(!isFullScreen);
+    return !isFullScreen;
+  }
+  return false;
+});
+
+ipcMain.handle("get-fullscreen-state", () => {
+  return mainWindow ? mainWindow.isFullScreen() : false;
+});
+
+ipcMain.handle("open-anydesk", () => {
+  // Try common AnyDesk paths
+  const anyDeskPaths = [
+    "C:\\Program Files (x86)\\AnyDesk\\AnyDesk.exe",
+    "C:\\Program Files\\AnyDesk\\AnyDesk.exe",
+    path.join(process.env.LOCALAPPDATA || "", "Programs", "AnyDesk", "AnyDesk.exe"),
+  ];
+
+  for (const adPath of anyDeskPaths) {
+    if (fs.existsSync(adPath)) {
+      exec(`"${adPath}"`, (error) => {
+        if (error) console.error("Failed to open AnyDesk:", error);
+      });
+      return true;
+    }
+  }
+
+  // Try running anydesk from PATH
+  exec("anydesk", (error) => {
+    if (error) console.error("AnyDesk not found in PATH:", error);
+  });
+  return true;
+});
 
 // Start backend server with error handling
 try {

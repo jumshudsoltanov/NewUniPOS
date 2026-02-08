@@ -1,11 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
+import SupportModal from "../SupportModal/SupportModal";
 import "./Settings.css";
 
 const Settings = () => {
     const navigate = useNavigate();
     const [showReturnModal, setShowReturnModal] = useState(false);
+    const [showSupportModal, setShowSupportModal] = useState(false);
+    const [showClock, setShowClock] = useState(() => {
+        return localStorage.getItem("showHeaderClock") === "true";
+    });
+
+    // Toggle clock visibility in header
+    const handleClockToggle = () => {
+        const newValue = !showClock;
+        setShowClock(newValue);
+        localStorage.setItem("showHeaderClock", newValue.toString());
+        // Dispatch custom event for Header to listen
+        window.dispatchEvent(new CustomEvent("clockToggle", { detail: newValue }));
+    };
+
+    // Toggle fullscreen via Electron API
+    const handleFullscreenToggle = async () => {
+        if (window.electronAPI?.toggleFullscreen) {
+            await window.electronAPI.toggleFullscreen();
+        } else {
+            // Fallback for browser
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+    };
+
+    // Open AnyDesk via Electron API
+    const handleOpenAnyDesk = async () => {
+        if (window.electronAPI?.openAnyDesk) {
+            await window.electronAPI.openAnyDesk();
+        } else {
+            alert("AnyDesk yalnız Electron tətbiqində açıla bilər");
+        }
+    };
 
     const topMenuItems = [
         {
@@ -59,25 +96,27 @@ const Settings = () => {
         },
         {
             id: "clock",
-            label: "Saat",
+            label: showClock ? "Saatı gizlət" : "Saatı göstər",
             icon: <i className="bi bi-clock"></i>,
+            onClick: handleClockToggle,
         },
         {
             id: "fullscreen",
-            label: "Tam ekran et",
+            label: "Pəncərə rejimi",
             icon: <i className="bi bi-arrows-fullscreen"></i>,
-            onClick: () => {
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen();
-                } else {
-                    document.exitFullscreen();
-                }
-            },
+            onClick: handleFullscreenToggle,
         },
         {
             id: "support",
             label: "Dəstək",
             icon: <i className="bi bi-question-circle"></i>,
+            onClick: () => setShowSupportModal(true),
+        },
+        {
+            id: "anydesk",
+            label: "AnyDesk",
+            icon: <i className="bi bi-display"></i>,
+            onClick: handleOpenAnyDesk,
         },
     ];
 
@@ -130,6 +169,12 @@ const Settings = () => {
             <ReturnCheckModal
                 show={showReturnModal}
                 onClose={() => setShowReturnModal(false)}
+            />
+
+            {/* Support Modal */}
+            <SupportModal
+                isOpen={showSupportModal}
+                onClose={() => setShowSupportModal(false)}
             />
         </>
     );

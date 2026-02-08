@@ -196,6 +196,26 @@ ul li {
   line-height: normal;
 }
 
+/* Header Clock */
+.header-clock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  height: 36px;
+}
+
+.header-clock i {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
 /* Remove specific widths or transforms from previous edits */
 .waiter-btn {
   width: auto;

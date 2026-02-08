@@ -21,6 +21,11 @@ const Header = ({ showBack, backPath, onBack }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Clock state
+  const [showClock, setShowClock] = useState(() => {
+    return localStorage.getItem("showHeaderClock") === "true";
+  });
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const isChecksPage = location.pathname === "/checks";
 
@@ -58,6 +63,34 @@ const Header = ({ showBack, backPath, onBack }) => {
       dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
     }
   }, [dispatch, loginedProfileData]);
+
+  // Clock timer
+  useEffect(() => {
+    if (!showClock) return;
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [showClock]);
+
+  // Listen for clock toggle from Settings
+  useEffect(() => {
+    const handleClockToggle = (e) => {
+      setShowClock(e.detail);
+    };
+    window.addEventListener("clockToggle", handleClockToggle);
+    return () => window.removeEventListener("clockToggle", handleClockToggle);
+  }, []);
+
+  // Format time as HH:MM:SS
+  const formatTime = (date) => {
+    return date.toLocaleTimeString("az-AZ", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    });
+  };
 
   return (
     <>
@@ -214,6 +247,16 @@ const Header = ({ showBack, backPath, onBack }) => {
               </Link>
 
               <div className="tools-divider"></div>
+
+              {/* Clock Display */}
+              {showClock && (
+                <div className="header-clock">
+                  <i className="bi bi-clock"></i>
+                  <span>{formatTime(currentTime)}</span>
+                </div>
+              )}
+
+              {showClock && <div className="tools-divider"></div>}
 
               {/* Menu Hamburger */}
               <button className="header-icon-btn small-icon-btn" onClick={() => navigate("/settings")}>

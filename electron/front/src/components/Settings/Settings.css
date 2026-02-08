@@ -16,16 +16,22 @@
 }
 
 .settings-back-btn {
-    width: 32px;
-    height: 32px;
+    width: 48px;
+    height: 48px;
     border: none;
-    background: transparent;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
     color: #fff;
-    font-size: 18px;
+    font-size: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-back-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .settings-page-title {
@@ -56,7 +62,7 @@
 }
 
 .settings-grid-bottom {
-    grid-template-columns: repeat(5, 200px);
+    grid-template-columns: repeat(6, 200px);
 }
 
 /* Card Buttons - Exact Specs */
