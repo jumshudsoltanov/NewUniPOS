@@ -1,4 +1,5 @@
 const OrderLogsModel = require("../model/OrderLogsModel");
+const SyncService = require("../services/SyncService");
 
 const addLog = async (req, res) => {
     const { orderId } = req.params;
@@ -16,6 +17,9 @@ const addLog = async (req, res) => {
             details,
             time: time || new Date().toISOString(),
         });
+
+        // Trigger sync for this order to include the new log
+        SyncService.triggerSync(orderId);
 
         return res.status(201).json(newLog);
     } catch (error) {

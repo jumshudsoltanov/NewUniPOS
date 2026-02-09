@@ -5,6 +5,7 @@ const WaitersModel = require("../model/WaitersModel");
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
+const SyncService = require("../services/SyncService");
 
 const sendOrdersItemsToDb = async (req, res) => {
   const { orderId } = req.params;
@@ -109,9 +110,13 @@ const sendOrdersItemsToDb = async (req, res) => {
         total: netTotal,
         discount: discount,
         service_charge: service,
+        is_synced: 0
       },
       { where: { uuid: orderId } },
     );
+
+    // Sync trigger
+    SyncService.triggerSync(orderId);
 
     // Return the full updated order for frontend state sync
     const updatedOrder = await OrdersModel.findOne({
@@ -202,9 +207,12 @@ const onUpdateDiscountOrder = async (req, res) => {
         total: newTotal,
         discount_type: discountType,
         discount_value: discountValue,
+        is_synced: 0
       },
       { where: { uuid: orderId } },
     );
+
+    SyncService.triggerSync(orderId);
 
     return res.status(200).json({
       message: "Discount updated successfully!",
@@ -274,9 +282,12 @@ const onUpdateServiceFeeOrder = async (req, res) => {
         total: newTotal,
         service_type: feeType,
         service_value: serviceValue,
+        is_synced: 0
       },
       { where: { uuid: orderId } },
     );
+
+    SyncService.triggerSync(orderId);
 
     return res.status(200).json({
       message: "service updated successfully!",
@@ -298,9 +309,11 @@ const onUpdateTableOrder = async (req, res) => {
 
   try {
     const updateTable = await OrdersModel.update(
-      { hall_id: currentHallId, table_id: newTableId },
+      { hall_id: currentHallId, table_id: newTableId, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+
+    SyncService.triggerSync(orderId);
 
     res
       .status(200)
@@ -320,9 +333,11 @@ const onLockCheck = async (req, res) => {
 
   try {
     const updateLockChecK = await OrdersModel.update(
-      { is_locked: status },
+      { is_locked: status, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+
+    SyncService.triggerSync(orderId);
 
     res
       .status(200)
@@ -342,9 +357,10 @@ const onUpdateCheckTags = async (req, res) => {
 
   try {
     const updateTags = await OrdersModel.update(
-      { tags: tags },
+      { tags: tags, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    SyncService.triggerSync(orderId);
     res.status(200).json({ message: "tags update" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
@@ -361,9 +377,10 @@ const onUpdateCheckComments = async (req, res) => {
 
   try {
     const updateComments = await OrdersModel.update(
-      { note: comments },
+      { note: comments, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    SyncService.triggerSync(orderId);
     res.status(200).json({ message: "comment update" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
@@ -387,6 +404,8 @@ const onDeleteOrderItems = async (req, res) => {
         where: { uuid: orderId },
       },
     );
+    await OrdersModel.update({ is_synced: 0 }, { where: { uuid: orderId } });
+    SyncService.triggerSync(orderId);
     res.status(200).json({ message: "delete all items" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
@@ -521,6 +540,13 @@ const onMergeChecks = async (req, res) => {
     // Commit
     await transaction.commit();
 
+    SyncService.triggerSync(currentOrderId);
+    // newOrderId is deleted, but we might want to sync that deletion too? 
+    // Usually handled by sending the deleted order as status=0/deleted. 
+    // Here we physically destroy the record. Admin sync might need to know about deletion.
+    // However, user requirement mentions syncing operations on check.
+    // For now, syncing the currentOrderId is critical.
+
     return res.status(200).json({
       message: "Merge success",
       data: {
@@ -547,9 +573,10 @@ const onChangeSaleType = async (req, res) => {
 
   try {
     const updateSaleType = await OrdersModel.update(
-      { sale_type: saleType, table_id: tableId, hall_id: hallId },
+      { sale_type: saleType, table_id: tableId, hall_id: hallId, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    SyncService.triggerSync(orderId);
     res.status(200).json({ message: "sale-type  update" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
@@ -566,9 +593,10 @@ const onUpdateWaiter = async (req, res) => {
 
   try {
     const updateWaiter = await OrdersModel.update(
-      { waiter_id: waiterId },
+      { waiter_id: waiterId, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    SyncService.triggerSync(orderId);
     res.status(200).json({ message: "waiter  update" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
@@ -747,6 +775,9 @@ const onSplitOrder = async (req, res) => {
 
     await transaction.commit();
 
+    SyncService.triggerSync(data.orderId);
+    SyncService.triggerSync(targetOrder.uuid);
+
     res.status(200).json({
       message: "success",
       data: {
@@ -915,9 +946,13 @@ const onGiftItem = async (req, res) => {
         total: netTotal,
         discount,
         service_charge: service,
+        is_synced: 0
       },
       { where: { uuid: orderId }, transaction },
     );
+
+    // Sync trigger
+    SyncService.triggerSync(orderId);
 
     await transaction.commit();
 
@@ -1050,9 +1085,13 @@ const onUpdateItemDiscount = async (req, res) => {
         total: netTotal,
         discount: discount,
         service_charge: service,
+        is_synced: 0
       },
       { where: { uuid: orderId }, transaction },
     );
+
+    // Sync trigger
+    SyncService.triggerSync(orderId);
 
     await transaction.commit();
 
@@ -1097,9 +1136,10 @@ const onDeleteCheck = async (req, res) => {
 
   try {
     const updateCheckStatus = await OrdersModel.update(
-      { status: 3, end_date: new Date() },
+      { status: 3, end_date: new Date(), is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    SyncService.triggerSync(orderId);
     res.status(200).json({ message: "success" });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
@@ -1119,7 +1159,7 @@ const onCloseOrder = async (req, res) => {
   try {
     // 1. Update Order Status, Note, and End Date
     await OrdersModel.update(
-      { status: status, note: note || "", end_date: new Date() },
+      { status: status, note: note || "", end_date: new Date(), is_synced: 0 },
       { where: { uuid: orderId }, transaction },
     );
 
@@ -1140,6 +1180,7 @@ const onCloseOrder = async (req, res) => {
     }
 
     await transaction.commit();
+    SyncService.triggerSync(orderId);
     res.status(200).json({ message: "Order closed successfully" });
   } catch (error) {
     if (transaction) await transaction.rollback();
@@ -1188,9 +1229,12 @@ const onUpdateDepositOrder = async (req, res) => {
       {
         deposit: depositValue,
         total: newTotal,
+        is_synced: 0
       },
       { where: { uuid: orderId } },
     );
+
+    SyncService.triggerSync(orderId);
 
     return res.status(200).json({
       message: "Deposit updated successfully!",
@@ -1218,9 +1262,11 @@ const onReturnCheck = async (req, res) => {
         is_delete_reason_id: is_delete_reason_id,
         status: 1, // Reopen the check
         end_date: null, // Clear the end date
+        is_synced: 0
       },
       { where: { uuid: orderId } }
     );
+    SyncService.triggerSync(orderId);
 
     return res.status(200).json({
       message: "Check returned and reopened successfully!",
@@ -1305,9 +1351,12 @@ const onDeleteItemWithReason = async (req, res) => {
         total: netTotal,
         discount,
         service_charge: service,
+        is_synced: 0
       },
       { where: { uuid: orderId }, transaction }
     );
+    // Sync handled after commit
+    SyncService.triggerSync(orderId);
 
     await transaction.commit();
 
@@ -1427,9 +1476,11 @@ const onUpdateItemPrice = async (req, res) => {
         total: netTotal,
         discount: discount,
         service_charge: service,
+        is_synced: 0
       },
       { where: { uuid: orderId } },
     );
+    SyncService.triggerSync(orderId);
 
     // Return success with necessary data for frontend updates
     res.status(200).json({

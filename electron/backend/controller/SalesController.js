@@ -1,4 +1,5 @@
 const OrdersModel = require("../model/OrdersModel");
+const SyncService = require("../services/SyncService");
 
 const CreateNewOrders = async (req, res) => {
   try {
@@ -47,7 +48,13 @@ const CreateNewOrders = async (req, res) => {
       service_type: serviceType,
       service_value: serviceValue,
       deposit: table?.deposit || 0, // Include table deposit if exists
+      is_synced: 0 // Mark as unsynced initially
     });
+
+    // Trigger sync
+    if (newSale.uuid) {
+      SyncService.triggerSync(newSale.uuid);
+    }
 
     res.status(200).json({ message: "success", data: newSale, count: newId });
   } catch (error) {
@@ -79,7 +86,13 @@ const CreateNewOtherOrders = async (req, res) => {
       sale_type: sale_type,
       status: status,
       is_selected: is_selected,
+      is_synced: 0
     });
+
+    // Trigger sync
+    if (newSale.uuid) {
+      SyncService.triggerSync(newSale.uuid);
+    }
 
     res.status(200).json({ message: "success", data: newSale, count: newId });
   } catch (error) {
