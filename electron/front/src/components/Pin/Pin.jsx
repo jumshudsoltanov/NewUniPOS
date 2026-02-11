@@ -4,7 +4,7 @@ import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault
 import DefaultLogo from "../../assets/images/unipos_logo.png";
 import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getWaiter } from "../../redux/Slices/WaitersSlice";
@@ -102,8 +102,35 @@ const ClearIcon = () => (
   </svg>
 );
 
-const ImageSection = React.memo((backgroundImg) => {
+const ImageSection = React.memo(({ backgroundImg }) => {
   const [loaded, setLoaded] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(RightBoxContainerImg2);
+
+  useEffect(() => {
+    const setBackground = () => {
+      try {
+        const authLogin = JSON.parse(localStorage.getItem("authlogin") || "{}");
+        if (authLogin?.bg) {
+          setCurrentSrc(authLogin.bg);
+          return;
+        }
+      } catch (error) {
+        console.error("Error parsing authlogin:", error);
+      }
+
+      if (backgroundImg) {
+        if (backgroundImg.startsWith("data:") || backgroundImg.startsWith("http")) {
+          setCurrentSrc(backgroundImg);
+        } else {
+          setCurrentSrc(`https://unipos.tech/${backgroundImg}`);
+        }
+      } else {
+        setCurrentSrc(RightBoxContainerImg2);
+      }
+    };
+
+    setBackground();
+  }, [backgroundImg]);
 
   return (
     <Col
@@ -118,13 +145,10 @@ const ImageSection = React.memo((backgroundImg) => {
         style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.5s ease" }}
       >
         <img
-          src={
-            backgroundImg?.backgroundImg
-              ? `https://unipos.tech/${backgroundImg.backgroundImg}`
-              : RightBoxContainerImg2
-          }
+          src={currentSrc}
           alt="Background"
           onLoad={() => setLoaded(true)}
+          onError={() => setCurrentSrc(RightBoxContainerImg2)}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       </div>
@@ -217,7 +241,7 @@ const Pin = () => {
         <Row className="g-0 h-100">
           {/* IMAGE SECTION */}
           <ImageSection
-            backgroundImg={loginedProfileData.data.profile.background_img}
+            backgroundImg={loginedProfileData?.data?.profile?.background_img}
           />
 
           {/* INFO SECTION */}

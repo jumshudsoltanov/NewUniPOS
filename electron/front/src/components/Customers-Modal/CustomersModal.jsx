@@ -30,6 +30,8 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   }, [selectedHall]);
 
 
+
+   
   const handleNumberClick = (num) => {
     if (guestCount === "0") {
       setGuestCount(num.toString());

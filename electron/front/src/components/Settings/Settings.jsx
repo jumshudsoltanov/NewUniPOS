@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
+import ReportModal from "../ReportModal/ReportModal";
 import "./Settings.css";
 
 const Settings = () => {
     const navigate = useNavigate();
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [showSupportModal, setShowSupportModal] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
     const [showClock, setShowClock] = useState(() => {
         return localStorage.getItem("showHeaderClock") === "true";
     });
@@ -55,6 +57,7 @@ const Settings = () => {
             id: "report",
             label: "Hesabat yarat",
             icon: <i className="bi bi-file-earmark-text"></i>,
+            onClick: () => setShowReportModal(true),
         },
         {
             id: "operation",
@@ -175,6 +178,12 @@ const Settings = () => {
             <SupportModal
                 isOpen={showSupportModal}
                 onClose={() => setShowSupportModal(false)}
+            />
+
+            {/* Report Modal */}
+            <ReportModal
+                show={showReportModal}
+                onClose={() => setShowReportModal(false)}
             />
         </>
     );

@@ -4,11 +4,66 @@ import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault
 import DefaultLogo from "../../assets/images/unipos_logo.png";
 import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useCallback, useEffect } from "react";
+
+
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { authPos } from "../../redux/Slices/LoginSlice";
-import { useEffect } from "react";
+
+const ImageSection = React.memo(({ backgroundImg }) => {
+  const [loaded, setLoaded] = useState(false);
+  const [currentSrc, setCurrentSrc] = useState(RightBoxContainerImg2);
+
+  useEffect(() => {
+    const setBackground = () => {
+      try {
+        const authLogin = JSON.parse(localStorage.getItem("authlogin") || "{}");
+        if (authLogin?.bg) {
+          setCurrentSrc(authLogin.bg);
+          return;
+        }
+      } catch (error) {
+        console.error("Error parsing authlogin:", error);
+      }
+
+      if (backgroundImg) {
+        if (backgroundImg.startsWith("data:") || backgroundImg.startsWith("http")) {
+          setCurrentSrc(backgroundImg);
+        } else {
+          setCurrentSrc(`https://unipos.tech/${backgroundImg}`);
+        }
+      } else {
+        setCurrentSrc(RightBoxContainerImg2);
+      }
+    };
+
+    setBackground();
+  }, [backgroundImg]);
+
+  return (
+    <Col
+      md={6}
+      lg={7}
+      xl={8}
+      className="d-none d-md-block p-0 h-100"
+      style={{ background: "#f8f9fa" }}
+    >
+      <div
+        className="RightBoxContainer"
+        style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.5s ease" }}
+      >
+        <img
+          src={currentSrc}
+          alt="Background"
+          onLoad={() => setLoaded(true)}
+          onError={() => setCurrentSrc(RightBoxContainerImg2)}
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      </div>
+    </Col>
+  );
+});
 
 const Login = () => {
   const [isError, setIsError] = useState(false);
@@ -65,13 +120,11 @@ const Login = () => {
     <>
       <Container fluid className="p-0 vh-100 overflow-hidden">
         <Row className="g-0 h-100">
+
           {/* IMAGE SECTION */}
-          <Col md={6} lg={7} xl={8} className="d-none d-md-block p-0 h-100">
-            <div
-              className="RightBoxContainer"
-              style={{ backgroundImage: `url(${RightBoxContainerImg2})` }}
-            />
-          </Col>
+          <ImageSection
+            backgroundImg={loginedProfileData?.data?.profile?.background_img}
+          />
 
           {/* INFO SECTION */}
           <Col xs={12} md={6} lg={5} xl={4} className="p-0 h-100">

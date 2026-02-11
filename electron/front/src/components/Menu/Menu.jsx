@@ -117,7 +117,7 @@ const Menu = ({
     }
 
     if (menuViewMode === "PRODUCTS") {
-      return selectedCat?.products || [];
+      return (selectedCat?.products || []).filter((item) => item && item.name);
     }
     return [];
   }, [
@@ -136,45 +136,57 @@ const Menu = ({
         className="g-2 px-2 overflow-auto"
         style={{ flex: 1, alignContent: "flex-start" }}
       >
-        {itemsToRender?.map((item, index) => (
-          <Col
-            key={item.id ? `${item.id}-${index}` : index}
-            xs={6} md={4}
-            style={{ flex: "0 0 20%", maxWidth: "20%" }}
-          >
-            <div
-              className="menu-card"
-              style={{
-                backgroundImage: item.img
-                  ? `url(https://unipos.tech/${item.img})`
-                  : "none",
-                backgroundColor: item.img ? "transparent" : "#555",
-                cursor: "pointer",
-              }}
-              onClick={() => {
-                if (searchText?.length > 0) {
-                  handleProductClick(item);
-                } else {
-                  if (menuViewMode === "PRODUCTS") {
-                    handleProductClick(item);
-                  } else {
-                    handleItemClick(item);
-                  }
-                }
-              }}
-            >
-              {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
-                <div className="menu-card-price">{item.price} ₼</div>
-              )}
+        {itemsToRender
+          ?.filter((item) => item && item.name) // Filter to prevent empty boxes
+          .map((item, index) => {
+            let imageSrc = "none";
+            if (item.img) {
+              if (item.img.startsWith("data:") || item.img.startsWith("http")) {
+                imageSrc = `url(${item.img})`;
+              } else {
+                imageSrc = `url(https://unipos.tech/${item.img})`;
+              }
+            }
 
-              <div className="menu-card-content">
-                <span className="text-center fw-bold text-white text-shadow">
-                  {item.name}
-                </span>
-              </div>
-            </div>
-          </Col>
-        ))}
+            return (
+              <Col
+                key={item.id ? `${item.id}-${index}` : index}
+                xs={6}
+                md={4}
+                style={{ flex: "0 0 20%", maxWidth: "20%" }}
+              >
+                <div
+                  className="menu-card"
+                  style={{
+                    backgroundImage: imageSrc,
+                    backgroundColor: item.img ? "transparent" : "#555",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    if (searchText?.length > 0) {
+                      handleProductClick(item);
+                    } else {
+                      if (menuViewMode === "PRODUCTS") {
+                        handleProductClick(item);
+                      } else {
+                        handleItemClick(item);
+                      }
+                    }
+                  }}
+                >
+                  {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
+                    <div className="menu-card-price">{item.price} ₼</div>
+                  )}
+
+                  <div className="menu-card-content">
+                    <span className="text-center fw-bold text-white text-shadow">
+                      {item.name}
+                    </span>
+                  </div>
+                </div>
+              </Col>
+            );
+          })}
         {itemsToRender?.length === 0 && (
           <div className="text-center w-100 text-muted mt-5">
             <p>Məlumat tapılmadı</p>

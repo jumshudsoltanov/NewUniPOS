@@ -1,0 +1,206 @@
+/* ReportModal.css */
+
+.report-modal .modal-content {
+    border-radius: 12px;
+    border: none;
+    overflow: hidden;
+    height: 75vh;
+    min-height: 550px;
+}
+
+.report-modal-dialog {
+    max-width: 1200px !important;
+    /* Significantly increased width */
+    margin: 1.75rem auto;
+    /* Ensure centering */
+}
+
+.report-modal-header {
+    background-color: #3f3d56;
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.report-modal-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.report-modal-close-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    padding: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.report-modal-close-btn:hover {
+    opacity: 0.8;
+}
+
+.report-modal-body {
+    padding: 0;
+    background-color: #ffffff;
+    height: calc(100% - 3.5rem);
+    display: flex;
+    /* Use flexbox for the main body layout */
+    overflow: hidden;
+}
+
+/* Sidebar (Filter Section) */
+.report-sidebar {
+    background-color: #f8f9fa;
+    /* Slight off-white to distinguish sidebar */
+    padding: 1.5rem;
+    border-right: 1px solid #dee2e6;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+}
+
+.report-content {
+    background-color: #ffffff;
+    padding: 2rem;
+    height: 100%;
+    overflow-y: auto;
+    flex: 1;
+    /* Take remaining space */
+}
+
+/* Form Styles */
+.report-sidebar .form-label {
+    font-weight: 600;
+    color: #343a40;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.report-sidebar .form-control,
+.report-sidebar .form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.95rem;
+    color: #495057;
+    box-shadow: none;
+}
+
+.report-sidebar .form-control:focus,
+.report-sidebar .form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+.report-sidebar .form-group {
+    margin-bottom: 1.5rem;
+    /* Increased spacing between groups */
+}
+
+/* Date/Time Row Styling */
+.date-time-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+}
+
+.date-time-row input[type="date"] {
+    flex: 1;
+    min-width: auto;
+    /* Allow natural width */
+}
+
+.date-time-row select {
+    width: 90px !important;
+    /* Fixed width for time */
+    flex-shrink: 0;
+}
+
+/* Switch Styles */
+.report-sidebar .form-check {
+    padding-left: 0;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.8rem;
+    min-height: auto;
+}
+
+.report-sidebar .form-check .form-check-input {
+    float: none;
+    margin-left: 0;
+    width: 2.8em;
+    height: 1.4em;
+    cursor: pointer;
+    margin-top: 0;
+}
+
+.report-sidebar .form-check .form-check-label {
+    margin-left: 1rem;
+    font-size: 0.95rem;
+    color: #495057;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Button Styles */
+.report-create-btn {
+    width: 100%;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    padding: 0.8rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: auto;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    gap: 8px;
+}
+
+.report-create-btn:hover {
+    background-color: #0b5ed7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.report-create-btn:active {
+    transform: translateY(0);
+}
+
+.report-create-btn i {
+    font-size: 1.2rem;
+}
+
+/* Scrollbar Styling */
+.report-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.report-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.report-sidebar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+
+.report-sidebar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}

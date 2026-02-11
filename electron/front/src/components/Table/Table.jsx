@@ -38,6 +38,8 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter }) => {
     }
   };
 
+  
+
 
   return (
     <>

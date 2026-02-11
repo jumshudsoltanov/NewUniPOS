@@ -16,18 +16,12 @@ const getLogin = async (req, res) => {
   try {
     const { username, terminalId, password } = req.body;
 
-    const response = await axios.get(
-      "http://46.224.8.157:35627/api/terminal/me",
+    const response = await axios.post(
+      "http://46.224.8.157:35627/api/terminal/login",
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        params: {
-          username,
-          terminal_id: terminalId,
-          terminal_password: password,
-        },
+        username: username,
+        terminal_id: terminalId,
+        terminal_password: password,
       },
     );
 
