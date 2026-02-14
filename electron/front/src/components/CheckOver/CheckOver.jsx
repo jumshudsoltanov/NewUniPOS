@@ -206,6 +206,7 @@ const CheckOver = () => {
             const tag = tagsListData.find(t => (t.name || t.text) === unpaidReason);
             payments = [{
                 without_payment_method_id: tag?.id || 0,
+                name: unpaidReason,
                 amount: calcTotal.sumTotal
             }];
             noteStr = `Ödənişsiz: ${unpaidReason}. ${comment}`;

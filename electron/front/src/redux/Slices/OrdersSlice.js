@@ -90,10 +90,11 @@ export const updateServiceFeeOnOrders = createAsyncThunk(
 
 export const reopenOrder = createAsyncThunk(
   "orders/reopen",
-  async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, reasonId, reasonName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders/${orderId}/reopen`
+        `http://localhost:55667/api/orders/${orderId}/reopen`,
+        { reasonId }
       );
 
       // Persistent Log
@@ -103,7 +104,7 @@ export const reopenOrder = createAsyncThunk(
         orderId,
         action: "Çek yenidən açıldı",
         waiterName,
-        details: "Bağlı çek yenidən açıldı"
+        details: `Bağlı çek yenidən açıldı. Səbəb: ${reasonName || 'Göstərilməyib'}`
       }));
 
       return response.data;
@@ -386,11 +387,16 @@ export const closeOrder = createAsyncThunk(
       // Persistent Log
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      const paymentDetails = payments.map(p => `${p.name || p.type || 'Ödəniş'}: ${p.amount}`).join(', ');
+
+      const isUnpaid = payments.some(p => p.without_payment_method_id);
+      const paymentDetails = payments.map(p => {
+        const methodPrefix = p.name || (p.without_payment_method_id ? "Ödənişsiz" : (p.type || 'Ödəniş'));
+        return `${methodPrefix}: ${p.amount} ₼`;
+      }).join(', ');
 
       thunkAPI.dispatch(saveLog({
         orderId,
-        action: "Ödəniş edildi",
+        action: isUnpaid ? "Ödənişsiz bağlandı" : "Ödəniş edildi",
         waiterName,
         details: paymentDetails || (note ? `Bağlandı: ${note}` : "Sifariş bağlandı")
       }));

@@ -63,7 +63,9 @@ const OtherChecks = ({
 
   const resolveNames = (item) => {
     if (item.sale_type !== "dine_in") {
-      return item.sale_type === "delivery" ? "Çatdırılma" : "Takeaway";
+      if (item.sale_type === "delivery") return "Çatdırılma";
+      if (item.sale_type === "takeaway") return "Takeaway";
+      return item.sale_type.charAt(0).toUpperCase() + item.sale_type.slice(1);
     }
 
     if (item.table?.name) {

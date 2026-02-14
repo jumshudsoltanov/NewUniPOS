@@ -1246,6 +1246,37 @@ const onUpdateDepositOrder = async (req, res) => {
   }
 };
 
+// Reopen Check - simply sets status back to 1 (active)
+const onReopenOrder = async (req, res) => {
+  const { orderId } = req.params;
+  const { reasonId } = req.body;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    await OrdersModel.update(
+      {
+        status: 1,
+        end_date: null,
+        is_delete_reason_id: reasonId,
+        is_synced: 0
+      },
+      { where: { uuid: orderId } }
+    );
+    SyncService.triggerSync(orderId);
+
+    return res.status(200).json({
+      message: "Check reopened successfully!",
+      data: { orderId, status: 1 },
+    });
+  } catch (error) {
+    console.error("Reopen order error:", error);
+    return res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
 // Return Check - marks as returned with reason and reopens
 const onReturnCheck = async (req, res) => {
   const { orderId } = req.params;
@@ -1520,5 +1551,6 @@ module.exports = {
   onUpdateDepositOrder,
   onCloseOrder,
   onReturnCheck,
+  onReopenOrder,
   onDeleteItemWithReason,
 };

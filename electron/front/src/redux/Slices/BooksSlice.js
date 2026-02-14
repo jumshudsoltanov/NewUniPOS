@@ -79,6 +79,12 @@ const BooksSlice = createSlice({
       state.status = 'failed';
       state.error = action.payload;
     });
+
+    // Remove from archive when reopened
+    builder.addCase("orders/reopen/fulfilled", (state, action) => {
+      const reopenedOrderId = action.meta.arg.orderId;
+      state.archivedBooks = state.archivedBooks.filter(o => o.uuid !== reopenedOrderId);
+    });
     // Listen for giftItem and discount (and sendOrdersItems if applicable)
     builder.addMatcher(
       (action) =>

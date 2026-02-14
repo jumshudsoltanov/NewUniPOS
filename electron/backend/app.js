@@ -25,6 +25,7 @@ const {
 } = require("./data/ProductsData");
 const { getPaymentMethods } = require("./data/PaymentMethodsData");
 const { getTags } = require("./data/TagsData");
+const { getSalesTypes } = require("./data/SalesTypesData");
 
 // Allow Cors
 app.use(
@@ -167,27 +168,30 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const InsertData = async () => {
   try {
     await getWaitersList();
-    await sleep(2000);
+    await sleep(500);
 
     await getTableGroups();
-    await sleep(2000);
+    await sleep(500);
 
     await getTables();
-    await sleep(2000);
+    await sleep(500);
 
     await getGeneralCategories();
-    await sleep(2000);
+    await sleep(500);
 
     await getCategories();
-    await sleep(2000);
+    await sleep(500);
 
     await getProducts();
-    await sleep(2000);
+    await sleep(500);
 
     await getTags();
-    await sleep(2000);
+    await sleep(500);
 
     await getPaymentMethods();
+    await sleep(500);
+
+    await getSalesTypes();
   } catch (error) {
     console.log("error insert", error);
   }

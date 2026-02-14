@@ -9,6 +9,8 @@ const BooksController = require("../controller/BooksController");
 const MenuController = require("../controller/MenuController");
 const TagsController = require("../controller/TagsController");
 const PaymentMethodsController = require("../controller/PaymentMethodsController");
+const SaleTypesController = require("../controller/SaleTypesContoller");
+
 // Routers lists
 router.post("/login", LoginController.getLogin);
 router.post("/sale", SalesController.CreateNewOrders);
@@ -17,7 +19,11 @@ router.get("/waiters/:pin", WaitersController.getWaiterInfo);
 router.get("/tables/:profileId", TablesController.getTables);
 router.get("/waiters/:profileId/list", WaitersController.getWaiterLists);
 router.get("/tags/:profileId/list", TagsController.getTagsList);
-router.get("/payment-methods/:profileId/list", PaymentMethodsController.getPaymentMethodsList);
+router.get(
+  "/payment-methods/:profileId/list",
+  PaymentMethodsController.getPaymentMethodsList,
+);
+router.get("/sale-types/:profileId", SaleTypesController.getSaleTypes);
 
 // Ordered Items Routers
 router.post(
@@ -110,10 +116,7 @@ router.patch(
   OrdersItemsController.onDeleteCheck,
 );
 
-router.post(
-  "/orders-items/:orderId/close",
-  OrdersItemsController.onCloseOrder,
-);
+router.post("/orders-items/:orderId/close", OrdersItemsController.onCloseOrder);
 
 router.patch(
   "/orders-items/:orderId/return",
@@ -122,8 +125,12 @@ router.patch(
 
 // All Orders Controllerj
 router.get("/orders/:profileId/all-checks", BooksController.getAllActiveOrders);
-router.get("/orders/:profileId/archived-checks", BooksController.getArchivedOrders);
+router.get(
+  "/orders/:profileId/archived-checks",
+  BooksController.getArchivedOrders,
+);
 router.get("/orders/:orderId", BooksController.getOrderById);
+router.patch("/orders/:orderId/reopen", OrdersItemsController.onReopenOrder);
 
 // MenuData
 router.get(

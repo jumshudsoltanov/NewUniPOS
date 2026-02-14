@@ -8,6 +8,8 @@ import BooksSlice from "../Slices/BooksSlice";
 import MenuSlice from "../Slices/MenuSlice";
 import PaymentMethodsSlice from "../Slices/PaymentMethodsSlice";
 
+import SalesTypesSlice from "../Slices/SalesTypesSlice";
+
 export default configureStore({
   reducer: {
     OrderSlice: OrderSlice,
@@ -18,5 +20,6 @@ export default configureStore({
     BooksSlice: BooksSlice,
     MenuSlice: MenuSlice,
     PaymentMethodsSlice: PaymentMethodsSlice,
+    SalesTypesSlice: SalesTypesSlice,
   },
 });

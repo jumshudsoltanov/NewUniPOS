@@ -375,7 +375,13 @@ const Checks = () => {
 
                       {check.sale_type && (
                         <span className={`checks-check-badge checks-badge-${check.sale_type}`}>
-                          {check.sale_type === "dine_in" ? "Restoranda" : check.sale_type === "takeaway" ? "Gəl götür" : "Çatdırılma"}
+                          {check.sale_type === "dine_in"
+                            ? "Restoranda"
+                            : check.sale_type === "takeaway"
+                              ? "Gəl götür"
+                              : check.sale_type === "delivery"
+                                ? "Çatdırılma"
+                                : (check.sale_type?.charAt(0).toUpperCase() + check.sale_type?.slice(1))}
                         </span>
                       )}
                     </div>

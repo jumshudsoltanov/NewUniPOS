@@ -10,18 +10,30 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { useNavigate } from "react-router-dom";
 
+import { getSalesTypes } from "../../redux/Slices/SalesTypesSlice";
+import { useEffect } from "react";
+
 export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { salesTypes: fetchedSalesTypes } = useSelector((state) => state.SalesTypesSlice);
   const [saleType, setSaleType] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
 
+  useEffect(() => {
+    if (loginedProfileData?.data?.profile?.id) {
+      dispatch(getSalesTypes(loginedProfileData.data.profile.id));
+    }
+  }, [dispatch, loginedProfileData]);
+
+  // Construct sales types list. Always include Dine In.
   const salesTypes = [
     {
       id: "dine_in",
       label: "Yerində",
+      // You can keep the icon here or dynamically assign icons
       icon: (
         <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
@@ -46,6 +58,16 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
         </svg>
       ),
     },
+    ...(fetchedSalesTypes || []).map(type => ({
+      id: type.name,
+      label: type.name,
+      // Default icon for dynamic types
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12z" />
+        </svg>
+      )
+    }))
   ];
 
   const createOrder = useCallback(
@@ -103,7 +125,8 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
       loginedProfileData,
       navigate,
       isCreating,
-      onClose
+      onClose,
+      salesTypes
     ],
   );
 
