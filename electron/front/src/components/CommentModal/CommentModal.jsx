@@ -13,6 +13,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 const CommentModal = ({ show, onClose, order }) => {
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const [comment, setComment] = useState("");
 
   useEffect(() => {
@@ -20,8 +21,10 @@ const CommentModal = ({ show, onClose, order }) => {
   }, [order?.note]);
 
   const handleUpdateComment = async () => {
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
     const result = await dispatch(
-      updateComments({ orderId: order?.uuid, comments: comment }),
+      updateComments({ orderId: order?.uuid, comments: comment, waiterName }),
     ).unwrap();
 
     console.log(result);

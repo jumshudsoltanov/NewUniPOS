@@ -31,9 +31,17 @@ const Tables = () => {
     const selectedHall = tableGroups.data.find(
       (hall) => hall.id === currentHallId,
     );
-    setCurrentHallData(selectedHall);
     const tables = selectedHall?.tables || [];
     return [...tables].sort((a, b) => a.id - b.id);
+  }, [tableGroups, currentHallId]);
+
+  React.useEffect(() => {
+    if (tableGroups?.data && currentHallId) {
+      const selectedHall = tableGroups.data.find(hall => hall.id === currentHallId);
+      setCurrentHallData(selectedHall);
+    } else if (tableGroups?.data) {
+      setCurrentHallData(tableGroups.data[0]);
+    }
   }, [tableGroups, currentHallId]);
 
   const handleTableClick = React.useCallback(
@@ -57,7 +65,9 @@ const Tables = () => {
             }
           }
 
-          const newHallName = currentHallData?.name || "Naməlum";
+          // Derive new hall name directly
+          const targetHall = tableGroups?.data?.find(h => h.id === currentHallId);
+          const newHallName = targetHall?.name || currentHallData?.name || "Naməlum";
 
           await dispatch(
             updateTableOrders({
@@ -92,7 +102,7 @@ const Tables = () => {
         setShowModal(true);
       }
     },
-    [id, dispatch, currentHallId, loginedProfileData, navigate],
+    [id, dispatch, currentHallId, loginedProfileData, navigate, tableGroups, currentHallData],
   );
 
   if (currentTables.length === 0) {

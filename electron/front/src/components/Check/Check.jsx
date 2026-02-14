@@ -278,10 +278,29 @@ const Check = () => {
   const [selectedCat, setSelectedCat] = useState(null);
 
   const handleMenuHome = () => {
-    setMenuViewMode("ROOT");
-    setSelectedGenCat(null);
-    setSelectedCat(null);
-    setSearchText("");
+    if (searchText) {
+      setSearchText("");
+      return;
+    }
+
+    if (menuViewMode === "PRODUCTS") {
+      if (selectedGenCat) {
+        setMenuViewMode("CATEGORIES");
+        setSelectedCat(null);
+      } else {
+        setMenuViewMode("ROOT");
+        setSelectedGenCat(null);
+        setSelectedCat(null);
+      }
+    } else if (menuViewMode === "CATEGORIES") {
+      setMenuViewMode("ROOT");
+      setSelectedGenCat(null);
+      setSelectedCat(null);
+    } else {
+      setMenuViewMode("ROOT");
+      setSelectedGenCat(null);
+      setSelectedCat(null);
+    }
   };
 
   const getMenuBreadcrumbTitle = () => {
@@ -291,7 +310,6 @@ const Check = () => {
     if (menuViewMode === "PRODUCTS") return selectedCat?.name;
     return "";
   };
-
 
   const handleOpenSplitModel = () => {
     if (currentOrder?.is_locked == 1) {
@@ -941,7 +959,7 @@ const Check = () => {
                   {/* Second Tab - Only Visible if NOT Root or Search Active */}
                   {(menuViewMode !== "ROOT" ||
                     (searchText && searchText.length > 0)) && (
-                      <div className="breadcrumb-tab next">
+                      <div className="breadcrumb-tab next cursor-pointer" onClick={handleMenuHome}>
                         <span>{getMenuBreadcrumbTitle()}</span>
                       </div>
                     )}

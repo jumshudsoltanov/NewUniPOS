@@ -9,6 +9,7 @@ import {
   getTableGroups,
   currentTableList,
 } from "../../redux/Slices/TablesSlice";
+import { saveLog } from "../../redux/Slices/OrdersSlice";
 
 const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   const [guestCount, setGuestCount] = useState("0");
@@ -31,7 +32,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
 
 
 
-   
+
   const handleNumberClick = (num) => {
     if (guestCount === "0") {
       setGuestCount(num.toString());
@@ -84,6 +85,15 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
     try {
       const result = await dispatch(saleNewOrders(payload)).unwrap();
       if (result?.message === "success") {
+        // Persistent Log
+        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+        dispatch(saveLog({
+          orderId: result.data.uuid,
+          action: "Yeni sifariş yaradıldı",
+          waiterName,
+          details: `Masa: ${table?.name || "Naməlum"}, Qonaq sayı: ${guestCount}`
+        }));
+
         navigate(`/check/${result?.data?.uuid}?tableId=${table.id}`);
       }
     } catch (err) {

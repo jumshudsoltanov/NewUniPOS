@@ -385,7 +385,7 @@ const CheckOver = () => {
                                 </div>
 
                                 <div className="unpaid-reasons gap-1 d-flex flex-column">
-                                    {(tagsListData.length > 0 ? tagsListData : [{ name: "Qonaq tərk etdi" }, { name: "Şirkət hesabına" }, { name: "Qarson səhvi" }]).map((tag, index) => {
+                                    {tagsListData.map((tag, index) => {
                                         const reasonName = tag.name || tag.text || `Reason ${index + 1}`;
                                         return (
                                             <div

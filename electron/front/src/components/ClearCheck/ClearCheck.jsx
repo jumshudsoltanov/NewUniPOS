@@ -8,11 +8,12 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const ClearCheck = ({ show, onClose, order }) => {
   const dispatch = useDispatch();
-  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
 
   const handleClearCheck = async () => {
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
     const result = await dispatch(
-      deleteOrderItems({ orderId: order.uuid }),
+      deleteOrderItems({ orderId: order.uuid, waiterName }),
     ).unwrap();
     await dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap()
     await dispatch(

@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   saleNewOtherOrders,
 } from "../../redux/Slices/SaleSlice";
+import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { useNavigate } from "react-router-dom";
@@ -74,6 +75,17 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
       try {
         const result = await dispatch(saleNewOtherOrders(payload)).unwrap();
         if (result?.message === "success") {
+          // Persistent Log
+          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+          const typeLabel = salesTypes.find(t => t.id === saleTypeId)?.label || saleTypeId;
+
+          dispatch(saveLog({
+            orderId: result.data.uuid,
+            action: "Yeni sifariş yaradıldı",
+            waiterName,
+            details: `Satış növü: ${typeLabel}`
+          }));
+
           await dispatch(getTableGroups(payload.profileId));
           await dispatch(getActiveOrders({ profileId: payload.profileId }));
           navigate(`/check/${result?.data?.uuid}`);

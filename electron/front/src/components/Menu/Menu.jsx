@@ -108,7 +108,9 @@ const Menu = ({
 
     if (menuViewMode === "ROOT") {
       const genCats = menuDataWithGeneralCategories?.data || [];
-      const cats = menuDataWithCategories?.data || [];
+      const cats = (menuDataWithCategories?.data || []).filter(
+        (c) => !c.general_categorie_id || c.general_categorie_id === 0
+      );
       return [...genCats, ...cats];
     }
 
