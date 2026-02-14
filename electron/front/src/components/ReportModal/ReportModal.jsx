@@ -1,8 +1,13 @@
-import React, { useState } from "react";
-import { Modal, Row, Col, Form } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { Modal, Row, Col, Form, Table } from "react-bootstrap";
+import { useSelector } from "react-redux";
+import axios from "axios";
 import "./ReportModal.css";
 
 const ReportModal = ({ show, onClose }) => {
+    const profile = useSelector((state) => state.LoginSlice?.loginedProfileData?.data?.profile);
+    const profileId = profile?.id;
+
     // Default dates (today and tomorrow)
     const today = new Date().toISOString().split('T')[0];
     const tomorrow = new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0];
@@ -17,21 +22,322 @@ const ReportModal = ({ show, onClose }) => {
     const [showTransactions, setShowTransactions] = useState(false);
     const [showAccounts, setShowAccounts] = useState(false);
 
-    const terminals = [
-        { id: "all", name: "Hamısı" },
-        // ... add more if available
-    ];
+    // Dynamic states
+    const [terminals, setTerminals] = useState([{ id: "all", name: "Hamısı" }]);
+    const [reportResults, setReportResults] = useState(null);
+    const [reportSummary, setReportSummary] = useState(null);
+    const [loading, setLoading] = useState(false);
 
     const reportTypes = [
         { id: "simple", name: "Sadə" },
-        // ... add more if available
+        { id: "products", name: "Məhsullar" },
+        { id: "hall", name: "Zal" },
+        { id: "tables", name: "Masalar" },
+        { id: "checks", name: "Çek" },
+        { id: "department", name: "Şöbə" },
+        { id: "inventory", name: "Ehtiyat" },
+        { id: "sale_method", name: "Satış üsulu" },
+        { id: "employee", name: "Əməkdaş" },
+        { id: "category", name: "Kateqoriya" },
+        { id: "refunds", name: "Geri qaytarılma" },
+        { id: "gifted_products", name: "İkram olunmuş məhsul" },
+        { id: "financial", name: "Maliyyə hesabatı" },
     ];
 
-    const handleCreateReport = () => {
-        console.log("Creating report with:", {
-            startDate, startTime, endDate, endTime, terminal, reportType, showTransactions, showAccounts
-        });
-        // Logic to fetch report data would go here
+    useEffect(() => {
+        if (show && profileId) {
+            fetchTerminals();
+        }
+    }, [show, profileId]);
+
+    const fetchTerminals = async () => {
+        try {
+            const response = await axios.get(`http://localhost:55667/api/reports/${profileId}/terminals`);
+            if (response.data.status === "success") {
+                setTerminals([{ id: "all", name: "Hamısı" }, ...response.data.data]);
+            }
+        } catch (error) {
+            console.error("Error fetching terminals:", error);
+        }
+    };
+
+    const handleCreateReport = async () => {
+        if (!profileId) return;
+
+        setLoading(true);
+        try {
+            // Always fetch simple summary first
+            const summaryRes = await axios.get(`http://localhost:55667/api/reports/${profileId}/data`, {
+                params: { startDate, startTime, endDate, endTime, terminal, reportType: 'simple', showTransactions }
+            });
+
+            if (summaryRes.data.status === "success") {
+                setReportSummary(summaryRes.data.data);
+            }
+
+            // If selected report is not simple, fetch it too
+            if (reportType !== "simple") {
+                const response = await axios.get(`http://localhost:55667/api/reports/${profileId}/data`, {
+                    params: { startDate, startTime, endDate, endTime, terminal, reportType, showTransactions }
+                });
+
+                if (response.data.status === "success") {
+                    setReportResults({
+                        type: reportType,
+                        data: response.data.data
+                    });
+                }
+            } else {
+                setReportResults({
+                    type: "simple",
+                    data: summaryRes.data.data
+                });
+            }
+        } catch (error) {
+            console.error("Error generating report:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const renderResults = () => {
+        if (loading) return (
+            <div className="report-loading-container">
+                <div className="spinner-border text-primary" role="status"></div>
+                <p className="mt-3">Məlumatlar hazırlanır...</p>
+            </div>
+        );
+
+        if (!reportResults || !reportSummary) return (
+            <div className="report-placeholder">
+                <i className="bi bi-file-earmark-text mb-3"></i>
+                <p className="mb-0 fs-5">
+                    Məlumatları görmək üçün "Hesabat yarat"<br />düyməsini seçin
+                </p>
+            </div>
+        );
+
+        const { type, data } = reportResults;
+
+        const formatDate = (dateStr) => {
+            if (!dateStr) return "";
+            const [year, month, day] = dateStr.split("-");
+            return `${day}.${month}.${year}`;
+        };
+
+        const ReportHeader = () => (
+            <div className="report-data-header mb-4">
+                <div className="report-data-info">
+                    <p><span>Bu tarixdən:</span> {formatDate(startDate)} {startTime}</p>
+                    <p><span>Bu tarixə qədər:</span> {formatDate(endDate)} {endTime}</p>
+                </div>
+                <div className="report-data-time">
+                    <i className="bi bi-clock-fill"></i>
+                    <span>Çıxarılma vaxtı: {new Date().toLocaleDateString('az-AZ')} {new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+            </div>
+        );
+
+        const SalesSummary = () => (
+            <div className="report-section mb-5">
+                <div className="section-title">Satış hesabatı</div>
+                <div className="receipt-row"><span>Cəm</span><div className="dots"></div><span className="value">{(reportSummary.total_amount || 0).toFixed(2)}</span></div>
+                <div className="receipt-row"><span>Vergi</span><div className="dots"></div><span className="value">0.00</span></div>
+                <div className="receipt-row"><span>İkram</span><div className="dots"></div><span className="value">0.00</span></div>
+                <div className="receipt-row"><span>Xidmət</span><div className="dots"></div><span className="value">{(reportSummary.total_service || 0).toFixed(2)}</span></div>
+                <div className="receipt-row"><span>Endirim</span><div className="dots"></div><span className="value">{(reportSummary.total_discount || 0).toFixed(2)}</span></div>
+                <div className="receipt-row"><span>Çatdırılma haqqı</span><div className="dots"></div><span className="value">0.00</span></div>
+                <div className="receipt-row"><span>Geri qaytarılma</span><div className="dots"></div><span className="value">0.00</span></div>
+                <div className="receipt-row total-line"><span>Cəm:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
+
+                <div className="section-title mt-4">Digər detallar</div>
+                <div className="receipt-row"><span>Qonaq sayı</span><div className="dots"></div><span className="value">0</span></div>
+
+                {Object.keys(reportSummary.payments || {}).length > 0 && (
+                    <>
+                        <div className="section-title mt-4">Ödəniş üsulları</div>
+                        {Object.entries(reportSummary.payments).map(([method, amount]) => (
+                            <div className="receipt-row" key={method}>
+                                <span>{method}</span><div className="dots"></div><span className="value">{amount.toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </>
+                )}
+
+                {Object.keys(reportSummary.tags || {}).length > 0 && (
+                    <>
+                        <div className="section-title mt-4">Etiketlər</div>
+                        {Object.entries(reportSummary.tags).map(([tag, details]) => (
+                            <div className="receipt-row" key={tag}>
+                                <span>{tag} ({details.count})</span><div className="dots"></div><span className="value">{details.total.toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </>
+                )}
+            </div>
+        );
+
+        return (
+            <div className="report-view premium-receipt">
+                <ReportHeader />
+                <SalesSummary />
+
+                {type !== "simple" && (
+                    <div className="report-details-section mt-5 pt-4 border-top">
+                        <div className="section-title mb-4">
+                            {reportTypes.find(t => t.id === type)?.name} Detalları
+                        </div>
+                        {renderSpecificData(type, data)}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderSpecificData = (type, data) => {
+        switch (type) {
+            case "products":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Məhsul</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.quantity}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "hall":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Zal</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "tables":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Masa</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "employee":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Əməkdaş</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "category":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Kateqoriya</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.quantity}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "checks":
+                return (
+                    <Table responsive className="custom-report-table list-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Masa</th>
+                                <th>Ofisant</th>
+                                {showTransactions && <th>Etiket</th>}
+                                <th className="text-end">Məbləğ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}>
+                                    <td>#{item.id}</td>
+                                    <td>{item.table?.name || "-"}</td>
+                                    <td>{item.waiter?.name || "-"}</td>
+                                    {showTransactions && <td>{item.tags || "-"}</td>}
+                                    <td className="text-end">{item.total?.toFixed(2)} AZN</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "refunds":
+                return (
+                    <Table responsive className="custom-report-table list-table">
+                        <thead>
+                            <tr><th>ID</th><th>Ofisant</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i} className="table-danger">
+                                    <td>#{item.id}</td>
+                                    <td>{item.waiter?.name || "-"}</td>
+                                    <td className="text-end">{item.total?.toFixed(2)} AZN</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "gifted_products":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Məhsul</th><th className="text-center">Sayı</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}><td>{item.product_name}</td><td className="text-center">{item.quantity}</td></tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "sale_method":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Üsul</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}>
+                                    <td>{item.name === 'dine_in' ? 'Zalda' : item.name === 'takeaway' ? 'Götür' : 'Çatdırılma'}</td>
+                                    <td className="text-center">{item.count}</td>
+                                    <td className="text-end">{item.total?.toFixed(2)} AZN</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            default:
+                return (
+                    <div className="alert alert-info">Seçilmiş hesabat üçün detallı məlumat tapılmadı.</div>
+                );
+        }
     };
 
     return (
@@ -143,19 +449,24 @@ const ReportModal = ({ show, onClose }) => {
                             />
                         </Form.Group>
 
-                        <button className="report-create-btn mt-auto" onClick={handleCreateReport}>
+                        <button
+                            className="report-create-btn mt-auto"
+                            onClick={handleCreateReport}
+                            disabled={loading}
+                        >
                             <i className="bi bi-file-earmark-bar-graph-fill me-2"></i>
-                            Hesabat yarat
+                            {loading ? "Yüklənir..." : "Hesabat yarat"}
                         </button>
                     </Col>
 
-                    {/* Right Content - Results Placeholder */}
-                    <Col md={7} lg={8} className="report-content d-flex align-items-center justify-content-center text-center">
-                        <div className="text-muted">
-                            <p className="mb-0 fs-5">
-                                Məlumatları görmək üçün "Hesabat yarat"<br />düyməsini seçin
-                            </p>
-                        </div>
+                    {/* Right Content - Results */}
+                    <Col
+                        md={7}
+                        lg={8}
+                        className={`report-content ${!reportResults || loading ? 'd-flex align-items-center justify-content-center text-center' : 'p-4'}`}
+                        style={{ overflowY: 'auto' }}
+                    >
+                        {renderResults()}
                     </Col>
                 </Row>
             </Modal.Body>
@@ -164,3 +475,4 @@ const ReportModal = ({ show, onClose }) => {
 };
 
 export default ReportModal;
+

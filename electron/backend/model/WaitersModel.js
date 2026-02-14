@@ -16,7 +16,7 @@ const WaitersModel = db.sequelize.define(
       defaultValue: 0,
     },
     img: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT("long"),
       allowNull: true,
       defaultValue: "0",
     },

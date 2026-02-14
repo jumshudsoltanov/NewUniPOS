@@ -16,7 +16,7 @@
 }
 
 .report-modal-header {
-    background-color: #3f3d56;
+    background-color: #4F85F4;
     color: white;
     padding: 1rem 1.5rem;
     display: flex;
@@ -187,20 +187,205 @@
     font-size: 1.2rem;
 }
 
+/* Report Content Area */
+.report-content h3,
+.report-content h4 {
+    color: #3f3d56;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+.report-content table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.report-content thead {
+    background-color: #f8f9fa;
+}
+
+.report-content thead th {
+    border-bottom: 2px solid #dee2e6 !important;
+    font-weight: 600;
+    color: #3f3d56;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.report-content tbody td {
+    vertical-align: middle;
+    color: #495057;
+}
+
+.report-summary-view {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.report-summary-view .table th {
+    background-color: #fcfcfc;
+    width: 60%;
+}
+
+.report-summary-view .table td {
+    text-align: right;
+    font-weight: 500;
+}
+
+/* Report Placeholders */
+.report-placeholder {
+    color: #a0aec0;
+    text-align: center;
+}
+
+.report-placeholder i {
+    font-size: 4rem;
+    display: block;
+    opacity: 0.5;
+}
+
+.report-loading-container {
+    text-align: center;
+    color: #3f3d56;
+}
+
+/* Report Header Info */
+.report-data-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.report-data-info p {
+    margin-bottom: 0.2rem;
+    font-size: 0.95rem;
+    color: #718096;
+}
+
+.report-data-info p span {
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.report-data-time {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #ebf8ff;
+    padding: 8px 15px;
+    border-radius: 20px;
+    color: #2b6cb0;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.report-data-time i {
+    font-size: 1.1rem;
+}
+
+/* Premium Receipt Style */
+.premium-receipt {
+    background: #fff;
+}
+
+.section-title {
+    background-color: #f7fafc;
+    padding: 10px 15px;
+    font-weight: 700;
+    color: #2d3748;
+    border-radius: 6px;
+    text-align: left;
+    margin-bottom: 1.2rem;
+    font-size: 1.1rem;
+    border-left: 4px solid #4F85F4;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.receipt-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+    font-size: 1rem;
+    color: #4a5568;
+}
+
+.receipt-row .dots {
+    flex: 1;
+    border-bottom: 1px dotted #cbd5e0;
+    margin: 0 10px;
+    position: relative;
+    top: -4px;
+}
+
+.receipt-row .value {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.total-line {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 2px solid #edf2f7;
+    color: #3182ce;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.total-line .value {
+    color: #3182ce;
+}
+
+/* Custom Table Styles */
+.custom-report-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.custom-report-table thead th {
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e2e8f0 !important;
+    color: #475569;
+    padding: 12px;
+}
+
+.custom-report-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.list-table {
+    font-size: 0.9rem;
+}
+
+.font-monospace {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 600;
+}
+
 /* Scrollbar Styling */
-.report-sidebar::-webkit-scrollbar {
+.report-sidebar::-webkit-scrollbar,
+.report-content::-webkit-scrollbar {
     width: 6px;
 }
 
-.report-sidebar::-webkit-scrollbar-track {
+.report-sidebar::-webkit-scrollbar-track,
+.report-content::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.report-sidebar::-webkit-scrollbar-thumb {
+.report-sidebar::-webkit-scrollbar-thumb,
+.report-content::-webkit-scrollbar-thumb {
     background-color: rgba(0, 0, 0, 0.1);
     border-radius: 3px;
 }
 
-.report-sidebar::-webkit-scrollbar-thumb:hover {
+.report-sidebar::-webkit-scrollbar-thumb:hover,
+.report-content::-webkit-scrollbar-thumb:hover {
     background-color: rgba(0, 0, 0, 0.2);
 }

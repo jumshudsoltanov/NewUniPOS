@@ -146,4 +146,9 @@ router.patch(
   OrdersItemsController.onUpdateItemPrice,
 );
 
+// Reports
+const ReportController = require("../controller/ReportController");
+router.get("/reports/:profileId/data", ReportController.getReportData);
+router.get("/reports/:profileId/terminals", ReportController.getTerminals);
+
 module.exports = router;

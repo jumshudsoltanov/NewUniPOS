@@ -10,8 +10,8 @@ const LoginModel = db.sequelize.define(
       autoIncrement: true,
     },
 
-    logo: DataTypes.TEXT,
-    super_admin_logo: DataTypes.TEXT,
+    logo: DataTypes.TEXT("long"),
+    super_admin_logo: DataTypes.TEXT("long"),
 
     restaurant_name: DataTypes.TEXT,
     username: DataTypes.TEXT,

@@ -5,7 +5,7 @@ const getWaiterInfo = async (req, res) => {
   try {
     const waiter = await WaitersModel.findOne({ where: { pin: pin } });
     if (!waiter) {
-      res.status(200).json({ message: "false", data: "waiter not found" });
+      return res.status(200).json({ message: "false", data: "waiter not found" });
     }
     res.status(200).json({ message: "success", data: waiter });
   } catch (error) {
@@ -21,7 +21,7 @@ const getWaiterLists = async (req, res) => {
       attributes: ["id", "name"],
     });
     if (!waiters) {
-      res.status(200).json({ message: "false", data: "waiter not found" });
+      return res.status(200).json({ message: "false", data: "waiter not found" });
     }
     res.status(200).json({ message: "success", data: waiters });
   } catch (error) {

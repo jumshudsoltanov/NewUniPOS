@@ -5,7 +5,7 @@ const getTagsList = async (req, res) => {
   try {
     const tags = await TagsModel.findAll({ where: { profile_id: profileId } });
     if (tags.length === 0) {
-      res.status(200).json({ message: "false", data: "tags not found" });
+      return res.status(200).json({ message: "false", data: "tags not found" });
     }
     res.status(200).json({ message: "success", data: tags });
   } catch (error) {

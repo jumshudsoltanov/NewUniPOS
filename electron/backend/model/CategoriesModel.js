@@ -42,7 +42,7 @@ const CategoriesModel = db.sequelize.define(
     },
 
     img: {
-      type: DataTypes.TEXT,
+      type: DataTypes.TEXT("long"),
       allowNull: true,
     },
 
