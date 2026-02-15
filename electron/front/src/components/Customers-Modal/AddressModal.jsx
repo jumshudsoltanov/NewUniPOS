@@ -1,21 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from 'react-bootstrap';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import './AddressModal.css';
 
-const SUGGESTIONS = [
-    "Bakı, Azərbaycan",
-    "Gəncə, Azərbaycan",
-    "Sumqayıt, Azərbaycan",
-    "Mingəçevir, Azərbaycan",
-    "Xırdalan, Azərbaycan",
-    "Lənkəran, Azərbaycan",
-    "Naxçıvan, Azərbaycan",
-    "Şəki, Azərbaycan",
-    "Quba, Azərbaycan",
-    "Qusar, Azərbaycan",
-    "İsmayıllı, Azərbaycan",
-    "Qəbələ, Azərbaycan"
-];
+// Fix for Leaflet marker icons in React
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Baku coordinates
+const PREDEFINED_CENTER = [40.4093, 49.8671];
+
+const LocationMarker = ({ setAddress, setPosition, position }) => {
+    const map = useMapEvents({
+        click(e) {
+            const { lat, lng } = e.latlng;
+            setPosition([lat, lng]);
+
+            // Reverse geocoding using OpenStreetMap Nominatim (still used for data)
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        setAddress(data.display_name);
+                    }
+                })
+                .catch(err => console.error("Error fetching address:", err));
+        },
+    });
+
+    return position ? <Marker position={position} /> : null;
+};
+
+// Component to move map center when position changes via search
+const MapUpdater = ({ center }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (center) {
+            map.flyTo(center, 13);
+        }
+    }, [center, map]);
+    return null;
+};
 
 const AddressModal = ({ show, onHide, onConfirm }) => {
     const [addressTitle, setAddressTitle] = useState('');
@@ -23,28 +58,93 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
     const [note, setNote] = useState('');
     const [filteredSuggestions, setFilteredSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [mapPosition, setMapPosition] = useState(null);
+    const [mapCenter, setMapCenter] = useState(PREDEFINED_CENTER);
 
+    // Reset form when modal opens
     useEffect(() => {
-        if (searchQuery.length > 1) {
-            const matched = SUGGESTIONS.filter(s =>
-                s.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-            setFilteredSuggestions(matched);
-            setShowSuggestions(matched.length > 0);
-        } else {
+        if (show) {
+            setAddressTitle('');
+            setSearchQuery('');
+            setNote('');
             setShowSuggestions(false);
+            setMapPosition(null);
+            setMapCenter(PREDEFINED_CENTER);
         }
+    }, [show]);
+
+    // Search suggestions using Nominatim API
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            if (searchQuery.length > 2) {
+                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&countrycodes=az&accept-language=az`)
+                    .then(res => {
+                        if (!res.ok) throw new Error("Network response was not ok");
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (Array.isArray(data)) {
+                            const suggestions = data.map(item => ({
+                                display_name: item.display_name,
+                                lat: parseFloat(item.lat),
+                                lon: parseFloat(item.lon)
+                            }));
+                            setFilteredSuggestions(suggestions);
+                            setShowSuggestions(suggestions.length > 0);
+
+                            // Auto-pan to the first suggestion
+                            if (suggestions.length > 0) {
+                                const first = suggestions[0];
+                                setMapCenter([first.lat, first.lon]);
+                            }
+                        } else {
+                            setFilteredSuggestions([]);
+                            setShowSuggestions(false);
+                        }
+                    })
+                    .catch(e => {
+                        console.error("Search error:", e);
+                        setFilteredSuggestions([]);
+                        setShowSuggestions(false);
+                    });
+            } else {
+                setShowSuggestions(false);
+            }
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(delayDebounceFn);
     }, [searchQuery]);
 
     const handleSelectSuggestion = (suggestion) => {
-        setSearchQuery(suggestion);
+        setSearchQuery(suggestion.display_name);
+        if (!addressTitle) {
+            setAddressTitle(suggestion.display_name.split(',')[0]);
+        }
         setShowSuggestions(false);
+
+        const newPos = [suggestion.lat, suggestion.lon];
+        setMapPosition(newPos);
+        setMapCenter(newPos);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (filteredSuggestions.length > 0) {
+                handleSelectSuggestion(filteredSuggestions[0]);
+            }
+        }
     };
 
     const handleConfirm = () => {
-        if (!addressTitle) return;
-        onConfirm({ title: addressTitle, address: searchQuery, note: note });
+        const title = addressTitle || searchQuery;
+        if (!title) return;
+        onConfirm({ title: title, address: searchQuery, note: note });
         onHide();
+    };
+
+    const handleMapAddressSelect = (address) => {
+        setSearchQuery(address);
     };
 
     return (
@@ -79,11 +179,13 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
                         <i className="bi bi-search"></i>
                         <input
                             type="text"
-                            placeholder="Ünvan axtarın"
+                            placeholder="Ünvan axtarın..."
                             className="address-search-input"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                            }}
+                            onKeyDown={handleKeyDown}
                         />
                         {showSuggestions && (
                             <div className="address-suggestions-dropdown">
@@ -94,28 +196,31 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
                                         onClick={() => handleSelectSuggestion(s)}
                                     >
                                         <i className="bi bi-geo-alt"></i>
-                                        <span>{s}</span>
+                                        <span>{s.display_name}</span>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
-                    <button className="open-map-btn">
-                        <i className="bi bi-compass"></i>
-                        Xəritədən seçin
-                    </button>
                 </div>
 
                 <div className="map-integration-container compact-map">
-                    <iframe
-                        title="Google Maps"
-                        width="100%"
-                        height="100%"
-                        frameBorder="0"
-                        style={{ border: 0 }}
-                        src={`https://www.google.com/maps?q=${searchQuery || 'Baku,Azerbaijan'}&output=embed`}
-                        allowFullScreen
-                    ></iframe>
+                    <MapContainer
+                        center={mapCenter}
+                        zoom={13}
+                        style={{ height: '100%', width: '100%' }}
+                    >
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.google.com/maps">Google Maps</a>'
+                            url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+                        />
+                        <LocationMarker
+                            setAddress={handleMapAddressSelect}
+                            setPosition={setMapPosition}
+                            position={mapPosition}
+                        />
+                        <MapUpdater center={mapCenter} />
+                    </MapContainer>
                 </div>
 
                 <div className="address-field-group mb-0">
@@ -130,9 +235,9 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
 
                 <div className="address-modal-actions mt-3">
                     <button
-                        className={`submit-address-btn ${addressTitle ? 'active' : ''}`}
+                        className={`submit-address-btn ${(addressTitle || searchQuery) ? 'active' : ''}`}
                         onClick={handleConfirm}
-                        disabled={!addressTitle}
+                        disabled={!(addressTitle || searchQuery)}
                     >
                         Ünvanı təsdiqləyin
                     </button>

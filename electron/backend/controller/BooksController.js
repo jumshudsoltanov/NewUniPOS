@@ -8,7 +8,7 @@ const { Op } = require("sequelize");
 
 const getAllActiveOrders = async (req, res) => {
   const { profileId } = req.params;
-  const { id, sale_type, waiter_id, hall_id, table_id, courier_id } = req.query;
+  const { id, sale_type, waiter_id, hall_id, table_id } = req.query;
 
   try {
     let whereClause = {
@@ -21,7 +21,6 @@ const getAllActiveOrders = async (req, res) => {
     if (sale_type) whereClause.sale_type = sale_type;
     if (waiter_id) whereClause.waiter_id = waiter_id;
     if (table_id) whereClause.table_id = table_id;
-    if (courier_id) whereClause.courier_id = courier_id;
 
     // Hall filtering setup
     const includeOptions = [
@@ -69,7 +68,7 @@ const getAllActiveOrders = async (req, res) => {
 
 const getArchivedOrders = async (req, res) => {
   const { profileId } = req.params;
-  const { type, date, id, sale_type, waiter_id, hall_id, table_id, courier_id } = req.query; // Extended filters
+  const { type, date, id, sale_type, waiter_id, hall_id, table_id } = req.query;
 
   try {
     let whereClause = {
@@ -77,7 +76,7 @@ const getArchivedOrders = async (req, res) => {
       status: { [Op.in]: [2, 3] }
     };
 
-    // Filter by ID (exact match or partial?) - usually exact or 'like' for string ID, but here ID is int
+    // Filter by ID
     if (id) {
       whereClause.id = id;
     }
@@ -95,15 +94,6 @@ const getArchivedOrders = async (req, res) => {
     // Filter by Table
     if (table_id) {
       whereClause.table_id = table_id;
-    }
-
-    // Filter by Courier (assuming courier_id is a field in orders, or handled via sale_type relationship if complex)
-    // Checking previous code, 'courier' wasn't explicitly in include, but let's assume standard field or relation. 
-    // If courier is just a user with a specific role, it might be waiter_id. 
-    // However, usually courier is separate. Let's add it to whereClause if existing, otherwise we might need join.
-    // For now, assuming it's a direct field or we filter by it if passed.
-    if (courier_id) {
-      whereClause.courier_id = courier_id;
     }
 
     // Filter by specific date if provided, otherwise handle 'offline' (today) logic ONLY if no ID/other specific filters override it?

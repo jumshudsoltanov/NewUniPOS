@@ -121,7 +121,8 @@ const CustomersSourceModal = ({ show, onHide }) => {
     });
 
     const handleConfirmAddress = (addressData) => {
-        setFormData(prev => ({ ...prev, address: `${addressData.title}: ${addressData.address}` }));
+        const addressValue = addressData.address || addressData.title;
+        setFormData(prev => ({ ...prev, address: addressValue }));
     };
 
     const dummyCustomers = [
@@ -328,21 +329,20 @@ const CustomersSourceModal = ({ show, onHide }) => {
 
                         <div className="form-group mt-4">
                             <label>Açıqlama</label>
-                            <div className="textarea-with-footer">
-                                <textarea
-                                    name="description"
-                                    placeholder="Əlavə məlumat..."
-                                    className="form-control-custom textarea-custom textarea-no-bottom-radius"
-                                    value={formData.description}
-                                    onChange={handleInputChange}
-                                />
-                                <div className="input-footer-actions">
-                                    <button type="submit" className="submit-btn input-footer-btn" onClick={handleSubmit}>
-                                        <i className="bi bi-person-plus"></i>
-                                        Müştəri yarat
-                                    </button>
-                                </div>
-                            </div>
+                            <textarea
+                                name="description"
+                                placeholder="Əlavə məlumat..."
+                                className="form-control-custom textarea-custom"
+                                value={formData.description}
+                                onChange={handleInputChange}
+                            />
+                        </div>
+
+                        <div className="form-footer-actions">
+                            <button type="submit" className="form-footer-btn" onClick={handleSubmit}>
+                                <i className="bi bi-person-plus"></i>
+                                Müştəri yarat
+                            </button>
                         </div>
                     </form>
                 </div>
