@@ -14,15 +14,28 @@ const getReportData = async (req, res) => {
     const { startDate, startTime, endDate, endTime, terminal, reportType, showTransactions } = req.query;
 
     try {
-        const start = new Date(`${startDate}T${startTime}:00`);
-        const end = new Date(`${endDate}T${endTime}:00`);
+        // Use strings for SQLite compatibility if needed, but Date objects are usually fine if handled correctly.
+        // Ensure we are working with the correct date range.
+        const startStr = `${startDate} ${startTime}:00`;
+        const endStr = `${endDate} ${endTime}:00`;
 
-        let whereClause = {
-            profile_id: profileId,
-            start_date: {
-                [Op.between]: [start, end],
+        console.log(`Generating report from ${startStr} to ${endStr}`);
+
+        let baseWhere = {
+            profile_id: profileId
+        };
+
+        if (terminal && terminal !== "all") {
+            baseWhere.terminal_id = terminal;
+        }
+
+        // For most reports (closed orders), we should filter by end_date
+        let closedWhere = {
+            ...baseWhere,
+            status: 2,
+            end_date: {
+                [Op.between]: [startStr, endStr],
             },
-            status: 2, // Assuming 2 means Closed/Paid
         };
 
         if (terminal && terminal !== "all") {
@@ -33,34 +46,34 @@ const getReportData = async (req, res) => {
 
         switch (reportType) {
             case "simple":
-                data = await getSimpleReport(whereClause, showTransactions === 'true');
+                data = await getSimpleReport(baseWhere, startStr, endStr, showTransactions === 'true');
                 break;
             case "products":
-                data = await getProductsReport(whereClause);
+                data = await getProductsReport(closedWhere);
                 break;
             case "hall":
-                data = await getHallReport(whereClause);
+                data = await getHallReport(closedWhere);
                 break;
             case "tables":
-                data = await getTablesReport(whereClause);
+                data = await getTablesReport(closedWhere);
                 break;
             case "checks":
-                data = await getChecksReport(whereClause, showTransactions === 'true');
+                data = await getChecksReport(closedWhere, showTransactions === 'true');
                 break;
             case "sale_method":
-                data = await getSaleMethodReport(whereClause);
+                data = await getSaleMethodReport(closedWhere);
                 break;
             case "employee":
-                data = await getEmployeeReport(whereClause);
+                data = await getEmployeeReport(closedWhere);
                 break;
             case "category":
-                data = await getCategoryReport(whereClause);
+                data = await getCategoryReport(closedWhere);
                 break;
             case "refunds":
-                data = await getRefundsReport(profileId, start, end);
+                data = await getRefundsReport(profileId, startStr, endStr);
                 break;
             case "gifted_products":
-                data = await getGiftedProductsReport(whereClause);
+                data = await getGiftedProductsReport(closedWhere);
                 break;
             default:
                 data = { message: "Report type not implemented yet" };
@@ -73,46 +86,91 @@ const getReportData = async (req, res) => {
     }
 };
 
-const getSimpleReport = async (whereClause, showTransactions) => {
-    const orders = await OrdersModel.findAll({
-        where: whereClause,
-        include: [{
-            model: OrderPaymentsModel,
-            as: 'order_payments',
-            include: [{ model: PaymentMethodsModel, as: 'payment_method' }]
-        }]
+const getSimpleReport = async (baseWhere, start, end, showTransactions) => {
+    // 1. Fetch Closed Orders (sales)
+    const closedOrders = await OrdersModel.findAll({
+        where: {
+            ...baseWhere,
+            status: 2,
+            end_date: { [Op.between]: [start, end] }
+        },
+        include: [
+            {
+                model: OrderPaymentsModel,
+                as: 'order_payments',
+                include: [{ model: PaymentMethodsModel, as: 'payment_method' }]
+            },
+            {
+                model: OrdersItemsModel,
+                as: 'orders_items'
+            }
+        ]
+    });
+
+    // 2. Fetch Returned Orders separately (filter by end_date when they were returned/deleted)
+    const returnedOrders = await OrdersModel.findAll({
+        where: {
+            ...baseWhere,
+            status: 3,
+            is_return: 1,
+            updated_at: { [Op.between]: [start, end] } // Or end_date if set for returns too
+        }
     });
 
     let summary = {
         total_amount: 0,
         total_discount: 0,
         total_service: 0,
+        total_gift: 0,
+        total_refund: 0,
         net_total: 0,
+        guest_count: 0,
         payments: {},
         tags: {}
     };
 
-    orders.forEach(order => {
+    // Process Closed Orders
+    closedOrders.forEach(order => {
+        // order.amount is subtotal
         summary.total_amount += parseFloat(order.amount || 0);
         summary.total_discount += parseFloat(order.discount || 0);
         summary.total_service += parseFloat(order.service_charge || 0);
         summary.net_total += parseFloat(order.total || 0);
+        summary.guest_count += parseInt(order.guest_count || 0);
 
+        // Calculate Gifts within these orders
+        if (order.orders_items) {
+            order.orders_items.forEach(item => {
+                if (item.is_gift === 1) {
+                    summary.total_gift += parseFloat(item.count || 0) * parseFloat(item.price || 0);
+                }
+            });
+        }
+
+        // Payments summary
         if (order.order_payments) {
             order.order_payments.forEach(p => {
-                const methodName = p.payment_method?.name || 'Digər';
+                const methodName = p.payment_method?.name || (p.without_payment_method_id ? 'Ödənişsiz' : 'Digər');
                 summary.payments[methodName] = (summary.payments[methodName] || 0) + parseFloat(p.paid || 0);
             });
         }
 
+        // Tags summary
         if (showTransactions && order.tags) {
-            const tag = order.tags;
-            if (!summary.tags[tag]) {
-                summary.tags[tag] = { count: 0, total: 0 };
-            }
-            summary.tags[tag].count += 1;
-            summary.tags[tag].total += parseFloat(order.total || 0);
+            const tagNames = order.tags.split(',').map(t => t.trim()).filter(t => t);
+            tagNames.forEach(tagName => {
+                if (!summary.tags[tagName]) {
+                    summary.tags[tagName] = { count: 0, total: 0 };
+                }
+                summary.tags[tagName].count += 1;
+                summary.tags[tagName].total += parseFloat(order.total || 0);
+            });
         }
+    });
+
+    // Process Returned Orders for the refund line
+    returnedOrders.forEach(order => {
+        summary.total_refund += parseFloat(order.total || order.amount || 0);
     });
 
     return summary;

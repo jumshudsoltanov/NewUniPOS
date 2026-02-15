@@ -143,15 +143,15 @@ const ReportModal = ({ show, onClose }) => {
                 <div className="section-title">Satış hesabatı</div>
                 <div className="receipt-row"><span>Cəm</span><div className="dots"></div><span className="value">{(reportSummary.total_amount || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>Vergi</span><div className="dots"></div><span className="value">0.00</span></div>
-                <div className="receipt-row"><span>İkram</span><div className="dots"></div><span className="value">0.00</span></div>
+                <div className="receipt-row"><span>İkram</span><div className="dots"></div><span className="value">{(reportSummary.total_gift || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>Xidmət</span><div className="dots"></div><span className="value">{(reportSummary.total_service || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>Endirim</span><div className="dots"></div><span className="value">{(reportSummary.total_discount || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>Çatdırılma haqqı</span><div className="dots"></div><span className="value">0.00</span></div>
-                <div className="receipt-row"><span>Geri qaytarılma</span><div className="dots"></div><span className="value">0.00</span></div>
-                <div className="receipt-row total-line"><span>Cəm:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
+                <div className="receipt-row"><span>Geri qaytarılma</span><div className="dots"></div><span className="value">{(reportSummary.total_refund || 0).toFixed(2)}</span></div>
+                <div className="receipt-row total-line"><span>Yekun:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
 
                 <div className="section-title mt-4">Digər detallar</div>
-                <div className="receipt-row"><span>Qonaq sayı</span><div className="dots"></div><span className="value">0</span></div>
+                <div className="receipt-row"><span>Qonaq sayı</span><div className="dots"></div><span className="value">{reportSummary.guest_count || 0}</span></div>
 
                 {Object.keys(reportSummary.payments || {}).length > 0 && (
                     <>
