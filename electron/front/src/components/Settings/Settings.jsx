@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
+import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import "./Settings.css";
 
 const Settings = () => {
@@ -10,6 +11,7 @@ const Settings = () => {
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [showSupportModal, setShowSupportModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
+    const [showCustomersModal, setShowCustomersModal] = useState(false);
     const [showClock, setShowClock] = useState(() => {
         return localStorage.getItem("showHeaderClock") === "true";
     });
@@ -70,6 +72,7 @@ const Settings = () => {
             label: "Müştərilər",
             icon: <i className="bi bi-people"></i>,
             highlight: true,
+            onClick: () => setShowCustomersModal(true),
         },
         {
             id: "archive",
@@ -184,6 +187,12 @@ const Settings = () => {
             <ReportModal
                 show={showReportModal}
                 onClose={() => setShowReportModal(false)}
+            />
+
+            {/* Customers Source Modal */}
+            <CustomersSourceModal
+                show={showCustomersModal}
+                onHide={() => setShowCustomersModal(false)}
             />
         </>
     );
