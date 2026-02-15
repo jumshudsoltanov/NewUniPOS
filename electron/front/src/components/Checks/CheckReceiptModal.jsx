@@ -1,0 +1,175 @@
+import { Modal } from "react-bootstrap";
+import "./CheckReceiptModal.css";
+
+const CheckReceiptModal = ({ show, onClose, order }) => {
+    if (!order) return null;
+
+    const formatDate = (date) => {
+        if (!date) return "—";
+        const d = new Date(date);
+        return `${d.getDate().toString().padStart(2, '0')}.${(d.getMonth() + 1).toString().padStart(2, '0')}.${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    };
+
+    const saleTypeLabels = {
+        dine_in: "Restoranda",
+        takeaway: "Gəl götür",
+        delivery: "Çatdırılma",
+    };
+
+    const getStatusPill = () => {
+        if (order.status === 3) return (
+            <span className="receipt-status-pill deleted">
+                <i className="bi bi-x-circle-fill"></i> Silinib
+            </span>
+        );
+        if (order.status === 2) return (
+            <span className="receipt-status-pill closed">
+                <i className="bi bi-check-circle-fill"></i> Bağlanıb
+            </span>
+        );
+        return (
+            <span className="receipt-status-pill active">
+                <i className="bi bi-circle-fill"></i> Aktiv
+            </span>
+        );
+    };
+
+    const subtotal = order.orders_items?.reduce((sum, item) => sum + (Number(item.count) * Number(item.price)), 0) || 0;
+    const discount = Number(order.discount || 0);
+    const serviceCharge = Number(order.service_charge || 0);
+    const grandTotal = subtotal - discount + serviceCharge;
+
+    const formatMoney = (val) => {
+        return Number(val).toLocaleString('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
+
+    return (
+        <Modal show={show} onHide={onClose} centered className="check-receipt-modal">
+            <Modal.Header closeButton>
+                <Modal.Title>Çek</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <div className="receipt-container">
+
+                    {/* Brand Header */}
+                    <div className="receipt-brand-header">
+                        <div className="receipt-brand-logo">Çek #{order.id}</div>
+                        <div className="receipt-check-number">{getStatusPill()}</div>
+                    </div>
+
+                    {/* Info Card */}
+                    <div className="receipt-info-card">
+                        {order.waiter?.name && (
+                            <div className="receipt-info-row">
+                                <span className="receipt-info-label">Ofisiant</span>
+                                <span className="receipt-info-value">{order.waiter.name}</span>
+                            </div>
+                        )}
+                        <div className="receipt-info-row">
+                            <span className="receipt-info-label">Satış üsulu</span>
+                            <span className="receipt-info-value">
+                                {saleTypeLabels[order.sale_type] || order.sale_type || "Naməlum"}
+                            </span>
+                        </div>
+                        {order.guest_count && (
+                            <div className="receipt-info-row">
+                                <span className="receipt-info-label">Qonaq sayı</span>
+                                <span className="receipt-info-value">{order.guest_count}</span>
+                            </div>
+                        )}
+                        <div className="receipt-info-row">
+                            <span className="receipt-info-label">Açıldı</span>
+                            <span className="receipt-info-value">{formatDate(order.start_date)}</span>
+                        </div>
+                        {order.end_date && (
+                            <div className="receipt-info-row">
+                                <span className="receipt-info-label">Bağlandı</span>
+                                <span className="receipt-info-value">{formatDate(order.end_date)}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Items Card */}
+                    <div className="receipt-items-card">
+                        <div className="receipt-items-title">Məhsullar</div>
+                        <table className="receipt-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Ad</th>
+                                    <th>Miq</th>
+                                    <th>Qiymət</th>
+                                    <th>Cəm</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {order.orders_items?.map((item, i) => {
+                                    const itemTotal = Number(item.count) * Number(item.price);
+                                    const isGift = item.is_gift === 1 || item.is_gift === true;
+
+                                    return (
+                                        <tr key={i} className={isGift ? 'gift-row' : ''}>
+                                            <td>
+                                                {item.product?.name || item.product_name || "Məhsul"}
+                                                {isGift && " 🎁"}
+                                            </td>
+                                            <td>{item.count}</td>
+                                            <td>{formatMoney(item.price)}</td>
+                                            <td>{formatMoney(itemTotal)}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Totals Card */}
+                    <div className="receipt-totals-card">
+                        <div className="receipt-total-row">
+                            <span className="receipt-total-label">Cəm</span>
+                            <span className="receipt-total-value">{formatMoney(subtotal)} ₼</span>
+                        </div>
+                        {discount > 0 && (
+                            <div className="receipt-total-row">
+                                <span className="receipt-total-label">Endirim</span>
+                                <span className="receipt-total-value" style={{ color: '#e74c3c' }}>-{formatMoney(discount)} ₼</span>
+                            </div>
+                        )}
+                        {serviceCharge > 0 && (
+                            <div className="receipt-total-row">
+                                <span className="receipt-total-label">Servis haqqı</span>
+                                <span className="receipt-total-value">{formatMoney(serviceCharge)} ₼</span>
+                            </div>
+                        )}
+                        <div className="receipt-total-row grand-total">
+                            <span className="receipt-total-label">Yekun</span>
+                            <span className="receipt-total-value">{formatMoney(grandTotal)} ₼</span>
+                        </div>
+                    </div>
+
+                    {/* Payment Card */}
+                    {order.order_payments?.length > 0 && (
+                        <div className="receipt-payment-card">
+                            <div className="receipt-payment-title">Ödəniş üsulu</div>
+                            {order.order_payments.map((p, i) => (
+                                <div key={i} className="receipt-payment-row">
+                                    <span className="receipt-payment-method">
+                                        <i className="bi bi-credit-card"></i>
+                                        {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Nağd")}
+                                    </span>
+                                    <span className="receipt-payment-amount">{formatMoney(p.paid)} ₼</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="receipt-modal-footer">
+                        <div className="receipt-powered-by">Powered by <span>Unipos</span></div>
+                    </div>
+                </div>
+            </Modal.Body>
+        </Modal>
+    );
+};
+
+export default CheckReceiptModal;

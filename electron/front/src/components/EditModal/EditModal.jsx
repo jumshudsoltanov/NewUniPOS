@@ -230,11 +230,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                   <div className="stepper-control">
                     <button
                       className="stepper-btn btn-minus"
-                      onClick={() => setQty((q) => Math.max(1, q - 1))}
+                      onClick={() => setQty((q) => Math.max(0, q - 1))}
                     >
                       <i className="bi bi-dash"></i>
                     </button>
-                    <span className="stepper-value">{qty}</span>
+                    <span className="stepper-value" style={qty === 0 ? { color: '#FF4D4D', fontWeight: 800 } : {}}>{qty}</span>
                     <button
                       className="stepper-btn btn-plus"
                       onClick={() => setQty((q) => q + 1)}
@@ -265,8 +265,22 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
                 {/* Footer Action Button */}
                 <button
-                  className="save-action-btn"
+                  className={`save-action-btn ${qty === 0 ? 'red' : ''}`}
                   onClick={async () => {
+                    // If qty is 0, trigger full delete
+                    if (qty === 0) {
+                      if (product.isNew) {
+                        const index = products.findIndex(p => p.id === (product.product_id || product.id));
+                        if (index !== -1) {
+                          dispatch(removeProduct(index));
+                        }
+                        onClose();
+                      } else {
+                        onOpenDeleteModal('full', product);
+                      }
+                      return;
+                    }
+
                     const savedQty = product.savedQuantity || 0;
                     const newLocalQty = qty - savedQty;
 
@@ -335,8 +349,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     onClose(true);
                   }}
                 >
-                  <i className="bi bi-check-lg"></i>
-                  Saxla
+                  <i className={`bi ${qty === 0 ? 'bi-trash3-fill' : 'bi-check-lg'}`}></i>
+                  {qty === 0 ? 'Sil' : 'Saxla'}
                 </button>
               </>
             ) : activeTab === "transfer" ? (

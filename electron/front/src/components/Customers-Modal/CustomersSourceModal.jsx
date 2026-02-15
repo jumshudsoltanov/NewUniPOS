@@ -10,7 +10,7 @@ import {
     updateCustomerViaAdmin,
 } from '../../redux/Slices/CustomersSlice';
 import { getArchivedOrders } from '../../redux/Slices/BooksSlice';
-import CheckDetailModal from '../Checks/CheckDetailModal';
+import CheckReceiptModal from '../Checks/CheckReceiptModal';
 
 const AZ_CITIES = [
     "Bakı", "Gəncə", "Sumqayıt", "Mingəçevir", "Lənkəran", "Şirvan", "Naxçıvan", "Şəki", "Yevlax",
@@ -122,8 +122,8 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
     const { books, archivedBooks } = useSelector((state) => state.BooksSlice);
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
-    // viewMode: 'create' | 'details' | 'edit'
-    const [viewMode, setViewMode] = useState('create');
+    // viewMode: 'list' | 'create' | 'details' | 'edit'
+    const [viewMode, setViewMode] = useState('list');
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
@@ -173,6 +173,8 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
             dispatch(fetchCustomersFromAdmin({ search: '' }));
             dispatch(fetchCustomerGroupsFromAdmin());
             setCreateSuccess(false);
+            setViewMode('list');
+            setSelectedCustomer(null);
         }
     }, [show, dispatch]);
 
@@ -812,7 +814,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                 onConfirm={handleConfirmAddress}
             />
 
-            <CheckDetailModal
+            <CheckReceiptModal
                 show={showCheckDetail}
                 onClose={() => setShowCheckDetail(false)}
                 order={selectedCheck}
