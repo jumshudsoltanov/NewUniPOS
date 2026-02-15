@@ -153,6 +153,11 @@ router.patch(
   OrdersItemsController.onUpdateItemPrice,
 );
 
+router.patch(
+  "/orders-items/:orderId/update-count",
+  OrdersItemsController.onUpdateItemCount,
+);
+
 // Reports
 const ReportController = require("../controller/ReportController");
 router.get("/reports/:profileId/data", ReportController.getReportData);

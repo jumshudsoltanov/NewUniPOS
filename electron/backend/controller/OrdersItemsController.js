@@ -1531,6 +1531,111 @@ const onUpdateItemPrice = async (req, res) => {
   }
 };
 
+const onUpdateItemCount = async (req, res) => {
+  const { orderId } = req.params;
+  const { itemId, newCount } = req.body;
+
+  if (!orderId || !itemId || newCount === undefined) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  try {
+    const item = await OrdersItemsModel.findOne({
+      where: {
+        order_id: orderId,
+        product_id: itemId,
+        is_gift: 0
+      }
+    });
+
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    item.count = parseInt(newCount);
+    await item.save();
+
+    // Recalculate Order Total
+    const listOfProducts = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      attributes: ["count", "price"],
+    });
+
+    const total = listOfProducts.reduce((sum, it) => {
+      const qty = parseFloat(it.count) || 0;
+      const prc = parseFloat(it.price) || 0;
+      return sum + qty * prc;
+    }, 0);
+
+    const currentOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      attributes: [
+        "discount_value",
+        "discount_type",
+        "service_value",
+        "service_type",
+        "deposit",
+      ],
+    });
+
+    let discount = 0;
+    let service = 0;
+    const deposit = parseFloat(currentOrder?.deposit || 0);
+
+    if (currentOrder) {
+      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const dValue = parseFloat(discount_value || 0);
+      const sValue = parseFloat(service_value || 0);
+
+      if (dValue > 0) {
+        if (discount_type === "percent") {
+          discount = (total * dValue) / 100;
+        } else if (discount_type === "cash") {
+          discount = dValue;
+        }
+      }
+
+      if (sValue > 0) {
+        if (service_type === "percent") {
+          service = (total * sValue) / 100;
+        } else if (service_type === "cash") {
+          service = sValue;
+        }
+      }
+    }
+
+    let netTotal = total - discount + service + deposit;
+    netTotal = Math.max(netTotal, 0);
+
+    await OrdersModel.update(
+      {
+        amount: total,
+        total: netTotal,
+        discount: discount,
+        service_charge: service,
+        is_synced: 0
+      },
+      { where: { uuid: orderId } },
+    );
+    SyncService.triggerSync(orderId);
+
+    res.status(200).json({
+      message: "success",
+      itemId,
+      newCount: item.count,
+      uuid: orderId,
+      total: netTotal,
+      amount: total,
+      discount,
+      service_charge: service
+    });
+
+  } catch (error) {
+    console.error("Update Count Error:", error);
+    res.status(500).json({ message: "Error updating count", error: error.message });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateItemPrice,
@@ -1553,4 +1658,5 @@ module.exports = {
   onReturnCheck,
   onReopenOrder,
   onDeleteItemWithReason,
+  onUpdateItemCount,
 };

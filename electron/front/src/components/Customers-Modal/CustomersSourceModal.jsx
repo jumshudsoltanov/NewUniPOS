@@ -338,12 +338,7 @@ const CustomersSourceModal = ({ show, onHide }) => {
                             />
                         </div>
 
-                        <div className="form-footer-actions">
-                            <button type="submit" className="form-footer-btn" onClick={handleSubmit}>
-                                <i className="bi bi-person-plus"></i>
-                                Müştəri yarat
-                            </button>
-                        </div>
+
                     </form>
                 </div>
             );
@@ -465,14 +460,20 @@ const CustomersSourceModal = ({ show, onHide }) => {
                             </div>
                         ))}
                     </div>
-                    <div className="sidebar-footer">
-                        <button className="sidebar-create-btn" onClick={handleCreateNew}>
-                            Müştəri yarat
-                        </button>
-                    </div>
+
                 </div>
 
                 {renderContent()}
+            </div>
+
+            <div className="customers-source-modal-footer">
+                <button className="footer-btn footer-btn-secondary" onClick={handleCreateNew}>
+                    Müştəri yarat
+                </button>
+                <button className="footer-btn footer-btn-primary" onClick={handleSubmit}>
+                    <i className="bi bi-person-plus"></i>
+                    Müştəri yarat
+                </button>
             </div>
 
             <AddressModal

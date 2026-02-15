@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
-import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion, updateItemPrice } from "../../redux/Slices/OrdersSlice";
+import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion, updateItemPrice, updateItemCount, saveLog } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from 'react-toastify';
@@ -285,11 +285,22 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                           name: product.name,
                         }),
                       );
-                    } else {
-                      // For existing items, handle price and quantity separately if needed
-                      // Check if price changed
-                      if (parseFloat(inputValue) !== parseFloat(product.price)) {
+                      // Log quantity change for new items too
+                      if (qty !== (product.count || 0)) {
                         const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                        dispatch(saveLog({
+                          orderId: orders.uuid,
+                          action: "Miqdar dəyişdirildi",
+                          waiterName,
+                          details: `${product.name || 'Məhsul'}: ${product.count || 0}-dən ${qty}-ə dəyişdi`
+                        }));
+                      }
+                    } else {
+                      // For existing items, handle price change immediately
+                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+                      // Check if price changed - only price goes to backend immediately
+                      if (parseFloat(inputValue) !== parseFloat(product.price)) {
                         await dispatch(updateItemPrice({
                           orderId: orders.uuid,
                           itemId: product.id,
@@ -300,19 +311,25 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         })).unwrap();
                       }
 
-                      // Check if quantity changed
-                      if (newLocalQty !== product.count) {
-                        // If updateCount is indeed empty, we might need a real thunk for qty update too
-                        // But for now, let's keep dispatching it in case it's handled elsewhere or user only asked for price
+                      // Quantity change stays local - will be sent via "Göndər" button
+                      if (newLocalQty > 0) {
                         dispatch(
                           updateCount({
                             productId: product.product_id || product.id,
-                            orderItemId: product.id,
                             count: newLocalQty,
                             price: inputValue,
                             name: product.name,
                           }),
                         );
+                      }
+                      // Log quantity change
+                      if (qty !== (product.count || 0)) {
+                        dispatch(saveLog({
+                          orderId: orders.uuid,
+                          action: "Miqdar dəyişdirildi",
+                          waiterName,
+                          details: `${product.name || 'Məhsul'}: ${product.count || 0}-dən ${qty}-ə dəyişdi`
+                        }));
                       }
                     }
                     onClose(true);

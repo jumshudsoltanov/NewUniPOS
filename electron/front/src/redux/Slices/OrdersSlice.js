@@ -256,12 +256,38 @@ export const splitOrder = createAsyncThunk(
       // Persistent Log
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+
+      const sourceOrderId = data?.orderId || profileId;
+      const items = data?.items || [];
+      const itemNames = items.map(i => `${i.qty} ədəd (ID:${i.id})`).join(', ');
+      const destTable = data?.table?.name || data?.table?.number || '';
+      const destHall = data?.table?.hall_name || '';
+      const salesType = data?.salesType === 'dine_in' ? 'Yerində' : data?.salesType === 'takeaway' ? 'Takeaway' : data?.salesType === 'delivery' ? 'Çatdırılma' : data?.salesType;
+
+      let details = `Köçürüldü: ${itemNames}`;
+      if (destTable) {
+        details += ` → [${destHall}] ${destTable}`;
+      } else {
+        details += ` → ${salesType}`;
+      }
+
+      // Log to source order
       thunkAPI.dispatch(saveLog({
-        orderId: data?.[0]?.orderId || profileId, // Fallback if orderId not direct
-        action: "Çek bölündü",
+        orderId: sourceOrderId,
+        action: "Məhsul köçürüldü",
         waiterName,
-        details: "Yeni çek yaradıldı"
+        details
       }));
+
+      // Log to destination order
+      if (response.data?.data?.newOrder?.uuid) {
+        thunkAPI.dispatch(saveLog({
+          orderId: response.data.data.newOrder.uuid,
+          action: "Məhsul qəbul edildi",
+          waiterName,
+          details: `Köçürmədən gəldi: ${itemNames}`
+        }));
+      }
 
       return response.data;
     } catch (error) {
@@ -366,6 +392,32 @@ export const updateItemPrice = createAsyncThunk(
         action: "Qiymət dəyişdirildi",
         waiterName,
         details: `${productName || 'Məhsul'}: ${oldPrice}₼-dən ${newPrice}₼-ə dəyişdi`
+      }));
+
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
+export const updateItemCount = createAsyncThunk(
+  "orders/updateItemCount",
+  async ({ orderId, itemId, newCount, oldCount, productName, waiterName: passedWaiterName }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/update-count`,
+        { itemId, newCount },
+      );
+
+      // Persistent Log
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Miqdar dəyişdirildi",
+        waiterName,
+        details: `${productName || 'Məhsul'}: ${oldCount}-dən ${newCount}-ə dəyişdi`
       }));
 
       return response.data;
@@ -634,6 +686,25 @@ export const OrderSlice = createSlice({
 
     updateCount: (state, action) => {
       const { productId, count, price, name, orderItemId } = action.payload;
+      const existingProduct = state.products.find(
+        (product) => product.id === productId
+      );
+      if (existingProduct) {
+        existingProduct.quantity = count;
+        existingProduct.newOrder = count;
+        if (price !== undefined) {
+          existingProduct.price = parseFloat(price);
+        }
+      } else if (count > 0) {
+        // Product doesn't exist in local products yet (saved item getting extra qty)
+        state.products.push({
+          id: productId,
+          name: name || "Məhsul",
+          price: parseFloat(price) || 0,
+          quantity: count,
+          newOrder: count,
+        });
+      }
     },
 
     menuData: (state, action) => {

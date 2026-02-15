@@ -146,20 +146,7 @@
     color: #999;
 }
 
-.sidebar-footer {
-    padding: 15px;
-}
 
-.sidebar-create-btn {
-    width: 100%;
-    padding: 10px;
-    background: #0095e8;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 14px;
-}
 
 /* Form Section */
 .customers-source-form-section {
@@ -354,20 +341,15 @@
     resize: none;
 }
 
-/* Form Footer - acts as modal content footer */
-.form-footer-actions {
-    margin-top: auto;
-    padding: 15px 0 0;
-    border-top: 1px solid #f0f0f0;
+/* Unified Modal Footer */
+.customers-source-modal-footer {
+    display: flex;
+    border-top: 1px solid #e9ecef;
 }
 
-.form-footer-btn {
-    width: 100%;
-    padding: 12px;
-    background: #003594;
-    color: white;
+.footer-btn {
+    padding: 14px;
     border: none;
-    border-radius: 8px;
     font-weight: 600;
     font-size: 15px;
     display: flex;
@@ -378,9 +360,29 @@
     transition: background 0.2s;
 }
 
-.form-footer-btn:hover {
+.footer-btn-secondary {
+    width: 280px;
+    flex-shrink: 0;
+    background: #f0f4ff;
+    color: #003594;
+    border-right: 1px solid #e0e7f5;
+}
+
+.footer-btn-secondary:hover {
+    background: #e0ecff;
+}
+
+.footer-btn-primary {
+    flex: 1;
+    background: #003594;
+    color: white;
+}
+
+.footer-btn-primary:hover {
     background: #002a7a;
 }
+
+
 
 /* Detailed View */
 .customer-details-container {
