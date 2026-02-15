@@ -103,9 +103,17 @@
 }
 
 .payment-title {
-    font-size: 32px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0;
+}
+
+.customer-info-tag {
+    font-size: 0.9rem;
+    color: #4F85F4;
     font-weight: 500;
-    color: #374151;
+    margin-top: 4px;
 }
 
 .total-amount-display {

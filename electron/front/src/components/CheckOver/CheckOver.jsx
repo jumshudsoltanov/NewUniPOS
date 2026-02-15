@@ -26,6 +26,7 @@ const CheckOver = () => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const { paymentMethods } = useSelector((state) => state.PaymentMethodsSlice);
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+    const { customers } = useSelector((state) => state.CustomersSlice);
     const dispatch = useDispatch();
 
     useEffect(() => {
@@ -63,6 +64,11 @@ const CheckOver = () => {
         if (!books?.data) return null;
         return books.data.find(o => o.uuid === id);
     }, [books, id]);
+
+    const selectedCustomer = useMemo(() => {
+        if (!currentOrder?.customer_id || !customers) return null;
+        return customers.find(c => c.id === currentOrder.customer_id);
+    }, [currentOrder?.customer_id, customers]);
 
     const calcTotal = useMemo(() => {
         if (!currentOrder) return { total: 0, sumTotal: "0.00" };
@@ -302,7 +308,15 @@ const CheckOver = () => {
                         {viewMode === "PAYMENT" ? (
                             <>
                                 <div className="payment-header d-flex justify-content-between align-items-center mb-4">
-                                    <h2 className="payment-title">Ödənilməli</h2>
+                                    <div className="payment-title-group">
+                                        <h2 className="payment-title">Ödənilməli</h2>
+                                        {selectedCustomer && (
+                                            <div className="customer-info-tag">
+                                                <i className="bi bi-person-fill me-1"></i>
+                                                {selectedCustomer.name} {selectedCustomer.group ? `(${selectedCustomer.group.name})` : ''}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="total-amount-display">
                                         <span className="amount">{calcTotal.sumTotal}</span>
                                         <span className="symbol">₼</span>

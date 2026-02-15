@@ -18,7 +18,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
 
-const CheckBottom = ({ orders, hall }) => {
+const CheckBottom = ({ orders, hall, selectedCustomer }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -211,10 +211,24 @@ const CheckBottom = ({ orders, hall }) => {
       {/* Desktop View */}
       <div className="checkBottom d-none d-lg-flex">
         <div className="summary-section">
+          {selectedCustomer && (
+            <div className="summary-row customer-row" style={{ color: 'white', fontWeight: '500' }}>
+              <span>Müştəri:</span>
+              <span title={`${selectedCustomer.name} (${selectedCustomer.phone || ''})`}>
+                {selectedCustomer.name}
+              </span>
+            </div>
+          )}
           <div className="summary-row">
             <span>Cəm:</span>
             <span>{calcTotal.total} ₼</span>
           </div>
+          {selectedCustomer?.group && (
+            <div className="summary-row">
+              <span>Qrup:</span>
+              <span>{selectedCustomer.group.name} {selectedCustomer.group.discount > 0 ? `(${selectedCustomer.group.discount}%)` : ''}</span>
+            </div>
+          )}
           {Number(calcTotal.discountAmount) > 0 && (
             <div className="summary-row">
               <span>Endirim:</span>

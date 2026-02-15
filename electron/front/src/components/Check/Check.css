@@ -503,6 +503,25 @@
     color: #053796;
 }
 
+/* CheckHeader Additional Styles */
+.header-subtitle-container {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.header-customer-info {
+    font-size: 0.8rem;
+    color: #444;
+    display: flex;
+    align-items: center;
+}
+
+.header-customer-info i {
+    color: #053796;
+}
+
 /* CheckMain */
 .checkMain {
     background-color: #EBF2FE;
@@ -608,6 +627,12 @@
     font-size: 0.8rem;
     opacity: 0.95;
     color: rgba(255, 255, 255, 0.9);
+}
+
+.summary-row.customer-row {
+    border-top: 1px dashed rgba(255, 255, 255, 0.3);
+    padding-top: 4px;
+    margin-top: 4px;
 }
 
 .summary-row.total-row {

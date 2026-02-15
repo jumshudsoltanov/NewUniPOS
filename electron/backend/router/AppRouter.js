@@ -163,4 +163,10 @@ const ReportController = require("../controller/ReportController");
 router.get("/reports/:profileId/data", ReportController.getReportData);
 router.get("/reports/:profileId/terminals", ReportController.getTerminals);
 
+// Assign Customer to Order
+router.patch(
+  "/orders-items/:orderId/assign-customer",
+  OrdersItemsController.onAssignCustomer,
+);
+
 module.exports = router;

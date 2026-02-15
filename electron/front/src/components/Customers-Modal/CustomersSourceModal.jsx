@@ -1,7 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Modal } from 'react-bootstrap';
+import { useDispatch, useSelector } from 'react-redux';
 import './CustomersSourceModal.css';
 import AddressModal from './AddressModal';
+import {
+    fetchCustomersFromAdmin,
+    fetchCustomerGroupsFromAdmin,
+    createCustomerViaAdmin,
+    updateCustomerViaAdmin,
+} from '../../redux/Slices/CustomersSlice';
+import { getArchivedOrders } from '../../redux/Slices/BooksSlice';
+import CheckDetailModal from '../Checks/CheckDetailModal';
 
 const AZ_CITIES = [
     "Bakı", "Gəncə", "Sumqayıt", "Mingəçevir", "Lənkəran", "Şirvan", "Naxçıvan", "Şəki", "Yevlax",
@@ -100,65 +109,146 @@ const SearchableSelect = ({ options, value, onChange, placeholder }) => {
     );
 };
 
-const CustomersSourceModal = ({ show, onHide }) => {
+const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSelectedCustomer }) => {
+    const dispatch = useDispatch();
+    const {
+        customers,
+        customerGroups,
+        isOnline,
+        loading,
+        createLoading,
+        error,
+    } = useSelector((state) => state.CustomersSlice);
+    const { books, archivedBooks } = useSelector((state) => state.BooksSlice);
+    const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+    // viewMode: 'create' | 'details' | 'edit'
     const [viewMode, setViewMode] = useState('create');
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
     const [showCountrySelect, setShowCountrySelect] = useState(false);
     const [showAddressModal, setShowAddressModal] = useState(false);
+    const [createSuccess, setCreateSuccess] = useState(false);
+    const [showDotsMenu, setShowDotsMenu] = useState(false);
+    const [showCheckDetail, setShowCheckDetail] = useState(false);
+    const [selectedCheck, setSelectedCheck] = useState(null);
+    const dotsMenuRef = useRef(null);
+
+    const customerHistory = useMemo(() => {
+        const active = (books?.data || []).filter(o => o.customer_id === selectedCustomer?.id);
+        const archived = (archivedBooks || []).filter(o => o.customer_id === selectedCustomer?.id);
+
+        return [...active, ...archived]
+            .sort((a, b) => new Date(b.end_date || b.start_date) - new Date(a.end_date || a.start_date))
+            .slice(0, 50); // Show more for history
+    }, [selectedCustomer, books?.data, archivedBooks]);
 
     const [formData, setFormData] = useState({
         name: '',
         code: '',
         phone: '',
-        group: '',
+        group_id: '',
         description: '',
         gender: '',
-        birthDate: '',
+        birth_date: '',
         email: '',
         address: ''
     });
+
+    // Close dots menu on outside click
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (dotsMenuRef.current && !dotsMenuRef.current.contains(event.target)) {
+                setShowDotsMenu(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // When modal opens, check internet & fetch customers
+    useEffect(() => {
+        if (show) {
+            dispatch(fetchCustomersFromAdmin({ search: '' }));
+            dispatch(fetchCustomerGroupsFromAdmin());
+            setCreateSuccess(false);
+        }
+    }, [show, dispatch]);
+
+    // Fetch archived orders when client changes
+    useEffect(() => {
+        if (show && selectedCustomer?.id && loginedProfileData?.data?.profile?.id) {
+            dispatch(getArchivedOrders({
+                profileId: loginedProfileData.data.profile.id,
+                type: 'all'
+            }));
+        }
+    }, [show, selectedCustomer, dispatch]);
+
+    // Search with debounce
+    useEffect(() => {
+        if (!show) return;
+        const timer = setTimeout(() => {
+            dispatch(fetchCustomersFromAdmin({ search: searchTerm }));
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm, dispatch, show]);
 
     const handleConfirmAddress = (addressData) => {
         const addressValue = addressData.address || addressData.title;
         setFormData(prev => ({ ...prev, address: addressValue }));
     };
 
-    const dummyCustomers = [
-        {
-            id: '001',
-            name: 'Məhəmmədəli Məmmədova',
-            phone: '+994 50 555 55 55',
-            cashback: 1125.50,
-            balance: 0.00,
-            total_spent: 137977,
-            total_discount: 240,
-            total_bonus: 0,
-            total_receipts: 4,
-            group: 'QRUP',
-            group_discount: '0%',
-            gender: 'Kişi',
-            birthDate: '11.11.1970',
-            checks: [
-                { id: '42625', closed_at: 'yan 30, 23:00:24', total: 114535.00, payment: 'Nağd 114,535.00' }
-            ]
-        },
-        // ... duplicates removed for brevity
-    ];
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const resetForm = () => {
+        setFormData({
+            name: '', code: '', phone: '', group_id: '', description: '',
+            gender: '', birth_date: '', email: '', address: ''
+        });
+        setSelectedCountry(COUNTRIES[0]);
+    };
+
     const handleCreateNew = () => {
         setViewMode('create');
         setSelectedCustomer(null);
+        setCreateSuccess(false);
+        setShowDotsMenu(false);
+        resetForm();
+    };
+
+    const handleEditCustomer = () => {
+        if (!selectedCustomer) return;
+        setShowDotsMenu(false);
+
+        // Parse phone: remove country dial code
+        let phone = selectedCustomer.phone || '';
+        let matchedCountry = COUNTRIES[0];
+        for (const c of COUNTRIES) {
+            if (phone.startsWith(c.dialCode)) {
+                matchedCountry = c;
+                phone = phone.replace(c.dialCode, '').trim();
+                break;
+            }
+        }
+        setSelectedCountry(matchedCountry);
+
         setFormData({
-            name: '', code: '', phone: '', group: '', description: '',
-            gender: '', birthDate: '', email: '', address: ''
+            name: selectedCustomer.name || '',
+            code: selectedCustomer.code || '',
+            phone: phone,
+            group_id: selectedCustomer.group_id || '',
+            description: selectedCustomer.description || '',
+            gender: selectedCustomer.gender || '',
+            birth_date: selectedCustomer.birth_date || '',
+            email: selectedCustomer.email || '',
+            address: selectedCustomer.address || '',
         });
+        setViewMode('edit');
     };
 
     const handleSelectCountry = (country) => {
@@ -169,201 +259,328 @@ const CustomersSourceModal = ({ show, onHide }) => {
     const handleSelectCustomer = (customer) => {
         setSelectedCustomer(customer);
         setViewMode('details');
+        setShowDotsMenu(false);
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        console.log('Form Submitted:', formData);
-        onHide();
-    };
+    const handleSubmit = async (e) => {
+        if (e) e.preventDefault();
+        if (!formData.name) return;
 
-    const renderContent = () => {
-        if (viewMode === 'placeholder') {
-            return (
-                <div className="placeholder-view">
-                    Müştəri seçin və ya yeni müştəri yaradın
-                </div>
-            );
+        const fullPhone = formData.phone ? `${selectedCountry.dialCode} ${formData.phone}` : '';
+
+        const customerPayload = {
+            ...formData,
+            phone: fullPhone,
+            group_id: formData.group_id || null,
+        };
+
+        try {
+            if (viewMode === 'edit' && selectedCustomer) {
+                // UPDATE
+                const result = await dispatch(updateCustomerViaAdmin({
+                    id: selectedCustomer.id,
+                    customerData: customerPayload
+                })).unwrap();
+                if (result && result.id) {
+                    setCreateSuccess(true);
+                    dispatch(fetchCustomersFromAdmin({ search: '' }));
+                    setTimeout(() => {
+                        setSelectedCustomer(result);
+                        setViewMode('details');
+                        setCreateSuccess(false);
+                    }, 1200);
+                }
+            } else {
+                // CREATE
+                const result = await dispatch(createCustomerViaAdmin(customerPayload)).unwrap();
+                if (result && result.id) {
+                    setCreateSuccess(true);
+                    dispatch(fetchCustomersFromAdmin({ search: '' }));
+                    setTimeout(() => {
+                        setSelectedCustomer(result);
+                        setViewMode('details');
+                        setCreateSuccess(false);
+                    }, 1200);
+                }
+            }
+        } catch (err) {
+            console.error("Customer save error:", err);
         }
+    };
 
-        if (viewMode === 'create') {
-            return (
-                <div className="customers-source-form-section">
-                    <form onSubmit={handleSubmit} className="h-100 d-flex flex-column">
-                        <div className="form-grid">
-                            <div className="form-group">
-                                <label>Ad Soyad</label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    placeholder="Ad Soyad..."
-                                    className="form-control-custom"
-                                    value={formData.name}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Cins</label>
-                                <div className="custom-select-wrapper">
-                                    <select
-                                        name="gender"
-                                        className="form-control-custom"
-                                        value={formData.gender}
-                                        onChange={handleInputChange}
-                                    >
-                                        <option value="">Cins seçin</option>
-                                        <option value="male">Kişi</option>
-                                        <option value="female">Qadın</option>
-                                    </select>
-                                    <i className="bi bi-chevron-down select-arrow"></i>
-                                </div>
-                            </div>
+    const filteredCustomers = customers.filter(c =>
+        (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-                            <div className="form-group">
-                                <label>Kod</label>
-                                <input
-                                    type="text"
-                                    name="code"
-                                    placeholder="Kod..."
-                                    className="form-control-custom"
-                                    value={formData.code}
-                                    onChange={handleInputChange}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Doğum tarixi</label>
-                                <div className="input-with-icon">
-                                    <input
-                                        type="date"
-                                        name="birthDate"
-                                        className="form-control-custom date-input-custom"
-                                        value={formData.birthDate}
-                                        onChange={handleInputChange}
-                                    />
-                                    <i className="bi bi-calendar3"></i>
-                                </div>
-                            </div>
+    // Shared form renderer for create and edit
+    const renderForm = () => {
+        const isEdit = viewMode === 'edit';
+        return (
+            <div className="customers-source-form-section">
+                {/* Form Header */}
+                <div className="form-section-header">
+                    <h3 className="form-section-title">{isEdit ? 'Müştəri redaktoru' : 'Müştəri yarat'}</h3>
+                    <button
+                        className="create-submit-btn"
+                        onClick={handleSubmit}
+                        disabled={createLoading || !formData.name}
+                    >
+                        {createLoading ? (
+                            <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                                {isEdit ? 'Yenilənir...' : 'Yaradılır...'}
+                            </>
+                        ) : (
+                            isEdit ? 'Yadda saxla' : 'Yarat'
+                        )}
+                    </button>
+                </div>
 
-                            <div className="form-group">
-                                <label>Mobil nömrə</label>
-                                <div className="phone-input-wrapper" style={{ position: 'relative' }}>
-                                    <div className="country-select" onClick={() => setShowCountrySelect(!showCountrySelect)}>
-                                        <img src={`https://flagcdn.com/w20/${selectedCountry.code}.png`} alt={selectedCountry.code} className="flag-icon" />
-                                        <span>{selectedCountry.dialCode}</span>
-                                        <i className="bi bi-chevron-down"></i>
-                                    </div>
-                                    {showCountrySelect && (
-                                        <div className="country-dropdown">
-                                            {COUNTRIES.map((c) => (
-                                                <div key={c.code} className="country-option" onClick={() => handleSelectCountry(c)}>
-                                                    <img src={`https://flagcdn.com/w20/${c.code}.png`} alt={c.code} />
-                                                    <span>{c.name} ({c.dialCode})</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <input
-                                        type="text"
-                                        name="phone"
-                                        placeholder="00 000 00 00"
-                                        className="form-control-custom flex-1"
-                                        value={formData.phone}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>E-mail</label>
-                                <div className="input-with-icon">
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        placeholder="nume@example.com"
-                                        className="form-control-custom w-100"
-                                        value={formData.email}
-                                        onChange={handleInputChange}
-                                    />
-                                    <i className="bi bi-envelope"></i>
-                                </div>
-                            </div>
+                {/* Online/Offline indicator */}
+                <div className="d-flex align-items-center mb-3 px-3 mt-3">
+                    <span
+                        className="d-inline-block rounded-circle me-2"
+                        style={{
+                            width: 8, height: 8,
+                            backgroundColor: isOnline ? '#22c55e' : '#ef4444',
+                        }}
+                    ></span>
+                    <small style={{ color: isOnline ? '#22c55e' : '#ef4444', fontWeight: 600, fontSize: '0.75rem' }}>
+                        {isOnline ? 'Online — Admin panelə bağlı' : 'Offline — İnternet yoxdur'}
+                    </small>
+                </div>
 
-                            <div className="form-group">
-                                <label>Müştəri qrupu seç</label>
-                                <div className="custom-select-wrapper">
-                                    <select
-                                        name="group"
-                                        className="form-control-custom"
-                                        value={formData.group}
-                                        onChange={handleInputChange}
-                                    >
-                                        <option value="">Qrup seçin</option>
-                                        <option value="standard">Standart</option>
-                                        <option value="vip">VIP</option>
-                                        <option value="corporate">Korporativ</option>
-                                    </select>
-                                    <i className="bi bi-chevron-down select-arrow"></i>
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Ünvan</label>
-                                <div className="address-input-container">
-                                    <div className="flex-1">
-                                        <SearchableSelect
-                                            options={AZ_CITIES}
-                                            value={formData.address}
-                                            onChange={(val) => setFormData(prev => ({ ...prev, address: val }))}
-                                            placeholder="Şəhər seçin"
-                                        />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        className="map-location-btn"
-                                        onClick={() => setShowAddressModal(true)}
-                                        title="Xəritədən seçin"
-                                    >
-                                        <i className="bi bi-geo-alt"></i>
-                                    </button>
-                                </div>
-                            </div>
+                {createSuccess && (
+                    <div className="px-3 mb-3">
+                        <div className="d-flex align-items-center p-3 rounded-3" style={{ backgroundColor: '#dcfce7', border: '1px solid #86efac' }}>
+                            <i className="bi bi-check-circle-fill me-2" style={{ color: '#16a34a', fontSize: '1.2rem' }}></i>
+                            <span style={{ color: '#15803d', fontWeight: 600, fontSize: '0.9rem' }}>
+                                {isEdit ? 'Müştəri uğurla yeniləndi!' : 'Müştəri uğurla yaradıldı!'}
+                            </span>
                         </div>
+                    </div>
+                )}
 
-                        <div className="form-group mt-4">
-                            <label>Açıqlama</label>
-                            <textarea
-                                name="description"
-                                placeholder="Əlavə məlumat..."
-                                className="form-control-custom textarea-custom"
-                                value={formData.description}
+                {error && (
+                    <div className="px-3 mb-3">
+                        <div className="d-flex align-items-center p-3 rounded-3" style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
+                            <i className="bi bi-exclamation-circle-fill me-2" style={{ color: '#dc2626', fontSize: '1.2rem' }}></i>
+                            <span style={{ color: '#dc2626', fontWeight: 600, fontSize: '0.9rem' }}>{error}</span>
+                        </div>
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="h-100 d-flex flex-column px-3">
+                    <div className="form-grid">
+                        <div className="form-group">
+                            <label>Ad Soyad</label>
+                            <input
+                                type="text"
+                                name="name"
+                                placeholder="Ad Soyad..."
+                                className="form-control-custom"
+                                value={formData.name}
+                                onChange={handleInputChange}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>Kod</label>
+                            <input
+                                type="text"
+                                name="code"
+                                placeholder="Kod..."
+                                className="form-control-custom"
+                                value={formData.code}
                                 onChange={handleInputChange}
                             />
                         </div>
 
-
-                    </form>
-                </div>
-            );
-        }
-
-        if (viewMode === 'details' && selectedCustomer) {
-            return (
-                <div className="customer-details-container">
-                    <div className="details-header">
-                        <div className="details-header-info">
-                            <h3>{selectedCustomer.name} (İD: {selectedCustomer.id})</h3>
-                            <p>{selectedCustomer.phone}</p>
+                        <div className="form-group">
+                            <label>Mobil nömrə</label>
+                            <div className="phone-input-wrapper" style={{ position: 'relative' }}>
+                                <div className="country-select" onClick={() => setShowCountrySelect(!showCountrySelect)}>
+                                    <img src={`https://flagcdn.com/w20/${selectedCountry.code}.png`} alt={selectedCountry.code} className="flag-icon" />
+                                    <span>{selectedCountry.dialCode}</span>
+                                    <i className="bi bi-chevron-down"></i>
+                                </div>
+                                {showCountrySelect && (
+                                    <div className="country-dropdown">
+                                        {COUNTRIES.map((c) => (
+                                            <div key={c.code} className="country-option" onClick={() => handleSelectCountry(c)}>
+                                                <img src={`https://flagcdn.com/w20/${c.code}.png`} alt={c.code} />
+                                                <span>{c.name} ({c.dialCode})</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <input
+                                    type="text"
+                                    name="phone"
+                                    placeholder="00 000 00 00"
+                                    className="form-control-custom flex-1"
+                                    value={formData.phone}
+                                    onChange={handleInputChange}
+                                />
+                            </div>
                         </div>
-                        <div className="details-header-actions">
-                            <button className="apply-btn">Tətbiq et</button>
+                        <div className="form-group">
+                            <label>Müştəri qrupu</label>
+                            <div className="custom-select-wrapper">
+                                <select
+                                    name="group_id"
+                                    className="form-control-custom"
+                                    value={formData.group_id}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">Müştəri qrupu seç</option>
+                                    {customerGroups.map(g => (
+                                        <option key={g.id} value={g.id}>
+                                            {g.name} {g.discount > 0 ? `(${g.discount}%)` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <i className="bi bi-chevron-down select-arrow"></i>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Cins</label>
+                            <div className="custom-select-wrapper">
+                                <select
+                                    name="gender"
+                                    className="form-control-custom"
+                                    value={formData.gender}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">Cins seç</option>
+                                    <option value="Kişi">Kişi</option>
+                                    <option value="Qadın">Qadın</option>
+                                    <option value="Digər">Digər</option>
+                                </select>
+                                <i className="bi bi-chevron-down select-arrow"></i>
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label>Doğum tarixi</label>
+                            <div className="input-with-icon">
+                                <input
+                                    type="date"
+                                    name="birth_date"
+                                    className="form-control-custom date-input-custom"
+                                    value={formData.birth_date}
+                                    onChange={handleInputChange}
+                                    placeholder="ex: 15.06.2015"
+                                />
+                                <i className="bi bi-calendar3"></i>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>E-mail</label>
+                            <div className="input-with-icon">
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="example@exmaple.com"
+                                    className="form-control-custom w-100"
+                                    value={formData.email}
+                                    onChange={handleInputChange}
+                                />
+                                <i className="bi bi-envelope"></i>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>Ünvan</label>
+                            <div className="address-input-container">
+                                <div className="flex-1">
+                                    <SearchableSelect
+                                        options={AZ_CITIES}
+                                        value={formData.address}
+                                        onChange={(val) => setFormData(prev => ({ ...prev, address: val }))}
+                                        placeholder="Şəhər seçin"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    className="map-location-btn"
+                                    onClick={() => setShowAddressModal(true)}
+                                    title="Xəritədən seçin"
+                                >
+                                    <i className="bi bi-geo-alt"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
+                    <div className="form-group mt-3">
+                        <label>Açıqlama</label>
+                        <textarea
+                            name="description"
+                            placeholder="Əlavə məlumat..."
+                            className="form-control-custom textarea-custom"
+                            value={formData.description}
+                            onChange={handleInputChange}
+                        />
+                    </div>
+                </form>
+            </div>
+        );
+    };
+
+    const renderContent = () => {
+        if (viewMode === 'create' || viewMode === 'edit') {
+            return renderForm();
+        }
+
+        if (viewMode === 'details' && selectedCustomer) {
+            const groupName = selectedCustomer.group?.name || '';
+            const groupDiscount = selectedCustomer.group?.discount || 0;
+
+            return (
+                <div className="customer-details-container">
+                    {/* Details Header with Tətbiq et + 3 dots */}
+                    <div className="details-top-header">
+                        <div className="details-header-info">
+                            <h3>{selectedCustomer.name} (ID: {selectedCustomer.id})</h3>
+                            <p>{selectedCustomer.phone || '—'}</p>
+                        </div>
+                        <div className="details-header-actions">
+                            <button className="apply-btn-styled" onClick={() => onApply && onApply(selectedCustomer)}>Tətbiq et</button>
+                            <div className="dots-menu-wrapper" ref={dotsMenuRef}>
+                                <button
+                                    className="dots-menu-btn"
+                                    onClick={() => setShowDotsMenu(!showDotsMenu)}
+                                >
+                                    <i className="bi bi-three-dots-vertical"></i>
+                                </button>
+                                {showDotsMenu && (
+                                    <div className="dots-dropdown">
+                                        <div className="dots-dropdown-item" onClick={handleEditCustomer}>
+                                            <i className="bi bi-pencil-square"></i>
+                                            Müştəri redaktoru
+                                        </div>
+                                        <div className="dots-dropdown-item" onClick={() => { setShowDotsMenu(false); }}>
+                                            <i className="bi bi-plus-circle"></i>
+                                            Əməliyyat yarat
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Cashback and Balance cards */}
                     <div className="details-highlights">
                         <div className="highlight-card cashback">
                             <div className="highlight-icon-circle">
                                 <i className="bi bi-star"></i>
                             </div>
                             <div className="highlight-info">
-                                <span className="amount">{selectedCustomer.cashback?.toFixed(2)} <span className="currency-symbol">₼</span></span>
+                                <span className="amount">{parseFloat(selectedCustomer.cashback || 0).toFixed(2)}</span>
                                 <span className="label">Keşbek</span>
                             </div>
                         </div>
@@ -372,37 +589,129 @@ const CustomersSourceModal = ({ show, onHide }) => {
                                 <i className="bi bi-currency-dollar"></i>
                             </div>
                             <div className="highlight-info">
-                                <span className="amount">{selectedCustomer.balance?.toFixed(2)} <span className="currency-symbol">₼</span></span>
+                                <span className="amount">{parseFloat(selectedCustomer.balance || 0).toFixed(2)}</span>
                                 <span className="label">Balans</span>
                             </div>
                         </div>
                     </div>
 
+                    {/* Stats row */}
                     <div className="details-stats-row">
                         <div className="stat-item">
                             <span className="label">Ümumi xərc</span>
-                            <div className="value">{selectedCustomer.total_spent} <span className="currency-symbol">₼</span></div>
+                            <div className="value">{parseFloat(selectedCustomer.total_spent || 0).toFixed(2)}</div>
                         </div>
                         <div className="stat-item">
                             <span className="label">Cəm endirim</span>
-                            <div className="value">{selectedCustomer.total_discount} <span className="currency-symbol">₼</span></div>
+                            <div className="value">{parseFloat(selectedCustomer.total_discount || 0).toFixed(2)}</div>
                         </div>
                         <div className="stat-item">
                             <span className="label">Ümumi Bonus</span>
-                            <div className="value">{selectedCustomer.total_bonus}</div>
+                            <div className="value">{parseFloat(selectedCustomer.total_bonus || 0).toFixed(0)}</div>
                         </div>
                         <div className="stat-item">
                             <span className="label">Ümumi qəbz</span>
-                            <div className="value">{selectedCustomer.total_receipts}</div>
+                            <div className="value">{selectedCustomer.total_receipts || 0}</div>
                         </div>
                     </div>
 
+                    {/* Group info */}
+                    {groupName && (
+                        <div className="details-group-row">
+                            <span className="group-label">{groupName}</span>
+                            <span className="group-badge">QRUP</span>
+                            <span className="group-discount">{groupDiscount}%</span>
+                        </div>
+                    )}
 
+                    {/* Personal info section */}
+                    <div className="details-personal-info">
+                        <div className="personal-info-row">
+                            <div className="info-item">
+                                <span className="info-label">TELEFONLAR</span>
+                                <span className="info-value">{selectedCustomer.phone || '—'}</span>
+                            </div>
+                            <div className="info-item">
+                                <span className="info-label">CİNS</span>
+                                <span className="info-value">{selectedCustomer.gender || '—'}</span>
+                            </div>
+                            <div className="info-item">
+                                <span className="info-label">DOĞUM TARİXİ</span>
+                                <span className="info-value">{selectedCustomer.birth_date || '—'}</span>
+                            </div>
+                        </div>
+                        {selectedCustomer.email && (
+                            <div className="personal-info-row mt-2">
+                                <div className="info-item">
+                                    <span className="info-label">E-MAİL</span>
+                                    <span className="info-value">{selectedCustomer.email}</span>
+                                </div>
+                            </div>
+                        )}
+                        {selectedCustomer.address && (
+                            <div className="personal-info-row mt-2">
+                                <div className="info-item">
+                                    <span className="info-label">ÜNVAN</span>
+                                    <span className="info-value">{selectedCustomer.address}</span>
+                                </div>
+                            </div>
+                        )}
+                        {selectedCustomer.description && (
+                            <div className="personal-info-row mt-2">
+                                <div className="info-item">
+                                    <span className="info-label">AÇIQLAMA</span>
+                                    <span className="info-value">{selectedCustomer.description}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Order History */}
+                    <div className="customer-history-section mt-4">
+                        <h4 className="section-title">Çeklər ({customerHistory.length})</h4>
+                        <div className="history-table-wrapper">
+                            <table className="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Çek#</th>
+                                        <th>Çek bağlanıb</th>
+                                        <th>Cəm</th>
+                                        <th>Endirim</th>
+                                        <th>Ödəniş üsulu</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {customerHistory.map(order => (
+                                        <tr key={order.uuid} onClick={() => { setSelectedCheck(order); setShowCheckDetail(true); }} className="clickable-row">
+                                            <td><span className="order-id-link">#{order.id}</span></td>
+                                            <td>{order.end_date ? new Date(order.end_date).toLocaleString('az-AZ', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace('.', '') : '—'}</td>
+                                            <td>{parseFloat(order.total || order.total_amount || 0).toFixed(2)}</td>
+                                            <td>{parseFloat(order.discount || 0).toFixed(2)}</td>
+                                            <td>
+                                                {order.order_payments?.length > 0 ? (
+                                                    <span className="payment-tag">
+                                                        {order.order_payments[0].payment_method?.name || 'Nağd'} {parseFloat(order.order_payments[0].paid).toFixed(2)}
+                                                    </span>
+                                                ) : (
+                                                    <span className="payment-tag">Gözləyir</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             );
         }
 
-        return null;
+        return (
+            <div className="customer-details-placeholder">
+                <i className="bi bi-person-badge"></i>
+                <p>Müştəri məlumatlarını görmək üçün siyahıdan seçin</p>
+            </div>
+        );
     };
 
     return (
@@ -419,7 +728,7 @@ const CustomersSourceModal = ({ show, onHide }) => {
                     <div className="customers-source-icon-circle">
                         <i className="bi bi-person"></i>
                     </div>
-                    <h2 className="customers-source-modal-title">Müştəri yarat</h2>
+                    <h2 className="customers-source-modal-title">Müştərilər</h2>
                 </div>
                 <button className="customers-source-close-btn" onClick={onHide}>
                     <i className="bi bi-x-lg"></i>
@@ -440,46 +749,73 @@ const CustomersSourceModal = ({ show, onHide }) => {
                             />
                         </div>
                     </div>
+
+                    {/* Loading indicator */}
+                    {loading && (
+                        <div className="text-center py-3">
+                            <div className="spinner-border spinner-border-sm" role="status" style={{ color: '#053796' }}>
+                                <span className="visually-hidden">Yüklənir...</span>
+                            </div>
+                            <small className="d-block mt-1" style={{ color: '#9ca3af' }}>Müştərilər yüklənir...</small>
+                        </div>
+                    )}
+
+                    {/* Offline message */}
+                    {!isOnline && !loading && (
+                        <div className="text-center py-3 px-2">
+                            <i className="bi bi-wifi-off d-block mb-2" style={{ fontSize: '1.5rem', color: '#ef4444' }}></i>
+                            <small style={{ color: '#9ca3af' }}>İnternet bağlantısı yoxdur.<br />Müştəri siyahısı əlçatan deyil.</small>
+                        </div>
+                    )}
+
                     <div className="customers-source-list">
-                        {dummyCustomers.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase())).map((customer, index) => (
+                        {!loading && filteredCustomers.map((customer) => (
                             <div
-                                key={index}
+                                key={customer.id}
                                 className={`customer-list-item ${selectedCustomer?.id === customer.id && viewMode === 'details' ? 'active' : ''}`}
                                 onClick={() => handleSelectCustomer(customer)}
                             >
                                 <img
-                                    src={`https://ui-avatars.com/api/?name=${customer.name}&background=c5c5d2&color=fff&font-size=0.33`}
+                                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(customer.name || '?')}&background=c5c5d2&color=fff&font-size=0.33`}
                                     alt="avatar"
                                     className="customer-avatar"
                                 />
                                 <div className="customer-info">
                                     <span className="customer-name">{customer.name}</span>
                                     <span className="customer-id">İD: {customer.id}</span>
-                                    <span className="customer-phone">{customer.phone}</span>
+                                    <span className="customer-phone">{customer.phone || '—'}</span>
                                 </div>
                             </div>
                         ))}
+                        {!loading && isOnline && filteredCustomers.length === 0 && (
+                            <div className="text-center py-3">
+                                <small style={{ color: '#9ca3af' }}>Müştəri tapılmadı</small>
+                            </div>
+                        )}
                     </div>
 
+                    {/* Create button at the bottom of sidebar */}
+                    <div className="sidebar-create-btn-wrapper">
+                        <button className="sidebar-create-btn" onClick={handleCreateNew}>
+                            <i className="bi bi-plus-lg me-2"></i>
+                            Müştəri yarat
+                        </button>
+                    </div>
                 </div>
 
                 {renderContent()}
-            </div>
-
-            <div className="customers-source-modal-footer">
-                <button className="footer-btn footer-btn-secondary" onClick={handleCreateNew}>
-                    Müştəri yarat
-                </button>
-                <button className="footer-btn footer-btn-primary" onClick={handleSubmit}>
-                    <i className="bi bi-person-plus"></i>
-                    Müştəri yarat
-                </button>
             </div>
 
             <AddressModal
                 show={showAddressModal}
                 onHide={() => setShowAddressModal(false)}
                 onConfirm={handleConfirmAddress}
+            />
+
+            <CheckDetailModal
+                show={showCheckDetail}
+                onClose={() => setShowCheckDetail(false)}
+                order={selectedCheck}
             />
         </Modal>
     );

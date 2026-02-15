@@ -61,6 +61,7 @@ const OrdersModel = db.sequelize.define(
     is_tax: { type: DataTypes.INTEGER, allowNull: true },
     is_locked: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
     is_synced: { type: DataTypes.INTEGER, allowNull: true },
+    customer_id: { type: DataTypes.INTEGER, allowNull: true },
   },
   {
     tableName: "orders",

@@ -32,6 +32,7 @@ export const sendOrdersItems = createAsyncThunk(
   },
 );
 
+
 export const updateDiscountOnOrders = createAsyncThunk(
   "pos/discount",
   async ({ orderId, discountValue, discountType, oldDiscountValue, oldDiscountType, waiterName: passedWaiterName }, thunkAPI) => {
@@ -288,6 +289,32 @@ export const splitOrder = createAsyncThunk(
           details: `Köçürmədən gəldi: ${itemNames}`
         }));
       }
+
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
+export const assignCustomerToOrder = createAsyncThunk(
+  "orders/assign-customer",
+  async ({ orderId, customerId, customerName, waiterName: passedWaiterName }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `http://localhost:55667/api/orders-items/${orderId}/assign-customer`,
+        { customer_id: customerId },
+      );
+
+      // Log
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || "Naməlum";
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: customerId ? "Müştəri təyin edildi" : "Müştəri silindi",
+        waiterName,
+        details: customerName || '-'
+      }));
 
       return response.data;
     } catch (error) {

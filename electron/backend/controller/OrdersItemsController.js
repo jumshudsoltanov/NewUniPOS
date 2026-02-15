@@ -1636,6 +1636,24 @@ const onUpdateItemCount = async (req, res) => {
   }
 };
 
+const onAssignCustomer = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { customer_id } = req.body;
+
+    await OrdersModel.update(
+      { customer_id: customer_id || null },
+      { where: { uuid: orderId } }
+    );
+
+    const updated = await OrdersModel.findOne({ where: { uuid: orderId } });
+    return res.json({ message: "success", data: updated });
+  } catch (error) {
+    console.error("Assign customer error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateItemPrice,
@@ -1659,4 +1677,5 @@ module.exports = {
   onReopenOrder,
   onDeleteItemWithReason,
   onUpdateItemCount,
+  onAssignCustomer,
 };

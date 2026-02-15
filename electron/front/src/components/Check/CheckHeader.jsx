@@ -5,7 +5,7 @@ import OtherChecks from "../OtherChecks/OtherChecks";
 import { useDispatch, useSelector } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
-const CheckHeader = ({ orders, hall, table }) => {
+const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -65,11 +65,11 @@ const CheckHeader = ({ orders, hall, table }) => {
                 })()}
               </span>
             )}
-            {orders && orders?.tags ? (
-              <span className="header-subtitle">{orders.tags}</span>
-            ) : (
-              ""
-            )}
+            <div className="header-subtitle-container">
+              {orders && orders?.tags && (
+                <span className="header-subtitle">{orders.tags}</span>
+              )}
+            </div>
           </div>
         </div>
 

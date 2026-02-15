@@ -27,11 +27,12 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders } from "../../redux/Slices/OrdersSlice";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 import OrderLogsModal from "./OrderLogsModal"; // Import Modal
+import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -59,6 +60,7 @@ const Check = () => {
     (state) => state.TablesSlice,
   );
   const { books } = useSelector((state) => state.BooksSlice);
+  const { customers } = useSelector((state) => state.CustomersSlice);
 
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const newOrderBtnRef = useRef(null);
@@ -68,6 +70,8 @@ const Check = () => {
   const tableId = searchParams.get("tableId");
   const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const goTables = async () => {
     if (location.state?.from === "/checks") {
@@ -258,8 +262,18 @@ const Check = () => {
       };
     }
 
-    return { currentOrder: null, currentHall: null, currentTable: null };
   }, [id, tableId, tableGroups, books]);
+
+  useEffect(() => {
+    if (currentOrder?.customer_id && customers?.length > 0) {
+      const customer = customers.find(c => c.id === currentOrder.customer_id);
+      if (customer) {
+        setSelectedCustomer(customer);
+      }
+    } else {
+      setSelectedCustomer(null);
+    }
+  }, [currentOrder?.customer_id, customers]);
 
   useEffect(() => {
     if (
@@ -419,7 +433,7 @@ const Check = () => {
                   </svg>
                 </div>
 
-                <div className="sidebar-icon">
+                <div className="sidebar-icon" onClick={() => setShowCustomerModal(true)} style={{ cursor: 'pointer' }}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -429,19 +443,22 @@ const Check = () => {
                   >
                     <path
                       d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-                      stroke="#343434"
+                      stroke={selectedCustomer ? "#053796" : "#343434"}
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                     <path
                       d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
-                      stroke="#343434"
+                      stroke={selectedCustomer ? "#053796" : "#343434"}
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   </svg>
+                  {selectedCustomer && (
+                    <span className="icon-badge" style={{ background: '#053796', fontSize: '7px', width: '14px', height: '14px' }}>✓</span>
+                  )}
                 </div>
 
                 <div className="sidebar-icon discount" onClick={() => {
@@ -755,9 +772,10 @@ const Check = () => {
                 orders={currentOrder}
                 table={currentTable}
                 hall={currentHall}
+                selectedCustomer={selectedCustomer}
               />
               <CheckMain orders={currentOrder} />
-              <CheckBottom orders={currentOrder} hall={currentHall} />
+              <CheckBottom orders={currentOrder} hall={currentHall} selectedCustomer={selectedCustomer} />
             </div>
           </div>
         </Col>
@@ -1207,6 +1225,44 @@ const Check = () => {
         show={showHistoryModal}
         onHide={() => setShowHistoryModal(false)}
         order={currentOrder}
+      />
+      <CustomersSourceModal
+        show={showCustomerModal}
+        onHide={() => setShowCustomerModal(false)}
+        onApply={(customer) => {
+          setSelectedCustomer(customer);
+          setShowCustomerModal(false);
+          // Save customer_id to order
+          if (currentOrder?.uuid) {
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+            // 1. Assign customer
+            dispatch(assignCustomerToOrder({
+              orderId: currentOrder.uuid,
+              customerId: customer?.id || null,
+              customerName: customer?.name || null,
+              waiterName,
+            })).then(() => {
+              // 2. Refresh data after assignment
+              dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
+              dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+            });
+
+            // 3. Apply customer group discount if automated
+            const groupDiscount = customer?.group?.discount;
+            if (groupDiscount && (!currentOrder.discount_value || currentOrder.discount_value == 0)) {
+              dispatch(updateDiscountOnOrders({
+                orderId: currentOrder.uuid,
+                discountValue: groupDiscount,
+                discountType: 'percent',
+                oldDiscountValue: currentOrder.discount_value,
+                oldDiscountType: currentOrder.discount_type,
+                waiterName
+              }));
+            }
+          }
+        }}
+        selectedCustomer={selectedCustomer}
       />
     </Container >
   );
