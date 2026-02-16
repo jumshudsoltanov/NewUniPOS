@@ -204,6 +204,7 @@ const Menu = ({
     setDragOverIndex(null);
   };
 
+  
   return (
     <Container fluid className="p-0 h-100 d-flex flex-column">
       <Row
@@ -268,7 +269,15 @@ const Menu = ({
                   )}
 
                   {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
-                    <div className="menu-card-price">{item.price} ₼</div>
+                    <div className="menu-card-price">
+                      <div>{item.price} ₼</div>
+                      {item.printer_details && item.printer_details.length > 0 && (
+                        <div style={{ fontSize: "0.6rem", opacity: 0.8, marginTop: "2px" }}>
+                          <i className="bi bi-printer me-1"></i>
+                          {item.printer_details.map(p => p.local_name || p.name).join(", ")}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <div className="menu-card-content">

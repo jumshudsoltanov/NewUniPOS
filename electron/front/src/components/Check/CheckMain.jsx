@@ -53,7 +53,8 @@ const CheckMain = ({ orders }) => {
             price: orderItem.price ?? orderItem.amount,
             isNew: false,
             is_gift: isGift, // Ensure it's passed
-            firstId: orderItem.id // Capture ID for sorting
+            firstId: orderItem.id, // Capture ID for sorting
+            printer_details: menuItem?.printer_details || []
           });
         }
       });
@@ -83,7 +84,8 @@ const CheckMain = ({ orders }) => {
           price: item.price,
           isNew: true,
           is_gift: 0,
-          firstId: 999999999 + idx
+          firstId: 999999999 + idx,
+          printer_details: item.printer_details || []
         });
       }
     });
@@ -120,8 +122,6 @@ const CheckMain = ({ orders }) => {
   };
 
 
-  console.log(orders)
-
   return (
     <>
       <div className="checkMainContent">
@@ -136,10 +136,7 @@ const CheckMain = ({ orders }) => {
         <div className="order-list-container">
           {allItems.length > 0 &&
             allItems.map((item, index) => {
-              // If Item is gift, we assume price is 0 BUT we might want to show original?
-              // Actually the backend sets price to 0. So item.price is 0.
-              // We need the original price to strikethrough.
-              // We can find it from the menu using product_id.
+
               const productInfo = menu.find(m => m.id === item.product_id);
               const originalPrice = productInfo?.price || 0;
 
@@ -154,7 +151,7 @@ const CheckMain = ({ orders }) => {
                   style={rowStyle}
                 >
                   <div className="col-name">
-                    {item.name}
+                    <div className="fw-bold">{item.name}</div>
                     {item.is_gift === 1 && <i className="bi bi-gift-fill text-danger ms-2"></i>}
                     {item.isDeleted && <span className="ms-2 badge bg-danger">Silinəcək</span>}
                     {item.partialDelete > 0 && !item.isDeleted && <span className="ms-2 badge bg-warning text-dark">-{item.partialDelete}</span>}
@@ -162,6 +159,12 @@ const CheckMain = ({ orders }) => {
                       <span className="discount-badge">
                         Endirim: {item.discount_type === 1 ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
                       </span>
+                    )}
+                    {item.printer_details && item.printer_details.length > 0 && (
+                      <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "2px" }}>
+                        <i className="bi bi-printer me-1"></i>
+                        {item.printer_details.map(p => p.local_name || p.name).join(", ")}
+                      </div>
                     )}
                   </div>
                   <div className="col-qty">

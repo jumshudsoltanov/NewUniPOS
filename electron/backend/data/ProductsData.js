@@ -29,13 +29,15 @@ const getGeneralCategories = async (passedProfileId) => {
       });
 
 
-      if (generalCategories.length === 0) return;
-
       const apiIds = generalCategories.map((g) => g.id);
 
       // DB-də olub, API-da olmayanları sil
       await GeneralCategoriesModel.destroy({
-        where: { id: { [Op.notIn]: apiIds } },
+        where: {
+          profile_id,
+          id: { [Op.notIn]: apiIds },
+        },
+        force: true,
       });
 
       // Insert / update
@@ -78,13 +80,15 @@ const getCategories = async (passedProfileId) => {
         return c;
       });
 
-      if (categories.length === 0) return;
-
       const apiIds = categories.map((c) => c.id);
 
       // DB-də olub, API-da olmayanları sil
       await CategoriesModel.destroy({
-        where: { id: { [Op.notIn]: apiIds } },
+        where: {
+          profile_id,
+          id: { [Op.notIn]: apiIds },
+        },
+        force: true,
       });
 
       // Insert / update
@@ -124,13 +128,15 @@ const getProducts = async (passedProfileId) => {
         return p;
       });
 
-      if (products.length === 0) return;
-
       const apiIds = products.map((p) => p.id);
 
       // DB-də olub, API-da olmayanları sil
       await ProductsModel.destroy({
-        where: { id: { [Op.notIn]: apiIds } },
+        where: {
+          profile_id,
+          id: { [Op.notIn]: apiIds },
+        },
+        force: true,
       });
 
       // Insert / update
