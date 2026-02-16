@@ -151,10 +151,12 @@ const CheckMain = ({ orders }) => {
                   style={rowStyle}
                 >
                   <div className="col-name">
-                    <div className="fw-bold">{item.name}</div>
-                    {item.is_gift === 1 && <i className="bi bi-gift-fill text-danger ms-2"></i>}
-                    {item.isDeleted && <span className="ms-2 badge bg-danger">Silinəcək</span>}
-                    {item.partialDelete > 0 && !item.isDeleted && <span className="ms-2 badge bg-warning text-dark">-{item.partialDelete}</span>}
+                    <div className="d-flex align-items-center flex-wrap gap-2">
+                      <div className="fw-bold">{item.name}</div>
+                      {item.is_gift === 1 && <i className="bi bi-gift-fill text-danger"></i>}
+                      {item.isDeleted && <span className="badge bg-danger">Silinəcək</span>}
+                      {item.partialDelete > 0 && !item.isDeleted && <span className="badge bg-warning text-dark">-{item.partialDelete}</span>}
+                    </div>
                     {item.discount_value > 0 && item.discount_type !== 0 && (
                       <span className="discount-badge">
                         Endirim: {item.discount_type === 1 ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
@@ -235,7 +237,9 @@ const CheckMain = ({ orders }) => {
               type: 'full',
               name: product.name,
               originalQty: product.count,
-              price: product.price
+              price: product.price,
+              category_id: product.category_id,
+              printer_details: product.printer_details
             }));
             toast.success("Məhsul silinmək üçün işarələndi!");
           } else if (deleteActionType === 'partial') {
@@ -248,7 +252,9 @@ const CheckMain = ({ orders }) => {
               type: 'partial',
               name: product.name,
               originalQty: product.count,
-              price: product.price
+              price: product.price,
+              category_id: product.category_id,
+              printer_details: product.printer_details
             }));
             toast.success("Miqdar azalma üçün işarələndi!");
           }

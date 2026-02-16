@@ -153,11 +153,12 @@ export const deleteOrderItem = createAsyncThunk(
       // Persistent Log
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const qtyText = qty ? `${qty} ədəd` : "Bütün";
       thunkAPI.dispatch(saveLog({
         orderId,
         action: "Məhsul silindi",
         waiterName,
-        details: `${productName || 'Məhsul'} - ${reasonName || 'Səbəb yoxdur'}`
+        details: `${qtyText} ${productName || 'Məhsul'} - ${reasonName || 'Səbəb yoxdur'}`
       }));
 
       return response.data;

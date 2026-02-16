@@ -88,10 +88,14 @@ ipcMain.handle("print-image", async (event, { image, printerName }) => {
     }
   });
 
+  const now = new Date().toLocaleString('az-AZ').replace(/[,]/g, '').replace(/[: ]/g, '_');
+  const jobName = `unipos_${now}`;
+
   const htmlContent = `
     <!DOCTYPE html>
     <html>
       <head>
+        <title>${jobName}</title>
         <style>
           body { margin: 0; padding: 0; display: flex; justify-content: flex-start; }
           img { width: 100%; max-width: 100%; height: auto; display: block; }
@@ -104,6 +108,7 @@ ipcMain.handle("print-image", async (event, { image, printerName }) => {
   `;
 
   await printWindow.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(htmlContent));
+  printWindow.setTitle(jobName);
 
   const options = {
     silent: true,

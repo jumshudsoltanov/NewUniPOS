@@ -33,7 +33,7 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
     return (
         <div className="notification-overlay" onClick={handleClose}>
             <div className="notification-container" onClick={(e) => e.stopPropagation()}>
-                {/* Left thin sidebar icons - as seen in the image */}
+                {/* Left thin sidebar icons - as requested to be restored */}
                 <div className="notif-left-bar">
                     <div className="notif-icon-circle active">
                         <i className="bi bi-house-door"></i>
