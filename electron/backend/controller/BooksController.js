@@ -29,7 +29,8 @@ const getAllActiveOrders = async (req, res) => {
         model: OrdersItemsModel,
         as: "orders_items",
         separate: true,
-        order: [["id", "ASC"]]
+        order: [["id", "ASC"]],
+        include: [{ model: require("../model/ProductsModel"), as: "product" }]
       },
       {
         model: OrderPaymentsModel,

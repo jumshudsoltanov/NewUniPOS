@@ -17,7 +17,7 @@ import { useMemo } from "react";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
-import { processAndPrintOrders } from "../../utils/printerHelpers.jsx";
+import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 
 const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
   const dispatch = useDispatch();

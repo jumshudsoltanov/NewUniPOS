@@ -171,4 +171,9 @@ router.patch(
   OrdersItemsController.onAssignCustomer,
 );
 
+router.post(
+  "/orders-items/:orderId/increment-print-count",
+  OrdersItemsController.incrementPrintCount,
+);
+
 module.exports = router;

@@ -28,7 +28,8 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount } from "../../redux/Slices/OrdersSlice";
+import { printCustomerReceipt } from "../../utils/printerHelpers";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
@@ -63,6 +64,7 @@ const Check = () => {
   const [openACtiveChecks, setOpenActiveChecks] = useState(false);
   const [openChangeSaleType, setOpenChangeSaleType] = useState(false);
   const [openSplitModal, setOpenSplitModal] = useState(false)
+  const [isPrintingCheck, setIsPrintingCheck] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -685,73 +687,102 @@ const Check = () => {
                 </div>
 
                 <div
-                  className="sidebar-icon position-relative"
+                  className={`sidebar-icon position-relative ${isPrintingCheck ? "disabled" : ""}`}
                   title="Çap et"
-                  onClick={() => {
+                  onClick={async () => {
+                    if (isDragMode || isPrintingCheck) return;
+
                     if (currentOrder?.uuid) {
+                      setIsPrintingCheck(true);
                       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-                      dispatch(saveLog({
-                        orderId: currentOrder.uuid,
-                        action: "Çek çap edildi",
-                        waiterName,
-                        details: "Sifariş çeki"
-                      }));
-                      toast.info("Çapa göndərildi...");
+
+                      try {
+                        const result = await printCustomerReceipt({
+                          items: products,
+                          checkData: currentOrder,
+                          tableName: currentTable?.name,
+                          hallName: currentHall?.name,
+                          waiterName
+                        }, loginedProfileData);
+
+                        if (result.success) {
+                          toast.success("Ön çap uğurla tamamlandı");
+                          await dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName })).unwrap();
+
+                          // Refresh Data
+                          await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+                          if (tableGroups?.data) {
+                            await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Print Check Error:", error);
+                      } finally {
+                        setIsPrintingCheck(false);
+                      }
                     }
                   }}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <path
-                      d="M7.25 7H16.75V5C16.75 3 16 2 13.75 2H10.25C8 2 7.25 3 7.25 5V7Z"
-                      fill="#EBF2FE"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeMiterlimit="10"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M16 15V19C16 21 15 22 13 22H11C9 22 8 21 8 19V15H16Z"
-                      fill="#EBF2FE"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeMiterlimit="10"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M21 10V15C21 17 20 18 18 18H16V15H8V18H6C4 18 3 17 3 15V10C3 8 4 7 6 7H18C20 7 21 8 21 10Z"
-                      fill="#EBF2FE"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeMiterlimit="10"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M17 15H15.79H7"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeMiterlimit="10"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M7 11H10"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeMiterlimit="10"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span className="icon-badge">8</span>
+                  {isPrintingCheck ? (
+                    <div className="spinner-border spinner-border-sm text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M7.25 7H16.75V5C16.75 3 16 2 13.75 2H10.25C8 2 7.25 3 7.25 5V7Z"
+                        fill="#EBF2FE"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeMiterlimit="10"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M16 15V19C16 21 15 22 13 22H11C9 22 8 21 8 19V15H16Z"
+                        fill="#EBF2FE"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeMiterlimit="10"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M21 10V15C21 17 20 18 18 18H16V15H8V18H6C4 18 3 17 3 15V10C3 8 4 7 6 7H18C20 7 21 8 21 10Z"
+                        fill="#EBF2FE"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeMiterlimit="10"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M17 15H15.79H7"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeMiterlimit="10"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M7 11H10"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeMiterlimit="10"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                  {!isPrintingCheck && (
+                    <span className="icon-badge">{currentOrder?.print_count || 0}</span>
+                  )}
                 </div>
 
                 <div

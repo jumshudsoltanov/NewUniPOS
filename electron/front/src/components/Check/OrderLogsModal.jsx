@@ -57,7 +57,7 @@ const OrderLogsModal = ({ show, onHide, order }) => {
                             }}></div>
 
                             {logs.map((log, index) => {
-                                const isError = log.action === "Mətbəx Çapı Xətası";
+                                const isError = log.action === "Mətbəx Çapı Xətası" || log.action === "Müştəri Çapı Xətası";
                                 return (
                                     <div key={log.id} className="timeline-item d-flex position-relative mb-3">
                                         {/* Marker */}

@@ -62,6 +62,7 @@ const OrdersModel = db.sequelize.define(
     is_locked: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
     is_synced: { type: DataTypes.INTEGER, allowNull: true },
     customer_id: { type: DataTypes.INTEGER, allowNull: true },
+    print_count: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
   },
   {
     tableName: "orders",

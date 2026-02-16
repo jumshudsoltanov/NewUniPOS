@@ -648,6 +648,29 @@ export const updateDepositOnOrders = createAsyncThunk(
 );
 
 
+export const incrementPrintCount = createAsyncThunk(
+  "orders/incrementPrintCount",
+  async ({ orderId, waiterName }, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `http://localhost:55667/api/orders-items/${orderId}/increment-print-count`
+      );
+
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Ön çap çıxarıldı",
+        waiterName,
+        details: "Müştəri çeki çap edildi"
+      }));
+
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  }
+);
+
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -821,6 +844,11 @@ export const OrderSlice = createSlice({
       })
       .addCase(closeOrder.fulfilled, (state, action) => {
         // No local log push - handled by thunk saveLog
+      })
+      .addCase(incrementPrintCount.fulfilled, (state, action) => {
+        if (state.currentOrder && state.currentOrder.uuid === action.meta.arg.orderId) {
+          state.currentOrder.print_count = action.payload.print_count;
+        }
       });
   },
 });

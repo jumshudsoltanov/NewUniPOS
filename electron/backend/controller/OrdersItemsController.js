@@ -1654,6 +1654,36 @@ const onAssignCustomer = async (req, res) => {
   }
 };
 
+const incrementPrintCount = async (req, res) => {
+  const { orderId } = req.params;
+
+  if (!orderId) {
+    return res.status(400).json({ message: "Missing orderId" });
+  }
+
+  try {
+    const order = await OrdersModel.findOne({ where: { uuid: orderId } });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    const newCount = (order.print_count || 0) + 1;
+
+    await OrdersModel.update(
+      { print_count: newCount, is_synced: 0 },
+      { where: { uuid: orderId } }
+    );
+
+    SyncService.triggerSync(orderId);
+
+    return res.status(200).json({ message: "Print count updated", print_count: newCount });
+  } catch (error) {
+    console.error("Error incrementing print count:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   sendOrdersItemsToDb,
   onUpdateItemPrice,
@@ -1678,4 +1708,5 @@ module.exports = {
   onDeleteItemWithReason,
   onUpdateItemCount,
   onAssignCustomer,
+  incrementPrintCount,
 };
