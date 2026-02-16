@@ -46,7 +46,7 @@ const CheckMain = ({ orders }) => {
           groupedMap.set(key, {
             ...orderItem,
             product_id: prodId,
-            name: menuItem?.name || orderItem.product_name || "Məhsul",
+            name: menuItem?.name || orderItem.product?.name || orderItem.product_name || "Məhsul",
             count: Number(orderItem.count),
             savedQuantity: Number(orderItem.count),
             localQuantity: 0,
