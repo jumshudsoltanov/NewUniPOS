@@ -26,6 +26,8 @@ const {
 const { getPaymentMethods } = require("./data/PaymentMethodsData");
 const { getTags } = require("./data/TagsData");
 const { getSalesTypes } = require("./data/SalesTypesData");
+const PrintersModel = require("./model/PrintersModel");
+const { getPrinters } = require("./data/PrintersData");
 
 // Allow Cors
 app.use(
@@ -192,6 +194,9 @@ const InsertData = async () => {
     await sleep(500);
 
     await getSalesTypes();
+    await sleep(500);
+
+    await getPrinters();
   } catch (error) {
     console.log("error insert", error);
   }

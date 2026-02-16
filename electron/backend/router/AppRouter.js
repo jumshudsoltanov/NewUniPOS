@@ -10,6 +10,7 @@ const MenuController = require("../controller/MenuController");
 const TagsController = require("../controller/TagsController");
 const PaymentMethodsController = require("../controller/PaymentMethodsController");
 const SaleTypesController = require("../controller/SaleTypesContoller");
+const PrintersController = require("../controller/PrintersController");
 
 // Routers lists
 router.post("/login", LoginController.getLogin);
@@ -17,6 +18,7 @@ router.post("/sale", SalesController.CreateNewOrders);
 router.post("/other-sale", SalesController.CreateNewOtherOrders);
 router.get("/waiters/:pin", WaitersController.getWaiterInfo);
 router.get("/tables/:profileId", TablesController.getTables);
+router.get("/pos/printers/:profileId", PrintersController.getPrinters);
 router.get("/waiters/:profileId/list", WaitersController.getWaiterLists);
 router.get("/tags/:profileId/list", TagsController.getTagsList);
 router.get(
