@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getWaiter } from "../../redux/Slices/WaitersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
 
 const PIN_LENGTH = 4;
 
@@ -216,7 +217,11 @@ const Pin = () => {
 
       if (waiterResult.message === "success") {
         if (loginedProfileData?.data?.profile?.id) {
-          await dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap();
+          await Promise.all([
+            dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap(),
+            dispatch(menuWithCategories(loginedProfileData.data.profile.id)).unwrap(),
+            dispatch(menuWithGeneralCategories(loginedProfileData.data.profile.id)).unwrap()
+          ]);
         }
         navigate("/tables");
       } else {
