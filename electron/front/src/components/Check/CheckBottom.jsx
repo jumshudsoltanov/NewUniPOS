@@ -19,7 +19,7 @@ import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
 import { processAndPrintOrders } from "../../utils/printerHelpers.jsx";
 
-const CheckBottom = ({ orders, hall, selectedCustomer }) => {
+const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -37,7 +37,7 @@ const CheckBottom = ({ orders, hall, selectedCustomer }) => {
     waiterId: loginedWaiter?.data?.id,
   };
 
-  const handleSendOrders = async () => {
+  const handleSendOrders = async (itemComments = {}) => {
     try {
       const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || orders?.waiter?.name || "Naməlum";
       // 1. Process Pending Deletions first
@@ -66,11 +66,11 @@ const CheckBottom = ({ orders, hall, selectedCustomer }) => {
         await processAndPrintOrders(
           deletedItemsForPrint,
           {
-            table: orders?.table_name || "Masa",
+            table: table?.name || orders?.table_name || "Masa",
             waiter: waiterName,
             hallName: hall?.name || "",
             orderId: orders?.uuid || id,
-            terminalInfo: {}, // Can start empty
+            terminalInfo: loginedProfileData?.data?.terminal || {},
             typeName: orders?.sale_type === 1 ? "Paket" : "Restoranda",
             checkData: orders,
             isDecrease: true
@@ -81,15 +81,21 @@ const CheckBottom = ({ orders, hall, selectedCustomer }) => {
 
       // 2. Send New Items
       if (products.length > 0) {
+        // Apply comments to products for printing and saving
+        const productsWithComments = products.map((p, idx) => ({
+          ...p,
+          comment: itemComments[idx] !== undefined ? itemComments[idx] : p.comment
+        }));
+
         // Print New Items
         await processAndPrintOrders(
-          products,
+          productsWithComments,
           {
-            table: orders?.table_name || "Masa",
+            table: table?.name || orders?.table_name || "Masa",
             waiter: waiterName,
             hallName: hall?.name || "",
             orderId: orders?.uuid || id,
-            terminalInfo: {},
+            terminalInfo: loginedProfileData?.data?.terminal || {},
             typeName: orders?.sale_type === 1 ? "Paket" : "Restoranda",
             checkData: orders,
             isDecrease: false
@@ -97,7 +103,11 @@ const CheckBottom = ({ orders, hall, selectedCustomer }) => {
           menuDataWithCategories
         );
 
-        await dispatch(sendOrdersItems({ ...payload, waiterName })).unwrap();
+        await dispatch(sendOrdersItems({
+          ...payload,
+          productList: productsWithComments,
+          waiterName
+        })).unwrap();
       }
 
       // 3. Refresh Data

@@ -20,7 +20,7 @@ const KitchenReceipt = ({
             date.getMonth() + 1
         ).padStart(2, "0")}.${date.getFullYear()}`;
 
-    const baseFont = Number(terminalInfo?.kitchen_receipt || 14);
+    const baseFont = 12 + Number(terminalInfo?.kitchen_receipt || 0);
     const fs = (n) => `${baseFont + n}px`;
 
     const items = orderedItems.length > 0 ? orderedItems : [];
@@ -45,24 +45,22 @@ const KitchenReceipt = ({
 
             {/* HEADER */}
             <div style={styles.header}>
-                <div style={styles.title(fs)}>*** MƏTBƏX ÇEKİ ***</div>
+                <div style={styles.titleSimplified(fs)}>MƏTBƏX ÇEKİ №: {displayId}</div>
                 <div style={styles.sub(fs)}>{formatDate(now)}</div>
-
-                <div style={styles.metaRow}>
-                    <div style={styles.metaLabel(fs)}>ÇEK №:</div>
-                    <div style={styles.metaValueLarge(fs)}>{displayId}</div>
-                </div>
 
                 <div style={styles.line}></div>
 
-                <div style={styles.headerGrid}>
-                    <div style={styles.gridItem}>
-                        <div style={styles.metaLabelSmall(fs)}>MASA:</div>
-                        <div style={styles.metaValue(fs)}>{checkData?.sale_type == 0 ? `${hallName || ""} ${cleanTable}` : typeName || "Paket"}</div>
+                <div style={styles.infoSection}>
+                    {(checkData?.sale_type === "dine_in" || checkData?.sale_type === 0 || !checkData?.sale_type) && (
+                        <div style={styles.infoRow(fs)}>
+                            <strong>Zal:</strong> {hallName || "-"} <strong>Masa:</strong> {cleanTable || "-"}
+                        </div>
+                    )}
+                    <div style={styles.infoRow(fs)}>
+                        <strong>Ofisiant:</strong> {cleanWaiter || "-"}
                     </div>
-                    <div style={styles.gridItem}>
-                        <div style={styles.metaLabelSmall(fs)}>OFİSİANT:</div>
-                        <div style={styles.metaValue(fs)}>{cleanWaiter}</div>
+                    <div style={styles.infoRow(fs)}>
+                        <strong>Üsul:</strong> {typeName || "Restoranda"}
                     </div>
                 </div>
             </div>
@@ -70,8 +68,8 @@ const KitchenReceipt = ({
             <div style={styles.lineBold}></div>
 
             {/* STATUS BADGE */}
-            <div style={styles.statusBox(hasDecrease, fs)}>
-                {hasDecrease ? "!!! MƏHSUL SİLİNDİ !!!" : "YENİ SİFARİŞ"}
+            <div style={styles.simpleStatus(hasDecrease, fs)}>
+                {hasDecrease ? "MƏHSUL SİLİNDİ" : "YENİ SİFARİŞ"}
             </div>
 
             <div style={styles.lineBold}></div>
@@ -87,10 +85,10 @@ const KitchenReceipt = ({
                         <div style={styles.itemInfo}>
                             <div style={styles.itemName(fs)}>{item.name}</div>
                             {item.comment && (
-                                <div style={styles.comment(fs)}>{"-"} {item.comment}</div>
+                                <div style={styles.comment(fs)}>- {item.comment}</div>
                             )}
                             {item.reasonName && (
-                                <div style={styles.reasonBox(fs)}>SƏBƏB: {item.reasonName}</div>
+                                <div style={styles.reasonSimple(fs)}>Səbəb: {item.reasonName}</div>
                             )}
 
                             {/* MODIFIERS */}
@@ -129,7 +127,7 @@ const KitchenReceipt = ({
             {/* FOOTER */}
             <div style={styles.footer(fs)}>
                 <div style={styles.footerLine}>Mətbəxə uğurlar!</div>
-                <div style={styles.footerLineSmall}>POS System v2.0</div>
+                <div style={styles.footerLineSmall}>UniPOS v2.0</div>
             </div>
         </div>
     );
@@ -144,58 +142,46 @@ const styles = {
         padding: "5px 10px",
         boxSizing: "border-box",
         background: "#fff",
-        fontFamily: "'Courier New', Courier, monospace",
+        fontFamily: "'Arial', 'Helvetica', sans-serif",
         color: "#000",
     }),
 
-    header: { textAlign: "center", marginBottom: "5px" },
+    header: { textAlign: "left", marginBottom: "5px" },
 
-    title: (fs) => ({
-        fontSize: fs(5),
+    titleSimplified: (fs) => ({
+        fontSize: fs(1),
         fontWeight: "900",
-        borderBottom: "1px double #000",
-        display: "inline-block",
-        paddingBottom: "2px",
-        marginBottom: "4px"
+        borderBottom: "2px solid #000",
+        marginBottom: "4px",
+        display: "block",
+        textAlign: "center"
     }),
 
     sub: (fs) => ({
-        fontSize: fs(0),
-        fontWeight: "700",
-        marginBottom: "6px",
+        fontSize: fs(-1),
+        fontWeight: "900",
+        marginBottom: "4px",
+        textAlign: "center"
     }),
 
-    metaRow: {
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: "8px",
-        margin: "4px 0"
-    },
-
-    metaLabel: (fs) => ({ fontSize: fs(2), fontWeight: "700" }),
-    metaLabelSmall: (fs) => ({ fontSize: fs(0), fontWeight: "700", opacity: 0.8 }),
-    metaValue: (fs) => ({ fontSize: fs(2), fontWeight: "900" }),
-    metaValueLarge: (fs) => ({ fontSize: fs(5), fontWeight: "900" }),
-
-    headerGrid: {
-        display: "flex",
-        justifyContent: "space-between",
-        textAlign: "left",
+    infoSection: {
         margin: "5px 0"
     },
 
-    gridItem: { flex: 1 },
+    infoRow: (fs) => ({
+        fontSize: fs(0),
+        lineHeight: "1.4",
+        marginBottom: "2px",
+        fontWeight: "900"
+    }),
 
-    statusBox: (isDecrease, fs) => ({
+    simpleStatus: (isDecrease, fs) => ({
         textAlign: "center",
-        fontSize: fs(4),
+        fontSize: fs(2),
         fontWeight: "900",
-        padding: "6px 0",
-        background: isDecrease ? "#000" : "transparent",
-        color: isDecrease ? "#fff" : "#000",
-        border: isDecrease ? "none" : "1px solid #000",
-        margin: "4px 0"
+        padding: "4px 0",
+        color: "#000",
+        textTransform: "uppercase"
     }),
 
     line: { borderBottom: "1px dashed #000", margin: "4px 0" },
@@ -209,20 +195,20 @@ const styles = {
         marginBottom: "4px"
     },
 
-    thName: (fs) => ({ fontSize: fs(0), fontWeight: "900" }),
-    thQty: (fs) => ({ fontSize: fs(0), fontWeight: "900", width: "50px", textAlign: "right" }),
+    thName: (fs) => ({ fontSize: fs(-1), fontWeight: "900" }),
+    thQty: (fs) => ({ fontSize: fs(-1), fontWeight: "900", width: "50px", textAlign: "right" }),
 
     itemRow: {
         display: "flex",
         width: "100%",
-        padding: "5px 0",
+        padding: "4px 0",
         borderBottom: "1px dotted #ccc",
     },
 
     itemInfo: { flex: 1, minWidth: 0 },
 
     itemName: (fs) => ({
-        fontSize: fs(4),
+        fontSize: fs(3),
         fontWeight: "900",
         lineHeight: "1.1",
         textTransform: "uppercase"
@@ -230,7 +216,7 @@ const styles = {
 
     qtyBox: (isDecrease, fs) => ({
         width: "60px",
-        fontSize: fs(6),
+        fontSize: fs(5),
         fontWeight: "900",
         textAlign: "right",
         display: "flex",
@@ -238,15 +224,15 @@ const styles = {
         justifyContent: "flex-end"
     }),
 
-    comment: (fs) => ({ fontSize: fs(1), fontWeight: "700", fontStyle: "italic", marginTop: "3px" }),
-    modifier: (fs) => ({ fontSize: fs(1), fontWeight: "700", color: "#333" }),
-    reasonBox: (fs) => ({
+    comment: (fs) => ({ fontSize: fs(0), fontWeight: "900", fontStyle: "italic", marginTop: "3px" }),
+    modifier: (fs) => ({ fontSize: fs(0), fontWeight: "900", color: "#333" }),
+    reasonSimple: (fs) => ({
         fontSize: fs(1),
         fontWeight: "900",
         marginTop: "4px",
-        padding: "2px 4px",
-        border: "1px solid #000",
-        display: "inline-block"
+        color: "#000",
+        display: "block",
+        textTransform: "uppercase"
     }),
 
     footer: (fs) => ({ textAlign: "center", marginTop: "10px" }),

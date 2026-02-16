@@ -30,7 +30,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
 
     const handleSendAndClose = () => {
         if (onSend) {
-            onSend();
+            onSend(comments);
         }
         onClose();
     };

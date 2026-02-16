@@ -228,33 +228,41 @@ const CheckMain = ({ orders }) => {
           setOpenDeleteProductModal(false);
           const product = productToDelete;
 
+          // Enrich with category/printer info from menu if missing
+          const pId = product.product_id || product.id;
+          const productInfo = menu.find(m => m.id === pId);
+          const finalCategoryId = product.category_id || productInfo?.category_id;
+          const finalPrinters = (product.printer_details && product.printer_details.length > 0)
+            ? product.printer_details
+            : productInfo?.printer_details;
+
           if (deleteActionType === 'full') {
             dispatch(addPendingDeletion({
               orderId: orders.uuid,
-              itemId: product.product_id || product.id,
+              itemId: pId,
               reasonId: data.reason,
-              reasonName: data.reasonName, // Add reason name
+              reasonName: data.reasonName,
               type: 'full',
               name: product.name,
               originalQty: product.count,
               price: product.price,
-              category_id: product.category_id,
-              printer_details: product.printer_details
+              category_id: finalCategoryId,
+              printer_details: finalPrinters
             }));
             toast.success("Məhsul silinmək üçün işarələndi!");
           } else if (deleteActionType === 'partial') {
             dispatch(addPendingDeletion({
               orderId: orders.uuid,
-              itemId: product.product_id || product.id,
+              itemId: pId,
               reasonId: data.reason,
-              reasonName: data.reasonName, // Add reason name
+              reasonName: data.reasonName,
               qty: qtyToReduce,
               type: 'partial',
               name: product.name,
               originalQty: product.count,
               price: product.price,
-              category_id: product.category_id,
-              printer_details: product.printer_details
+              category_id: finalCategoryId,
+              printer_details: finalPrinters
             }));
             toast.success("Miqdar azalma üçün işarələndi!");
           }

@@ -800,7 +800,7 @@ const Check = () => {
                 selectedCustomer={selectedCustomer}
               />
               <CheckMain orders={currentOrder} />
-              <CheckBottom orders={currentOrder} hall={currentHall} selectedCustomer={selectedCustomer} />
+              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} />
             </div>
           </div>
         </Col>

@@ -81,6 +81,8 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    /* Crucial for scrolling children */
 }
 
 .notif-header {
@@ -92,6 +94,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 15px;
+    flex-shrink: 0;
+    /* Header should not shrink */
     font-size: 18px;
     font-weight: 500;
 }
@@ -149,6 +153,8 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    /* Crucial for scrolling children */
 }
 
 .notif-header-left {
@@ -224,9 +230,7 @@
     display: flex;
     flex-direction: column;
     gap: 18px;
-    height: 100%;
     padding-bottom: 30px;
-    /* Better ending space */
 }
 
 /* Scrollbar Styling */
