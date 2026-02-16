@@ -37,7 +37,7 @@ const CategoriesModel = db.sequelize.define(
     },
 
     printer_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
 

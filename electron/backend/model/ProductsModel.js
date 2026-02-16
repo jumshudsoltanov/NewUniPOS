@@ -90,7 +90,7 @@ const ProductsModel = db.sequelize.define(
     },
 
     printer_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
   },

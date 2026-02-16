@@ -71,6 +71,9 @@ const getCategories = async (passedProfileId) => {
         Object.keys(c).forEach((k) => {
           if (c[k] === undefined) c[k] = 0;
         });
+        if (Array.isArray(c.printer_id)) {
+          c.printer_id = c.printer_id.join(",");
+        }
         c.profile_id = profile_id;
         return c;
       });
@@ -114,6 +117,9 @@ const getProducts = async (passedProfileId) => {
         Object.keys(p).forEach((k) => {
           if (p[k] === undefined) p[k] = 0;
         });
+        if (Array.isArray(p.printer_id)) {
+          p.printer_id = p.printer_id.join(",");
+        }
         p.profile_id = profile_id;
         return p;
       });
