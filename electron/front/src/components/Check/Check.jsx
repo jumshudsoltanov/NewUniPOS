@@ -40,6 +40,17 @@ const Check = () => {
   const [searchText, setSearchText] = useState("");
   const [activeMobileTab, setActiveMobileTab] = useState("menu");
   const [showOpeationsModal, setShowOperationsModal] = useState(false);
+
+  // Settings toolbar states
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDragMode, setIsDragMode] = useState(false);
+  const [categoryOrder, setCategoryOrder] = useState(() => {
+    try {
+      const saved = localStorage.getItem('category_order');
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
+  const [tempCategoryOrder, setTempCategoryOrder] = useState(null);
   const [lockCheck, setLockCheck] = useState(false);
   const [comment, setComment] = useState(false);
   const [onShowClearModal, setOnShowClearModal] = useState(false);
@@ -985,7 +996,7 @@ const Check = () => {
               </div>
 
               {/* Right Side: Search & Actions */}
-              <div className="header-right d-flex align-items-center gap-2">
+              <div className="header-right d-flex align-items-center gap-1">
                 {/* Search */}
                 <div
                   className={`search-wrapper ${isSearchExpanded ? "expanded-modern" : ""}`}
@@ -1067,6 +1078,72 @@ const Check = () => {
                 {/* <div className="header-icon bg-white border rounded p-2 text-secondary cursor-pointer">
                     <i className="bi bi-list-ul"></i>
                   </div> */}
+
+                {/* Settings Toolbar - hidden when search is expanded */}
+                {!isSearchExpanded && (
+                  <div className="settings-toolbar-wrapper">
+                    <div
+                      className={`settings-gear-btn ${isSettingsOpen ? 'active' : ''}`}
+                      onClick={() => {
+                        if (isDragMode) return;
+                        setIsSettingsOpen(!isSettingsOpen);
+                      }}
+                    >
+                      <i className="bi bi-gear-fill"></i>
+                    </div>
+
+                    {isSettingsOpen && !isDragMode && (
+                      <div className="settings-actions">
+                        <div
+                          className="settings-action-btn"
+                          title="Kateqoriya sırasını dəyiş"
+                          onClick={() => {
+                            setIsDragMode(true);
+                            setTempCategoryOrder(categoryOrder);
+                          }}
+                        >
+                          <i className="bi bi-arrows-move"></i>
+                        </div>
+                        <div className="settings-action-btn" title="Əlavə et">
+                          <i className="bi bi-plus-lg"></i>
+                        </div>
+                        <div className="settings-action-btn" title="Redaktə et">
+                          <i className="bi bi-pencil-fill"></i>
+                        </div>
+                      </div>
+                    )}
+
+                    {isDragMode && (
+                      <div className="drag-mode-actions">
+                        <div
+                          className="drag-mode-btn cancel"
+                          title="Ləğv et"
+                          onClick={() => {
+                            setIsDragMode(false);
+                            setCategoryOrder(tempCategoryOrder);
+                            setTempCategoryOrder(null);
+                          }}
+                        >
+                          <i className="bi bi-x-lg"></i>
+                        </div>
+                        <div
+                          className="drag-mode-btn confirm"
+                          title="Təsdiqlə"
+                          onClick={() => {
+                            setIsDragMode(false);
+                            setTempCategoryOrder(null);
+                            if (categoryOrder) {
+                              localStorage.setItem('category_order', JSON.stringify(categoryOrder));
+                            }
+                            toast.success('Kateqoriya sırası yadda saxlanıldı!');
+                          }}
+                        >
+                          <i className="bi bi-check-lg"></i>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1081,6 +1158,9 @@ const Check = () => {
                 setSelectedGenCat={setSelectedGenCat}
                 selectedCat={selectedCat}
                 setSelectedCat={setSelectedCat}
+                isDragMode={isDragMode}
+                categoryOrder={categoryOrder}
+                onCategoryOrderChange={(newOrder) => setCategoryOrder(newOrder)}
               />
             </div>
           </div>

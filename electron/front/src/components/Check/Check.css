@@ -136,6 +136,8 @@
     background-color: #EBF2FE;
     border-bottom: 1px solid #d1d5db;
     overflow: hidden;
+    gap: 0;
+    padding-right: 8px;
 }
 
 /* Breadcrumb Styles */
@@ -1478,4 +1480,204 @@
     .check-container {
         border-radius: 0;
     }
+}
+
+/* ========================
+   SETTINGS TOOLBAR STYLES
+   ======================== */
+.settings-toolbar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+}
+
+.settings-gear-btn {
+    width: 48px;
+    height: 38px;
+    background-color: #053796;
+    border: none;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    font-size: 16px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    transform: skewX(-15deg);
+}
+
+.settings-gear-btn i {
+    transform: skewX(15deg);
+}
+
+.settings-gear-btn:hover {
+    background-color: #042d7a;
+}
+
+.settings-gear-btn.active {
+    background-color: #053796;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.4);
+}
+
+/* Settings action buttons container */
+.settings-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 4px;
+    animation: settingsSlideIn 0.2s ease;
+}
+
+@keyframes settingsSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.settings-action-btn {
+    width: 38px;
+    height: 34px;
+    background-color: #053796;
+    border: none;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    font-size: 14px;
+    transition: all 0.15s ease;
+    transform: skewX(-15deg);
+}
+
+.settings-action-btn i {
+    transform: skewX(15deg);
+}
+
+.settings-action-btn:hover {
+    background-color: #042d7a;
+    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.35);
+}
+
+.settings-action-btn:active {
+    transform: skewX(-15deg) scale(0.95);
+}
+
+.settings-action-btn.active {
+    background-color: #fff;
+    color: #053796;
+    border: 1px solid #053796;
+    box-shadow: 0 0 0 2px rgba(5, 55, 150, 0.2);
+}
+
+/* Drag mode buttons (confirm/cancel) */
+.drag-mode-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 4px;
+    animation: settingsSlideIn 0.2s ease;
+}
+
+.drag-mode-btn {
+    width: 38px;
+    height: 34px;
+    border: none;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.15s ease;
+    transform: skewX(-15deg);
+}
+
+.drag-mode-btn i {
+    transform: skewX(15deg);
+}
+
+.drag-mode-btn.cancel {
+    background-color: #dc2626;
+    color: #fff;
+}
+
+.drag-mode-btn.cancel:hover {
+    background-color: #b91c1c;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
+}
+
+.drag-mode-btn.cancel:active {
+    transform: skewX(-15deg) scale(0.95);
+}
+
+.drag-mode-btn.confirm {
+    background-color: #16a34a;
+    color: #fff;
+}
+
+.drag-mode-btn.confirm:hover {
+    background-color: #15803d;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.35);
+}
+
+.drag-mode-btn.confirm:active {
+    transform: skewX(-15deg) scale(0.95);
+}
+
+/* Drag mode category card styling */
+.menu-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.menu-card.drag-over {
+    border: 2px dashed #053796;
+    box-shadow: 0 0 12px rgba(5, 55, 150, 0.3);
+}
+
+.menu-card.drag-mode {
+    cursor: grab;
+    position: relative;
+}
+
+.menu-card.drag-mode:active {
+    cursor: grabbing;
+}
+
+.menu-card .drag-handle-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(5, 55, 150, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    z-index: 5;
+}
+
+.menu-card .drag-handle-icon {
+    background: rgba(255, 255, 255, 0.95);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #053796;
+    font-size: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { Container, Col, Row } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { addProducts, menuData } from "../../redux/Slices/OrdersSlice";
@@ -17,12 +17,19 @@ const Menu = ({
   setSelectedGenCat,
   selectedCat,
   setSelectedCat,
+  isDragMode = false,
+  categoryOrder = null,
+  onCategoryOrderChange = () => { },
 }) => {
   const dispatch = useDispatch();
   const { menuDataWithGeneralCategories, menuDataWithCategories } = useSelector(
     (state) => state.MenuSlice,
   );
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+  // Drag state
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   // Fetch Data
   useEffect(() => {
@@ -71,6 +78,7 @@ const Menu = ({
 
   const handleItemClick = (item) => {
     if (searchText) return;
+    if (isDragMode) return; // Prevent navigation in drag mode
 
     if (item.categories && Array.isArray(item.categories)) {
       if (item.categories.length === 0) {
@@ -94,12 +102,27 @@ const Menu = ({
   };
 
   const handleProductClick = (product) => {
+    if (isDragMode) return; // Prevent adding in drag mode
     if (order?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
     }
     dispatch(addProducts(product));
   };
+
+  // Apply custom ordering
+  const applyOrder = useCallback((items, order) => {
+    if (!order || !Array.isArray(order) || order.length === 0) return items;
+
+    const orderMap = {};
+    order.forEach((id, idx) => { orderMap[id] = idx; });
+
+    return [...items].sort((a, b) => {
+      const aIdx = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
+      const bIdx = orderMap[b.id] !== undefined ? orderMap[b.id] : 999999;
+      return aIdx - bIdx;
+    });
+  }, []);
 
   const itemsToRender = useMemo(() => {
     if (searchText && searchText.trim().length > 0) {
@@ -111,7 +134,9 @@ const Menu = ({
       const cats = (menuDataWithCategories?.data || []).filter(
         (c) => !c.general_categorie_id || c.general_categorie_id === 0
       );
-      return [...genCats, ...cats];
+      let items = [...genCats, ...cats];
+      // Apply custom ordering for ROOT view
+      return applyOrder(items, categoryOrder);
     }
 
     if (menuViewMode === "CATEGORIES") {
@@ -130,7 +155,54 @@ const Menu = ({
     selectedCat,
     searchText,
     filteredProducts,
+    categoryOrder,
+    applyOrder,
   ]);
+
+  // Drag handlers
+  const handleDragStart = (e, index) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // Set a transparent drag image
+    const el = e.currentTarget;
+    e.dataTransfer.setDragImage(el, el.offsetWidth / 2, el.offsetHeight / 2);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    // Reorder items
+    const newItems = [...itemsToRender];
+    const [removed] = newItems.splice(draggedIndex, 1);
+    newItems.splice(dropIndex, 0, removed);
+
+    // Save new order as array of IDs
+    const newOrder = newItems.map(item => item.id);
+    onCategoryOrderChange(newOrder);
+
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   return (
     <Container fluid className="p-0 h-100 d-flex flex-column">
@@ -150,6 +222,9 @@ const Menu = ({
               }
             }
 
+            const isDragging = isDragMode && draggedIndex === index;
+            const isDragOver = isDragMode && dragOverIndex === index && draggedIndex !== index;
+
             return (
               <Col
                 key={item.id ? `${item.id}-${index}` : index}
@@ -158,13 +233,20 @@ const Menu = ({
                 style={{ flex: "0 0 20%", maxWidth: "20%" }}
               >
                 <div
-                  className="menu-card"
+                  className={`menu-card ${isDragMode && menuViewMode === 'ROOT' ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
                   style={{
                     backgroundImage: imageSrc,
                     backgroundColor: item.img ? "transparent" : "#555",
-                    cursor: "pointer",
+                    cursor: isDragMode && menuViewMode === 'ROOT' ? "grab" : "pointer",
                   }}
+                  draggable={isDragMode && menuViewMode === 'ROOT'}
+                  onDragStart={isDragMode && menuViewMode === 'ROOT' ? (e) => handleDragStart(e, index) : undefined}
+                  onDragOver={isDragMode && menuViewMode === 'ROOT' ? (e) => handleDragOver(e, index) : undefined}
+                  onDragLeave={isDragMode && menuViewMode === 'ROOT' ? handleDragLeave : undefined}
+                  onDrop={isDragMode && menuViewMode === 'ROOT' ? (e) => handleDrop(e, index) : undefined}
+                  onDragEnd={isDragMode && menuViewMode === 'ROOT' ? handleDragEnd : undefined}
                   onClick={() => {
+                    if (isDragMode) return;
                     if (searchText?.length > 0) {
                       handleProductClick(item);
                     } else {
@@ -176,6 +258,15 @@ const Menu = ({
                     }
                   }}
                 >
+                  {/* Drag handle overlay in drag mode */}
+                  {isDragMode && menuViewMode === 'ROOT' && (
+                    <div className="drag-handle-overlay">
+                      <div className="drag-handle-icon">
+                        <i className="bi bi-arrows-move"></i>
+                      </div>
+                    </div>
+                  )}
+
                   {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
                     <div className="menu-card-price">{item.price} ₼</div>
                   )}
