@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Container, Col, Row } from "react-bootstrap";
 import "./Check.css";
+import "../Header/Header.css";
 import Menu from "../Menu/Menu";
 import CheckHeader from "./CheckHeader";
 import CheckMain from "./CheckMain";
@@ -33,6 +34,7 @@ import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 import OrderLogsModal from "./OrderLogsModal"; // Import Modal
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
+import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -83,6 +85,8 @@ const Check = () => {
   const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
 
   const goTables = async () => {
     if (location.state?.from === "/checks") {
@@ -297,6 +301,16 @@ const Check = () => {
       );
     }
   }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const all = JSON.parse(localStorage.getItem("pos_notifications") || "[]");
+      setNotifCount(all.filter(n => n.status === "new").length);
+    };
+    updateCount();
+    window.addEventListener("newNotification", updateCount);
+    return () => window.removeEventListener("newNotification", updateCount);
+  }, []);
 
   const [menuViewMode, setMenuViewMode] = useState("ROOT");
   const [selectedGenCat, setSelectedGenCat] = useState(null);
@@ -844,7 +858,10 @@ const Check = () => {
               <div className="tools-divider"></div>
 
               {/* Menu Hamburger */}
-              <button className="header-icon-btn small-icon-btn">
+              <button
+                className="header-icon-btn small-icon-btn"
+                onClick={() => navigate("/settings")}
+              >
                 <svg
                   width="20"
                   height="20"
@@ -901,7 +918,10 @@ const Check = () => {
               <div className="tools-divider"></div>
 
               {/* Notification Bell */}
-              <button className="header-icon-btn small-icon-btn">
+              <button
+                className="header-icon-btn small-icon-btn position-relative"
+                onClick={() => setShowNotifications(true)}
+              >
                 <svg
                   width="20"
                   height="20"
@@ -917,6 +937,7 @@ const Check = () => {
                   />
                   <path d="M13.73 21A2 2 0 0 1 10.27 21" />
                 </svg>
+                {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
               </button>
 
               <div className="tools-divider"></div>
@@ -1343,6 +1364,10 @@ const Check = () => {
           }
         }}
         selectedCustomer={selectedCustomer}
+      />
+      <NotificationSidebar
+        show={showNotifications}
+        onClose={() => setShowNotifications(false)}
       />
     </Container >
   );

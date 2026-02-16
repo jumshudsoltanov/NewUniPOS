@@ -41,14 +41,15 @@ const getGeneralCategories = async (passedProfileId) => {
       });
 
       // Insert / update
-      const updateGeneralCategoryKeys = Object.keys(generalCategories[0]).filter(
-        (key) => GeneralCategoriesModel.rawAttributes[key],
-      );
+      if (generalCategories.length > 0) {
+        const updateGeneralCategoryKeys = Object.keys(generalCategories[0]).filter(
+          (key) => GeneralCategoriesModel.rawAttributes[key],
+        );
 
-
-      await GeneralCategoriesModel.bulkCreate(generalCategories, {
-        updateOnDuplicate: updateGeneralCategoryKeys,
-      });
+        await GeneralCategoriesModel.bulkCreate(generalCategories, {
+          updateOnDuplicate: updateGeneralCategoryKeys,
+        });
+      }
 
       console.log("DB sync olundu: insert/update + silindi");
     }
@@ -92,13 +93,15 @@ const getCategories = async (passedProfileId) => {
       });
 
       // Insert / update
-      const updateCategoryKeys = Object.keys(categories[0]).filter(
-        (key) => CategoriesModel.rawAttributes[key],
-      );
+      if (categories.length > 0) {
+        const updateCategoryKeys = Object.keys(categories[0]).filter(
+          (key) => CategoriesModel.rawAttributes[key],
+        );
 
-      await CategoriesModel.bulkCreate(categories, {
-        updateOnDuplicate: updateCategoryKeys,
-      });
+        await CategoriesModel.bulkCreate(categories, {
+          updateOnDuplicate: updateCategoryKeys,
+        });
+      }
 
       console.log("DB sync olundu: insert/update + silindi");
     }
@@ -140,13 +143,15 @@ const getProducts = async (passedProfileId) => {
       });
 
       // Insert / update
-      const updateProductKeys = Object.keys(products[0]).filter(
-        (key) => ProductsModel.rawAttributes[key],
-      );
+      if (products.length > 0) {
+        const updateProductKeys = Object.keys(products[0]).filter(
+          (key) => ProductsModel.rawAttributes[key],
+        );
 
-      await ProductsModel.bulkCreate(products, {
-        updateOnDuplicate: updateProductKeys,
-      });
+        await ProductsModel.bulkCreate(products, {
+          updateOnDuplicate: updateProductKeys,
+        });
+      }
 
       console.log("DB sync olundu: insert/update + silindi");
     }

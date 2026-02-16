@@ -9,6 +9,7 @@ import {
 } from "../../redux/Slices/TablesSlice";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 
 const Header = ({ showBack, backPath, onBack }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -16,6 +17,7 @@ const Header = ({ showBack, backPath, onBack }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [activeHall, setActiveHall] = useState(null);
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const newOrderBtnRef = useRef(null);
   const dispatch = useDispatch();
   const location = useLocation();
@@ -80,6 +82,19 @@ const Header = ({ showBack, backPath, onBack }) => {
     };
     window.addEventListener("clockToggle", handleClockToggle);
     return () => window.removeEventListener("clockToggle", handleClockToggle);
+  }, []);
+
+  // Notification count
+  const [notifCount, setNotifCount] = useState(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const all = JSON.parse(localStorage.getItem("pos_notifications") || "[]");
+      setNotifCount(all.filter(n => n.status === "new").length);
+    };
+    updateCount();
+    window.addEventListener("newNotification", updateCount);
+    return () => window.removeEventListener("newNotification", updateCount);
   }, []);
 
   // Format time as HH:MM:SS
@@ -317,7 +332,10 @@ const Header = ({ showBack, backPath, onBack }) => {
               <div className="tools-divider"></div>
 
               {/* Notification Bell */}
-              <button className="header-icon-btn small-icon-btn">
+              <button
+                className="header-icon-btn small-icon-btn"
+                onClick={() => setShowNotifications(true)}
+              >
                 <svg
                   width="20"
                   height="20"
@@ -333,6 +351,7 @@ const Header = ({ showBack, backPath, onBack }) => {
                   />
                   <path d="M13.73 21A2 2 0 0 1 10.27 21" />
                 </svg>
+                {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
               </button>
 
               <div className="tools-divider"></div>
@@ -422,6 +441,11 @@ const Header = ({ showBack, backPath, onBack }) => {
         onSelect={(type) => {
           console.log("Seçilən satış tipi:", type);
         }}
+      />
+
+      <NotificationSidebar
+        show={showNotifications}
+        onClose={() => setShowNotifications(false)}
       />
     </>
   );

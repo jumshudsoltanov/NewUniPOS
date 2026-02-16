@@ -17,12 +17,14 @@ import { useMemo } from "react";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
+import { processAndPrintOrders } from "../../utils/printerHelpers.jsx";
 
 const CheckBottom = ({ orders, hall, selectedCustomer }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { menuDataWithCategories } = useSelector((state) => state.MenuSlice); // Import menu data for printing
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -53,8 +55,48 @@ const CheckBottom = ({ orders, hall, selectedCustomer }) => {
         }
       }
 
+      // Print Deletions
+      if (pendingDeletions && pendingDeletions.length > 0) {
+        const deletedItemsForPrint = pendingDeletions.map(d => ({
+          ...d,
+          changeType: 'decrease',
+          quantity: d.type === 'partial' ? d.qty : d.originalQty
+        }));
+
+        await processAndPrintOrders(
+          deletedItemsForPrint,
+          {
+            table: orders?.table_name || "Masa",
+            waiter: waiterName,
+            hallName: hall?.name || "",
+            orderId: orders?.uuid || id,
+            terminalInfo: {}, // Can start empty
+            typeName: orders?.sale_type === 1 ? "Paket" : "Restoranda",
+            checkData: orders,
+            isDecrease: true
+          },
+          menuDataWithCategories
+        );
+      }
+
       // 2. Send New Items
       if (products.length > 0) {
+        // Print New Items
+        await processAndPrintOrders(
+          products,
+          {
+            table: orders?.table_name || "Masa",
+            waiter: waiterName,
+            hallName: hall?.name || "",
+            orderId: orders?.uuid || id,
+            terminalInfo: {},
+            typeName: orders?.sale_type === 1 ? "Paket" : "Restoranda",
+            checkData: orders,
+            isDecrease: false
+          },
+          menuDataWithCategories
+        );
+
         await dispatch(sendOrdersItems({ ...payload, waiterName })).unwrap();
       }
 

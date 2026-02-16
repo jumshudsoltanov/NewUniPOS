@@ -79,6 +79,57 @@ ipcMain.handle("open-anydesk", () => {
   return true;
 });
 
+ipcMain.handle("print-image", async (event, { image, printerName }) => {
+  let printWindow = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
+  });
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { margin: 0; padding: 0; display: flex; justify-content: flex-start; }
+          img { width: 100%; max-width: 100%; height: auto; display: block; }
+        </style>
+      </head>
+      <body>
+        <img src="${image}" />
+      </body>
+    </html>
+  `;
+
+  await printWindow.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(htmlContent));
+
+  const options = {
+    silent: true,
+    deviceName: printerName,
+  };
+
+  try {
+    // Wait for the image to load and render
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    await new Promise((resolve, reject) => {
+      printWindow.webContents.print(options, (success, errorType) => {
+        if (!success) reject(errorType);
+        else resolve();
+      });
+    });
+
+    if (!printWindow.isDestroyed()) printWindow.close();
+    return { success: true };
+  } catch (error) {
+    console.error("Printing failed:", error);
+    if (!printWindow.isDestroyed()) printWindow.close();
+    return { success: false, error };
+  }
+});
+
 // Start backend server with error handling
 try {
   const appPath = app.getAppPath();
