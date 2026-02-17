@@ -40,22 +40,22 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
 
   return (
     <>
-      <div className="check-header-bar">
+      <div className="check-header-bar" style={{ position: "relative" }}>
         {/* Left Section: Edit + Info */}
-        <div className="header-left-section">
+        <div className="header-left-section" style={{ flex: 1, maxWidth: "42%", display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
           <div
             className="header-edit-btn"
             onClick={() => setOpenTagModal(true)}
           >
             <i className="bi bi-pencil-fill"></i>
           </div>
-          <div className="header-info-text">
+          <div className="header-info-text" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 0, minWidth: 0, overflow: "hidden" }}>
             {orders?.sale_type == "dine_in" ? (
-              <span className="header-order-id">
+              <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
                 {hall?.name} / {table?.name}
               </span>
             ) : (
-              <span className="header-order-id">
+              <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
                 {(() => {
                   const type = orders?.sale_type;
                   if (!type) return "";
@@ -65,21 +65,21 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
                 })()}
               </span>
             )}
-            <div className="header-subtitle-container">
+            <div className="header-subtitle-container" style={{ minWidth: 0 }}>
               {orders && orders?.tags && (
-                <span className="header-subtitle">{orders.tags}</span>
+                <span className="header-subtitle" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{orders.tags}</span>
               )}
             </div>
           </div>
         </div>
 
         {/* Center Section: Time */}
-        <div className="header-center-section">
+        <div className="header-center-section" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", zIndex: 5 }}>
           <span className="header-time">{`${getTimeDifference(orders?.start_date).hours ?? 0}:${getTimeDifference(orders?.start_date).minutes ?? 0}`}</span>
         </div>
 
         {/* Right Section: Order IDs + Toggle */}
-        <div className="header-right-section">
+        <div className="header-right-section" style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
           <span className="header-order-id">
             #{orders?.id} / #{orders?.id}
           </span>

@@ -10,7 +10,17 @@ const CustomerReceipt = ({
 }) => {
     // Extract terminal info from profile data or use defaults
     const terminalInfo = profileData?.data?.terminal || {};
-    const filialName = profileData?.data?.profile?.company_name || terminalInfo?.filial || "RESTORAN";
+    const filialName = profileData?.data?.profile?.restaurant_name ||
+        profileData?.data?.profile?.company_name ||
+        terminalInfo?.filial ||
+        "RESTORAN";
+
+    // Logo priority: Terminal Logo -> Profile Logo -> Profile Img
+    const logoSrc = terminalInfo?.logoPrint && terminalInfo?.logoPrint !== "data:directory;base64,"
+        ? (terminalInfo.logoPrint.startsWith("http") || terminalInfo.logoPrint.startsWith("data:") ? terminalInfo.logoPrint : `https://unipos.tech/${terminalInfo.logoPrint}`)
+        : (profileData?.data?.profile?.logo
+            ? (profileData.data.profile.logo.startsWith("http") || profileData.data.profile.logo.startsWith("data:") ? profileData.data.profile.logo : `https://unipos.tech/${profileData.data.profile.logo}`)
+            : null);
 
     const qrCodeValue =
         `https://menu.unipos.tech/?r=${terminalInfo?.username}` ||
@@ -155,16 +165,20 @@ const CustomerReceipt = ({
 
         statusBox: {
             textAlign: "center",
-            marginTop: "2mm",
-            marginBottom: "1mm",
-            border: "2px solid #000",
-            padding: "1mm",
-            borderRadius: "4px"
+            marginTop: "3mm",
+            marginBottom: "3mm",
+            border: "3px solid #000",
+            padding: "2mm 4mm",
+            borderRadius: "6px",
+            width: "fit-content",
+            margin: "4mm auto",
+            transform: "rotate(-5deg)"
         },
         statusText: {
-            fontSize: fs(11),
+            fontSize: fs(14),
             fontWeight: "900",
-            textTransform: "uppercase"
+            textTransform: "uppercase",
+            letterSpacing: "2px"
         }
     };
 
@@ -182,28 +196,21 @@ const CustomerReceipt = ({
         <div style={styles.receipt}>
             {/* HEADER */}
             <div style={styles.header}>
-                {terminalInfo?.logoPrint &&
-                    terminalInfo?.logoPrint !== "data:directory;base64," && (
-                        <img
-                            src={
-                                terminalInfo.logoPrint.startsWith("http") ||
-                                    terminalInfo.logoPrint.startsWith("data:")
-                                    ? terminalInfo.logoPrint
-                                    : `https://unipos.tech/${terminalInfo.logoPrint}`
-                            }
-                            alt="Logo"
-                            style={{
-                                width: "50%",
-                                maxWidth: "150px",
-                                objectFit: "contain",
-                                borderRadius: "50%",
-                                display: "block",
-                                border: "1px solid #0000",
-                                margin: "0 auto 2mm auto",
-                            }}
-                            onError={(e) => (e.target.style.display = "none")}
-                        />
-                    )}
+                {logoSrc && (
+                    <img
+                        src={logoSrc}
+                        alt="Logo"
+                        style={{
+                            width: "50%",
+                            maxWidth: "150px",
+                            objectFit: "contain",
+                            borderRadius: "8px",
+                            display: "block",
+                            margin: "0 auto 2mm auto",
+                        }}
+                        onError={(e) => (e.target.style.display = "none")}
+                    />
+                )}
 
                 <div style={styles.restaurantName}>
                     {filialName}
@@ -359,10 +366,8 @@ const CustomerReceipt = ({
 
             {/* ÖDƏNİLMƏYİB STATUS - Only if Not Paid */}
             {!isPaid && (
-                <div style={{ textAlign: 'center', margin: '3mm 0' }}>
-                    <div style={{ borderBottom: '1px solid #000', marginBottom: '1mm', width: '50%', margin: '0 auto' }}></div>
-                    <span style={{ fontWeight: '900', fontSize: fs(12) }}>ÖDƏNİLMƏYİB</span>
-                    <div style={{ borderBottom: '1px solid #000', marginTop: '1mm', width: '50%', margin: '0 auto' }}></div>
+                <div style={styles.statusBox}>
+                    <span style={styles.statusText}>ÖDƏNİLMƏYİB</span>
                 </div>
             )}
 
@@ -447,10 +452,8 @@ const CustomerReceipt = ({
 
             {/* ÖDƏNİLİB STATUS */}
             {isPaid && (
-                <div style={{ textAlign: 'center', margin: '3mm 0' }}>
-                    <div style={{ borderBottom: '1px solid #000', marginBottom: '1mm', width: '50%', margin: '0 auto' }}></div>
-                    <span style={{ fontWeight: '900', fontSize: fs(12) }}>ÖDƏNİLİB</span>
-                    <div style={{ borderBottom: '1px solid #000', marginTop: '1mm', width: '50%', margin: '0 auto' }}></div>
+                <div style={{ ...styles.statusBox, border: "3px solid #000" }}>
+                    <span style={styles.statusText}>ÖDƏNİLİB</span>
                 </div>
             )}
 

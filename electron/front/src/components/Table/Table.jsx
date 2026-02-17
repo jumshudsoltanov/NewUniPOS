@@ -38,7 +38,7 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter }) => {
     }
   };
 
-  
+
 
 
   return (
@@ -81,7 +81,7 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter }) => {
 
           <div className="print-action">
             <div className="notification-badge fw-bold">
-              {orders?.length || 0}
+              {orders?.reduce((sum, order) => sum + (order.print_count || 0), 0) || 0}
             </div>
             <svg
               xmlns="http://www.w3.org/2000/svg"

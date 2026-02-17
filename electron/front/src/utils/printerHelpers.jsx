@@ -30,6 +30,7 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
         }
         if (printers.length === 0) {
             console.warn(`No printer found for item: ${item.name}`);
+            addNotification("Printer Xətası", `${item.name} üçün printer təyin edilməyib`, orderData.orderId);
             continue;
         }
         printers.forEach(p => {
