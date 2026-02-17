@@ -4,18 +4,68 @@ import TagModal from "../Modals/TagModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import { useDispatch, useSelector } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { saleNewOrders } from "../../redux/Slices/SaleSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { saveLog } from "../../redux/Slices/OrdersSlice";
+import { useNavigate } from "react-router-dom";
 
 const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (loginedProfileData?.data?.profile?.id) {
       dispatch(getTableGroups(loginedProfileData.data.profile.id));
     }
   }, [dispatch, loginedProfileData]);
+
+  const handleCreateOrder = async () => {
+    setOpenOtherCheckModal(false);
+    const waiterId = loginedWaiter?.data?.id;
+    const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
+    const profileId = loginedProfileData?.data?.profile?.id;
+
+    if (!waiterId || !terminalId || !profileId) {
+      console.error("Missing required user data");
+      return;
+    }
+
+    const payload = {
+      guestCount: 0,
+      tableId: table?.id,
+      waiterId,
+      terminalId,
+      profileId,
+      sale_type: "dine_in",
+      hallId: hall?.id,
+      status: 1,
+      serviceType: hall?.service_fee ? "percent" : null,
+      serviceValue: hall?.service_fee || 0,
+      is_selected: 1,
+    };
+
+    try {
+      const result = await dispatch(saleNewOrders(payload)).unwrap();
+      if (result?.message === "success") {
+        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+        dispatch(saveLog({
+          orderId: result.data.uuid,
+          action: "Yeni sifariş yaradıldı (Header)",
+          waiterName,
+          details: `Masa: ${table?.name || "Naməlum"}`
+        }));
+        await dispatch(getTableGroups(profileId));
+        await dispatch(getActiveOrders({ profileId }));
+        navigate(`/check/${result?.data?.uuid}?tableId=${table?.id}`);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const getTimeDifference = (startDate) => {
     if (!startDate) return { hours: "00", minutes: "00" };
@@ -101,6 +151,7 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
         onClose={() => setOpenOtherCheckModal(false)}
         table={table}
         showAll={true}
+        onCreateNew={handleCreateOrder}
       />
     </>
   );

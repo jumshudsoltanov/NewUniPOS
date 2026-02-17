@@ -53,7 +53,9 @@
   margin-bottom: 4px;
 }
 
-/* .check-item:hover removed as per request */
+.check-item:hover {
+  background-color: #f8f9fa;
+}
 
 /* Specific styles for the "Create New" button row */
 .create-check-item {

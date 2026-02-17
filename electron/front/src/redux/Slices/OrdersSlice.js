@@ -705,7 +705,11 @@ export const OrderSlice = createSlice({
     },
     addProducts: (state, action) => {
       const existingProduct = state.products.find(
-        (product) => product.id === action.payload.id,
+        (product) => {
+          const p1 = Number(product.price || 0).toFixed(2);
+          const p2 = Number(action.payload.price || 0).toFixed(2);
+          return product.id === action.payload.id && p1 === p2;
+        }
       );
 
       let oldQuantity = 0;
@@ -717,7 +721,7 @@ export const OrderSlice = createSlice({
         existingProduct.newOrder = (existingProduct.newOrder || 0) + 1;
         newQuantity = existingProduct.quantity;
       } else {
-        state.products.push({ ...action.payload, quantity: 1, newOrder: 1 });
+        state.products.push({ ...action.payload, quantity: 1, newOrder: 1, price: parseFloat(action.payload.price) });
         oldQuantity = 0;
         newQuantity = 1;
       }

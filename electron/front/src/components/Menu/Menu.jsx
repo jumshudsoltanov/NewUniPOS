@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { Container, Col, Row } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { addProducts, menuData } from "../../redux/Slices/OrdersSlice";
+import { addProducts, menuData, saveLog } from "../../redux/Slices/OrdersSlice";
 import { toast } from "sonner";
 import {
   menuWithGeneralCategories,
   menuWithCategories,
 } from "../../redux/Slices/MenuSlice";
+import ManualPriceModal from "../Modals/ManualPriceModal";
 
 const Menu = ({
   order,
@@ -30,6 +31,10 @@ const Menu = ({
   // Drag state
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  // Modal State
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [pendingProduct, setPendingProduct] = useState(null);
 
   // Fetch Data
   useEffect(() => {
@@ -107,7 +112,32 @@ const Menu = ({
       toast.error("Qəbz kilidlidir!");
       return;
     }
+
+    if (product.own_set_price === 1) {
+      setPendingProduct(product);
+      setShowPriceModal(true);
+      return;
+    }
+
     dispatch(addProducts(product));
+  };
+
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+
+  const handlePriceConfirm = (price) => {
+    if (pendingProduct) {
+      dispatch(addProducts({ ...pendingProduct, price: price }));
+
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      dispatch(saveLog({
+        orderId: order?.uuid,
+        action: "Məhsul əlavə edildi (Manual qiymət)",
+        waiterName,
+        details: `${pendingProduct.name} - ${price}₼`
+      }));
+
+      setPendingProduct(null);
+    }
   };
 
   // Apply custom ordering
@@ -163,7 +193,6 @@ const Menu = ({
   const handleDragStart = (e, index) => {
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
-    // Set a transparent drag image
     const el = e.currentTarget;
     e.dataTransfer.setDragImage(el, el.offsetWidth / 2, el.offsetHeight / 2);
   };
@@ -186,12 +215,10 @@ const Menu = ({
       return;
     }
 
-    // Reorder items
     const newItems = [...itemsToRender];
     const [removed] = newItems.splice(draggedIndex, 1);
     newItems.splice(dropIndex, 0, removed);
 
-    // Save new order as array of IDs
     const newOrder = newItems.map(item => item.id);
     onCategoryOrderChange(newOrder);
 
@@ -204,7 +231,6 @@ const Menu = ({
     setDragOverIndex(null);
   };
 
-  
   return (
     <Container fluid className="p-0 h-100 d-flex flex-column">
       <Row
@@ -212,7 +238,7 @@ const Menu = ({
         style={{ flex: 1, alignContent: "flex-start" }}
       >
         {itemsToRender
-          ?.filter((item) => item && item.name) // Filter to prevent empty boxes
+          ?.filter((item) => item && item.name)
           .map((item, index) => {
             let imageSrc = "none";
             if (item.img) {
@@ -259,7 +285,6 @@ const Menu = ({
                     }
                   }}
                 >
-                  {/* Drag handle overlay in drag mode */}
                   {isDragMode && menuViewMode === 'ROOT' && (
                     <div className="drag-handle-overlay">
                       <div className="drag-handle-icon">
@@ -295,6 +320,12 @@ const Menu = ({
           </div>
         )}
       </Row>
+      <ManualPriceModal
+        show={showPriceModal}
+        onClose={() => setShowPriceModal(false)}
+        product={pendingProduct}
+        onConfirm={handlePriceConfirm}
+      />
     </Container>
   );
 };

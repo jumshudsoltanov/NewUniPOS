@@ -29,6 +29,7 @@ import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
 import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount } from "../../redux/Slices/OrdersSlice";
+import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { printCustomerReceipt } from "../../utils/printerHelpers";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
@@ -1327,6 +1328,53 @@ const Check = () => {
         order={currentOrder}
         show={openACtiveChecks}
         onClose={() => setOpenActiveChecks(false)}
+        onCreateNew={async () => {
+          setOpenActiveChecks(false);
+          const waiterId = loginedWaiter?.data?.id;
+          const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
+          const profileId = loginedProfileData?.data?.profile?.id;
+
+          if (!waiterId || !terminalId || !profileId) {
+            toast.error("İstifadəçi məlumatları çatışmır");
+            return;
+          }
+          // Use current table/hall info if available, or default?
+          // "Yeni yarat" from Check view generally implies creating a new check for the SAME table if possible, or just a new check.
+          // If we are in a check, `currentTable` and `currentHall` are available.
+          const payload = {
+            guestCount: 0, // No guest count prompt
+            tableId: currentTable?.id, // Keep same table
+            waiterId,
+            terminalId,
+            profileId,
+            sale_type: "dine_in",
+            hallId: currentHall?.id,
+            status: 1,
+            serviceType: currentHall?.service_fee ? "percent" : null,
+            serviceValue: currentHall?.service_fee || 0,
+            is_selected: 1,
+          };
+
+          try {
+            const result = await dispatch(saleNewOrders(payload)).unwrap();
+            if (result?.message === "success") {
+              const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+              dispatch(saveLog({
+                orderId: result.data.uuid,
+                action: "Yeni sifariş yaradıldı (Check View)",
+                waiterName,
+                details: `Masa: ${currentTable?.name || "Naməlum"}`
+              }));
+              await dispatch(getTableGroups(profileId));
+              await dispatch(getActiveOrders({ profileId }));
+              navigate(`/check/${result?.data?.uuid}?tableId=${currentTable?.id}`);
+              toast.success("Yeni çek yaradıldı");
+            }
+          } catch (error) {
+            console.error(error);
+            toast.error("Xəta baş verdi");
+          }
+        }}
       />
 
       <ChangeSaleTypeModal

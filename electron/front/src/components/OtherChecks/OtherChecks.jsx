@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./OtherChecks.css";
-import { Button, Modal } from "react-bootstrap";
+import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
-import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { mergeChecks } from "../../redux/Slices/OrdersSlice";
@@ -15,6 +14,7 @@ const OtherChecks = ({
   showAll = false,
   type,
   order,
+  onCreateNew,
 }) => {
   const { currentHallId, tableGroups } = useSelector(
     (state) => state.TablesSlice,
@@ -30,20 +30,6 @@ const OtherChecks = ({
   const { id } = useParams();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-  const [guestCount, setGuestCount] = useState("0");
-  const [isCreating, setIsCreating] = useState(false);
-  const [serviceValue, setserviceValue] = useState(0);
-
-  useEffect(() => {
-    const hallFee = currentHallData?.service_fee;
-    if (hallFee !== 0) {
-      setserviceValue(Number(hallFee));
-    } else {
-      setserviceValue(Number(loginedProfileData?.data?.profile?.service_fee));
-    }
-  }, [currentHallData]);
-
-
 
   useEffect(() => {
     dispatch(getTableGroups(loginedProfileData?.data?.profile.id));
@@ -78,49 +64,6 @@ const OtherChecks = ({
 
     return "Zal / Masa";
   };
-
-  const createOrder = useCallback(async () => {
-    if (isCreating) return;
-    setIsCreating(true);
-
-    const payload = {
-      guestCount: 0,
-      tableId: table?.id,
-      waiterId: loginedWaiter?.data?.id,
-      terminalId: loginedProfileData?.data?.terminal?.terminal_id,
-      profileId: loginedProfileData?.data?.profile?.id,
-      sale_type: "dine_in",
-      hallId: currentHallId,
-      status: 1,
-      serviceType: serviceValue ? "percent" : null,
-      serviceValue: serviceValue,
-      is_selected: 1,
-    };
-
-    try {
-      const result = await dispatch(saleNewOrders(payload)).unwrap();
-      if (result.message === "success") {
-        await dispatch(getTableGroups(payload.profileId));
-        await dispatch(getActiveOrders({ profileId: payload.profileId }));
-        navigate(`/check/${result.data.uuid}?tableId=${table.id}`);
-        onClose(false);
-      }
-    } catch (err) {
-      console.error("Check created error:", err);
-    } finally {
-      setIsCreating(false);
-    }
-  }, [
-    dispatch,
-    guestCount,
-    table?.id,
-    loginedWaiter?.data?.id,
-    loginedProfileData?.data?.terminal?.terminal_id,
-    loginedProfileData?.data?.profile?.id,
-    currentHallId,
-    navigate,
-    isCreating,
-  ]);
 
   const handleGoNewCheck = (orderId, tableId) => {
     const url = tableId
@@ -215,7 +158,7 @@ const OtherChecks = ({
         {table && (
           <button
             className="check-item create-check-item"
-            onClick={() => createOrder()}
+            onClick={onCreateNew}
           >
             <span className="me-2 fw-bold" style={{ fontSize: "20px" }}>
               +

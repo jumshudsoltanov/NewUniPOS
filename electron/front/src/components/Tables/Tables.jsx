@@ -150,6 +150,10 @@ const Tables = () => {
         show={showOtherChecks}
         onClose={() => setShowOtherChecks(false)}
         table={selectedTable}
+        onCreateNew={() => {
+          setShowOtherChecks(false);
+          setShowModal(true);
+        }}
       />
     </>
   );

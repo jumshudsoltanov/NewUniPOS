@@ -33,8 +33,9 @@ const CheckMain = ({ orders }) => {
       orders.orders_items.forEach((orderItem) => {
         const prodId = Number(orderItem.product_id);
         const isGift = orderItem.is_gift ? 1 : 0;
-        // Key must include is_gift to separate
-        const key = `${prodId}-${isGift}`;
+        const price = parseFloat(orderItem.price || orderItem.amount || 0).toFixed(2);
+        // Key now includes price to separate items with different prices
+        const key = `${prodId}-${isGift}-${price}`;
         const existing = groupedMap.get(key);
 
         if (existing) {
@@ -66,7 +67,8 @@ const CheckMain = ({ orders }) => {
     combinedLocal.forEach((item, idx) => {
       const prodId = Number(item.id);
       const isGift = 0;
-      const key = `${prodId}-${isGift}`;
+      const price = parseFloat(item.price || 0).toFixed(2);
+      const key = `${prodId}-${isGift}-${price}`;
       const existing = groupedMap.get(key);
 
       if (existing) {

@@ -1,0 +1,187 @@
+/* Main Modal Container Overrides */
+.manual-price-modal .modal-content {
+    border-radius: 10px !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.manual-price-modal .modal-dialog {
+    max-width: 340px !important;
+    margin: 1.75rem auto;
+}
+
+.modal-content-wrapper {
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.modal-header-custom {
+    background-color: #5D99FF;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+    border-bottom: none;
+}
+
+.modal-title-custom {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-icon {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-icon i {
+    font-size: 1.2rem;
+    color: #053796;
+}
+
+.btn-close-custom {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: white;
+    width: auto;
+    height: auto;
+}
+
+.btn-close-custom:hover {
+    background: transparent;
+    opacity: 0.8;
+}
+
+.btn-close-custom svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Body */
+.modal-body-custom {
+    padding: 24px 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Price Input Box */
+.price-display-box {
+    position: relative;
+    height: 52px;
+    display: flex;
+}
+
+.price-input {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #C0C0C0;
+    border-radius: 8px;
+    padding: 0 16px;
+    padding-left: 20px;
+    /* Space for currency symbol if inside, but we removed symbol from inside input and put it as distinct element or just placeholder */
+    font-size: 24px;
+    /* Larger font for price */
+    font-weight: 600;
+    color: #333;
+    outline: none;
+    text-align: right;
+    /* Price usually aligned right */
+}
+
+.price-input:focus {
+    border-color: #053796;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    color: #9CA3AF;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+/* Numpad */
+.numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.num-key {
+    height: 60px;
+    background-color: #fff;
+    border: 1px solid #C0C0C0;
+    border-radius: 12px;
+    font-size: 24px;
+    font-weight: 600;
+    color: #053796;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.num-key:active {
+    background-color: #F8F9FA;
+    transform: translateY(1px);
+}
+
+.num-key i {
+    color: #777;
+    /* Backspace icon color */
+}
+
+/* Confirm Button */
+.confirm-btn {
+    width: 100%;
+    height: 56px;
+    background-color: #053796;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
+    margin-top: 10px;
+    /* Slight separation */
+}
+
+.confirm-btn:hover:not(:disabled) {
+    background-color: #042d7a;
+}
+
+.confirm-btn:disabled {
+    background-color: #D1D5DB;
+    cursor: not-allowed;
+    box-shadow: none;
+}

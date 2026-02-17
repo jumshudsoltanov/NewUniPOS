@@ -112,95 +112,96 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
     isCreating,
   ]);
 
-  const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
   return (
-    <Modal show={show} onHide={onHide} centered className="customers-modal">
-      <Modal.Header closeButton className="customers-modal-header">
-        <div className="customers-header-content">
-          <div className="customers-icon-circle">
-            <i className="bi bi-people"></i>
+    <Modal show={show} onHide={onHide} centered className="customers-modal" backdrop="static" animation={false}>
+      <div className="modal-content-wrapper">
+        <div className="customers-modal-header">
+          <div className="customers-header-content">
+            <div className="customers-icon-circle">
+              <i className="bi bi-people-fill"></i>
+            </div>
+            <div className="customers-modal-title">Qonaq sayı</div>
           </div>
-          <Modal.Title>Qonaq sayı</Modal.Title>
+          <button className="btn-close-custom" onClick={onHide}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
-      </Modal.Header>
 
-      <Modal.Body className="p-0">
-        <div className="text-center py-2">
-          <h1 className="customers-guest-count-display">{guestCount}</h1>
-          <p className="text-muted mb-1">Qonaq sayını seçin</p>
-        </div>
+        <div className="customers-modal-body">
+          <div className="guest-count-display-box">
+            <span className="guest-count-value">{guestCount || "0"}</span>
+          </div>
 
-        <Container className="customers-keypad-container pb-3 px-3">
-          <Row className="g-2 justify-content-center">
-            {numbers.map((num) => (
-              <Col xs={4} key={num} className="d-flex justify-content-center">
-                <Button
-                  variant="light"
-                  className="customers-keypad-btn"
-                  onClick={() => handleNumberClick(num)}
-                  disabled={isCreating}
-                >
-                  {num}
-                </Button>
-              </Col>
+          <div className="customers-keypad-grid">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+              <button
+                key={num}
+                className="customers-keypad-btn"
+                onClick={() => handleNumberClick(num)}
+                disabled={isCreating}
+              >
+                {num}
+              </button>
             ))}
-            <Col xs={4} className="d-flex justify-content-center">
-              <Button
-                variant="light"
-                className="customers-keypad-btn"
-                onClick={() => handleNumberClick(".")}
-                disabled={isCreating}
-              >
-                .
-              </Button>
-            </Col>
-            <Col xs={4} className="d-flex justify-content-center">
-              <Button
-                variant="light"
-                className="customers-keypad-btn"
-                onClick={() => handleNumberClick(0)}
-                disabled={isCreating}
-              >
-                0
-              </Button>
-            </Col>
-            <Col xs={4} className="d-flex justify-content-center">
-              <Button
-                variant="light"
-                className="customers-keypad-btn customers-backspace-btn"
-                onClick={handleBackspace}
-                disabled={isCreating}
-              >
-                <i className="bi bi-backspace"></i>
-              </Button>
-            </Col>
-          </Row>
-        </Container>
-      </Modal.Body>
+            <button
+              className="customers-keypad-btn"
+              onClick={() => handleNumberClick(".")}
+              disabled={isCreating}
+            >
+              .
+            </button>
+            <button
+              className="customers-keypad-btn"
+              onClick={() => handleNumberClick(0)}
+              disabled={isCreating}
+            >
+              0
+            </button>
+            <button
+              className="customers-keypad-btn customers-backspace-btn"
+              onClick={handleBackspace}
+              disabled={isCreating}
+            >
+              <i className="bi bi-backspace"></i>
+            </button>
+          </div>
 
-      <Modal.Footer className="justify-content-center p-2 border-0">
-        <Button
-          className="w-100 customers-save-btn"
-          disabled={isCreating}
-          onClick={() => {
-            createOrder();
-          }}
-        >
-          {isCreating ? (
-            <>
-              <span
-                className="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
-              Yaradılır...
-            </>
-          ) : (
-            "Yadda saxla"
-          )}
-        </Button>
-      </Modal.Footer>
+          <button
+            className="customers-save-btn"
+            disabled={isCreating || guestCount === "0"}
+            onClick={createOrder}
+          >
+            {isCreating ? (
+              <>
+                <span
+                  className="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
+                Yaradılır...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>
+                Təsdiqlə
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </Modal>
   );
 };

@@ -1,123 +1,167 @@
-.customers-modal {
-    padding: 0 !important;
-    /* Reset bootstrap padding */
+/* Main Modal Container Overrides */
+.customers-modal .modal-content {
+    border-radius: 10px !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .customers-modal .modal-dialog {
+    max-width: 340px !important;
+    margin: 1.75rem auto;
+}
+
+.modal-content-wrapper {
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.customers-modal-header {
+    background-color: #5D99FF;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin: 1.75rem auto;
-    /* Match DiscountModal margin */
-}
-
-.customers-modal .modal-content {
-    width: 340px;
-    /* Match DiscountModal width */
-    max-width: 90vw;
-    margin: auto;
-    border-radius: 10px;
-    /* Match DiscountModal border radius */
-    border: none;
-    overflow: hidden;
-    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
-    /* Match DiscountModal shadow */
-}
-
-.customers-modal-header {
-    background-color: #558df7;
-    /* Light Blue/Periwinkle from image */
-    color: white;
-    border-bottom: 2px dashed rgba(255, 255, 255, 0.3);
-    /* Dashed line effect */
-    padding: 12px 16px;
-    /* Reduced padding */
-    position: relative;
-}
-
-.customers-modal-header .btn-close {
-    filter: invert(1) grayscale(100%) brightness(200%);
-    opacity: 1;
+    justify-content: space-between;
+    height: 70px;
+    border-bottom: none;
 }
 
 .customers-header-content {
     display: flex;
     align-items: center;
     gap: 12px;
-    width: 100%;
 }
 
 .customers-icon-circle {
-    width: 36px;
-    /* Slightly smaller */
-    height: 36px;
-    background: rgba(255, 255, 255, 0.2);
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
 }
 
-.customers-guest-count-display {
-    color: #1e3a8a;
-    /* Dark Blue */
-    font-weight: 700;
-    font-size: 2.5rem;
-    /* Reduced font size */
-    margin-bottom: 0;
+.customers-icon-circle i {
+    font-size: 1.2rem;
+    color: #053796;
 }
 
-.customers-keypad-container {
-    max-width: 340px;
-    /* Match modal width */
-    margin: 0 auto;
-    padding: 8px 0;
+.customers-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
 }
 
-.customers-keypad-btn {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1.15 / 1;
-    border-radius: 14px !important;
-    font-size: 2rem;
-    /* Larger text */
-    font-weight: 700;
-    /* Bolder text */
-    color: #1e3a8a;
-    background: #ffffff;
-    /* White background */
-    border: 1px solid #e5e7eb;
-    /* Subtle border */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    /* Lifted shadow */
+.btn-close-custom {
+    background: transparent;
+    border: none;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0;
+    color: white;
+    width: auto;
+    height: auto;
+}
+
+.btn-close-custom:hover {
+    background: transparent;
+    opacity: 0.8;
+}
+
+.btn-close-custom svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Body */
+.customers-modal-body {
+    padding: 24px 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Guest Count Display */
+.guest-count-display-box {
+    position: relative;
+    height: 52px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #C0C0C0;
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.guest-count-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Numpad */
+.customers-keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.customers-keypad-btn {
+    height: 60px;
+    background-color: #fff;
+    border: 1px solid #C0C0C0;
+    border-radius: 12px;
+    font-size: 24px;
+    font-weight: 600;
+    color: #053796;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .customers-keypad-btn:active {
-    transform: scale(0.95);
-    background-color: #f0f9ff;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    background-color: #F8F9FA;
+    transform: translateY(1px);
 }
 
 .customers-backspace-btn {
-    color: #6b7280;
+    color: #777;
 }
 
+/* Save Button */
 .customers-save-btn {
+    width: 100%;
+    height: 56px;
     background-color: #053796;
-    color: #fff;
     border: none;
     border-radius: 12px;
-    padding: 14px;
-    font-size: 1.1rem;
-    font-weight: 600;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
+    margin-top: 5px;
 }
 
-.customers-save-btn:hover {
-    background-color: #1e40af;
-    color: #fff;
+.customers-save-btn:hover:not(:disabled) {
+    background-color: #042d7a;
+}
+
+.customers-save-btn:disabled {
+    background-color: #D1D5DB;
+    cursor: not-allowed;
+    box-shadow: none;
 }
