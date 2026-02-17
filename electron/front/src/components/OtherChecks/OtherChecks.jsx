@@ -182,21 +182,26 @@ const OtherChecks = ({
             filteredOrders.map((item, index) => (
               <button
                 key={index}
-                className="check-item"
+                className="check-item py-3 align-items-center"
                 onClick={() =>
                   onMultiFunctionOtherChecs(type, item.uuid, item.table_id, item)
                 }
               >
-                <span>
-                  <span style={{ fontWeight: "bold", marginRight: "5px" }}>
+                <div className="d-flex flex-column text-start overflow-hidden pe-3" style={{ flex: 1 }}>
+                  <div className="fw-bold text-truncate text-dark" style={{ fontSize: '1rem' }} title={resolveNames(item)}>
                     {resolveNames(item)}
-                  </span>
-                  - Çek #{item.id} / Qonaq: {item.guest_count || 1}
-                  <span className="ms-2">
-                    ({item.waiter?.name || "terminal_user"})
-                  </span>
-                </span>
-                <span style={{ fontWeight: "bold" }}>{item.total || 0} ₼</span>
+                  </div>
+                  <div className="text-muted small text-truncate mt-1">
+                    <span className="me-2">Çek #{item.id}</span>
+                    <span className="me-2">•</span>
+                    <span className="me-2">Qonaq: {item.guest_count || 1}</span>
+                    <span className="me-2">•</span>
+                    <span>{item.waiter?.name || "terminal_user"}</span>
+                  </div>
+                </div>
+                <div className="fw-bold text-nowrap text-primary fs-5">
+                  {Number(item.total || 0).toFixed(2)} ₼
+                </div>
               </button>
             ))
           ) : (

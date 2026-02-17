@@ -18,7 +18,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const [qty, setQty] = useState(product?.count || 1);
   const [price, setPrice] = useState(product?.price || 0);
   const dispatch = useDispatch();
-  const { sentProducts, products } = useSelector((state) => state.OrderSlice);
+  const { sentProducts, products, menu } = useSelector((state) => state.OrderSlice);
   const [inputValue, setInputValue] = useState(
     product?.price ? product.price.toString() : "0",
   );
@@ -41,6 +41,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+
+  // Lookup product info from menu to ensure we have flags
+  const productInfo = menu?.find(m => m.id === (product?.product_id || product?.id));
+  const isNoDiscount = (product?.no_discount === 1 || product?.product?.no_discount === 1 || productInfo?.no_discount === 1);
 
   const salesTypes = [
     { id: "dine_in", label: "Yerində" },
@@ -497,72 +501,80 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 )}
               </>
             ) : activeTab === "discount" ? (
-              <>
-                <div className="edit-form-wrapper">
-                  <div className="discount-input-container">
-                    <div className="discount-display">
-                      {discountValue || "0"}
-                    </div>
-                    <div className="discount-type-toggles">
-                      <button
-                        className={`discount-type-btn ${discountType === 'percent' ? 'active' : ''}`}
-                        onClick={() => setDiscountType('percent')}
-                      >%</button>
-                      <button
-                        className={`discount-type-btn ${discountType === 'amount' ? 'active' : ''}`}
-                        onClick={() => setDiscountType('amount')}
-                      >₼</button>
-                    </div>
-                  </div>
-
-                  <div className="numpad-grid">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'back'].map((key) => (
-                      <button
-                        key={key}
-                        className={`numpad-btn ${key === 'back' ? 'numpad-back' : ''}`}
-                        onClick={() => {
-                          if (key === 'back') {
-                            setDiscountValue(prev => prev.length > 1 ? prev.slice(0, -1) : "0");
-                          } else {
-                            if (key === '.') {
-                              if (!discountValue.includes('.')) setDiscountValue(prev => prev + key);
-                            } else {
-                              setDiscountValue(prev => prev === "0" ? String(key) : prev + String(key));
-                            }
-                          }
-                        }}
-                      >
-                        {key === 'back' ? <i className="bi bi-backspace"></i> : key}
-                      </button>
-                    ))}
-                  </div>
+              isNoDiscount ? (
+                <div className="empty-tab-content p-4 text-center text-muted">
+                  <i className="bi bi-slash-circle fs-1 d-block mb-3 text-danger"></i>
+                  <h5 className="text-danger">Endirim qadağandır</h5>
+                  <p>Bu məhsula endirim tətbiq edilə bilməz</p>
                 </div>
+              ) : (
+                <>
+                  <div className="edit-form-wrapper">
+                    <div className="discount-input-container">
+                      <div className="discount-display">
+                        {discountValue || "0"}
+                      </div>
+                      <div className="discount-type-toggles">
+                        <button
+                          className={`discount-type-btn ${discountType === 'percent' ? 'active' : ''}`}
+                          onClick={() => setDiscountType('percent')}
+                        >%</button>
+                        <button
+                          className={`discount-type-btn ${discountType === 'amount' ? 'active' : ''}`}
+                          onClick={() => setDiscountType('amount')}
+                        >₼</button>
+                      </div>
+                    </div>
 
-                <button
-                  className="save-action-btn"
-                  onClick={() => {
-                    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-                    dispatch(updateItemDiscount({
-                      orderId: orders.uuid,
-                      itemId: product.product_id || product.id,
-                      discountValue: discountValue,
-                      discountType: discountType,
-                      productName: product.name || product.product?.name,
-                      waiterName
-                    })).then((res) => {
-                      if (res.type.endsWith('fulfilled')) {
-                        onClose();
-                        toast.success("Endirim tətbiq edildi");
-                      } else {
-                        toast.error("Xəta baş verdi");
-                      }
-                    });
-                  }}
-                >
-                  <i className="bi bi-percent"></i>
-                  Tətbiq et
-                </button>
-              </>
+                    <div className="numpad-grid">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'back'].map((key) => (
+                        <button
+                          key={key}
+                          className={`numpad-btn ${key === 'back' ? 'numpad-back' : ''}`}
+                          onClick={() => {
+                            if (key === 'back') {
+                              setDiscountValue(prev => prev.length > 1 ? prev.slice(0, -1) : "0");
+                            } else {
+                              if (key === '.') {
+                                if (!discountValue.includes('.')) setDiscountValue(prev => prev + key);
+                              } else {
+                                setDiscountValue(prev => prev === "0" ? String(key) : prev + String(key));
+                              }
+                            }
+                          }}
+                        >
+                          {key === 'back' ? <i className="bi bi-backspace"></i> : key}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    className="save-action-btn"
+                    onClick={() => {
+                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                      dispatch(updateItemDiscount({
+                        orderId: orders.uuid,
+                        itemId: product.product_id || product.id,
+                        discountValue: discountValue,
+                        discountType: discountType,
+                        productName: product.name || product.product?.name,
+                        waiterName
+                      })).then((res) => {
+                        if (res.type.endsWith('fulfilled')) {
+                          onClose();
+                          toast.success("Endirim tətbiq edildi");
+                        } else {
+                          toast.error("Xəta baş verdi");
+                        }
+                      });
+                    }}
+                  >
+                    <i className="bi bi-percent"></i>
+                    Tətbiq et
+                  </button>
+                </>
+              )
             ) : (
               <div className="empty-tab-content p-4 text-center text-muted">
                 <i className="bi bi-cone-striped fs-1 d-block mb-3"></i>

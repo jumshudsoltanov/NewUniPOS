@@ -21,7 +21,7 @@ import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printer
 
 const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
   const dispatch = useDispatch();
-  const { products, sentProducts, pendingDeletions } = useSelector((state) => state.OrderSlice);
+  const { products, sentProducts, pendingDeletions, menu } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { menuDataWithCategories } = useSelector((state) => state.MenuSlice); // Import menu data for printing
@@ -138,13 +138,31 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
 
   const calcTotal = useMemo(() => {
     let total = 0;
+    let totalForDiscount = 0;
+    let totalForService = 0;
 
     const addItems = (items) => {
       if (!items) return;
       items.forEach((item) => {
         const count = Number(item.count || item.quantity || 0);
         const price = Number(item.price || 0);
-        total += count * price;
+        const itemTotal = count * price;
+
+        total += itemTotal;
+
+        // Check for no_discount flag
+        // Lookup product in menu to get full details (including backend flags)
+        const productInfo = menu?.find(m => m.id === (item.product_id || item.id));
+        const isNoDiscount = (item.no_discount === 1 || productInfo?.no_discount === 1);
+        if (!isNoDiscount) {
+          totalForDiscount += itemTotal;
+        }
+
+        // Check for no_service_fee flag
+        const isNoService = (item.no_service_fee === 1 || productInfo?.no_service_fee === 1);
+        if (!isNoService) {
+          totalForService += itemTotal;
+        }
       });
     };
 
@@ -157,18 +175,28 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
       pendingDeletions.forEach((del) => {
         const delQty = del.type === 'partial' ? del.qty : del.originalQty;
         const delPrice = Number(del.price || 0);
+        const delTotal = delQty * delPrice;
 
-        // We assume pending deletions are always from existing orders (orders_items).
-        // Since we added all orders_items above, we just need to subtract the value.
-        // NOTE: If we mark a 'new' (local) product for deletion, it is removed from 'products' array directly in EditModal logic.
-        // So pendingDeletions only contains server items.
+        total -= delTotal;
 
-        total -= (delQty * delPrice);
+        const productInfo = menu?.find(m => m.id === (del.itemId || del.product_id || del.id));
+
+        const isNoDiscount = (del.no_discount === 1 || productInfo?.no_discount === 1);
+        if (!isNoDiscount) {
+          totalForDiscount -= delTotal;
+        }
+
+        const isNoService = (del.no_service_fee === 1 || productInfo?.no_service_fee === 1);
+        if (!isNoService) {
+          totalForService -= delTotal;
+        }
       });
     }
 
-    // Ensure total doesn't go below zero (though logic should prevent it)
+    // Ensure totals don't go below zero
     if (total < 0) total = 0;
+    if (totalForDiscount < 0) totalForDiscount = 0;
+    if (totalForService < 0) totalForService = 0;
 
     // Calculate Dynamic Discount
     const discountValue = Number(orders?.discount_value || 0);
@@ -177,7 +205,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
 
     if (discountValue > 0) {
       if (discountType === "percent") {
-        discountAmount = (total * discountValue) / 100;
+        // Apply percent discount only to eligible items
+        discountAmount = (totalForDiscount * discountValue) / 100;
       } else {
         discountAmount = discountValue;
       }
@@ -200,7 +229,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
 
     if (serviceValue > 0) {
       if (serviceType === "percent") {
-        serviceAmount = (total * serviceValue) / 100;
+        // Apply percent service fee only to eligible items
+        serviceAmount = (totalForService * serviceValue) / 100;
       } else {
         serviceAmount = serviceValue;
       }
@@ -216,7 +246,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
     // Calculate effective percentage for display
     let effectivePercentage = 0;
     if (total > 0 && discountAmount > 0) {
-      effectivePercentage = ((discountAmount / total) * 100).toFixed(1); // 1 decimal place
+      // Calculate effective % against TOTAL (not just eligible total) for display context
+      effectivePercentage = ((discountAmount / total) * 100).toFixed(1);
       if (effectivePercentage.endsWith(".0")) {
         effectivePercentage = parseInt(effectivePercentage);
       }
@@ -253,7 +284,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
     orders?.service_type,
     orders?.service_charge,
     orders?.deposit,
-    pendingDeletions // Added dependency
+    pendingDeletions,
+    menu // Added dependency
   ]);
 
   const totalChanges = products.length + (pendingDeletions?.length || 0);

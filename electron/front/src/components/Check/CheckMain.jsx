@@ -136,9 +136,15 @@ const CheckMain = ({ orders }) => {
         <div className="order-list-container">
           {allItems.length > 0 &&
             allItems.map((item, index) => {
-
               const productInfo = menu.find(m => m.id === item.product_id);
-              const originalPrice = productInfo?.price || 0;
+              const isNoDiscount = (item.no_discount === 1 || productInfo?.no_discount === 1);
+              const originalPrice = Number(productInfo?.price || item.price || 0);
+              const currentPrice = Number(item.price || 0);
+              const totalAmount = (currentPrice * Number(item.count)).toFixed(2);
+
+              // Determine if discounted
+              const isDiscounted = item.discount_value > 0 && !isNoDiscount;
+              const isGift = item.is_gift === 1;
 
               // Visual styles for deleted items
               const rowStyle = item.isDeleted ? { textDecoration: 'line-through', color: 'red', opacity: 0.7 } : {};
@@ -150,43 +156,57 @@ const CheckMain = ({ orders }) => {
                   key={`${item.product_id}-${item.is_gift}-${index}`}
                   style={rowStyle}
                 >
-                  <div className="col-name">
+                  {/* Product Name Column */}
+                  <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="d-flex align-items-center flex-wrap gap-2">
-                      <div className="fw-bold">{item.name}</div>
-                      {item.is_gift === 1 && <i className="bi bi-gift-fill text-danger"></i>}
+                      <span className="fw-bold">{item.name}</span>
+                      {isGift && <i className="bi bi-gift-fill text-danger" title="İkram"></i>}
                       {item.isDeleted && <span className="badge bg-danger">Silinəcək</span>}
                       {item.partialDelete > 0 && !item.isDeleted && <span className="badge bg-warning text-dark">-{item.partialDelete}</span>}
                     </div>
-                    {item.discount_value > 0 && item.discount_type !== 0 && (
-                      <span className="discount-badge">
-                        Endirim: {item.discount_type === 1 ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
-                      </span>
-                    )}
-                    {item.printer_details && item.printer_details.length > 0 && (
-                      <div style={{ fontSize: "0.75rem", color: "#666", marginTop: "2px" }}>
-                        <i className="bi bi-printer me-1"></i>
-                        {item.printer_details.map(p => p.local_name || p.name).join(", ")}
-                      </div>
-                    )}
+
+                    {/* Sub-details: Discount & Printer */}
+                    <div className="d-flex flex-column gap-1 mt-1">
+                      {isDiscounted && !isGift && (
+                        <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
+                          Endirim: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
+                        </span>
+                      )}
+
+                      {item.printer_details && item.printer_details.length > 0 && (
+                        <div style={{ fontSize: "0.7rem", color: "#666", display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <i className="bi bi-printer"></i>
+                          {item.printer_details.map(p => p.local_name || p.name).join(", ")}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="col-qty">
-                    {item.count} <span className="x-sign">×</span>{" "}
-                    {item.is_gift === 1 ? (
-                      <>
-                        <span className="text-decoration-line-through text-muted me-1">{Number(originalPrice).toFixed(2)}</span>
-                        <span>0.00 ₼</span>
-                      </>
-                    ) : item.discount_value > 0 ? (
-                      <>
-                        <span className="text-decoration-line-through text-muted me-1">{Number(originalPrice).toFixed(2)}</span>
-                        <>{Number(item.price).toFixed(2)} ₼</>
-                      </>
-                    ) : (
-                      <>{Number(item.price).toFixed(2)} ₼</>
-                    )}
+
+                  {/* Quantity & Price Column */}
+                  <div className="col-qty d-flex justify-content-center align-items-center">
+                    <div className="d-flex align-items-center gap-1">
+                      <span className="fw-bold">{item.count}</span>
+                      <span className="text-muted" style={{ fontSize: '0.8rem' }}>x</span>
+
+                      {isGift ? (
+                        <div className="d-flex align-items-center gap-1">
+                          <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
+                          <span className="fw-bold text-danger">0.00</span>
+                        </div>
+                      ) : (currentPrice !== originalPrice) ? (
+                        <div className="d-flex align-items-center gap-1">
+                          <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
+                          <span className="fw-bold">{currentPrice.toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <span className="fw-bold">{currentPrice.toFixed(2)}</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="col-total">
-                    {(Number(item.price) * Number(item.count)).toFixed(2)} ₼
+
+                  {/* Total Column */}
+                  <div className="col-total d-flex align-items-center justify-content-end fw-bold">
+                    {totalAmount} ₼
                   </div>
                 </div>
               )
