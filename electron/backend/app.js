@@ -210,6 +210,19 @@ const InsertData = async () => {
   InsertData();
 })();
 
+// Sync Endpoint
+app.post("/api/sync", async (req, res) => {
+  try {
+    console.log("Manual sync triggered...");
+    await InsertData();
+    console.log("Manual sync completed.");
+    res.status(200).json({ message: "Sync completed" });
+  } catch (error) {
+    console.error("Sync error:", error);
+    res.status(500).json({ message: "Sync failed", error: error.message });
+  }
+});
+
 app.listen(55667, () => {
   console.log("Express Server Is Running");
 });

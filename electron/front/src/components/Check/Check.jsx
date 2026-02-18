@@ -38,6 +38,12 @@ import OrderLogsModal from "./OrderLogsModal"; // Import Modal
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
+import axios from "axios";
+
+// Cloud API Base URL (Same as Admin)
+const CLOUD_API_URL = "https://api.unipos.tech/api";
+// Local Backend Sync URL
+const LOCAL_SYNC_URL = "http://localhost:55667/api/sync";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -49,23 +55,7 @@ const Check = () => {
   // Settings toolbar states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDragMode, setIsDragMode] = useState(false);
-  const [customOrders, setCustomOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem('pos_custom_orders');
-      let orders = saved ? JSON.parse(saved) : {};
-
-      // Backward compatibility for ROOT
-      if (!orders["ROOT"]) {
-        try {
-          const oldRoot = localStorage.getItem('category_order');
-          if (oldRoot) {
-            orders["ROOT"] = JSON.parse(oldRoot);
-          }
-        } catch { }
-      }
-      return orders;
-    } catch { return {}; }
-  });
+  const [customOrders, setCustomOrders] = useState({});
   const [tempCustomOrders, setTempCustomOrders] = useState(null);
   const [lockCheck, setLockCheck] = useState(false);
   const [comment, setComment] = useState(false);
@@ -1166,6 +1156,10 @@ const Check = () => {
                           className="settings-action-btn"
                           title="Sıranı dəyiş"
                           onClick={() => {
+                            if (!navigator.onLine) {
+                              toast.error("İnternet bağlantısı yoxdur. Sıranı dəyişmək üçün internet lazımdır.");
+                              return;
+                            }
                             setIsDragMode(true);
                             setTempCustomOrders(customOrders);
                           }}
@@ -1209,11 +1203,62 @@ const Check = () => {
                         <div
                           className="drag-mode-btn confirm"
                           title="Təsdiqlə"
-                          onClick={() => {
-                            setIsDragMode(false);
-                            setTempCustomOrders(null);
-                            localStorage.setItem('pos_custom_orders', JSON.stringify(customOrders));
-                            toast.success('Sıralama yadda saxlanıldı!');
+                          onClick={async () => {
+                            if (!navigator.onLine) {
+                              toast.error("İnternet bağlantısı yoxdur!");
+                              return;
+                            }
+
+                            const loadingToast = toast.loading("Dəyişikliklər yadda saxlanılır...");
+
+                            try {
+                              // Determine which order to save based on current view
+                              let orderedItems = [];
+                              let endpoint = "";
+
+                              if (menuViewMode === "ROOT") {
+                                const items = customOrders["ROOT"] || [];
+                                orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
+                                endpoint = `${CLOUD_API_URL}/general-categories/ordering`;
+                              } else if (menuViewMode === "CATEGORIES" && selectedGenCat) {
+                                const items = customOrders[`GEN_${selectedGenCat.id}`] || [];
+                                orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
+                                endpoint = `${CLOUD_API_URL}/categories/ordering`;
+                              } else if (menuViewMode === "PRODUCTS" && selectedCat) {
+                                const items = customOrders[`CAT_${selectedCat.id}`] || [];
+                                orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
+                                endpoint = `${CLOUD_API_URL}/products/ordering`;
+                              }
+
+                              if (orderedItems.length > 0 && endpoint) {
+                                // 1. Save to Cloud
+                                await axios.put(endpoint, { orderedItems });
+
+                                // 2. Trigger Sync on Local Backend
+                                toast.dismiss(loadingToast);
+                                const syncToast = toast.loading("Məlumatlar yenilənir...");
+                                try {
+                                  await axios.post(LOCAL_SYNC_URL);
+                                } catch (syncErr) {
+                                  console.error("Sync error warning:", syncErr);
+                                  // Continue even if local sync endpoint fails, maybe user can reload manually
+                                }
+
+                                toast.dismiss(syncToast);
+                                toast.success("Sıralama uğurla yadda saxlanıldı!");
+
+                                // 3. Reload Window to fetch fresh data from local DB
+                                window.location.reload();
+                              } else {
+                                toast.dismiss(loadingToast);
+                                setIsDragMode(false);
+                                setTempCustomOrders(null);
+                              }
+                            } catch (error) {
+                              console.error("Save order error:", error);
+                              toast.dismiss(loadingToast);
+                              toast.error("Xəta baş verdi: " + error.message);
+                            }
                           }}
                         >
                           <i className="bi bi-check-lg"></i>

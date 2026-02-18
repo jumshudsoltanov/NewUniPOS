@@ -9,6 +9,11 @@ const getMenuWithGeneralCategories = async (req, res) => {
   try {
     const response = await GeneralCategoriesModel.findAll({
       where: { profile_id: profileId },
+      order: [
+        ['ordering', 'ASC'],
+        [{ model: CategoriesModel, as: 'categories' }, 'ordering', 'ASC'],
+        [{ model: CategoriesModel, as: 'categories' }, { model: ProductsModel, as: 'products' }, 'ordering', 'ASC']
+      ],
       include: {
         model: CategoriesModel,
         as: "categories",
@@ -72,6 +77,10 @@ const getMenuWithCategories = async (req, res) => {
   try {
     const response = await CategoriesModel.findAll({
       where: { profile_id: profileId },
+      order: [
+        ['ordering', 'ASC'],
+        [{ model: ProductsModel, as: 'products' }, 'ordering', 'ASC']
+      ],
       include: {
         model: ProductsModel,
         as: "products",
