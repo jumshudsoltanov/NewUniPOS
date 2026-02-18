@@ -331,25 +331,6 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.menu-card-strip {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 70%;
-    width: 4px;
-    background-color: #22c55e;
-    /* Bright Green */
-    border-top-right-radius: 4px;
-    border-bottom-right-radius: 4px;
-    top: 15%;
-    /* Offset from top */
-    transform: none;
-    z-index: 2;
-}
-
-/* Actually looking closer at image, it's a small green tag on top-left edge */
-
 .menu-card-price {
     position: absolute;
     top: 0;

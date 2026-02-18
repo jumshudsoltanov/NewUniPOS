@@ -45,7 +45,50 @@ const MenuSlice = createSlice({
       })
       .addCase(menuWithCategories.fulfilled, (state, action) => {
         state.menuDataWithCategories = action.payload;
-      });
+      })
+      // Instant Update for Products
+      .addMatcher(
+        (action) => action.type === 'products/update/fulfilled',
+        (state, action) => {
+          const updatedProduct = action.payload?.data || action.payload;
+          if (!updatedProduct || !updatedProduct.id) return;
+
+          // Update in menuDataWithCategories
+          if (state.menuDataWithCategories?.data && Array.isArray(state.menuDataWithCategories.data)) {
+            state.menuDataWithCategories.data = state.menuDataWithCategories.data.map(cat => {
+              if (cat.products && Array.isArray(cat.products)) {
+                return {
+                  ...cat,
+                  products: cat.products.map(p => p.id === updatedProduct.id ? { ...p, ...updatedProduct } : p)
+                };
+              }
+              return cat;
+            });
+          }
+        }
+      )
+      // Instant Add for Products (Optional, but good for UX)
+      .addMatcher(
+        (action) => action.type === 'products/add/fulfilled',
+        (state, action) => {
+          const newProduct = action.payload?.data || action.payload;
+          if (!newProduct || !newProduct.category_id) return;
+
+          if (state.menuDataWithCategories?.data && Array.isArray(state.menuDataWithCategories.data)) {
+            state.menuDataWithCategories.data = state.menuDataWithCategories.data.map(cat => {
+              if (cat.id === newProduct.category_id) {
+                const products = cat.products ? [...cat.products] : [];
+                // Add if not exists
+                if (!products.find(p => p.id === newProduct.id)) {
+                  products.push(newProduct);
+                }
+                return { ...cat, products };
+              }
+              return cat;
+            });
+          }
+        }
+      );
   },
 });
 

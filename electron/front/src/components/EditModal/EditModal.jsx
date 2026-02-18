@@ -83,8 +83,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
       ).unwrap();
 
       if (result?.data?.newOrder?.uuid) {
-        await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
-        await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+        // Redux state will be updated by matcher and navigation will occur
 
         if (result.data.status === 'merged') {
 

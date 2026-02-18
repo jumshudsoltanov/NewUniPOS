@@ -111,10 +111,32 @@ const BooksSlice = createSlice({
         action.type === "pos/orders/fulfilled" ||
         action.type === "orders/lockCheck/fulfilled" ||
         action.type === "orders/lock-check/fulfilled" ||
-        action.type === "orders/delete-item/fulfilled",
+        action.type === "orders/delete-item/fulfilled" ||
+        action.type === "orders/updateItemPrice/fulfilled" ||
+        action.type === "orders/updateItemCount/fulfilled" ||
+        action.type === "orders/assign-customer/fulfilled" ||
+        action.type === "orders/updateDeposit/fulfilled" ||
+        action.type === "orders/updateComments/fulfilled" ||
+        action.type === "orders/updateTags/fulfilled" ||
+        action.type === "orders/serviceFee/fulfilled" ||
+        action.type === "pos/discount/fulfilled" ||
+        action.type === "orders/change-saletype/fulfilled" ||
+        action.type === "orders/waiters/fulfilled" ||
+        action.type === "orders/incrementPrintCount/fulfilled" ||
+        action.type === "orders/split/fulfilled",
       (state, action) => {
-        const updatedOrder = action.payload?.data || action.payload; // Payload is the full Order object
-        if (!updatedOrder || (!updatedOrder.uuid && !updatedOrder.id)) return;
+        const payload = action.payload?.data || action.payload;
+        if (!payload) return;
+
+        // Handle possible multiple orders (e.g., from split/transfer)
+        const ordersToUpdate = [];
+        if (payload.originalOrder) ordersToUpdate.push(payload.originalOrder);
+        if (payload.newOrder) ordersToUpdate.push(payload.newOrder);
+        if (!payload.originalOrder && !payload.newOrder && (payload.uuid || payload.id)) {
+          ordersToUpdate.push(payload);
+        }
+
+        if (ordersToUpdate.length === 0) return;
 
         // Determine where the list is
         let ordersList = null;
@@ -125,13 +147,18 @@ const BooksSlice = createSlice({
         }
 
         if (ordersList) {
-          const targetId = updatedOrder.uuid || updatedOrder.id;
-          const index = ordersList.findIndex(
-            (o) => o.uuid === targetId || o.id === targetId || String(o.uuid) === String(targetId)
-          );
-          if (index !== -1) {
-            ordersList[index] = { ...ordersList[index], ...updatedOrder };
-          }
+          ordersToUpdate.forEach(updatedOrder => {
+            const targetId = updatedOrder.uuid || updatedOrder.id;
+            const index = ordersList.findIndex(
+              (o) => o.uuid === targetId || o.id === targetId || String(o.uuid) === String(targetId)
+            );
+            if (index !== -1) {
+              ordersList[index] = { ...ordersList[index], ...updatedOrder };
+            } else if (payload.newOrder && updatedOrder === payload.newOrder) {
+              // If it's a completely new order (from split to new table), add it to the list
+              ordersList.unshift(updatedOrder);
+            }
+          });
         }
       },
     );

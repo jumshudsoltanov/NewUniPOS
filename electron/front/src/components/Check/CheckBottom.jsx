@@ -110,12 +110,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
         })).unwrap();
       }
 
-      // 3. Refresh Data
-      if (orders?.table_id) {
-        await dispatch(getTableGroups(payload.profileId));
-      } else {
-        await dispatch(getActiveOrders({ profileId: payload.profileId }));
-      }
+      // 3. Refresh Data (Handled by Redux Matchers)
 
       toast.success("Əməliyyat uğurla tamamlandı!");
 

@@ -1282,30 +1282,24 @@ const Check = () => {
                                 // 1. Save to Cloud
                                 await axios.put(endpoint, { orderedItems });
 
-                                // 2. Trigger Sync on Local Backend
-                                toast.dismiss(loadingToast);
-                                const syncToast = toast.loading("Məlumatlar yenilənir...");
-                                try {
-                                  await axios.post(LOCAL_SYNC_URL);
-                                } catch (syncErr) {
-                                  console.error("Sync error warning:", syncErr);
-                                  // Continue even if local sync endpoint fails, maybe user can reload manually
-                                }
-
-                                toast.dismiss(syncToast);
-                                toast.success("Sıralama uğurla yadda saxlanıldı!");
-
-                                // 3. Update Redux Store without reloading
-                                const profileId = loginedProfileData?.data?.profile?.id;
-                                if (profileId) {
-                                  await dispatch(menuWithGeneralCategories(profileId)).unwrap();
-                                  await dispatch(menuWithCategories(profileId)).unwrap();
-                                }
-
-                                // 4. Reset Drag Mode
+                                // 2. Reset Drag Mode Immediately
                                 setIsDragMode(false);
                                 setTempCustomOrders(null);
-                                setCustomOrders({}); // Clear custom orders so UI relies on updated DB order
+                                toast.dismiss(loadingToast);
+                                toast.success("Sıralama uğurla yadda saxlanıldı!");
+
+                                // 3. Sync and Refresh in Background
+                                axios.post(LOCAL_SYNC_URL).then(() => {
+                                  const profileId = loginedProfileData?.data?.profile?.id;
+                                  if (profileId) {
+                                    dispatch(menuWithGeneralCategories(profileId));
+                                    dispatch(menuWithCategories(profileId));
+                                  }
+                                }).catch(err => console.error("Background sync error:", err));
+
+                                // We don't clear customOrders here anymore. 
+                                // It acts as a local cache so the UI stays in the new order 
+                                // even if the background refresh takes a few seconds.
                               } else {
                                 toast.dismiss(loadingToast);
                                 setIsDragMode(false);
@@ -1591,11 +1585,7 @@ const Check = () => {
               customerId: customer?.id || null,
               customerName: customer?.name || null,
               waiterName,
-            })).then(() => {
-              // 2. Refresh data after assignment
-              dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
-              dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
-            });
+            }));
 
             // 3. Apply customer group discount if automated
             const groupDiscount = customer?.group?.discount;

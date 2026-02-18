@@ -34,7 +34,7 @@
 }
 
 .modal-title {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     margin: 0;
 }
@@ -63,15 +63,17 @@
 
 .form-group-custom label {
     font-weight: 600;
-    font-size: 13px;
-    color: #333;
+    font-size: 11px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .form-control-custom {
-    padding: 10px 14px;
+    padding: 8px 12px;
     border: 1px solid #e9ecef;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 12px;
     background: #fff;
     outline: none;
     width: 100%;
@@ -142,7 +144,7 @@
 }
 
 .upload-placeholder span {
-    font-size: 12px;
+    font-size: 11px;
 }
 
 /* Toggles */
@@ -163,7 +165,7 @@
 }
 
 .toggle-label {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     color: #495057;
 }
@@ -197,7 +199,7 @@
     border: none;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -213,7 +215,7 @@
     border: none;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;

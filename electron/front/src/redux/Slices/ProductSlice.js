@@ -9,17 +9,17 @@ export const addProduct = createAsyncThunk(
     "products/add",
     async (productData, { dispatch, rejectWithValue }) => {
         try {
-            // 1. Create on Cloud
+            // 1. Create on Cloud (Fastest possible wait)
             const response = await axios.post(API_URL, productData);
 
-            // 2. Sync Local DB
-            await axios.post(LOCAL_SYNC_URL);
+            // 2. Sync and Refresh in Background (Non-blocking)
+            axios.post(LOCAL_SYNC_URL).then(() => {
+                if (productData.profile_id) {
+                    dispatch(menuWithCategories(productData.profile_id));
+                    dispatch(menuWithGeneralCategories(productData.profile_id));
+                }
+            }).catch(err => console.error("Background sync error:", err));
 
-            // 3. Refresh Local Menu
-            if (productData.profile_id) {
-                await dispatch(menuWithCategories(productData.profile_id));
-                await dispatch(menuWithGeneralCategories(productData.profile_id));
-            }
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response?.data || error.message);
@@ -34,14 +34,14 @@ export const updateProduct = createAsyncThunk(
             // 1. Update on Cloud
             const response = await axios.put(`${API_URL}/${id}`, productData);
 
-            // 2. Sync Local DB
-            await axios.post(LOCAL_SYNC_URL);
+            // 2. Sync and Refresh in Background
+            axios.post(LOCAL_SYNC_URL).then(() => {
+                if (productData.profile_id) {
+                    dispatch(menuWithCategories(productData.profile_id));
+                    dispatch(menuWithGeneralCategories(productData.profile_id));
+                }
+            }).catch(err => console.error("Background sync error:", err));
 
-            // 3. Refresh Local Menu
-            if (productData.profile_id) {
-                await dispatch(menuWithCategories(productData.profile_id));
-                await dispatch(menuWithGeneralCategories(productData.profile_id));
-            }
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response?.data || error.message);
@@ -56,14 +56,14 @@ export const deleteProduct = createAsyncThunk(
             // 1. Delete on Cloud
             await axios.delete(`${API_URL}/${id}`);
 
-            // 2. Sync Local DB
-            await axios.post(LOCAL_SYNC_URL);
+            // 2. Sync and Refresh in Background
+            axios.post(LOCAL_SYNC_URL).then(() => {
+                if (profile_id) {
+                    dispatch(menuWithCategories(profile_id));
+                    dispatch(menuWithGeneralCategories(profile_id));
+                }
+            }).catch(err => console.error("Background sync error:", err));
 
-            // 3. Refresh Local Menu
-            if (profile_id) {
-                await dispatch(menuWithCategories(profile_id));
-                await dispatch(menuWithGeneralCategories(profile_id));
-            }
             return id;
         } catch (error) {
             return rejectWithValue(error.response?.data || error.message);

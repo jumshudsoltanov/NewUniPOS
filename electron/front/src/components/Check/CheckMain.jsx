@@ -219,15 +219,8 @@ const CheckMain = ({ orders }) => {
       {editItemModal && (
         <EditModal
           show={editItemModal}
-          onClose={async (shouldRefresh) => {
+          onClose={async () => {
             setEditItemModal(false);
-            if (shouldRefresh === true) {
-              const profileId = loginedProfileData?.data?.profile?.id;
-              if (profileId) {
-                await dispatch(getActiveOrders({ profileId }));
-                await dispatch(getTableGroups(profileId));
-              }
-            }
           }}
           product={selectedProduct}
           orders={orders}
