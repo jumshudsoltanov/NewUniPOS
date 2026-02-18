@@ -6,6 +6,10 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   getTableGroups,
   currentTableList,
+  startEditMode,
+  cancelEditMode,
+  saveEditMode,
+  setTempHallOrder
 } from "../../redux/Slices/TablesSlice";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
@@ -13,7 +17,13 @@ import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 
 const Header = ({ showBack, backPath, onBack }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-  const { tableGroups } = useSelector((state) => state.TablesSlice);
+  const {
+    tableGroups,
+    isTableEditMode,
+    hallOrder,
+    tempHallOrder
+  } = useSelector((state) => state.TablesSlice);
+
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [activeHall, setActiveHall] = useState(null);
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
@@ -22,6 +32,61 @@ const Header = ({ showBack, backPath, onBack }) => {
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Hall Drag State
+  const [draggedHallIndex, setDraggedHallIndex] = useState(null);
+  const [dragOverHallIndex, setDragOverHallIndex] = useState(null);
+
+  // Computed Halls based on order
+  const orderedHalls = (() => {
+    if (!tableGroups?.data) return [];
+    const sourceData = [...tableGroups.data];
+    const order = isTableEditMode ? tempHallOrder : hallOrder;
+
+    if (!order || order.length === 0) return sourceData;
+
+    const orderMap = {};
+    order.forEach((id, idx) => { orderMap[id] = idx; });
+
+    return sourceData.sort((a, b) => {
+      const aIdx = orderMap[a.id] !== undefined ? orderMap[a.id] : 9999;
+      const bIdx = orderMap[b.id] !== undefined ? orderMap[b.id] : 9999;
+      return aIdx - bIdx;
+    });
+  })();
+
+  // Hall Drag Handlers
+  const handleHallDragStart = (e, index) => {
+    if (!isTableEditMode) return;
+    setDraggedHallIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleHallDragOver = (e, index) => {
+    e.preventDefault();
+    if (!isTableEditMode) return;
+    setDragOverHallIndex(index);
+  };
+
+  const handleHallDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (!isTableEditMode || draggedHallIndex === null || draggedHallIndex === dropIndex) return;
+
+    const newHalls = [...orderedHalls];
+    const [moved] = newHalls.splice(draggedHallIndex, 1);
+    newHalls.splice(dropIndex, 0, moved);
+
+    const newOrder = newHalls.map(h => h.id);
+    dispatch(setTempHallOrder(newOrder));
+
+    setDraggedHallIndex(null);
+    setDragOverHallIndex(null);
+  };
+
+  const handleHallDragEnd = () => {
+    setDraggedHallIndex(null);
+    setDragOverHallIndex(null);
+  };
 
   // Clock state
   const [showClock, setShowClock] = useState(() => {
@@ -150,16 +215,25 @@ const Header = ({ showBack, backPath, onBack }) => {
               </div>
             ) : (
               <ul className="hallsTab">
-                {tableGroups &&
-                  tableGroups?.data?.map((hall, index) => (
-                    <li
-                      key={index}
-                      className={`hall-btn ${activeHall === hall.id ? "active" : ""}`}
-                      onClick={() => setActiveHall(hall.id)}
-                    >
-                      {hall.name}
-                    </li>
-                  ))}
+                {orderedHalls.map((hall, index) => (
+                  <li
+                    key={hall.id}
+                    className={`hall-btn ${activeHall === hall.id ? "active" : ""} ${isTableEditMode ? "drag-mode" : ""} ${isTableEditMode && draggedHallIndex === index ? "dragging" : ""} ${isTableEditMode && dragOverHallIndex === index ? "drag-over" : ""}`}
+                    onClick={() => !isTableEditMode && setActiveHall(hall.id)}
+                    draggable={isTableEditMode}
+                    onDragStart={(e) => handleHallDragStart(e, index)}
+                    onDragOver={(e) => handleHallDragOver(e, index)}
+                    onDrop={(e) => handleHallDrop(e, index)}
+                    onDragEnd={handleHallDragEnd}
+                    style={{
+                      cursor: isTableEditMode ? 'grab' : 'pointer',
+                      opacity: isTableEditMode && draggedHallIndex === index ? 0.5 : 1
+                    }}
+                  >
+                    {hall.name}
+                    {isTableEditMode && <i className="bi bi-grip-vertical ms-2 opacity-50"></i>}
+                  </li>
+                ))}
               </ul>
             )}
           </Col>

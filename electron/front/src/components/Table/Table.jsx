@@ -2,7 +2,7 @@ import React from "react";
 import "./Table.css";
 import { useParams } from "react-router-dom";
 
-const Table = React.memo(({ table, onTableClick, loginedWaiter }) => {
+const Table = React.memo(({ table, onTableClick, loginedWaiter, customStyle }) => {
   const { name, status, shape_type, orders } = table || {};
 
   const hasOrders = orders && orders.length > 0;
@@ -44,9 +44,9 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter }) => {
   return (
     <>
       <div
-        className={`table-wrapper wrapper-${shape_type || "square"}`}
+        className={`table-wrapper wrapper-${shape_type || "square"} ${customStyle ? "resizable-mode" : ""}`}
         onClick={() => handleTableClick(table)}
-        style={{ cursor: "pointer" }}
+        style={{ cursor: "pointer", ...customStyle }}
       >
         {renderSeats()}
 

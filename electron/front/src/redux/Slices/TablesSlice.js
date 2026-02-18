@@ -20,10 +20,55 @@ const TablesSlice = createSlice({
   initialState: {
     tableGroups: {},
     currentHallId: null,
+    isTableEditMode: false,
+    hallOrder: JSON.parse(localStorage.getItem("pos_hall_order") || "[]"),
+    tableOrder: JSON.parse(localStorage.getItem("pos_table_orders") || "{}"),
+    tableLayouts: JSON.parse(localStorage.getItem("pos_table_layouts") || "{}"),
+    tempHallOrder: [],
+    tempTableOrder: {},
+    tempTableLayouts: {},
   },
   reducers: {
     currentTableList: (state, action) => {
       state.currentHallId = action.payload.hallId;
+    },
+    startEditMode: (state) => {
+      state.isTableEditMode = true;
+      state.tempHallOrder = [...state.hallOrder];
+      state.tempTableOrder = { ...state.tableOrder };
+      state.tempTableLayouts = { ...state.tableLayouts };
+    },
+    cancelEditMode: (state) => {
+      state.isTableEditMode = false;
+      state.tempHallOrder = [];
+      state.tempTableOrder = {};
+    },
+    saveEditMode: (state) => {
+      state.isTableEditMode = false;
+      state.hallOrder = [...state.tempHallOrder];
+      state.tableOrder = { ...state.tempTableOrder };
+      state.tableLayouts = { ...state.tempTableLayouts };
+      localStorage.setItem("pos_hall_order", JSON.stringify(state.hallOrder));
+      localStorage.setItem("pos_table_orders", JSON.stringify(state.tableOrder));
+      localStorage.setItem("pos_table_layouts", JSON.stringify(state.tableLayouts));
+      state.tempHallOrder = [];
+      state.tempTableOrder = {};
+      state.tempTableLayouts = {};
+    },
+    setTempHallOrder: (state, action) => {
+      state.tempHallOrder = action.payload;
+    },
+    setTempTableOrder: (state, action) => {
+      const { hallId, order } = action.payload;
+      state.tempTableOrder[hallId] = order;
+    },
+    setTempTableLayout: (state, action) => {
+      const { hallId, layout } = action.payload;
+      // Merge with existing layout for that hall
+      state.tempTableLayouts[hallId] = {
+        ...(state.tempTableLayouts[hallId] || {}),
+        ...layout
+      };
     },
   },
   extraReducers: (builder) => {
@@ -68,5 +113,13 @@ const TablesSlice = createSlice({
   },
 });
 
-export const { currentTableList } = TablesSlice.actions;
+export const {
+  currentTableList,
+  startEditMode,
+  cancelEditMode,
+  saveEditMode,
+  setTempHallOrder,
+  setTempTableOrder,
+  setTempTableLayout
+} = TablesSlice.actions;
 export default TablesSlice.reducer;

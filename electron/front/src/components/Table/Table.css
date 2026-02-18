@@ -407,3 +407,75 @@
 .table-surface.other-waiter-table .table-waiter-info span {
     font-weight: 600;
 }
+
+
+/* =========================== */
+/* Resizable Mode Overrides    */
+/* =========================== */
+.resizable-mode .table-square {
+    width: 70%;
+    height: 70%;
+    border-radius: 12%;
+}
+
+.resizable-mode .table-round {
+    width: 70%;
+    height: 70%;
+    border-radius: 50%;
+}
+
+.resizable-mode .table-rectangle {
+    width: 70%;
+    height: 80%;
+    border-radius: 10%;
+}
+
+.resizable-mode .seat-top {
+    width: 60px;
+    height: 20px;
+    top: 10%;
+}
+
+.resizable-mode .seat-bottom {
+    width: 60px;
+    height: 20px;
+    bottom: 10%;
+}
+
+.resizable-mode .seat-left {
+    width: 20px;
+    height: 60px;
+    left: 10%;
+}
+
+.resizable-mode .seat-right {
+    width: 20px;
+    height: 60px;
+    right: 10%;
+}
+
+.resizable-mode .seat-left-1,
+.resizable-mode .seat-left-2,
+.resizable-mode .seat-left-3 {
+    width: 20px;
+    height: 50px;
+    left: 10%;
+}
+
+.resizable-mode .seat-right-1,
+.resizable-mode .seat-right-2,
+.resizable-mode .seat-right-3 {
+    width: 20px;
+    height: 50px;
+    right: 10%;
+}
+
+.resizable-mode .seat-left-1,
+.resizable-mode .seat-right-1 {
+    top: 15%;
+}
+
+.resizable-mode .seat-left-3,
+.resizable-mode .seat-right-3 {
+    bottom: 15%;
+}

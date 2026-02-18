@@ -57,6 +57,38 @@
   height: 60px;
 }
 
+/* Drag Mode Styles */
+.hall-btn.drag-mode {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  background: #042d7a;
+}
+
+.hall-btn.drag-mode:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.hall-btn.dragging {
+  opacity: 0.5;
+  background: #032055;
+}
+
+.hall-btn.drag-over {
+  background: rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+.hall-btn.drag-over::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10%;
+  bottom: 10%;
+  width: 4px;
+  background-color: #4ade80;
+  border-radius: 2px;
+}
+
+
 /* ==================== */
 /* Checks Page Header   */
 /* ==================== */
