@@ -37,6 +37,7 @@ import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import OrderLogsModal from "./OrderLogsModal"; // Import Modal
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
+import ProductModal from "../ProductModal/ProductModal";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -48,13 +49,24 @@ const Check = () => {
   // Settings toolbar states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDragMode, setIsDragMode] = useState(false);
-  const [categoryOrder, setCategoryOrder] = useState(() => {
+  const [customOrders, setCustomOrders] = useState(() => {
     try {
-      const saved = localStorage.getItem('category_order');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
+      const saved = localStorage.getItem('pos_custom_orders');
+      let orders = saved ? JSON.parse(saved) : {};
+
+      // Backward compatibility for ROOT
+      if (!orders["ROOT"]) {
+        try {
+          const oldRoot = localStorage.getItem('category_order');
+          if (oldRoot) {
+            orders["ROOT"] = JSON.parse(oldRoot);
+          }
+        } catch { }
+      }
+      return orders;
+    } catch { return {}; }
   });
-  const [tempCategoryOrder, setTempCategoryOrder] = useState(null);
+  const [tempCustomOrders, setTempCustomOrders] = useState(null);
   const [lockCheck, setLockCheck] = useState(false);
   const [comment, setComment] = useState(false);
   const [onShowClearModal, setOnShowClearModal] = useState(false);
@@ -90,6 +102,9 @@ const Check = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [productToEdit, setProductToEdit] = useState(null);
 
   const goTables = async () => {
     if (location.state?.from === "/checks") {
@@ -1149,18 +1164,30 @@ const Check = () => {
                       <div className="settings-actions">
                         <div
                           className="settings-action-btn"
-                          title="Kateqoriya sırasını dəyiş"
+                          title="Sıranı dəyiş"
                           onClick={() => {
                             setIsDragMode(true);
-                            setTempCategoryOrder(categoryOrder);
+                            setTempCustomOrders(customOrders);
                           }}
                         >
                           <i className="bi bi-arrows-move"></i>
                         </div>
-                        <div className="settings-action-btn" title="Əlavə et">
+                        <div className="settings-action-btn" title="Əlavə et" onClick={() => setShowProductModal(true)}>
                           <i className="bi bi-plus-lg"></i>
                         </div>
-                        <div className="settings-action-btn" title="Redaktə et">
+                        <div
+                          className={`settings-action-btn ${isEditMode ? 'active-mode' : ''}`}
+                          title="Redaktə et"
+                          onClick={() => {
+                            if (isDragMode) return;
+                            setIsEditMode(!isEditMode);
+                            if (!isEditMode) {
+                              toast.info("Redaktə rejimi aktivdir. Məhsulun üzərinə vurun.");
+                            } else {
+                              toast.info("Redaktə rejimi deaktiv edildi.");
+                            }
+                          }}
+                        >
                           <i className="bi bi-pencil-fill"></i>
                         </div>
                       </div>
@@ -1173,8 +1200,8 @@ const Check = () => {
                           title="Ləğv et"
                           onClick={() => {
                             setIsDragMode(false);
-                            setCategoryOrder(tempCategoryOrder);
-                            setTempCategoryOrder(null);
+                            setCustomOrders(tempCustomOrders);
+                            setTempCustomOrders(null);
                           }}
                         >
                           <i className="bi bi-x-lg"></i>
@@ -1184,11 +1211,9 @@ const Check = () => {
                           title="Təsdiqlə"
                           onClick={() => {
                             setIsDragMode(false);
-                            setTempCategoryOrder(null);
-                            if (categoryOrder) {
-                              localStorage.setItem('category_order', JSON.stringify(categoryOrder));
-                            }
-                            toast.success('Kateqoriya sırası yadda saxlanıldı!');
+                            setTempCustomOrders(null);
+                            localStorage.setItem('pos_custom_orders', JSON.stringify(customOrders));
+                            toast.success('Sıralama yadda saxlanıldı!');
                           }}
                         >
                           <i className="bi bi-check-lg"></i>
@@ -1212,8 +1237,30 @@ const Check = () => {
                 selectedCat={selectedCat}
                 setSelectedCat={setSelectedCat}
                 isDragMode={isDragMode}
-                categoryOrder={categoryOrder}
-                onCategoryOrderChange={(newOrder) => setCategoryOrder(newOrder)}
+                categoryOrder={(() => {
+                  if (menuViewMode === "ROOT") return customOrders["ROOT"] || [];
+                  if (menuViewMode === "CATEGORIES" && selectedGenCat) return customOrders[`GEN_${selectedGenCat.id}`] || [];
+                  if (menuViewMode === "PRODUCTS" && selectedCat) return customOrders[`CAT_${selectedCat.id}`] || [];
+                  return [];
+                })()}
+                onCategoryOrderChange={(newOrder) => {
+                  let key = null;
+                  if (menuViewMode === "ROOT") key = "ROOT";
+                  else if (menuViewMode === "CATEGORIES" && selectedGenCat) key = `GEN_${selectedGenCat.id}`;
+                  else if (menuViewMode === "PRODUCTS" && selectedCat) key = `CAT_${selectedCat.id}`;
+
+                  if (key) {
+                    setCustomOrders(prev => ({
+                      ...prev,
+                      [key]: newOrder
+                    }));
+                  }
+                }}
+                isEditMode={isEditMode}
+                onEditProduct={(product) => {
+                  setProductToEdit(product);
+                  setShowProductModal(true);
+                }}
               />
             </div>
           </div>
@@ -1447,6 +1494,14 @@ const Check = () => {
       <NotificationSidebar
         show={showNotifications}
         onClose={() => setShowNotifications(false)}
+      />
+      <ProductModal
+        show={showProductModal}
+        onHide={() => {
+          setShowProductModal(false);
+          setProductToEdit(null);
+        }}
+        productToEdit={productToEdit}
       />
     </Container >
   );

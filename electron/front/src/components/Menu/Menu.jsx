@@ -21,6 +21,8 @@ const Menu = ({
   isDragMode = false,
   categoryOrder = null,
   onCategoryOrderChange = () => { },
+  isEditMode = false,
+  onEditProduct = () => { },
 }) => {
   const dispatch = useDispatch();
   const { menuDataWithGeneralCategories, menuDataWithCategories } = useSelector(
@@ -113,6 +115,11 @@ const Menu = ({
       return;
     }
 
+    if (isEditMode) {
+      if (onEditProduct) onEditProduct(product);
+      return;
+    }
+
     if (product.own_set_price === 1) {
       setPendingProduct(product);
       setShowPriceModal(true);
@@ -170,11 +177,13 @@ const Menu = ({
     }
 
     if (menuViewMode === "CATEGORIES") {
-      return selectedGenCat?.categories || [];
+      let items = selectedGenCat?.categories || [];
+      return applyOrder(items, categoryOrder);
     }
 
     if (menuViewMode === "PRODUCTS") {
-      return (selectedCat?.products || []).filter((item) => item && item.name);
+      let items = (selectedCat?.products || []).filter((item) => item && item.name);
+      return applyOrder(items, categoryOrder);
     }
     return [];
   }, [
@@ -260,18 +269,18 @@ const Menu = ({
                 style={{ flex: "0 0 20%", maxWidth: "20%" }}
               >
                 <div
-                  className={`menu-card ${isDragMode && menuViewMode === 'ROOT' ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                  className={`menu-card ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
                   style={{
                     backgroundImage: imageSrc,
                     backgroundColor: item.img ? "transparent" : "#555",
-                    cursor: isDragMode && menuViewMode === 'ROOT' ? "grab" : "pointer",
+                    cursor: isDragMode ? "grab" : "pointer",
                   }}
-                  draggable={isDragMode && menuViewMode === 'ROOT'}
-                  onDragStart={isDragMode && menuViewMode === 'ROOT' ? (e) => handleDragStart(e, index) : undefined}
-                  onDragOver={isDragMode && menuViewMode === 'ROOT' ? (e) => handleDragOver(e, index) : undefined}
-                  onDragLeave={isDragMode && menuViewMode === 'ROOT' ? handleDragLeave : undefined}
-                  onDrop={isDragMode && menuViewMode === 'ROOT' ? (e) => handleDrop(e, index) : undefined}
-                  onDragEnd={isDragMode && menuViewMode === 'ROOT' ? handleDragEnd : undefined}
+                  draggable={isDragMode}
+                  onDragStart={isDragMode ? (e) => handleDragStart(e, index) : undefined}
+                  onDragOver={isDragMode ? (e) => handleDragOver(e, index) : undefined}
+                  onDragLeave={isDragMode ? handleDragLeave : undefined}
+                  onDrop={isDragMode ? (e) => handleDrop(e, index) : undefined}
+                  onDragEnd={isDragMode ? handleDragEnd : undefined}
                   onClick={() => {
                     if (isDragMode) return;
                     if (searchText?.length > 0) {
@@ -285,10 +294,18 @@ const Menu = ({
                     }
                   }}
                 >
-                  {isDragMode && menuViewMode === 'ROOT' && (
+                  {isDragMode && (
                     <div className="drag-handle-overlay">
                       <div className="drag-handle-icon">
                         <i className="bi bi-arrows-move"></i>
+                      </div>
+                    </div>
+                  )}
+
+                  {isEditMode && menuViewMode === 'PRODUCTS' && (
+                    <div className="product-edit-overlay">
+                      <div className="edit-icon-circle">
+                        <i className="bi bi-pencil-fill"></i>
                       </div>
                     </div>
                   )}

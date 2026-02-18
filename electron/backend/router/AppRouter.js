@@ -11,6 +11,7 @@ const TagsController = require("../controller/TagsController");
 const PaymentMethodsController = require("../controller/PaymentMethodsController");
 const SaleTypesController = require("../controller/SaleTypesContoller");
 const PrintersController = require("../controller/PrintersController");
+const ProductsController = require("../controller/ProductsController");
 
 // Routers lists
 router.post("/login", LoginController.getLogin);
@@ -26,6 +27,9 @@ router.get(
   PaymentMethodsController.getPaymentMethodsList,
 );
 router.get("/sale-types/:profileId", SaleTypesController.getSaleTypes);
+router.post("/products", ProductsController.createProduct);
+router.put("/products/:id", ProductsController.updateProduct);
+router.delete("/products/:id", ProductsController.deleteProduct);
 
 // Ordered Items Routers
 router.post(

@@ -93,6 +93,12 @@ const ProductsModel = db.sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+
+    product_type: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "simple",
+    },
   },
   {
     tableName: "products",

@@ -9,6 +9,7 @@ import MenuSlice from "../Slices/MenuSlice";
 import PaymentMethodsSlice from "../Slices/PaymentMethodsSlice";
 import SalesTypesSlice from "../Slices/SalesTypesSlice";
 import CustomersSlice from "../Slices/CustomersSlice";
+import ProductSlice from "../Slices/ProductSlice";
 
 export default configureStore({
   reducer: {
@@ -22,5 +23,6 @@ export default configureStore({
     PaymentMethodsSlice: PaymentMethodsSlice,
     SalesTypesSlice: SalesTypesSlice,
     CustomersSlice: CustomersSlice,
+    ProductSlice: ProductSlice,
   },
 });

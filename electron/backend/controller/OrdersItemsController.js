@@ -25,6 +25,7 @@ const sendOrdersItemsToDb = async (req, res) => {
         where: {
           order_id: orderId,
           product_id: item.id,
+          price: item.price,
         },
       });
 
