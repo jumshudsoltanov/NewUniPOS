@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { Container, Col, Row } from "react-bootstrap";
+import { Container, Col, Row, Modal } from "react-bootstrap";
 import "./Check.css";
 import "../Header/Header.css";
 import Menu from "../Menu/Menu";
@@ -29,6 +29,7 @@ import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
 import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount } from "../../redux/Slices/OrdersSlice";
+import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { printCustomerReceipt } from "../../utils/printerHelpers";
 import { toast } from "sonner";
@@ -44,6 +45,11 @@ import axios from "axios";
 const CLOUD_API_URL = "https://api.unipos.tech/api";
 // Local Backend Sync URL
 const LOCAL_SYNC_URL = "http://localhost:55667/api/sync";
+
+import {
+  menuWithGeneralCategories,
+  menuWithCategories,
+} from "../../redux/Slices/MenuSlice";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -95,6 +101,8 @@ const Check = () => {
   const [showProductModal, setShowProductModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const goTables = async () => {
     if (location.state?.from === "/checks") {
@@ -423,6 +431,34 @@ const Check = () => {
       navigate("/tables")
     }
   }
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+
+    const toastId = toast.loading("Məhsul silinir...");
+    try {
+      const profileId = loginedProfileData?.data?.profile?.id;
+      // Pass object as expected by the thunk
+      await dispatch(deleteProduct({ id: productToDelete.id, profile_id: profileId })).unwrap();
+
+      // Force refresh manually to be safe
+      if (profileId) {
+        dispatch(menuWithCategories(profileId));
+        dispatch(menuWithGeneralCategories(profileId));
+      }
+
+      toast.dismiss(toastId);
+      toast.success("Məhsul silindi!");
+
+      // Refresh logic is already in slice, but we can optimistically close everything
+      setShowDeleteConfirm(false);
+      setProductToDelete(null);
+    } catch (error) {
+      toast.dismiss(toastId);
+      console.error(error);
+      toast.error("Silinmə zamanı xəta baş verdi");
+    }
+  };
 
 
   return (
@@ -1247,8 +1283,17 @@ const Check = () => {
                                 toast.dismiss(syncToast);
                                 toast.success("Sıralama uğurla yadda saxlanıldı!");
 
-                                // 3. Reload Window to fetch fresh data from local DB
-                                window.location.reload();
+                                // 3. Update Redux Store without reloading
+                                const profileId = loginedProfileData?.data?.profile?.id;
+                                if (profileId) {
+                                  await dispatch(menuWithGeneralCategories(profileId)).unwrap();
+                                  await dispatch(menuWithCategories(profileId)).unwrap();
+                                }
+
+                                // 4. Reset Drag Mode
+                                setIsDragMode(false);
+                                setTempCustomOrders(null);
+                                setCustomOrders({}); // Clear custom orders so UI relies on updated DB order
                               } else {
                                 toast.dismiss(loadingToast);
                                 setIsDragMode(false);
@@ -1305,6 +1350,10 @@ const Check = () => {
                 onEditProduct={(product) => {
                   setProductToEdit(product);
                   setShowProductModal(true);
+                }}
+                onDeleteItem={(product) => {
+                  setProductToDelete(product);
+                  setShowDeleteConfirm(true);
                 }}
               />
             </div>
@@ -1498,13 +1547,29 @@ const Check = () => {
         onHide={() => setShowHistoryModal(false)}
         order={currentOrder}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal show={showDeleteConfirm} onHide={() => setShowDeleteConfirm(false)} centered size="sm">
+        <Modal.Header closeButton>
+          <Modal.Title>Silmək istədiyinizə əminsiniz?</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="text-center">
+          <p>"{productToDelete?.name}" məhsulu silinəcək. Bu əməliyyatı geri qaytarmaq mümkün deyil.</p>
+        </Modal.Body>
+        <Modal.Footer className="justify-content-center border-0 pb-4">
+          <div className="d-flex gap-2 w-100 px-3">
+            <button className="btn btn-secondary w-50" onClick={() => setShowDeleteConfirm(false)}>Ləğv et</button>
+            <button className="btn btn-danger w-50" onClick={handleDeleteProduct}>Sil</button>
+          </div>
+        </Modal.Footer>
+      </Modal>
       <CustomersSourceModal
         show={showCustomerModal}
         onHide={() => setShowCustomerModal(false)}
         onApply={(customer) => {
           setSelectedCustomer(customer);
           setShowCustomerModal(false);
-          // Save customer_id to order
+
           if (currentOrder?.uuid) {
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 

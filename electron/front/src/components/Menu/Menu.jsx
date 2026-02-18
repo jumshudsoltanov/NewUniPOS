@@ -23,6 +23,7 @@ const Menu = ({
   onCategoryOrderChange = () => { },
   isEditMode = false,
   onEditProduct = () => { },
+  onDeleteItem = () => { },
 }) => {
   const dispatch = useDispatch();
   const { menuDataWithGeneralCategories, menuDataWithCategories } = useSelector(
@@ -303,11 +304,24 @@ const Menu = ({
                   )}
 
                   {isEditMode && menuViewMode === 'PRODUCTS' && (
-                    <div className="product-edit-overlay">
-                      <div className="edit-icon-circle">
-                        <i className="bi bi-pencil-fill"></i>
+                    <>
+                      <div className="product-edit-overlay">
+                        <div className="edit-icon-circle">
+                          <i className="bi bi-pencil-fill"></i>
+                        </div>
                       </div>
-                    </div>
+                      <div
+                        className="product-delete-overlay"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onDeleteItem) onDeleteItem(item);
+                        }}
+                      >
+                        <div className="delete-icon-circle">
+                          <i className="bi bi-x-lg"></i>
+                        </div>
+                      </div>
+                    </>
                   )}
 
                   {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (

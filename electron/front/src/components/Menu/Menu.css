@@ -1,0 +1,71 @@
+/* Edit Mode - Pencil Icon */
+.product-edit-overlay {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 10;
+}
+
+.edit-icon-circle {
+    width: 28px;
+    /* Slightly larger for easier click */
+    height: 28px;
+    background-color: #053796;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Edit Mode - Delete (X) Icon */
+.product-delete-overlay {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    left: 5px;
+    z-index: 100;
+    cursor: pointer;
+}
+
+.delete-icon-circle {
+    width: 28px;
+    height: 28px;
+    background-color: #ef4444;
+    /* Red color */
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.drag-handle-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.3);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.drag-handle-icon {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+}

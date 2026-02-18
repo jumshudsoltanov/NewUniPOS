@@ -2,17 +2,23 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { menuWithCategories, menuWithGeneralCategories } from "./MenuSlice";
 
-const API_URL = "http://localhost:55667/api/products";
+const API_URL = "https://api.unipos.tech/api/products";
+const LOCAL_SYNC_URL = "http://localhost:55667/api/sync";
 
 export const addProduct = createAsyncThunk(
     "products/add",
     async (productData, { dispatch, rejectWithValue }) => {
         try {
+            // 1. Create on Cloud
             const response = await axios.post(API_URL, productData);
-            // Refresh menu
+
+            // 2. Sync Local DB
+            await axios.post(LOCAL_SYNC_URL);
+
+            // 3. Refresh Local Menu
             if (productData.profile_id) {
-                dispatch(menuWithCategories(productData.profile_id));
-                dispatch(menuWithGeneralCategories(productData.profile_id));
+                await dispatch(menuWithCategories(productData.profile_id));
+                await dispatch(menuWithGeneralCategories(productData.profile_id));
             }
             return response.data;
         } catch (error) {
@@ -25,10 +31,16 @@ export const updateProduct = createAsyncThunk(
     "products/update",
     async ({ id, productData }, { dispatch, rejectWithValue }) => {
         try {
+            // 1. Update on Cloud
             const response = await axios.put(`${API_URL}/${id}`, productData);
+
+            // 2. Sync Local DB
+            await axios.post(LOCAL_SYNC_URL);
+
+            // 3. Refresh Local Menu
             if (productData.profile_id) {
-                dispatch(menuWithCategories(productData.profile_id));
-                dispatch(menuWithGeneralCategories(productData.profile_id));
+                await dispatch(menuWithCategories(productData.profile_id));
+                await dispatch(menuWithGeneralCategories(productData.profile_id));
             }
             return response.data;
         } catch (error) {
@@ -41,10 +53,16 @@ export const deleteProduct = createAsyncThunk(
     "products/delete",
     async ({ id, profile_id }, { dispatch, rejectWithValue }) => {
         try {
+            // 1. Delete on Cloud
             await axios.delete(`${API_URL}/${id}`);
+
+            // 2. Sync Local DB
+            await axios.post(LOCAL_SYNC_URL);
+
+            // 3. Refresh Local Menu
             if (profile_id) {
-                dispatch(menuWithCategories(profile_id));
-                dispatch(menuWithGeneralCategories(profile_id));
+                await dispatch(menuWithCategories(profile_id));
+                await dispatch(menuWithGeneralCategories(profile_id));
             }
             return id;
         } catch (error) {

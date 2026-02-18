@@ -1137,7 +1137,12 @@ const onDeleteCheck = async (req, res) => {
 
   try {
     const updateCheckStatus = await OrdersModel.update(
-      { status: 3, end_date: new Date(), is_synced: 0 },
+      {
+        status: 3,
+        end_date: new Date(),
+        is_delete_reason_id: reason,
+        is_synced: 0
+      },
       { where: { uuid: orderId } },
     );
     SyncService.triggerSync(orderId);

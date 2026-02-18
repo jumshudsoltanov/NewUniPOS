@@ -73,10 +73,44 @@ const TablesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(getTableGroups.fulfilled, (state, action) => {
-      state.tableGroups = action.payload;
+      // Create a deep copy or new structure to avoid mutating read-only payload
+      const payload = action.payload;
+      if (payload?.data) {
+        // We can allow assignment to state proxy to handle immutability
+        state.tableGroups = {
+          ...payload,
+          data: payload.data.map(hall => ({
+            ...hall,
+            tables: hall.tables ? hall.tables.map(table => ({
+              ...table,
+              orders: table.orders ? table.orders.filter(o => o.status !== 3) : []
+            })) : []
+          }))
+        };
+      } else {
+        state.tableGroups = payload;
+      }
+
       // Set default hall if not set
-      if (!state.currentHallId && action.payload?.data?.length > 0) {
-        state.currentHallId = action.payload.data[0].id;
+      if (!state.currentHallId && state.tableGroups?.data?.length > 0) {
+        state.currentHallId = state.tableGroups.data[0].id;
+      }
+    });
+
+    // Handle deleteCheck fulfilled explicitly
+    builder.addCase("orders/deleteCheck/fulfilled", (state, action) => {
+      const orderId = action.meta.arg.orderId;
+      if (state.tableGroups?.data) {
+        state.tableGroups.data.forEach(hall => {
+          if (hall.tables) {
+            hall.tables.forEach(table => {
+              if (table.orders) {
+                const initialLength = table.orders.length;
+                table.orders = table.orders.filter(o => o.uuid !== orderId);
+              }
+            });
+          }
+        });
       }
     });
 
