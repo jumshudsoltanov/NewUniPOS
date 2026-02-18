@@ -40,6 +40,7 @@ import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
 import axios from "axios";
+import { addNotification } from "../../utils/notificationService";
 
 // Cloud API Base URL (Same as Admin)
 const CLOUD_API_URL = "https://api.unipos.tech/api";
@@ -460,6 +461,7 @@ const Check = () => {
       }
 
       toast.dismiss(toastId);
+      addNotification("Məhsul Silindi", `"${productToDelete.name}" məhsulu menyudan silindi.`, { category: "info" });
       toast.success("Məhsul silindi!");
 
       // Refresh logic is already in slice, but we can optimistically close everything
@@ -1286,6 +1288,7 @@ const Check = () => {
                                 setIsDragMode(false);
                                 setTempCustomOrders(null);
                                 toast.dismiss(loadingToast);
+                                addNotification("Sıralama Dəyişdirildi", "Menyu sıralaması yeniləndi.");
                                 toast.success("Sıralama uğurla yadda saxlanıldı!");
 
                                 // 3. Sync and Refresh in Background
@@ -1555,19 +1558,39 @@ const Check = () => {
       />
 
       {/* Delete Confirmation Modal */}
-      <Modal show={showDeleteConfirm} onHide={() => setShowDeleteConfirm(false)} centered size="sm">
-        <Modal.Header closeButton>
-          <Modal.Title>Silmək istədiyinizə əminsiniz?</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="text-center">
-          <p>"{productToDelete?.name}" məhsulu silinəcək. Bu əməliyyatı geri qaytarmaq mümkün deyil.</p>
-        </Modal.Body>
-        <Modal.Footer className="justify-content-center border-0 pb-4">
-          <div className="d-flex gap-2 w-100 px-3">
-            <button className="btn btn-secondary w-50" onClick={() => setShowDeleteConfirm(false)}>Ləğv et</button>
-            <button className="btn btn-danger w-50" onClick={handleDeleteProduct}>Sil</button>
+      <Modal
+        show={showDeleteConfirm}
+        onHide={() => setShowDeleteConfirm(false)}
+        centered
+        className="product-modal danger-theme"
+      >
+        <div className="product-modal-header">
+          <div className="header-left">
+            <div className="header-icon-circle">
+              <i className="bi bi-trash3"></i>
+            </div>
+            <h5 className="modal-title">Məhsulu Silmək</h5>
           </div>
-        </Modal.Footer>
+          <button className="close-btn" onClick={() => setShowDeleteConfirm(false)}>
+            <i className="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div className="product-modal-body text-center py-4">
+          <p className="mb-0" style={{ fontSize: '14px', color: '#444' }}>
+            "<strong>{productToDelete?.name}</strong>" məhsulu silinəcək.
+            <br />
+            Bu əməliyyatı geri qaytarmaq mümkün deyil.
+          </p>
+
+          <div className="modal-footer-custom justify-content-center border-0 pb-0">
+            <button className="btn-cancel" onClick={() => setShowDeleteConfirm(false)}>Ləğv et</button>
+            <button className="btn-save" onClick={handleDeleteProduct}>
+              <i className="bi bi-trash3"></i>
+              Sil
+            </button>
+          </div>
+        </div>
       </Modal>
       <CustomersSourceModal
         show={showCustomerModal}

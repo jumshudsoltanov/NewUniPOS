@@ -1,211 +1,32 @@
-.check-delete-modal .modal-content {
-    border-radius: 12px !important;
-    border: none;
-    overflow: hidden;
-    background-color: #fff;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    max-width: 450px;
-    margin: auto;
-}
-
-.check-delete-modal .modal-dialog {
-    max-width: 450px;
-}
-
-/* Header */
-.delete-modal-header {
-    background-color: #4F85F4;
-    /* Matching the dark purple in image */
-    color: white;
-    padding: 16px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.header-title {
-    font-size: 1.15rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-}
-
-.close-btn {
-    background: transparent;
-    border: none;
-    color: white;
-    font-size: 1.3rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    opacity: 0.9;
-    transition: opacity 0.2s;
-}
-
-/* .close-btn:hover {
-    opacity: 1;
-} */
-
-/* Body */
-.delete-modal-body {
-    padding: 12px !important;
-    max-height: 480px;
-    overflow-y: auto;
-}
-
+/* Reasons List Styles */
 .reasons-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
-.reason-item {
-    background-color: #f9fafb;
-    border: 2px solid #f3f4f6;
-    border-radius: 8px;
-    padding: 14px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-/* .reason-item:hover {
-    background-color: #f3f4f6;
-} */
-
-.reason-item.selected {
-    background-color: #fff;
-    border-color: #4F85F4;
-    /* Brand Blue */
-}
-
-.reason-text {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #374151;
-}
-
-.check-icon {
-    color: #4F85F4;
-    font-size: 1.2rem;
-}
-
-/* Footer */
-.delete-modal-footer {
-    padding: 12px 20px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-top: 1px solid #f3f4f6;
-}
-
-.waste-toggle {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    flex-grow: 1;
-    padding: 12px 14px;
-    background: #fff;
-    border-radius: 10px;
-    margin-right: 20px;
-    border: 1px solid #e5e7eb;
-    transition: all 0.2s;
-}
-
-/* .waste-toggle:hover {
-    border-color: #d1d5db;
-    background-color: #f9fafb;
-} */
-
-.waste-icon-wrapper {
-    font-size: 1.3rem;
-    color: #1f2937;
-    display: flex;
-    align-items: center;
-}
-
-.waste-label {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1f2937;
-    flex-grow: 1;
-}
-
-.custom-checkbox {
-    width: 24px;
-    height: 24px;
-    border: 2px solid #d1d5db;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: white;
-    transition: all 0.2s;
-}
-
-.custom-checkbox.checked {
-    border-color: #d1d5db;
-    color: #4F85F4;
-}
-
-.custom-checkbox i {
-    font-size: 1.2rem;
-    font-weight: bold;
-}
-
-.save-btn {
-    background-color: #4F85F4;
-    /* Green */
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    height: 52px;
-    min-width: 120px;
-    justify-content: center;
-}
-
-.save-btn i {
-    font-size: 1.4rem;
-}
-
-
-
-.save-btn:active:not(:disabled) {
-    transform: translateY(0);
-}
-
-.save-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background-color: #9ca3af;
-}
-
-/* Custom Scrollbar */
-.delete-modal-body::-webkit-scrollbar {
+.reasons-list::-webkit-scrollbar {
     width: 6px;
 }
 
-.delete-modal-body::-webkit-scrollbar-track {
-    background: transparent;
+.reasons-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
 }
 
-.delete-modal-body::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+.reasons-list::-webkit-scrollbar-thumb {
+    background: #ccc;
     border-radius: 10px;
 }
-/* 
-.delete-modal-body::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
-} */
+
+.reasons-list::-webkit-scrollbar-thumb:hover {
+    background: #bbb;
+}
+
+.reason-item:hover {
+    background-color: #f8fafc !important;
+}
+
+.reason-item.selected:hover {
+    background-color: #fef2f2 !important;
+}

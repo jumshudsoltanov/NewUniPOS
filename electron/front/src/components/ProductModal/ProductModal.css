@@ -34,8 +34,8 @@
 }
 
 .modal-title {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
     margin: 0;
 }
 
@@ -64,16 +64,17 @@
 .form-group-custom label {
     font-weight: 600;
     font-size: 11px;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: #444;
+    text-transform: none;
+    letter-spacing: normal;
+    margin-bottom: 4px;
 }
 
 .form-control-custom {
     padding: 8px 12px;
     border: 1px solid #e9ecef;
-    border-radius: 8px;
-    font-size: 12px;
+    border-radius: 6px;
+    font-size: 11px;
     background: #fff;
     outline: none;
     width: 100%;
@@ -152,7 +153,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 16px;
+    padding: 10px 12px;
     background: #f8f9fa;
     border-radius: 8px;
     height: 100%;
@@ -164,10 +165,10 @@
     justify-content: space-between;
 }
 
-.toggle-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #495057;
+.product-modal-body .toggle-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #444;
 }
 
 /* Switch Styling */
@@ -231,4 +232,27 @@
 .btn-save:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+/* Danger Theme Overrides */
+.product-modal.danger-theme .product-modal-header {
+    background: #dc2626 !important;
+}
+
+.product-modal.danger-theme .btn-save {
+    background: #dc2626 !important;
+}
+
+.product-modal.danger-theme .btn-save:hover {
+    background: #b91c1c !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2) !important;
+}
+
+.product-modal.danger-theme .btn-cancel {
+    background: #fef2f2 !important;
+    color: #dc2626 !important;
+}
+
+.product-modal.danger-theme .btn-cancel:hover {
+    background: #fee2e2 !important;
 }

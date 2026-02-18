@@ -178,12 +178,16 @@ const Menu = ({
     }
 
     if (menuViewMode === "CATEGORIES") {
-      let items = selectedGenCat?.categories || [];
+      // Find up-to-date general category from state
+      const currentGenCat = (menuDataWithGeneralCategories?.data || []).find(g => g.id === selectedGenCat?.id);
+      let items = currentGenCat?.categories || selectedGenCat?.categories || [];
       return applyOrder(items, categoryOrder);
     }
 
     if (menuViewMode === "PRODUCTS") {
-      let items = (selectedCat?.products || []).filter((item) => item && item.name);
+      // Find up-to-date category from state
+      const currentCat = (menuDataWithCategories?.data || []).find(c => c.id === selectedCat?.id);
+      let items = (currentCat?.products || selectedCat?.products || []).filter((item) => item && item.name);
       return applyOrder(items, categoryOrder);
     }
     return [];
@@ -303,7 +307,7 @@ const Menu = ({
                     </div>
                   )}
 
-                  {isEditMode && menuViewMode === 'PRODUCTS' && (
+                  {isEditMode && (menuViewMode === 'PRODUCTS' || searchText?.length > 0) && (
                     <>
                       <div className="product-edit-overlay">
                         <div className="edit-icon-circle">

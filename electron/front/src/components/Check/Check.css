@@ -1680,34 +1680,81 @@
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.product-edit-overlay {
+.product-edit-mode-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(5, 55, 150, 0.4);
+    background-color: rgba(5, 55, 150, 0.2);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10;
+    z-index: 100 !important;
     border-radius: 8px;
-    /* Match menu-card border-radius */
-    animation: fadeIn 0.2s ease-in-out;
+    animation: fadeIn 0.15s ease-out;
+    pointer-events: none;
+}
+
+.product-edit-overlay {
+    position: absolute !important;
+    top: -10px !important;
+    right: -10px !important;
+    left: auto !important;
+    bottom: auto !important;
+    z-index: 120 !important;
+    pointer-events: auto;
+    width: auto !important;
+    height: auto !important;
+    background: none !important;
+}
+
+.product-delete-overlay {
+    position: absolute !important;
+    top: -10px !important;
+    left: -10px !important;
+    right: auto !important;
+    bottom: auto !important;
+    z-index: 120 !important;
+    pointer-events: auto;
 }
 
 .edit-icon-circle {
-    width: 40px;
-    height: 40px;
-    background-color: #fff;
+    width: 30px;
+    height: 30px;
+    background-color: #053796 !important;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #053796;
-    font-size: 1.2rem;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: #fff !important;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.15s ease;
+}
+
+.delete-icon-circle {
+    width: 30px;
+    height: 30px;
+    background-color: #dc2626 !important;
+    /* Bright Red */
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff !important;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.15s ease;
+}
+
+.edit-icon-circle:hover,
+.delete-icon-circle:hover {
+    transform: scale(1.1);
 }
 
 @keyframes popIn {

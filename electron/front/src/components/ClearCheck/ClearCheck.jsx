@@ -30,27 +30,45 @@ const ClearCheck = ({ show, onClose, order }) => {
   };
 
   return (
-    <Modal show={show} onHide={onClose} size="md">
-      <Modal.Header closeButton style={{ backgroundColor: "#0062CC" }}>
-        <Modal.Title className="text-white">Xəbərdarlıq</Modal.Title>
-      </Modal.Header>
-      <Modal.Body className="text-center fw-bold">
-        Qəbzi təmizləmək istədiyinizə əminsiniz?
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="danger" onClick={onClose}>
-          Ləvğ et
-        </Button>
-        <Button
-          style={{ backgroundColor: "#0062CC" }}
-          onClick={() => {
-            handleClearCheck();
-            onClose(true);
-          }}
-        >
-          Təsdiqlə
-        </Button>
-      </Modal.Footer>
+    <Modal
+      show={show}
+      onHide={onClose}
+      centered
+      className="product-modal"
+    >
+      <div className="product-modal-header">
+        <div className="header-left">
+          <div className="header-icon-circle">
+            <i className="bi bi-exclamation-triangle"></i>
+          </div>
+          <h5 className="modal-title">Qəbzi Təmizləmək</h5>
+        </div>
+        <button className="close-btn" onClick={onClose}>
+          <i className="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div className="product-modal-body text-center py-4">
+        <p className="mb-0" style={{ fontSize: '14px', color: '#444' }}>
+          Qəbzi təmizləmək istədiyinizə əminsiniz?
+          <br />
+          <span className="text-muted" style={{ fontSize: '12px' }}>Bu əməliyyat bütün seçilmiş məhsulları siləcək.</span>
+        </p>
+
+        <div className="modal-footer-custom justify-content-center border-0 pb-0">
+          <button className="btn-cancel" onClick={onClose}>Ləvğ et</button>
+          <button
+            className="btn-save"
+            onClick={() => {
+              handleClearCheck();
+              onClose(true);
+            }}
+          >
+            <i className="bi bi-check-lg"></i>
+            Təsdiqlə
+          </button>
+        </div>
+      </div>
     </Modal>
   );
 };

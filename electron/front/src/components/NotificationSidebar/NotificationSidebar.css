@@ -76,6 +76,12 @@
     background: #eff6ff;
 }
 
+.notif-icon-item.active {
+    background-color: #053796;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(5, 55, 150, 0.3);
+}
+
 /* Main Panel */
 .notif-main-panel {
     flex: 1;

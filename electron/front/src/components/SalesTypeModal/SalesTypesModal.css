@@ -1,7 +1,7 @@
 /* Modal Customization */
 .sales-modal-header {
-  background-color: #5D99FF;
-  /* Light blue similar to image */
+  background-color: #053796;
+  /* Dark blue similar to other modals */
   color: white;
   border-bottom: none;
   border-top-left-radius: 8px;
@@ -29,12 +29,15 @@
 .sales-type-list-item {
   background: white;
   border: none;
-  padding: 20px;
-  font-size: 16px;
-  color: #333;
+  padding: 16px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #444;
   cursor: pointer;
-  transition: background-color 0.2s;
-  text-align: center;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
   border-bottom: 1px solid #f0f0f0;
 }

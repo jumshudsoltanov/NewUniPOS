@@ -1,9 +1,9 @@
 /* Edit Mode - Pencil Icon */
 .product-edit-overlay {
     position: absolute;
-    top: 5px;
-    right: 5px;
-    z-index: 10;
+    top: -10px;
+    right: -10px;
+    z-index: 100 !important;
 }
 
 .edit-icon-circle {
@@ -23,10 +23,9 @@
 /* Edit Mode - Delete (X) Icon */
 .product-delete-overlay {
     position: absolute;
-    top: 5px;
-    left: 5px;
-    left: 5px;
-    z-index: 100;
+    top: -10px;
+    left: -10px;
+    z-index: 100 !important;
     cursor: pointer;
 }
 

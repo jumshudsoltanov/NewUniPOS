@@ -30,7 +30,7 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
         }
         if (printers.length === 0) {
             console.warn(`No printer found for item: ${item.name}`);
-            addNotification("Printer Xətası", `${item.name} üçün printer təyin edilməyib`, orderData.orderId);
+            addNotification("Printer Xətası", `${item.name} üçün printer təyin edilməyib`, { orderId: orderData.orderId, category: "system", type: "error" });
             continue;
         }
         printers.forEach(p => {
@@ -99,13 +99,13 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
             if (!result || !result.success) {
                 const errMsg = result?.error || 'Bilinməyən xəta';
                 const displayId = orderData.checkData?.id || orderData.orderId;
-                addNotification("Çap Xətası", `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`, displayId, printerName);
+                addNotification("Çap Xətası", `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: displayId, printerName, category: "system", type: "error" });
                 await logError(errMsg);
             }
         } else {
             const errMsg = "Electron API tapılmadı";
             const displayId = orderData.checkData?.id || orderData.orderId;
-            addNotification("Sistem Xətası", errMsg, displayId, printerName);
+            addNotification("Sistem Xətası", errMsg, { orderId: displayId, printerName, category: "system", type: "error" });
             await logError(errMsg);
         }
     });
@@ -154,7 +154,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
     };
 
     if (!printerName) {
-        addNotification("Çap Xətası", "Kassa printeri təyin edilməyib", orderData?.checkData?.id || orderData?.orderId);
+        addNotification("Çap Xətası", "Kassa printeri təyin edilməyib", { orderId: orderData?.checkData?.id || orderData?.orderId, category: "system", type: "error" });
         await logError("Müştəri Çapı Xətası", "Kassa printeri təyin edilməyib");
         return { success: false, error: "Kassa printeri tapılmadı" };
     }
@@ -200,7 +200,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
 
             if (!result || !result.success) {
                 const errMsg = result?.error || 'Bilinməyən xəta';
-                addNotification("Çap Xətası", `kassa printerinə çap göndərilmədi. Xəta: ${errMsg}`, orderData.checkData?.id);
+                addNotification("Çap Xətası", `kassa printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: orderData.checkData?.id, category: "system", type: "error" });
                 // Log error
                 await logError("Müştəri Çapı Xətası", `Kassa çapı xətası: ${errMsg}`);
                 return { success: false, error: errMsg };
@@ -208,14 +208,14 @@ export const printCustomerReceipt = async (orderData, profileData) => {
             return { success: true };
         } else {
             const errMsg = "Electron API mövcud deyil";
-            addNotification("Sistem Xətası", errMsg, orderData.checkData?.id);
+            addNotification("Sistem Xətası", errMsg, { orderId: orderData.checkData?.id, category: "system", type: "error" });
             await logError("Sistem Xətası", errMsg);
             return { success: false, error: errMsg };
         }
 
     } catch (error) {
         console.error("Print generation error:", error);
-        addNotification("Çap Xətası", "Çek yaradılarkən xəta baş verdi", orderData.checkData?.id);
+        addNotification("Çap Xətası", "Çek yaradılarkən xəta baş verdi", { orderId: orderData.checkData?.id, category: "system", type: "error" });
         await logError("Müştəri Çapı Xətası", `Çek yaradılarkən xəta: ${error.message}`);
         return { success: false, error: error.message };
     } finally {

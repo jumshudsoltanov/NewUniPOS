@@ -4,6 +4,7 @@ import { getNotifications, markAllAsOld, clearNotifications } from "../../utils/
 
 const NotificationSidebarComponent = ({ show, onClose }) => {
     const [activeTab, setActiveTab] = useState("new"); // "new" or "old"
+    const [selectedCategory, setSelectedCategory] = useState("all");
     const [notifications, setNotifications] = useState([]);
 
     useEffect(() => {
@@ -15,11 +16,19 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
         return () => window.removeEventListener("newNotification", load);
     }, []);
 
-    const filteredNotifs = notifications.filter(n => n.status === activeTab);
+    // Filter by tab AND category
+    const filteredNotifs = notifications.filter(n => {
+        const matchesTab = n.status === activeTab;
+        const matchesCategory = selectedCategory === "all" || n.category === selectedCategory;
+        return matchesTab && matchesCategory;
+    });
 
     if (!show) return null;
 
     const handleClose = () => {
+        // Only mark notifications in CURRENT view as old if we want to be precise,
+        // but traditionally we mark all 'new' for that tab.
+        // We'll stick to the existing markAllAsOld logic for simplicity or refine it.
         if (activeTab === "new" && filteredNotifs.length > 0) {
             markAllAsOld();
         }
@@ -30,28 +39,39 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
         clearNotifications(activeTab);
     };
 
+    const categories = [
+        { id: "all", icon: "bi-house-door" },
+        { id: "qr", icon: "bi-qr-code-scan" },
+        { id: "telephone", icon: "bi-telephone" },
+        { id: "delivery", icon: "bi-bicycle" },
+        { id: "courier", icon: "bi-truck" },
+        { id: "system", icon: "bi-exclamation-triangle" },
+        { id: "clock", icon: "bi-clock" },
+        { id: "info", icon: "bi-info-circle" }
+    ];
+
     return (
         <div className="notification-overlay" onClick={handleClose}>
             <div className="notification-container" onClick={(e) => e.stopPropagation()}>
-                {/* Left thin sidebar icons - as requested to be restored */}
+                {/* Left thin sidebar icons */}
                 <div className="notif-left-bar">
-                    <div className="notif-icon-circle active">
-                        <i className="bi bi-house-door"></i>
-                    </div>
-                    <div className="notif-icon-item"><i className="bi bi-qr-code-scan"></i></div>
-                    <div className="notif-icon-item"><i className="bi bi-telephone"></i></div>
-                    <div className="notif-icon-item"><i className="bi bi-bicycle"></i></div>
-                    <div className="notif-icon-item"><i className="bi bi-truck"></i></div>
-                    <div className="notif-icon-item"><i className="bi bi-exclamation-triangle"></i></div>
-                    <div className="notif-icon-item"><i className="bi bi-clock"></i></div>
-                    <div className="notif-icon-item"><i className="bi bi-info-circle"></i></div>
+                    {categories.map(cat => (
+                        <div
+                            key={cat.id}
+                            className={`notif-icon-item ${selectedCategory === cat.id ? 'active' : ''}`}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            title={cat.id}
+                        >
+                            <i className={`bi ${cat.icon}`}></i>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Main Notification Panel */}
                 <div className="notif-main-panel">
                     <div className="notif-header">
                         <div className="notif-header-left">
-                            <span>Bildirişlər</span>
+                            <span>Bildirişlər {selectedCategory !== 'all' ? `(${selectedCategory})` : ''}</span>
                         </div>
                         <button className="notif-close-btn" onClick={handleClose}>
                             <i className="bi bi-x-lg"></i>
@@ -87,7 +107,7 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                         <div className="notif-list-container">
                             {filteredNotifs.length > 0 ? (
                                 filteredNotifs.map(n => {
-                                    const isError = n.title?.toLowerCase().includes("xəta");
+                                    const isError = n.type === 'error' || n.title?.toLowerCase().includes("xəta");
                                     return (
                                         <div key={n.id} className={`notif-item card-style ${isError ? 'notif-error' : ''}`}>
                                             <div className="notif-card-main">
@@ -129,7 +149,7 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                             ) : (
                                 <div className="notif-empty-state">
                                     <i className="bi bi-bell-slash notif-empty-state-large-icon"></i>
-                                    <p>Hələ ki, bildiriş yoxdur</p>
+                                    <p>{selectedCategory === 'all' ? 'Hələ ki, bildiriş yoxdur' : `Bu kateqoriyada bildiriş yoxdur`}</p>
                                 </div>
                             )}
                         </div>

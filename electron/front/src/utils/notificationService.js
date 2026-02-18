@@ -1,4 +1,5 @@
-export const addNotification = (title, message, orderId = null, printerName = null) => {
+export const addNotification = (title, message, options = {}) => {
+    const { orderId = null, printerName = null, category = "info", type = "info" } = options;
     const notifications = JSON.parse(localStorage.getItem("pos_notifications") || "[]");
     const newNotif = {
         id: Date.now(),
@@ -6,10 +7,11 @@ export const addNotification = (title, message, orderId = null, printerName = nu
         message,
         orderId,
         printerName,
+        category, // new field for filtering (e.g., 'product', 'system', 'order')
         time: new Date().toLocaleTimeString("az-AZ", { hour: "2-digit", minute: "2-digit" }),
         fullDate: new Date().toLocaleString("az-AZ"),
         status: "new", // new, old
-        type: "error"
+        type // error, info, success, warning
     };
     notifications.unshift(newNotif);
     localStorage.setItem("pos_notifications", JSON.stringify(notifications));

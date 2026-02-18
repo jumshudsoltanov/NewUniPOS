@@ -144,12 +144,22 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
     <Modal
       show={show}
       onHide={() => onClose()}
-      className="sales-type-modal"
+      className="sales-type-modal product-modal"
+      centered
     >
-      <Modal.Header closeButton className="sales-modal-header">
-        <Modal.Title className="sales-modal-title">Satış üsulu</Modal.Title>
-      </Modal.Header>
-      <Modal.Body className="p-0">
+      <div className="product-modal-header">
+        <div className="header-left">
+          <div className="header-icon-circle">
+            <i className="bi bi-cart3"></i>
+          </div>
+          <h5 className="modal-title">Satış üsulu</h5>
+        </div>
+        <button className="close-btn" onClick={() => onClose()}>
+          <i className="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div className="product-modal-body p-0">
         <div className="sales-type-list">
           {salesTypes.map((type) => (
             <button
@@ -158,10 +168,11 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
               onClick={() => handleSelect(type)}
             >
               <span className="sales-type-label">{type.label}</span>
+              <i className="bi bi-chevron-right text-muted" style={{ fontSize: '14px' }}></i>
             </button>
           ))}
         </div>
-      </Modal.Body>
+      </div>
     </Modal>
   );
 };

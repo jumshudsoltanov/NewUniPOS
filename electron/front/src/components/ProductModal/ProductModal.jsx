@@ -5,6 +5,8 @@ import { addProduct, updateProduct } from '../../redux/Slices/ProductSlice';
 import { toast } from 'sonner';
 import './ProductModal.css';
 
+import { addNotification } from '../../utils/notificationService';
+
 const ProductModal = ({ show, onHide, productToEdit = null }) => {
     const dispatch = useDispatch();
     const { menuDataWithCategories } = useSelector(state => state.MenuSlice);
@@ -95,9 +97,11 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
         try {
             if (productToEdit) {
                 await dispatch(updateProduct({ id: productToEdit.id, productData: payload })).unwrap();
+                addNotification("Məhsul Redaktə Edildi", `"${payload.name}" məhsulunun məlumatları yeniləndi.`, { category: "info" });
                 toast.success("Məhsul yeniləndi!");
             } else {
                 await dispatch(addProduct(payload)).unwrap();
+                addNotification("Yeni Məhsul", `"${payload.name}" adlı yeni məhsul menyuya əlavə edildi.`, { category: "info" });
                 toast.success("Yeni məhsul yaradıldı!");
             }
             onHide();
