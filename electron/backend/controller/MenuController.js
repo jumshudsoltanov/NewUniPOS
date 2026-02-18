@@ -12,7 +12,6 @@ const getMenuWithGeneralCategories = async (req, res) => {
       order: [
         ['ordering', 'ASC'],
         [{ model: CategoriesModel, as: 'categories' }, 'ordering', 'ASC'],
-        [{ model: CategoriesModel, as: 'categories' }, { model: ProductsModel, as: 'products' }, 'ordering', 'ASC']
       ],
       include: {
         model: CategoriesModel,

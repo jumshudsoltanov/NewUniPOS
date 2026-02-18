@@ -73,10 +73,8 @@ const TablesSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(getTableGroups.fulfilled, (state, action) => {
-      // Create a deep copy or new structure to avoid mutating read-only payload
       const payload = action.payload;
       if (payload?.data) {
-        // We can allow assignment to state proxy to handle immutability
         state.tableGroups = {
           ...payload,
           data: payload.data.map(hall => ({
@@ -97,25 +95,33 @@ const TablesSlice = createSlice({
       }
     });
 
-    // Handle deleteCheck fulfilled explicitly
-    builder.addCase("orders/deleteCheck/fulfilled", (state, action) => {
-      const orderId = action.meta.arg.orderId;
-      if (state.tableGroups?.data) {
-        state.tableGroups.data.forEach(hall => {
-          if (hall.tables) {
-            hall.tables.forEach(table => {
-              if (table.orders) {
-                const initialLength = table.orders.length;
-                table.orders = table.orders.filter(o => o.uuid !== orderId);
-              }
-            });
-          }
-        });
-      }
-    });
+    builder.addMatcher(
+      (action) =>
+        action.type === "orders/deleteCheck/fulfilled" ||
+        action.type === "orders/close/fulfilled",
+      (state, action) => {
+        const orderId = action.meta.arg?.orderId;
+        if (!orderId) return;
+
+        if (state.tableGroups?.data) {
+          state.tableGroups.data.forEach((hall) => {
+            if (hall.tables) {
+              hall.tables.forEach((table) => {
+                if (table.orders) {
+                  table.orders = table.orders.filter(
+                    (o) => o.uuid !== orderId && o.id !== orderId && String(o.uuid) !== String(orderId)
+                  );
+                }
+              });
+            }
+          });
+        }
+      },
+    );
 
     builder.addMatcher(
       (action) =>
+        action.type === "orders/lockCheck/fulfilled" ||
         action.type === "orders/lock-check/fulfilled" ||
         action.type === "orders/gift/fulfilled" ||
         action.type === "orders/itemDiscount/fulfilled" ||
@@ -123,23 +129,26 @@ const TablesSlice = createSlice({
         action.type === "orders/updateItemPrice/fulfilled",
       (state, action) => {
         const updatedOrder = action.payload?.data || action.payload;
-        if (!updatedOrder || !updatedOrder.uuid) return;
+        if (!updatedOrder || (!updatedOrder.uuid && !updatedOrder.id)) return;
 
         if (state.tableGroups?.data) {
           state.tableGroups.data.forEach((hall) => {
-            hall.tables.forEach((table) => {
-              if (table.orders) {
-                const index = table.orders.findIndex(
-                  (o) => o.uuid === updatedOrder.uuid,
-                );
-                if (index !== -1) {
-                  table.orders[index] = {
-                    ...table.orders[index],
-                    ...updatedOrder,
-                  };
+            if (hall.tables) {
+              hall.tables.forEach((table) => {
+                if (table.orders) {
+                  const targetId = updatedOrder.uuid || updatedOrder.id;
+                  const index = table.orders.findIndex(
+                    (o) => o.uuid === targetId || o.id === targetId || String(o.uuid) === String(targetId)
+                  );
+                  if (index !== -1) {
+                    table.orders[index] = {
+                      ...table.orders[index],
+                      ...updatedOrder,
+                    };
+                  }
                 }
-              }
-            });
+              });
+            }
           });
         }
       },

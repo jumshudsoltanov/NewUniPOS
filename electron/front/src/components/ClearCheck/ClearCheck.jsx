@@ -9,17 +9,24 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 const ClearCheck = ({ show, onClose, order }) => {
   const dispatch = useDispatch();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
   const handleClearCheck = async () => {
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-    const result = await dispatch(
-      deleteOrderItems({ orderId: order.uuid, waiterName }),
-    ).unwrap();
-    await dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap()
-    await dispatch(
-      getActiveOrders({ profileId: loginedProfileData.data.profile.id }),
-    ).unwrap;
+    try {
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const profileId = loginedProfileData?.data?.profile?.id;
 
+      await dispatch(
+        deleteOrderItems({ orderId: order.uuid, waiterName }),
+      ).unwrap();
+
+      if (profileId) {
+        await dispatch(getTableGroups(profileId));
+        await dispatch(getActiveOrders({ profileId }));
+      }
+    } catch (error) {
+      console.error("Clear Check Error:", error);
+    }
   };
 
   return (

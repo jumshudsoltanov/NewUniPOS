@@ -85,17 +85,36 @@ const BooksSlice = createSlice({
       const reopenedOrderId = action.meta.arg.orderId;
       state.archivedBooks = state.archivedBooks.filter(o => o.uuid !== reopenedOrderId);
     });
+
+    // Handle deleteCheck OR closeOrder fulfilled to remove from books
+    builder.addMatcher(
+      (action) =>
+        action.type === "orders/deleteCheck/fulfilled" ||
+        action.type === "orders/close/fulfilled",
+      (state, action) => {
+        const orderId = action.meta.arg?.orderId;
+        if (!orderId) return;
+
+        let ordersList = null;
+        if (Array.isArray(state.books)) {
+          state.books = state.books.filter(o => o.uuid !== orderId && o.id !== orderId && String(o.uuid) !== String(orderId));
+        } else if (state.books && Array.isArray(state.books.data)) {
+          state.books.data = state.books.data.filter(o => o.uuid !== orderId && o.id !== orderId && String(o.uuid) !== String(orderId));
+        }
+      }
+    );
     // Listen for giftItem and discount (and sendOrdersItems if applicable)
     builder.addMatcher(
       (action) =>
         action.type === "orders/gift/fulfilled" ||
         action.type === "orders/itemDiscount/fulfilled" ||
         action.type === "pos/orders/fulfilled" ||
+        action.type === "orders/lockCheck/fulfilled" ||
         action.type === "orders/lock-check/fulfilled" ||
         action.type === "orders/delete-item/fulfilled",
       (state, action) => {
-        const updatedOrder = action.payload; // Payload is the full Order object
-        if (!updatedOrder || !updatedOrder.uuid) return;
+        const updatedOrder = action.payload?.data || action.payload; // Payload is the full Order object
+        if (!updatedOrder || (!updatedOrder.uuid && !updatedOrder.id)) return;
 
         // Determine where the list is
         let ordersList = null;
@@ -106,16 +125,12 @@ const BooksSlice = createSlice({
         }
 
         if (ordersList) {
+          const targetId = updatedOrder.uuid || updatedOrder.id;
           const index = ordersList.findIndex(
-            (o) => o.uuid === updatedOrder.uuid,
+            (o) => o.uuid === targetId || o.id === targetId || String(o.uuid) === String(targetId)
           );
           if (index !== -1) {
-            ordersList[index] = updatedOrder;
-          } else {
-            // If it's a new order not in list (rare for 'update'), push it?
-            // Usually we only update existing.
-            // But for 'sendOrdersItems', maybe it's just created?
-            ordersList.push(updatedOrder);
+            ordersList[index] = { ...ordersList[index], ...updatedOrder };
           }
         }
       },

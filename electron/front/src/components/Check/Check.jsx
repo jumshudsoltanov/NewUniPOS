@@ -421,15 +421,27 @@ const Check = () => {
   }
 
 
-  const handleDeleteCheckFunction = async ({ reason, reasonName, orderId }) => {
+  const handleDeleteCheckFunction = ({ reason, reasonName, orderId }) => {
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-    const res = await dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName })).unwrap()
-    if (res.message == "success") {
-      await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id))
-      await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }))
+    const profileId = loginedProfileData?.data?.profile?.id;
 
-      navigate("/tables")
-    }
+    // 1. Instant Redirection
+    navigate("/tables", { replace: true });
+
+    // 2. background execution
+    dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName }))
+      .unwrap()
+      .then(() => {
+        if (profileId) {
+          dispatch(getTableGroups(profileId));
+          dispatch(getActiveOrders({ profileId }));
+        }
+        toast.success("Çek uğurla silindi");
+      })
+      .catch((error) => {
+        console.error("Delayed Delete Error:", error);
+        toast.error("Silinmə zamanı xəta baş verdi");
+      });
   }
 
   const handleDeleteProduct = async () => {
@@ -1527,7 +1539,7 @@ const Check = () => {
       <SplitOrderModal show={openSplitModal} onClose={() => setOpenSplitModal(false)} order={currentOrder} onSplit={handleSplitOrder} />
       <CheckDeleteModal
         show={openDeleCheckModal}
-        onConfirm={(data) => handleDeleteCheckFunction(data.reason, data.orderId)}
+        onConfirm={(data) => handleDeleteCheckFunction(data)}
         onClose={() => setOpenDeleteCheckModal(false)}
         order={currentOrder}
         type={"checks"}
