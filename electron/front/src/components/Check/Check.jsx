@@ -1437,6 +1437,7 @@ const Check = () => {
           setShowHistoryModal(true);
           setShowOperationsModal(false);
         }}
+        loginedWaiter={loginedWaiter}
       />
 
       <CheckLockModal

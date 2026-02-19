@@ -200,6 +200,21 @@ const WaitersModel = db.sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
+    can_view_logs: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    can_view_customers: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    can_clear_check: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "waiters",

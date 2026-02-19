@@ -17,38 +17,44 @@ export const OperationsModal = ({
   handleOpenSplitModel,
   handleDeleteCheckModal,
   openDepositModal,
-  openHistory
+  openHistory,
+  loginedWaiter
 }) => {
+
+
   const operations = [
-    { icon: "bi-arrows-angle-expand", text: "Çeki böl", functions: handleOpenSplitModel },
-    { icon: "bi-clock-history", text: "Əməliyyat Tarixçəsi", functions: openHistory },
+    { icon: "bi-arrows-angle-expand", text: "Çeki böl", functions: handleOpenSplitModel, permissions: loginedWaiter?.data?.can_split_receipt },
+    { icon: "bi-clock-history", text: "Əməliyyat Tarixçəsi", functions: openHistory, permissions: loginedWaiter?.data?.can_view_logs },
     {
       icon: "bi-chat-left-text",
       text: "Çekə şərh yaz",
       functions: openCommentModal,
     },
-    { icon: "bi-person-plus", text: "Müştəri əlavə et" },
-    { icon: "bi-journal-x", text: "Çeki təmizləmə", functions: clearCheck },
-    { icon: "bi-percent", text: "Endirim", functions: openDiscountModal },
+    { icon: "bi-person-plus", text: "Müştəri bazası", permissions: loginedWaiter?.data?.can_view_customers },
+    { icon: "bi-journal-x", text: "Çeki təmizləmə", functions: clearCheck, permissions: loginedWaiter?.data?.can_clear_check },
+    { icon: "bi-percent", text: "Endirim", functions: openDiscountModal, permissions: loginedWaiter?.data?.can_add_discount },
     {
       icon: "bi-collection",
       text: "Çeki birləşdir",
       functions: openACtiveCheck,
+      permissions: loginedWaiter?.data?.can_merge_checks
     },
     {
       icon: "bi-arrow-left-right",
       text: "Satış üsulunu dəyiş",
       functions: handleOpenChangeSaleType,
+      permissions: loginedWaiter?.data?.can_change_sale_type
     },
     {
       icon: "bi-bell",
       text: "Xidmət haqqı əlavə et",
       functions: openServiceFee,
+      permissions: loginedWaiter?.data?.can_edit_service_fee
     },
-    { icon: "bi-people", text: "Əməkdaş dəyiş", functions: openWaitersModal },
-    { icon: "bi-table", text: "Masanı dəyiş", functions: handleChangeTable },
-    { icon: "bi-trash", text: "Çeki sil", functions: handleDeleteCheckModal },
-    { icon: "bi-cash-coin", text: "Depozit", functions: openDepositModal },
+    { icon: "bi-people", text: "Əməkdaş dəyiş", functions: openWaitersModal, permissions: loginedWaiter?.data?.can_change_waiter },
+    { icon: "bi-table", text: "Masanı dəyiş", functions: handleChangeTable, permissions: loginedWaiter?.data?.can_change_table },
+    { icon: "bi-trash", text: "Çeki sil", functions: handleDeleteCheckModal, permissions: loginedWaiter?.data?.can_delete_check },
+    { icon: "bi-cash-coin", text: "Depozit", functions: openDepositModal, permissions: loginedWaiter?.data?.can_give_deposit },
   ];
 
   return (
@@ -61,7 +67,7 @@ export const OperationsModal = ({
         className="operations-modal"
       >
         {false && (
-          <Modal.Header  className="bg-primary text-white border-0 py-3 px-4 d-flex align-items-center justify-content-between">
+          <Modal.Header className="bg-primary text-white border-0 py-3 px-4 d-flex align-items-center justify-content-between">
             <h5 className="m-0"></h5>
             {/* Close X Button for Desktop */}
             <div
@@ -86,7 +92,7 @@ export const OperationsModal = ({
               <Col xs={12} md={6} key={index}>
                 <div
                   className="operation-item d-flex align-items-center gap-2 py-2 px-2 rounded cursor-pointer"
-                  onClick={op.functions}
+                  onClick={op.permissions ? op.functions : undefined}
                 >
                   <i className={`bi ${op.icon} fs-5 operation-icon`}></i>
                   <span className="text-dark fw-medium fs-6">{op.text}</span>

@@ -194,6 +194,12 @@ const Menu = ({
       // Find up-to-date category from state
       const currentCat = (menuDataWithCategories?.data || []).find(c => c.id === selectedCat?.id);
       let items = (currentCat?.products || selectedCat?.products || []).filter((item) => item && item.name);
+
+      // Inject category discount
+      if (currentCat && currentCat.discount && Number(currentCat.discount) > 0) {
+        items = items.map(item => ({ ...item, categoryDiscount: Number(currentCat.discount) }));
+      }
+
       return applyOrder(items, categoryOrder);
     }
     return [];
@@ -269,6 +275,16 @@ const Menu = ({
               }
             }
 
+            // Calculate effective price
+            let effectivePrice = Number(item.price);
+            if (item.discount && Number(item.discount) > 0) {
+              effectivePrice = Number(item.discount);
+            } else if (item.categoryDiscount && Number(item.categoryDiscount) > 0) {
+              const discountValue = (Number(item.price) * Number(item.categoryDiscount)) / 100;
+              effectivePrice = Number(item.price) - discountValue;
+              effectivePrice = Math.round(effectivePrice * 100) / 100; // Round to 2 decimal places
+            }
+
             const isDragging = isDragMode && draggedIndex === index;
             const isDragOver = isDragMode && dragOverIndex === index && draggedIndex !== index;
 
@@ -294,11 +310,14 @@ const Menu = ({
                   onDragEnd={isDragMode ? handleDragEnd : undefined}
                   onClick={() => {
                     if (isDragMode) return;
+
+                    const itemWithEffectivePrice = { ...item, price: effectivePrice };
+
                     if (searchText?.length > 0) {
-                      handleProductClick(item);
+                      handleProductClick(itemWithEffectivePrice);
                     } else {
                       if (menuViewMode === "PRODUCTS") {
-                        handleProductClick(item);
+                        handleProductClick(itemWithEffectivePrice);
                       } else {
                         handleItemClick(item);
                       }
@@ -317,7 +336,9 @@ const Menu = ({
 
                   {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
                     <div className="menu-card-price">
-                      <div>{item.price} ₼</div>
+                      <div>
+                        {effectivePrice} ₼
+                      </div>
                       {item.printer_details && item.printer_details.length > 0 && (
                         <div style={{ fontSize: "0.6rem", opacity: 0.8, marginTop: "2px" }}>
                           <i className="bi bi-printer me-1"></i>
