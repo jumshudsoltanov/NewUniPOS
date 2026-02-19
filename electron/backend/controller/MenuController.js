@@ -2,6 +2,7 @@ const GeneralCategoriesModel = require("../model/GeneralCategoriesModel");
 const CategoriesModel = require("../model/CategoriesModel");
 const ProductsModel = require("../model/ProductsModel");
 const PrintersModel = require("../model/PrintersModel");
+const { Op } = require("sequelize");
 
 const getMenuWithGeneralCategories = async (req, res) => {
   const { profileId } = req.params;
@@ -19,6 +20,8 @@ const getMenuWithGeneralCategories = async (req, res) => {
         include: {
           model: ProductsModel,
           as: "products",
+          where: { is_hidden_pos: { [Op.or]: [0, null] } },
+          required: false,
         },
       },
     });
@@ -83,6 +86,8 @@ const getMenuWithCategories = async (req, res) => {
       include: {
         model: ProductsModel,
         as: "products",
+        where: { is_hidden_pos: { [Op.or]: [0, null] } },
+        required: false,
       },
     });
 

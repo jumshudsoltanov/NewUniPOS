@@ -22,6 +22,7 @@ const Menu = ({
   categoryOrder = null,
   onCategoryOrderChange = () => { },
   isEditMode = false,
+  isDeleteMode = false,
   onEditProduct = () => { },
   onDeleteItem = () => { },
 }) => {
@@ -118,6 +119,11 @@ const Menu = ({
 
     if (isEditMode) {
       if (onEditProduct) onEditProduct(product);
+      return;
+    }
+
+    if (isDeleteMode) {
+      if (onDeleteItem) onDeleteItem(product);
       return;
     }
 
@@ -307,26 +313,7 @@ const Menu = ({
                     </div>
                   )}
 
-                  {isEditMode && (menuViewMode === 'PRODUCTS' || searchText?.length > 0) && (
-                    <>
-                      <div className="product-edit-overlay">
-                        <div className="edit-icon-circle">
-                          <i className="bi bi-pencil-fill"></i>
-                        </div>
-                      </div>
-                      <div
-                        className="product-delete-overlay"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onDeleteItem) onDeleteItem(item);
-                        }}
-                      >
-                        <div className="delete-icon-circle">
-                          <i className="bi bi-x-lg"></i>
-                        </div>
-                      </div>
-                    </>
-                  )}
+
 
                   {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
                     <div className="menu-card-price">

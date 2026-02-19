@@ -1,49 +1,158 @@
-/* Edit Mode - Pencil Icon */
-.product-edit-overlay {
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    z-index: 100 !important;
+/* Edit Mode - Full Card Overlay */
+.menu-card .product-edit-overlay {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    transform: none !important;
+    background: linear-gradient(135deg, rgba(3, 32, 89, 0.55) 0%, rgba(0, 0, 0, 0.45) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 90 !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    animation: fadeInOverlay 0.25s ease-out;
 }
 
+@keyframes fadeInOverlay {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+
+    to {
+        opacity: 1;
+        backdrop-filter: blur(6px);
+    }
+}
+
+/* Edit Pencil Button - Premium Glassmorphic Style */
 .edit-icon-circle {
-    width: 28px;
-    /* Slightly larger for easier click */
-    height: 28px;
-    background-color: #053796;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, rgba(5, 55, 150, 0.9) 0%, rgba(6, 64, 173, 0.85) 100%);
     color: white;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 0.9rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    font-size: 1.1rem;
+    box-shadow:
+        0 4px 15px rgba(5, 55, 150, 0.5),
+        0 0 0 3px rgba(255, 255, 255, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: pointer;
+    position: relative;
 }
 
-/* Edit Mode - Delete (X) Icon */
-.product-delete-overlay {
+.edit-icon-circle::after {
+    content: '';
     position: absolute;
-    top: -10px;
-    left: -10px;
+    inset: -5px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    animation: editPulseRing 2s ease-out infinite;
+    pointer-events: none;
+}
+
+@keyframes editPulseRing {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    70% {
+        transform: scale(1.25);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1.25);
+        opacity: 0;
+    }
+}
+
+.menu-card .product-edit-overlay:hover .edit-icon-circle {
+    transform: scale(1.12);
+    background: linear-gradient(135deg, rgba(6, 64, 173, 1) 0%, rgba(5, 55, 150, 1) 100%);
+    box-shadow:
+        0 8px 25px rgba(5, 55, 150, 0.65),
+        0 0 0 4px rgba(255, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.menu-card .product-edit-overlay:hover .edit-icon-circle::after {
+    animation: none;
+    opacity: 0;
+}
+
+/* Edit Mode - Delete (X) Icon - Modern Pill Style */
+.menu-card .product-delete-overlay {
+    position: absolute;
+    top: -6px !important;
+    left: -6px !important;
     z-index: 100 !important;
     cursor: pointer;
+    right: auto !important;
+    bottom: auto !important;
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: deleteSlideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes deleteSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.5) translate(-4px, -4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translate(0, 0);
+    }
+}
+
+.menu-card .product-delete-overlay:hover {
+    transform: scale(1.1);
+}
+
+.menu-card .product-delete-overlay:active {
+    transform: scale(0.95);
 }
 
 .delete-icon-circle {
-    width: 28px;
-    height: 28px;
-    background-color: #ef4444;
-    /* Red color */
+    width: 26px;
+    height: 26px;
+    background: linear-gradient(135deg, #ff4757 0%, #c0392b 100%);
     color: white;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 0.9rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    font-size: 0.7rem;
+    font-weight: 700;
+    box-shadow:
+        0 3px 10px rgba(239, 68, 68, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    border: 1.5px solid rgba(255, 255, 255, 0.6);
+    transition: all 0.25s ease;
+}
+
+.menu-card .product-delete-overlay:hover .delete-icon-circle {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    box-shadow:
+        0 4px 14px rgba(239, 68, 68, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.8);
 }
 
 .drag-handle-overlay {
+    /* ... existing styles ... */
     position: absolute;
     top: 0;
     left: 0;
@@ -58,6 +167,7 @@
 }
 
 .drag-handle-icon {
+    /* ... existing styles ... */
     background-color: rgba(0, 0, 0, 0.6);
     color: white;
     border-radius: 50%;
@@ -70,11 +180,10 @@
 }
 
 /* Only during drag/edit mode, move label to bottom so it doesn't overlap with icons */
-.menu-card.drag-mode .menu-card-content,
-.menu-card .product-edit-overlay~.menu-card-content {
+.menu-card.drag-mode .menu-card-content {
     align-items: flex-end !important;
-    padding-bottom: 5px !important;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%) !important;
+    padding-bottom: 8px !important;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%) !important;
 }
 
 .menu-card-content span {

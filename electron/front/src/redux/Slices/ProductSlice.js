@@ -2,23 +2,19 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { menuWithCategories, menuWithGeneralCategories } from "./MenuSlice";
 
-const API_URL = "https://api.unipos.tech/api/products";
+const API_URL = "http://localhost:55667/api/products";
 const LOCAL_SYNC_URL = "http://localhost:55667/api/sync";
 
 export const addProduct = createAsyncThunk(
     "products/add",
     async (productData, { dispatch, rejectWithValue }) => {
         try {
-            // 1. Create on Cloud (Fastest possible wait)
             const response = await axios.post(API_URL, productData);
 
-            // 2. Sync and Refresh in Background (Non-blocking)
-            axios.post(LOCAL_SYNC_URL).then(() => {
-                if (productData.profile_id) {
-                    dispatch(menuWithCategories(productData.profile_id));
-                    dispatch(menuWithGeneralCategories(productData.profile_id));
-                }
-            }).catch(err => console.error("Background sync error:", err));
+            if (productData.profile_id) {
+                dispatch(menuWithCategories(productData.profile_id));
+                dispatch(menuWithGeneralCategories(productData.profile_id));
+            }
 
             return response.data;
         } catch (error) {
@@ -31,16 +27,12 @@ export const updateProduct = createAsyncThunk(
     "products/update",
     async ({ id, productData }, { dispatch, rejectWithValue }) => {
         try {
-            // 1. Update on Cloud
             const response = await axios.put(`${API_URL}/${id}`, productData);
 
-            // 2. Sync and Refresh in Background
-            axios.post(LOCAL_SYNC_URL).then(() => {
-                if (productData.profile_id) {
-                    dispatch(menuWithCategories(productData.profile_id));
-                    dispatch(menuWithGeneralCategories(productData.profile_id));
-                }
-            }).catch(err => console.error("Background sync error:", err));
+            if (productData.profile_id) {
+                dispatch(menuWithCategories(productData.profile_id));
+                dispatch(menuWithGeneralCategories(productData.profile_id));
+            }
 
             return response.data;
         } catch (error) {
@@ -53,16 +45,14 @@ export const deleteProduct = createAsyncThunk(
     "products/delete",
     async ({ id, profile_id }, { dispatch, rejectWithValue }) => {
         try {
-            // 1. Delete on Cloud
-            await axios.delete(`${API_URL}/${id}`);
+            await axios.delete(`${API_URL}/${id}`, {
+                data: { profile_id }
+            });
 
-            // 2. Sync and Refresh in Background
-            axios.post(LOCAL_SYNC_URL).then(() => {
-                if (profile_id) {
-                    dispatch(menuWithCategories(profile_id));
-                    dispatch(menuWithGeneralCategories(profile_id));
-                }
-            }).catch(err => console.error("Background sync error:", err));
+            if (profile_id) {
+                dispatch(menuWithCategories(profile_id));
+                dispatch(menuWithGeneralCategories(profile_id));
+            }
 
             return id;
         } catch (error) {

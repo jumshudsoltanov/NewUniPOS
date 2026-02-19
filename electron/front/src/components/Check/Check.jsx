@@ -101,6 +101,7 @@ const Check = () => {
   const [notifCount, setNotifCount] = useState(0);
   const [showProductModal, setShowProductModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -451,20 +452,11 @@ const Check = () => {
     const toastId = toast.loading("Məhsul silinir...");
     try {
       const profileId = loginedProfileData?.data?.profile?.id;
-      // Pass object as expected by the thunk
       await dispatch(deleteProduct({ id: productToDelete.id, profile_id: profileId })).unwrap();
-
-      // Force refresh manually to be safe
-      if (profileId) {
-        dispatch(menuWithCategories(profileId));
-        dispatch(menuWithGeneralCategories(profileId));
-      }
 
       toast.dismiss(toastId);
       addNotification("Məhsul Silindi", `"${productToDelete.name}" məhsulu menyudan silindi.`, { category: "info" });
       toast.success("Məhsul silindi!");
-
-      // Refresh logic is already in slice, but we can optimistically close everything
       setShowDeleteConfirm(false);
       setProductToDelete(null);
     } catch (error) {
@@ -1224,8 +1216,10 @@ const Check = () => {
                           title="Redaktə et"
                           onClick={() => {
                             if (isDragMode) return;
-                            setIsEditMode(!isEditMode);
-                            if (!isEditMode) {
+                            const newEditMode = !isEditMode;
+                            setIsEditMode(newEditMode);
+                            if (newEditMode) {
+                              setIsDeleteMode(false);
                               toast.info("Redaktə rejimi aktivdir. Məhsulun üzərinə vurun.");
                             } else {
                               toast.info("Redaktə rejimi deaktiv edildi.");
@@ -1233,6 +1227,23 @@ const Check = () => {
                           }}
                         >
                           <i className="bi bi-pencil-fill"></i>
+                        </div>
+                        <div
+                          className={`settings-action-btn ${isDeleteMode ? 'active-mode delete-mode' : ''}`}
+                          title="Sil"
+                          onClick={() => {
+                            if (isDragMode) return;
+                            const newDeleteMode = !isDeleteMode;
+                            setIsDeleteMode(newDeleteMode);
+                            if (newDeleteMode) {
+                              setIsEditMode(false);
+                              toast.info("Silmə rejimi aktivdir. Məhsulun üzərinə vurun.");
+                            } else {
+                              toast.info("Silmə rejimi deaktiv edildi.");
+                            }
+                          }}
+                        >
+                          <i className="bi bi-trash3-fill"></i>
                         </div>
                       </div>
                     )}
@@ -1356,6 +1367,7 @@ const Check = () => {
                   }
                 }}
                 isEditMode={isEditMode}
+                isDeleteMode={isDeleteMode}
                 onEditProduct={(product) => {
                   setProductToEdit(product);
                   setShowProductModal(true);

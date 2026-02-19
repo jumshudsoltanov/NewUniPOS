@@ -62,17 +62,24 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
+        const { profile_id } = req.body; // Expect profile_id in body if needed, or fetch it
 
-        // 1. Send to Remote Admin API
-        await axios.delete(`${API_URL}/${id}`);
+        // 1. Send to Remote Admin API (Soft Delete via Update)
+        await axios.put(`${API_URL}/${id}`, {
+            is_hidden_pos: 1,
+            is_hidden_qr: 1,
+            profile_id
+        });
 
-        // 2. Delete from Local DB
-        // Soft delete if paranoid is true (it is in ProductsModel)
-        await ProductsModel.destroy({
+        // 2. Update Local DB (Soft Delete)
+        await ProductsModel.update({
+            is_hidden_pos: 1,
+            is_hidden_qr: 1
+        }, {
             where: { id: id }
         });
 
-        res.status(200).json({ message: "Product deleted successfully" });
+        res.status(200).json({ message: "Product deleted (hidden) successfully" });
     } catch (error) {
         console.error("Delete Product Error:", error.message);
         res.status(500).json({ message: "Failed to delete product", error: error.message });

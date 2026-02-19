@@ -78,13 +78,51 @@ const MenuSlice = createSlice({
             state.menuDataWithCategories.data = state.menuDataWithCategories.data.map(cat => {
               if (cat.id === newProduct.category_id) {
                 const products = cat.products ? [...cat.products] : [];
-                // Add if not exists
                 if (!products.find(p => p.id === newProduct.id)) {
                   products.push(newProduct);
                 }
                 return { ...cat, products };
               }
               return cat;
+            });
+          }
+        }
+      )
+      .addMatcher(
+        (action) => action.type === 'products/delete/fulfilled',
+        (state, action) => {
+          const deletedId = action.payload;
+          if (!deletedId) return;
+
+          if (state.menuDataWithCategories?.data && Array.isArray(state.menuDataWithCategories.data)) {
+            state.menuDataWithCategories.data = state.menuDataWithCategories.data.map(cat => {
+              if (cat.products && Array.isArray(cat.products)) {
+                return {
+                  ...cat,
+                  products: cat.products.filter(p => p.id !== deletedId)
+                };
+              }
+              return cat;
+            });
+          }
+
+          if (state.menuDataWithGeneralCategories?.data && Array.isArray(state.menuDataWithGeneralCategories.data)) {
+            state.menuDataWithGeneralCategories.data = state.menuDataWithGeneralCategories.data.map(genCat => {
+              if (genCat.categories && Array.isArray(genCat.categories)) {
+                return {
+                  ...genCat,
+                  categories: genCat.categories.map(cat => {
+                    if (cat.products && Array.isArray(cat.products)) {
+                      return {
+                        ...cat,
+                        products: cat.products.filter(p => p.id !== deletedId)
+                      };
+                    }
+                    return cat;
+                  })
+                };
+              }
+              return genCat;
             });
           }
         }
