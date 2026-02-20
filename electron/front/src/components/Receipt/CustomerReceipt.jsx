@@ -16,11 +16,18 @@ const CustomerReceipt = ({
         "RESTORAN";
 
     // Logo priority: Terminal Logo -> Profile Logo -> Profile Img
-    const logoSrc = terminalInfo?.logoPrint && terminalInfo?.logoPrint !== "data:directory;base64,"
-        ? (terminalInfo.logoPrint.startsWith("http") || terminalInfo.logoPrint.startsWith("data:") ? terminalInfo.logoPrint : `https://unipos.tech/${terminalInfo.logoPrint}`)
-        : (profileData?.data?.profile?.logo
-            ? (profileData.data.profile.logo.startsWith("http") || profileData.data.profile.logo.startsWith("data:") ? profileData.data.profile.logo : `https://unipos.tech/${profileData.data.profile.logo}`)
-            : null);
+    const validLogo = (logo) => logo && logo !== "null" && logo !== "undefined" && logo !== "data:directory;base64,";
+
+    let logoSrc = null;
+    if (validLogo(terminalInfo?.logoPrint)) {
+        logoSrc = terminalInfo.logoPrint.startsWith("http") || terminalInfo.logoPrint.startsWith("data:")
+            ? terminalInfo.logoPrint
+            : `http://46.224.8.157:35627/${terminalInfo.logoPrint}`;
+    } else if (validLogo(profileData?.data?.profile?.logo)) {
+        logoSrc = profileData.data.profile.logo.startsWith("http") || profileData.data.profile.logo.startsWith("data:")
+            ? profileData.data.profile.logo
+            : `http://46.224.8.157:35627/${profileData.data.profile.logo}`;
+    }
 
     const qrCodeValue =
         `https://menu.unipos.tech/?r=${terminalInfo?.username}` ||
@@ -167,18 +174,20 @@ const CustomerReceipt = ({
             textAlign: "center",
             marginTop: "3mm",
             marginBottom: "3mm",
-            border: "3px solid #000",
-            padding: "2mm 4mm",
-            borderRadius: "6px",
-            width: "fit-content",
-            margin: "4mm auto",
-            transform: "rotate(-5deg)"
+            borderTop: "1px dashed #000",
+            borderBottom: "1px dashed #000",
+            padding: "2mm 0",
+            width: "100%",
+            display: "block",
+            boxSizing: "border-box"
         },
         statusText: {
-            fontSize: fs(14),
+            fontSize: fs(12),
             fontWeight: "900",
             textTransform: "uppercase",
-            letterSpacing: "2px"
+            letterSpacing: "2px",
+            display: "block",
+            textAlign: "center"
         }
     };
 
@@ -189,6 +198,16 @@ const CustomerReceipt = ({
 
     // Use payments if available, otherwise empty
     const payments = checkData?.payments || [];
+
+    // Map Sale Types
+    const getSaleTypeName = (type, typeName) => {
+        if (typeName) return typeName;
+        if (type == 1 || type === "takeaway") return "Al-götür";
+        if (type == 2 || type === "delivery") return "Çatdırılma";
+        return "Restoranda";
+    };
+
+    const displaySaleType = getSaleTypeName(checkData?.sale_type, checkData?.sale_type_name);
 
     const itemsToRender = (orderedItems && orderedItems.length > 0) ? orderedItems : (checkData?.orders_items || []);
 
@@ -279,10 +298,10 @@ const CustomerReceipt = ({
                 </div>
 
                 {/* ✅ SATIŞ TİPİ */}
-                {checkData?.sale_type !== 0 && (
+                {displaySaleType !== "Restoranda" && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Satış tipi</span>
-                        <span style={styles.value}>{checkData?.sale_type_name || ""}</span>
+                        <span style={styles.value}>{displaySaleType}</span>
                     </div>
                 )}
             </div>
