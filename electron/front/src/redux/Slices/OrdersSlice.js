@@ -740,15 +740,24 @@ export const OrderSlice = createSlice({
     },
 
     updateCount: (state, action) => {
-      const { productId, count, price, name, orderItemId } = action.payload;
-      const existingProduct = state.products.find(
-        (product) => product.id === productId
+      const { productId, count, price, name } = action.payload;
+      const existingProductIndex = state.products.findIndex(
+        (product) => {
+          const p1 = Number(product.price || 0).toFixed(2);
+          const p2 = Number(price || 0).toFixed(2);
+          return product.id === productId && (!price || p1 === p2);
+        }
       );
-      if (existingProduct) {
-        existingProduct.quantity = count;
-        existingProduct.newOrder = count;
-        if (price !== undefined) {
-          existingProduct.price = parseFloat(price);
+
+      if (existingProductIndex !== -1) {
+        if (count <= 0) {
+          state.products.splice(existingProductIndex, 1);
+        } else {
+          state.products[existingProductIndex].quantity = count;
+          state.products[existingProductIndex].newOrder = count;
+          if (price !== undefined) {
+            state.products[existingProductIndex].price = parseFloat(price);
+          }
         }
       } else if (count > 0) {
         // Product doesn't exist in local products yet (saved item getting extra qty)

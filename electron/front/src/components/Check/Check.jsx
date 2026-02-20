@@ -931,7 +931,17 @@ const Check = () => {
               </button>
 
               {/* Checks */}
-              <Link to="/checks" className="header-action-item small-item">
+              <div
+                className="header-action-item small-item"
+                style={{ cursor: "pointer" }}
+                onClick={() => {
+                  if (Number(loginedWaiter?.data?.can_view_archived_checks) === 1) {
+                    navigate("/checks");
+                  } else {
+                    // Optional: toast.error("İcazəniz yoxdur");
+                  }
+                }}
+              >
                 <span className="d-none d-xl-inline">Çeklər</span>
                 <svg
                   className="d-xl-none"
@@ -945,7 +955,7 @@ const Check = () => {
                   <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" />
                 </svg>
                 <span className="count-badge text-white" style={{ background: "#A5B4FC" }}>{books?.data?.length || 0}</span>
-              </Link>
+              </div>
 
               <div className="tools-divider"></div>
 
@@ -1012,7 +1022,10 @@ const Check = () => {
               {/* Notification Bell */}
               <button
                 className="header-icon-btn small-icon-btn position-relative"
-                onClick={() => setShowNotifications(true)}
+                onClick={() => {
+                  if (Number(loginedWaiter?.data?.can_see_notif) !== 1) return;
+                  setShowNotifications(true);
+                }}
               >
                 <svg
                   width="20"
@@ -1198,6 +1211,7 @@ const Check = () => {
                     <div
                       className={`settings-gear-btn ${isSettingsOpen ? 'active' : ''}`}
                       onClick={() => {
+                        if (Number(loginedWaiter?.data?.can_manage_products) !== 1) return;
                         if (isDragMode) return;
                         setIsSettingsOpen(!isSettingsOpen);
                       }}

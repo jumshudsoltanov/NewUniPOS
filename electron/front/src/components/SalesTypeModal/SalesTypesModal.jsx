@@ -145,7 +145,6 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
       show={show}
       onHide={() => onClose()}
       className="sales-type-modal product-modal"
-      centered
     >
       <div className="product-modal-header">
         <div className="header-left">

@@ -476,20 +476,22 @@ const Tables = () => {
               </button>
             </>
           ) : (
-            <button
-              className="btn btn-primary d-flex align-items-center gap-2 shadow-lg"
-              onClick={() => dispatch(startEditMode())}
-              style={{
-                backgroundColor: '#053796',
-                border: 'none',
-                borderRadius: '50px',
-                padding: '12px 24px',
-                fontSize: '16px'
-              }}
-            >
-              <i className="bi bi-pencil-fill"></i>
-              <span className="d-none d-md-inline">Düzəliş et</span>
-            </button>
+            Number(loginedWaiter?.data?.can_edit_table_design) === 1 && (
+              <button
+                className="btn btn-primary d-flex align-items-center gap-2 shadow-lg"
+                onClick={() => dispatch(startEditMode())}
+                style={{
+                  backgroundColor: '#053796',
+                  border: 'none',
+                  borderRadius: '50px',
+                  padding: '12px 24px',
+                  fontSize: '16px'
+                }}
+              >
+                <i className="bi bi-pencil-fill"></i>
+                <span className="d-none d-md-inline">Düzəliş et</span>
+              </button>
+            )
           )}
         </div>
 

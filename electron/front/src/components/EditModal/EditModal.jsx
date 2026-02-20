@@ -4,8 +4,7 @@ import "./EditModal.css";
 import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion, updateItemPrice, updateItemCount, saveLog } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from "sonner";
 import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
 import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -190,6 +189,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     }
                     onClose();
                   } else {
+                    if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
+                      toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                      return;
+                    }
                     onOpenDeleteModal('full', product);
                   }
                 }}
@@ -217,12 +220,16 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
               <>
                 <div className="edit-form-wrapper">
                   {/* Price / Input Display */}
-                  <div className="input-display-box">
+                  <div className="input-display-box" onClick={() => {
+                    if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) {
+                      toast.error("Sizin qiymət dəyişmək icazəniz yoxdur!");
+                    }
+                  }}>
                     <input
                       type="text"
                       className="super-input"
                       value={inputValue}
-                      disabled={!loginedWaiter?.data?.can_change_product_price}
+                      disabled={Number(loginedWaiter?.data?.can_change_product_price) !== 1}
                       onChange={(e) => {
                         if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) return;
                         setInputValue(e.target.value);
@@ -240,7 +247,15 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                   <div className="stepper-control">
                     <button
                       className="stepper-btn btn-minus"
-                      onClick={() => setQty((q) => Math.max(0, q - 1))}
+                      onClick={() => {
+                        const newQty = Math.max(0, qty - 1);
+                        const savedQty = product.savedQuantity || 0;
+                        if (newQty < savedQty && Number(loginedWaiter?.data?.can_delete_product) !== 1) {
+                          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                          return;
+                        }
+                        setQty(newQty);
+                      }}
                     >
                       <i className="bi bi-dash"></i>
                     </button>
@@ -286,6 +301,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         }
                         onClose();
                       } else {
+                        if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
+                          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                          return;
+                        }
                         onOpenDeleteModal('full', product);
                       }
                       return;
@@ -295,6 +314,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     const newLocalQty = qty - savedQty;
 
                     if (newLocalQty < 0) {
+                      if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
+                        toast.error("Sizin məhsul miqdarını azaltmaq (silmək) icazəniz yoxdur!");
+                        // Reset quantity back to saved, so they cannot bypass
+                        setQty(savedQty);
+                        return;
+                      }
                       onOpenDeleteModal('partial', product, Math.abs(newLocalQty));
                       return;
                     }

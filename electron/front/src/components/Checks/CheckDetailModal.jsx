@@ -289,7 +289,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                             <Button
                                 variant="warning"
                                 className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
-                                onClick={() => setShowReasonModal(true)}
+                                onClick={() => {
+                                    if (Number(loginedWaiter?.data?.can_return_receipt) !== 1) return;
+                                    setShowReasonModal(true);
+                                }}
                                 style={{ backgroundColor: "#f39c12", color: "#fff" }}
                             >
                                 <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i> ÇEKİ YENİDƏN AÇ

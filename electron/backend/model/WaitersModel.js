@@ -230,6 +230,16 @@ const WaitersModel = db.sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
+    can_manage_products: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
+    can_edit_table_design: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "waiters",

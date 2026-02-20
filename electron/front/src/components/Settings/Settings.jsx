@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
@@ -8,6 +9,7 @@ import "./Settings.css";
 
 const Settings = () => {
     const navigate = useNavigate();
+    const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [showSupportModal, setShowSupportModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
@@ -53,7 +55,10 @@ const Settings = () => {
             id: "refund",
             label: "Geri qaytarılma",
             icon: <i className="bi bi-arrow-counterclockwise"></i>,
-            onClick: () => setShowReturnModal(true),
+            onClick: () => {
+                if (Number(loginedWaiter?.data?.can_return_receipt) !== 1) return;
+                setShowReturnModal(true);
+            },
         },
         {
             id: "report",

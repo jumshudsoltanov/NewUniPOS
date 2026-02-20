@@ -65,27 +65,28 @@ const CheckMain = ({ orders }) => {
     const combinedLocal = [...products, ...(sentProducts || [])];
 
     combinedLocal.forEach((item, idx) => {
-      const prodId = Number(item.id);
-      const isGift = 0;
+      const prodId = Number(item.id || item.product_id);
+      const isGift = item.is_gift ? 1 : 0;
       const price = parseFloat(item.price || 0).toFixed(2);
       const key = `${prodId}-${isGift}-${price}`;
       const existing = groupedMap.get(key);
 
+      const qtyToAdd = Number(item.quantity || item.count || 1);
+
       if (existing) {
-        existing.count += item.quantity;
-        existing.localQuantity = (existing.localQuantity || 0) + item.quantity;
-        existing.price = item.price;
-        existing.isNew = true;
+        existing.count += qtyToAdd;
+        existing.localQuantity = (existing.localQuantity || 0) + qtyToAdd;
+        existing.isNew = true; // Mark as partially new so it highlights
       } else {
         groupedMap.set(key, {
           product_id: prodId,
           name: item.name,
-          count: item.quantity,
+          count: qtyToAdd,
           savedQuantity: 0,
-          localQuantity: item.quantity,
+          localQuantity: qtyToAdd,
           price: item.price,
           isNew: true,
-          is_gift: 0,
+          is_gift: isGift,
           firstId: 999999999 + idx,
           printer_details: item.printer_details || []
         });
