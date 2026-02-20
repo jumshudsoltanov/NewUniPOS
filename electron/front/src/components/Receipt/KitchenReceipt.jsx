@@ -33,8 +33,10 @@ const KitchenReceipt = ({
     const styles = {
         receipt: {
             width: "100%",
-            padding: "0px",
+            maxWidth: "300px",
             boxSizing: "border-box",
+            padding: "0 2mm",
+            margin: "0 auto",
             background: "#fff",
             fontFamily: "'Consolas','Fira Code', monospace",
             fontSize: fs(9),
@@ -53,21 +55,23 @@ const KitchenReceipt = ({
         line: {
             borderBottom: "1px dashed #000",
             margin: "1mm 0",
+            width: "100%"
         },
 
-        infoSection: { fontSize: fs(9.5) },
+        infoSection: { fontSize: fs(9.5), width: "100%" },
 
         infoRow: {
             display: "flex",
             justifyContent: "space-between",
             marginBottom: "0.6mm",
+            width: "100%"
         },
 
-        label: { fontWeight: "900", minWidth: "26mm" },
+        label: { fontWeight: "900", flex: "0 0 auto" },
 
-        value: { textAlign: "right", flex: 1, marginLeft: "1mm" },
+        value: { textAlign: "right", flex: "1 1 auto", marginLeft: "1mm", wordBreak: "break-word" },
 
-        items: { fontSize: fs(10) },
+        items: { fontSize: fs(10), width: "100%" },
 
         itemsHeader: {
             display: "flex",
@@ -76,17 +80,19 @@ const KitchenReceipt = ({
             paddingBottom: "0.5mm",
             marginBottom: "1mm",
             fontSize: fs(10),
+            width: "100%"
         },
 
         colName: {
-            flex: 1,
+            flex: "1 1 70%",
             whiteSpace: "normal",
             wordWrap: "break-word",
             wordBreak: "break-word",
             lineHeight: "1.05",
+            paddingRight: "1mm"
         },
 
-        colQty: { width: "12mm", textAlign: "right", fontWeight: "900" },
+        colQty: { flex: "0 0 30%", textAlign: "right", fontWeight: "900" },
 
         itemRow: {
             display: "flex",
@@ -96,6 +102,7 @@ const KitchenReceipt = ({
             fontWeight: "900",
             lineHeight: "1.05",
             alignItems: "center",
+            width: "100%"
         },
 
         status: {
