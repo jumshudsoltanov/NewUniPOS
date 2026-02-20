@@ -22,7 +22,7 @@ const getGeneralCategories = async (passedProfileId) => {
     if (response.data && Array.isArray(response.data.data)) {
       const generalCategories = response.data.data.map((g) => {
         Object.keys(g).forEach((k) => {
-          if (g[k] === undefined) g[k] = 0;
+          if (g[k] === undefined) g[k] = k === 'printer_id' ? null : 0;
         });
         g.profile_id = profile_id;
         return g;
@@ -79,7 +79,7 @@ const getCategories = async (passedProfileId) => {
     if (categoriesData && Array.isArray(categoriesData)) {
       const categories = categoriesData.map((c) => {
         Object.keys(c).forEach((k) => {
-          if (c[k] === undefined) c[k] = 0;
+          if (c[k] === undefined) c[k] = k === 'printer_id' ? null : 0;
         });
         if (Array.isArray(c.printer_id)) {
           c.printer_id = c.printer_id.join(",");
@@ -133,11 +133,31 @@ const getProducts = async (passedProfileId) => {
       `http://46.224.8.157:35627/api/products/${profile_id}`,
     );
 
+    let printerMap = {};
+    try {
+      const v2Response = await axios.get(`https://api.unipos.tech/api/products?profile_id=${profile_id}&per_page=1000`);
+      if (v2Response.data && Array.isArray(v2Response.data.items)) {
+        v2Response.data.items.forEach(item => {
+          if (item.id && item.printer_id) {
+            printerMap[item.id] = Array.isArray(item.printer_id) ? item.printer_id.join(",") : item.printer_id.toString();
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Xəta (v2 API printerləri):", e.message);
+    }
+
     if (response.data && Array.isArray(response.data.data)) {
       const products = response.data.data.map((p) => {
         Object.keys(p).forEach((k) => {
-          if (p[k] === undefined) p[k] = 0;
+          if (p[k] === undefined) p[k] = k === 'printer_id' ? null : 0;
         });
+
+        // Merge printer_id from admin panel v2 API
+        if (printerMap[p.id]) {
+          p.printer_id = printerMap[p.id];
+        }
+
         if (Array.isArray(p.printer_id)) {
           p.printer_id = p.printer_id.join(",");
         }

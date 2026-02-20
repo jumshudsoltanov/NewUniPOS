@@ -339,12 +339,6 @@ const Menu = ({
                       <div>
                         {effectivePrice} ₼
                       </div>
-                      {item.printer_details && item.printer_details.length > 0 && (
-                        <div style={{ fontSize: "0.6rem", opacity: 0.8, marginTop: "2px" }}>
-                          <i className="bi bi-printer me-1"></i>
-                          {item.printer_details.map(p => p.local_name || p.name).join(", ")}
-                        </div>
-                      )}
                     </div>
                   )}
 

@@ -5,11 +5,10 @@ const KitchenReceipt = ({
     table = "",
     waiter = "",
     hallName,
-    orderId, // This is UUID, used for internal/meta if needed
+    orderId,
     terminalInfo,
     typeName,
     checkData,
-    isDecrease = false,
 }) => {
     const now = new Date();
 
@@ -20,77 +19,65 @@ const KitchenReceipt = ({
             date.getMonth() + 1
         ).padStart(2, "0")}.${date.getFullYear()}`;
 
-    const baseFont = 12 + Number(terminalInfo?.kitchen_receipt || 0);
+    const baseFont = Number(terminalInfo?.kitchen_receipt || 14);
     const fs = (n) => `${baseFont + n}px`;
 
     const items = orderedItems.length > 0 ? orderedItems : [];
-    const hasDecrease = isDecrease || items.some((i) => i.changeType === "decrease");
+    const hasDecrease = items.some((i) => i.changeType === "decrease");
 
-    const cleanTable = String(table || "").replace(/masa/gi, "").trim();
-    const cleanWaiter = String(waiter || "").replace(/ofisiant/gi, "").trim();
-
-    // Use Numeric ID for display if available
-    const displayId = checkData?.id || orderId?.toString().slice(0, 8);
+    // Təkrarçılığın qarşısını alırıq
+    const cleanTable = String(table).replace(/masa/gi, "").trim();
+    const cleanWaiter = String(waiter)
+        .replace(/ofisiant/gi, "")
+        .trim();
 
     return (
-        <div id="kitchen-receipt-content" style={styles.receipt(fs)}>
+        <div style={styles.receipt(fs)}>
             <style>
                 {`
-                @media print {
-                  @page { margin: 0; size: auto; }
-                  body { margin: 0; padding: 0; }
-                }
-              `}
+        @media print {
+          @page { margin: 0; size: auto; }
+          body { margin: 0; padding: 0; width: 100%; box-sizing: border-box; }
+        }
+      `}
             </style>
 
             {/* HEADER */}
             <div style={styles.header}>
-                <div style={styles.titleSimplified(fs)}>MƏTBƏX ÇEKİ №: {displayId}</div>
+                <div style={styles.title(fs)}>MƏTBƏX ÇEKİ</div>
                 <div style={styles.sub(fs)}>{formatDate(now)}</div>
-
-                <div style={styles.line}></div>
-
-                <div style={styles.infoSection}>
-                    {(checkData?.sale_type === "dine_in" || checkData?.sale_type === 0 || !checkData?.sale_type) && (
-                        <div style={styles.infoRow(fs)}>
-                            <strong>Zal:</strong> {hallName || "-"} <strong>Masa:</strong> {cleanTable || "-"}
-                        </div>
-                    )}
-                    <div style={styles.infoRow(fs)}>
-                        <strong>Ofisiant:</strong> {cleanWaiter || "-"}
-                    </div>
-                    <div style={styles.infoRow(fs)}>
-                        <strong>Üsul:</strong> {typeName || "Restoranda"}
-                    </div>
+                <div style={styles.meta(fs)}>
+                    {(checkData?.sale_type === 0 || checkData?.sale_type === "dine_in" || !checkData?.sale_type) && hallName ? `${hallName} - MASA: ${cleanTable}` : ""}
+                </div>
+                <div style={styles.meta(fs)}>
+                    OFİSİANT: {cleanWaiter} • #{checkData?.id || orderId?.toString().slice(0, 8)}
+                </div>
+                <div style={styles.meta(fs)}>
+                    Satış üsulu: {typeName || "Restoranda"}
                 </div>
             </div>
 
-            <div style={styles.lineBold}></div>
+            <div style={styles.line}></div>
 
-            {/* STATUS BADGE */}
-            <div style={styles.simpleStatus(hasDecrease, fs)}>
-                {hasDecrease ? "MƏHSUL SİLİNDİ" : "YENİ SİFARİŞ"}
+            {/* STATUS */}
+            <div style={styles.status(fs)}>
+                {hasDecrease ? "SİLİNƏN MƏHSULLAR" : "YENİ SİFARİŞ"}
             </div>
 
-            <div style={styles.lineBold}></div>
+            <div style={styles.line}></div>
 
-            {/* ITEMS TABLE */}
-            <div style={{ width: "100%", marginTop: "5px" }}>
-                <div style={styles.tableHeader}>
-                    <div style={styles.thName(fs)}>MƏHSUL ADI</div>
-                    <div style={styles.thQty(fs)}>SAY</div>
-                </div>
+            {/* ITEMS */}
+            <div style={{ width: "100%" }}>
                 {items.map((item, idx) => (
-                    <div key={idx} style={styles.itemRow}>
-                        <div style={styles.itemInfo}>
+                    <div key={idx} style={styles.item}>
+                        <div style={styles.itemLeft}>
                             <div style={styles.itemName(fs)}>{item.name}</div>
                             {item.comment && (
-                                <div style={styles.comment(fs)}>- {item.comment}</div>
+                                <div style={styles.comment(fs)}>* {item.comment}</div>
                             )}
                             {item.reasonName && (
-                                <div style={styles.reasonSimple(fs)}>Səbəb: {item.reasonName}</div>
+                                <div style={styles.comment(fs)}>! {item.reasonName}</div>
                             )}
-
                             {/* MODIFIERS */}
                             {(() => {
                                 let mods = [];
@@ -98,37 +85,39 @@ const KitchenReceipt = ({
                                     if (Array.isArray(item.modifiers)) {
                                         mods = item.modifiers;
                                     } else if (typeof item.modifiers === "string") {
+                                        // Check if it's a JSON string representing an array
                                         const parsed = JSON.parse(item.modifiers);
                                         if (Array.isArray(parsed)) mods = parsed;
                                     }
-                                } catch (e) { mods = []; }
+                                } catch (e) {
+                                    console.error("Modifier parse error in Receipt:", e);
+                                    mods = [];
+                                }
 
                                 return (
                                     mods.length > 0 &&
                                     mods.map((mod, mIdx) => (
-                                        <div key={mIdx} style={styles.modifier(fs)}>
-                                            + {mod.count > 0 ? `${mod.name || mod.product_name} (x${mod.count})` : (mod.name || mod.product_name)}
+                                        <div key={mIdx} style={styles.comment(fs)}>
+                                            + {mod.count > 0 ? `${mod.name || mod.product_name || "Adsız"} (x${mod.count})` : (mod.name || mod.product_name || "Adsız")}
                                         </div>
                                     ))
                                 );
                             })()}
                         </div>
-                        <div style={styles.qtyBox(hasDecrease, fs)}>
-                            {item.changeType === "decrease" || isDecrease || hasDecrease
-                                ? `-${item.qty || item.quantity || item.count || 0}`
-                                : `${item.quantity || item.count}`}
+                        {/* SAY HİSSƏSİ - Sabit genişlik verdik ki, heç vaxt itməsin */}
+                        <div style={styles.qty(fs)}>
+                            {item.changeType === "decrease"
+                                ? `-${item.diff}`
+                                : `${item.quantity}`}
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div style={styles.lineBold}></div>
+            <div style={styles.line}></div>
 
             {/* FOOTER */}
-            <div style={styles.footer(fs)}>
-                <div style={styles.footerLine}>Mətbəxə uğurlar!</div>
-                <div style={styles.footerLineSmall}>UniPOS v2.0</div>
-            </div>
+            <div style={styles.footer(fs)}>Mətbəxə uğurlar!</div>
         </div>
     );
 };
@@ -138,104 +127,92 @@ export default KitchenReceipt;
 const styles = {
     receipt: (fs) => ({
         width: "100%",
-        maxWidth: "80mm",
-        padding: "5px 10px",
+        padding: "0",
+        margin: "0",
         boxSizing: "border-box",
         background: "#fff",
-        fontFamily: "'Arial', 'Helvetica', sans-serif",
+        fontFamily: "monospace",
         color: "#000",
     }),
 
-    header: { textAlign: "left", marginBottom: "5px" },
+    header: { textAlign: "center", marginBottom: "1px", width: "100%" },
 
-    titleSimplified: (fs) => ({
-        fontSize: fs(1),
+    title: (fs) => ({
+        fontSize: fs(6),
         fontWeight: "900",
-        borderBottom: "2px solid #000",
-        marginBottom: "4px",
-        display: "block",
-        textAlign: "center"
+        letterSpacing: "1px",
+        wordBreak: "break-word",
     }),
 
     sub: (fs) => ({
-        fontSize: fs(-1),
-        fontWeight: "900",
-        marginBottom: "4px",
-        textAlign: "center"
-    }),
-
-    infoSection: {
-        margin: "5px 0"
-    },
-
-    infoRow: (fs) => ({
-        fontSize: fs(0),
-        lineHeight: "1.4",
+        fontSize: fs(1),
+        fontWeight: "700",
         marginBottom: "2px",
-        fontWeight: "900"
     }),
 
-    simpleStatus: (isDecrease, fs) => ({
-        textAlign: "center",
+    meta: (fs) => ({
         fontSize: fs(2),
-        fontWeight: "900",
-        padding: "4px 0",
-        color: "#000",
-        textTransform: "uppercase"
+        fontWeight: "800",
+        lineHeight: "1.3",
+        wordBreak: "break-word",
     }),
 
-    line: { borderBottom: "1px dashed #000", margin: "4px 0" },
-    lineBold: { borderBottom: "2px solid #000", margin: "2px 0" },
-
-    tableHeader: {
-        display: "flex",
-        justifyContent: "space-between",
-        borderBottom: "1px solid #000",
-        paddingBottom: "2px",
-        marginBottom: "4px"
+    line: {
+        borderBottom: "1px dashed #000",
+        margin: "1px 0",
+        width: "100%",
     },
 
-    thName: (fs) => ({ fontSize: fs(-1), fontWeight: "900" }),
-    thQty: (fs) => ({ fontSize: fs(-1), fontWeight: "900", width: "50px", textAlign: "right" }),
+    status: (fs) => ({
+        textAlign: "center",
+        fontSize: fs(4),
+        fontWeight: "900",
+        padding: "2px 0",
+        wordBreak: "break-word",
+    }),
 
-    itemRow: {
+    item: {
         display: "flex",
         width: "100%",
-        padding: "4px 0",
-        borderBottom: "1px dotted #ccc",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        padding: "2px 0",
+        borderBottom: "1px solid #eee",
     },
 
-    itemInfo: { flex: 1, minWidth: 0 },
+    itemLeft: {
+        flex: 1,
+        minWidth: 0,
+        paddingRight: "4px",
+    },
 
     itemName: (fs) => ({
         fontSize: fs(3),
         fontWeight: "900",
-        lineHeight: "1.1",
-        textTransform: "uppercase"
+        wordBreak: "break-word",
+        lineHeight: "1.2",
     }),
 
-    qtyBox: (isDecrease, fs) => ({
-        width: "60px",
-        fontSize: fs(5),
+    comment: (fs) => ({
+        fontSize: fs(1),
+        fontWeight: "700",
+        wordBreak: "break-word",
+        marginTop: "2px",
+    }),
+
+    qty: (fs) => ({
+        width: "40px", // Reduced width slightly to prevent cutoff on tight margins
+        flexShrink: 0,
+        fontSize: fs(4),
         fontWeight: "900",
         textAlign: "right",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "flex-end"
+        whiteSpace: "nowrap",
     }),
 
-    comment: (fs) => ({ fontSize: fs(0), fontWeight: "900", fontStyle: "italic", marginTop: "3px" }),
-    modifier: (fs) => ({ fontSize: fs(0), fontWeight: "900", color: "#333" }),
-    reasonSimple: (fs) => ({
-        fontSize: fs(1),
-        fontWeight: "900",
+    footer: (fs) => ({
+        textAlign: "center",
         marginTop: "4px",
-        color: "#000",
-        display: "block",
-        textTransform: "uppercase"
+        fontSize: fs(2),
+        fontWeight: "900",
     }),
-
-    footer: (fs) => ({ textAlign: "center", marginTop: "10px" }),
-    footerLine: { fontSize: "14px", fontWeight: "900" },
-    footerLineSmall: { fontSize: "10px", opacity: 0.5, marginTop: "2px" }
 };
