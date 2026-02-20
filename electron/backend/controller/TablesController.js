@@ -47,12 +47,6 @@ const getTables = async (req, res) => {
         [TablesModel, "id", "ASC"],
       ],
     });
-    if (tables.length === 0) {
-      res
-        .status(200)
-        .json({ message: "false", data: "tables or halls not found" });
-      return;
-    }
 
     res.status(200).json({ message: "success", data: tables });
   } catch (error) {

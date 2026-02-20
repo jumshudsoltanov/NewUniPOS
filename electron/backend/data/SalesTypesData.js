@@ -26,23 +26,29 @@ const getSalesTypes = async (passedProfileId) => {
         return g;
       });
 
-      if (salestypes.length === 0) return;
-
       const apiIds = salestypes.map((g) => g.id);
 
       // DB-də olub, API-da olmayanları sil
-      await SalesTypesModal.destroy({
-        where: { id: { [Op.notIn]: apiIds } },
-      });
+      if (apiIds.length > 0) {
+        await SalesTypesModal.destroy({
+          where: { id: { [Op.notIn]: apiIds }, profile_id },
+        });
+      } else {
+        await SalesTypesModal.destroy({
+          where: { profile_id },
+        });
+      }
 
       // Insert / update
-      const updateSaleTypes = Object.keys(salestypes[0]).filter(
-        (key) => SalesTypesModal.rawAttributes[key],
-      );
+      if (salestypes.length > 0) {
+        const updateSaleTypes = Object.keys(salestypes[0]).filter(
+          (key) => SalesTypesModal.rawAttributes[key],
+        );
 
-      await SalesTypesModal.bulkCreate(salestypes, {
-        updateOnDuplicate: updateSaleTypes,
-      });
+        await SalesTypesModal.bulkCreate(salestypes, {
+          updateOnDuplicate: updateSaleTypes,
+        });
+      }
 
       console.log("DB sync olundu: insert/update + silindi");
     }

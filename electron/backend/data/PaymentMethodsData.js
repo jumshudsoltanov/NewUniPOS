@@ -49,21 +49,28 @@ const getPaymentMethods = async (passedProfileId) => {
         return item;
       });
 
+      const apiIds = paymentMethods.map((g) => g.id);
+
+      // DB-də olub, API-da olmayanları sil (yalnız bu profil üçün)
+      let deletedCount = 0;
+      if (apiIds.length > 0) {
+        deletedCount = await PaymentMethodsModel.destroy({
+          where: {
+            id: { [Op.notIn]: apiIds },
+            profile_id: profile_id
+          },
+        });
+      } else {
+        deletedCount = await PaymentMethodsModel.destroy({
+          where: { profile_id: profile_id },
+        });
+      }
+      console.log(`${deletedCount} ədəd köhnə data silindi.`);
+
       if (paymentMethods.length === 0) {
         console.log("API-dan heç bir ödəniş üsulu gəlmədi");
         return;
       }
-
-      const apiIds = paymentMethods.map((g) => g.id);
-
-      // DB-də olub, API-da olmayanları sil (yalnız bu profil üçün)
-      const deletedCount = await PaymentMethodsModel.destroy({
-        where: {
-          id: { [Op.notIn]: apiIds },
-          profile_id: profile_id
-        },
-      });
-      console.log(`${deletedCount} ədəd köhnə data silindi.`);
 
       // Insert / update üçün sahələri təyin edək (id-ni update siyahısından çıxarırıq)
       const updateKeys = Object.keys(PaymentMethodsModel.rawAttributes).filter(

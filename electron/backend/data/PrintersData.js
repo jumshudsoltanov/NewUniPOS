@@ -29,7 +29,11 @@ const getPrinters = async (passedProfileId) => {
             const apiIds = apiPrinters.map((p) => p.id);
 
             // Delete printers not in API response
-            await PrintersModel.destroy({ where: { id: { [Op.notIn]: apiIds } } });
+            if (apiIds.length > 0) {
+                await PrintersModel.destroy({ where: { id: { [Op.notIn]: apiIds }, profile_id } });
+            } else {
+                await PrintersModel.destroy({ where: { profile_id } });
+            }
 
             // Insert / update
             await PrintersModel.bulkCreate(apiPrinters, {

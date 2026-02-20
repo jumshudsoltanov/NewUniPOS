@@ -32,13 +32,20 @@ const getGeneralCategories = async (passedProfileId) => {
       const apiIds = generalCategories.map((g) => g.id);
 
       // DB-də olub, API-da olmayanları sil
-      await GeneralCategoriesModel.destroy({
-        where: {
-          profile_id,
-          id: { [Op.notIn]: apiIds },
-        },
-        force: true,
-      });
+      if (apiIds.length > 0) {
+        await GeneralCategoriesModel.destroy({
+          where: {
+            profile_id,
+            id: { [Op.notIn]: apiIds },
+          },
+          force: true,
+        });
+      } else {
+        await GeneralCategoriesModel.destroy({
+          where: { profile_id },
+          force: true,
+        });
+      }
 
       // Insert / update
       if (generalCategories.length > 0) {
@@ -84,13 +91,20 @@ const getCategories = async (passedProfileId) => {
       const apiIds = categories.map((c) => c.id);
 
       // DB-də olub, API-da olmayanları sil
-      await CategoriesModel.destroy({
-        where: {
-          profile_id,
-          id: { [Op.notIn]: apiIds },
-        },
-        force: true,
-      });
+      if (apiIds.length > 0) {
+        await CategoriesModel.destroy({
+          where: {
+            profile_id,
+            id: { [Op.notIn]: apiIds },
+          },
+          force: true,
+        });
+      } else {
+        await CategoriesModel.destroy({
+          where: { profile_id },
+          force: true,
+        });
+      }
 
       // Insert / update
       if (categories.length > 0) {
@@ -134,13 +148,20 @@ const getProducts = async (passedProfileId) => {
       const apiIds = products.map((p) => p.id);
 
       // DB-də olub, API-da olmayanları sil
-      await ProductsModel.destroy({
-        where: {
-          profile_id,
-          id: { [Op.notIn]: apiIds },
-        },
-        force: true,
-      });
+      if (apiIds.length > 0) {
+        await ProductsModel.destroy({
+          where: {
+            profile_id,
+            id: { [Op.notIn]: apiIds },
+          },
+          force: true,
+        });
+      } else {
+        await ProductsModel.destroy({
+          where: { profile_id },
+          force: true,
+        });
+      }
 
       // Insert / update
       if (products.length > 0) {

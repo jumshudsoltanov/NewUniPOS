@@ -28,7 +28,11 @@ const getTags = async (passedProfileId) => {
 
       const apiIds = apiTables.map((t) => t.id);
 
-      await TagsModel.destroy({ where: { id: { [Op.notIn]: apiIds } } });
+      if (apiIds.length > 0) {
+        await TagsModel.destroy({ where: { id: { [Op.notIn]: apiIds }, profile_id }, force: true });
+      } else {
+        await TagsModel.destroy({ where: { profile_id }, force: true });
+      }
 
       // Insert / update
       await TagsModel.bulkCreate(apiTables, {

@@ -28,8 +28,12 @@ const getWaitersList = async (passedProfileId) => {
 
       const apiIds = apiWaiters.map((w) => w.id);
 
-      // DB-də olub, API-da olmayanları sil
-      await WaitersModel.destroy({ where: { id: { [Op.notIn]: apiIds } } });
+      // DB-də olub, API-da olmayanları sil (hard delete)
+      if (apiIds.length > 0) {
+        await WaitersModel.destroy({ where: { id: { [Op.notIn]: apiIds } }, force: true });
+      } else {
+        await WaitersModel.destroy({ where: {}, force: true }); // Bütün ofisiantları sil
+      }
 
       // Insert / update
       await WaitersModel.bulkCreate(apiWaiters, {

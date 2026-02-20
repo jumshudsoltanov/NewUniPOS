@@ -30,7 +30,11 @@ const getTableGroups = async (passedProfileId) => {
       const apiIds = apiTableGroups.map((tg) => tg.id);
 
       // DB-də olub, API-da olmayanları sil
-      await TableGroupsModel.destroy({ where: { id: { [Op.notIn]: apiIds } } });
+      if (apiIds.length > 0) {
+        await TableGroupsModel.destroy({ where: { id: { [Op.notIn]: apiIds }, profile_id }, force: true });
+      } else {
+        await TableGroupsModel.destroy({ where: { profile_id }, force: true });
+      }
 
       // Insert / update
       await TableGroupsModel.bulkCreate(apiTableGroups, {
@@ -65,7 +69,11 @@ const getTables = async (passedProfileId) => {
       const apiIds = apiTables.map((t) => t.id);
 
       // DB-də olub, API-da olmayanları sil
-      await TablesModel.destroy({ where: { id: { [Op.notIn]: apiIds } } });
+      if (apiIds.length > 0) {
+        await TablesModel.destroy({ where: { id: { [Op.notIn]: apiIds }, profile_id }, force: true });
+      } else {
+        await TablesModel.destroy({ where: { profile_id }, force: true });
+      }
 
       // Insert / update
       await TablesModel.bulkCreate(apiTables, {

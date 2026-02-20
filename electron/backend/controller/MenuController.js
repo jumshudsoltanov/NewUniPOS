@@ -26,12 +26,7 @@ const getMenuWithGeneralCategories = async (req, res) => {
       },
     });
 
-    if (response.length === 0) {
-      res
-        .status(200)
-        .json({ message: "false", data: "tables or halls not found" });
-      return;
-    }
+
 
     const printers = await PrintersModel.findAll({
       where: { profile_id: profileId },
@@ -91,12 +86,7 @@ const getMenuWithCategories = async (req, res) => {
       },
     });
 
-    if (response.length === 0) {
-      res
-        .status(200)
-        .json({ message: "false", data: "tables or halls not found" });
-      return;
-    }
+
 
     const printers = await PrintersModel.findAll({
       where: { profile_id: profileId },
