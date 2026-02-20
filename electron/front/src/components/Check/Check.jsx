@@ -1586,33 +1586,39 @@ const Check = () => {
         show={showDeleteConfirm}
         onHide={() => setShowDeleteConfirm(false)}
         centered
-        className="product-modal danger-theme"
+        className="delete-confirm-modal"
+        animation={false}
       >
-        <div className="product-modal-header">
-          <div className="header-left">
-            <div className="header-icon-circle">
-              <i className="bi bi-trash3"></i>
+        <div className="delete-confirm-wrapper">
+          <div className="delete-confirm-header">
+            <div className="delete-confirm-header-content">
+              <div className="delete-confirm-icon-circle">
+                <i className="bi bi-trash3-fill"></i>
+              </div>
+              <div className="delete-confirm-title">Məhsulu Silmək</div>
             </div>
-            <h5 className="modal-title">Məhsulu Silmək</h5>
-          </div>
-          <button className="close-btn" onClick={() => setShowDeleteConfirm(false)}>
-            <i className="bi bi-x-lg"></i>
-          </button>
-        </div>
-
-        <div className="product-modal-body text-center py-4">
-          <p className="mb-0" style={{ fontSize: '14px', color: '#444' }}>
-            "<strong>{productToDelete?.name}</strong>" məhsulu silinəcək.
-            <br />
-            Bu əməliyyatı geri qaytarmaq mümkün deyil.
-          </p>
-
-          <div className="modal-footer-custom justify-content-center border-0 pb-0">
-            <button className="btn-cancel" onClick={() => setShowDeleteConfirm(false)}>Ləğv et</button>
-            <button className="btn-save" onClick={handleDeleteProduct}>
-              <i className="bi bi-trash3"></i>
-              Sil
+            <button className="btn-close-custom" onClick={() => setShowDeleteConfirm(false)}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
+          </div>
+
+          <div className="delete-confirm-body">
+            <p>
+              "<strong>{productToDelete?.name}</strong>" məhsulu silinəcək.
+              <br />
+              Bu əməliyyatı geri qaytarmaq mümkün deyil.
+            </p>
+
+            <div className="delete-confirm-footer">
+              <button className="delete-confirm-cancel" onClick={() => setShowDeleteConfirm(false)}>Ləğv et</button>
+              <button className="delete-confirm-save" onClick={handleDeleteProduct}>
+                <i className="bi bi-trash3-fill"></i>
+                Sil
+              </button>
+            </div>
           </div>
         </div>
       </Modal>

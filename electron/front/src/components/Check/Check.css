@@ -1795,3 +1795,125 @@
         opacity: 1;
     }
 }
+
+/* Unified Delete Confirm Modal Styling (Blue Theme) */
+.delete-confirm-modal .modal-content {
+    border-radius: 10px !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.delete-confirm-modal .modal-dialog {
+    max-width: 480px !important;
+    margin: 1.75rem auto;
+}
+
+.delete-confirm-wrapper {
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.delete-confirm-header {
+    background-color: #5D99FF;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+}
+
+.delete-confirm-header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.delete-confirm-icon-circle {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-confirm-icon-circle i {
+    font-size: 1.2rem;
+    color: #053796;
+}
+
+.delete-confirm-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Body */
+.delete-confirm-body {
+    padding: 30px 20px 20px 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.delete-confirm-body p {
+    font-size: 16px;
+    color: #444;
+    margin-bottom: 5px;
+    line-height: 1.5;
+}
+
+/* Footer Actions */
+.delete-confirm-footer {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+    margin-top: 5px;
+    padding-top: 25px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.delete-confirm-cancel {
+    flex: 1;
+    background-color: #f1f5f9;
+    color: #053796;
+    font-weight: 600;
+    font-size: 16px;
+    border: none;
+    height: 52px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-confirm-cancel:hover {
+    background-color: #e2e8f0;
+}
+
+.delete-confirm-save {
+    flex: 1;
+    height: 52px;
+    background-color: #053796;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.delete-confirm-save:hover {
+    background-color: #042d7a;
+}

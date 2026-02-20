@@ -181,7 +181,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
 
           <button
             className="customers-save-btn"
-            disabled={isCreating || guestCount === "0"}
+            disabled={isCreating}
             onClick={createOrder}
           >
             {isCreating ? (

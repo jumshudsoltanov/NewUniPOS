@@ -1,13 +1,8 @@
-import React from "react";
-import Button from "react-bootstrap/Button";
+import React, { useState, useEffect, useCallback } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./CheckLockModal.css";
-import { Container, Col, Row } from "react-bootstrap";
-import { useState } from "react";
-import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateLockChecK } from "../../redux/Slices/OrdersSlice";
-import { useCallback } from "react";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
@@ -53,10 +48,11 @@ const CheckLockModal = ({ show, onClose, order }) => {
   }, [
     status,
     order?.uuid,
-    order?.table_id,
     loginedProfileData?.data?.profile?.id,
     dispatch,
     onClose,
+    loginedWaiter?.data?.name,
+    loginedProfileData?.data?.profile?.name
   ]);
 
   return (
@@ -66,59 +62,59 @@ const CheckLockModal = ({ show, onClose, order }) => {
       backdrop="static"
       keyboard={false}
       centered
-      className="product-modal"
+      className="check-lock-modal"
+      animation={false}
     >
-      <div className="product-modal-header">
-        <div className="header-left">
-          <div className="header-icon-circle">
-            <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'}`}></i>
+      <div className="modal-content-wrapper">
+        <div className="check-lock-modal-header">
+          <div className="check-lock-header-content">
+            <div className="check-lock-icon-circle">
+              <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'}`}></i>
+            </div>
+            <div className="check-lock-modal-title">Çeki kilidlə</div>
           </div>
-          <h5 className="modal-title">Çeki kilidlə</h5>
-        </div>
-        <button className="close-btn" onClick={onClose}>
-          <i className="bi bi-x-lg"></i>
-        </button>
-      </div>
-
-      <div className="product-modal-body text-center py-4">
-        <div className="mb-4">
-          <div style={{
-            width: '64px',
-            height: '64px',
-            background: '#eff6ff',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto',
-            color: '#053796',
-            fontSize: '32px'
-          }}>
-            <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'}`}></i>
-          </div>
-        </div>
-
-        <h6 className="mb-3" style={{ fontWeight: 700, color: '#333' }}>
-          {status === 0
-            ? "Qəbzi kilidləmək istədiyinizə əminsiniz?"
-            : "Qəbzin kilidini açmaq istədiyinizə əminsiniz?"}
-        </h6>
-
-        <p className="text-muted mb-4" style={{ fontSize: '13px', maxWidth: '80%', margin: '0 auto' }}>
-          {status === 0
-            ? "Kilidlənmiş qəbzlərdə dəyişiklik etmək mümkün olmayacaq."
-            : "Kilid açıldıqdan sonra qəbzdə dəyişiklik etmək mümkün olacaq."}
-        </p>
-
-        <div className="modal-footer-custom justify-content-center border-0 pb-0">
-          <button className="btn-cancel" onClick={onClose}>Ləğv et</button>
-          <button
-            className="btn-save"
-            onClick={handleUpdateStatus}
-          >
-            <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'}`}></i>
-            {status === 0 ? "Kilidlə" : "Kilidi Aç"}
+          <button className="btn-close-custom" onClick={onClose}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
+        </div>
+
+        <div className="check-lock-modal-body text-center">
+          <div className="lock-icon-big-wrapper">
+            <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'}`}></i>
+          </div>
+
+          <h5 className="modal-question-text">
+            {status === 0
+              ? "Qəbzi kilidləmək istədiyinizə əminsiniz?"
+              : "Qəbzin kilidini açmaq istədiyinizə əminsiniz?"}
+          </h5>
+
+          <p className="modal-sub-text">
+            {status === 0
+              ? "Kilidlənmiş qəbzlərdə dəyişiklik etmək mümkün olmayacaq."
+              : "Kilid açıldıqdan sonra qəbzdə dəyişiklik etmək mümkün olacaq."}
+          </p>
+
+          <div className="modal-footer-custom">
+            <button className="btn-cancel" onClick={onClose}>Ləğv et</button>
+            <button className="check-lock-save-btn" onClick={handleUpdateStatus}>
+              <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'} me-2`}></i>
+              {status === 0 ? "Kilidlə" : "Kilidi Aç"}
+            </button>
+          </div>
         </div>
       </div>
     </Modal>

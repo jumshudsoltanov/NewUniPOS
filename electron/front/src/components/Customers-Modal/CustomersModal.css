@@ -161,7 +161,8 @@
 }
 
 .customers-save-btn:disabled {
-    background-color: #D1D5DB;
+    background-color: #d1d5db;
+    color: #ffffff;
     cursor: not-allowed;
     box-shadow: none;
 }

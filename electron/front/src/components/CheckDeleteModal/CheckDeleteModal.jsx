@@ -3,13 +3,13 @@ import Modal from "react-bootstrap/Modal";
 import "./CheckDeleteModal.css";
 import { useDispatch, useSelector } from "react-redux"
 import { getTagsList } from "../../redux/Slices/TagsSlice";
+
 const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, actionName }) => {
-    let headerName = type == "checks" ? "Çeki sil" : "Məhsulu sil"
+    let headerName = type === "checks" ? "Çeki sil" : "Məhsulu sil";
     const [selectedReason, setSelectedReason] = useState(null);
-    const [isWaste, setIsWaste] = useState(false);
-    const [tagsListData, setTagsListData] = useState([])
-    const dispatch = useDispatch()
-    const { loginedProfileData } = useSelector((state) => state.LoginSlice)
+    const [tagsListData, setTagsListData] = useState([]);
+    const dispatch = useDispatch();
+    const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
     useEffect(() => {
         const getTagsData = async () => {
@@ -30,7 +30,6 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
 
     const reasons = tagsListData?.filter((item) => Number(item.type) === tagsType) ?? [];
 
-
     const handleConfirm = () => {
         if (selectedReason) {
             const reasonObj = reasons.find(r => r.id === selectedReason);
@@ -48,70 +47,62 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
             show={show}
             onHide={() => onClose(false)}
             centered
-            className="product-modal danger-theme"
+            className="check-delete-modal"
             backdrop="static"
+            animation={false}
         >
-            <div className="product-modal-header">
-                <div className="header-left">
-                    <div className="header-icon-circle">
-                        <i className="bi bi-trash3"></i>
-                    </div>
-                    <h5 className="modal-title">{headerName}</h5>
-                </div>
-                <button className="close-btn" onClick={() => onClose(false)}>
-                    <i className="bi bi-x-lg"></i>
-                </button>
-            </div>
-
-            <Modal.Body className="product-modal-body p-0">
-                <div className="reasons-list">
-                    <div className="p-3 border-bottom bg-light">
-                        <p className="mb-0 text-muted" style={{ fontSize: '12px' }}>
-                            Zəhmət olmasa ləğv etmə səbəbini seçin:
-                        </p>
-                    </div>
-                    {reasons.map((reason, index) => (
-                        <div
-                            key={index}
-                            className={`reason-item ${selectedReason === reason.id ? "selected" : ""}`}
-                            onClick={() => setSelectedReason(reason.id)}
-                            style={{
-                                padding: '12px 20px',
-                                borderBottom: '1px solid #f0f0f0',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                transition: 'all 0.2s',
-                                background: selectedReason === reason.id ? '#fef2f2' : 'transparent'
-                            }}
-                        >
-                            <span className="reason-text" style={{
-                                fontSize: '13px',
-                                fontWeight: selectedReason === reason.id ? '600' : '400',
-                                color: selectedReason === reason.id ? '#dc2626' : '#444'
-                            }}>
-                                {reason.name}
-                            </span>
-                            {selectedReason === reason.id && (
-                                <i className="bi bi-check-circle-fill" style={{ color: '#dc2626' }}></i>
-                            )}
+            <div className="modal-content-wrapper">
+                <div className="check-delete-modal-header">
+                    <div className="check-delete-header-content">
+                        <div className="check-delete-icon-circle">
+                            <i className="bi bi-trash3-fill"></i>
                         </div>
-                    ))}
-                </div>
-
-                <div className="modal-footer-custom justify-content-center p-3">
-                    <button className="btn-cancel w-50" onClick={() => onClose(false)}>Ləğv et</button>
-                    <button
-                        className="btn-save w-50"
-                        onClick={handleConfirm}
-                        disabled={!selectedReason}
-                    >
-                        <i className="bi bi-check-lg"></i>
-                        {actionName || "Saxla"}
+                        <div className="check-delete-modal-title">{headerName}</div>
+                    </div>
+                    <button className="btn-close-custom" onClick={() => onClose(false)}>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="white"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
                     </button>
                 </div>
-            </Modal.Body>
+
+                <div className="check-delete-modal-body">
+                    <div className="reasons-list">
+                        {reasons.map((reason, index) => (
+                            <div
+                                key={index}
+                                className={`reason-item ${selectedReason === reason.id ? "selected" : ""}`}
+                                onClick={() => setSelectedReason(reason.id)}
+                            >
+                                <span className="reason-text">{reason.name}</span>
+                                <div className="check-icon-container">
+                                    <i className="bi bi-check-lg"></i>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <button
+                        className="check-delete-save-btn"
+                        disabled={!selectedReason}
+                        onClick={handleConfirm}
+                    >
+                        <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>
+                        {actionName || "Təsdiqlə"}
+                    </button>
+                </div>
+            </div>
         </Modal>
     );
 };

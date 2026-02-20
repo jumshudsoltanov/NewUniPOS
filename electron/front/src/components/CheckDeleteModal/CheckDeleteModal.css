@@ -1,8 +1,108 @@
-/* Reasons List Styles */
+/* Main Modal Container Overrides */
+.check-delete-modal .modal-content {
+    border-radius: 10px !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.check-delete-modal .modal-dialog {
+    max-width: 480px !important;
+    margin: 1.75rem auto;
+}
+
+.modal-content-wrapper {
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header - Match CustomersModal Colors */
+.check-delete-modal-header {
+    background-color: #5D99FF;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+    border-bottom: none;
+}
+
+.check-delete-header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.check-delete-icon-circle {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.check-delete-icon-circle i {
+    font-size: 1.2rem;
+    color: #053796;
+}
+
+.check-delete-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Body */
+.check-delete-modal-body {
+    padding: 24px 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Big Lock Icon Content */
+.lock-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background-color: #f0f7ff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+.lock-icon-wrapper i {
+    font-size: 28px;
+    color: #053796;
+}
+
+.modal-question-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    margin: 5px 0;
+}
+
+.modal-sub-text {
+    font-size: 14px;
+    color: #64748b;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Reasons List */
 .reasons-list {
     display: flex;
     flex-direction: column;
-    max-height: 400px;
+    gap: 8px;
+    max-height: 380px;
     overflow-y: auto;
 }
 
@@ -11,22 +111,93 @@
 }
 
 .reasons-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: transparent;
 }
 
 .reasons-list::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: #d1d5db;
     border-radius: 10px;
 }
 
-.reasons-list::-webkit-scrollbar-thumb:hover {
-    background: #bbb;
+.reason-item {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .reason-item:hover {
-    background-color: #f8fafc !important;
+    border-color: #cbd5e1;
 }
 
-.reason-item.selected:hover {
-    background-color: #fef2f2 !important;
+.reason-item.selected {
+    border-color: #5D99FF;
+    background-color: #ffffff;
+}
+
+.reason-text {
+    font-size: 15px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.check-icon-container {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.reason-item.selected .check-icon-container {
+    background-color: #5D99FF;
+    border-color: #5D99FF;
+}
+
+.check-icon-container i {
+    color: #fff;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.reason-item.selected .check-icon-container i {
+    opacity: 1;
+}
+
+/* Save Button */
+.check-delete-save-btn {
+    width: 100%;
+    height: 52px;
+    background-color: #053796;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    transition: all 0.2s;
+}
+
+.check-delete-save-btn:hover:not(:disabled) {
+    background-color: #042d7a;
+}
+
+.check-delete-save-btn:disabled {
+    background-color: #f8fafc;
+    color: #94a3b8;
+    border: 1px solid #e2e8f0;
+    cursor: not-allowed;
 }
