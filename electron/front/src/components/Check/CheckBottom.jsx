@@ -123,6 +123,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
   // Close Check
 
   const goCloseCheck = async () => {
+    if (!loginedWaiter?.data?.cannot_close_check) return
     if (products.length > 0 || pendingDeletions.length > 0) {
       await handleSendOrders()
     }

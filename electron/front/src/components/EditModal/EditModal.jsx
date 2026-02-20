@@ -57,7 +57,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
     // Validate
     if (selectedSalesType === 'dine_in' && !selectedTable) {
-      alert("Please select a table");
+      console.error("Please select a table");
       return;
     }
 
@@ -138,7 +138,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
               <button
                 className={`sidebar-btn ${activeTab === "transfer" ? "active" : ""}`}
-                onClick={() => setActiveTab("transfer")}
+                onClick={() => {
+                  if (!Number(loginedWaiter?.data?.can_transfer_product)) return;
+                  setActiveTab("gift")
+                }}
+
               >
                 <i className="bi bi-arrow-left-right"></i>
                 <span>Köçürmə</span>
@@ -146,7 +150,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
               <button
                 className={`sidebar-btn ${activeTab === "gift" ? "active" : ""}`}
-                onClick={() => setActiveTab("gift")}
+                onClick={() => {
+                  if (!Number(loginedWaiter?.data?.can_give_treats)) return;
+                  setActiveTab("gift")
+                }}
               >
                 <i className="bi bi-gift-fill"></i>
                 <span>İkram</span>
@@ -154,14 +161,17 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
               <button
                 className={`sidebar-btn ${activeTab === "discount" ? "active" : ""}`}
-                onClick={() => setActiveTab("discount")}
+                onClick={() => {
+                  if (!Number(loginedWaiter?.data?.can_give_product_discount)) return;
+                  setActiveTab("discount")
+                }}
               >
                 <i className="bi bi-percent"></i>
                 <span>Endirim</span>
               </button>
 
               <button
-                className={`sidebar-btn ${activeTab === "seller" ? "active" : ""}`}
+                className={`d-none sidebar-btn ${activeTab === "seller" ? "active" : ""}`}
                 onClick={() => setActiveTab("seller")}
               >
                 <i className="bi bi-person-fill"></i>
@@ -174,14 +184,6 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 className="sidebar-btn btn-delete"
                 onClick={() => {
                   if (product.isNew) {
-                    // Find index in products array. 
-                    // Since product prop is constructed in CheckMain, we rely on product_id matches.
-                    // But duplicates might exist if we added same product twice?
-                    // CheckMain merges them: "Process New (Local) ... combinedLocal.forEach..."
-                    // A local product in `products` array has `id` (productId).
-                    // `updateCount` handles finding by productId.
-                    // So we can just find index by productId.
-
                     const index = products.findIndex(p => p.id === (product.product_id || product.id));
                     if (index !== -1) {
                       dispatch(removeProduct(index));
@@ -220,7 +222,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       type="text"
                       className="super-input"
                       value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
+                      disabled={!loginedWaiter?.data?.can_change_product_price}
+                      onChange={(e) => {
+                        if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) return;
+                        setInputValue(e.target.value);
+                      }}
+
                     />
                     <div className="currency-icon">₼</div>
                     <div className="input-label">
@@ -414,9 +421,16 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                   )}
                 </div>
 
-                <button className="save-action-btn" onClick={handleTransfer}>
+                <button
+                  className="save-action-btn"
+                  onClick={() => {
+                    if (!Number(loginedWaiter?.data?.can_transfer_product)) return;
+                    handleTransfer();
+                  }}
+                >
                   <i className="bi bi-arrow-left-right"></i> Köçür
                 </button>
+
               </>
             ) : activeTab === "gift" ? (
               <>

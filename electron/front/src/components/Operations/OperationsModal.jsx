@@ -29,6 +29,7 @@ export const OperationsModal = ({
       icon: "bi-chat-left-text",
       text: "Çekə şərh yaz",
       functions: openCommentModal,
+      permissions: loginedWaiter?.data?.can_add_check_comment
     },
     { icon: "bi-person-plus", text: "Müştəri bazası", permissions: loginedWaiter?.data?.can_view_customers },
     { icon: "bi-journal-x", text: "Çeki təmizləmə", functions: clearCheck, permissions: loginedWaiter?.data?.can_clear_check },

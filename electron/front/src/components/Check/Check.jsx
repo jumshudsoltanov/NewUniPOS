@@ -508,7 +508,13 @@ const Check = () => {
                   </svg>
                 </div>
 
-                <div className="sidebar-icon" onClick={() => setShowCustomerModal(true)} style={{ cursor: 'pointer' }}>
+                <div className="sidebar-icon"
+                  onClick={() => {
+                    if (!loginedWaiter?.data?.can_view_customers) return
+                    setShowCustomerModal(true)
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -541,6 +547,7 @@ const Check = () => {
                     toast.error("Qəbz kilidlidir!");
                     return;
                   }
+                  if (!loginedWaiter?.data?.can_add_discount) return
                   setOnShowDiscount(true);
                 }}>
                   <svg
@@ -586,6 +593,7 @@ const Check = () => {
                     toast.error("Qəbz kilidlidir!");
                     return;
                   }
+                  if (!loginedWaiter?.data?.can_edit_service_fee) return
                   setOnShowServiceFee(true);
                 }}>
                   <svg
@@ -633,6 +641,7 @@ const Check = () => {
                       toast.error("Qəbz kilidlidir!");
                       return;
                     }
+                    if (!loginedWaiter?.data?.can_add_check_comment) return
                     setComment(true);
                   }}
 
@@ -677,8 +686,11 @@ const Check = () => {
                 </div>
                 <div
                   className={`sidebar-icon history ${showHistoryModal ? 'active-sidebar-icon' : ''}`}
-                  onClick={() => setShowHistoryModal(true)}
-                >
+                  onClick={() => {
+                    if (!loginedWaiter?.data?.can_view_logs) {
+                      setShowHistoryModal(true);
+                    }
+                  }}                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
@@ -700,6 +712,7 @@ const Check = () => {
                 <div
                   className="sidebar-icon check-lock"
                   onClick={() => {
+                    if (!loginedWaiter?.data?.can_lock_check) return
                     setLockCheck(true);
                   }}
                 >
@@ -738,7 +751,7 @@ const Check = () => {
                   className={`sidebar-icon position-relative ${isPrintingCheck ? "disabled" : ""}`}
                   title="Çap et"
                   onClick={async () => {
-                    if (isDragMode || isPrintingCheck) return;
+                    if (isDragMode || isPrintingCheck || !loginedWaiter?.data?.can_print_before_close) return;
 
                     if (currentOrder?.uuid) {
                       setIsPrintingCheck(true);
@@ -1501,9 +1514,7 @@ const Check = () => {
             toast.error("İstifadəçi məlumatları çatışmır");
             return;
           }
-          // Use current table/hall info if available, or default?
-          // "Yeni yarat" from Check view generally implies creating a new check for the SAME table if possible, or just a new check.
-          // If we are in a check, `currentTable` and `currentHall` are available.
+
           const payload = {
             guestCount: 0, // No guest count prompt
             tableId: currentTable?.id, // Keep same table
