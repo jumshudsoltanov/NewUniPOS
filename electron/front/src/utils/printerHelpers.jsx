@@ -51,7 +51,7 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
         container.style.position = "absolute";
         container.style.top = "-9999px";
         container.style.left = "-9999px";
-        container.style.width = "80mm";
+        container.style.width = "320px";
         document.body.appendChild(container);
 
         const root = ReactDOM.createRoot(container);
@@ -164,7 +164,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
     container.style.position = "absolute";
     container.style.top = "-9999px";
     container.style.left = "-9999px";
-    container.style.width = "80mm"; // Standard receipt width
+    container.style.width = "320px"; // Standard receipt width
     document.body.appendChild(container);
 
     const root = ReactDOM.createRoot(container);

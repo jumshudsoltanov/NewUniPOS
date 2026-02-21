@@ -97,6 +97,7 @@ ipcMain.handle("print-image", async (event, { image, printerName }) => {
       <head>
         <title>${jobName}</title>
         <style>
+          @page { margin: 0; }
           body { margin: 0; padding: 0; display: flex; justify-content: flex-start; }
           img { width: 100%; max-width: 100%; height: auto; display: block; }
         </style>
@@ -113,6 +114,7 @@ ipcMain.handle("print-image", async (event, { image, printerName }) => {
   const options = {
     silent: true,
     deviceName: printerName,
+    margins: { marginType: 'none' }
   };
 
   try {

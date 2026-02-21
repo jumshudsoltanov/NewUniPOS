@@ -33,7 +33,6 @@ const KitchenReceipt = ({
     const styles = {
         receipt: {
             width: "100%",
-            maxWidth: "300px",
             boxSizing: "border-box",
             padding: "0 2mm",
             margin: "0 auto",
