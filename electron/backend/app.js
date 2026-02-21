@@ -190,6 +190,14 @@ const InsertData = async () => {
   await creaedtToTabel();
   // Fetch initial data in background
   InsertData();
+
+  try {
+    const profile = await LoginModel.findOne();
+    if (profile && profile.is_master === 1 && global.httpServer) {
+      const { initMasterServer } = require("./socket/MasterServer");
+      initMasterServer(global.httpServer);
+    }
+  } catch (e) { }
 })();
 
 // Sync Endpoint
@@ -205,6 +213,8 @@ app.post("/api/sync", async (req, res) => {
   }
 });
 
-app.listen(55667, () => {
+const server = app.listen(55667, () => {
   console.log("Express Server Is Running");
 });
+
+global.httpServer = server;

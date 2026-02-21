@@ -27,6 +27,7 @@ const getLogin = async (req, res) => {
     );
 
     const profile = response.data?.data?.profile;
+    const terminal = response.data?.data?.terminal;
 
     if (!profile) {
       return res.status(400).json({ message: "Profile tapılmadı" });
@@ -34,8 +35,14 @@ const getLogin = async (req, res) => {
 
     await LoginModel.upsert({
       profile_id: profile.id,
+      is_master: terminal?.is_master ? 1 : 0,
       ...profile,
     });
+
+    if (terminal?.is_master === 1 && global.httpServer) {
+      const { initMasterServer } = require("../socket/MasterServer");
+      initMasterServer(global.httpServer);
+    }
 
     // Fetch initial data after login
     await getWaitersList(profile.id);

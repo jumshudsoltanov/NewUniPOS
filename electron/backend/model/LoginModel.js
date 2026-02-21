@@ -10,6 +10,11 @@ const LoginModel = db.sequelize.define(
       autoIncrement: true,
     },
 
+    is_master: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
+
     logo: DataTypes.TEXT("long"),
     super_admin_logo: DataTypes.TEXT("long"),
 
