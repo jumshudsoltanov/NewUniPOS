@@ -29,6 +29,14 @@ function AppContent() {
   const [showInitialLoading, setShowInitialLoading] = useState(true);
 
   useEffect(() => {
+    if (window.electronAPI && window.electronAPI.onBackendLog) {
+      window.electronAPI.onBackendLog((...args) => {
+        console.log("%cBackend Log:", "background: #222; color: #bada55; padding: 2px;", ...args);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     // Əgər artıq init başlayıbsa, bir daha başlama
     if (initStarted.current) return;
     initStarted.current = true;

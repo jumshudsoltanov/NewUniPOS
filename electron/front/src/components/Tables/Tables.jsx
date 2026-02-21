@@ -16,6 +16,7 @@ import {
   setTempTableLayout
 } from "../../redux/Slices/TablesSlice";
 import { toast } from "sonner";
+import { getSocket } from "../../utils/apiConfig";
 
 const Tables = () => {
   const {
@@ -149,6 +150,25 @@ const Tables = () => {
       setCurrentHallData(tableGroups.data[0]);
     }
   }, [tableGroups, currentHallId]);
+
+  // Handle Socket.IO Real-Time Table Synchronization
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleTableUpdated = (data) => {
+      // Re-fetch the tables to reflect updated order states visually
+      if (loginedProfileData?.data?.profile?.id) {
+        dispatch(getTableGroups(loginedProfileData.data.profile.id));
+      }
+    };
+
+    socket.on("table_updated", handleTableUpdated);
+
+    return () => {
+      socket.off("table_updated", handleTableUpdated);
+    };
+  }, [dispatch, loginedProfileData]);
 
   const handleTableClick = React.useCallback(
     async (table) => {

@@ -33,19 +33,24 @@ const getLogin = async (req, res) => {
       return res.status(400).json({ message: "Profile tapılmadı" });
     }
 
-    if (terminal?.is_master == 1) {
-      await LoginModel.upsert({
-        profile_id: profile.id,
-        is_master: 1,
-        ...profile,
-      });
+    const isMaster = terminal?.is_master == 1;
+    global.isMasterNode = isMaster;
 
+    // Always clear old profile and upsert the current active one (Master or Slave)
+    await LoginModel.destroy({ where: {} });
+    await LoginModel.upsert({
+      profile_id: profile.id,
+      is_master: isMaster ? 1 : 0,
+      ...profile,
+    });
+
+    if (isMaster) {
       if (global.httpServer) {
         const { initMasterServer } = require("../socket/MasterServer");
         initMasterServer(global.httpServer);
       }
 
-      // Fetch initial data after login
+      // Fetch initial data after login for the Master Cache
       await getWaitersList(profile.id);
       await getTableGroups(profile.id);
       await getTables(profile.id);

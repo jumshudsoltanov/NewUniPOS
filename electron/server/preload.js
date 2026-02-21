@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     openAnyDesk: () => ipcRenderer.invoke("open-anydesk"),
     printImage: (data) => ipcRenderer.invoke("print-image", data),
     scanMaster: () => ipcRenderer.invoke("scan-master"),
+    onBackendLog: (callback) => ipcRenderer.on("backend-log", (event, ...args) => callback(...args)),
 });

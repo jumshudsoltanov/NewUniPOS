@@ -3,7 +3,8 @@ const app = express();
 const AppRouter = require("./router/AppRouter");
 const cors = require("cors");
 const db = require("./database/config");
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 const TablesModel = require("./model/TablesModel");
 const TableGroupsModel = require("./model/TableGroupsModel");
 const OrdersModel = require("./model/OrdersModel");
@@ -184,29 +185,54 @@ const InsertData = async () => {
   }
 };
 
-const server = app.listen(55667, () => {
-  console.log("Express Server Is Running");
+const server = app.listen(55667, "0.0.0.0", () => {
+  console.log("Express Server Is Running on 0.0.0.0:55667");
+});
+
+server.on("error", (e) => {
+  if (e.code === "EADDRINUSE") {
+    console.log("Port 55667 is already in use. Running as a Slave instance on the same machine without a local API port.");
+  } else {
+    console.error("Express server error:", e);
+  }
 });
 
 global.httpServer = server;
+global.isMasterNode = false;
 
 // Initialize and start
 (async () => {
   await connectToDatabase();
   await creaedtToTabel();
-  // Fetch initial data in background
-  InsertData();
 
   try {
     const profile = await LoginModel.findOne();
     if (profile && profile.is_master === 1) {
+      global.isMasterNode = true;
+      console.log("Terminal is confirmed as Master in DB.");
+
       const { initMasterServer } = require("./socket/MasterServer");
       initMasterServer(server);
+
+      // Sərfəli (Master) terminal üçün ilkin məlumatları çək
+      InsertData();
+    } else {
+      console.log("Terminal is NOT Master. Running as Slave. (Broadcasting disabled)");
     }
   } catch (e) {
-    console.log("Error initializing master server on boot:", e.message);
+    console.log("Error checking master profile on boot:", e.message);
   }
 })();
+
+// Discovery Endpoint for TCP Sweeping
+app.get("/api/discover", (req, res) => {
+  if (global.isMasterNode) {
+    res.json({ master: true, message: "POS_MASTER_NODE" });
+  } else {
+    // Slave terminal should never claim to be the Master to TCP pingers
+    res.status(403).json({ master: false });
+  }
+});
 
 // Sync Endpoint
 app.post("/api/sync", async (req, res) => {

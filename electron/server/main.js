@@ -39,6 +39,23 @@ function createWindow() {
       console.error("Index file not found:", indexPath);
     }
   }
+
+  // Intercept all backend console.logs and pipe them to the frontend DevTools
+  const originalLog = console.log;
+  console.log = function (...args) {
+    originalLog.apply(console, args);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("backend-log", "[NODE BACKEND]", ...args);
+    }
+  };
+
+  const originalError = console.error;
+  console.error = function (...args) {
+    originalError.apply(console, args);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("backend-log", "[NODE ERROR]", ...args);
+    }
+  };
 }
 
 // IPC Handlers
@@ -139,46 +156,104 @@ ipcMain.handle("print-image", async (event, { image, printerName }) => {
 
 ipcMain.handle("scan-master", async () => {
   return new Promise((resolve) => {
-    const dgram = require("dgram");
-    const listener = dgram.createSocket("udp4");
     let resolved = false;
 
-    listener.on("message", (msg) => {
+    // --- 1. UDP Listener ---
+    const dgram = require("dgram");
+    const listener = dgram.createSocket("udp4");
+
+    listener.on("message", (msg, rinfo) => {
       try {
         const data = JSON.parse(msg.toString());
-        if (data.type === "master_pos" && data.ip) {
-          if (!resolved) {
-            resolved = true;
-            listener.close();
-            resolve(data.ip);
-          }
+        console.log(`[SLAVE UDP] Mesaj gəldi: ${msg.toString()} | Göndərən: ${rinfo.address}`);
+        if (data.type === "master_pos" && data.ip && !resolved) {
+          console.log(`[SLAVE UDP] MASTER IP TƏSDİQLƏNDİ: ${data.ip}`);
+          resolved = true;
+          try { listener.close(); } catch (e) { }
+          resolve(data.ip);
         }
-      } catch (e) { }
-    });
-
-    listener.on("error", () => {
-      if (!resolved) {
-        resolved = true;
-        listener.close();
-        resolve(null);
+      } catch (e) {
+        console.log("[SLAVE UDP] Parsing Error:", e.message);
       }
     });
 
     try {
-      listener.bind(44444);
+      listener.bind({ port: 44444, exclusive: false });
     } catch (e) {
-      // Port in use or other error
-      if (!resolved) resolve(null);
+      console.log("[SLAVE UDP] Bind error:", e.message);
     }
 
-    // Timeout after 5 seconds if no master found
+    // --- 2. TCP Sweep (Super fast HTTP Check) ---
+    const os = require("os");
+    const http = require("http");
+    const interfaces = os.networkInterfaces();
+    let localSubnet = null;
+
+    for (const name of Object.keys(interfaces)) {
+      const isVirtual = name.toLowerCase().match(/(vmware|virtual|vbox|wsl|vethernet|loopback)/);
+      if (isVirtual) continue;
+      for (const iface of interfaces[name]) {
+        if (iface.family === "IPv4" && !iface.internal && iface.address.startsWith("192.168.")) {
+          localSubnet = iface.address.split('.').slice(0, 3).join('.');
+          break;
+        }
+      }
+      if (localSubnet) break;
+    }
+
+    if (localSubnet) {
+      console.log(`[SLAVE TCP] IP Axtarışı başladı. Subnet: ${localSubnet}.1 - 254`);
+
+      const checkIp = (ip) => {
+        return new Promise((res) => {
+          const startTime = Date.now();
+          const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 3000 }, (response) => {
+            let body = '';
+            response.on('data', chunk => body += chunk);
+            response.on('end', () => {
+              try {
+                const result = JSON.parse(body);
+                if (result.master === true) {
+                  console.log(`[SLAVE TCP] Uğurlu cavab: ${ip} | Müddət: ${Date.now() - startTime}ms`);
+                  res(ip);
+                }
+                else res(null);
+              } catch (e) { res(null); }
+            });
+          });
+          req.on('socket', function (socket) {
+            socket.setTimeout(3000);
+            socket.on('timeout', function () { req.destroy(); });
+          });
+          req.on('error', () => res(null));
+          req.on('timeout', () => { req.destroy(); res(null); });
+        });
+      };
+
+      for (let i = 1; i <= 254; i++) {
+        const testIp = `${localSubnet}.${i}`;
+        checkIp(testIp).then(foundIp => {
+          if (foundIp && !resolved) {
+            console.log(`[SLAVE TCP] MASTER IP TƏSDİQLƏNDİ: ${foundIp}`);
+            resolved = true;
+            try { listener.close(); } catch (e) { }
+            resolve(foundIp);
+          }
+        });
+      }
+    } else {
+      console.log("[SLAVE TCP] Wi-Fi 192.168 alt şəbəkəsi tapılmadı.");
+    }
+
+    // --- 3. Safety Timeout ---
     setTimeout(() => {
       if (!resolved) {
         resolved = true;
         try { listener.close(); } catch (e) { }
+        console.log("[SLAVE] 15 saniyə ərzində Master tapılmadı. Lokal davam edilir...");
         resolve(null);
       }
-    }, 5000);
+    }, 15000);
   });
 });
 
