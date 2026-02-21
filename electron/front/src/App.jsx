@@ -56,9 +56,9 @@ function AppContent() {
       const isMasterSlaveActive = terminalData.is_master_slave_active === 1 || profileData.is_master_slave_active === 1;
 
       if (!storageData || (isMasterSlaveActive && !isMaster)) {
-        await initNetwork(); // Attempt to find Master via UDP/TCP on network
+        await initNetwork(false, !isMasterSlaveActive); // Attempt to find Master
       } else {
-        await initNetwork(true); // Force local connection for Standalone or Master
+        await initNetwork(true, !isMasterSlaveActive); // Standalone or Master
       }
 
       if (storageData) {
@@ -158,3 +158,4 @@ function App() {
 }
 
 export default App;
+

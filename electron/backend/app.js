@@ -207,7 +207,7 @@ global.isMasterNode = false;
 
   try {
     const profile = await LoginModel.findOne();
-    if (profile && profile.is_master === 1) {
+    if (profile && profile.is_master === 1 && profile.is_master_slave_active === 1) {
       global.isMasterNode = true;
       console.log("Terminal is confirmed as Master in DB.");
 

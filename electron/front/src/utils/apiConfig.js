@@ -7,7 +7,7 @@ const apiConfig = axios.create({
 
 let socket = null;
 
-export const initNetwork = async (forceLocal = false) => {
+export const initNetwork = async (forceLocal = false, disableSocket = false) => {
     if (!forceLocal && window.electronAPI && window.electronAPI.scanMaster) {
         try {
             const masterIp = await window.electronAPI.scanMaster();
@@ -15,10 +15,12 @@ export const initNetwork = async (forceLocal = false) => {
                 const baseURL = `http://${masterIp}:55667`;
                 apiConfig.defaults.baseURL = `${baseURL}/api`;
 
-                socket = io(baseURL);
-                socket.on("connect", () => {
-                    console.warn(`[CONNECTION] Connected as SLAVE to Master Terminal at ${baseURL}`);
-                });
+                if (!disableSocket) {
+                    socket = io(baseURL);
+                    socket.on("connect", () => {
+                        console.warn(`[CONNECTION] Connected as SLAVE to Master Terminal at ${baseURL}`);
+                    });
+                }
                 return { masterIp, socket };
             }
         } catch (e) {
@@ -27,10 +29,15 @@ export const initNetwork = async (forceLocal = false) => {
     }
 
     // Fallback to local (only if forceLocal is true or it's genuinely the Electron Master)
-    socket = io("http://localhost:55667");
-    socket.on("connect", () => {
-        console.warn("[CONNECTION] Connected as MASTER (Local Database)");
-    });
+    if (!disableSocket) {
+        socket = io("http://localhost:55667");
+        socket.on("connect", () => {
+            console.warn("[CONNECTION] Connected as MASTER (Local Database)");
+        });
+    } else {
+        console.warn("[CONNECTION] Running in Standalone Mode. Real-time sockets explicitly deactivated.");
+    }
+
     return { masterIp: "localhost", socket };
 };
 

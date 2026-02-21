@@ -3,7 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import KitchenReceipt from "../components/Receipt/KitchenReceipt";
 import { addNotification } from "./notificationService";
-import axios from "../../utils/apiConfig";
+import axios from "./apiConfig";
 
 export const processAndPrintOrders = async (items, orderData, menuDataWithCategories) => {
     const printerGroups = {};
