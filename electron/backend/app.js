@@ -184,6 +184,12 @@ const InsertData = async () => {
   }
 };
 
+const server = app.listen(55667, () => {
+  console.log("Express Server Is Running");
+});
+
+global.httpServer = server;
+
 // Initialize and start
 (async () => {
   await connectToDatabase();
@@ -193,11 +199,13 @@ const InsertData = async () => {
 
   try {
     const profile = await LoginModel.findOne();
-    if (profile && profile.is_master === 1 && global.httpServer) {
+    if (profile && profile.is_master === 1) {
       const { initMasterServer } = require("./socket/MasterServer");
-      initMasterServer(global.httpServer);
+      initMasterServer(server);
     }
-  } catch (e) { }
+  } catch (e) {
+    console.log("Error initializing master server on boot:", e.message);
+  }
 })();
 
 // Sync Endpoint
@@ -212,9 +220,3 @@ app.post("/api/sync", async (req, res) => {
     res.status(500).json({ message: "Sync failed", error: error.message });
   }
 });
-
-const server = app.listen(55667, () => {
-  console.log("Express Server Is Running");
-});
-
-global.httpServer = server;

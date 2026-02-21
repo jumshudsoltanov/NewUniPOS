@@ -42,7 +42,11 @@ function AppContent() {
       const currentPath = window.location.hash.replace("#", "") || "/";
 
       // Tətbiqi başlamadan və APİ müraciətlərini etmədən əvvəl UDP scan edib BaseUrl və Socket yaradırıq.
-      if (!storageData || !storageData.is_master) {
+      const terminalData = authResult?.data?.terminal || {};
+      const profileData = authResult?.data?.profile || {};
+      const isMaster = terminalData.is_master === 1 || profileData.is_master === 1;
+
+      if (!storageData || !isMaster) {
         await initNetwork();
       } else {
         await initNetwork(true); // force local for master

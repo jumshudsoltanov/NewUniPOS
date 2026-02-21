@@ -17,7 +17,7 @@ export const initNetwork = async (forceLocal = false) => {
 
                 socket = io(baseURL);
                 socket.on("connect", () => {
-                    console.log(`✅ Master terminalı ilə əlaqə quruldu (${baseURL})`);
+                    console.warn(`[CONNECTION] Connected as SLAVE to Master Terminal at ${baseURL}`);
                 });
                 return { masterIp, socket };
             }
@@ -26,10 +26,10 @@ export const initNetwork = async (forceLocal = false) => {
         }
     }
 
-    // Fallback to local
+    // Fallback to local (only if forceLocal is true or it's genuinely the Electron Master)
     socket = io("http://localhost:55667");
     socket.on("connect", () => {
-        console.log("✅ Lokal Socket serverə qoşuldu");
+        console.warn("[CONNECTION] Connected as MASTER (Local Database)");
     });
     return { masterIp: "localhost", socket };
 };

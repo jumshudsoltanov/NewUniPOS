@@ -54,6 +54,8 @@ const CreateNewOrders = async (req, res) => {
     // Trigger sync
     if (newSale.uuid) {
       SyncService.triggerSync(newSale.uuid);
+      const { getIo } = require("../socket/MasterServer");
+      if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
     }
 
     res.status(200).json({ message: "success", data: newSale, count: newId });
@@ -92,6 +94,8 @@ const CreateNewOtherOrders = async (req, res) => {
     // Trigger sync
     if (newSale.uuid) {
       SyncService.triggerSync(newSale.uuid);
+      const { getIo } = require("../socket/MasterServer");
+      if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
     }
 
     res.status(200).json({ message: "success", data: newSale, count: newId });
