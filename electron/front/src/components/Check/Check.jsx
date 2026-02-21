@@ -45,7 +45,7 @@ import { addNotification } from "../../utils/notificationService";
 // Cloud API Base URL (Same as Admin)
 const CLOUD_API_URL = "https://api.unipos.tech/api";
 // Local Backend Sync URL
-const LOCAL_SYNC_URL = "http://localhost:55667/api/sync";
+const LOCAL_SYNC_URL = "/sync";
 
 import {
   menuWithGeneralCategories,
@@ -1320,7 +1320,7 @@ const Check = () => {
 
                               if (orderedItems.length > 0 && endpoint) {
                                 // 1. Save to Cloud
-                                await axios.put(endpoint, { orderedItems });
+                                await apiConfig.put(endpoint, { orderedItems });
 
                                 // 2. Reset Drag Mode Immediately
                                 setIsDragMode(false);

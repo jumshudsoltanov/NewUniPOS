@@ -1,12 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import apiConfig from "../../utils/apiConfig";
 
 export const menuWithGeneralCategories = createAsyncThunk(
   "orders/all-menu",
   async (profileId, thunkAPI) => {
     try {
-      const response = await axios.get(
-        `http://localhost:55667/api/menu/${profileId}/all-menu`,
+      const response = await apiConfig.get(
+        `/menu/${profileId}/all-menu`,
         {},
       );
       return response.data;
@@ -20,8 +20,8 @@ export const menuWithCategories = createAsyncThunk(
   "orders/men-categories",
   async (profileId, thunkAPI) => {
     try {
-      const response = await axios.get(
-        `http://localhost:55667/api/menu/${profileId}/menu-with-categories`,
+      const response = await apiConfig.get(
+        `/menu/${profileId}/menu-with-categories`,
         {},
       );
       return response.data;

@@ -137,6 +137,51 @@ ipcMain.handle("print-image", async (event, { image, printerName }) => {
   }
 });
 
+ipcMain.handle("scan-master", async () => {
+  return new Promise((resolve) => {
+    const dgram = require("dgram");
+    const listener = dgram.createSocket("udp4");
+    let resolved = false;
+
+    listener.on("message", (msg) => {
+      try {
+        const data = JSON.parse(msg.toString());
+        if (data.type === "master_pos" && data.ip) {
+          if (!resolved) {
+            resolved = true;
+            listener.close();
+            resolve(data.ip);
+          }
+        }
+      } catch (e) { }
+    });
+
+    listener.on("error", () => {
+      if (!resolved) {
+        resolved = true;
+        listener.close();
+        resolve(null);
+      }
+    });
+
+    try {
+      listener.bind(44444);
+    } catch (e) {
+      // Port in use or other error
+      if (!resolved) resolve(null);
+    }
+
+    // Timeout after 5 seconds if no master found
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        try { listener.close(); } catch (e) { }
+        resolve(null);
+      }
+    }, 5000);
+  });
+});
+
 // Start backend server with error handling
 try {
   const appPath = app.getAppPath();

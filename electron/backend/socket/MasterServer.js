@@ -28,8 +28,12 @@ const initMasterServer = (server) => {
         }
     });
 
+    console.log("✅ Master Socket.io Server Başladı");
+
     io.on("connection", (socket) => {
+        console.log(`🔌 Yeni terminal qoşuldu: ${socket.id}`);
         socket.on("disconnect", () => {
+            console.log(`❌ Terminal bağlantısı kəsildi: ${socket.id}`);
         });
     });
 
@@ -60,4 +64,6 @@ const startBroadcasting = () => {
     });
 };
 
-module.exports = { initMasterServer };
+const getIo = () => io;
+
+module.exports = { initMasterServer, getIo };

@@ -18,6 +18,7 @@ import Toastify from "./components/Toastify/Toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
+import { initNetwork } from "./utils/apiConfig";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -44,6 +45,11 @@ function AppContent() {
         // Redux-da login datasını bərpa edirik (offline işləməsi üçün)
         if (authResult) {
           dispatch(setLoginData(authResult));
+        }
+
+        // Tətbiqi başlamadan və APİ müraciətlərini etmədən əvvəl UDP scan edib BaseUrl və Socket yaradırıq.
+        if (!storageData.is_master) {
+          await initNetwork();
         }
 
         try {

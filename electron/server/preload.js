@@ -4,4 +4,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getFullscreenState: () => ipcRenderer.invoke("get-fullscreen-state"),
     openAnyDesk: () => ipcRenderer.invoke("open-anydesk"),
     printImage: (data) => ipcRenderer.invoke("print-image", data),
+    scanMaster: () => ipcRenderer.invoke("scan-master"),
 });

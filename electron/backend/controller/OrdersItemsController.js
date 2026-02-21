@@ -118,6 +118,8 @@ const sendOrdersItemsToDb = async (req, res) => {
 
     // Sync trigger
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     // Return the full updated order for frontend state sync
     const updatedOrder = await OrdersModel.findOne({
@@ -214,6 +216,8 @@ const onUpdateDiscountOrder = async (req, res) => {
     );
 
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     return res.status(200).json({
       message: "Discount updated successfully!",
@@ -289,6 +293,8 @@ const onUpdateServiceFeeOrder = async (req, res) => {
     );
 
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     return res.status(200).json({
       message: "service updated successfully!",
@@ -315,6 +321,8 @@ const onUpdateTableOrder = async (req, res) => {
     );
 
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     res
       .status(200)
@@ -339,6 +347,8 @@ const onLockCheck = async (req, res) => {
     );
 
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     res
       .status(200)
@@ -362,6 +372,8 @@ const onUpdateCheckTags = async (req, res) => {
       { where: { uuid: orderId } },
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -405,6 +417,8 @@ const onUpdateCheckComments = async (req, res) => {
       { where: { uuid: orderId } },
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -453,6 +467,8 @@ const onDeleteOrderItems = async (req, res) => {
     );
     await OrdersModel.update({ is_synced: 0 }, { where: { uuid: orderId } });
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -664,6 +680,8 @@ const onChangeSaleType = async (req, res) => {
       { where: { uuid: orderId } },
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -707,6 +725,8 @@ const onUpdateWaiter = async (req, res) => {
       { where: { uuid: orderId } },
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -1131,6 +1151,8 @@ const onGiftItem = async (req, res) => {
 
     // Sync trigger
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     await transaction.commit();
 
@@ -1271,6 +1293,8 @@ const onUpdateItemDiscount = async (req, res) => {
 
     // Sync trigger
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     await transaction.commit();
 
@@ -1325,6 +1349,8 @@ const onDeleteCheck = async (req, res) => {
       { where: { uuid: orderId } },
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -1390,6 +1416,8 @@ const onCloseOrder = async (req, res) => {
     // 5. Commit and Trigger Sync
     await transaction.commit();
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     // 6. Fetch full updated order and return
     const updatedOrder = await OrdersModel.findOne({
@@ -1468,6 +1496,8 @@ const onUpdateDepositOrder = async (req, res) => {
     );
 
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -1521,6 +1551,8 @@ const onReopenOrder = async (req, res) => {
       { where: { uuid: orderId } }
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     return res.status(200).json({
       message: "Check reopened successfully!",
@@ -1553,6 +1585,8 @@ const onReturnCheck = async (req, res) => {
       { where: { uuid: orderId } }
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     return res.status(200).json({
       message: "Check returned and reopened successfully!",
@@ -1643,6 +1677,8 @@ const onDeleteItemWithReason = async (req, res) => {
     );
     // Sync handled after commit
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     await transaction.commit();
 
@@ -1767,6 +1803,8 @@ const onUpdateItemPrice = async (req, res) => {
       { where: { uuid: orderId } },
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     // Return success with full order data for frontend updates
     const updatedOrder = await OrdersModel.findOne({
@@ -1889,6 +1927,8 @@ const onUpdateItemCount = async (req, res) => {
       { where: { uuid: orderId } },
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     // Return success with full order data for frontend updates
     const updatedOrder = await OrdersModel.findOne({
@@ -1934,6 +1974,8 @@ const onAssignCustomer = async (req, res) => {
       { where: { uuid: orderId } }
     );
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updated = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -1985,6 +2027,8 @@ const incrementPrintCount = async (req, res) => {
     );
 
     SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
