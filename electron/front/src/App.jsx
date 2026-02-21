@@ -41,15 +41,17 @@ function AppContent() {
       const authResult = JSON.parse(localStorage.getItem("authResult"));
       const currentPath = window.location.hash.replace("#", "") || "/";
 
+      // Tətbiqi başlamadan və APİ müraciətlərini etmədən əvvəl UDP scan edib BaseUrl və Socket yaradırıq.
+      if (!storageData || !storageData.is_master) {
+        await initNetwork();
+      } else {
+        await initNetwork(true); // force local for master
+      }
+
       if (storageData) {
         // Redux-da login datasını bərpa edirik (offline işləməsi üçün)
         if (authResult) {
           dispatch(setLoginData(authResult));
-        }
-
-        // Tətbiqi başlamadan və APİ müraciətlərini etmədən əvvəl UDP scan edib BaseUrl və Socket yaradırıq.
-        if (!storageData.is_master) {
-          await initNetwork();
         }
 
         try {

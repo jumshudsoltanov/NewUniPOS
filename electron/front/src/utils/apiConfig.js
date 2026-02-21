@@ -7,8 +7,8 @@ const apiConfig = axios.create({
 
 let socket = null;
 
-export const initNetwork = async () => {
-    if (window.electronAPI && window.electronAPI.scanMaster) {
+export const initNetwork = async (forceLocal = false) => {
+    if (!forceLocal && window.electronAPI && window.electronAPI.scanMaster) {
         try {
             const masterIp = await window.electronAPI.scanMaster();
             if (masterIp) {

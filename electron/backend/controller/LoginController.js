@@ -33,35 +33,41 @@ const getLogin = async (req, res) => {
       return res.status(400).json({ message: "Profile tapılmadı" });
     }
 
-    await LoginModel.upsert({
-      profile_id: profile.id,
-      is_master: terminal?.is_master ? 1 : 0,
-      ...profile,
-    });
+    if (terminal?.is_master == 1) {
+      await LoginModel.upsert({
+        profile_id: profile.id,
+        is_master: 1,
+        ...profile,
+      });
 
-    if (terminal?.is_master === 1 && global.httpServer) {
-      const { initMasterServer } = require("../socket/MasterServer");
-      initMasterServer(global.httpServer);
+      if (global.httpServer) {
+        const { initMasterServer } = require("../socket/MasterServer");
+        initMasterServer(global.httpServer);
+      }
+
+      // Fetch initial data after login
+      await getWaitersList(profile.id);
+      await getTableGroups(profile.id);
+      await getTables(profile.id);
+      await getGeneralCategories(profile.id);
+      await getCategories(profile.id);
+      await getProducts(profile.id);
+      await getTags(profile.id);
+      await getPaymentMethods(profile.id);
+      await getSalesTypes(profile.id);
     }
 
-    // Fetch initial data after login
-    await getWaitersList(profile.id);
-    await getTableGroups(profile.id);
-    await getTables(profile.id);
-    await getGeneralCategories(profile.id);
-    await getCategories(profile.id);
-    await getProducts(profile.id);
-    await getTags(profile.id);
-    await getPaymentMethods(profile.id);
-    await getSalesTypes(profile.id);
-
     // Fetch the stored profile so we include local fields like background_img
-    const storedProfile = await LoginModel.findOne({ where: { id: profile.id } });
-    if (storedProfile && response.data && response.data.data && response.data.data.profile) {
-      response.data.data.profile = {
-        ...response.data.data.profile,
-        ...storedProfile.toJSON()
-      };
+    try {
+      const storedProfile = await LoginModel.findOne({ where: { id: profile.id } });
+      if (storedProfile && response.data && response.data.data && response.data.data.profile) {
+        response.data.data.profile = {
+          ...response.data.data.profile,
+          ...storedProfile.toJSON()
+        };
+      }
+    } catch (dbError) {
+      console.log("No local database available to fetch stored profile, continuing with cloud profile");
     }
 
     res.status(200).json(response.data);
