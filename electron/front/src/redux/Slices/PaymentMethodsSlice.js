@@ -1,12 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 
 export const getPaymentMethods = createAsyncThunk(
     "paymentMethods/getPaymentMethods",
     async (profileId, thunkAPI) => {
         try {
             const response = await axios.get(
-                `http://localhost:55667/api/payment-methods/${profileId}/list`,
+                `/payment-methods/${profileId}/list`,
             );
             return response.data;
         } catch (error) {
@@ -40,3 +40,5 @@ const PaymentMethodsSlice = createSlice({
 });
 
 export default PaymentMethodsSlice.reducer;
+
+

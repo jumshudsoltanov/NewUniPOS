@@ -53,11 +53,12 @@ function AppContent() {
       const terminalData = authResult?.data?.terminal || {};
       const profileData = authResult?.data?.profile || {};
       const isMaster = terminalData.is_master === 1 || profileData.is_master === 1;
+      const isMasterSlaveActive = terminalData.is_master_slave_active === 1 || profileData.is_master_slave_active === 1;
 
-      if (!storageData || !isMaster) {
-        await initNetwork();
+      if (!storageData || (isMasterSlaveActive && !isMaster)) {
+        await initNetwork(); // Attempt to find Master via UDP/TCP on network
       } else {
-        await initNetwork(true); // force local for master
+        await initNetwork(true); // Force local connection for Standalone or Master
       }
 
       if (storageData) {

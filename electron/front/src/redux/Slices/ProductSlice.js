@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 import { menuWithCategories, menuWithGeneralCategories } from "./MenuSlice";
 
-const API_URL = "http://localhost:55667/api/products";
-const LOCAL_SYNC_URL = "http://localhost:55667/api/sync";
+const API_URL = "/products";
+const LOCAL_SYNC_URL = "/sync";
 
 export const addProduct = createAsyncThunk(
     "products/add",
@@ -92,3 +92,5 @@ const ProductSlice = createSlice({
 });
 
 export default ProductSlice.reducer;
+
+

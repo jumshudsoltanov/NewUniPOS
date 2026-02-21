@@ -1,11 +1,11 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 
 export const getActiveOrders = createAsyncThunk(
   "pos/active-orders",
   async ({ profileId, id, sale_type, waiter_id, hall_id, table_id, courier_id }, thunkAPI) => {
     try {
-      let url = `http://localhost:55667/api/orders/${profileId}/all-checks`;
+      let url = `/orders/${profileId}/all-checks`;
       const params = new URLSearchParams();
       if (id) params.append("id", id);
       if (sale_type) params.append("sale_type", sale_type);
@@ -27,7 +27,7 @@ export const getArchivedOrders = createAsyncThunk(
   "pos/archived-orders",
   async ({ profileId, type, date, id, sale_type, waiter_id, hall_id, table_id, courier_id }, thunkAPI) => {
     try {
-      let url = `http://localhost:55667/api/orders/${profileId}/archived-checks?type=${type}`;
+      let url = `/orders/${profileId}/archived-checks?type=${type}`;
       if (date) url += `&date=${date}`;
       if (id) url += `&id=${id}`;
       if (sale_type) url += `&sale_type=${sale_type}`;
@@ -166,3 +166,5 @@ const BooksSlice = createSlice({
 });
 
 export default BooksSlice.reducer;
+
+

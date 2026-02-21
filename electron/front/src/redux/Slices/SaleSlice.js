@@ -1,12 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 
 export const saleNewOrders = createAsyncThunk(
   "pos/sales",
   async (data, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:55667/api/sale",
+        "/sale",
         data,
       );
       return response.data;
@@ -22,7 +22,7 @@ export const saleNewOtherOrders = createAsyncThunk(
   async (data, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:55667/api/other-sale",
+        "/other-sale",
         data,
       );
       return response.data;
@@ -52,3 +52,5 @@ const SaleSlice = createSlice({
 });
 
 export default SaleSlice.reducer;
+
+

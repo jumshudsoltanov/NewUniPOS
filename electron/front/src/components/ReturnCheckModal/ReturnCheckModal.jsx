@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Row, Col } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import "./ReturnCheckModal.css";
@@ -48,7 +48,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
         try {
             const profileId = loginedProfileData?.data?.profile?.id;
             const response = await axios.get(
-                `http://localhost:55667/api/orders/${checkId}?profileId=${profileId}`
+                `/orders/${checkId}?profileId=${profileId}`
             );
 
             if (response.data?.data) {
@@ -74,7 +74,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
     const handleReturnConfirm = async ({ reason, orderId }) => {
         try {
             await axios.patch(
-                `http://localhost:55667/api/orders-items/${orderId}/return`,
+                `/orders-items/${orderId}/return`,
                 {
                     is_return: 1,
                     is_delete_reason_id: reason
@@ -266,3 +266,5 @@ const ReturnCheckModal = ({ show, onClose }) => {
 };
 
 export default ReturnCheckModal;
+
+

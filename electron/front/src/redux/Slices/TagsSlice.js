@@ -1,9 +1,9 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 
 export const getTagsList = createAsyncThunk("pos/tags", async (profileId) => {
   const response = await axios.get(
-    `http://localhost:55667/api/tags/${profileId}/list`,
+    `/tags/${profileId}/list`,
     {},
   );
   return response.data;
@@ -23,3 +23,5 @@ const TagsSlice = createSlice({
 });
 
 export default TagsSlice.reducer;
+
+

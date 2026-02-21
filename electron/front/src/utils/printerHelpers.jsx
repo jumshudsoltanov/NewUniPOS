@@ -3,7 +3,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import KitchenReceipt from "../components/Receipt/KitchenReceipt";
 import { addNotification } from "./notificationService";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 
 export const processAndPrintOrders = async (items, orderData, menuDataWithCategories) => {
     const printerGroups = {};
@@ -84,7 +84,7 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
 
         const logError = async (errorMsg) => {
             try {
-                await axios.post(`http://localhost:55667/api/orders-items/${orderData.orderId}/logs`, {
+                await axios.post(`/orders-items/${orderData.orderId}/logs`, {
                     action: "Mətbəx Çapı Xətası",
                     waiterName: orderData.waiter || "Sistem",
                     details: `${printerName} printerinə çap göndərilə bilmədi. Xəta: ${errorMsg}`,
@@ -125,7 +125,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         try {
             const profileId = profileData?.data?.profile?.id;
             if (profileId) {
-                const response = await axios.get(`http://localhost:55667/api/pos/printers/${profileId}`);
+                const response = await axios.get(`/pos/printers/${profileId}`);
                 if (response.data && Array.isArray(response.data.data)) {
                     printers = response.data.data;
                 }
@@ -142,7 +142,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
     const logError = async (action, details) => {
         try {
             if (orderData?.checkData?.uuid) {
-                await axios.post(`http://localhost:55667/api/orders-items/${orderData.checkData.uuid}/logs`, {
+                await axios.post(`/orders-items/${orderData.checkData.uuid}/logs`, {
                     action: action,
                     waiterName: orderData.waiterName || "Sistem",
                     details: details,
@@ -224,3 +224,5 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         document.body.removeChild(container);
     }
 };
+
+

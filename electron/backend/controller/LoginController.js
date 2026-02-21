@@ -34,17 +34,20 @@ const getLogin = async (req, res) => {
     }
 
     const isMaster = terminal?.is_master == 1;
-    global.isMasterNode = isMaster;
+    const isMasterSlaveActive = terminal?.is_master_slave_active == 1;
+
+    global.isMasterNode = isMaster && isMasterSlaveActive;
 
     // Always clear old profile and upsert the current active one (Master or Slave)
     await LoginModel.destroy({ where: {} });
     await LoginModel.upsert({
       profile_id: profile.id,
       is_master: isMaster ? 1 : 0,
+      is_master_slave_active: isMasterSlaveActive ? 1 : 0,
       ...profile,
     });
 
-    if (isMaster) {
+    if (global.isMasterNode) {
       if (global.httpServer) {
         const { initMasterServer } = require("../socket/MasterServer");
         initMasterServer(global.httpServer);

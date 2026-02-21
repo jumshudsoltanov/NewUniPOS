@@ -1,9 +1,9 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 
 export const getWaiter = createAsyncThunk("pos/waiter", async (pin) => {
   const response = await axios.get(
-    `http://localhost:55667/api/waiters/${pin}`,
+    `/waiters/${pin}`,
     {},
   );
   return response.data;
@@ -13,7 +13,7 @@ export const getWaitersList = createAsyncThunk(
   "pos/waiters",
   async (profileId) => {
     const response = await axios.get(
-      `http://localhost:55667/api/waiters/${profileId}/list`,
+      `/waiters/${profileId}/list`,
       {},
     );
     return response.data;
@@ -39,3 +39,4 @@ const WaitersSlice = createSlice({
 });
 
 export default WaitersSlice.reducer;
+

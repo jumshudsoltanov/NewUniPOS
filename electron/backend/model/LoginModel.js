@@ -14,6 +14,10 @@ const LoginModel = db.sequelize.define(
       type: DataTypes.TINYINT,
       defaultValue: 0,
     },
+    is_master_slave_active: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
 
     logo: DataTypes.TEXT("long"),
     super_admin_logo: DataTypes.TEXT("long"),

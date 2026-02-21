@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Row, Col, Form, Table } from "react-bootstrap";
 import { useSelector } from "react-redux";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 import "./ReportModal.css";
 
 const ReportModal = ({ show, onClose }) => {
@@ -52,7 +52,7 @@ const ReportModal = ({ show, onClose }) => {
 
     const fetchTerminals = async () => {
         try {
-            const response = await axios.get(`http://localhost:55667/api/reports/${profileId}/terminals`);
+            const response = await axios.get(`/reports/${profileId}/terminals`);
             if (response.data.status === "success") {
                 setTerminals([{ id: "all", name: "Hamısı" }, ...response.data.data]);
             }
@@ -67,7 +67,7 @@ const ReportModal = ({ show, onClose }) => {
         setLoading(true);
         try {
             // Always fetch simple summary first
-            const summaryRes = await axios.get(`http://localhost:55667/api/reports/${profileId}/data`, {
+            const summaryRes = await axios.get(`/reports/${profileId}/data`, {
                 params: { startDate, startTime, endDate, endTime, terminal, reportType: 'simple', showTransactions }
             });
 
@@ -77,7 +77,7 @@ const ReportModal = ({ show, onClose }) => {
 
             // If selected report is not simple, fetch it too
             if (reportType !== "simple") {
-                const response = await axios.get(`http://localhost:55667/api/reports/${profileId}/data`, {
+                const response = await axios.get(`/reports/${profileId}/data`, {
                     params: { startDate, startTime, endDate, endTime, terminal, reportType, showTransactions }
                 });
 
@@ -475,4 +475,6 @@ const ReportModal = ({ show, onClose }) => {
 };
 
 export default ReportModal;
+
+
 

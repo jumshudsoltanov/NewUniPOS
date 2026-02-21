@@ -1,12 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 
 export const getSalesTypes = createAsyncThunk(
     "salesTypes/getSalesTypes",
     async (profileId, thunkAPI) => {
         try {
             const response = await axios.get(
-                `http://localhost:55667/api/sale-types/${profileId}`,
+                `/sale-types/${profileId}`,
             );
             return response.data;
         } catch (error) {
@@ -40,3 +40,5 @@ const SalesTypesSlice = createSlice({
 });
 
 export default SalesTypesSlice.reducer;
+
+

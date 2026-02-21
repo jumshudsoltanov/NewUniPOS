@@ -1,12 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 
 export const getTableGroups = createAsyncThunk(
   "tables/getTableGroups",
   async (profileId, thunkAPI) => {
     try {
       const response = await axios.get(
-        `http://localhost:55667/api/tables/${profileId}`,
+        `/tables/${profileId}`,
       );
       return response.data;
     } catch (error) {
@@ -166,3 +166,5 @@ export const {
   setTempTableLayout
 } = TablesSlice.actions;
 export default TablesSlice.reducer;
+
+

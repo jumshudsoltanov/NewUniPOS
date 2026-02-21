@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import axios from "../../utils/apiConfig";
 import { getTableGroups } from "./TablesSlice";
 import { getActiveOrders } from "./BooksSlice";
 
@@ -9,7 +9,7 @@ export const sendOrdersItems = createAsyncThunk(
     try {
       const { orderId, profileId, productList, waiterId, waiterName: passedWaiterName } = payload;
       const response = await axios.post(
-        `http://localhost:55667/api/orders-items/${orderId}/items`,
+        `/orders-items/${orderId}/items`,
         { productList, profileId, waiterId: waiterId || 0 },
       );
 
@@ -38,7 +38,7 @@ export const updateDiscountOnOrders = createAsyncThunk(
   async ({ orderId, discountValue, discountType, oldDiscountValue, oldDiscountType, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/discount`,
+        `/orders-items/${orderId}/discount`,
         { discountValue, discountType },
       );
 
@@ -66,7 +66,7 @@ export const updateServiceFeeOnOrders = createAsyncThunk(
   async ({ orderId, serviceValue, feeType, oldServiceValue, oldFeeType, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/service-fee`,
+        `/orders-items/${orderId}/service-fee`,
         { serviceValue, feeType },
       );
 
@@ -94,7 +94,7 @@ export const reopenOrder = createAsyncThunk(
   async ({ orderId, reasonId, reasonName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders/${orderId}/reopen`,
+        `/orders/${orderId}/reopen`,
         { reasonId }
       );
 
@@ -120,7 +120,7 @@ export const updateTableOrders = createAsyncThunk(
   async ({ orderId, newTableId, currentHallId, oldTableName, newTableName, oldHallName, newHallName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/update-table`,
+        `/orders-items/${orderId}/update-table`,
         { newTableId, currentHallId },
       );
 
@@ -146,7 +146,7 @@ export const deleteOrderItem = createAsyncThunk(
   async ({ orderId, itemId, reasonId, qty, productName, reasonName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `http://localhost:55667/api/orders-items/${orderId}/delete-item`,
+        `/orders-items/${orderId}/delete-item`,
         { itemId, reasonId, qty },
       );
 
@@ -173,7 +173,7 @@ export const mergeChecks = createAsyncThunk(
   async ({ currentOrderId, newOrderId, currentCheckId, newCheckId, currentTotal, newTotal, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${currentOrderId}/merge-orders`,
+        `/orders-items/${currentOrderId}/merge-orders`,
         { newOrderId },
       );
 
@@ -199,7 +199,7 @@ export const changeSaleType = createAsyncThunk(
   async ({ orderId, saleType, tableId, hallId, oldTypeName, newTypeName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/change-saletype`,
+        `/orders-items/${orderId}/change-saletype`,
         { saleType, tableId, hallId },
       );
 
@@ -225,7 +225,7 @@ export const changeWaiter = createAsyncThunk(
   async ({ orderId, waiterId, oldWaiterName, newWaiterName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/update-waiter`,
+        `/orders-items/${orderId}/update-waiter`,
         { waiterId },
       );
 
@@ -251,7 +251,7 @@ export const splitOrder = createAsyncThunk(
   async ({ data, profileId, profile, hallData, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `http://localhost:55667/api/orders-items/${profileId}/split-order`,
+        `/orders-items/${profileId}/split-order`,
         { data, profile, hallData },
       );
 
@@ -303,7 +303,7 @@ export const assignCustomerToOrder = createAsyncThunk(
   async ({ orderId, customerId, customerName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/assign-customer`,
+        `/orders-items/${orderId}/assign-customer`,
         { customer_id: customerId },
       );
 
@@ -329,7 +329,7 @@ export const giftItem = createAsyncThunk(
   async ({ orderId, itemId, qty, isGift, productName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `http://localhost:55667/api/orders-items/${orderId}/gift-item`,
+        `/orders-items/${orderId}/gift-item`,
         { itemId, qty, isGift },
       );
 
@@ -355,7 +355,7 @@ export const updateItemDiscount = createAsyncThunk(
   async ({ orderId, itemId, discountValue, discountType, productName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `http://localhost:55667/api/orders-items/${orderId}/discount-item`,
+        `/orders-items/${orderId}/discount-item`,
         { itemId, discountValue, discountType },
       );
 
@@ -382,7 +382,7 @@ export const deleteCheck = createAsyncThunk(
   async ({ orderId, reason, reasonText, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/delete-check`,
+        `/orders-items/${orderId}/delete-check`,
         { reason },
       );
 
@@ -408,7 +408,7 @@ export const updateItemPrice = createAsyncThunk(
   async ({ orderId, itemId, newPrice, oldPrice, productName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/update-price`,
+        `/orders-items/${orderId}/update-price`,
         { itemId, newPrice },
       );
 
@@ -434,7 +434,7 @@ export const updateItemCount = createAsyncThunk(
   async ({ orderId, itemId, newCount, oldCount, productName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/update-count`,
+        `/orders-items/${orderId}/update-count`,
         { itemId, newCount },
       );
 
@@ -460,7 +460,7 @@ export const closeOrder = createAsyncThunk(
   async ({ orderId, payments, status, profileId, waiterId, note, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `http://localhost:55667/api/orders-items/${orderId}/close`,
+        `/orders-items/${orderId}/close`,
         { payments, status, profileId, waiterId, note },
       );
 
@@ -493,7 +493,7 @@ export const fetchLogs = createAsyncThunk(
   async (orderId, thunkAPI) => {
     try {
       const response = await axios.get(
-        `http://localhost:55667/api/orders-items/${orderId}/logs`
+        `/orders-items/${orderId}/logs`
       );
       // Map snake_case to camelCase for consistent filtering
       return response.data.map(log => ({
@@ -512,7 +512,7 @@ export const saveLog = createAsyncThunk(
   async ({ orderId, action, waiterName, details }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `http://localhost:55667/api/orders-items/${orderId}/logs`,
+        `/orders-items/${orderId}/logs`,
         { action, waiterName, details }
       );
       // Map snake_case to camelCase
@@ -532,7 +532,7 @@ export const updateLockChecK = createAsyncThunk(
   async ({ orderId, status, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/lock-check`,
+        `/orders-items/${orderId}/lock-check`,
         { status },
       );
 
@@ -558,7 +558,7 @@ export const updateTags = createAsyncThunk(
   async ({ orderId, tags }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/check-tags`,
+        `/orders-items/${orderId}/check-tags`,
         { tags },
       );
       return response.data;
@@ -573,7 +573,7 @@ export const updateComments = createAsyncThunk(
   async ({ orderId, comments, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/check-comments`,
+        `/orders-items/${orderId}/check-comments`,
         { comments },
       );
 
@@ -599,7 +599,7 @@ export const deleteOrderItems = createAsyncThunk(
   async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/delete-items`,
+        `/orders-items/${orderId}/delete-items`,
       );
 
       // Persistent Log
@@ -624,7 +624,7 @@ export const updateDepositOnOrders = createAsyncThunk(
   async ({ orderId, depositValue, depositType, oldDepositValue, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
-        `http://localhost:55667/api/orders-items/${orderId}/deposit`,
+        `/orders-items/${orderId}/deposit`,
         { depositValue, depositType },
       );
 
@@ -653,7 +653,7 @@ export const incrementPrintCount = createAsyncThunk(
   async ({ orderId, waiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `http://localhost:55667/api/orders-items/${orderId}/increment-print-count`
+        `/orders-items/${orderId}/increment-print-count`
       );
 
       thunkAPI.dispatch(saveLog({
@@ -879,3 +879,5 @@ export const {
 } = OrderSlice.actions;
 
 export default OrderSlice.reducer;
+
+
