@@ -12,26 +12,17 @@ const NetworkOverlay = () => {
         const checkStatus = async () => {
             const storageData = JSON.parse(localStorage.getItem("profile"));
             const authResult = JSON.parse(localStorage.getItem("authResult"));
-            if (!storageData || !authResult) return;
+            if (!storageData || !authResult) return false;
 
             const profileData = authResult?.data?.profile || {};
             const terminalData = authResult?.data?.terminal || {};
 
-            const isMaster = terminalData.is_master === 1 || profileData.is_master === 1;
-            const isMasterSlaveActive = terminalData.is_master_slave_active === 1 || profileData.is_master_slave_active === 1;
+            const isMaster = terminalData.is_master == 1 || profileData.is_master == 1;
+            const isMasterSlaveActive = terminalData.is_master_slave_active == 1 || profileData.is_master_slave_active == 1;
 
-            // Standalone or actual Master never gets locked out by network
             if (isMaster || !isMasterSlaveActive) {
                 setIsDisconnected(false);
-                return;
-            }
-
-            const socket = getSocket();
-            if (!socket) return;
-
-            // Update IP addresses for display
-            if (socket.io?.uri) {
-                setMasterIp(socket.io.uri.replace("http://", "").replace(":55667", ""));
+                return false;
             }
 
             if (window.electronAPI && window.electronAPI.getLocalIp) {
@@ -40,30 +31,40 @@ const NetworkOverlay = () => {
                     setSlaveIp(localIp);
                 } catch (e) { }
             }
-
-            const handleDisconnect = () => setIsDisconnected(true);
-            const handleConnect = () => setIsDisconnected(false);
-
-            // Check immediate state
-            setIsDisconnected(!socket.connected);
-
-            socket.on("disconnect", handleDisconnect);
-            socket.on("connect", handleConnect);
-
-            return () => {
-                socket.off("disconnect", handleDisconnect);
-                socket.off("connect", handleConnect);
-            };
+            return true;
         };
 
-        // Since Socket initialization is async in App.jsx, poll until available
-        pollingInterval = setInterval(() => {
+        // Continuous network verification loop for Slaves
+        const verifyConnection = async () => {
+            const isSlaveNetworkActive = await checkStatus();
+            if (!isSlaveNetworkActive) return;
+
             const socket = getSocket();
-            if (socket) {
-                clearInterval(pollingInterval);
-                checkStatus();
+
+            if (!socket) {
+                // Socket not even initialized yet, means it's still looking for Master
+                setIsDisconnected(true);
+                return;
             }
-        }, 1000);
+
+            if (socket.io?.uri) {
+                setMasterIp(socket.io.uri.replace("http://", "").replace(":55667", ""));
+            }
+
+            // Real-time boolean check overrules hanging event listeners
+            if (!socket.connected) {
+                setIsDisconnected(true);
+            } else {
+                setIsDisconnected(false);
+            }
+
+            // Re-bind just to be absolutely certain we catch the physical drop event immediately
+            socket.off("disconnect").on("disconnect", () => setIsDisconnected(true));
+            socket.off("connect").on("connect", () => setIsDisconnected(false));
+        };
+
+        verifyConnection(); // Immediate check
+        pollingInterval = setInterval(verifyConnection, 2000); // 2-second continuous heartbeat
 
         return () => clearInterval(pollingInterval);
     }, []);
@@ -135,6 +136,33 @@ const NetworkOverlay = () => {
                 <div className="spinner-border spinner-border-sm" style={{ color: "var(--primary-color, #4ABFB3)", width: "1.2rem", height: "1.2rem" }} role="status"></div>
                 <span style={{ color: "#CBD5E0", fontSize: "1rem", fontWeight: "500" }}>Yenidən bağlanmağa cəhd edilir...</span>
             </div>
+
+            <button
+                onClick={() => {
+                    if (window.electronAPI && window.electronAPI.minimizeApp) {
+                        window.close();
+                    } else {
+                        window.close();
+                    }
+                }}
+                style={{
+                    marginTop: "35px",
+                    padding: "12px 30px",
+                    backgroundColor: "#4F85F4",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "1.05rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 15px rgba(79, 133, 244, 0.4)",
+                    transition: "all 0.2s ease"
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.03)"}
+                onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+            >
+                <i className="bi bi-power me-2"></i> Sistemdən Çıxış (Bağla)
+            </button>
         </div>
     );
 };
