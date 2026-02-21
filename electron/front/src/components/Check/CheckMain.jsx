@@ -8,6 +8,7 @@ import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault.jpg";
 
 const CheckMain = ({ orders }) => {
   const dispatch = useDispatch(); // Add dispatch
@@ -23,6 +24,8 @@ const CheckMain = ({ orders }) => {
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+
 
 
   const allItems = useMemo(() => {
@@ -125,9 +128,49 @@ const CheckMain = ({ orders }) => {
   };
 
 
+  let fallbackProfileData = null;
+  try {
+    const authResultStr = localStorage.getItem("authResult");
+    if (authResultStr) fallbackProfileData = JSON.parse(authResultStr);
+  } catch (err) {
+    console.error("Error parsing authResult:", err);
+  }
+
+  const activeProfileData = loginedProfileData || fallbackProfileData;
+  const profileInfo = activeProfileData?.data?.profile || {};
+
+  const validImg = (img) => {
+    if (!img) return false;
+    const strImg = String(img).trim().toLowerCase();
+    if (strImg === "null" || strImg === "undefined" || strImg === "data:directory;base64,") return false;
+    return true;
+  };
+
+  const cloudBgRaw = profileInfo.background_img || profileInfo.bg || profileInfo.bgImage || profileInfo.background;
+
+  let cloudBg = "";
+  if (validImg(cloudBgRaw)) {
+    cloudBg = cloudBgRaw.startsWith("http") || cloudBgRaw.startsWith("data:")
+      ? cloudBgRaw
+      : `http://46.224.8.157:35627/${cloudBgRaw}`;
+  }
+
+
+  console.log(loginedProfileData)
+
   return (
     <>
-      <div className="checkMainContent">
+      <div
+        className="checkMainContent"
+        style={{
+          backgroundImage: cloudBg
+            ? `linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)), url(${cloudBg})`
+            : `linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)), url(${RightBoxContainerImg2})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat"
+        }}
+      >
         {/* Header Row */}
         <div className="order-table-header">
           <div className="header-col col-name-header">Məhsul</div>

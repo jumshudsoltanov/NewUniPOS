@@ -109,25 +109,39 @@ const ImageSection = React.memo(({ backgroundImg }) => {
 
   useEffect(() => {
     const setBackground = () => {
+      const validImage = (img) => {
+        if (!img) return false;
+        const strImg = String(img).trim().toLowerCase();
+        if (strImg === "null" || strImg === "undefined" || strImg === "data:directory;base64,") return false;
+        return true;
+      };
+
+      if (validImage(backgroundImg)) {
+        if (backgroundImg.startsWith("data:") || backgroundImg.startsWith("http")) {
+          setCurrentSrc(backgroundImg);
+        } else {
+          setCurrentSrc(`http://46.224.8.157:35627/${backgroundImg}`);
+        }
+        return;
+      }
+
       try {
         const authLogin = JSON.parse(localStorage.getItem("authlogin") || "{}");
-        if (authLogin?.bg) {
-          setCurrentSrc(authLogin.bg);
+        const cachedBg = authLogin?.background_img || authLogin?.bg || authLogin?.data?.profile?.background_img;
+        if (validImage(cachedBg)) {
+          if (cachedBg.startsWith("data:") || cachedBg.startsWith("http")) {
+            setCurrentSrc(cachedBg);
+          } else {
+            setCurrentSrc(`http://46.224.8.157:35627/${cachedBg}`);
+          }
           return;
         }
       } catch (error) {
         console.error("Error parsing authlogin:", error);
       }
 
-      if (backgroundImg) {
-        if (backgroundImg.startsWith("data:") || backgroundImg.startsWith("http")) {
-          setCurrentSrc(backgroundImg);
-        } else {
-          setCurrentSrc(`https://unipos.tech/${backgroundImg}`);
-        }
-      } else {
-        setCurrentSrc(RightBoxContainerImg2);
-      }
+      // Final fallback if no internet / no data / no cache
+      setCurrentSrc(RightBoxContainerImg2);
     };
 
     setBackground();
@@ -166,6 +180,36 @@ const Pin = () => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const navigate = useNavigate();
+
+  let fallbackProfileData = null;
+  try {
+    const authResultStr = localStorage.getItem("authResult");
+    if (authResultStr) fallbackProfileData = JSON.parse(authResultStr);
+  } catch (err) {
+    console.error("Error parsing authResult:", err);
+  }
+
+  const activeProfileData = loginedProfileData || fallbackProfileData;
+  const terminalInfo = activeProfileData?.data?.terminal || {};
+  const profileInfo = activeProfileData?.data?.profile || {};
+
+  const validImg = (img) => {
+    if (!img) return false;
+    const strImg = String(img).trim().toLowerCase();
+    if (strImg === "null" || strImg === "undefined" || strImg === "data:directory;base64,") return false;
+    return true;
+  };
+
+  let logoSrc = DefaultLogo;
+  if (validImg(terminalInfo.logoPrint)) {
+    logoSrc = terminalInfo.logoPrint.startsWith("http") || terminalInfo.logoPrint.startsWith("data:")
+      ? terminalInfo.logoPrint
+      : `http://46.224.8.157:35627/${terminalInfo.logoPrint}`;
+  } else if (validImg(profileInfo.logo)) {
+    logoSrc = profileInfo.logo.startsWith("http") || profileInfo.logo.startsWith("data:")
+      ? profileInfo.logo
+      : `http://46.224.8.157:35627/${profileInfo.logo}`;
+  }
 
   const handleRefresh = () => {
     window.location.reload();
@@ -240,13 +284,16 @@ const Pin = () => {
     }
   };
 
+  const cloudBg = terminalInfo.background || terminalInfo.bg ||
+    profileInfo.background_img || profileInfo.bg || profileInfo.background;
+
   return (
     <>
       <Container fluid className="p-0 vh-100 overflow-hidden">
         <Row className="g-0 h-100">
           {/* IMAGE SECTION */}
           <ImageSection
-            backgroundImg={loginedProfileData?.data?.profile?.background_img}
+            backgroundImg={cloudBg}
           />
 
           {/* INFO SECTION */}
@@ -360,7 +407,16 @@ const Pin = () => {
 
               {/* Logo */}
               <div className="logoContainer">
-                <img src={DefaultLogo} alt="logo" />
+                <img
+                  src={logoSrc}
+                  alt="logo"
+                  onError={(e) => {
+                    if (e.target.src !== DefaultLogo) {
+                      e.target.src = DefaultLogo;
+                    }
+                  }}
+                  style={{ maxHeight: "150px", maxWidth: "250px", objectFit: "contain" }}
+                />
               </div>
 
               {/* PIN Container */}

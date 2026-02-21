@@ -47,6 +47,16 @@ const getLogin = async (req, res) => {
     await getTags(profile.id);
     await getPaymentMethods(profile.id);
     await getSalesTypes(profile.id);
+
+    // Fetch the stored profile so we include local fields like background_img
+    const storedProfile = await LoginModel.findOne({ where: { id: profile.id } });
+    if (storedProfile && response.data && response.data.data && response.data.data.profile) {
+      response.data.data.profile = {
+        ...response.data.data.profile,
+        ...storedProfile.toJSON()
+      };
+    }
+
     res.status(200).json(response.data);
   } catch (error) {
     res.status(500).json({
