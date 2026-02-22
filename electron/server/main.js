@@ -140,6 +140,10 @@ ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
     `);
 
     await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Printing timed out (10s)"));
+      }, 10000);
+
       printWindow.webContents.print({
         silent: true,
         deviceName: printerName,
@@ -147,7 +151,8 @@ ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
         preferCSSPageSize: true,
         pageSize: { width: 72000, height: contentHeight * 1000 }
       }, (success, errorType) => {
-        if (!success) reject(errorType);
+        clearTimeout(timeout);
+        if (!success) reject(errorType || "Print failed");
         else resolve();
       });
     });

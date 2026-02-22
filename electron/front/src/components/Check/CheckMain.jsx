@@ -306,7 +306,9 @@ const CheckMain = ({ orders }) => {
               originalQty: product.count,
               price: product.price,
               category_id: finalCategoryId,
-              printer_details: finalPrinters
+              printer_details: finalPrinters,
+              modifiers: product.modifiers,
+              comment: product.comment
             }));
             toast.success("Məhsul silinmək üçün işarələndi!");
           } else if (deleteActionType === 'partial') {
@@ -321,7 +323,9 @@ const CheckMain = ({ orders }) => {
               originalQty: product.count,
               price: product.price,
               category_id: finalCategoryId,
-              printer_details: finalPrinters
+              printer_details: finalPrinters,
+              modifiers: product.modifiers,
+              comment: product.comment
             }));
             toast.success("Miqdar azalma üçün işarələndi!");
           }

@@ -8,7 +8,7 @@
 }
 
 .check-lock-modal .modal-dialog {
-    max-width: 480px !important;
+    max-width: 420px !important;
     margin: 1.75rem auto;
 }
 
@@ -26,6 +26,7 @@
     align-items: center;
     justify-content: space-between;
     height: 70px;
+    border-bottom: none;
 }
 
 .check-lock-header-content {
@@ -55,9 +56,32 @@
     color: #fff;
 }
 
+.btn-close-custom {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: white;
+    width: auto;
+    height: auto;
+}
+
+.btn-close-custom:hover {
+    background: transparent;
+    opacity: 0.8;
+}
+
+.btn-close-custom svg {
+    width: 24px;
+    height: 24px;
+}
+
 /* Body */
 .check-lock-modal-body {
-    padding: 30px 20px;
+    padding: 24px 20px;
     background-color: #fff;
     display: flex;
     flex-direction: column;
@@ -83,45 +107,44 @@
 }
 
 .modal-question-text {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 500;
     color: #333;
     text-align: center;
     margin: 0;
 }
 
 .modal-sub-text {
-    font-size: 14px;
-    color: #64748b;
+    font-size: 13px;
+    color: #999;
     text-align: center;
-    margin-bottom: 25px;
+    margin-bottom: 10px;
 }
 
 /* Footer Actions */
 .modal-footer-custom {
     display: flex;
-    gap: 15px;
+    gap: 12px;
     width: 100%;
-    margin-top: 5px;
-    padding-top: 25px;
-    border-top: 1px solid #f0f0f0;
+    margin-top: auto;
+    border-top: none;
+    padding-top: 0;
 }
 
 .btn-cancel {
     flex: 1;
-    background-color: #f1f5f9;
-    color: #053796;
-    font-weight: 600;
-    font-size: 16px;
-    border: none;
     height: 52px;
-    border-radius: 8px;
+    background-color: #fff;
+    border: 1px solid #C0C0C0;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
     cursor: pointer;
-    transition: all 0.2s;
 }
 
 .btn-cancel:hover {
-    background-color: #e2e8f0;
+    background-color: #F8F9FA;
 }
 
 .check-lock-save-btn {
@@ -129,15 +152,15 @@
     height: 52px;
     background-color: #053796;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     color: #fff;
     font-size: 16px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
 }
 
 .check-lock-save-btn:hover {

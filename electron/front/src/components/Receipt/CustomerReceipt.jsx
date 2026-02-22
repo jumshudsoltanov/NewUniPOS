@@ -87,17 +87,17 @@ const CustomerReceipt = ({
             fontSize: fs(11),
         },
         colName: {
-            flex: "1 1 40%",
+            width: "125px", // STRICT 125px out of 300px
             whiteSpace: "normal",
             wordWrap: "break-word",
             wordBreak: "break-word",
             lineHeight: "1.3",
             paddingRight: "4px"
         },
-        colQty: { flex: "0 0 10%", textAlign: "center", fontWeight: "900", whiteSpace: "nowrap" },
-        colPrice: { flex: "0 0 25%", textAlign: "right", fontWeight: "900", paddingRight: "4px", whiteSpace: "nowrap" },
+        colQty: { width: "35px", textAlign: "center", fontWeight: "900", whiteSpace: "nowrap" },
+        colPrice: { width: "65px", textAlign: "right", fontWeight: "900", paddingRight: "4px", whiteSpace: "nowrap" },
         colTotal: {
-            flex: "0 0 25%",
+            width: "75px",
             textAlign: "right",
             fontWeight: "900",
             whiteSpace: "nowrap",
@@ -314,7 +314,10 @@ const CustomerReceipt = ({
                         };
 
                         return (
-                            <div key={i} style={styles.itemRow}>
+                            <div key={i} style={{
+                                ...styles.itemRow,
+                                borderBottom: i === itemsToRender.length - 1 ? "none" : styles.itemRow.borderBottom
+                            }}>
                                 <div style={styles.colName}>
                                     {params.name}
                                     {params.modifiers.length > 0 && (

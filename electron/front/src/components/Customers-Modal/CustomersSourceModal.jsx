@@ -551,6 +551,9 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                             <p>{selectedCustomer.phone || '—'}</p>
                         </div>
                         <div className="details-header-actions">
+                            {propSelectedCustomer && (
+                                <button className="remove-btn-styled" onClick={() => onApply && onApply(null)}>Müştərini çıxar</button>
+                            )}
                             <button className="apply-btn-styled" onClick={() => onApply && onApply(selectedCustomer)}>Tətbiq et</button>
                             <div className="dots-menu-wrapper" ref={dotsMenuRef}>
                                 <button

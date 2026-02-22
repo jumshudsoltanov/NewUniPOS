@@ -68,14 +68,14 @@ const KitchenReceipt = ({
             fontSize: fs(12),
         },
         colName: {
-            flex: "1 1 70%",
+            width: "220px", // Kitchen only has name and qty usually: 220px name
             whiteSpace: "normal",
             wordWrap: "break-word",
             wordBreak: "break-word",
-            lineHeight: "1.2",
-            paddingRight: "2px"
+            lineHeight: "1.3",
+            paddingRight: "6px"
         },
-        colQty: { flex: "0 0 30%", textAlign: "right", fontWeight: "900" },
+        colQty: { width: "80px", textAlign: "right", fontWeight: "900", whiteSpace: "nowrap" },
         itemRow: {
             display: "flex",
             padding: "3px 0",
@@ -186,14 +186,23 @@ const KitchenReceipt = ({
                     const itemName = item.product_name || item.name || item.product?.name || "Naməlum";
 
                     return (
-                        <div key={idx} style={styles.itemRow}>
+                        <div key={idx} style={{
+                            ...styles.itemRow,
+                            borderBottom: idx === items.length - 1 ? "none" : styles.itemRow.borderBottom
+                        }}>
                             <div style={styles.colName}>
-                                {itemName}
+                                <span style={{ textDecoration: item.changeType === "decrease" ? "line-through" : "none" }}>
+                                    {itemName}
+                                </span>
                                 {item.comment && (
-                                    <div style={styles.modifier}>* {item.comment}</div>
+                                    <div style={{ ...styles.modifier, fontWeight: "900", fontStyle: "italic", fontSize: fs(12) }}>
+                                        * Qeyd: {item.comment}
+                                    </div>
                                 )}
-                                {item.reasonName && (
-                                    <div style={styles.modifier}>! {item.reasonName}</div>
+                                {item.reasonName && item.changeType === "decrease" && (
+                                    <div style={{ ...styles.modifier, fontWeight: "900", fontSize: fs(12), border: "1px solid #000", display: "inline-block", padding: "1px 3px", marginTop: "2px" }}>
+                                        SƏBƏB: {item.reasonName}
+                                    </div>
                                 )}
                                 {mods.length > 0 && (
                                     <div style={styles.modifier}>

@@ -29,6 +29,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
   const navigate = useNavigate();
 
   const [showNewItemsModal, setShowNewItemsModal] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const payload = {
     orderId: id,
@@ -40,6 +41,42 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
   const handleSendOrders = async (itemComments = {}) => {
     try {
       const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || orders?.waiter?.name || "Naməlum";
+
+      const getSaleTypeName = (type, typeName) => {
+        if (typeName) return typeName;
+        if (type == 1 || type === "takeaway") return "Al-götür";
+        if (type == 2 || type === "delivery") return "Çatdırılma";
+        return "Restoranda";
+      };
+      const displaySaleType = getSaleTypeName(orders?.sale_type, orders?.sale_type_name);
+
+      const getAllPrintersForItem = (item) => {
+        const menuRef = menu?.find(m => m.id === (item.itemId || item.product_id || item.id));
+        const categoryId = menuRef?.category_id || item.category_id;
+
+        // 1. Get explicitly assigned product printers from menu (most reliable) or the item itself
+        const productPrinters = (menuRef?.printer_details && menuRef.printer_details.length > 0)
+          ? menuRef.printer_details
+          : (item.printer_details || []);
+
+        // 2. Get category printers
+        let categoryPrinters = [];
+        if (categoryId && menuDataWithCategories?.data) {
+          for (const genCat of menuDataWithCategories.data) {
+            if (genCat.is_general && genCat.categories) {
+              const subCat = genCat.categories.find(c => c.id === categoryId);
+              if (subCat && subCat.printer_details) categoryPrinters = subCat.printer_details;
+            } else if (genCat.id === categoryId && genCat.printer_details) {
+              categoryPrinters = genCat.printer_details;
+            }
+          }
+        }
+
+        // 3. Merge both to guarantee all assigned printers are hit, duplicate prevention is downstream
+        const combined = [...productPrinters, ...categoryPrinters];
+        return { printers: combined, categoryId };
+      };
+
       // 1. Process Pending Deletions first
       if (pendingDeletions && pendingDeletions.length > 0) {
         for (const deletion of pendingDeletions) {
@@ -57,11 +94,17 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
 
       // Print Deletions
       if (pendingDeletions && pendingDeletions.length > 0) {
-        const deletedItemsForPrint = pendingDeletions.map(d => ({
-          ...d,
-          changeType: 'decrease',
-          quantity: d.type === 'partial' ? d.qty : d.originalQty
-        }));
+        const deletedItemsForPrint = pendingDeletions.map(d => {
+          const { printers, categoryId } = getAllPrintersForItem(d);
+
+          return {
+            ...d,
+            printer_details: printers,
+            category_id: categoryId,
+            changeType: 'decrease',
+            quantity: d.type === 'partial' ? d.qty : d.originalQty
+          };
+        });
 
         await processAndPrintOrders(
           deletedItemsForPrint,
@@ -71,7 +114,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
             hallName: hall?.name || "",
             orderId: orders?.uuid || id,
             terminalInfo: loginedProfileData?.data?.terminal || {},
-            typeName: orders?.sale_type === 1 ? "Paket" : "Restoranda",
+            typeName: displaySaleType,
             checkData: orders,
             isDecrease: true
           },
@@ -82,13 +125,28 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
       // 2. Send New Items
       if (products.length > 0) {
         // Apply comments to products for printing and saving
-        const productsWithComments = products.map((p, idx) => ({
-          ...p,
-          comment: itemComments[idx] !== undefined ? itemComments[idx] : p.comment
-        }));
+        const productsWithComments = products.map((p, idx) => {
+          const { printers, categoryId } = getAllPrintersForItem(p);
 
-        // Print New Items
-        await processAndPrintOrders(
+          return {
+            ...p,
+            printer_details: printers,
+            category_id: categoryId,
+            comment: itemComments[idx] !== undefined ? itemComments[idx] : p.comment
+          };
+        });
+
+        setIsSending(true);
+
+        // 1. Send New Items to Server FIRST (so "New" badges disappear immediately)
+        await dispatch(sendOrdersItems({
+          ...payload,
+          productList: productsWithComments,
+          waiterName
+        })).unwrap();
+
+        // 2. Print New Items AFTER (while server request is processing or finished)
+        processAndPrintOrders(
           productsWithComments,
           {
             table: table?.name || orders?.table_name || "Masa",
@@ -96,18 +154,12 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
             hallName: hall?.name || "",
             orderId: orders?.uuid || id,
             terminalInfo: loginedProfileData?.data?.terminal || {},
-            typeName: orders?.sale_type === 1 ? "Paket" : "Restoranda",
+            typeName: displaySaleType,
             checkData: orders,
             isDecrease: false
           },
           menuDataWithCategories
         );
-
-        await dispatch(sendOrdersItems({
-          ...payload,
-          productList: productsWithComments,
-          waiterName
-        })).unwrap();
       }
 
       // 3. Refresh Data (Handled by Redux Matchers)
@@ -117,6 +169,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
     } catch (e) {
       console.error(e);
       toast.error("Xəta baş verdi");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -340,20 +394,29 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
         <div className="pt-3 action-buttons">
           <div className="btn-send-group">
             <button
-              className={`btn-send ${(orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0)) ? 'disabled' : ''}`}
+              className={`btn-send ${(orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0) || isSending) ? 'disabled' : ''}`}
               onClick={() => {
-                if (orders?.is_locked == 1) {
-                  toast.error("Qəbz kilidlidir!");
+                if (orders?.is_locked == 1 || isSending) {
+                  toast.error(isSending ? "Əməliyyat davam edir..." : "Qəbz kilidlidir!");
                   return;
                 }
                 handleSendOrders();
               }}
-              disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0)}
+              disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0) || isSending}
             >
-              <i className="bi bi-send"></i>
-              <span>Göndər</span>
-              {totalChanges > 0 && (
-                <span className="new-items-badge">{totalChanges}</span>
+              {isSending ? (
+                <div className="d-flex align-items-center gap-2">
+                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  <span>Göndərilir...</span>
+                </div>
+              ) : (
+                <>
+                  <i className="bi bi-send"></i>
+                  <span>Göndər</span>
+                  {totalChanges > 0 && (
+                    <span className="new-items-badge">{totalChanges}</span>
+                  )}
+                </>
               )}
             </button>
 
@@ -384,8 +447,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
         <button
           className="mobile-icon-btn gray-btn"
           onClick={() => {
-            if (orders?.is_locked == 1) {
-              toast.error("Qəbz kilidlidir!");
+            if (orders?.is_locked == 1 || isSending) {
+              toast.error(isSending ? "Əməliyyat davam edir..." : "Qəbz kilidlidir!");
               return;
             }
             // Log Print
@@ -398,9 +461,13 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
             }));
             handleSendOrders();
           }}
-          disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0)}
+          disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0) || isSending}
         >
-          <i className="bi bi-printer-fill"></i>
+          {isSending ? (
+            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          ) : (
+            <i className="bi bi-printer-fill"></i>
+          )}
         </button>
         <button
           className="mobile-icon-btn gray-btn"

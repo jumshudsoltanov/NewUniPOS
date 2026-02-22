@@ -29,6 +29,7 @@ import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
 import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount } from "../../redux/Slices/OrdersSlice";
+import { fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { printCustomerReceipt } from "../../utils/printerHelpers";
@@ -97,7 +98,6 @@ const Check = () => {
   const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -310,16 +310,23 @@ const Check = () => {
 
   }, [id, tableId, tableGroups, books]);
 
-  useEffect(() => {
-    if (currentOrder?.customer_id && customers?.length > 0) {
-      const customer = customers.find(c => c.id === currentOrder.customer_id);
-      if (customer) {
-        setSelectedCustomer(customer);
+  const selectedCustomer = useMemo(() => {
+    if (currentOrder?.customer_id) {
+      if (customers?.length > 0) {
+        const customer = customers.find(c => c.id === currentOrder.customer_id);
+        if (customer) return customer;
       }
-    } else {
-      setSelectedCustomer(null);
+
+      const fallbackName = currentOrder?.customer_name || currentOrder?.customerName || currentOrder?.customer?.name;
+      if (fallbackName) {
+        return {
+          id: currentOrder.customer_id,
+          name: fallbackName
+        };
+      }
     }
-  }, [currentOrder?.customer_id, customers]);
+    return null;
+  }, [currentOrder?.customer_id, currentOrder?.customer_name, currentOrder?.customerName, currentOrder?.customer?.name, customers]);
 
   useEffect(() => {
     if (
@@ -330,6 +337,10 @@ const Check = () => {
       dispatch(
         getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }),
       );
+    }
+    // Also fetch customers so that they are available for mapping customer_id -> name
+    if (!customers || customers.length === 0) {
+      dispatch(fetchCustomersFromAdmin());
     }
   }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
 
@@ -1122,7 +1133,7 @@ const Check = () => {
               <button
                 className="header-icon-btn small-icon-btn wifi-icon position-relative"
                 onClick={() => setShowStatusModal(true)}
-                style={{ cursor: "pointer", border: "none", background: "none", padding: "0 12px" }}
+                style={{ cursor: "pointer", border: "none", background: "none", padding: "0 20px 0 12px" }}
               >
                 <svg
                   width="20"
@@ -1715,7 +1726,6 @@ const Check = () => {
         show={showCustomerModal}
         onHide={() => setShowCustomerModal(false)}
         onApply={(customer) => {
-          setSelectedCustomer(customer);
           setShowCustomerModal(false);
 
           if (currentOrder?.uuid) {

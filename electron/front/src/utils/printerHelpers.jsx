@@ -3,9 +3,10 @@ import ReactDOM from "react-dom/client";
 import KitchenReceipt from "../components/Receipt/KitchenReceipt";
 import { addNotification } from "./notificationService";
 import axios from "./apiConfig";
+import CustomerReceipt from "../components/Receipt/CustomerReceipt";
 
 export const processAndPrintOrders = async (items, orderData, menuDataWithCategories) => {
-    const printerGroups = {};
+    const printerBatches = []; // Array of { printerName: [items] } pools
 
     const findCategoryPrinters = (categoryId) => {
         if (!menuDataWithCategories?.data) return [];
@@ -33,87 +34,108 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
             addNotification("Printer Xətası", `${item.name} üçün printer təyin edilməyib`, { orderId: displayId, category: "system", type: "error" });
             continue;
         }
-        // Deduplicate printers by name to prevent same item appearing twice on same printer
-        const seen = new Set();
-        const uniquePrinters = printers.filter(p => {
-            const key = p.local_name || p.name;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-        uniquePrinters.forEach(p => {
-            const pName = p.local_name || p.name;
-            if (!printerGroups[pName]) {
-                printerGroups[pName] = [];
+
+        // Support multi-copy: Instead of deduplicating, we assign to different batches
+        // items with repeated printers will go to separate print jobs
+        const itemPrinters = printers.map(p => typeof p === 'object' ? (p.local_name || p.name) : p).filter(Boolean);
+        console.log(`[PRINTER DEBUG] Processing item '${item.name}' with assigned printers:`, itemPrinters);
+
+        const printerOccurrence = {};
+        itemPrinters.forEach(pName => {
+            const count = (printerOccurrence[pName] || 0);
+            printerOccurrence[pName] = count + 1;
+
+            if (!printerBatches[count]) {
+                printerBatches[count] = {};
             }
-            printerGroups[pName].push({ ...item, printerName: pName });
+            if (!printerBatches[count][pName]) {
+                printerBatches[count][pName] = [];
+            }
+            printerBatches[count][pName].push({ ...item, printerName: pName });
         });
     }
 
-    for (const printerName of Object.keys(printerGroups)) {
-        const groupItems = printerGroups[printerName];
-        if (groupItems.length === 0) continue;
+    // Iterate through all batches and print them
+    for (let i = 0; i < printerBatches.length; i++) {
+        const batch = printerBatches[i];
+        if (!batch) continue;
+        console.log(`[PRINTER] Processing batch ${i + 1}/${printerBatches.length}`);
 
-        const container = document.createElement("div");
-        container.style.position = "absolute";
-        container.style.top = "0px";
-        container.style.left = "-9999px";
-        container.style.width = "272px";
-        document.body.appendChild(container);
-
-        const root = ReactDOM.createRoot(container);
-        await new Promise((resolve) => {
-            root.render(
-                <KitchenReceipt
-                    orderedItems={groupItems}
-                    table={orderData.table}
-                    waiter={orderData.waiter}
-                    hallName={orderData.hallName}
-                    orderId={orderData.orderId}
-                    terminalInfo={orderData.terminalInfo}
-                    typeName={orderData.typeName}
-                    checkData={orderData.checkData}
-                    isDecrease={orderData.isDecrease}
-                />
-            );
-            setTimeout(resolve, 500);
-        });
-
-        const html = container.innerHTML;
-        root.unmount();
-        document.body.removeChild(container);
-
-        const logError = async (errorMsg) => {
+        for (const printerName of Object.keys(batch)) {
             try {
-                await axios.post(`/orders-items/${orderData.orderId}/logs`, {
-                    action: "Mətbəx Çapı Xətası",
-                    waiterName: orderData.waiter || "Sistem",
-                    details: `${printerName} printerinə çap göndərilə bilmədi. Xəta: ${errorMsg}`,
-                    time: new Date().toISOString()
-                });
-            } catch (e) {
-                console.error("Error logging print failure:", e);
-            }
-        };
+                console.log(`[PRINTER] Starting print job for: ${printerName} (Batch ${i + 1})`);
+                const groupItems = batch[printerName];
+                if (!groupItems || groupItems.length === 0) continue;
 
-        if (window.electronAPI && window.electronAPI.printReceipt) {
-            const result = await window.electronAPI.printReceipt({ html, printerName });
-            if (!result || !result.success) {
-                const errMsg = result?.error || 'Bilinməyən xəta';
-                const displayId = orderData.checkData?.id || orderData.orderId;
-                addNotification("Çap Xətası", `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: displayId, printerName, category: "system", type: "error" });
-                await logError(errMsg);
+                const container = document.createElement("div");
+                container.style.position = "absolute";
+                container.style.top = "0px";
+                container.style.left = "-9999px";
+                container.style.width = "272px";
+                document.body.appendChild(container);
+
+                const root = ReactDOM.createRoot(container);
+                await new Promise((resolve) => {
+                    root.render(
+                        <KitchenReceipt
+                            orderedItems={groupItems}
+                            table={orderData.table}
+                            waiter={orderData.waiter}
+                            hallName={orderData.hallName}
+                            orderId={orderData.orderId}
+                            terminalInfo={orderData.terminalInfo}
+                            typeName={orderData.typeName}
+                            checkData={orderData.checkData}
+                            isDecrease={orderData.isDecrease}
+                        />
+                    );
+                    setTimeout(resolve, 100);
+                });
+
+                const html = container.innerHTML;
+                root.unmount();
+                document.body.removeChild(container);
+
+                const logError = async (errorMsg) => {
+                    try {
+                        await axios.post(`/orders-items/${orderData.orderId}/logs`, {
+                            action: "Mətbəx Çapı Xətası",
+                            waiterName: orderData.waiter || "Sistem",
+                            details: `${printerName} printerinə çap göndərilə bilmədi. Xəta: ${errorMsg}`,
+                            time: new Date().toISOString()
+                        });
+                    } catch (e) {
+                        console.error("Error logging print failure:", e);
+                    }
+                };
+
+                if (window.electronAPI && window.electronAPI.printReceipt) {
+                    const result = await window.electronAPI.printReceipt({ html, printerName });
+                    if (!result || !result.success) {
+                        const errMsg = result?.error || 'Bilinməyən xəta';
+                        const displayId = orderData.checkData?.id || orderData.orderId;
+                        console.error(`[PRINTER] Print failed for ${printerName}:`, errMsg);
+                        addNotification("Çap Xətası", `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: displayId, printerName, category: "system", type: "error" });
+                        await logError(errMsg);
+                    } else {
+                        console.log(`[PRINTER] Print succeeded for: ${printerName}`);
+                    }
+                } else {
+                    const errMsg = "Electron API tapılmadı";
+                    const displayId = orderData.checkData?.id || orderData.orderId;
+                    addNotification("Sistem Xətası", errMsg, { orderId: displayId, printerName, category: "system", type: "error" });
+                    await logError(errMsg);
+                }
+
+                // Minimal delay between print jobs for speed while maintaining stability
+                await new Promise(r => setTimeout(r, 20));
+            } catch (loopError) {
+                console.error(`[PRINTER] Unexpected error in printing loop for ${printerName}:`, loopError);
             }
-        } else {
-            const errMsg = "Electron API tapılmadı";
-            const displayId = orderData.checkData?.id || orderData.orderId;
-            addNotification("Sistem Xətası", errMsg, { orderId: displayId, printerName, category: "system", type: "error" });
-            await logError(errMsg);
         }
     }
 };
 
-import CustomerReceipt from "../components/Receipt/CustomerReceipt";
 
 export const printCustomerReceipt = async (orderData, profileData) => {
     let printers = profileData?.data?.printers;
