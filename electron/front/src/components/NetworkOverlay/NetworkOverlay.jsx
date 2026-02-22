@@ -9,20 +9,62 @@ const NetworkOverlay = () => {
     useEffect(() => {
         let pollingInterval;
 
-        const checkStatus = async () => {
-            const storageData = JSON.parse(localStorage.getItem("profile"));
+        // Continuous network verification loop for Slaves
+        const verifyConnection = async () => {
+            let isConfiguredSlave = false;
+            let isMaster = false;
+            let isMasterSlaveActive = false;
+
             const authResult = JSON.parse(localStorage.getItem("authResult"));
-            if (!storageData || !authResult) return false;
+            if (authResult) {
+                const profileData = authResult?.data?.profile || {};
+                const terminalData = authResult?.data?.terminal || {};
+                isMaster = terminalData.is_master == 1 || profileData.is_master == 1;
+                isMasterSlaveActive = terminalData.is_master_slave_active == 1 || profileData.is_master_slave_active == 1;
 
-            const profileData = authResult?.data?.profile || {};
-            const terminalData = authResult?.data?.terminal || {};
+                if (!isMaster && isMasterSlaveActive) {
+                    isConfiguredSlave = true;
+                }
+            }
 
-            const isMaster = terminalData.is_master == 1 || profileData.is_master == 1;
-            const isMasterSlaveActive = terminalData.is_master_slave_active == 1 || profileData.is_master_slave_active == 1;
+            const socket = getSocket();
 
-            if (isMaster || !isMasterSlaveActive) {
-                setIsDisconnected(false);
-                return false;
+            if (!socket) {
+                // If it's a slave and socket is deliberately null (failed to find master), block it!
+                if (isConfiguredSlave) {
+                    setIsDisconnected(true);
+                } else {
+                    setIsDisconnected(false);
+                }
+                return;
+            }
+
+            let uri = socket.io?.uri || "";
+            let isRemoteSocket = false;
+            let isConnectedToMaster = false;
+
+            if (uri && !uri.includes("localhost") && !uri.includes("127.0.0.1")) {
+                isRemoteSocket = true;
+                if (socket.connected) {
+                    isConnectedToMaster = true;
+                }
+            }
+
+            let shouldShowOverlay = false;
+
+            if (isConfiguredSlave || isRemoteSocket) {
+                // If this terminal is configured as a Slave, or if it successfully attached 
+                // to a remote Master Socket during discovery (isRemoteSocket), it must maintain 
+                // the connection. If the Master connection is lost, block the UI immediately.
+                if (!isConnectedToMaster) {
+                    shouldShowOverlay = true;
+                }
+            }
+
+            setIsDisconnected(shouldShowOverlay);
+
+            if (shouldShowOverlay && uri) {
+                setMasterIp(uri.replace("http://", "").replace(":55667", ""));
             }
 
             if (window.electronAPI && window.electronAPI.getLocalIp) {
@@ -31,36 +73,14 @@ const NetworkOverlay = () => {
                     setSlaveIp(localIp);
                 } catch (e) { }
             }
-            return true;
-        };
 
-        // Continuous network verification loop for Slaves
-        const verifyConnection = async () => {
-            const isSlaveNetworkActive = await checkStatus();
-            if (!isSlaveNetworkActive) return;
-
-            const socket = getSocket();
-
-            if (!socket) {
-                // Socket not even initialized yet, means it's still looking for Master
-                setIsDisconnected(true);
-                return;
-            }
-
-            if (socket.io?.uri) {
-                setMasterIp(socket.io.uri.replace("http://", "").replace(":55667", ""));
-            }
-
-            // Real-time boolean check overrules hanging event listeners
-            if (!socket.connected) {
-                setIsDisconnected(true);
-            } else {
-                setIsDisconnected(false);
-            }
-
-            // Re-bind just to be absolutely certain we catch the physical drop event immediately
-            socket.off("disconnect").on("disconnect", () => setIsDisconnected(true));
-            socket.off("connect").on("connect", () => setIsDisconnected(false));
+            // Bind fallback to physical disconnect event just in case
+            socket.off("disconnect").on("disconnect", () => {
+                if (isConfiguredSlave || isRemoteSocket) setIsDisconnected(true);
+            });
+            socket.off("connect").on("connect", () => {
+                if (isConfiguredSlave || isRemoteSocket) setIsDisconnected(false);
+            });
         };
 
         verifyConnection(); // Immediate check
@@ -92,17 +112,8 @@ const NetworkOverlay = () => {
                 fontFamily: "'Inter', sans-serif"
             }}
         >
-            <div style={{ marginBottom: "25px", animation: "pulseGlobal 2s infinite" }}>
-                {/* Warning Icon using typical Primary mapping or White */}
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="90"
-                    height="90"
-                    fill="var(--primary-color, #4ABFB3)"
-                    viewBox="0 0 16 16"
-                >
-                    <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-                </svg>
+            <div style={{ marginBottom: "25px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "5rem", color: "#4F85F4" }}></i>
             </div>
 
             <h1 style={{ fontSize: "2.8rem", fontWeight: "700", marginBottom: "15px", color: "#FFFFFF", letterSpacing: "-0.5px" }}>
@@ -123,17 +134,17 @@ const NetworkOverlay = () => {
             }}>
                 <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: "0.85rem", color: "#718096", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>Master İP ünvanı</div>
-                    <div style={{ fontSize: "1.6rem", fontWeight: "bold", color: "var(--primary-color, #4ABFB3)" }}>{masterIp || "Bilinmir"}</div>
+                    <div style={{ fontSize: "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{masterIp || "Bilinmir"}</div>
                 </div>
                 <div style={{ width: "1px", background: "#2D3748" }}></div>
                 <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: "0.85rem", color: "#718096", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>Sizin İP ünvanınız (Slave)</div>
-                    <div style={{ fontSize: "1.6rem", fontWeight: "bold", color: "var(--primary-color, #4ABFB3)" }}>{slaveIp || "Bilinmir"}</div>
+                    <div style={{ fontSize: "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{slaveIp || "Bilinmir"}</div>
                 </div>
             </div>
 
             <div style={{ marginTop: "50px", display: "flex", alignItems: "center", gap: "12px", background: "rgba(255,255,255,0.05)", padding: "12px 24px", borderRadius: "50px" }}>
-                <div className="spinner-border spinner-border-sm" style={{ color: "var(--primary-color, #4ABFB3)", width: "1.2rem", height: "1.2rem" }} role="status"></div>
+                <div className="spinner-border spinner-border-sm" style={{ color: "#4F85F4", width: "1.2rem", height: "1.2rem" }} role="status"></div>
                 <span style={{ color: "#CBD5E0", fontSize: "1rem", fontWeight: "500" }}>Yenidən bağlanmağa cəhd edilir...</span>
             </div>
 
@@ -158,8 +169,6 @@ const NetworkOverlay = () => {
                     boxShadow: "0 4px 15px rgba(79, 133, 244, 0.4)",
                     transition: "all 0.2s ease"
                 }}
-                onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.03)"}
-                onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
             >
                 <i className="bi bi-power me-2"></i> Sistemdən Çıxış (Bağla)
             </button>

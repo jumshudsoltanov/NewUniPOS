@@ -16,6 +16,7 @@ import Layout from "./components/Layout/Layout";
 import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 import Toastify from "./components/Toastify/Toastify";
 import "react-toastify/dist/ReactToastify.css";
+import NetworkOverlay from "./components/NetworkOverlay/NetworkOverlay";
 import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
 import { initNetwork } from "./utils/apiConfig";
@@ -131,6 +132,7 @@ function AppContent() {
   return (
     <>
       <Toastify />
+      <NetworkOverlay />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/pin" element={<Pin />} />

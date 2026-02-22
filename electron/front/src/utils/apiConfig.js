@@ -29,16 +29,21 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
     }
 
     // Fallback to local (only if forceLocal is true or it's genuinely the Electron Master)
-    if (!disableSocket) {
+    if (!disableSocket && forceLocal) {
         socket = io("http://localhost:55667");
         socket.on("connect", () => {
             console.warn("[CONNECTION] Connected as MASTER (Local Database)");
         });
+    } else if (!disableSocket && !forceLocal) {
+        // Essential: If it was scanning for a master (Slave) and failed, it must NOT connect to localhost
+        console.warn("[CONNECTION] Slave failed to find Master. Socket disabled to force Error Overlay.");
+        socket = null;
     } else {
         console.warn("[CONNECTION] Running in Standalone Mode. Real-time sockets explicitly deactivated.");
+        socket = null;
     }
 
-    return { masterIp: "localhost", socket };
+    return { masterIp: forceLocal ? "localhost" : null, socket };
 };
 
 export const getSocket = () => socket;
