@@ -91,21 +91,27 @@ pause`;
 };
 
 const initMasterServer = (server) => {
-    if (io) return;
+    if (io) {
+        console.log("⚠️ Master Socket.io Server artıq aktivdir.");
+        return;
+    }
 
     io = new Server(server, {
         cors: {
             origin: "*",
             methods: ["GET", "POST"]
-        }
+        },
+        transports: ['websocket', 'polling'], // Alignment with Slave side
+        pingTimeout: 60000,
+        pingInterval: 25000
     });
 
     console.log("✅ Master Socket.io Server Başladı");
 
     io.on("connection", (socket) => {
         console.log(`🔌 Yeni terminal qoşuldu: ${socket.id}`);
-        socket.on("disconnect", () => {
-            console.log(`❌ Terminal bağlantısı kəsildi: ${socket.id}`);
+        socket.on("disconnect", (reason) => {
+            console.log(`❌ Terminal bağlantısı kəsildi (${reason}): ${socket.id}`);
         });
     });
 
@@ -113,19 +119,35 @@ const initMasterServer = (server) => {
     openFirewallPorts();
 };
 
+let broadcastInterval = null;
+
 const startBroadcasting = () => {
     if (isBroadcasting) return;
+
+    // Clean up if somehow called again
+    if (broadcaster) {
+        try { broadcaster.close(); } catch (e) { }
+    }
 
     broadcaster = dgram.createSocket("udp4");
 
     broadcaster.on("listening", () => {
         broadcaster.setBroadcast(true);
         isBroadcasting = true;
+        console.log("📡 UDP Yayımı (Discovery) başladı...");
+    });
+
+    broadcaster.on("error", (err) => {
+        console.error("❌ UDP Broadcaster Error:", err);
+        isBroadcasting = false;
+        try { broadcaster.close(); } catch (e) { }
     });
 
     broadcaster.bind(() => {
         let logCounter = 0;
-        setInterval(() => {
+        if (broadcastInterval) clearInterval(broadcastInterval);
+
+        broadcastInterval = setInterval(() => {
             const netInfo = getLocalNetworkInfo();
             const broadcastAddress = getBroadcastIp(netInfo.ip, netInfo.netmask);
 
@@ -139,10 +161,14 @@ const startBroadcasting = () => {
                 console.log(`[MASTER UDP] IP Seçildi: ${netInfo.ip} | Netmask: ${netInfo.netmask} | Adapter: ${netInfo.name}`);
                 console.log(`[MASTER UDP] Yayım IP'si (Broadcast Address): ${broadcastAddress}`);
             }
-            logCounter = (logCounter + 1) % 5; 
+            logCounter = (logCounter + 1) % 10;
 
-            // Direct the broadcast to the specific subnet, avoiding Windows virtual adapter drops
-            broadcaster.send(message, 0, message.length, 44444, broadcastAddress);
+            // Direct the broadcast to the specific subnet
+            if (isBroadcasting && broadcaster) {
+                broadcaster.send(message, 0, message.length, 44444, broadcastAddress, (err) => {
+                    if (err) console.error("[MASTER UDP] Send Error:", err.message);
+                });
+            }
         }, 3000);
     });
 };

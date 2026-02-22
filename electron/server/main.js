@@ -254,6 +254,14 @@ ipcMain.handle("scan-master", async () => {
   return new Promise((resolve) => {
     let resolved = false;
 
+    // Helper to finish the scan and clean up
+    const finishScan = (ip) => {
+      if (resolved) return;
+      resolved = true;
+      try { listener.close(); } catch (e) { }
+      resolve(ip);
+    };
+
     // --- 1. UDP Listener ---
     const dgram = require("dgram");
     const listener = dgram.createSocket("udp4");
@@ -261,16 +269,18 @@ ipcMain.handle("scan-master", async () => {
     listener.on("message", (msg, rinfo) => {
       try {
         const data = JSON.parse(msg.toString());
-        console.log(`[SLAVE UDP] Mesaj gəldi: ${msg.toString()} | Göndərən: ${rinfo.address}`);
         if (data.type === "master_pos" && data.ip && !resolved) {
           console.log(`[SLAVE UDP] MASTER IP TƏSDİQLƏNDİ: ${data.ip}`);
-          resolved = true;
-          try { listener.close(); } catch (e) { }
-          resolve(data.ip);
+          finishScan(data.ip);
         }
       } catch (e) {
         console.log("[SLAVE UDP] Parsing Error:", e.message);
       }
+    });
+
+    listener.on("error", (err) => {
+      console.log("[SLAVE UDP] Listener Error:", err.message);
+      // Don't finishScan(null) here, TCP might still find it
     });
 
     try {
@@ -298,18 +308,22 @@ ipcMain.handle("scan-master", async () => {
     }
 
     if (localSubnet) {
-      console.log(`[SLAVE TCP] IP Axtarışı başladı. Subnet: ${localSubnet}.1 - 254`);
+      console.log(`[SLAVE TCP] IP Axtarışı başladı. Subnet: ${localSubnet}.*`);
 
       const net = require("net");
       const checkIp = (ip) => {
         return new Promise((res) => {
+          if (resolved) return res(null);
+
           const socket = new net.Socket();
-          socket.setTimeout(1500);
+          socket.setTimeout(1000); // Shorter timeout for faster sweep
 
           socket.on('connect', () => {
             socket.destroy();
+            if (resolved) return res(null);
+
             const startTime = Date.now();
-            const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 2000 }, (response) => {
+            const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 1500 }, (response) => {
               let body = '';
               response.on('data', chunk => body += chunk);
               response.on('end', () => {
@@ -337,7 +351,7 @@ ipcMain.handle("scan-master", async () => {
       for (let i = 1; i <= 254; i++) ips.push(`${localSubnet}.${i}`);
 
       const scanBatches = async () => {
-        const batchSize = 40;
+        const batchSize = 50; // Increased batch size for speed
         for (let i = 0; i < ips.length; i += batchSize) {
           if (resolved) return;
           const batch = ips.slice(i, i + batchSize);
@@ -346,28 +360,25 @@ ipcMain.handle("scan-master", async () => {
 
           if (foundIp && !resolved) {
             console.log(`[SLAVE TCP] MASTER IP TƏSDİQLƏNDİ: ${foundIp}`);
-            resolved = true;
-            try { listener.close(); } catch (e) { }
-            resolve(foundIp);
+            finishScan(foundIp);
             return;
           }
         }
+
+        // If we finished the sweep and no UDP came in, wait a bit longer or fail
+        setTimeout(() => {
+          if (!resolved) finishScan(null);
+        }, 5000);
       };
 
       scanBatches();
     } else {
-      console.log("[SLAVE TCP] Lokal (Private) IPv4 alt şəbəkəsi tapılmadı.");
+      console.log("[SLAVE TCP] Lokal IPv4 alt şəbəkəsi tapılmadı.");
+      // If no TCP sweep possible, wait for UDP or timeout
+      setTimeout(() => {
+        if (!resolved) finishScan(null);
+      }, 10000);
     }
-
-    // --- 3. Safety Timeout ---
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        try { listener.close(); } catch (e) { }
-        console.log("[SLAVE] 15 saniyə ərzində Master tapılmadı. Lokal davam edilir...");
-        resolve(null);
-      }
-    }, 15000);
   });
 });
 

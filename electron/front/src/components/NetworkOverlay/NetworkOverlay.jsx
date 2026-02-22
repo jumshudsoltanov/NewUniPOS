@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getSocket } from "../../utils/apiConfig";
+import { getSocket, initNetwork } from "../../utils/apiConfig";
 
 const NetworkOverlay = () => {
     const [isDisconnected, setIsDisconnected] = useState(false);
@@ -8,14 +8,15 @@ const NetworkOverlay = () => {
 
     useEffect(() => {
         let pollingInterval;
+        let retryCounter = 0;
 
         // Continuous network verification loop for Slaves
         const verifyConnection = async () => {
+            const authResult = JSON.parse(localStorage.getItem("authResult"));
             let isConfiguredSlave = false;
             let isMaster = false;
             let isMasterSlaveActive = false;
 
-            const authResult = JSON.parse(localStorage.getItem("authResult"));
             if (authResult) {
                 const profileData = authResult?.data?.profile || {};
                 const terminalData = authResult?.data?.terminal || {};
@@ -29,58 +30,56 @@ const NetworkOverlay = () => {
 
             const socket = getSocket();
 
-            if (!socket) {
-                // If it's a slave and socket is deliberately null (failed to find master), block it!
-                if (isConfiguredSlave) {
-                    setIsDisconnected(true);
-                } else {
-                    setIsDisconnected(false);
+            // If we are a slave and disconnected, try a background re-scan occasionally
+            if ((!socket || !socket.connected) && isConfiguredSlave) {
+                setIsDisconnected(true);
+
+                // Every 5 iterations (roughly 10 seconds), attempt a background re-init
+                retryCounter++;
+                if (retryCounter >= 5) {
+                    console.warn("[NETWORK] Background re-scan started...");
+                    retryCounter = 0;
+                    try {
+                        const result = await initNetwork(false, false);
+                        if (result && result.socket) {
+                            console.warn("[NETWORK] Master found in background!");
+                            setIsDisconnected(false);
+                        }
+                    } catch (e) {
+                        console.error("[NETWORK] Background re-scan failed:", e.message);
+                    }
                 }
                 return;
             }
 
-            let uri = socket.io?.uri || "";
-            let isRemoteSocket = false;
-            let isConnectedToMaster = false;
+            // If we have a socket, we need to check if it's actually remote and connected
+            if (socket) {
+                let uri = socket.io?.uri || "";
+                let isRemoteSocket = !uri.includes("localhost") && !uri.includes("127.0.0.1");
+                let isConnectedToMaster = socket.connected;
 
-            if (uri && !uri.includes("localhost") && !uri.includes("127.0.0.1")) {
-                isRemoteSocket = true;
-                if (socket.connected) {
-                    isConnectedToMaster = true;
+                if (isConfiguredSlave || isRemoteSocket) {
+                    if (!isConnectedToMaster) {
+                        setIsDisconnected(true);
+                    } else {
+                        setIsDisconnected(false);
+                        retryCounter = 0; // Reset counter on successful connection
+                    }
                 }
+            } else {
+                // No socket and not a slave? Usually master/local mode.
+                setIsDisconnected(false);
             }
 
-            let shouldShowOverlay = false;
-
-            if (isConfiguredSlave || isRemoteSocket) {
-                // If this terminal is configured as a Slave, or if it successfully attached 
-                // to a remote Master Socket during discovery (isRemoteSocket), it must maintain 
-                // the connection. If the Master connection is lost, block the UI immediately.
-                if (!isConnectedToMaster) {
-                    shouldShowOverlay = true;
-                }
+            if (socket) {
+                socket.off("disconnect").on("disconnect", () => {
+                    if (isConfiguredSlave) setIsDisconnected(true);
+                });
+                socket.off("connect").on("connect", () => {
+                    setIsDisconnected(false);
+                    retryCounter = 0;
+                });
             }
-
-            setIsDisconnected(shouldShowOverlay);
-
-            if (shouldShowOverlay && uri) {
-                setMasterIp(uri.replace("http://", "").replace(":55667", ""));
-            }
-
-            if (window.electronAPI && window.electronAPI.getLocalIp) {
-                try {
-                    const localIp = await window.electronAPI.getLocalIp();
-                    setSlaveIp(localIp);
-                } catch (e) { }
-            }
-
-            // Bind fallback to physical disconnect event just in case
-            socket.off("disconnect").on("disconnect", () => {
-                if (isConfiguredSlave || isRemoteSocket) setIsDisconnected(true);
-            });
-            socket.off("connect").on("connect", () => {
-                if (isConfiguredSlave || isRemoteSocket) setIsDisconnected(false);
-            });
         };
 
         verifyConnection(); // Immediate check
