@@ -1,4 +1,3 @@
-import html2canvas from "html2canvas";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import KitchenReceipt from "../components/Receipt/KitchenReceipt";
@@ -43,15 +42,15 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
         });
     }
 
-    const printPromises = Object.keys(printerGroups).map(async (printerName) => {
+    for (const printerName of Object.keys(printerGroups)) {
         const groupItems = printerGroups[printerName];
-        if (groupItems.length === 0) return;
+        if (groupItems.length === 0) continue;
 
         const container = document.createElement("div");
         container.style.position = "absolute";
-        container.style.top = "-9999px";
+        container.style.top = "0px";
         container.style.left = "-9999px";
-        container.style.width = "320px";
+        container.style.width = "272px";
         document.body.appendChild(container);
 
         const root = ReactDOM.createRoot(container);
@@ -69,16 +68,10 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                     isDecrease={orderData.isDecrease}
                 />
             );
-            setTimeout(resolve, 100);
+            setTimeout(resolve, 500);
         });
 
-        const canvas = await html2canvas(container, {
-            scale: 2,
-            backgroundColor: "#ffffff",
-            logging: false
-        });
-
-        const imageData = canvas.toDataURL("image/png");
+        const html = container.innerHTML;
         root.unmount();
         document.body.removeChild(container);
 
@@ -95,8 +88,8 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
             }
         };
 
-        if (window.electronAPI && window.electronAPI.printImage) {
-            const result = await window.electronAPI.printImage({ image: imageData, printerName });
+        if (window.electronAPI && window.electronAPI.printReceipt) {
+            const result = await window.electronAPI.printReceipt({ html, printerName });
             if (!result || !result.success) {
                 const errMsg = result?.error || 'Bilinməyən xəta';
                 const displayId = orderData.checkData?.id || orderData.orderId;
@@ -109,18 +102,14 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
             addNotification("Sistem Xətası", errMsg, { orderId: displayId, printerName, category: "system", type: "error" });
             await logError(errMsg);
         }
-    });
-
-    await Promise.all(printPromises);
+    }
 };
 
-// Import CustomerReceipt dynamically or at top if possible, but we'll import it here for the helper
 import CustomerReceipt from "../components/Receipt/CustomerReceipt";
 
 export const printCustomerReceipt = async (orderData, profileData) => {
     let printers = profileData?.data?.printers;
 
-    // If printers are not in profileData, fetch them from API
     if (!printers || !Array.isArray(printers) || printers.length === 0) {
         try {
             const profileId = profileData?.data?.profile?.id;
@@ -136,7 +125,6 @@ export const printCustomerReceipt = async (orderData, profileData) => {
     }
 
     const printer = printers?.find(p => p.is_cashier === 1);
-    // User specifically requested to prioritize local_name for cashier printer
     const printerName = printer?.local_name || printer?.name;
 
     const logError = async (action, details) => {
@@ -162,14 +150,13 @@ export const printCustomerReceipt = async (orderData, profileData) => {
 
     const container = document.createElement("div");
     container.style.position = "absolute";
-    container.style.top = "-9999px";
+    container.style.top = "0px";
     container.style.left = "-9999px";
-    container.style.width = "320px"; // Standard receipt width
+    container.style.width = "272px";
     document.body.appendChild(container);
 
     const root = ReactDOM.createRoot(container);
 
-    // Prepare props
     const receiptProps = {
         orderedItems: orderData.items,
         checkData: orderData.checkData,
@@ -180,29 +167,21 @@ export const printCustomerReceipt = async (orderData, profileData) => {
 
     await new Promise((resolve) => {
         root.render(<CustomerReceipt {...receiptProps} />);
-        setTimeout(resolve, 500); // Wait for render and images
+        setTimeout(resolve, 500);
     });
 
     try {
-        const canvas = await html2canvas(container, {
-            scale: 2,
-            backgroundColor: "#ffffff",
-            logging: false,
-            useCORS: true // Important for external logos
-        });
+        const html = container.innerHTML;
 
-        const imageData = canvas.toDataURL("image/png");
-
-        if (window.electronAPI && window.electronAPI.printImage) {
-            const result = await window.electronAPI.printImage({
-                image: imageData,
+        if (window.electronAPI && window.electronAPI.printReceipt) {
+            const result = await window.electronAPI.printReceipt({
+                html,
                 printerName: printerName
             });
 
             if (!result || !result.success) {
                 const errMsg = result?.error || 'Bilinməyən xəta';
                 addNotification("Çap Xətası", `kassa printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: orderData.checkData?.id, category: "system", type: "error" });
-                // Log error
                 await logError("Müştəri Çapı Xətası", `Kassa çapı xətası: ${errMsg}`);
                 return { success: false, error: errMsg };
             }
@@ -213,7 +192,6 @@ export const printCustomerReceipt = async (orderData, profileData) => {
             await logError("Sistem Xətası", errMsg);
             return { success: false, error: errMsg };
         }
-
     } catch (error) {
         console.error("Print generation error:", error);
         addNotification("Çap Xətası", "Çek yaradılarkən xəta baş verdi", { orderId: orderData.checkData?.id, category: "system", type: "error" });
@@ -224,5 +202,3 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         document.body.removeChild(container);
     }
 };
-
-

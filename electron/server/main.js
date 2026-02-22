@@ -97,50 +97,56 @@ ipcMain.handle("open-anydesk", () => {
   return true;
 });
 
-ipcMain.handle("print-image", async (event, { image, printerName }) => {
+ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
   let printWindow = new BrowserWindow({
     show: false,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false
-    }
+    webPreferences: { nodeIntegration: true, contextIsolation: false, webSecurity: false }
   });
 
-  const now = new Date().toLocaleString('az-AZ').replace(/[,]/g, '').replace(/[: ]/g, '_');
-  const jobName = `unipos_${now}`;
-
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>${jobName}</title>
-        <style>
-          @page { margin: 0; }
-          body { margin: 0; padding: 0; display: flex; justify-content: flex-start; }
-          img { width: 100%; max-width: 100%; height: auto; display: block; }
-        </style>
-      </head>
-      <body>
-        <img src="${image}" />
-      </body>
-    </html>
-  `;
+  const htmlContent = `<!DOCTYPE html><html><head>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { margin: 0; padding: 0; width: 72mm; }
+      body > div { width: 100% !important; max-width: 100% !important; }
+    </style>
+  </head><body>${html}</body></html>`;
 
   await printWindow.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(htmlContent));
-  printWindow.setTitle(jobName);
-
-  const options = {
-    silent: true,
-    deviceName: printerName,
-    margins: { marginType: 'none' }
-  };
 
   try {
-    // Wait for the image to load and render
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for all images to load (logos, QR etc)
+    await printWindow.webContents.executeJavaScript(`
+      new Promise(resolve => {
+        const imgs = document.querySelectorAll('img');
+        if (!imgs.length) return resolve();
+        let loaded = 0;
+        const check = () => { loaded++; if (loaded >= imgs.length) resolve(); };
+        imgs.forEach(img => {
+          if (img.complete) check();
+          else { img.onload = check; img.onerror = check; }
+        });
+        setTimeout(resolve, 3000);
+      });
+    `);
+
+    // Measure content height and inject exact @page size
+    const contentHeight = await printWindow.webContents.executeJavaScript(`
+      const h = document.body.scrollHeight;
+      const hmm = Math.ceil(h * 25.4 / 96) + 10;
+      const s = document.createElement('style');
+      s.textContent = '@page { size: 72mm ' + hmm + 'mm; margin: 0; }';
+      document.head.appendChild(s);
+      hmm;
+    `);
 
     await new Promise((resolve, reject) => {
-      printWindow.webContents.print(options, (success, errorType) => {
+      printWindow.webContents.print({
+        silent: true,
+        deviceName: printerName,
+        margins: { marginType: 'none' },
+        preferCSSPageSize: true,
+        pageSize: { width: 72000, height: contentHeight * 1000 }
+      }, (success, errorType) => {
         if (!success) reject(errorType);
         else resolve();
       });
@@ -149,9 +155,9 @@ ipcMain.handle("print-image", async (event, { image, printerName }) => {
     if (!printWindow.isDestroyed()) printWindow.close();
     return { success: true };
   } catch (error) {
-    console.error("Printing failed:", error);
+    console.error("Receipt printing failed:", error);
     if (!printWindow.isDestroyed()) printWindow.close();
-    return { success: false, error };
+    return { success: false, error: String(error) };
   }
 });
 
@@ -215,7 +221,7 @@ ipcMain.handle("get-local-ip", () => {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      if (iface.family === "IPv4" && !iface.internal && iface.address.startsWith("192.168.")) {
+      if (iface.family === "IPv4" && !iface.internal && !iface.address.startsWith("169.254.")) {
         return iface.address;
       }
     }
@@ -278,7 +284,7 @@ ipcMain.handle("scan-master", async () => {
       const isVirtual = name.toLowerCase().match(/(vmware|virtual|vbox|wsl|vethernet|loopback)/);
       if (isVirtual) continue;
       for (const iface of interfaces[name]) {
-        if (iface.family === "IPv4" && !iface.internal && iface.address.startsWith("192.168.")) {
+        if (iface.family === "IPv4" && !iface.internal && !iface.address.startsWith("169.254.")) {
           localSubnet = iface.address.split('.').slice(0, 3).join('.');
           break;
         }
@@ -289,45 +295,63 @@ ipcMain.handle("scan-master", async () => {
     if (localSubnet) {
       console.log(`[SLAVE TCP] IP Axtarışı başladı. Subnet: ${localSubnet}.1 - 254`);
 
+      const net = require("net");
       const checkIp = (ip) => {
         return new Promise((res) => {
-          const startTime = Date.now();
-          const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 3000 }, (response) => {
-            let body = '';
-            response.on('data', chunk => body += chunk);
-            response.on('end', () => {
-              try {
-                const result = JSON.parse(body);
-                if (result.master === true) {
-                  console.log(`[SLAVE TCP] Uğurlu cavab: ${ip} | Müddət: ${Date.now() - startTime}ms`);
-                  res(ip);
-                }
-                else res(null);
-              } catch (e) { res(null); }
+          const socket = new net.Socket();
+          socket.setTimeout(1500);
+
+          socket.on('connect', () => {
+            socket.destroy();
+            const startTime = Date.now();
+            const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 2000 }, (response) => {
+              let body = '';
+              response.on('data', chunk => body += chunk);
+              response.on('end', () => {
+                try {
+                  const result = JSON.parse(body);
+                  if (result.master === true) {
+                    console.log(`[SLAVE TCP] Uğurlu cavab: ${ip} | Müddət: ${Date.now() - startTime}ms`);
+                    res(ip);
+                  } else res(null);
+                } catch (e) { res(null); }
+              });
             });
+            req.on('error', () => res(null));
+            req.on('timeout', () => { req.destroy(); res(null); });
           });
-          req.on('socket', function (socket) {
-            socket.setTimeout(3000);
-            socket.on('timeout', function () { req.destroy(); });
-          });
-          req.on('error', () => res(null));
-          req.on('timeout', () => { req.destroy(); res(null); });
+
+          socket.on('timeout', () => { socket.destroy(); res(null); });
+          socket.on('error', () => { socket.destroy(); res(null); });
+
+          socket.connect(55667, ip);
         });
       };
 
-      for (let i = 1; i <= 254; i++) {
-        const testIp = `${localSubnet}.${i}`;
-        checkIp(testIp).then(foundIp => {
+      const ips = [];
+      for (let i = 1; i <= 254; i++) ips.push(`${localSubnet}.${i}`);
+
+      const scanBatches = async () => {
+        const batchSize = 40;
+        for (let i = 0; i < ips.length; i += batchSize) {
+          if (resolved) return;
+          const batch = ips.slice(i, i + batchSize);
+          const results = await Promise.all(batch.map(checkIp));
+          const foundIp = results.find(res => res !== null);
+
           if (foundIp && !resolved) {
             console.log(`[SLAVE TCP] MASTER IP TƏSDİQLƏNDİ: ${foundIp}`);
             resolved = true;
             try { listener.close(); } catch (e) { }
             resolve(foundIp);
+            return;
           }
-        });
-      }
+        }
+      };
+
+      scanBatches();
     } else {
-      console.log("[SLAVE TCP] Wi-Fi 192.168 alt şəbəkəsi tapılmadı.");
+      console.log("[SLAVE TCP] Lokal (Private) IPv4 alt şəbəkəsi tapılmadı.");
     }
 
     // --- 3. Safety Timeout ---

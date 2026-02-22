@@ -8,14 +8,12 @@ const CustomerReceipt = ({
     tableName,
     hallName,
 }) => {
-    // Extract terminal info from profile data or use defaults
     const terminalInfo = profileData?.data?.terminal || {};
     const filialName = profileData?.data?.profile?.restaurant_name ||
         profileData?.data?.profile?.company_name ||
         terminalInfo?.filial ||
         "RESTORAN";
 
-    // Logo priority: Terminal Logo -> Profile Logo -> Profile Img
     const validLogo = (logo) => logo && logo !== "null" && logo !== "undefined" && logo !== "data:directory;base64,";
 
     let logoSrc = null;
@@ -44,145 +42,122 @@ const CustomerReceipt = ({
     ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     const baseFont = Number(terminalInfo?.customer_receipt || 0);
-
-    const fs = (n) => `${baseFont + n}pt`;
+    const fs = (baseSize) => `${baseSize + baseFont}px`;
 
     const isQrHidden = Number(terminalInfo?.qr_on_check) === 1;
 
     const styles = {
         receipt: {
             width: "100%",
-            padding: "0px",
             boxSizing: "border-box",
+            padding: "0 4px",
+            margin: "0",
             background: "#fff",
-            fontFamily: "'Consolas','Fira Code', monospace",
-            fontSize: fs(8), // Reduced
+            fontFamily: "'Consolas', monospace",
+            fontSize: fs(12),
             color: "#000",
-            fontWeight: "900",
-            overflow: "hidden",
+            fontWeight: "bold",
         },
-
         header: { textAlign: "center" },
-
         restaurantName: {
-            fontSize: fs(12), // Reduced
+            fontSize: fs(16),
             fontWeight: "900",
-            marginBottom: "1mm", // Reduced
+            marginBottom: "2px",
             textTransform: "uppercase"
         },
-
         line: {
             borderBottom: "1px dashed #000",
-            margin: "0.5mm 0", // Compacted
+            margin: "3px 0",
         },
-
-        infoSection: { fontSize: fs(8.5) }, // Reduced
-
+        infoSection: { fontSize: fs(11) },
         infoRow: {
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: "0.2mm", // Compacted
+            marginBottom: "1px",
         },
-
-        label: { fontWeight: "900", minWidth: "26mm" },
-
-        value: { textAlign: "right", flex: 1, marginLeft: "1mm" },
-
-        items: { fontSize: fs(9) }, // Reduced
-
+        label: { fontWeight: "900" },
+        value: { textAlign: "right", flex: 1, marginLeft: "4px" },
+        items: { fontSize: fs(11) },
         itemsHeader: {
             display: "flex",
             fontWeight: "900",
             borderBottom: "1px solid #000",
-            paddingBottom: "0.5mm",
-            marginBottom: "0.5mm", // Reduced
-            fontSize: fs(9),
+            paddingBottom: "2px",
+            marginBottom: "2px",
+            fontSize: fs(11),
         },
-
         colName: {
-            flex: "1 1 45%",
+            flex: "1 1 40%",
             whiteSpace: "normal",
             wordWrap: "break-word",
             wordBreak: "break-word",
-            lineHeight: "1",
-            paddingRight: "1mm"
+            lineHeight: "1.3",
+            paddingRight: "4px"
         },
-
-        colQty: { flex: "0 0 15%", textAlign: "center", fontWeight: "900" },
-
-        colPrice: { flex: "0 0 20%", textAlign: "right", fontWeight: "900", paddingRight: "1mm" },
-
+        colQty: { flex: "0 0 10%", textAlign: "center", fontWeight: "900", whiteSpace: "nowrap" },
+        colPrice: { flex: "0 0 25%", textAlign: "right", fontWeight: "900", paddingRight: "4px", whiteSpace: "nowrap" },
         colTotal: {
-            flex: "0 0 20%",
+            flex: "0 0 25%",
             textAlign: "right",
             fontWeight: "900",
+            whiteSpace: "nowrap",
         },
-
         itemRow: {
             display: "flex",
-            padding: "0.5mm 0", // Reduced
-            borderBottom: "1px dashed #c1c1c1",
-            fontSize: fs(8.5), // Reduced
+            padding: "4px 0",
+            borderBottom: "1px dashed #000",
+            fontSize: fs(11),
             fontWeight: "900",
-            lineHeight: "1",
-            alignItems: "center",
+            lineHeight: "1.3",
+            alignItems: "flex-start",
         },
-
         summaryRow: {
             display: "flex",
-            marginBottom: "0.5mm", // Reduced
-            fontSize: fs(9),
+            marginBottom: "2px",
+            fontSize: fs(12),
             fontWeight: "900",
         },
-
         total: {
             display: "flex",
             fontWeight: "900",
-            fontSize: fs(11), // Reduced
-            marginTop: "1mm", // Reduced
+            fontSize: fs(14),
+            marginTop: "4px",
+            whiteSpace: "nowrap",
         },
-
         footer: {
             display: "flex",
-            marginTop: "2mm", // Reduced
-            paddingTop: "1mm",
+            marginTop: "6px",
+            paddingTop: "4px",
             fontWeight: "900",
         },
-
-        qr: { width: "25mm" },
-
+        qr: { width: "60px" },
         thanks: {
             flex: 1,
-            paddingLeft: isQrHidden ? "0" : "3mm",
+            paddingLeft: isQrHidden ? "0" : "6px",
             textAlign: isQrHidden ? "center" : "left",
         },
-
-        thankText: { marginBottom: "0.5mm", fontSize: fs(9), fontWeight: "900" }, // Reduced
-
-        link: { fontSize: fs(7), wordBreak: "break-word", fontWeight: "900" },
-
-        note: { fontSize: fs(8), fontStyle: "italic", marginTop: "1mm" }, // Reduced
-
+        thankText: { marginBottom: "2px", fontSize: fs(11), fontWeight: "900" },
+        link: { fontSize: fs(10), wordBreak: "break-word", fontWeight: "900" },
+        note: { fontSize: fs(10), fontStyle: "italic", marginTop: "3px" },
         modifier: {
-            fontSize: fs(7.5),
+            fontSize: fs(9),
             fontStyle: "italic",
-            marginTop: "0px",
+            marginTop: "1px",
             fontWeight: "500",
         },
-
         statusBox: {
             textAlign: "center",
-            marginTop: "3mm",
-            marginBottom: "3mm",
+            marginTop: "4px",
+            marginBottom: "4px",
             borderTop: "1px dashed #000",
             borderBottom: "1px dashed #000",
-            padding: "2mm 0",
+            padding: "3px 0",
             width: "100%",
             display: "block",
             boxSizing: "border-box"
         },
         statusText: {
-            fontSize: fs(12),
+            fontSize: fs(14),
             fontWeight: "900",
             textTransform: "uppercase",
             letterSpacing: "2px",
@@ -191,15 +166,12 @@ const CustomerReceipt = ({
         }
     };
 
-    // Check if fully paid
     const isPaid = checkData?.payments &&
         checkData.payments.length > 0 &&
         checkData.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0) >= checkData.total;
 
-    // Use payments if available, otherwise empty
     const payments = checkData?.payments || [];
 
-    // Map Sale Types
     const getSaleTypeName = (type, typeName) => {
         if (typeName) return typeName;
         if (type == 1 || type === "takeaway") return "Al-götür";
@@ -220,12 +192,11 @@ const CustomerReceipt = ({
                         src={logoSrc}
                         alt="Logo"
                         style={{
-                            width: "50%",
-                            maxWidth: "150px",
+                            width: "40%",
+                            maxWidth: "80px",
                             objectFit: "contain",
-                            borderRadius: "8px",
                             display: "block",
-                            margin: "0 auto 2mm auto",
+                            margin: "0 auto 2px auto",
                         }}
                         onError={(e) => (e.target.style.display = "none")}
                     />
@@ -261,7 +232,6 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
-                {/* Customer Info if available */}
                 {checkData?.customer_name && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Müştəri</span>
@@ -297,7 +267,6 @@ const CustomerReceipt = ({
                     <span style={styles.value}>{checkData?.waiter_name || checkData?.waiter?.name || "-"}</span>
                 </div>
 
-                {/* ✅ SATIŞ TİPİ */}
                 {displaySaleType !== "Restoranda" && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Satış tipi</span>
@@ -317,7 +286,6 @@ const CustomerReceipt = ({
                     <span style={styles.colTotal}>Cəm</span>
                 </div>
 
-                {/* TIMER ROW FIXED */}
                 {checkData?.rate_per_minute &&
                     Number(checkData?.rate_per_minute) !== 0 ? (
                     <div style={styles.itemRow}>
@@ -334,7 +302,7 @@ const CustomerReceipt = ({
                     .filter((item) => (Number(item.quantity) > 0 || Number(item.count) > 0))
                     .map((item, i) => {
                         const params = {
-                            name: item.name || item.product?.name || "Naməlum",
+                            name: item.product_name || item.name || item.product?.name || "Naməlum",
                             quantity: Number(item.quantity || item.count || 0),
                             price: Number(item.price || 0),
                             is_gift: Number(item.is_gift || 0) === 1,
@@ -383,7 +351,7 @@ const CustomerReceipt = ({
 
             <div style={styles.line}></div>
 
-            {/* ÖDƏNİLMƏYİB STATUS - Only if Not Paid */}
+            {/* ÖDƏNİLMƏYİB STATUS */}
             {!isPaid && (
                 <div style={styles.statusBox}>
                     <span style={styles.statusText}>ÖDƏNİLMƏYİB</span>
@@ -391,16 +359,15 @@ const CustomerReceipt = ({
             )}
 
             {/* SUMMARY */}
-            <div style={styles.summary}>
+            <div>
                 {checkData?.discount > 0 && (
                     <div style={styles.summaryRow}>
                         <span style={{ flex: 1 }}>
                             Endirim{" "}
-                            {checkData.discountType === "percent" // Changed from percentage to handle different data
+                            {checkData.discountType === "percent"
                                 ? `(${checkData.discount}%)`
                                 : ""}
                         </span>
-
                         <span style={styles.colTotal}>
                             -{Number(checkData.discountValue || checkData.discount_value || 0).toFixed(2)} ₼
                         </span>
@@ -415,7 +382,6 @@ const CustomerReceipt = ({
                                 ? `(${checkData.serviceFee}%)`
                                 : ""}
                         </span>
-
                         <span style={styles.colTotal}>
                             {Number(checkData.serviceFeeValue || checkData.service_fee_value || 0).toFixed(2)} ₼
                         </span>
@@ -442,15 +408,15 @@ const CustomerReceipt = ({
 
             {/* ÖDƏNİŞ METODLARI */}
             {payments.length > 0 && (
-                <div style={{ marginTop: "2mm" }}>
+                <div style={{ marginTop: "4px" }}>
                     <div style={styles.line}></div>
 
                     <div
                         style={{
                             fontWeight: "900",
-                            marginBottom: "1mm",
-                            marginTop: "1mm",
-                            fontSize: fs(10),
+                            marginBottom: "3px",
+                            marginTop: "3px",
+                            fontSize: fs(12),
                         }}
                     >
                         Ödəniş üsulları:
@@ -471,7 +437,7 @@ const CustomerReceipt = ({
 
             {/* ÖDƏNİLİB STATUS */}
             {isPaid && (
-                <div style={{ ...styles.statusBox, border: "3px solid #000" }}>
+                <div style={{ ...styles.statusBox, border: "2px solid #000" }}>
                     <span style={styles.statusText}>ÖDƏNİLİB</span>
                 </div>
             )}
@@ -480,7 +446,7 @@ const CustomerReceipt = ({
             <div style={styles.footer}>
                 {!isQrHidden && (
                     <div style={styles.qr}>
-                        <QRCode value={qrCodeValue} size={80} level="H" />
+                        <QRCode value={qrCodeValue} size={60} level="H" />
                     </div>
                 )}
 

@@ -10,6 +10,7 @@ const KitchenReceipt = ({
     typeName,
     checkData,
     selectedCustomer,
+    isDecrease,
 }) => {
     const now = new Date();
     const currentTime = `${now.getFullYear()}-${String(
@@ -19,108 +20,87 @@ const KitchenReceipt = ({
     ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     const items = orderedItems.length > 0 ? orderedItems : [];
-    const hasDecrease = items.some((i) => i.changeType === "decrease");
+    const hasDecrease = isDecrease || items.some((i) => i.changeType === "decrease");
 
     const cleanTable = String(table).replace(/masa/gi, "").trim();
     const cleanWaiter = String(waiter).replace(/ofisiant/gi, "").trim();
 
-    // 🔵 GLOBAL FONTSIZE
-    const baseFont = Number(terminalInfo?.kitchen_receipt || 9);
-
-    // 🔵 FONT HESABLAMA FUNKSIYASI
-    const fs = (n) => `${baseFont + n}pt`;
+    const baseFont = Number(terminalInfo?.kitchen_receipt || 0);
+    const fs = (n) => `${n + baseFont}px`;
 
     const styles = {
         receipt: {
             width: "100%",
             boxSizing: "border-box",
-            padding: "0 2mm",
-            margin: "0 auto",
+            padding: "0 2px",
+            margin: "0",
             background: "#fff",
-            fontFamily: "'Consolas','Fira Code', monospace",
-            fontSize: fs(9),
+            fontFamily: "'Consolas', monospace",
+            fontSize: fs(12),
             color: "#000",
-            fontWeight: "900",
-            overflow: "hidden",
+            fontWeight: "bold",
         },
-
-        header: { textAlign: "center" },
-
+        header: { textAlign: "center", marginBottom: "4px" },
         title: {
-            fontSize: fs(13),
+            fontSize: fs(16),
             fontWeight: "900",
+            letterSpacing: "1px",
         },
-
         line: {
             borderBottom: "1px dashed #000",
-            margin: "1mm 0",
-            width: "100%"
+            margin: "3px 0",
         },
-
-        infoSection: { fontSize: fs(9.5), width: "100%" },
-
+        infoSection: { fontSize: fs(11) },
         infoRow: {
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: "0.6mm",
-            width: "100%"
+            marginBottom: "1px",
         },
-
-        label: { fontWeight: "900", flex: "0 0 auto" },
-
-        value: { textAlign: "right", flex: "1 1 auto", marginLeft: "1mm", wordBreak: "break-word" },
-
-        items: { fontSize: fs(10), width: "100%" },
-
+        label: { fontWeight: "900" },
+        value: { textAlign: "right", flex: "1 1 auto", marginLeft: "4px", wordBreak: "break-word" },
+        items: { fontSize: fs(12) },
         itemsHeader: {
             display: "flex",
             fontWeight: "900",
             borderBottom: "1px solid #000",
-            paddingBottom: "0.5mm",
-            marginBottom: "1mm",
-            fontSize: fs(10),
-            width: "100%"
+            paddingBottom: "2px",
+            marginBottom: "2px",
+            fontSize: fs(12),
         },
-
         colName: {
             flex: "1 1 70%",
             whiteSpace: "normal",
             wordWrap: "break-word",
             wordBreak: "break-word",
-            lineHeight: "1.05",
-            paddingRight: "1mm"
+            lineHeight: "1.2",
+            paddingRight: "2px"
         },
-
         colQty: { flex: "0 0 30%", textAlign: "right", fontWeight: "900" },
-
         itemRow: {
             display: "flex",
-            padding: "1mm 0",
-            borderBottom: "1px dashed #c1c1c1",
-            fontSize: fs(9.8),
+            padding: "3px 0",
+            borderBottom: "1px dashed #000",
+            fontSize: fs(13),
             fontWeight: "900",
-            lineHeight: "1.05",
+            lineHeight: "1.2",
             alignItems: "center",
-            width: "100%"
         },
-
         status: {
             textAlign: "center",
-            fontSize: fs(12),
+            fontSize: fs(16),
             fontWeight: "900",
-            padding: "2mm 0",
+            padding: "4px 0",
             wordBreak: "break-word",
+            letterSpacing: "1px",
         },
-
         footer: {
             textAlign: "center",
-            marginTop: "4mm",
-            fontSize: fs(10),
+            marginTop: "6px",
+            fontSize: fs(11),
             fontWeight: "900",
         },
-
         modifier: {
-            fontSize: fs(8.5),
+            fontSize: fs(10),
             fontStyle: "italic",
             marginTop: "1px",
             fontWeight: "500",
@@ -129,31 +109,10 @@ const KitchenReceipt = ({
 
     return (
         <div style={styles.receipt}>
-            <style>
-                {`
-        @media print {
-          @page {
-            size: auto;
-            margin: 0mm; /* Printerin öz marginlərini ləğv edir */
-          }
-          html, body {
-            margin: 0px !important;
-            padding: 0px !important;
-            width: 100%;
-          }
-          /* Mümkün sürüşmələrin qarşısını almaq üçün containeri məcbur edirik */
-          div {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-          }
-        }
-      `}
-            </style>
-
             {/* HEADER */}
             <div style={styles.header}>
                 <div style={styles.title}>MƏTBƏX ÇEKİ</div>
-                <div style={{ fontSize: fs(9.5), marginTop: "1mm", fontWeight: "900" }}>{currentTime}</div>
+                <div style={{ fontSize: fs(11), marginTop: "2px", fontWeight: "900" }}>{currentTime}</div>
             </div>
 
             <div style={styles.line}></div>
@@ -170,13 +129,12 @@ const KitchenReceipt = ({
                     <span style={styles.value}>#{checkData?.id || orderId?.toString().slice(0, 8)}</span>
                 </div>
 
-                {(checkData?.sale_type === 0 || checkData?.sale_type === "dine_in" || !checkData?.sale_type) && hallName && (
+                {hallName && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Satış yeri</span>
                         <span style={styles.value}>
                             {hallName}
-                            {tableName || cleanTable ? "-" : ""}
-                            {tableName || cleanTable}
+                            {cleanTable ? `-${cleanTable}` : ""}
                         </span>
                     </div>
                 )}
@@ -186,7 +144,6 @@ const KitchenReceipt = ({
                     <span style={styles.value}>{typeName || "Restoranda"}</span>
                 </div>
 
-                {/* CUSTOMER INFO */}
                 {(selectedCustomer || checkData?.customerName) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Müştəri</span>
@@ -226,10 +183,12 @@ const KitchenReceipt = ({
                         mods = [];
                     }
 
+                    const itemName = item.product_name || item.name || item.product?.name || "Naməlum";
+
                     return (
                         <div key={idx} style={styles.itemRow}>
                             <div style={styles.colName}>
-                                {item.name}
+                                {itemName}
                                 {item.comment && (
                                     <div style={styles.modifier}>* {item.comment}</div>
                                 )}

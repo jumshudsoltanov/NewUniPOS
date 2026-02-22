@@ -37,6 +37,7 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
     } else if (!disableSocket && !forceLocal) {
         // Essential: If it was scanning for a master (Slave) and failed, it must NOT connect to localhost
         console.warn("[CONNECTION] Slave failed to find Master. Socket disabled to force Error Overlay.");
+        apiConfig.defaults.baseURL = "http://255.255.255.255/api"; // Force immediate Axios timeout
         socket = null;
     } else {
         console.warn("[CONNECTION] Running in Standalone Mode. Real-time sockets explicitly deactivated.");

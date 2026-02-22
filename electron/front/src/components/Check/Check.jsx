@@ -130,6 +130,10 @@ const Check = () => {
     setShowOperationsModal(true);
   };
 
+
+  console.log(loginedProfileData);
+
+
   const clearCheck = () => {
 
     if (currentOrder?.is_locked == 1) {

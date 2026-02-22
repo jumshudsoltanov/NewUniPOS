@@ -54,17 +54,40 @@ const getBroadcastIp = (ip, netmask) => {
 };
 
 const { exec } = require("child_process");
+const fs = require("fs");
+const path = require("path");
 
 const openFirewallPorts = () => {
     const tcpCommand = `netsh advfirewall firewall show rule name="UniPOS_Master_TCP" >nul || netsh advfirewall firewall add rule name="UniPOS_Master_TCP" dir=in action=allow protocol=TCP localport=55667 profile=any`;
     const udpCommand = `netsh advfirewall firewall show rule name="UniPOS_Master_UDP" >nul || netsh advfirewall firewall add rule name="UniPOS_Master_UDP" dir=in action=allow protocol=UDP localport=44444 profile=any`;
 
+    // Try silently first
     exec(tcpCommand, (err) => {
         if (!err) console.log("✅ Windows Firewall TCP Rule verified");
     });
     exec(udpCommand, (err) => {
         if (!err) console.log("✅ Windows Firewall UDP Rule verified");
     });
+
+    // Create a .bat file on Desktop for manual elevation just in case they are blocked cross-machine
+    try {
+        const desktopPath = path.join(os.homedir(), "Desktop", "Sistem_Sebekesini_Ac.bat");
+        const batContent = `@echo off
+echo ===================================================
+echo UniPOS Sebeke Icareleri (Firewall)
+echo ===================================================
+echo Xahis edirik bu fayli "Run as Administrator" kimi acin!
+echo Master qurguya TCP:55667 ve Slave qurguya UDP:44444 icazesi verilir...
+netsh advfirewall firewall add rule name="UniPOS_Master_TCP" dir=in action=allow protocol=TCP localport=55667 profile=any
+netsh advfirewall firewall add rule name="UniPOS_Master_UDP" dir=in action=allow protocol=UDP localport=44444 profile=any
+netsh advfirewall firewall add rule name="UniPOS_Master_TCP_Out" dir=out action=allow protocol=TCP localport=55667 profile=any
+echo ===================================================
+echo TAMAMLANDI! Indi Slave ekranlar Master-i gore bilecek.
+pause`;
+        fs.writeFileSync(desktopPath, batContent, 'utf-8');
+    } catch (e) {
+        console.error("Could not write Firewall BAT to desktop", e);
+    }
 };
 
 const initMasterServer = (server) => {
