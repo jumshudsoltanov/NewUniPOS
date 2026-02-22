@@ -1,31 +1,118 @@
-.modal-header .btn-close {
-    width: 1rem;
-    height: 1rem;
-    background-color: transparent;
+/* Main Modal Container Overrides */
+.comment-modal .modal-content {
+    border-radius: 10px !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.comment-modal .modal-dialog {
+    max-width: 420px !important;
+    margin: 1.75rem auto;
+}
+
+/* Header */
+.comment-modal-header {
+    background-color: #5D99FF;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+    border-bottom: none;
+}
+
+.comment-header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.comment-icon-circle {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comment-icon-circle i {
+    font-size: 1.2rem;
+    color: #053796;
+}
+
+.comment-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Body */
+.comment-modal-body {
+    padding: 24px 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Textarea */
+.comment-textarea {
+    border: 1px solid #C0C0C0;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 15px;
+    color: #333;
+    background-color: #fff;
+}
+
+.comment-textarea:focus {
+    border-color: #5D99FF;
+    box-shadow: 0 0 0 2px rgba(93, 153, 255, 0.2);
+    outline: none;
+}
+
+/* Footer Buttons */
+.comment-footer-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.comment-cancel-btn {
+    flex: 1;
+    height: 52px;
+    background-color: #fff;
+    border: 1px solid #C0C0C0;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+}
+
+.comment-cancel-btn:hover {
+    background-color: #F8F9FA;
+}
+
+.comment-save-btn {
+    flex: 1;
+    height: 52px;
+    background-color: #053796;
     border: none;
-    opacity: 1;
-    filter: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
 }
 
-
-.modal-header .btn-close::before,
-.modal-header .btn-close::after {
-    background-color: white;
-}
-
-
-.modal-header .btn-close:hover,
-.modal-header .btn-close:focus {
-    background-color: transparent;
-    filter: none;
-    filter: invert(1);
-}
-
-.modal-header .btn-close {
-    filter: invert(1);
-}
-
-
-.comment-area {
-    border: 1px solid #0d6efd !important;
+.comment-save-btn:hover {
+    background-color: #042d7a;
 }

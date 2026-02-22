@@ -41,7 +41,7 @@ const CustomerReceipt = ({
         now.getHours()
     ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-    const baseFont = Number(terminalInfo?.customer_receipt || 0);
+    const baseFont = Number(terminalInfo?.customer_receipt || profileData?.data?.customer_receipt || profileData?.data?.profile?.customer_receipt || 0);
     const fs = (baseSize) => `${baseSize + baseFont}px`;
 
     const isQrHidden = Number(terminalInfo?.qr_on_check) === 1;
@@ -232,10 +232,10 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
-                {checkData?.customer_name && (
+                {(checkData?.customer_name || checkData?.customerName || checkData?.customer?.name || checkData?.customer?.full_name) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Müştəri</span>
-                        <span style={styles.value}>{checkData.customer_name}</span>
+                        <span style={styles.value}>{checkData.customer_name || checkData.customerName || checkData.customer?.name || checkData.customer?.full_name}</span>
                     </div>
                 )}
 
@@ -349,7 +349,7 @@ const CustomerReceipt = ({
                     })}
             </div>
 
-            <div style={styles.line}></div>
+
 
             {/* ÖDƏNİLMƏYİB STATUS */}
             {!isPaid && (
@@ -409,7 +409,7 @@ const CustomerReceipt = ({
             {/* ÖDƏNİŞ METODLARI */}
             {payments.length > 0 && (
                 <div style={{ marginTop: "4px" }}>
-                    <div style={styles.line}></div>
+
 
                     <div
                         style={{

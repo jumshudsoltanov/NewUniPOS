@@ -33,7 +33,15 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
             addNotification("Printer Xətası", `${item.name} üçün printer təyin edilməyib`, { orderId: displayId, category: "system", type: "error" });
             continue;
         }
-        printers.forEach(p => {
+        // Deduplicate printers by name to prevent same item appearing twice on same printer
+        const seen = new Set();
+        const uniquePrinters = printers.filter(p => {
+            const key = p.local_name || p.name;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+        uniquePrinters.forEach(p => {
             const pName = p.local_name || p.name;
             if (!printerGroups[pName]) {
                 printerGroups[pName] = [];

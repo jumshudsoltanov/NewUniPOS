@@ -25,7 +25,7 @@ const KitchenReceipt = ({
     const cleanTable = String(table).replace(/masa/gi, "").trim();
     const cleanWaiter = String(waiter).replace(/ofisiant/gi, "").trim();
 
-    const baseFont = Number(terminalInfo?.kitchen_receipt || 0);
+    const baseFont = Number(terminalInfo?.kitchen_receipt || checkData?.kitchen_receipt || 0);
     const fs = (n) => `${n + baseFont}px`;
 
     const styles = {
@@ -203,7 +203,7 @@ const KitchenReceipt = ({
                             </div>
 
                             <div style={styles.colQty}>
-                                {item.changeType === "decrease" ? `-${item.diff}` : `${item.quantity}`}
+                                {item.changeType === "decrease" ? `-${item.diff || item.quantity || item.qty || item.count || 0}` : `${item.quantity || item.count || 0}`}
                             </div>
                         </div>
                     );

@@ -743,7 +743,7 @@ const Check = () => {
                 <div
                   className={`sidebar-icon history ${showHistoryModal ? 'active-sidebar-icon' : ''}`}
                   onClick={() => {
-                    if (!loginedWaiter?.data?.can_view_logs) {
+                    if (loginedWaiter?.data?.can_view_logs) {
                       setShowHistoryModal(true);
                     }
                   }}                >
@@ -816,7 +816,7 @@ const Check = () => {
                       try {
                         const result = await printCustomerReceipt({
                           items: products,
-                          checkData: currentOrder,
+                          checkData: { ...currentOrder, customer_name: selectedCustomer?.name || currentOrder?.customer_name || "" },
                           tableName: currentTable?.name,
                           hallName: currentHall?.name,
                           waiterName

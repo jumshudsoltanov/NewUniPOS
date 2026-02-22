@@ -1,5 +1,4 @@
 import React from "react";
-import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import "./CommentModal.css";
 import Form from "react-bootstrap/Form";
@@ -29,7 +28,6 @@ const CommentModal = ({ show, onClose, order }) => {
 
     console.log(result);
 
-    // Refresh data
     if (loginedProfileData?.data?.profile?.id) {
       const profileId = loginedProfileData.data.profile.id;
       await Promise.all([
@@ -42,46 +40,51 @@ const CommentModal = ({ show, onClose, order }) => {
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onClose}
-      backdrop="static"
-      keyboard={false}
-      centered
-      className="product-modal"
-    >
-      <div className="product-modal-header">
-        <div className="header-left">
-          <div className="header-icon-circle">
-            <i className="bi bi-chat-text"></i>
+    <Modal show={show} onHide={onClose} centered className="comment-modal" backdrop="static" animation={false}>
+      <div className="modal-content-wrapper">
+        <div className="comment-modal-header">
+          <div className="comment-header-content">
+            <div className="comment-icon-circle">
+              <i className="bi bi-chat-text"></i>
+            </div>
+            <div className="comment-modal-title">Çekə Şərh Yaz</div>
           </div>
-          <h5 className="modal-title">Çekə Şərh Yaz</h5>
-        </div>
-        <button className="close-btn" onClick={onClose}>
-          <i className="bi bi-x-lg"></i>
-        </button>
-      </div>
-
-      <div className="product-modal-body">
-        <Form.Control
-          as="textarea"
-          className="form-control-custom"
-          onChange={(e) => setComment(e.target.value)}
-          value={comment}
-          rows={4}
-          placeholder="Şərhinizi bura yazın..."
-          style={{ resize: "none" }}
-        />
-
-        <div className="modal-footer-custom px-0 pb-0">
-          <button className="btn-cancel" onClick={onClose}>Bağla</button>
-          <button
-            className="btn-save"
-            onClick={handleUpdateComment}
-          >
-            <i className="bi bi-check-lg"></i>
-            Saxla
+          <button className="btn-close-custom" onClick={onClose}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
+        </div>
+
+        <div className="comment-modal-body">
+          <Form.Control
+            as="textarea"
+            className="comment-textarea"
+            onChange={(e) => setComment(e.target.value)}
+            value={comment}
+            rows={4}
+            placeholder="Şərhinizi bura yazın..."
+            style={{ resize: "none" }}
+          />
+
+          <div className="comment-footer-buttons">
+            <button className="comment-cancel-btn" onClick={onClose}>Bağla</button>
+            <button className="comment-save-btn" onClick={handleUpdateComment}>
+              <i className="bi bi-check2 me-2" style={{ fontSize: '1.2rem' }}></i>
+              Saxla
+            </button>
+          </div>
         </div>
       </div>
     </Modal>

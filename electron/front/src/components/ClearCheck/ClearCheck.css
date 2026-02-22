@@ -1,0 +1,120 @@
+/* Main Modal Container Overrides */
+.clear-check-modal .modal-content {
+    border-radius: 10px !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.clear-check-modal .modal-dialog {
+    max-width: 420px !important;
+    margin: 1.75rem auto;
+}
+
+/* Header */
+.clear-check-modal-header {
+    background-color: #5D99FF;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+    border-bottom: none;
+}
+
+.clear-check-header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.clear-check-icon-circle {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.clear-check-icon-circle i {
+    font-size: 1.2rem;
+    color: #053796;
+}
+
+.clear-check-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Body */
+.clear-check-modal-body {
+    padding: 24px 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Message */
+.clear-check-message {
+    text-align: left;
+}
+
+.clear-check-question {
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.clear-check-warning {
+    font-size: 13px;
+    color: #999;
+    margin-bottom: 0;
+}
+
+/* Footer Buttons */
+.clear-check-footer-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.clear-check-cancel-btn {
+    flex: 1;
+    height: 52px;
+    background-color: #fff;
+    border: 1px solid #C0C0C0;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+}
+
+.clear-check-cancel-btn:hover {
+    background-color: #F8F9FA;
+}
+
+.clear-check-confirm-btn {
+    flex: 1;
+    height: 52px;
+    background-color: #053796;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
+}
+
+.clear-check-confirm-btn:hover {
+    background-color: #042d7a;
+}

@@ -131,6 +131,7 @@ const sendOrdersItemsToDb = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
+          include: [{ model: require("../model/ProductsModel"), as: "product" }]
         },
         {
           model: TablesModel,
