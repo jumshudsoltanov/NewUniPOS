@@ -1,4 +1,5 @@
 const { BrowserWindow, app, ipcMain, shell } = require("electron");
+const os = require("os");
 const path = require("path");
 const fs = require("fs");
 const { exec } = require("child_process");
@@ -152,6 +153,90 @@ ipcMain.handle("print-image", async (event, { image, printerName }) => {
     if (!printWindow.isDestroyed()) printWindow.close();
     return { success: false, error };
   }
+});
+
+ipcMain.handle("get-memory-info", () => {
+  const totalMemory = os.totalmem();
+  const freeMemory = os.freemem();
+  const usedMemory = totalMemory - freeMemory;
+
+  return {
+    used: (usedMemory / (1024 * 1024 * 1024)).toFixed(2), // GB
+    total: (totalMemory / (1024 * 1024 * 1024)).toFixed(2), // GB
+    free: (freeMemory / (1024 * 1024 * 1024)).toFixed(2) // GB
+  };
+});
+
+ipcMain.handle("get-disk-info", async () => {
+  return new Promise((resolve) => {
+    exec('wmic logicaldisk where DeviceID="C:" get FreeSpace,Size /format:list', (error, stdout) => {
+      if (error) {
+        console.error("OS Disk Error:", error);
+        resolve({ used: 0, total: 0, free: 0 });
+        return;
+      }
+
+      const lines = stdout.split('\n').filter(line => line.trim() !== '');
+      let freeSpace = 0;
+      let totalSize = 0;
+
+      lines.forEach(line => {
+        if (line.startsWith('FreeSpace=')) {
+          freeSpace = parseInt(line.split('=')[1]);
+        }
+        if (line.startsWith('Size=')) {
+          totalSize = parseInt(line.split('=')[1]);
+        }
+      });
+
+      const usedSpace = totalSize - freeSpace;
+
+      resolve({
+        used: (usedSpace / (1024 * 1024 * 1024)).toFixed(1), // GB
+        total: (totalSize / (1024 * 1024 * 1024)).toFixed(0), // GB
+        free: (freeSpace / (1024 * 1024 * 1024)).toFixed(1) // GB
+      });
+    });
+  });
+});
+
+ipcMain.handle("get-sync-status", async () => {
+  try {
+    const SyncService = require("../backend/services/SyncService");
+    return await SyncService.getSyncStatus();
+  } catch (error) {
+    console.error("IPC get-sync-status error:", error);
+    return { isSyncing: false, pendingCount: 0 };
+  }
+});
+
+ipcMain.handle("get-local-ip", () => {
+  const os = require("os");
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal && iface.address.startsWith("192.168.")) {
+        return iface.address;
+      }
+    }
+  }
+  return "Unknown";
+});
+
+ipcMain.handle("check-internet", async () => {
+  const http = require("http");
+  return new Promise((resolve) => {
+    // Try to reach a reliable public IP or our sync server domain
+    const req = http.get("http://46.224.8.157:35627/api/terminal/login", { timeout: 3000 }, (res) => {
+      resolve(true);
+      res.resume();
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
 });
 
 ipcMain.handle("scan-master", async () => {

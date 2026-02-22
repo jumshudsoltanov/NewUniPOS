@@ -109,31 +109,27 @@
 }
 
 .right-top-header {
-    background: var(--Surface-Default, #053796);
+    background: #053796;
     color: white;
     height: 60px;
-    /* Match left header height */
     display: flex;
     align-items: center;
+    padding: 0;
+    overflow: hidden;
 }
 
-.tools-divider {
-    width: 1px;
-    height: 24px;
-    background-color: rgba(255, 255, 255, 0.2);
-    margin: 0 12px;
-}
+
 
 /* Ensure Header is a positioning context */
 .CheckRightboxHeader {
     position: relative !important;
     z-index: 10;
     height: 50px;
-    margin-top: 5px;
-    /* Added separation from blue top bar */
+    margin-top: 0;
     display: flex;
     align-items: center;
     background-color: #EBF2FE;
+    /* Brand light blue */
     border-bottom: 1px solid #d1d5db;
     overflow: hidden;
     gap: 0;
@@ -148,9 +144,7 @@
     padding-left: 5px;
     flex-grow: 1;
     flex-shrink: 1;
-    /* Allow it to shrink if needed */
     min-width: 0;
-    /* Allow Flexbox to shrink it properly */
 }
 
 .breadcrumb-tab {
@@ -160,13 +154,10 @@
     justify-content: center;
     height: 38px;
     background-color: #053796;
-    /* Brand Blue Background */
     color: #fff;
-    /* White Text */
     font-weight: 600;
     font-size: 0.95rem;
     font-weight: 600;
-    /* font-style: italic; removed */
     cursor: pointer;
     padding: 0 20px;
     border-radius: 4px;
@@ -517,8 +508,12 @@
 .order-table-header {
     display: flex;
     justify-content: space-between;
-    padding-bottom: 8px;
-    border-bottom: 1px dashed #dce5ef;
+    align-items: center;
+    height: 50px;
+    padding: 0 15px;
+    background-color: #EBF2FE;
+    /* Matched to breadcrumb bar */
+    border-bottom: 1px solid #d1d5db;
     font-size: 0.85rem;
     color: #555;
     font-weight: 600;
@@ -980,8 +975,8 @@
 
 /* New Check Header Design (Footer Color Match) - Compact */
 .check-header-bar {
-    background: var(--Surface-Default, #4F85F4);
-    /* Matched to right header */
+    background: #4F85F4;
+    /* Matched exactly to requested color */
     color: white;
     display: flex;
     justify-content: space-between;
@@ -1297,9 +1292,11 @@
 /* New Order Table Layout */
 .order-table-header {
     display: flex;
-    padding: 10px 15px;
-    background-color: #f1f5f9;
-    border-bottom: 1px solid #e2e8f0;
+    align-items: center;
+    height: 50px;
+    padding: 0 15px;
+    background-color: #EBF2FE;
+    border-bottom: 1px solid #d1d5db;
     font-size: 0.9rem;
     font-weight: 600;
     color: #64748b;

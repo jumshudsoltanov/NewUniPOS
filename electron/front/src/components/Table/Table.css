@@ -131,7 +131,7 @@
 }
 
 /* Inner Table Content Styles */
-.status-dot {
+.table-surface .status-dot {
     position: absolute;
     top: 12px;
     right: 12px;

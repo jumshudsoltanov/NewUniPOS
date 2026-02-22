@@ -41,6 +41,7 @@ import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
+import StatusModal from "../StatusModal/StatusModal";
 
 // Cloud API Base URL (Same as Admin)
 const CLOUD_API_URL = "https://api.unipos.tech/api";
@@ -105,6 +106,14 @@ const Check = () => {
   const [productToEdit, setProductToEdit] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [syncCount, setSyncCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [hasInternet, setHasInternet] = useState(true);
+  const [showClock, setShowClock] = useState(() => {
+    return localStorage.getItem("showHeaderClock") === "true";
+  });
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const goTables = async () => {
     if (location.state?.from === "/checks") {
@@ -327,12 +336,55 @@ const Check = () => {
     };
     updateCount();
     window.addEventListener("newNotification", updateCount);
-    return () => window.removeEventListener("newNotification", updateCount);
+
+    // Connectivity Checks
+    const handleConnectivity = () => {
+      setIsOnline(navigator.onLine);
+      if (window.electronAPI && window.electronAPI.checkInternet) {
+        window.electronAPI.checkInternet().then(setHasInternet).catch(() => setHasInternet(false));
+      }
+    };
+    window.addEventListener("online", handleConnectivity);
+    window.addEventListener("offline", handleConnectivity);
+    const connInt = setInterval(handleConnectivity, 5000);
+
+    // Clock Interval
+    const clockInt = setInterval(() => setCurrentTime(new Date()), 1000);
+
+    // Sync Count Polling
+    const fetchSyncCount = () => {
+      if (window.electronAPI && window.electronAPI.getSyncStatus) {
+        window.electronAPI.getSyncStatus().then(st => setSyncCount(st.pendingCount || 0)).catch(console.error);
+      }
+    };
+    fetchSyncCount();
+    const syncInt = setInterval(fetchSyncCount, 15000);
+
+    return () => {
+      window.removeEventListener("newNotification", updateCount);
+      window.removeEventListener("online", handleConnectivity);
+      window.removeEventListener("offline", handleConnectivity);
+      clearInterval(connInt);
+      clearInterval(syncInt);
+      clearInterval(clockInt);
+    };
   }, []);
 
   const [menuViewMode, setMenuViewMode] = useState("ROOT");
   const [selectedGenCat, setSelectedGenCat] = useState(null);
   const [selectedCat, setSelectedCat] = useState(null);
+
+  const handleManualSync = () => {
+    console.log("Manually triggering sync...");
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString("az-AZ", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
 
   const handleMenuHome = () => {
     if (searchText) {
@@ -906,7 +958,8 @@ const Check = () => {
         >
           <div className="checkRightBox h-100 d-flex flex-column bg-light mobile-content-adjust">
             {/* Top Info Bar (Dark Blue) */}
-            <div className="right-top-header d-none d-md-flex justify-content-end align-items-center px-3 py-2 text-white">
+            <div className="right-top-header right-tools-container d-none d-md-flex justify-content-end align-items-center">
+              <div className="tools-divider"></div>
               <button
                 ref={newOrderBtnRef}
                 className="create-order-btn small-btn"
@@ -929,6 +982,8 @@ const Check = () => {
                 </svg>
                 <span className="d-none d-xl-inline">Yeni sifariş</span>
               </button>
+
+              <div className="tools-divider"></div>
 
               {/* Checks */}
               <div
@@ -959,6 +1014,17 @@ const Check = () => {
 
               <div className="tools-divider"></div>
 
+              {/* Clock Display */}
+              {showClock && (
+                <>
+                  <div className="header-clock">
+                    <i className="bi bi-clock"></i>
+                    <span>{formatTime(currentTime)}</span>
+                  </div>
+                  <div className="tools-divider"></div>
+                </>
+              )}
+
               {/* Menu Hamburger */}
               <button
                 className="header-icon-btn small-icon-btn"
@@ -980,8 +1046,9 @@ const Check = () => {
                 </svg>
               </button>
 
-              {/* Waiter */}
               <div className="tools-divider"></div>
+
+              {/* Waiter */}
 
               {/* Waiter/Exit Icon */}
               <Link
@@ -1048,7 +1115,11 @@ const Check = () => {
               <div className="tools-divider"></div>
 
               {/* Wifi Icon */}
-              <div className="header-icon-btn small-icon-btn wifi-icon">
+              <button
+                className="header-icon-btn small-icon-btn wifi-icon position-relative"
+                onClick={() => setShowStatusModal(true)}
+                style={{ cursor: "pointer", border: "none", background: "none", padding: "0 12px" }}
+              >
                 <svg
                   width="20"
                   height="20"
@@ -1058,34 +1129,34 @@ const Check = () => {
                 >
                   <path
                     d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
-                    stroke="#00FF6A"
+                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                   <path
                     d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
-                    stroke="#00FF6A"
+                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                   <path
                     d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
-                    stroke="#00FF6A"
+                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                   <path
                     d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
-                    stroke="#00FF6A"
+                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </svg>
-              </div>
+              </button>
             </div>
 
             {/* Bottom Action Bar (White) */}
@@ -1673,6 +1744,10 @@ const Check = () => {
       <NotificationSidebar
         show={showNotifications}
         onClose={() => setShowNotifications(false)}
+      />
+      <StatusModal
+        show={showStatusModal}
+        onHide={() => setShowStatusModal(false)}
       />
       <ProductModal
         show={showProductModal}

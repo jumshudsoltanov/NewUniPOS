@@ -14,6 +14,7 @@ import {
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
+import StatusModal from "../StatusModal/StatusModal";
 
 const Header = ({ showBack, backPath, onBack }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -28,6 +29,10 @@ const Header = ({ showBack, backPath, onBack }) => {
   const [activeHall, setActiveHall] = useState(null);
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [syncCount, setSyncCount] = useState(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [hasInternet, setHasInternet] = useState(true);
   const newOrderBtnRef = useRef(null);
   const dispatch = useDispatch();
   const location = useLocation();
@@ -152,22 +157,52 @@ const Header = ({ showBack, backPath, onBack }) => {
   // Notification count
   const [notifCount, setNotifCount] = useState(0);
 
+  const updateCount = () => {
+    const all = JSON.parse(localStorage.getItem("pos_notifications") || "[]");
+    setNotifCount(all.filter(n => n.status === "new").length);
+  };
+
   useEffect(() => {
-    const updateCount = () => {
-      const all = JSON.parse(localStorage.getItem("pos_notifications") || "[]");
-      setNotifCount(all.filter(n => n.status === "new").length);
-    };
     updateCount();
     window.addEventListener("newNotification", updateCount);
-    return () => window.removeEventListener("newNotification", updateCount);
+
+    // Connectivity Checks
+    const handleConnectivity = () => {
+      setIsOnline(navigator.onLine);
+      if (window.electronAPI && window.electronAPI.checkInternet) {
+        window.electronAPI.checkInternet().then(setHasInternet).catch(() => setHasInternet(false));
+      }
+    };
+    window.addEventListener("online", handleConnectivity);
+    window.addEventListener("offline", handleConnectivity);
+    const connInt = setInterval(handleConnectivity, 5000);
+
+    handleConnectivity(); // Initial check
+
+    // Sync Count Polling
+    const fetchSyncCount = () => {
+      if (window.electronAPI && window.electronAPI.getSyncStatus) {
+        window.electronAPI.getSyncStatus().then(st => setSyncCount(st.pendingCount || 0)).catch(console.error);
+      }
+    };
+    fetchSyncCount();
+    const syncInt = setInterval(fetchSyncCount, 15000); // Poll every 15s for the header
+
+    return () => {
+      window.removeEventListener("newNotification", updateCount);
+      window.removeEventListener("online", handleConnectivity);
+      window.removeEventListener("offline", handleConnectivity);
+      clearInterval(connInt);
+      clearInterval(syncInt);
+    };
   }, []);
+
 
   // Format time as HH:MM:SS
   const formatTime = (date) => {
     return date.toLocaleTimeString("az-AZ", {
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
       hour12: false
     });
   };
@@ -294,6 +329,7 @@ const Header = ({ showBack, backPath, onBack }) => {
 
           <Col lg={6} md={6} className="headerLeftBox h-100 d-none d-md-block">
             <div className="right-tools-container h-100 d-flex align-items-center justify-content-end">
+              <div className="tools-divider"></div>
               {/* New Order Button */}
               <button
                 ref={newOrderBtnRef}
@@ -317,6 +353,8 @@ const Header = ({ showBack, backPath, onBack }) => {
                 </svg>
                 <span className="d-none d-xl-inline">Yeni sifariş</span>
               </button>
+
+              <div className="tools-divider"></div>
 
               {/* Checks */}
               <div
@@ -347,15 +385,15 @@ const Header = ({ showBack, backPath, onBack }) => {
 
               <div className="tools-divider"></div>
 
-              {/* Clock Display */}
               {showClock && (
-                <div className="header-clock">
-                  <i className="bi bi-clock"></i>
-                  <span>{formatTime(currentTime)}</span>
-                </div>
+                <>
+                  <div className="header-clock">
+                    <i className="bi bi-clock"></i>
+                    <span>{formatTime(currentTime)}</span>
+                  </div>
+                  <div className="tools-divider"></div>
+                </>
               )}
-
-              {showClock && <div className="tools-divider"></div>}
 
               {/* Menu Hamburger */}
               <button className="header-icon-btn small-icon-btn" onClick={() => navigate("/settings")}>
@@ -444,7 +482,11 @@ const Header = ({ showBack, backPath, onBack }) => {
               <div className="tools-divider"></div>
 
               {/* Wifi Icon */}
-              <div className="header-icon-btn small-icon-btn wifi-icon">
+              <button
+                className="header-icon-btn small-icon-btn wifi-icon position-relative"
+                onClick={() => setShowStatusModal(true)}
+                style={{ cursor: "pointer", border: "none", background: "none", padding: "0 12px" }}
+              >
                 <svg
                   width="20"
                   height="20"
@@ -454,34 +496,34 @@ const Header = ({ showBack, backPath, onBack }) => {
                 >
                   <path
                     d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
-                    stroke="#00FF6A"
+                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                   <path
                     d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
-                    stroke="#00FF6A"
+                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                   <path
                     d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
-                    stroke="#00FF6A"
+                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                   <path
                     d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
-                    stroke="#00FF6A"
+                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
                     strokeWidth="1.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
                 </svg>
-              </div>
+              </button>
             </div>
           </Col>
         </Row>
@@ -533,6 +575,11 @@ const Header = ({ showBack, backPath, onBack }) => {
       <NotificationSidebar
         show={showNotifications}
         onClose={() => setShowNotifications(false)}
+      />
+
+      <StatusModal
+        show={showStatusModal}
+        onHide={() => setShowStatusModal(false)}
       />
     </>
   );

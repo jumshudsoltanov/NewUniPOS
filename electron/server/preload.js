@@ -5,5 +5,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     openAnyDesk: () => ipcRenderer.invoke("open-anydesk"),
     printImage: (data) => ipcRenderer.invoke("print-image", data),
     scanMaster: () => ipcRenderer.invoke("scan-master"),
+    getMemoryInfo: () => ipcRenderer.invoke("get-memory-info"),
+    getDiskInfo: () => ipcRenderer.invoke("get-disk-info"),
+    getSyncStatus: () => ipcRenderer.invoke("get-sync-status"),
+    getLocalIp: () => ipcRenderer.invoke("get-local-ip"),
+    checkInternet: () => ipcRenderer.invoke("check-internet"),
     onBackendLog: (callback) => ipcRenderer.on("backend-log", (event, ...args) => callback(...args)),
 });

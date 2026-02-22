@@ -10,7 +10,26 @@ const ADMIN_API_URL = "https://api.unipos.tech/api/sync";
 class SyncService {
   constructor() {
     this.isSyncing = false;
+    this.lastSyncTime = new Date(); // Initialize with current time on startup
     setInterval(() => this.syncPendingOrders(), 60000);
+  }
+
+  async getSyncStatus() {
+    try {
+      const pendingCount = await OrdersModel.count({
+        where: {
+          [Op.or]: [{ is_synced: 0 }, { is_synced: null }],
+        },
+      });
+      return {
+        isSyncing: this.isSyncing,
+        pendingCount: pendingCount,
+        lastSyncTime: this.lastSyncTime
+      };
+    } catch (error) {
+      console.error("Error getting sync status:", error);
+      return { isSyncing: this.isSyncing, pendingCount: 0, lastSyncTime: this.lastSyncTime };
+    }
   }
 
   async triggerSync(orderId) {
@@ -71,6 +90,7 @@ class SyncService {
 
       // If successful, mark as synced
       await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId } });
+      this.lastSyncTime = new Date();
       console.log(`Order ${orderId} synced successfully`);
     } catch (error) {
       console.error(`Failed to sync order ${orderId}:`, error.message);
@@ -101,6 +121,7 @@ class SyncService {
       for (const order of pendingOrders) {
         await this.triggerSync(order.uuid);
       }
+      this.lastSyncTime = new Date();
     } catch (error) {
       console.error("Error in background sync:", error);
     } finally {
