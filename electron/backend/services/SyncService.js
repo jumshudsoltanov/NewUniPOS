@@ -4,8 +4,13 @@ const OrdersModel = require("../model/OrdersModel");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
 const OrderLogsModel = require("../model/OrderLogsModel");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
+const ProductsModel = require("../model/ProductsModel");
+const TablesModel = require("../model/TablesModel");
+const WaitersModel = require("../model/WaitersModel");
+const TablesGroupsModel = require("../model/TableGroupsModel");
 
 const ADMIN_API_URL = "https://api.unipos.tech/api/sync";
+const ADMIN_API_FALLBACK_URL = "http://46.224.8.157:35627/api/sync";
 
 class SyncService {
   constructor() {
@@ -43,7 +48,6 @@ class SyncService {
       });
 
       // Attach product names to items
-      const ProductsModel = require("../model/ProductsModel");
       for (let item of items) {
         const product = await ProductsModel.findOne({
           where: { id: item.product_id },
@@ -63,13 +67,11 @@ class SyncService {
       // Fetch related table if exists (to ensure it's synced to admin)
       let table = null;
       if (order.table_id) {
-        const TablesModel = require("../model/TablesModel");
         table = await TablesModel.findOne({ where: { id: order.table_id } });
       }
 
       // Fetch waiter name
       if (order.waiter_id) {
-        const WaitersModel = require("../model/WaitersModel");
         const waiter = await WaitersModel.findOne({
           where: { id: order.waiter_id },
         });
@@ -79,12 +81,21 @@ class SyncService {
       }
 
       const payload = {
-        orders: [order],
-        items: items,
-        logs: logs,
-        payments: payments,
-        tables: table ? [table] : [], // Include table data
+        profile_id: order.profile_id, // Root level profile_id for cloud routing
+        orders: [{
+          ...order.get({ plain: true }),
+          waiter_name: order.getDataValue("waiter_name") || order.waiter_name
+        }],
+        items: items.map(item => ({
+          ...item.get({ plain: true }),
+          product_name: item.getDataValue("product_name") || item.product_name
+        })),
+        logs: logs.map(log => log.get({ plain: true })),
+        payments: payments.map(payment => payment.get({ plain: true })),
+        tables: table ? [table.get({ plain: true })] : [],
       };
+
+      console.log(`[SYNC] Sending payload for Order ${orderId}: Items=${payload.items.length}, Logs=${payload.logs.length}, Payments=${payload.payments.length}`);
 
       await this.sendToAdmin(payload);
 
@@ -100,6 +111,12 @@ class SyncService {
   }
 
   async syncPendingOrders() {
+    // Only the Master node should perform background synchronization.
+    // Slave nodes rely on the Master to handle all database operations and cloud syncing.
+    if (!global.isMasterNode) {
+      return;
+    }
+
     if (this.isSyncing) return;
     this.isSyncing = true;
 
@@ -130,19 +147,26 @@ class SyncService {
   }
 
   async sendToAdmin(payload) {
-    try {
-      const response = await axios.post(ADMIN_API_URL, payload, {
-        timeout: 5000, // 5 second timeout
-      });
+    let lastError = null;
+    const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
 
-      if (response.status === 200 && response.data.success) {
-        return true;
-      } else {
-        throw new Error("Admin API returned failure");
+    for (const url of urls) {
+      try {
+        console.log(`[SYNC] Attempting sync to ${url}...`);
+        const response = await axios.post(url, payload, {
+          timeout: 10000,
+        });
+
+        console.log(`[SYNC] Response from ${url}: Status=${response.status}`);
+        if (response.status >= 200 && response.status < 300) {
+          return true;
+        }
+      } catch (error) {
+        console.warn(`[SYNC] Primary sync failed for ${url}:`, error.message);
+        lastError = error;
       }
-    } catch (error) {
-      throw error; // Re-throw to be caught by caller
     }
+    throw lastError || new Error("All sync endpoints failed");
   }
 }
 

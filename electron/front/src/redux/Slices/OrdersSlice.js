@@ -352,11 +352,26 @@ export const giftItem = createAsyncThunk(
 
 export const updateItemDiscount = createAsyncThunk(
   "orders/itemDiscount",
-  async ({ orderId, itemId, discountValue, discountType, productName, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, itemId, productId, discountValue, discountType, productName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
+      if (!orderId || !itemId) {
+        throw new Error("Sifariş və ya məhsul ID-si tapılmadı");
+      }
+
       const response = await axios.post(
         `/orders-items/${orderId}/discount-item`,
-        { itemId, discountValue, discountType },
+        {
+          itemId,
+          item_id: itemId,
+          productId,
+          product_id: productId || itemId,
+          discountValue: parseFloat(discountValue) || 0,
+          discountType,
+          discount_value: parseFloat(discountValue) || 0,
+          discount_type: discountType,
+          discount_percentage: discountType === 'percent' ? parseFloat(discountValue) : 0,
+          discount_amount: discountType === 'amount' ? parseFloat(discountValue) : 0,
+        },
       );
 
       // Persistent Log

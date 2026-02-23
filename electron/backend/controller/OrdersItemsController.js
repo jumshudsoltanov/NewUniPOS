@@ -1005,7 +1005,7 @@ const onGiftItem = async (req, res) => {
 
   try {
     const originalItem = await OrdersItemsModel.findOne({
-      where: { order_id: orderId, product_id: itemId, is_gift: isGift ? 0 : 1 },
+      where: { order_id: orderId, id: itemId },
       transaction,
     });
 
@@ -1150,12 +1150,12 @@ const onGiftItem = async (req, res) => {
       { where: { uuid: orderId }, transaction },
     );
 
-    // Sync trigger
+    await transaction.commit();
+
+    // Sync trigger (AFTER commit so admin gets the updated data)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    await transaction.commit();
 
     // Fetch full order data to return
     const updatedOrder = await OrdersModel.findOne({
@@ -1195,7 +1195,7 @@ const onUpdateItemDiscount = async (req, res) => {
 
   try {
     const item = await OrdersItemsModel.findOne({
-      where: { order_id: orderId, product_id: itemId, is_gift: 0 },
+      where: { order_id: orderId, id: itemId },
       transaction,
     });
 
@@ -1291,15 +1291,12 @@ const onUpdateItemDiscount = async (req, res) => {
       },
       { where: { uuid: orderId }, transaction },
     );
+    await transaction.commit();
 
-    // Sync trigger
+    // Sync trigger (AFTER commit so admin gets the updated data)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    await transaction.commit();
-
-    // Fetch and return logic continues...
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -1317,7 +1314,7 @@ const onUpdateItemDiscount = async (req, res) => {
           as: "table",
           attributes: ["id", "name"],
           include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+            { model: TablesGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
@@ -1612,7 +1609,7 @@ const onDeleteItemWithReason = async (req, res) => {
 
   try {
     const item = await OrdersItemsModel.findOne({
-      where: { order_id: orderId, product_id: itemId, is_gift: 0 },
+      where: { order_id: orderId, id: itemId },
       transaction,
     });
 
@@ -1676,12 +1673,12 @@ const onDeleteItemWithReason = async (req, res) => {
       },
       { where: { uuid: orderId }, transaction }
     );
-    // Sync handled after commit
+    await transaction.commit();
+
+    // Sync trigger (AFTER commit so admin gets the updated data)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    await transaction.commit();
 
     // Return updated order
     const updatedOrder = await OrdersModel.findOne({
@@ -1853,8 +1850,7 @@ const onUpdateItemCount = async (req, res) => {
     const item = await OrdersItemsModel.findOne({
       where: {
         order_id: orderId,
-        product_id: itemId,
-        is_gift: 0
+        id: itemId
       }
     });
 

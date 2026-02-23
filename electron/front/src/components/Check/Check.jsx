@@ -1550,6 +1550,10 @@ const Check = () => {
           setShowHistoryModal(true);
           setShowOperationsModal(false);
         }}
+        openCustomersModal={() => {
+          setShowCustomerModal(true);
+          setShowOperationsModal(false);
+        }}
         loginedWaiter={loginedWaiter}
       />
 

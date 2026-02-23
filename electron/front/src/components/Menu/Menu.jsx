@@ -133,6 +133,14 @@ const Menu = ({
       return;
     }
 
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    dispatch(saveLog({
+      orderId: order?.uuid,
+      action: "Məhsul əlavə edildi",
+      waiterName,
+      details: product.name
+    }));
+
     dispatch(addProducts(product));
   };
 

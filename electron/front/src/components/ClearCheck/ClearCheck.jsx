@@ -1,21 +1,78 @@
-import React from "react";
+import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import { useDispatch, useSelector } from "react-redux";
-import { clearOrders, deleteOrderItems } from "../../redux/Slices/OrdersSlice";
+import { clearOrders, deleteOrderItems, saveLog } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { processAndPrintOrders } from "../../utils/printerHelpers";
 import "./ClearCheck.css";
 
 const ClearCheck = ({ show, onClose, order }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const dispatch = useDispatch();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { menu, categories } = useSelector((state) => state.OrderSlice);
+  const { tableGroups } = useSelector((state) => state.TablesSlice);
+
+  const getSaleTypeName = (type, typeName) => {
+    if (typeName) return typeName;
+    if (type == 1 || type === "takeaway") return "Al-götür";
+    if (type == 2 || type === "delivery") return "Çatdırılma";
+    return "Restoranda";
+  };
 
   const handleClearCheck = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const profileId = loginedProfileData?.data?.profile?.id;
 
+      // 1. Kitchen Print for all confirmed items
+      if (order?.orders_items && order.orders_items.length > 0) {
+        const itemsToPrint = order.orders_items.map(item => {
+          const menuRef = menu?.find(m => m.id == (item.product_id || item.id));
+          return {
+            ...item,
+            name: menuRef?.name || item.product?.name || item.name || "Məhsul",
+            quantity: Number(item.count || item.quantity || 0),
+            printer_details: menuRef?.printer_details || item.printer_details || [],
+            category_id: menuRef?.category_id || item.category_id,
+            changeType: 'decrease' // Mark as deleted
+          };
+        });
+
+        const menuDataWithCategories = {
+          data: menu || [],
+          categories: categories || []
+        };
+
+        const displaySaleType = getSaleTypeName(order?.sale_type, order?.sale_type_name);
+        const hall = tableGroups?.data?.find(h => h.id == order.hall_id);
+
+        try {
+          await processAndPrintOrders(
+            itemsToPrint,
+            {
+              table: order?.table_name || "Masa",
+              waiter: waiterName,
+              hallName: hall?.name || "",
+              orderId: order?.uuid,
+              terminalInfo: loginedProfileData?.data?.terminal || {},
+              typeName: displaySaleType,
+              checkData: order,
+              isDecrease: true
+            },
+            menuDataWithCategories
+          );
+        } catch (printErr) {
+          console.error("Clear Check Printing Error:", printErr);
+        }
+      }
+
+      // 2. Clear on Server
       await dispatch(
         deleteOrderItems({ orderId: order.uuid, waiterName }),
       ).unwrap();
@@ -24,8 +81,11 @@ const ClearCheck = ({ show, onClose, order }) => {
         await dispatch(getTableGroups(profileId));
         await dispatch(getActiveOrders({ profileId }));
       }
+      onClose(true);
     } catch (error) {
       console.error("Clear Check Error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -67,12 +127,14 @@ const ClearCheck = ({ show, onClose, order }) => {
             <button className="clear-check-cancel-btn" onClick={onClose}>Ləğv et</button>
             <button
               className="clear-check-confirm-btn"
-              onClick={() => {
-                handleClearCheck();
-                onClose(true);
-              }}
+              onClick={handleClearCheck}
+              disabled={isSubmitting}
             >
-              <i className="bi bi-check2 me-2" style={{ fontSize: '1.2rem' }}></i>
+              {isSubmitting ? (
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              ) : (
+                <i className="bi bi-check2 me-2" style={{ fontSize: '1.2rem' }}></i>
+              )}
               Təsdiqlə
             </button>
           </div>

@@ -2,11 +2,12 @@ import { Modal, Button, Row, Col, Form } from "react-bootstrap";
 import "./CheckDetailModal.css";
 import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchLogs, reopenOrder } from "../../redux/Slices/OrdersSlice";
+import { fetchLogs, reopenOrder, saveLog } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
+import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 
 const CheckDetailModal = ({ show, onClose, order }) => {
     const dispatch = useDispatch();
@@ -15,6 +16,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const [currentView, setCurrentView] = useState("details"); // 'details' | 'history'
     const [logFilter, setLogFilter] = useState("all");
     const [showReasonModal, setShowReasonModal] = useState(false);
+    const [isPrinting, setIsPrinting] = useState(false);
     const { orderLogs = [] } = useSelector((state) => state.OrderSlice);
 
     useEffect(() => {
@@ -64,6 +66,60 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         } catch (error) {
             console.error("Çek yenidən açma xətası:", error);
             toast.error("Xəta baş verdi");
+        }
+    };
+
+    const handlePrint = async () => {
+        if (!order || isPrinting) return;
+        setIsPrinting(true);
+
+        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || order.waiter?.name || "Naməlum";
+
+        // Map data for consistent receipt format
+        const mappedItems = (order.orders_items || []).map(item => ({
+            ...item,
+            product_name: item.product?.name || item.name || "Məhsul",
+            quantity: item.count || 0
+        }));
+
+        const mappedPayments = (order.order_payments || []).map(p => ({
+            ...p,
+            name: p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Nağd"),
+            amount: p.paid
+        }));
+
+        const receiptOrderData = {
+            items: mappedItems,
+            checkData: {
+                ...order,
+                orderId: order.id, // Display ID
+                startDate: order.start_date,
+                waiter_name: order.waiter?.name,
+                payments: mappedPayments
+            },
+            tableName: order.table?.name || "Masa",
+            hallName: order.table?.hall?.name || "",
+            waiterName: waiterName
+        };
+
+        try {
+            const result = await printCustomerReceipt(receiptOrderData, loginedProfileData);
+            if (result.success) {
+                toast.success("Çek çap edildi");
+
+                // Log print event
+                dispatch(saveLog({
+                    orderId: order.uuid,
+                    action: "Çek çap edildi",
+                    waiterName,
+                    details: "Arxivdən təkrar çap"
+                }));
+            }
+        } catch (error) {
+            console.error("Print error:", error);
+            toast.error("Çap zamanı xəta baş verdi");
+        } finally {
+            setIsPrinting(false);
         }
     };
 
@@ -280,7 +336,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 onClick={() => setCurrentView(currentView === "details" ? "history" : "details")}
                                 style={{ color: "#0d6efd", background: "transparent", fontWeight: 500 }}
                             >
-                                <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me - 2 fs - 5`}></i>
+                                <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me-2 fs-5`}></i>
                                 {currentView === "details" ? "TARİXÇƏ" : "ÇEK MƏLUMATLARI"}
                             </Button>
                         </div>
@@ -300,10 +356,20 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                             <Button
                                 variant="primary"
                                 className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
-                                onClick={() => window.print()}
-                                style={{ backgroundColor: "#0d6efd" }}
+                                onClick={handlePrint}
+                                disabled={isPrinting}
+                                style={{ backgroundColor: "#0d6efd", opacity: isPrinting ? 0.7 : 1 }}
                             >
-                                <i className="bi bi-printer me-2 fs-5"></i> ÇAP ET
+                                {isPrinting ? (
+                                    <>
+                                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                                        ÇAP EDİLİR...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="bi bi-printer me-2 fs-5"></i> ÇAP ET
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </div>

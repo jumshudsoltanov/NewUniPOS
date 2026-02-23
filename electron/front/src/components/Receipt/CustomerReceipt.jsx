@@ -147,20 +147,19 @@ const CustomerReceipt = ({
         },
         statusBox: {
             textAlign: "center",
-            marginTop: "4px",
-            marginBottom: "4px",
-            borderTop: "1px dashed #000",
-            borderBottom: "1px dashed #000",
-            padding: "3px 0",
+            marginTop: "6px",
+            marginBottom: "6px",
+            border: "2px solid #000",
+            padding: "2px 0",
             width: "100%",
             display: "block",
             boxSizing: "border-box"
         },
         statusText: {
-            fontSize: fs(14),
+            fontSize: fs(12),
             fontWeight: "900",
             textTransform: "uppercase",
-            letterSpacing: "2px",
+            letterSpacing: "1px",
             display: "block",
             textAlign: "center"
         }
@@ -182,6 +181,59 @@ const CustomerReceipt = ({
     const displaySaleType = getSaleTypeName(checkData?.sale_type, checkData?.sale_type_name);
 
     const itemsToRender = (orderedItems && orderedItems.length > 0) ? orderedItems : (checkData?.orders_items || []);
+
+    const subtotal = itemsToRender.reduce((sum, item) => {
+        const qty = Number(item.quantity || item.count || 0);
+        const price = Number(item.price || 0);
+        const isGift = Number(item.is_gift || 0) === 1;
+        return sum + (isGift ? 0 : qty * price);
+    }, 0) + (Number(checkData?.rate_per_minute) || 0);
+
+    const calcPercent = (val, total) => {
+        if (!total || total === 0 || !val) return 0;
+        const p = (val / total) * 100;
+        return p % 1 === 0 ? p.toFixed(0) : p.toFixed(1);
+    };
+
+    // Helper to extract financial values safely
+    const getDiscountInfo = () => {
+        const type = checkData.discount_type || checkData.discountType || "";
+        const value = Number(checkData.discountValue || checkData.discount_value || checkData.discount || 0);
+
+        if (type === "percent") {
+            return {
+                amount: (subtotal * value) / 100,
+                percent: value,
+                isPercent: true
+            };
+        }
+        return {
+            amount: value,
+            percent: calcPercent(value, subtotal),
+            isPercent: false
+        };
+    };
+
+    const getServiceInfo = () => {
+        const type = checkData.serviceFeeType || checkData.service_fee_type || "";
+        const value = Number(checkData.serviceFeeValue || checkData.service_fee_value || checkData.serviceFee || checkData.service_charge || 0);
+
+        if (type === "percent") {
+            return {
+                amount: (subtotal * value) / 100,
+                percent: value,
+                isPercent: true
+            };
+        }
+        return {
+            amount: value,
+            percent: calcPercent(value, subtotal),
+            isPercent: false
+        };
+    };
+
+    const discountInfo = getDiscountInfo();
+    const serviceInfo = getServiceInfo();
 
     return (
         <div style={styles.receipt}>
@@ -298,9 +350,9 @@ const CustomerReceipt = ({
                     </div>
                 ) : null}
 
-                {itemsToRender
-                    .filter((item) => (Number(item.quantity) > 0 || Number(item.count) > 0))
-                    .map((item, i) => {
+                {(() => {
+                    const filtered = itemsToRender.filter((item) => (Number(item.quantity) > 0 || Number(item.count) > 0));
+                    return filtered.map((item, i) => {
                         const params = {
                             name: item.product_name || item.name || item.product?.name || "Naməlum",
                             quantity: Number(item.quantity || item.count || 0),
@@ -316,7 +368,7 @@ const CustomerReceipt = ({
                         return (
                             <div key={i} style={{
                                 ...styles.itemRow,
-                                borderBottom: i === itemsToRender.length - 1 ? "none" : styles.itemRow.borderBottom
+                                borderBottom: i === filtered.length - 1 ? "1.5px solid #000" : styles.itemRow.borderBottom
                             }}>
                                 <div style={styles.colName}>
                                     {params.name}
@@ -349,7 +401,8 @@ const CustomerReceipt = ({
                                 </span>
                             </div>
                         );
-                    })}
+                    });
+                })()}
             </div>
 
 
@@ -362,31 +415,25 @@ const CustomerReceipt = ({
             )}
 
             {/* SUMMARY */}
-            <div>
-                {checkData?.discount > 0 && (
+            <div style={{ marginTop: "10px" }}>
+                {discountInfo.amount > 0 && (
                     <div style={styles.summaryRow}>
                         <span style={{ flex: 1 }}>
-                            Endirim{" "}
-                            {checkData.discountType === "percent"
-                                ? `(${checkData.discount}%)`
-                                : ""}
+                            Endirim ({discountInfo.percent}%)
                         </span>
                         <span style={styles.colTotal}>
-                            -{Number(checkData.discountValue || checkData.discount_value || 0).toFixed(2)} ₼
+                            -{discountInfo.amount.toFixed(2)} ₼
                         </span>
                     </div>
                 )}
 
-                {checkData?.serviceFee > 0 && (
+                {serviceInfo.amount > 0 && (
                     <div style={styles.summaryRow}>
                         <span style={{ flex: 1 }}>
-                            Xidmət haqqı{" "}
-                            {checkData.serviceFeeType === "percent"
-                                ? `(${checkData.serviceFee}%)`
-                                : ""}
+                            Xidmət haqqı ({serviceInfo.percent}%)
                         </span>
                         <span style={styles.colTotal}>
-                            {Number(checkData.serviceFeeValue || checkData.service_fee_value || 0).toFixed(2)} ₼
+                            {serviceInfo.amount.toFixed(2)} ₼
                         </span>
                     </div>
                 )}
@@ -406,7 +453,9 @@ const CustomerReceipt = ({
             {/* TOTAL */}
             <div style={styles.total}>
                 <span style={{ flex: 1 }}>YEKUN</span>
-                <span style={styles.colTotal}>{Number(checkData?.total || 0).toFixed(2)} ₼</span>
+                <span style={styles.colTotal}>
+                    {(subtotal - discountInfo.amount + serviceInfo.amount).toFixed(2)} ₼
+                </span>
             </div>
 
             {/* ÖDƏNİŞ METODLARI */}
@@ -435,12 +484,27 @@ const CustomerReceipt = ({
                             </span>
                         </div>
                     ))}
+
+                    {/* NEW: Paid and Change */}
+                    {(checkData?.paid_amount !== undefined || checkData?.paidAmount !== undefined) && (
+                        <div style={{ ...styles.summaryRow, marginTop: "4px", borderTop: "1px dashed #000", paddingTop: "2px" }}>
+                            <span style={{ flex: 1 }}>VERİLƏN</span>
+                            <span>{parseFloat(checkData.paid_amount || checkData.paidAmount || 0).toFixed(2)} ₼</span>
+                        </div>
+                    )}
+
+                    {(checkData?.change !== undefined) && (
+                        <div style={styles.summaryRow}>
+                            <span style={{ flex: 1 }}>QALIQ</span>
+                            <span>{parseFloat(checkData.change || 0).toFixed(2)} ₼</span>
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* ÖDƏNİLİB STATUS */}
             {isPaid && (
-                <div style={{ ...styles.statusBox, border: "2px solid #000" }}>
+                <div style={styles.statusBox}>
                     <span style={styles.statusText}>ÖDƏNİLİB</span>
                 </div>
             )}

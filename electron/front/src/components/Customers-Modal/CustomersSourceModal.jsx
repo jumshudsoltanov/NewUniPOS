@@ -47,6 +47,45 @@ const COUNTRIES = [
     { code: 'tm', name: 'Türkmənistan', dialCode: '+993' }
 ];
 
+// --- DATE HELPERS ---
+const formatDateForDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    // If it's already in DD.MM.YYYY, return as is
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(dateStr)) return dateStr;
+    // If it's YYYY-MM-DD
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+        return `${parts[2]}.${parts[1]}.${parts[0]}`;
+    }
+    return dateStr;
+};
+
+const formatDateForAPI = (dateStr) => {
+    if (!dateStr) return null;
+    // If it's DD.MM.YYYY
+    const parts = dateStr.split('.');
+    if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+};
+
+const autoFormatDate = (value, prevValue) => {
+    // Remove all non-digits
+    const cleanValue = value.replace(/\D/g, '');
+    const isDeleting = prevValue && value.length < prevValue.length;
+
+    if (isDeleting) return value; // Let user delete freely
+
+    let formatted = cleanValue;
+    if (cleanValue.length > 2 && cleanValue.length <= 4) {
+        formatted = `${cleanValue.slice(0, 2)}.${cleanValue.slice(2)}`;
+    } else if (cleanValue.length > 4) {
+        formatted = `${cleanValue.slice(0, 2)}.${cleanValue.slice(2, 4)}.${cleanValue.slice(4, 8)}`;
+    }
+    return formatted;
+};
+
 const SearchableSelect = ({ options, value, onChange, placeholder }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -134,6 +173,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
     const [showCheckDetail, setShowCheckDetail] = useState(false);
     const [selectedCheck, setSelectedCheck] = useState(null);
     const dotsMenuRef = useRef(null);
+    const hiddenDatePickerRef = useRef(null);
 
     const customerHistory = useMemo(() => {
         const active = (books?.data || []).filter(o => o.customer_id === selectedCustomer?.id);
@@ -204,7 +244,29 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'birth_date') {
+            const formatted = autoFormatDate(value, formData.birth_date);
+            setFormData(prev => ({ ...prev, [name]: formatted }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleCalendarChange = (e) => {
+        const val = e.target.value; // YYYY-MM-DD
+        if (!val) return;
+        const formatted = formatDateForDisplay(val);
+        setFormData(prev => ({ ...prev, birth_date: formatted }));
+    };
+
+    const generateCustomerCode = () => {
+        if (!customers || customers.length === 0) return "1001";
+        const numericCodes = customers
+            .map(c => parseInt(c.code))
+            .filter(code => !isNaN(code));
+        if (numericCodes.length === 0) return "1001";
+        const maxCode = Math.max(...numericCodes);
+        return (maxCode + 1).toString();
     };
 
     const resetForm = () => {
@@ -221,6 +283,10 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
         setCreateSuccess(false);
         setShowDotsMenu(false);
         resetForm();
+
+        // Auto-generate code
+        const nextCode = generateCustomerCode();
+        setFormData(prev => ({ ...prev, code: nextCode }));
     };
 
     const handleEditCustomer = () => {
@@ -246,7 +312,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
             group_id: selectedCustomer.group_id || '',
             description: selectedCustomer.description || '',
             gender: selectedCustomer.gender || '',
-            birth_date: selectedCustomer.birth_date || '',
+            birth_date: formatDateForDisplay(selectedCustomer.birth_date || ''),
             email: selectedCustomer.email || '',
             address: selectedCustomer.address || '',
         });
@@ -273,6 +339,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
         const customerPayload = {
             ...formData,
             phone: fullPhone,
+            birth_date: formatDateForAPI(formData.birth_date),
             group_id: formData.group_id || null,
         };
 
@@ -390,14 +457,22 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                         </div>
                         <div className="form-group">
                             <label>Kod</label>
-                            <input
-                                type="text"
-                                name="code"
-                                placeholder="Kod..."
-                                className="form-control-custom"
-                                value={formData.code}
-                                onChange={handleInputChange}
-                            />
+                            <div className="input-with-icon">
+                                <input
+                                    type="text"
+                                    name="code"
+                                    placeholder="Kod..."
+                                    className="form-control-custom"
+                                    value={formData.code}
+                                    onChange={handleInputChange}
+                                />
+                                <i
+                                    className="bi bi-arrow-clockwise"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => setFormData(prev => ({ ...prev, code: generateCustomerCode() }))}
+                                    title="Kodu yenilə"
+                                ></i>
+                            </div>
                         </div>
 
                         <div className="form-group">
@@ -469,14 +544,32 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                             <label>Doğum tarixi</label>
                             <div className="input-with-icon">
                                 <input
-                                    type="date"
+                                    type="text"
                                     name="birth_date"
-                                    className="form-control-custom date-input-custom"
+                                    className="form-control-custom"
                                     value={formData.birth_date}
                                     onChange={handleInputChange}
-                                    placeholder="ex: 15.06.2015"
+                                    placeholder="DD.MM.YYYY (məs: 15.06.1990)"
+                                    maxLength={10}
                                 />
-                                <i className="bi bi-calendar3"></i>
+                                <input
+                                    type="date"
+                                    ref={hiddenDatePickerRef}
+                                    style={{
+                                        position: 'absolute',
+                                        visibility: 'hidden',
+                                        width: 0,
+                                        height: 0,
+                                        padding: 0,
+                                        border: 'none'
+                                    }}
+                                    onChange={handleCalendarChange}
+                                />
+                                <i
+                                    className="bi bi-calendar3"
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => hiddenDatePickerRef.current?.showPicker ? hiddenDatePickerRef.current.showPicker() : hiddenDatePickerRef.current.click()}
+                                ></i>
                             </div>
                         </div>
 

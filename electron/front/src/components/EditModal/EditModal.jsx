@@ -3,7 +3,7 @@ import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
 import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion, updateItemPrice, updateItemCount, saveLog } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
 import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
@@ -36,7 +36,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const [selectedWaiter, setSelectedWaiter] = useState(null);
   const [createNewOrder, setCreateNewOrder] = useState(false);
 
-  const navigate = useNavigate();
+  const { id: orderUuidFromUrl } = useParams();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -54,7 +55,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const handleTransfer = async () => {
     const hallServiceFee = tableGroups?.data?.find(item => item?.id == selectedTable?.hall_id);
 
-    // Validate
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     if (selectedSalesType === 'dine_in' && !selectedTable) {
       console.error("Please select a table");
       return;
@@ -102,6 +104,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
       }
     } catch (error) {
       console.error("Transfer error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -110,6 +114,46 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
       setInputValue((prev) => prev.slice(0, -1));
     } else {
       setInputValue((prev) => prev + val);
+    }
+  };
+
+  const handleApplyDiscount = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const orderId = orders?.uuid || orderUuidFromUrl;
+      const itemId = product?.id || product?.firstId;
+
+      if (!orderId) {
+        toast.error("Sifariş ID-si tapılmadı");
+        return;
+      }
+
+      if (product.isNew) {
+        toast.info("Gözləyən məhsula endirim tətbiq etmək üçün əvvəlcə 'Göndər' düyməsini sıxın.");
+        return;
+      }
+
+      const payload = {
+        orderId: orderId,
+        itemId: itemId,
+        productId: product?.product_id || product?.id,
+        discountValue: discountValue,
+        discountType: discountType,
+        productName: product.name,
+        waiterName
+      };
+
+      await dispatch(updateItemDiscount(payload)).unwrap();
+      toast.success("Endirim tətbiq edildi");
+      onClose();
+    } catch (error) {
+      console.error("Discount error detail:", JSON.stringify(error, null, 2));
+      const errorMsg = error?.error || error?.message || "Xəta baş verdi";
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -139,7 +183,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 className={`sidebar-btn ${activeTab === "transfer" ? "active" : ""}`}
                 onClick={() => {
                   if (!Number(loginedWaiter?.data?.can_transfer_product)) return;
-                  setActiveTab("gift")
+                  setActiveTab("transfer")
                 }}
 
               >
@@ -291,101 +335,121 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 {/* Footer Action Button */}
                 <button
                   className={`save-action-btn ${qty === 0 ? 'red' : ''}`}
+                  disabled={isSubmitting}
+                  style={{ opacity: isSubmitting ? 0.7 : 1 }}
                   onClick={async () => {
-                    // If qty is 0, trigger full delete
-                    if (qty === 0) {
-                      if (product.isNew) {
-                        const index = products.findIndex(p => p.id === (product.product_id || product.id));
-                        if (index !== -1) {
-                          dispatch(removeProduct(index));
+                    if (isSubmitting) return;
+                    setIsSubmitting(true);
+                    try {
+                      // If qty is 0, trigger full delete
+                      if (qty === 0) {
+                        if (product.isNew) {
+                          const index = products.findIndex(p => p.id === (product.product_id || product.id));
+                          if (index !== -1) {
+                            dispatch(removeProduct(index));
+                          }
+                          onClose();
+                        } else {
+                          if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
+                            toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                            return;
+                          }
+                          onOpenDeleteModal('full', product);
                         }
-                        onClose();
-                      } else {
-                        if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
-                          return;
-                        }
-                        onOpenDeleteModal('full', product);
-                      }
-                      return;
-                    }
-
-                    const savedQty = product.savedQuantity || 0;
-                    const newLocalQty = qty - savedQty;
-
-                    if (newLocalQty < 0) {
-                      if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                        toast.error("Sizin məhsul miqdarını azaltmaq (silmək) icazəniz yoxdur!");
-                        // Reset quantity back to saved, so they cannot bypass
-                        setQty(savedQty);
                         return;
                       }
-                      onOpenDeleteModal('partial', product, Math.abs(newLocalQty));
-                      return;
-                    }
 
-                    if (product.isNew) {
-                      dispatch(
-                        updateCount({
-                          productId: product.product_id || product.id,
-                          orderItemId: product.isNew ? undefined : product.id,
-                          count: newLocalQty,
-                          price: inputValue,
-                          name: product.name,
-                        }),
-                      );
-                      // Log quantity change for new items too
-                      if (qty !== (product.count || 0)) {
-                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-                        dispatch(saveLog({
-                          orderId: orders.uuid,
-                          action: "Miqdar dəyişdirildi",
-                          waiterName,
-                          details: `${product.name || 'Məhsul'}: ${product.count || 0}-dən ${qty}-ə dəyişdi`
-                        }));
-                      }
-                    } else {
-                      // For existing items, handle price change immediately
-                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                      const savedQty = product.savedQuantity || 0;
+                      const newLocalQty = qty - savedQty;
 
-                      // Check if price changed - only price goes to backend immediately
-                      if (parseFloat(inputValue) !== parseFloat(product.price)) {
-                        await dispatch(updateItemPrice({
-                          orderId: orders.uuid,
-                          itemId: product.id,
-                          newPrice: inputValue,
-                          oldPrice: product.price,
-                          productName: product.name,
-                          waiterName
-                        })).unwrap();
+                      if (newLocalQty < 0) {
+                        if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
+                          toast.error("Sizin məhsul miqdarını azaltmaq (silmək) icazəniz yoxdur!");
+                          // Reset quantity back to saved, so they cannot bypass
+                          setQty(savedQty);
+                          return;
+                        }
+                        onOpenDeleteModal('partial', product, Math.abs(newLocalQty));
+                        return;
                       }
 
-                      // Quantity change stays local - will be sent via "Göndər" button
-                      if (newLocalQty > 0) {
+                      if (product.isNew) {
                         dispatch(
                           updateCount({
                             productId: product.product_id || product.id,
+                            orderItemId: product.isNew ? undefined : product.id,
                             count: newLocalQty,
                             price: inputValue,
                             name: product.name,
                           }),
                         );
+                        // Log quantity change for new items too
+                        if (qty !== (product.count || 0)) {
+                          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                          dispatch(saveLog({
+                            orderId: orders.uuid,
+                            action: "Miqdar dəyişdirildi",
+                            waiterName,
+                            details: `${product.name || 'Məhsul'}: ${product.count || 0}-dən ${qty}-ə dəyişdi`
+                          }));
+                        }
+                      } else {
+                        // For existing items, handle price change immediately
+                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+                        // Check if price changed - only price goes to backend immediately
+                        if (parseFloat(inputValue) !== parseFloat(product.price)) {
+                          await dispatch(updateItemPrice({
+                            orderId: orders.uuid,
+                            itemId: product.id,
+                            newPrice: inputValue,
+                            oldPrice: product.price,
+                            productName: product.name,
+                            waiterName
+                          })).unwrap();
+                        }
+
+                        // Quantity change stays local - will be sent via "Göndər" button
+                        if (newLocalQty > 0) {
+                          dispatch(
+                            updateCount({
+                              productId: product.product_id || product.id,
+                              count: newLocalQty,
+                              price: inputValue,
+                              name: product.name,
+                            }),
+                          );
+                        }
+                        // Log quantity change
+                        if (qty !== (product.count || 0)) {
+                          dispatch(saveLog({
+                            orderId: orders.uuid,
+                            action: "Miqdar dəyişdirildi",
+                            waiterName,
+                            details: `${product.name || 'Məhsul'}: ${product.count || 0}-dən ${qty}-ə dəyişdi`
+                          }));
+                        }
                       }
-                      // Log quantity change
-                      if (qty !== (product.count || 0)) {
-                        dispatch(saveLog({
-                          orderId: orders.uuid,
-                          action: "Miqdar dəyişdirildi",
-                          waiterName,
-                          details: `${product.name || 'Məhsul'}: ${product.count || 0}-dən ${qty}-ə dəyişdi`
-                        }));
-                      }
+                      onClose(true);
+                    } catch (error) {
+                      console.error("Save error:", error);
+                      toast.error("Xəta baş verdi");
+                    } finally {
+                      setIsSubmitting(false);
                     }
-                    onClose(true);
                   }}
                 >
-                  <i className={`bi ${qty === 0 ? 'bi-trash3-fill' : 'bi-check-lg'}`}></i>
-                  {qty === 0 ? 'Sil' : 'Saxla'}
+                  {isSubmitting ? (
+                    <>
+                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                      <span>Gözləyin...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className={`bi ${qty === 0 ? 'bi-trash3-fill' : 'bi-check-lg'}`}></i>
+                      {qty === 0 ? 'Sil' : 'Saxla'}
+                    </>
+                  )}
                 </button>
               </>
             ) : activeTab === "transfer" ? (
@@ -448,12 +512,23 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
                 <button
                   className="save-action-btn"
+                  disabled={isSubmitting}
+                  style={{ opacity: isSubmitting ? 0.7 : 1 }}
                   onClick={() => {
                     if (!Number(loginedWaiter?.data?.can_transfer_product)) return;
                     handleTransfer();
                   }}
                 >
-                  <i className="bi bi-arrow-left-right"></i> Köçür
+                  {isSubmitting ? (
+                    <>
+                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                      <span>Köçürülür...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-arrow-left-right"></i> Köçür
+                    </>
+                  )}
                 </button>
 
               </>
@@ -489,7 +564,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 {product?.is_gift === 1 ? (
                   <button
                     className="save-action-btn red"
+                    disabled={isSubmitting}
+                    style={{ opacity: isSubmitting ? 0.7 : 1 }}
                     onClick={() => {
+                      if (isSubmitting) return;
+                      setIsSubmitting(true);
                       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
                       dispatch(giftItem({
                         orderId: orders.uuid,
@@ -499,6 +578,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         productName: product.name || product.product?.name,
                         waiterName
                       })).then((res) => {
+                        setIsSubmitting(false);
                         if (res.type.endsWith('fulfilled')) {
                           onClose();
                           toast.success("İkram ləğv edildi");
@@ -508,13 +588,26 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       });
                     }}
                   >
-                    <i className="bi bi-x-circle"></i>
-                    İkramı Ləğv Et
+                    {isSubmitting ? (
+                      <>
+                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span>Ləğv edilir...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-x-circle"></i>
+                        İkramı Ləğv Et
+                      </>
+                    )}
                   </button>
                 ) : (
                   <button
                     className="save-action-btn"
+                    disabled={isSubmitting}
+                    style={{ opacity: isSubmitting ? 0.7 : 1 }}
                     onClick={() => {
+                      if (isSubmitting) return;
+                      setIsSubmitting(true);
                       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
                       dispatch(giftItem({
                         orderId: orders.uuid,
@@ -524,6 +617,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         productName: product.name || product.product?.name,
                         waiterName
                       })).then((res) => {
+                        setIsSubmitting(false);
                         if (res.type.endsWith('fulfilled')) {
                           onClose();
                           toast.success("Məhsul ikram edildi");
@@ -533,8 +627,17 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       });
                     }}
                   >
-                    <i className="bi bi-gift-fill"></i>
-                    İkram Et
+                    {isSubmitting ? (
+                      <>
+                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span>İkram edilir...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-gift-fill"></i>
+                        İkram Et
+                      </>
+                    )}
                   </button>
                 )}
               </>
@@ -565,51 +668,47 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     </div>
 
                     <div className="numpad-grid">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'back'].map((key) => (
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, ".", 0].map((num) => (
                         <button
-                          key={key}
-                          className={`numpad-btn ${key === 'back' ? 'numpad-back' : ''}`}
+                          key={num}
+                          className="num-key"
                           onClick={() => {
-                            if (key === 'back') {
-                              setDiscountValue(prev => prev.length > 1 ? prev.slice(0, -1) : "0");
+                            if (num === '.') {
+                              if (!discountValue.includes('.')) setDiscountValue(prev => prev + num);
                             } else {
-                              if (key === '.') {
-                                if (!discountValue.includes('.')) setDiscountValue(prev => prev + key);
-                              } else {
-                                setDiscountValue(prev => prev === "0" ? String(key) : prev + String(key));
-                              }
+                              setDiscountValue(prev => prev === "0" ? String(num) : prev + String(num));
                             }
                           }}
                         >
-                          {key === 'back' ? <i className="bi bi-backspace"></i> : key}
+                          {num}
                         </button>
                       ))}
+                      <button
+                        className="num-key"
+                        onClick={() => setDiscountValue(prev => prev.length > 1 ? prev.slice(0, -1) : "0")}
+                      >
+                        <i className="bi bi-backspace"></i>
+                      </button>
                     </div>
                   </div>
 
                   <button
                     className="save-action-btn"
-                    onClick={() => {
-                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-                      dispatch(updateItemDiscount({
-                        orderId: orders.uuid,
-                        itemId: product.product_id || product.id,
-                        discountValue: discountValue,
-                        discountType: discountType,
-                        productName: product.name || product.product?.name,
-                        waiterName
-                      })).then((res) => {
-                        if (res.type.endsWith('fulfilled')) {
-                          onClose();
-                          toast.success("Endirim tətbiq edildi");
-                        } else {
-                          toast.error("Xəta baş verdi");
-                        }
-                      });
-                    }}
+                    onClick={handleApplyDiscount}
+                    disabled={isSubmitting}
+                    style={{ opacity: isSubmitting ? 0.7 : 1 }}
                   >
-                    <i className="bi bi-percent"></i>
-                    Tətbiq et
+                    {isSubmitting ? (
+                      <>
+                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                        <span>Tətbiq edilir...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-percent"></i>
+                        <span>Tətbiq et</span>
+                      </>
+                    )}
                   </button>
                 </>
               )

@@ -26,6 +26,7 @@ import SplitWaiterSelect from "./SplitWaiterSelect";
 
 export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit }) => {
     const [splitQuantities, setSplitQuantities] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Selection States
     const [showTableSelect, setShowTableSelect] = useState(false);
@@ -77,20 +78,26 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
         });
     };
 
-    const handleSplitAction = () => {
+    const handleSplitAction = async () => {
         const itemsToSplit = Object.entries(splitQuantities)
             .filter(([_, qty]) => qty > 0)
             .map(([id, qty]) => ({ id, qty }));
 
-        if (itemsToSplit.length > 0) {
-            // Include selected metadata
-            onSplit({
-                orderId: order.uuid,
-                items: itemsToSplit,
-                salesType: selectedSalesType,
-                table: selectedTable,
-                waiter: selectedWaiter
-            });
+        if (itemsToSplit.length > 0 && !isSubmitting) {
+            setIsSubmitting(true);
+            try {
+                // Include selected metadata
+                await onSplit({
+                    orderId: order.uuid,
+                    items: itemsToSplit,
+                    salesType: selectedSalesType,
+                    table: selectedTable,
+                    waiter: selectedWaiter
+                });
+            } catch (error) {
+                console.error("Split error:", error);
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -229,11 +236,25 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
                             </button>
                         </div>
 
-                        <button className="btn-primary-split" onClick={handleSplitAction}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="me-2">
-                                <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M9 21H4v-5" />
-                            </svg>
-                            Bölmək
+                        <button
+                            className="btn-primary-split"
+                            onClick={handleSplitAction}
+                            disabled={isSubmitting}
+                            style={{ opacity: isSubmitting ? 0.7 : 1 }}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    Bölünür...
+                                </>
+                            ) : (
+                                <>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="me-2">
+                                        <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M9 21H4v-5" />
+                                    </svg>
+                                    Bölmək
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

@@ -51,7 +51,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
       const displaySaleType = getSaleTypeName(orders?.sale_type, orders?.sale_type_name);
 
       const getAllPrintersForItem = (item) => {
-        const menuRef = menu?.find(m => m.id === (item.itemId || item.product_id || item.id));
+        // Use loose equality (==) for ID comparison because item IDs can be strings from params/UUIDs
+        const menuRef = menu?.find(m => m.id == (item.itemId || item.product_id || item.id));
         const categoryId = menuRef?.category_id || item.category_id;
 
         // 1. Get explicitly assigned product printers from menu (most reliable) or the item itself
@@ -77,18 +78,26 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
         return { printers: combined, categoryId };
       };
 
+      // Start loading state immediately to prevent user from re-triggering while deletions are processing
+      setIsSending(true);
+
       // 1. Process Pending Deletions first
       if (pendingDeletions && pendingDeletions.length > 0) {
         for (const deletion of pendingDeletions) {
-          await dispatch(deleteOrderItem({
-            orderId: deletion.orderId,
-            itemId: deletion.itemId,
-            reasonId: deletion.reasonId,
-            qty: deletion.type === 'partial' ? deletion.qty : undefined,
-            reasonName: deletion.reasonName, // Pass reason name
-            productName: deletion.name, // Pass product name
-            waiterName
-          })).unwrap();
+          try {
+            await dispatch(deleteOrderItem({
+              orderId: deletion.orderId,
+              itemId: deletion.itemId,
+              reasonId: deletion.reasonId,
+              qty: deletion.type === 'partial' ? deletion.qty : undefined,
+              reasonName: deletion.reasonName, // Pass reason name
+              productName: deletion.name, // Pass product name
+              waiterName
+            })).unwrap();
+          } catch (deleteError) {
+            console.error("Single Item Deletion Error:", deleteError);
+            // We continue processing other deletions even if one fails
+          }
         }
       }
 
@@ -106,20 +115,25 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
           };
         });
 
-        await processAndPrintOrders(
-          deletedItemsForPrint,
-          {
-            table: table?.name || orders?.table_name || "Masa",
-            waiter: waiterName,
-            hallName: hall?.name || "",
-            orderId: orders?.uuid || id,
-            terminalInfo: loginedProfileData?.data?.terminal || {},
-            typeName: displaySaleType,
-            checkData: orders,
-            isDecrease: true
-          },
-          menuDataWithCategories
-        );
+        try {
+          await processAndPrintOrders(
+            deletedItemsForPrint,
+            {
+              table: table?.name || orders?.table_name || "Masa",
+              waiter: waiterName,
+              hallName: hall?.name || "",
+              orderId: orders?.uuid || id,
+              terminalInfo: loginedProfileData?.data?.terminal || {},
+              typeName: displaySaleType,
+              checkData: orders,
+              isDecrease: true
+            },
+            menuDataWithCategories
+          );
+        } catch (printError) {
+          console.error("Deletion Printing Error:", printError);
+          // Don't stop the whole process if printing fails
+        }
       }
 
       // 2. Send New Items
@@ -135,8 +149,6 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
             comment: itemComments[idx] !== undefined ? itemComments[idx] : p.comment
           };
         });
-
-        setIsSending(true);
 
         // 1. Send New Items to Server FIRST (so "New" badges disappear immediately)
         await dispatch(sendOrdersItems({

@@ -6,7 +6,8 @@ import Header from "../Header/Header";
 import "./CheckOver.css";
 import { getTagsList } from '../../redux/Slices/TagsSlice';
 import { getPaymentMethods } from '../../redux/Slices/PaymentMethodsSlice';
-import { closeOrder, addLog } from '../../redux/Slices/OrdersSlice';
+import { closeOrder, saveLog } from '../../redux/Slices/OrdersSlice';
+import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -229,22 +230,43 @@ const CheckOver = () => {
                 waiterName
             })).unwrap();
 
-            // Log Close
-            dispatch(addLog({
+            // Persistent Log
+            dispatch(saveLog({
                 orderId: id,
                 action: "Çek bağlandı",
                 waiterName,
-                details: viewMode === "PAYMENT" ? `Ödəniş: ${calcTotal.sumTotal} ₼` : `Ödənişsiz: ${unpaidReason || 'Səbəb yoxdur'}`
+                details: noteStr ? `Bağlandı. Qeyd: ${noteStr}` : "Sifariş müvəffəqiyyətlə bağlandı"
             }));
 
             // Log Print if checked
             if (printCheck) {
-                dispatch(addLog({
+                dispatch(saveLog({
                     orderId: id,
                     action: "Çek çap edildi",
                     waiterName,
                     details: "Bağlanış çeki"
                 }));
+
+                // Trigger actual print
+                const paidValue = Number(calcValue) || totalPaidInMethods || 0;
+                const changeValue = Number(remainingBalance) || 0;
+
+                printCustomerReceipt({
+                    items: currentOrder?.orders_items || [],
+                    checkData: {
+                        ...currentOrder,
+                        orderId: currentOrder?.id,
+                        total: calcTotal.sumTotal,
+                        payments: payments,
+                        paidAmount: paidValue,
+                        change: changeValue,
+                        customer_name: selectedCustomer?.name || currentOrder?.customer_name || "",
+                        waiter_name: waiterName
+                    },
+                    tableName: currentOrder?.table_name || "",
+                    hallName: currentOrder?.hall_name || "",
+                    waiterName
+                }, loginedProfileData);
             }
 
             // Navigation on success

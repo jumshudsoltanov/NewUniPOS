@@ -10,6 +10,9 @@ const addLog = async (req, res) => {
     }
 
     try {
+        const OrdersModel = require("../model/OrdersModel");
+        await OrdersModel.update({ is_synced: 0 }, { where: { uuid: orderId } });
+
         const newLog = await OrderLogsModel.create({
             order_id: orderId,
             action,

@@ -110,7 +110,16 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 };
 
                 if (window.electronAPI && window.electronAPI.printReceipt) {
-                    const result = await window.electronAPI.printReceipt({ html, printerName });
+                    console.log(`[PRINTER] Sending to Electron API: ${printerName}`);
+
+                    // Use a race to prevent permanent hang if Electron API doesn't return
+                    const printPromise = window.electronAPI.printReceipt({ html, printerName });
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error("Çap vaxtı bitdi (Timeout)")), 15000)
+                    );
+
+                    const result = await Promise.race([printPromise, timeoutPromise]);
+
                     if (!result || !result.success) {
                         const errMsg = result?.error || 'Bilinməyən xəta';
                         const displayId = orderData.checkData?.id || orderData.orderId;
@@ -128,9 +137,10 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 }
 
                 // Minimal delay between print jobs for speed while maintaining stability
-                await new Promise(r => setTimeout(r, 20));
+                await new Promise(r => setTimeout(r, 50));
             } catch (loopError) {
-                console.error(`[PRINTER] Unexpected error in printing loop for ${printerName}:`, loopError);
+                console.error(`[PRINTER] Unexpected error in printing loop for ${printerName}:`, loopError.message);
+                addNotification("Sistem Xətası", `Çap zamanı gözlənilməz xəta: ${loopError.message}`, { category: "system", type: "error" });
             }
         }
     }
