@@ -46,7 +46,6 @@ const SplitWaiterSelect = ({ show, onClose, onSelect }) => {
             animation={false}
             dialogClassName="waiters-modal-dialog"
             contentClassName="waiters-modal-content"
-            centered
         >
             <div className="waiters-modal-container">
                 {/* Header */}

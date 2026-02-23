@@ -101,7 +101,7 @@ const CheckMain = ({ orders }) => {
     const renderedItems = items.map(item => ({ ...item, displayDetails: null }));
 
     pendingDeletions.forEach(pd => {
-      const target = renderedItems.find(i => Number(i.product_id) === Number(pd.itemId));
+      const target = renderedItems.find(i => Number(i.firstId) === Number(pd.itemId) || Number(i.id) === Number(pd.itemId));
       if (target) {
         if (pd.type === 'full') {
           target.isDeleted = true;
@@ -298,7 +298,8 @@ const CheckMain = ({ orders }) => {
           if (deleteActionType === 'full') {
             dispatch(addPendingDeletion({
               orderId: orders.uuid,
-              itemId: pId,
+              itemId: product?.id || product?.firstId,
+              product_id: pId,
               reasonId: data.reason,
               reasonName: data.reasonName,
               type: 'full',
@@ -314,7 +315,8 @@ const CheckMain = ({ orders }) => {
           } else if (deleteActionType === 'partial') {
             dispatch(addPendingDeletion({
               orderId: orders.uuid,
-              itemId: pId,
+              itemId: product?.id || product?.firstId,
+              product_id: pId,
               reasonId: data.reason,
               reasonName: data.reasonName,
               qty: qtyToReduce,

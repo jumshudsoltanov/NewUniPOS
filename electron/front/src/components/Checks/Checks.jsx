@@ -7,11 +7,13 @@ import { getWaitersList } from "../../redux/Slices/WaitersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useNavigate } from "react-router-dom";
 import CheckDetailModal from "./CheckDetailModal";
+import { toast } from "sonner";
 
 const Checks = () => {
   const [activeTab, setActiveTab] = useState("open");
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { archivedBooks, status } = useSelector((state) => state.BooksSlice);
   const { waitersLists } = useSelector((state) => state.WaitersSlice);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
@@ -142,6 +144,14 @@ const Checks = () => {
   };
 
   const handleOrderClick = (order) => {
+    // Permission check for accessing other waiter's checks
+    if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 1) {
+      if (order?.waiter_id !== loginedWaiter?.data?.id && order?.waiter?.id !== loginedWaiter?.data?.id) {
+        toast.error("İcazəniz yoxdur: Bu çek başqa ofisianta aiddir.");
+        return;
+      }
+    }
+
     if (activeTab === "open") {
       navigate(`/check/${order.uuid}?tableId=${order.table_id}`, { state: { from: "/checks" } });
     } else {

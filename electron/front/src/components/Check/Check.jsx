@@ -41,6 +41,7 @@ import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
 import axios from "axios";
+import apiConfig from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 import StatusModal from "../StatusModal/StatusModal";
 
@@ -244,22 +245,21 @@ const Check = () => {
     if (!id)
       return { currentOrder: null, currentHall: null, currentTable: null };
 
-    // TABLE ORDER logic
-    if (tableId && tableId !== "null" && tableId !== "0") {
-      if (!tableGroups?.data) {
-        if (books?.data) {
-          const order = books.data.find((item) => item.uuid == id);
-          if (order) {
-            return {
-              currentOrder: order,
-              currentHall: order.table?.hall || null,
-              currentTable: order.table || null,
-            };
-          }
-        }
-        return { currentOrder: null, currentHall: null, currentTable: null };
+    // ALL ORDERS LOGIC
+    if (books?.data) {
+      // 1. Try to find the latest updated version of the order in Books (Redux)
+      const order = books.data.find((item) => item.uuid == id);
+      if (order) {
+        return {
+          currentOrder: order,
+          currentHall: order.table?.hall || null,
+          currentTable: order.table || null,
+        };
       }
+    }
 
+    // 2. Fallback to tableGroups if not found in Books (for initial load Edge Cases)
+    if (tableId && tableId !== "null" && tableId !== "0" && tableGroups?.data) {
       let foundHall = null;
       let foundTable = null;
 
@@ -272,41 +272,21 @@ const Check = () => {
         }
       }
 
-      if (!foundTable) {
-        if (books?.data) {
-          const order = books.data.find((item) => item.uuid == id);
-          if (order) {
-            return {
-              currentOrder: order,
-              currentHall: order.table?.hall || null,
-              currentTable: order.table || null,
-            };
-          }
+      if (foundTable) {
+        const order = foundTable.orders.find((o) => o.uuid == id);
+        if (order) {
+          return {
+            currentOrder: order,
+            currentHall: foundHall,
+            currentTable: foundTable,
+          };
         }
-        return { currentOrder: null, currentHall: null, currentTable: null };
       }
-
-      let order = books?.data?.find((item) => item.uuid == id);
-
-      if (!order) {
-        order = foundTable.orders.find((o) => o.uuid == id);
-      }
-
-      return {
-        currentOrder: order || null,
-        currentHall: foundHall,
-        currentTable: foundTable,
-      };
     }
 
-    if (books?.data) {
-      const order = books.data.find((item) => item.uuid == id);
-      return {
-        currentOrder: order,
-        currentHall: order?.table?.hall || null,
-        currentTable: order?.table || null,
-      };
-    }
+    return { currentOrder: null, currentHall: null, currentTable: null };
+
+    // Handled in the block above
 
   }, [id, tableId, tableGroups, books]);
 

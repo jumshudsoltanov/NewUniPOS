@@ -1,6 +1,6 @@
 /* Waiters Modal styles */
 .waiters-modal-content {
-    border-radius: 24px !important;
+    border-radius: 10px !important;
     border: none !important;
     overflow: hidden;
     background-color: transparent !important;
@@ -8,7 +8,7 @@
 }
 
 .waiters-modal-dialog {
-    max-width: 400px !important;
+    max-width: 340px !important;
     margin: 1.75rem auto;
 }
 
@@ -16,19 +16,17 @@
     background-color: #fff;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    /* max-height removed to fit content naturally or controlled by modal */
 }
 
 /* Header */
 .waiters-header {
-    background-color: #053796;
-    padding: 20px 24px;
+    background-color: #5D99FF;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 76px;
-    flex-shrink: 0;
+    height: 70px;
+    border-bottom: none;
 }
 
 .header-left {
@@ -38,8 +36,8 @@
 }
 
 .header-icon {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     background-color: rgba(255, 255, 255, 0.4);
     border-radius: 50%;
     display: flex;
@@ -50,6 +48,7 @@
 .header-icon svg {
     width: 24px;
     height: 24px;
+    stroke: #053796;
 }
 
 .header-title {
@@ -66,16 +65,28 @@
     align-items: center;
     justify-content: center;
     padding: 0;
+    color: white;
+    width: auto;
+    height: auto;
+}
+
+.close-btn:hover {
+    background: transparent;
+    opacity: 0.8;
+}
+
+.close-btn svg {
+    width: 24px;
+    height: 24px;
 }
 
 /* Body */
 .waiters-body {
-    padding: 24px;
+    padding: 24px 20px;
     background-color: #fff;
     display: flex;
     flex-direction: column;
     gap: 20px;
-    /* Removed overflow-y from here to put it on the list for better control */
 }
 
 /* Search Input */
@@ -109,8 +120,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 320px;
-    /* Limit height for scrolling */
+    max-height: 40vh;
     overflow-y: auto;
     padding-right: 4px;
     /* Space for scrollbar */
@@ -250,6 +260,7 @@
     font-weight: 500;
     cursor: pointer;
     margin-top: 4px;
+    flex-shrink: 0;
     box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
 }
 
@@ -267,15 +278,16 @@
 }
 
 .select-btn {
-    min-width: 60px;
-    height: 32px;
+    width: 60px;
+    height: 36px;
     border-radius: 8px;
     border: none;
     cursor: pointer;
+    background-color: #053796;
 }
 
 .select-btn.selected {
-    background-color: #dc3545;
+    background-color: #042d7a;
     display: flex;
     align-items: center;
     justify-content: center;

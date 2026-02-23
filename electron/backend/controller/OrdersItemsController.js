@@ -987,7 +987,9 @@ const onSplitOrder = async (req, res) => {
       },
     });
   } catch (error) {
-    await transaction.rollback();
+    if (transaction) {
+      try { await transaction.rollback(); } catch (e) { }
+    }
     console.error("Split Order Error:", error);
     res.status(500).json({ message: "Split failed", error: error.message });
   }
@@ -1029,7 +1031,7 @@ const onGiftItem = async (req, res) => {
     // 2. Add to Target Item (Gift or Normal)
     const targetIsGift = isGift ? 1 : 0;
     const targetItem = await OrdersItemsModel.findOne({
-      where: { order_id: orderId, product_id: itemId, is_gift: targetIsGift },
+      where: { order_id: orderId, product_id: originalItem.product_id, is_gift: targetIsGift },
       transaction,
     });
 
@@ -1041,7 +1043,7 @@ const onGiftItem = async (req, res) => {
       } else {
         // Restore price - wait, if original was gift, it had price 0. Steps: Find product.
         const product = await OrdersItemsModel.findOne({
-          where: { order_id: orderId, product_id: itemId, is_gift: 0 },
+          where: { order_id: orderId, product_id: originalItem.product_id, is_gift: 0 },
           transaction,
         });
         // If there is another non-gift item, copy its price?
@@ -1060,7 +1062,7 @@ const onGiftItem = async (req, res) => {
       } else {
         // Try to find the price from a non-gift sibling OR use original_price if available
         const sibling = await OrdersItemsModel.findOne({
-          where: { order_id: orderId, product_id: itemId, is_gift: 0 },
+          where: { order_id: orderId, product_id: originalItem.product_id, is_gift: 0 },
           paranoid: false,
           transaction,
         });
@@ -1085,7 +1087,7 @@ const onGiftItem = async (req, res) => {
       await OrdersItemsModel.create(
         {
           order_id: orderId,
-          product_id: itemId,
+          product_id: originalItem.product_id,
           count: moveQty,
           price: newPrice,
           discount_value: 0,
@@ -1182,7 +1184,10 @@ const onGiftItem = async (req, res) => {
 
     res.status(200).json(updatedOrder);
   } catch (error) {
-    await transaction.rollback();
+    if (transaction) {
+      try { await transaction.rollback(); } catch (e) { }
+    }
+    console.error("Gift Error:", error);
     res.status(500).json({ message: "Error", error: error.message });
   }
 };
@@ -1314,7 +1319,7 @@ const onUpdateItemDiscount = async (req, res) => {
           as: "table",
           attributes: ["id", "name"],
           include: [
-            { model: TablesGroupsModel, as: "hall", attributes: ["id", "name"] },
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
@@ -1322,7 +1327,13 @@ const onUpdateItemDiscount = async (req, res) => {
 
     res.status(200).json(updatedOrder);
   } catch (error) {
-    if (transaction) await transaction.rollback();
+    if (transaction) {
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error("Rollback Error:", rollbackError);
+      }
+    }
     console.error("Discount Error:", error);
     res.status(500).json({ message: "Error", error: error.message });
   }
@@ -1442,7 +1453,9 @@ const onCloseOrder = async (req, res) => {
 
     res.status(200).json({ message: "success", data: updatedOrder });
   } catch (error) {
-    if (transaction) await transaction.rollback();
+    if (transaction) {
+      try { await transaction.rollback(); } catch (e) { }
+    }
     console.error("Close Order Error:", error);
     res
       .status(500)
@@ -1602,8 +1615,10 @@ const onDeleteItemWithReason = async (req, res) => {
   const { itemId, reasonId, qty } = req.body;
 
   if (!orderId || !itemId) {
+    console.error(`[DELETE REASON ERROR] Missing fields! orderId: ${orderId}, itemId: ${itemId}, reasonId: ${reasonId}`);
     return res.status(400).json({ message: "Missing required fields" });
   }
+
 
   const transaction = await sequelize.transaction();
 
@@ -1705,7 +1720,9 @@ const onDeleteItemWithReason = async (req, res) => {
     res.status(200).json(updatedOrder);
 
   } catch (error) {
-    await transaction.rollback();
+    if (transaction) {
+      try { await transaction.rollback(); } catch (e) { }
+    }
     console.error("Delete Item Error:", error);
     res.status(500).json({ message: "Error deleting item", error: error.message });
   }

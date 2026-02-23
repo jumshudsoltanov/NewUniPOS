@@ -4,7 +4,7 @@ import "./EditModal.css";
 import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion, updateItemPrice, updateItemCount, saveLog } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
+import { toast } from "react-toastify";
 import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
 import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -41,6 +41,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const navigate = useNavigate();
 
   // Lookup product info from menu to ensure we have flags
   const productInfo = menu?.find(m => m.id === (product?.product_id || product?.id));
@@ -147,9 +148,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
       await dispatch(updateItemDiscount(payload)).unwrap();
       toast.success("Endirim tətbiq edildi");
+
       onClose();
     } catch (error) {
-      console.error("Discount error detail:", JSON.stringify(error, null, 2));
+      console.error("Discount error detail:", error);
       const errorMsg = error?.error || error?.message || "Xəta baş verdi";
       toast.error(errorMsg);
     } finally {
@@ -430,6 +432,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                           }));
                         }
                       }
+
                       onClose(true);
                     } catch (error) {
                       console.error("Save error:", error);
@@ -572,7 +575,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
                       dispatch(giftItem({
                         orderId: orders.uuid,
-                        itemId: product.product_id || product.id,
+                        itemId: product?.id || product?.firstId,
                         qty: transferQty,
                         isGift: false, // Remove gift status
                         productName: product.name || product.product?.name,
@@ -611,7 +614,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
                       dispatch(giftItem({
                         orderId: orders.uuid,
-                        itemId: product.product_id || product.id,
+                        itemId: product?.id || product?.firstId,
                         qty: transferQty,
                         isGift: true, // Add gift status
                         productName: product.name || product.product?.name,

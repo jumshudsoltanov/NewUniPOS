@@ -8,6 +8,7 @@ import { getTagsList } from '../../redux/Slices/TagsSlice';
 import { getPaymentMethods } from '../../redux/Slices/PaymentMethodsSlice';
 import { closeOrder, saveLog } from '../../redux/Slices/OrdersSlice';
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
+import { toast } from "sonner";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -400,7 +401,20 @@ const CheckOver = () => {
                                 </div>
 
                                 <div className="action-buttons-section mt-auto d-flex justify-content-between align-items-center">
-                                    <button className="unpaid-mode-btn" onClick={() => setViewMode("UNPAID")}>
+                                    <button
+                                        className="unpaid-mode-btn"
+                                        onClick={() => {
+                                            if (Number(loginedWaiter?.data?.can_close_without_payment) === 1) {
+                                                setViewMode("UNPAID");
+                                            } else {
+                                                toast.error("İcazəniz yoxdur: Ödənişsiz bağlamaq hüququnuz yoxdur.");
+                                            }
+                                        }}
+                                        style={{
+                                            opacity: Number(loginedWaiter?.data?.can_close_without_payment) === 1 ? 1 : 0.5,
+                                            cursor: Number(loginedWaiter?.data?.can_close_without_payment) === 1 ? 'pointer' : 'not-allowed'
+                                        }}
+                                    >
                                         Ödənişsiz bağla
                                     </button>
                                     <button

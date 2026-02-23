@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { mergeChecks } from "../../redux/Slices/OrdersSlice";
+import { toast } from "sonner";
 
 const OtherChecks = ({
   show,
@@ -97,6 +98,14 @@ const OtherChecks = ({
   };
 
   const onMultiFunctionOtherChecs = async (type, orderId, tableId, orderData) => {
+    // Check permission - "can_access_own_checks_only"
+    if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 1) {
+      if (orderData?.waiter_id !== loginedWaiter?.data?.id && orderData?.waiter?.id !== loginedWaiter?.data?.id) {
+        toast.error("İcazəniz yoxdur: Bu çek başqa ofisianta aiddir.");
+        return;
+      }
+    }
+
     if (type !== "merge") {
       handleGoNewCheck(orderId, tableId);
     } else {

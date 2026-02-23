@@ -175,6 +175,16 @@ const Tables = () => {
       if (isTableEditMode) return;
 
       const { orders } = table || {};
+
+      const hasOrders = orders && orders.length > 0;
+      const isMyTable = hasOrders && loginedWaiter?.data?.id && (orders[0]?.waiter_id == loginedWaiter.data.id || orders[0]?.waiter?.id == loginedWaiter.data.id);
+      const isOtherTable = hasOrders && !isMyTable;
+
+      if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 1 && isOtherTable) {
+        toast.error("İcazəniz yoxdur: Bu masa başqa ofisianta aiddir.");
+        return;
+      }
+
       if (id) {
         try {
           const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";

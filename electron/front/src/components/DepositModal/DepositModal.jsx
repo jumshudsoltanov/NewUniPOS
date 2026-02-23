@@ -77,48 +77,20 @@ const DepositModal = ({ show, onClose, order }) => {
             show={show}
             onHide={onClose}
             centered
+            className="customers-modal deposit-override-modal"
+            backdrop="static"
             animation={false}
-            dialogClassName="custom-modal-width"
-            contentClassName="custom-modal-content"
         >
-            <div className="deposit-modal-container">
+            <div className="modal-content-wrapper">
                 {/* Header */}
-                <div className="deposit-header">
-                    <div className="header-left">
-                        <div className="header-icon">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                            >
-                                <path
-                                    d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                                    stroke="#053796"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                                <path
-                                    d="M12 6V18"
-                                    stroke="#053796"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                                <path
-                                    d="M9 9C9 9 10 7.5 12 7.5C14 7.5 15 9 15 10C15 11.5 12.5 12 12 12.5C11.5 13 9 13.5 9 15C9 16.5 11 17.5 13 17.5C15 17.5 16 16.5 16 16.5"
-                                    stroke="#053796"
-                                    strokeWidth="1.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
-                            </svg>
+                <div className="customers-modal-header">
+                    <div className="customers-header-content">
+                        <div className="customers-icon-circle">
+                            <i className="bi bi-wallet2"></i>
                         </div>
-                        <span className="header-title">Depozit</span>
+                        <div className="customers-modal-title">Depozit</div>
                     </div>
-                    <button className="close-btn" onClick={onClose}>
+                    <button className="btn-close-custom" onClick={onClose}>
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="24"
@@ -137,95 +109,44 @@ const DepositModal = ({ show, onClose, order }) => {
                 </div>
 
                 {/* Body */}
-                <div className="deposit-body">
+                <div className="customers-modal-body">
                     {/* Input Area */}
-                    <div className="input-row">
-                        <div className="input-wrapper">
-                            <input
-                                type="text"
-                                value={value}
-                                readOnly
-                                className="deposit-input"
-                            />
-                        </div>
-                        <div className="toggle-group permanent-cash">
-                            <button className="toggle-btn active">₼</button>
-                        </div>
+                    <div className="guest-count-display-box deposit-display-box">
+                        <span className="guest-count-value">{value || "0"} ₼</span>
                     </div>
 
-                    {/* Keypad */}
-                    <div className="keypad-grid">
+                    {/* Keypad Grid */}
+                    <div className="customers-keypad-grid">
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                             <button
                                 key={num}
-                                className="keypad-btn"
+                                className="customers-keypad-btn"
                                 onClick={() => handleNumClick(num)}
                             >
                                 {num}
                             </button>
                         ))}
-                        <button className="keypad-btn" onClick={() => handleNumClick(".")}>
+                        <button className="customers-keypad-btn" onClick={() => handleNumClick(".")}>
                             .
                         </button>
-                        <button className="keypad-btn" onClick={() => handleNumClick(0)}>
+                        <button className="customers-keypad-btn" onClick={() => handleNumClick(0)}>
                             0
                         </button>
                         <button
-                            className="keypad-btn backspace-btn"
+                            className="customers-keypad-btn customers-backspace-btn"
                             onClick={handleBackspace}
                         >
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-9.172a2 2 0 00-1.414.586L3 12z"
-                                />
-                            </svg>
+                            <i className="bi bi-backspace"></i>
                         </button>
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="action-row">
-                        <button className="delete-all-btn" onClick={handleClear}>
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={1.5}
-                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                            </svg>
+                    <div className="deposit-action-row">
+                        <button className="deposit-delete-all-btn" onClick={handleClear}>
+                            <i className="bi bi-trash3"></i>
                         </button>
-                        <button className="apply-btn" onClick={handleApply}>
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="20"
-                                height="20"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                style={{ marginRight: "8px" }}
-                            >
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
+                        <button className="customers-save-btn deposit-save-btn" onClick={handleApply}>
+                            <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>
                             Tətbiq et
                         </button>
                     </div>

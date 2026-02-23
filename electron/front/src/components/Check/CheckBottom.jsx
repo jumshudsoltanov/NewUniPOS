@@ -52,7 +52,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
 
       const getAllPrintersForItem = (item) => {
         // Use loose equality (==) for ID comparison because item IDs can be strings from params/UUIDs
-        const menuRef = menu?.find(m => m.id == (item.itemId || item.product_id || item.id));
+        const menuRef = menu?.find(m => m.id == (item.product_id || item.itemId || item.id));
         const categoryId = menuRef?.category_id || item.category_id;
 
         // 1. Get explicitly assigned product printers from menu (most reliable) or the item itself
@@ -241,7 +241,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
 
         total -= delTotal;
 
-        const productInfo = menu?.find(m => m.id === (del.itemId || del.product_id || del.id));
+        const productInfo = menu?.find(m => m.id === (del.product_id || del.itemId || del.id));
 
         const isNoDiscount = (del.no_discount === 1 || productInfo?.no_discount === 1);
         if (!isNoDiscount) {

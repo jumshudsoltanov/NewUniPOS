@@ -1,42 +1,43 @@
 /* Main Modal Container Overrides */
-.custom-modal-content {
-    border-radius: 12px !important;
+.deposit-override-modal .modal-content {
+    border-radius: 10px !important;
     border: none !important;
     overflow: hidden;
     background-color: transparent !important;
-    box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
 }
 
-.custom-modal-width {
-    max-width: 320px !important;
+.deposit-override-modal .modal-dialog {
+    max-width: 340px !important;
     margin: 1.75rem auto;
 }
 
-.deposit-modal-container {
+.modal-content-wrapper {
     background-color: #fff;
     display: flex;
     flex-direction: column;
 }
 
 /* Header */
-.deposit-header {
-    background-color: #053796;
-    padding: 12px 18px;
+.customers-modal-header {
+    background-color: #5D99FF;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 64px;
+    height: 70px;
+    border-bottom: none;
 }
 
-.header-left {
+.customers-header-content {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.header-icon {
-    width: 38px;
-    height: 38px;
+.customers-icon-circle {
+    width: 40px;
+    height: 40px;
     background-color: rgba(255, 255, 255, 0.4);
     border-radius: 50%;
     display: flex;
@@ -44,18 +45,18 @@
     justify-content: center;
 }
 
-.header-icon svg {
-    width: 22px;
-    height: 22px;
+.customers-icon-circle i {
+    font-size: 1.2rem;
+    color: #053796;
 }
 
-.header-title {
-    font-size: 19px;
+.customers-modal-title {
+    font-size: 20px;
     font-weight: 600;
     color: #fff;
 }
 
-.close-btn {
+.btn-close-custom {
     background: transparent;
     border: none;
     cursor: pointer;
@@ -63,110 +64,91 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    opacity: 0.9;
+    color: white;
+    width: auto;
+    height: auto;
 }
 
-.close-btn:hover {
-    opacity: 1;
+.btn-close-custom:hover {
+    background: transparent;
+    opacity: 0.8;
+}
+
+.btn-close-custom svg {
+    width: 24px;
+    height: 24px;
 }
 
 /* Body */
-.deposit-body {
-    padding: 20px;
+.customers-modal-body {
+    padding: 24px 20px;
     background-color: #fff;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
 }
 
-/* Input Row */
-.input-row {
+/* Guest Count Display */
+.deposit-display-box {
+    position: relative;
+    height: 52px;
     display: flex;
-    gap: 10px;
-    height: 50px;
-}
-
-.input-wrapper {
-    flex: 1;
-}
-
-.deposit-input {
-    width: 100%;
-    height: 100%;
-    border: 1px solid #E0E0E0;
-    border-radius: 8px;
-    padding: 0 14px;
-    font-size: 18px;
-    font-weight: 500;
-    color: #333;
-    outline: none;
-    background-color: #FAFAFA;
-}
-
-/* Toggle Group (Static for cash only) */
-.toggle-group.permanent-cash {
-    display: flex;
-}
-
-.toggle-group.permanent-cash .toggle-btn {
-    width: 50px;
-    height: 50px;
-    border: 1px solid #053796;
-    background-color: #053796;
-    color: #fff;
-    font-size: 18px;
-    font-weight: 500;
-    border-radius: 8px;
-    cursor: default;
-    display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
+    border: 1px solid #C0C0C0;
+    border-radius: 8px;
+    background-color: #fff;
 }
 
-/* Keypad Grid */
-.keypad-grid {
+.guest-count-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Numpad */
+.customers-keypad-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 12px;
 }
 
-.keypad-btn {
-    height: 56px;
+.customers-keypad-btn {
+    height: 60px;
     background-color: #fff;
-    border: 1px solid #E0E0E0;
+    border: 1px solid #C0C0C0;
     border-radius: 12px;
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 600;
     color: #053796;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.1s;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
 }
 
-.keypad-btn:active {
-    background-color: #F0F4FF;
-    transform: scale(0.98);
+.customers-keypad-btn:active {
+    background-color: #F8F9FA;
+    transform: translateY(1px);
 }
 
-.backspace-btn {
-    color: #888;
+.customers-backspace-btn {
+    color: #777;
 }
 
-/* Footer Actions */
-.action-row {
+.deposit-action-row {
     display: flex;
     gap: 10px;
-    margin-top: 4px;
+    margin-top: 5px;
 }
 
-.delete-all-btn {
+.deposit-delete-all-btn {
     width: 56px;
     height: 56px;
     background-color: #fff;
-    border: 1px solid #E0E0E0;
+    border: 1px solid #C0C0C0;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -176,33 +158,37 @@
     transition: all 0.2s;
 }
 
-.delete-all-btn:hover {
+.deposit-delete-all-btn:hover {
     background-color: #F5F5F5;
     color: #333;
 }
 
-.apply-btn {
+/* Save Button */
+.deposit-save-btn {
     flex: 1;
     height: 56px;
     background-color: #053796;
     border: none;
     border-radius: 12px;
     color: #fff;
-    font-size: 17px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(5, 55, 150, 0.25);
-    transition: all 0.2s;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
+    margin-top: 0;
+    /* Reset margin from partial reuse */
 }
 
-.apply-btn:hover {
+.deposit-save-btn:hover:not(:disabled) {
     background-color: #042d7a;
-    box-shadow: 0 6px 16px rgba(5, 55, 150, 0.35);
 }
 
-.apply-btn:active {
-    transform: translateY(1px);
+.deposit-save-btn:disabled {
+    background-color: #d1d5db;
+    color: #ffffff;
+    cursor: not-allowed;
+    box-shadow: none;
 }
