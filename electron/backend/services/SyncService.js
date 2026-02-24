@@ -21,19 +21,31 @@ class SyncService {
 
   async getSyncStatus() {
     try {
-      const pendingCount = await OrdersModel.count({
-        where: {
-          [Op.or]: [{ is_synced: 0 }, { is_synced: null }],
-        },
-      });
+      const [pendingCount, syncedCount] = await Promise.all([
+        OrdersModel.count({
+          where: {
+            [Op.or]: [{ is_synced: 0 }, { is_synced: null }],
+          },
+        }),
+        OrdersModel.count({
+          where: { is_synced: 1 },
+        }),
+      ]);
+
       return {
         isSyncing: this.isSyncing,
         pendingCount: pendingCount,
+        syncedCount: syncedCount,
         lastSyncTime: this.lastSyncTime
       };
     } catch (error) {
       console.error("Error getting sync status:", error);
-      return { isSyncing: this.isSyncing, pendingCount: 0, lastSyncTime: this.lastSyncTime };
+      return {
+        isSyncing: this.isSyncing,
+        pendingCount: 0,
+        syncedCount: 0,
+        lastSyncTime: this.lastSyncTime
+      };
     }
   }
 

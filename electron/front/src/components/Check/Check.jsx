@@ -40,6 +40,7 @@ import OrderLogsModal from "./OrderLogsModal"; // Import Modal
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
+import UpdateGuestCountModal from "../Customers-Modal/UpdateGuestCountModal";
 import axios from "axios";
 import apiConfig from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
@@ -99,6 +100,7 @@ const Check = () => {
   const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showGuestCountModal, setShowGuestCountModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -1534,7 +1536,22 @@ const Check = () => {
           setShowCustomerModal(true);
           setShowOperationsModal(false);
         }}
+        openGuestCountModal={() => {
+          setShowGuestCountModal(true);
+          setShowOperationsModal(false);
+        }}
         loginedWaiter={loginedWaiter}
+      />
+
+      <UpdateGuestCountModal
+        show={showGuestCountModal}
+        onHide={() => setShowGuestCountModal(false)}
+        order={currentOrder}
+        onSuccess={() => {
+          if (loginedProfileData?.data?.profile?.id) {
+            dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+          }
+        }}
       />
 
       <CheckLockModal

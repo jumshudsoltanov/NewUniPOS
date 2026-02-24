@@ -4,12 +4,16 @@ import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault
 import DefaultLogo from "../../assets/images/unipos_logo.png";
 import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getWaiter } from "../../redux/Slices/WaitersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
+import { toast } from "sonner";
+import RefreshLoader from "../RefreshLoader/RefreshLoader";
+import BrandsModal from "../BrandsModal/BrandsModal";
 
 const PIN_LENGTH = 4;
 
@@ -176,10 +180,58 @@ const Pin = () => {
   const [isError, setIsError] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
+  const [syncCount, setSyncCount] = useState(0);
+  const [syncedCount, setSyncedCount] = useState(0);
+  const [showSyncedBadge, setShowSyncedBadge] = useState(false);
+  const prevSyncedCountRef = useRef(0);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [hasInternet, setHasInternet] = useState(true);
   const dispatch = useDispatch();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleConnectivity = () => {
+      setIsOnline(navigator.onLine);
+      if (window.electronAPI && window.electronAPI.checkInternet) {
+        window.electronAPI.checkInternet().then(setHasInternet).catch(() => setHasInternet(false));
+      }
+    };
+    window.addEventListener("online", handleConnectivity);
+    window.addEventListener("offline", handleConnectivity);
+
+    // Sync Count Polling
+    const fetchSyncCount = () => {
+      if (window.electronAPI && window.electronAPI.getSyncStatus) {
+        window.electronAPI.getSyncStatus().then(st => {
+          setSyncCount(st.pendingCount || 0);
+          const newSyncedCount = st.syncedCount || 0;
+          if (newSyncedCount > prevSyncedCountRef.current) {
+            setShowSyncedBadge(true);
+            setTimeout(() => setShowSyncedBadge(false), 3000);
+          }
+          setSyncedCount(newSyncedCount);
+          prevSyncedCountRef.current = newSyncedCount;
+        }).catch(console.error);
+      }
+    };
+
+    handleConnectivity();
+    fetchSyncCount();
+
+    const connInt = setInterval(handleConnectivity, 5000);
+    const syncInt = setInterval(fetchSyncCount, 15000);
+
+    return () => {
+      window.removeEventListener("online", handleConnectivity);
+      window.removeEventListener("offline", handleConnectivity);
+      clearInterval(connInt);
+      clearInterval(syncInt);
+    };
+  }, []);
 
   let fallbackProfileData = null;
   try {
@@ -211,22 +263,43 @@ const Pin = () => {
       : `http://46.224.8.157:35627/${profileInfo.logo}`;
   }
 
-  const handleRefresh = () => {
-    window.location.reload();
+  const handleRefresh = async () => {
+    if (!activeProfileData?.data?.profile?.id) {
+      toast.error("Profil məlumatı yoxdur, səhifə yenilənə bilmədi.");
+      return;
+    }
+
+    setIsRefreshing(true);
+    const toastId = toast.loading("Məlumatlar yenilənir...");
+    try {
+      await Promise.all([
+        dispatch(getTableGroups(activeProfileData.data.profile.id)).unwrap(),
+        dispatch(getActiveOrders({ profileId: activeProfileData.data.profile.id })).unwrap(),
+        dispatch(menuWithCategories(activeProfileData.data.profile.id)).unwrap(),
+        dispatch(menuWithGeneralCategories(activeProfileData.data.profile.id)).unwrap(),
+        new Promise(resolve => setTimeout(resolve, 5000))
+      ]);
+      toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
+    } catch (error) {
+      console.error("Yeniləmə xətası:", error);
+      toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleBrandList = () => {
-    console.log("Brend siyahısı");
+    setIsBrandsModalOpen(true);
   };
 
   const handleDownloadData = () => {
-    console.log("Məlumatları yüklə");
+    handleRefresh();
   };
 
   const handleExit = () => {
     localStorage.removeItem("profile");
     localStorage.removeItem("authResult");
-    navigate("/");
+    window.location.href = "/";
   };
 
   const handleNumberClick = useCallback(
@@ -366,42 +439,46 @@ const Pin = () => {
                       />
                     </svg>
                   </button>
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
-                      stroke="#00FF6A"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
-                      stroke="#00FF6A"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
-                      stroke="#00FF6A"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
-                      stroke="#00FF6A"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <div className="wifi-badge-container">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
+                        stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
+                        stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
+                        stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
+                        stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    {showSyncedBadge && syncedCount > 0 && <span className="sync-badge-done">{syncedCount}</span>}
+                    {syncCount > 0 && <span className="sync-badge-pending">{syncCount}</span>}
+                  </div>
                 </div>
               </div>
 
@@ -503,14 +580,14 @@ const Pin = () => {
 
               {/* Terminal Info Footer */}
               <div className="terminalInfo">
-                <span className="terminalId">P3257</span>
+                <span className="terminalId">{terminalInfo?.name || "P3257"}</span>
                 <span className="terminalDivider">•</span>
                 <span className="terminalName">
-                  Terminal: <strong>Terminal 1</strong>
+                  Terminal: <strong>{terminalInfo?.terminal_id || "Terminal 1"}</strong>
                 </span>
                 <span className="terminalDivider">•</span>
                 <span className="terminalBranch">
-                  Filial: <strong>Main</strong>
+                  Filial: <strong>{profileInfo?.username || "Main"}</strong>
                 </span>
               </div>
             </div>
@@ -522,9 +599,9 @@ const Pin = () => {
       <SupportModal
         isOpen={isSupportModalOpen}
         onClose={() => setIsSupportModalOpen(false)}
-        terminalId="P3257"
-        terminalName="Terminal 1"
-        branchName="Main"
+        terminalId={terminalInfo?.name || "P3257"}
+        terminalName={terminalInfo?.terminal_id || "Terminal 1"}
+        branchName={profileInfo?.username || "Main"}
       />
 
       {/* Settings Menu */}
@@ -535,6 +612,15 @@ const Pin = () => {
         onBrandList={handleBrandList}
         onDownloadData={handleDownloadData}
         onExit={handleExit}
+      />
+
+      {/* Refreshing Overlay */}
+      <RefreshLoader isOpen={isRefreshing} />
+
+      {/* Brands Modal */}
+      <BrandsModal
+        show={isBrandsModalOpen}
+        onHide={() => setIsBrandsModalOpen(false)}
       />
     </>
   );

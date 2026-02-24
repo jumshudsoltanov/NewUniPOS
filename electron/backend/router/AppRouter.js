@@ -102,6 +102,11 @@ router.patch(
   OrdersItemsController.onUpdateWaiter,
 );
 
+router.patch(
+  "/orders-items/:orderId/update-guest-count",
+  OrdersItemsController.onUpdateGuestCount,
+);
+
 router.post(
   "/orders-items/:profileId/split-order",
   OrdersItemsController.onSplitOrder,

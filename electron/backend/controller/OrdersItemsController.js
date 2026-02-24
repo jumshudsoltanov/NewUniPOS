@@ -2019,6 +2019,58 @@ const onAssignCustomer = async (req, res) => {
   }
 };
 
+const onUpdateGuestCount = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { guestCount } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ message: "false", data: "Missing orderId" });
+    }
+
+    const checkOrder = await OrdersModel.findOne({ where: { uuid: orderId } });
+    if (!checkOrder) {
+      return res.status(404).json({ message: "false", data: "Order not found" });
+    }
+
+    await OrdersModel.update(
+      { guest_count: guestCount, is_synced: 0 },
+      { where: { uuid: orderId } }
+    );
+
+    SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId: orderId });
+
+    const getOrders = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+          ],
+        },
+      ],
+    });
+
+    return res.status(200).json({ message: "success", data: getOrders });
+  } catch (error) {
+    console.error("Guest count update error:", error);
+    return res.status(500).json({ message: "false", data: error.message });
+  }
+};
+
 const incrementPrintCount = async (req, res) => {
   const { orderId } = req.params;
 
@@ -2098,4 +2150,5 @@ module.exports = {
   onUpdateItemCount,
   onAssignCustomer,
   incrementPrintCount,
+  onUpdateGuestCount,
 };

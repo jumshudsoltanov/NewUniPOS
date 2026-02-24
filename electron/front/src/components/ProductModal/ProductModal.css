@@ -34,7 +34,7 @@
 }
 
 .modal-title {
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 700;
     margin: 0;
 }
@@ -63,7 +63,7 @@
 
 .form-group-custom label {
     font-weight: 600;
-    font-size: 11px;
+    font-size: 14px;
     color: #444;
     text-transform: none;
     letter-spacing: normal;
@@ -71,10 +71,10 @@
 }
 
 .form-control-custom {
-    padding: 8px 12px;
+    padding: 10px 14px;
     border: 1px solid #e9ecef;
     border-radius: 6px;
-    font-size: 11px;
+    font-size: 14px;
     background: #fff;
     outline: none;
     width: 100%;
@@ -145,7 +145,7 @@
 }
 
 .upload-placeholder span {
-    font-size: 11px;
+    font-size: 14px;
 }
 
 /* Toggles */
@@ -166,7 +166,7 @@
 }
 
 .product-modal-body .toggle-label {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 600;
     color: #444;
 }
@@ -200,7 +200,7 @@
     border: none;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -216,7 +216,7 @@
     border: none;
     border-radius: 8px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;

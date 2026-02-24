@@ -246,6 +246,21 @@ export const changeWaiter = createAsyncThunk(
   },
 );
 
+export const updateGuestCountOrder = createAsyncThunk(
+  "orders/update-guest-count",
+  async ({ orderId, guestCount }, thunkAPI) => {
+    try {
+      const response = await axios.patch(
+        `/orders-items/${orderId}/update-guest-count`,
+        { guestCount },
+      );
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const splitOrder = createAsyncThunk(
   "orders/split",
   async ({ data, profileId, profile, hallData, waiterName: passedWaiterName }, thunkAPI) => {

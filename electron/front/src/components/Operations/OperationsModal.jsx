@@ -19,6 +19,7 @@ export const OperationsModal = ({
   openDepositModal,
   openHistory,
   openCustomersModal,
+  openGuestCountModal,
   loginedWaiter
 }) => {
 
@@ -47,16 +48,17 @@ export const OperationsModal = ({
       functions: handleOpenChangeSaleType,
       permissions: loginedWaiter?.data?.can_change_sale_type
     },
+    { icon: "bi-people", text: "Əməkdaş dəyiş", functions: openWaitersModal, permissions: loginedWaiter?.data?.can_change_waiter },
     {
       icon: "bi-bell",
       text: "Xidmət haqqı əlavə et",
       functions: openServiceFee,
       permissions: loginedWaiter?.data?.can_edit_service_fee
     },
-    { icon: "bi-people", text: "Əməkdaş dəyiş", functions: openWaitersModal, permissions: loginedWaiter?.data?.can_change_waiter },
     { icon: "bi-table", text: "Masanı dəyiş", functions: handleChangeTable, permissions: loginedWaiter?.data?.can_change_table },
     { icon: "bi-trash", text: "Çeki sil", functions: handleDeleteCheckModal, permissions: loginedWaiter?.data?.can_delete_check },
     { icon: "bi-cash-coin", text: "Depozit", functions: openDepositModal, permissions: loginedWaiter?.data?.can_give_deposit },
+    { icon: "bi-people-fill", text: "Qonaq sayını dəyiş", functions: openGuestCountModal, permissions: 1 },
   ];
 
   return (

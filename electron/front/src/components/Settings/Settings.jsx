@@ -1,19 +1,26 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { toast } from "sonner";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
+import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import "./Settings.css";
 
 const Settings = () => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+    const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [showSupportModal, setShowSupportModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
     const [showCustomersModal, setShowCustomersModal] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [showClock, setShowClock] = useState(() => {
         return localStorage.getItem("showHeaderClock") === "true";
     });
@@ -47,6 +54,29 @@ const Settings = () => {
             await window.electronAPI.openAnyDesk();
         } else {
             alert("AnyDesk yalnız Electron tətbiqində açıla bilər");
+        }
+    };
+
+    const handleSoftRefresh = async () => {
+        if (!loginedProfileData?.data?.profile?.id) {
+            toast.error("Profil məlumatı yoxdur, səhifə yenilənə bilmədi.");
+            return;
+        }
+
+        setIsRefreshing(true);
+        const toastId = toast.loading("Məlumatlar yenilənir...");
+        try {
+            await Promise.all([
+                dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap(),
+                dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id })).unwrap(),
+                new Promise(resolve => setTimeout(resolve, 5000))
+            ]);
+            toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
+        } catch (error) {
+            console.error("Yeniləmə xətası:", error);
+            toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
+        } finally {
+            setIsRefreshing(false);
         }
     };
 
@@ -98,7 +128,7 @@ const Settings = () => {
             id: "refresh",
             label: "Yenilə",
             icon: <i className="bi bi-arrow-repeat"></i>,
-            onClick: () => window.location.reload(),
+            onClick: handleSoftRefresh,
         },
         {
             id: "sound",
@@ -199,6 +229,9 @@ const Settings = () => {
                 show={showCustomersModal}
                 onHide={() => setShowCustomersModal(false)}
             />
+
+            {/* Refreshing Overlay */}
+            <RefreshLoader isOpen={isRefreshing} />
         </>
     );
 };
