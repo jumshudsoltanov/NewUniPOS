@@ -101,3 +101,48 @@ body,
         transform: translateY(0);
     }
 }
+
+/* ==================== */
+/* WIFI & SYNC BADGES   */
+/* ==================== */
+
+.wifi-badge-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    height: fit-content;
+}
+
+.sync-badge-done,
+.sync-badge-pending {
+    position: absolute;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 8px;
+    font-weight: 900;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1;
+    border: 1.5px solid #fff;
+    z-index: 100;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+}
+
+.sync-badge-done {
+    top: -5px;
+    right: 12px;
+    background: #00FF6A;
+}
+
+.sync-badge-pending {
+    top: -5px;
+    right: -6px;
+    background: #FF9800;
+}

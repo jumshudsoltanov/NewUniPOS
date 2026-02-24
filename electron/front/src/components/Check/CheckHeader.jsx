@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import "./Check.css";
 import TagModal from "../Modals/TagModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
@@ -14,52 +14,8 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-  const [syncCount, setSyncCount] = useState(0);
-  const [syncedCount, setSyncedCount] = useState(0);
-  const [showSyncedBadge, setShowSyncedBadge] = useState(false);
-  const prevSyncedCountRef = useRef(0);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [hasInternet, setHasInternet] = useState(true);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleConnectivity = () => {
-      setIsOnline(navigator.onLine);
-      if (window.electronAPI && window.electronAPI.checkInternet) {
-        window.electronAPI.checkInternet().then(setHasInternet).catch(() => setHasInternet(false));
-      }
-    };
-    window.addEventListener("online", handleConnectivity);
-    window.addEventListener("offline", handleConnectivity);
-
-    const fetchSyncCount = () => {
-      if (window.electronAPI && window.electronAPI.getSyncStatus) {
-        window.electronAPI.getSyncStatus().then(st => {
-          setSyncCount(st.pendingCount || 0);
-          const newSyncedCount = st.syncedCount || 0;
-          if (newSyncedCount > prevSyncedCountRef.current) {
-            setShowSyncedBadge(true);
-            setTimeout(() => setShowSyncedBadge(false), 3000);
-          }
-          setSyncedCount(newSyncedCount);
-          prevSyncedCountRef.current = newSyncedCount;
-        }).catch(console.error);
-      }
-    };
-
-    handleConnectivity();
-    fetchSyncCount();
-    const connInt = setInterval(handleConnectivity, 5000);
-    const syncInt = setInterval(fetchSyncCount, 15000);
-
-    return () => {
-      window.removeEventListener("online", handleConnectivity);
-      window.removeEventListener("offline", handleConnectivity);
-      clearInterval(connInt);
-      clearInterval(syncInt);
-    };
-  }, []);
 
   useEffect(() => {
     if (loginedProfileData?.data?.profile?.id) {
@@ -177,46 +133,6 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
           <span className="header-order-id">
             #{orders?.id} / #{orders?.id}
           </span>
-          <div className="wifi-badge-container" style={{ margin: "0 5px" }}>
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
-                stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
-                stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
-                stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
-                stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            {showSyncedBadge && syncedCount > 0 && <span className="sync-badge-done">{syncedCount}</span>}
-            {syncCount > 0 && <span className="sync-badge-pending">{syncCount}</span>}
-          </div>
           <div
             className="header-toggle-btn"
             onClick={() => setOpenOtherCheckModal(true)}

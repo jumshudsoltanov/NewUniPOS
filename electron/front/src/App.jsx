@@ -7,9 +7,10 @@ import Tables from "./components/Tables/Tables";
 import CustomerModal from "./components/Customers-Modal/CustomersModal";
 import Check from "./components/Check/Check";
 import Checks from "./components/Checks/Checks";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
+import { updateSyncStatus, resetSyncedBadge, updateConnectivity } from "./redux/Slices/SyncSlice";
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
 import Layout from "./components/Layout/Layout";
@@ -35,7 +36,59 @@ function AppContent() {
         console.log("%cBackend Log:", "background: #222; color: #bada55; padding: 2px;", ...args);
       });
     }
-  }, []);
+
+    // Connectivity and Sync Polling
+    const handleConnectivity = () => {
+      const isOnline = navigator.onLine;
+      if (window.electronAPI && window.electronAPI.checkInternet) {
+        window.electronAPI.checkInternet().then(hasInternet => {
+          dispatch(updateConnectivity({ isOnline, hasInternet }));
+        }).catch(() => {
+          dispatch(updateConnectivity({ isOnline, hasInternet: false }));
+        });
+      } else {
+        dispatch(updateConnectivity({ isOnline, hasInternet: true }));
+      }
+    };
+
+    const fetchSyncCount = () => {
+      if (window.electronAPI && window.electronAPI.getSyncStatus) {
+        window.electronAPI.getSyncStatus().then(st => {
+          dispatch(updateSyncStatus({
+            pendingCount: st.pendingCount || 0,
+            syncedCount: st.syncedCount || 0
+          }));
+        }).catch(console.error);
+      }
+    };
+
+    window.addEventListener("online", handleConnectivity);
+    window.addEventListener("offline", handleConnectivity);
+
+    handleConnectivity();
+    fetchSyncCount();
+
+    const connInt = setInterval(handleConnectivity, 5000);
+    const syncInt = setInterval(fetchSyncCount, 15000);
+
+    return () => {
+      window.removeEventListener("online", handleConnectivity);
+      window.removeEventListener("offline", handleConnectivity);
+      clearInterval(connInt);
+      clearInterval(syncInt);
+    };
+  }, [dispatch]);
+
+  // Handle Synced Badge Timeout
+  const showSyncedBadge = useSelector((state) => state.SyncSlice.showSyncedBadge);
+  useEffect(() => {
+    if (showSyncedBadge) {
+      const timer = setTimeout(() => {
+        dispatch(resetSyncedBadge());
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSyncedBadge, dispatch]);
 
   useEffect(() => {
     // Əgər artıq init başlayıbsa, bir daha başlama

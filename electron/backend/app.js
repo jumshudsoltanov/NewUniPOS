@@ -14,8 +14,8 @@ const LoginModel = require("./model/LoginModel");
 const GeneralCategoriesModel = require("./model/GeneralCategoriesModel");
 const CategoriesModel = require("./model/CategoriesModel");
 const ProductsModel = require("./model/ProductsModel");
-const OrderPaymentsModel = require("./model/OrderPaymentsModel");
 const PaymentMethodsModel = require("./model/PaymentMethodsModel");
+const OrderLogsModel = require("./model/OrderLogsModel");
 const TagsModel = require("./model/TagsModel");
 const { getWaitersList } = require("./data/WaitersData");
 const { getTableGroups, getTables } = require("./data/TablesData");
@@ -137,6 +137,20 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
+    // Order Logs
+    OrdersModel.hasMany(OrderLogsModel, {
+      foreignKey: "order_id",
+      sourceKey: "uuid",
+      as: "order_logs",
+      constraints: false,
+    });
+
+    OrderLogsModel.belongsTo(OrdersModel, {
+      foreignKey: "order_id",
+      targetKey: "uuid",
+      constraints: false,
+    });
+
     // Products Data
     GeneralCategoriesModel.hasMany(CategoriesModel, {
       foreignKey: "general_categorie_id",
@@ -207,14 +221,21 @@ global.isMasterNode = false;
 
   try {
     const profile = await LoginModel.findOne();
-    if (profile && profile.is_master === 1 && profile.is_master_slave_active === 1) {
+    console.log("DEBUG: Current Terminal Profile is_master:", profile ? profile.is_master : "NULL");
+
+    if (profile && (Number(profile.is_master) === 1 || profile.is_master === true)) {
       global.isMasterNode = true;
       console.log("Terminal is confirmed as Master in DB.");
 
-      const { initMasterServer } = require("./socket/MasterServer");
-      initMasterServer(server);
+      if (profile.is_master_slave_active === 1) {
+        console.log("Master-Slave mode is active. Starting MasterServer...");
+        const { initMasterServer } = require("./socket/MasterServer");
+        initMasterServer(server);
+      } else {
+        console.log("Standalone Master mode. MasterServer not started.");
+      }
 
-      // Sərfəli (Master) terminal üçün ilkin məlumatları çək
+      // Sərfəli (Master) terminal üçün ilkin məlumatları çək və sinxronizasiyanı təmin et
       InsertData();
     } else {
       console.log("Terminal is NOT Master. Running as Slave. (Broadcasting disabled)");

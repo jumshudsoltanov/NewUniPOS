@@ -144,7 +144,6 @@ const ImageSection = React.memo(({ backgroundImg }) => {
         console.error("Error parsing authlogin:", error);
       }
 
-      // Final fallback if no internet / no data / no cache
       setCurrentSrc(RightBoxContainerImg2);
     };
 
@@ -182,56 +181,19 @@ const Pin = () => {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
-  const [syncCount, setSyncCount] = useState(0);
-  const [syncedCount, setSyncedCount] = useState(0);
-  const [showSyncedBadge, setShowSyncedBadge] = useState(false);
-  const prevSyncedCountRef = useRef(0);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [hasInternet, setHasInternet] = useState(true);
   const dispatch = useDispatch();
-  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const handleConnectivity = () => {
-      setIsOnline(navigator.onLine);
-      if (window.electronAPI && window.electronAPI.checkInternet) {
-        window.electronAPI.checkInternet().then(setHasInternet).catch(() => setHasInternet(false));
-      }
-    };
-    window.addEventListener("online", handleConnectivity);
-    window.addEventListener("offline", handleConnectivity);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
-    // Sync Count Polling
-    const fetchSyncCount = () => {
-      if (window.electronAPI && window.electronAPI.getSyncStatus) {
-        window.electronAPI.getSyncStatus().then(st => {
-          setSyncCount(st.pendingCount || 0);
-          const newSyncedCount = st.syncedCount || 0;
-          if (newSyncedCount > prevSyncedCountRef.current) {
-            setShowSyncedBadge(true);
-            setTimeout(() => setShowSyncedBadge(false), 3000);
-          }
-          setSyncedCount(newSyncedCount);
-          prevSyncedCountRef.current = newSyncedCount;
-        }).catch(console.error);
-      }
-    };
-
-    handleConnectivity();
-    fetchSyncCount();
-
-    const connInt = setInterval(handleConnectivity, 5000);
-    const syncInt = setInterval(fetchSyncCount, 15000);
-
-    return () => {
-      window.removeEventListener("online", handleConnectivity);
-      window.removeEventListener("offline", handleConnectivity);
-      clearInterval(connInt);
-      clearInterval(syncInt);
-    };
-  }, []);
+  const {
+    pendingCount: syncCount,
+    lastSyncedDelta: syncedCount,
+    showSyncedBadge,
+    isOnline,
+    hasInternet
+  } = useSelector((state) => state.SyncSlice);
 
   let fallbackProfileData = null;
   try {
@@ -302,32 +264,6 @@ const Pin = () => {
     window.location.href = "/";
   };
 
-  const handleNumberClick = useCallback(
-    (num) => {
-      if (pin.length < PIN_LENGTH) {
-        const newPin = pin + num;
-        setPin(newPin);
-        setIsError(false);
-        if (newPin.length === PIN_LENGTH) {
-          handlePinSubmit(newPin);
-        }
-      }
-    },
-    [pin],
-  );
-
-  const handleBackspace = useCallback(() => {
-    if (pin.length > 0) {
-      setPin(pin.slice(0, -1));
-      setIsError(false);
-    }
-  }, [pin]);
-
-  const handleClear = useCallback(() => {
-    setPin("");
-    setIsError(false);
-  }, []);
-
   const handlePinSubmit = async (submittedPin) => {
     try {
       const waiterResult = await dispatch(getWaiter(submittedPin)).unwrap();
@@ -357,6 +293,32 @@ const Pin = () => {
     }
   };
 
+  const handleNumberClick = useCallback(
+    (num) => {
+      if (pin.length < PIN_LENGTH) {
+        const newPin = pin + num;
+        setPin(newPin);
+        setIsError(false);
+        if (newPin.length === PIN_LENGTH) {
+          handlePinSubmit(newPin);
+        }
+      }
+    },
+    [pin],
+  );
+
+  const handleBackspace = useCallback(() => {
+    if (pin.length > 0) {
+      setPin(pin.slice(0, -1));
+      setIsError(false);
+    }
+  }, [pin]);
+
+  const handleClear = useCallback(() => {
+    setPin("");
+    setIsError(false);
+  }, []);
+
   const cloudBg = terminalInfo.background || terminalInfo.bg ||
     profileInfo.background_img || profileInfo.bg || profileInfo.background;
 
@@ -364,15 +326,12 @@ const Pin = () => {
     <>
       <Container fluid className="p-0 vh-100 overflow-hidden">
         <Row className="g-0 h-100">
-          {/* IMAGE SECTION */}
           <ImageSection
             backgroundImg={cloudBg}
           />
 
-          {/* INFO SECTION */}
           <Col xs={12} md={6} lg={5} xl={4} className="p-0 h-100">
             <div className="LeftBoxContainer">
-              {/* Header */}
               <div className="infoHeader">
                 <button
                   className="supportBtn"
@@ -482,7 +441,6 @@ const Pin = () => {
                 </div>
               </div>
 
-              {/* Logo */}
               <div className="logoContainer">
                 <img
                   src={logoSrc}
@@ -496,14 +454,11 @@ const Pin = () => {
                 />
               </div>
 
-              {/* PIN Container */}
               <div className="pinContainer">
-                {/* PIN Header */}
                 <div className="pinHeader">
                   <span className="pinText">PIN Kodu daxil edin</span>
                 </div>
 
-                {/* PIN Dots */}
                 <div className="pinDots">
                   {Array.from({ length: PIN_LENGTH }).map((_, index) => (
                     <PinDot
@@ -514,48 +469,22 @@ const Pin = () => {
                   ))}
                 </div>
 
-                {/* PIN Keypad */}
                 <div className="pinKeypad">
-                  {/* Row 1: 1-2-3 */}
                   <div className="pinKeypadRow">
-                    <NumberButton value={1} onClick={handleNumberClick}>
-                      1
-                    </NumberButton>
-                    <NumberButton value={2} onClick={handleNumberClick}>
-                      2
-                    </NumberButton>
-                    <NumberButton value={3} onClick={handleNumberClick}>
-                      3
-                    </NumberButton>
+                    <NumberButton value={1} onClick={handleNumberClick}>1</NumberButton>
+                    <NumberButton value={2} onClick={handleNumberClick}>2</NumberButton>
+                    <NumberButton value={3} onClick={handleNumberClick}>3</NumberButton>
                   </div>
-
-                  {/* Row 2: 4-5-6 */}
                   <div className="pinKeypadRow">
-                    <NumberButton value={4} onClick={handleNumberClick}>
-                      4
-                    </NumberButton>
-                    <NumberButton value={5} onClick={handleNumberClick}>
-                      5
-                    </NumberButton>
-                    <NumberButton value={6} onClick={handleNumberClick}>
-                      6
-                    </NumberButton>
+                    <NumberButton value={4} onClick={handleNumberClick}>4</NumberButton>
+                    <NumberButton value={5} onClick={handleNumberClick}>5</NumberButton>
+                    <NumberButton value={6} onClick={handleNumberClick}>6</NumberButton>
                   </div>
-
-                  {/* Row 3: 7-8-9 */}
                   <div className="pinKeypadRow">
-                    <NumberButton value={7} onClick={handleNumberClick}>
-                      7
-                    </NumberButton>
-                    <NumberButton value={8} onClick={handleNumberClick}>
-                      8
-                    </NumberButton>
-                    <NumberButton value={9} onClick={handleNumberClick}>
-                      9
-                    </NumberButton>
+                    <NumberButton value={7} onClick={handleNumberClick}>7</NumberButton>
+                    <NumberButton value={8} onClick={handleNumberClick}>8</NumberButton>
+                    <NumberButton value={9} onClick={handleNumberClick}>9</NumberButton>
                   </div>
-
-                  {/* Row 4: Clear-0-Backspace */}
                   <div className="pinKeypadRow">
                     <NumberButton
                       value="clear"
@@ -564,9 +493,7 @@ const Pin = () => {
                     >
                       <ClearIcon />
                     </NumberButton>
-                    <NumberButton value={0} onClick={handleNumberClick}>
-                      0
-                    </NumberButton>
+                    <NumberButton value={0} onClick={handleNumberClick}>0</NumberButton>
                     <NumberButton
                       value="backspace"
                       onClick={handleBackspace}
@@ -578,7 +505,6 @@ const Pin = () => {
                 </div>
               </div>
 
-              {/* Terminal Info Footer */}
               <div className="terminalInfo">
                 <span className="terminalId">{terminalInfo?.name || "P3257"}</span>
                 <span className="terminalDivider">•</span>
@@ -595,7 +521,6 @@ const Pin = () => {
         </Row>
       </Container>
 
-      {/* Support Modal */}
       <SupportModal
         isOpen={isSupportModalOpen}
         onClose={() => setIsSupportModalOpen(false)}
@@ -604,7 +529,6 @@ const Pin = () => {
         branchName={profileInfo?.username || "Main"}
       />
 
-      {/* Settings Menu */}
       <SettingsMenu
         isOpen={isSettingsMenuOpen}
         onClose={() => setIsSettingsMenuOpen(false)}
@@ -614,10 +538,8 @@ const Pin = () => {
         onExit={handleExit}
       />
 
-      {/* Refreshing Overlay */}
       <RefreshLoader isOpen={isRefreshing} />
 
-      {/* Brands Modal */}
       <BrandsModal
         show={isBrandsModalOpen}
         onHide={() => setIsBrandsModalOpen(false)}

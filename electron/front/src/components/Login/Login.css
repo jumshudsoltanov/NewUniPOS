@@ -58,45 +58,6 @@
   transform: scale(0.95);
 }
 
-.wifi-badge-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-}
-
-.sync-badge-done,
-.sync-badge-pending {
-  position: absolute;
-  color: #fff;
-  border-radius: 50%;
-  font-size: 8px;
-  font-weight: 800;
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  line-height: 1;
-  border: 1.5px solid #fff;
-  z-index: 2;
-}
-
-.sync-badge-done {
-  top: -2px;
-  right: -2px;
-  background: #00FF6A;
-}
-
-.sync-badge-pending {
-  bottom: -2px;
-  right: -2px;
-  background: #f59e0b;
-}
-
 .supportBtn {
   display: inline-flex;
   align-items: center;

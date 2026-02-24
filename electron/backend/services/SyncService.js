@@ -16,21 +16,40 @@ class SyncService {
   constructor() {
     this.isSyncing = false;
     this.lastSyncTime = new Date(); // Initialize with current time on startup
-    setInterval(() => this.syncPendingOrders(), 60000);
+    setInterval(() => this.syncPendingOrders(), 30000);
   }
 
   async getSyncStatus() {
     try {
-      const [pendingCount, syncedCount] = await Promise.all([
-        OrdersModel.count({
+      const OrderPaymentsModel = require("../model/OrderPaymentsModel");
+      const OrderLogsModel = require("../model/OrderLogsModel");
+
+      const [pendingOrders, syncedCount] = await Promise.all([
+        OrdersModel.findAll({
           where: {
             [Op.or]: [{ is_synced: 0 }, { is_synced: null }],
           },
+          include: [
+            { model: OrdersItemsModel, as: 'orders_items' },
+            { model: OrderPaymentsModel, as: 'order_payments' },
+            { model: OrderLogsModel, as: 'order_logs' }
+          ]
+        }).catch(err => {
+          console.warn("SyncStatus: Falling back to simple count due to inclusion error:", err.message);
+          return OrdersModel.findAll({ where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }] } });
         }),
         OrdersModel.count({
           where: { is_synced: 1 },
         }),
       ]);
+
+      // Sum orders + items + payments + logs for a very granular count
+      let pendingCount = pendingOrders.length;
+      pendingOrders.forEach(order => {
+        if (order.orders_items) pendingCount += order.orders_items.length;
+        if (order.order_payments) pendingCount += order.order_payments.length;
+        if (order.order_logs) pendingCount += order.order_logs.length;
+      });
 
       return {
         isSyncing: this.isSyncing,
@@ -39,6 +58,7 @@ class SyncService {
         lastSyncTime: this.lastSyncTime
       };
     } catch (error) {
+      //...
       console.error("Error getting sync status:", error);
       return {
         isSyncing: this.isSyncing,

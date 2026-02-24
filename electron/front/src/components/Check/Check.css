@@ -449,46 +449,6 @@
     box-shadow: 0 4px 10px rgba(79, 133, 244, 0.3);
 }
 
-/* Wifi & Sync Status styles for CheckHeader */
-.wifi-badge-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-}
-
-.sync-badge-done,
-.sync-badge-pending {
-    position: absolute;
-    color: #fff;
-    border-radius: 50%;
-    font-size: 7px;
-    font-weight: 800;
-    width: 14px;
-    height: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    line-height: 1;
-    border: 1.2px solid #fff;
-    z-index: 2;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.sync-badge-done {
-    top: -2px;
-    right: -2px;
-    background: #00FF6A;
-}
-
-.sync-badge-pending {
-    bottom: -2px;
-    right: -2px;
-    background: #f59e0b;
-}
 
 .header-info-row {
     display: flex;

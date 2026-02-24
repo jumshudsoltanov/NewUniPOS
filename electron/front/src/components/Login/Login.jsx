@@ -81,12 +81,6 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
-  const [syncCount, setSyncCount] = useState(0);
-  const [syncedCount, setSyncedCount] = useState(0);
-  const [showSyncedBadge, setShowSyncedBadge] = useState(false);
-  const prevSyncedCountRef = useRef(0);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [hasInternet, setHasInternet] = useState(true);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -99,50 +93,21 @@ const Login = () => {
     console.error("Error parsing authResult:", err);
   }
 
+  const {
+    pendingCount: syncCount,
+    lastSyncedDelta: syncedCount,
+    showSyncedBadge,
+    isOnline,
+    hasInternet
+  } = useSelector((state) => state.SyncSlice);
+
+  useEffect(() => {
+    console.log("Login Mounted", loginedProfileData);
+  }, []);
+
   const activeProfileData = loginedProfileData || fallbackProfileData;
   const terminalInfo = activeProfileData?.data?.terminal || {};
   const profileInfo = activeProfileData?.data?.profile || {};
-
-  useEffect(() => {
-    const handleConnectivity = () => {
-      setIsOnline(navigator.onLine);
-      if (window.electronAPI && window.electronAPI.checkInternet) {
-        window.electronAPI.checkInternet().then(setHasInternet).catch(() => setHasInternet(false));
-      }
-    };
-    window.addEventListener("online", handleConnectivity);
-    window.addEventListener("offline", handleConnectivity);
-
-    // Sync Count Polling
-    const fetchSyncCount = () => {
-      if (window.electronAPI && window.electronAPI.getSyncStatus) {
-        window.electronAPI.getSyncStatus().then(st => {
-          setSyncCount(st.pendingCount || 0);
-          const newSyncedCount = st.syncedCount || 0;
-          if (newSyncedCount > prevSyncedCountRef.current) {
-            setShowSyncedBadge(true);
-            setTimeout(() => setShowSyncedBadge(false), 3000);
-          }
-          setSyncedCount(newSyncedCount);
-          prevSyncedCountRef.current = newSyncedCount;
-        }).catch(console.error);
-      }
-    };
-
-    handleConnectivity();
-    fetchSyncCount();
-
-    const connInt = setInterval(handleConnectivity, 5000);
-    const syncInt = setInterval(fetchSyncCount, 15000);
-
-    return () => {
-      window.removeEventListener("online", handleConnectivity);
-      window.removeEventListener("offline", handleConnectivity);
-      clearInterval(connInt);
-      clearInterval(syncInt);
-    };
-  }, []);
-
 
   const handleRefresh = async () => {
     if (!loginedProfileData?.data?.profile?.id) {

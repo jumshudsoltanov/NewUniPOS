@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import "./Header.css";
 import { Col, Row, Container } from "react-bootstrap";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getTableGroups,
@@ -15,6 +15,7 @@ import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import StatusModal from "../StatusModal/StatusModal";
+import { useLocation, useNavigate } from "react-router-dom"; // Moved here
 
 const Header = ({ showBack, backPath, onBack }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -29,13 +30,8 @@ const Header = ({ showBack, backPath, onBack }) => {
   const [activeHall, setActiveHall] = useState(null);
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [syncCount, setSyncCount] = useState(0); // pending
-  const [syncedCount, setSyncedCount] = useState(0); // completed
-  const [showSyncedBadge, setShowSyncedBadge] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false); // This was duplicated, keeping the one that's used
   const prevSyncedCountRef = useRef(0);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [hasInternet, setHasInternet] = useState(true);
   const newOrderBtnRef = useRef(null);
   const dispatch = useDispatch();
   const location = useLocation();
@@ -165,47 +161,26 @@ const Header = ({ showBack, backPath, onBack }) => {
     setNotifCount(all.filter(n => n.status === "new").length);
   };
 
+  const {
+    pendingCount: syncCount,
+    lastSyncedDelta: syncedCount,
+    showSyncedBadge,
+    isOnline,
+    hasInternet
+  } = useSelector((state) => state.SyncSlice);
+
+  useEffect(() => {
+    if (loginedProfileData?.data?.profile?.id) {
+      dispatch(getTableGroups(loginedProfileData.data.profile.id));
+    }
+  }, [dispatch, loginedProfileData]);
+
   useEffect(() => {
     updateCount();
     window.addEventListener("newNotification", updateCount);
 
-    // Connectivity Checks
-    const handleConnectivity = () => {
-      setIsOnline(navigator.onLine);
-      if (window.electronAPI && window.electronAPI.checkInternet) {
-        window.electronAPI.checkInternet().then(setHasInternet).catch(() => setHasInternet(false));
-      }
-    };
-    window.addEventListener("online", handleConnectivity);
-    window.addEventListener("offline", handleConnectivity);
-    const connInt = setInterval(handleConnectivity, 5000);
-
-    handleConnectivity(); // Initial check
-
-    // Sync Count Polling
-    const fetchSyncCount = () => {
-      if (window.electronAPI && window.electronAPI.getSyncStatus) {
-        window.electronAPI.getSyncStatus().then(st => {
-          setSyncCount(st.pendingCount || 0);
-          const newSyncedCount = st.syncedCount || 0;
-          if (newSyncedCount > prevSyncedCountRef.current) {
-            setShowSyncedBadge(true);
-            setTimeout(() => setShowSyncedBadge(false), 3000);
-          }
-          setSyncedCount(newSyncedCount);
-          prevSyncedCountRef.current = newSyncedCount;
-        }).catch(console.error);
-      }
-    };
-    fetchSyncCount();
-    const syncInt = setInterval(fetchSyncCount, 15000); // Poll every 15s for the header
-
     return () => {
       window.removeEventListener("newNotification", updateCount);
-      window.removeEventListener("online", handleConnectivity);
-      window.removeEventListener("offline", handleConnectivity);
-      clearInterval(connInt);
-      clearInterval(syncInt);
     };
   }, []);
 

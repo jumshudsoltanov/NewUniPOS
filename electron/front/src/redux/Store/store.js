@@ -10,6 +10,7 @@ import PaymentMethodsSlice from "../Slices/PaymentMethodsSlice";
 import SalesTypesSlice from "../Slices/SalesTypesSlice";
 import CustomersSlice from "../Slices/CustomersSlice";
 import ProductSlice from "../Slices/ProductSlice";
+import SyncSlice from "../Slices/SyncSlice";
 
 export default configureStore({
   reducer: {
@@ -24,5 +25,6 @@ export default configureStore({
     SalesTypesSlice: SalesTypesSlice,
     CustomersSlice: CustomersSlice,
     ProductSlice: ProductSlice,
+    SyncSlice: SyncSlice,
   },
 });

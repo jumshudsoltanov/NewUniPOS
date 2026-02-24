@@ -110,9 +110,14 @@ const Check = () => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  const [syncCount, setSyncCount] = useState(0);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [hasInternet, setHasInternet] = useState(true);
+  const {
+    pendingCount: syncCount,
+    lastSyncedDelta: syncedCount,
+    showSyncedBadge,
+    isOnline,
+    hasInternet
+  } = useSelector((state) => state.SyncSlice);
+
   const [showClock, setShowClock] = useState(() => {
     return localStorage.getItem("showHeaderClock") === "true";
   });
@@ -334,38 +339,14 @@ const Check = () => {
     updateCount();
     window.addEventListener("newNotification", updateCount);
 
-    // Connectivity Checks
-    const handleConnectivity = () => {
-      setIsOnline(navigator.onLine);
-      if (window.electronAPI && window.electronAPI.checkInternet) {
-        window.electronAPI.checkInternet().then(setHasInternet).catch(() => setHasInternet(false));
-      }
-    };
-    window.addEventListener("online", handleConnectivity);
-    window.addEventListener("offline", handleConnectivity);
-    const connInt = setInterval(handleConnectivity, 5000);
-
-    // Clock Interval
     const clockInt = setInterval(() => setCurrentTime(new Date()), 1000);
-
-    // Sync Count Polling
-    const fetchSyncCount = () => {
-      if (window.electronAPI && window.electronAPI.getSyncStatus) {
-        window.electronAPI.getSyncStatus().then(st => setSyncCount(st.pendingCount || 0)).catch(console.error);
-      }
-    };
-    fetchSyncCount();
-    const syncInt = setInterval(fetchSyncCount, 15000);
 
     return () => {
       window.removeEventListener("newNotification", updateCount);
-      window.removeEventListener("online", handleConnectivity);
-      window.removeEventListener("offline", handleConnectivity);
-      clearInterval(connInt);
-      clearInterval(syncInt);
       clearInterval(clockInt);
     };
   }, []);
+
 
   const [menuViewMode, setMenuViewMode] = useState("ROOT");
   const [selectedGenCat, setSelectedGenCat] = useState(null);
@@ -758,6 +739,7 @@ const Check = () => {
               </div>
 
               <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
+
                 <div
                   className="sidebar-icon check-lock"
                   onClick={() => {
@@ -1111,48 +1093,51 @@ const Check = () => {
 
               <div className="tools-divider"></div>
 
-              {/* Wifi Icon */}
               <button
                 className="header-icon-btn small-icon-btn wifi-icon position-relative"
                 onClick={() => setShowStatusModal(true)}
                 style={{ cursor: "pointer", border: "none", background: "none", padding: "0 20px 0 12px" }}
               >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
-                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
-                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
-                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
-                    stroke={!isOnline ? "#FF4B4B" : (!hasInternet || syncCount > 0 ? "#F59E0B" : "#00FF6A")}
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+                <div className="wifi-badge-container">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2 8.3601C8.06 3.6801 15.94 3.6801 22 8.3601"
+                      stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M4.91 11.8401C9.21 8.5201 14.8 8.5201 19.1 11.8401"
+                      stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M6.79 15.4902C9.94 13.0502 14.05 13.0502 17.2 15.4902"
+                      stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M9.4 19.1501C10.98 17.9301 13.03 17.9301 14.61 19.1501"
+                      stroke={!isOnline || !hasInternet ? "#FFA500" : (syncCount > 0 ? "#F59E0B" : "#00FF6A")}
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  {showSyncedBadge && syncedCount > 0 && <span className="sync-badge-done">{syncedCount}</span>}
+                  {syncCount > 0 && <span className="sync-badge-pending">{syncCount}</span>}
+                </div>
               </button>
             </div>
 
