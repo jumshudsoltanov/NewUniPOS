@@ -10,6 +10,7 @@ import Checks from "./components/Checks/Checks";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
+import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "./redux/Slices/CustomersSlice";
 import { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } from "./redux/Slices/SyncSlice";
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
@@ -138,6 +139,10 @@ function AppContent() {
           const data = await dispatch(authPos(storageData)).unwrap();
           localStorage.setItem("authResult", JSON.stringify(data));
 
+          // Pre-load customers and groups
+          dispatch(fetchCustomersFromAdmin());
+          dispatch(fetchCustomerGroupsFromAdmin());
+
           // Yalnız root-dursa /pin-ə yönləndir, yoxsa olduğu yerdə qalsın
           if (currentPath === "/") {
             navigate("/pin");
@@ -149,6 +154,11 @@ function AppContent() {
 
           if (isNetworkError && authResult) {
             console.log("Offline mode: using cached authResult");
+
+            // Also try to fetch cached/initial customers if possible (though they are online-only)
+            dispatch(fetchCustomersFromAdmin());
+            dispatch(fetchCustomerGroupsFromAdmin());
+
             if (currentPath === "/") {
               navigate("/pin");
             }

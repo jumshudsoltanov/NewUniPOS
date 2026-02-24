@@ -1,4 +1,4 @@
-const { default: axios } = require("axios");
+const axios = require("axios");
 const LoginModel = require("../model/LoginModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
 const TablesModel = require("../model/TablesModel");
@@ -37,9 +37,11 @@ const getTableGroups = async (passedProfileId) => {
       }
 
       // Insert / update
-      await TableGroupsModel.bulkCreate(apiTableGroups, {
-        updateOnDuplicate: Object.keys(apiTableGroups[0]),
-      });
+      if (apiTableGroups.length > 0) {
+        await TableGroupsModel.bulkCreate(apiTableGroups, {
+          updateOnDuplicate: Object.keys(apiTableGroups[0]),
+        });
+      }
 
       console.log("DB sync olundu: insert/update + silindi");
     }
@@ -76,9 +78,11 @@ const getTables = async (passedProfileId) => {
       }
 
       // Insert / update
-      await TablesModel.bulkCreate(apiTables, {
-        updateOnDuplicate: Object.keys(apiTables[0]),
-      });
+      if (apiTables.length > 0) {
+        await TablesModel.bulkCreate(apiTables, {
+          updateOnDuplicate: Object.keys(apiTables[0]),
+        });
+      }
 
       console.log("DB sync olundu: insert/update + silindi");
     }

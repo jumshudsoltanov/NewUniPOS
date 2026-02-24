@@ -29,7 +29,7 @@ import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
 import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount } from "../../redux/Slices/OrdersSlice";
-import { fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
+import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { printCustomerReceipt } from "../../utils/printerHelpers";
@@ -325,11 +325,13 @@ const Check = () => {
         getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }),
       );
     }
-    // Also fetch customers so that they are available for mapping customer_id -> name
+    // Customer data is now pre-loaded in App.jsx. 
+    // We only trigger if it's somehow missing from state.
     if (!customers || customers.length === 0) {
       dispatch(fetchCustomersFromAdmin());
+      dispatch(fetchCustomerGroupsFromAdmin());
     }
-  }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id]);
+  }, [id, tableId, books, dispatch, loginedProfileData?.data?.profile?.id, customers?.length]);
 
   useEffect(() => {
     const updateCount = () => {

@@ -14,10 +14,6 @@ const LoginModel = db.sequelize.define(
       type: DataTypes.TINYINT,
       defaultValue: 0,
     },
-    is_master_slave_active: {
-      type: DataTypes.TINYINT,
-      defaultValue: 0,
-    },
 
     logo: DataTypes.TEXT("long"),
     super_admin_logo: DataTypes.TEXT("long"),
@@ -90,13 +86,7 @@ const LoginModel = db.sequelize.define(
     is_scroll: DataTypes.INTEGER,
     is_timer: DataTypes.INTEGER,
 
-    is_master_slave_active: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-
     parent_id: DataTypes.INTEGER,
-
     is_sprt_printer: DataTypes.INTEGER,
     qr_on_check: DataTypes.INTEGER,
 
@@ -113,14 +103,11 @@ const LoginModel = db.sequelize.define(
     mobile_token: DataTypes.TEXT,
   },
   {
-    createdAt: true,
-    updatedAt: true,
-    deletedAt: true,
     modelName: "LoginModel",
     underscored: true,
-    version: true,
     tableName: "profiles",
     timestamps: true,
+    paranoid: true,
   },
 );
 

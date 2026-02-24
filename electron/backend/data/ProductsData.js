@@ -1,4 +1,4 @@
-const { default: axios } = require("axios");
+const axios = require("axios");
 const GeneralCategoriesModel = require("../model/GeneralCategoriesModel");
 const CategoriesModel = require("../model/CategoriesModel");
 const ProductsModel = require("../model/ProductsModel");
@@ -135,6 +135,8 @@ const getProducts = async (passedProfileId) => {
 
     let printerMap = {};
     try {
+      // Small delay before fetching printer-product mappings to help with rate limits
+      await new Promise(resolve => setTimeout(resolve, 500));
       const v2Response = await axios.get(`https://api.unipos.tech/api/products?profile_id=${profile_id}&per_page=1000`);
       if (v2Response.data && Array.isArray(v2Response.data.items)) {
         v2Response.data.items.forEach(item => {

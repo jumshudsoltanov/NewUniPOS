@@ -1,4 +1,4 @@
-const { default: axios } = require("axios");
+const axios = require("axios");
 const LoginModel = require("../model/LoginModel");
 const PrintersModel = require("../model/PrintersModel");
 const { Op } = require("sequelize");
@@ -36,9 +36,11 @@ const getPrinters = async (passedProfileId) => {
             }
 
             // Insert / update
-            await PrintersModel.bulkCreate(apiPrinters, {
-                updateOnDuplicate: ["profile_id", "name", "local_name", "is_cashier", "type"],
-            });
+            if (apiPrinters.length > 0) {
+                await PrintersModel.bulkCreate(apiPrinters, {
+                    updateOnDuplicate: ["profile_id", "name", "local_name", "is_cashier", "type"],
+                });
+            }
 
             console.log("Printers DB sync olundu: insert/update + silindi");
         }

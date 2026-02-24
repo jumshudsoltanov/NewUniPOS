@@ -1,4 +1,4 @@
-const { default: axios } = require("axios");
+const axios = require("axios");
 const SalesTypesModal = require("../model/SalesTypesModal");
 const LoginModel = require("../model/LoginModel");
 const { Op } = require("sequelize");

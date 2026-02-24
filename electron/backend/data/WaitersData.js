@@ -1,4 +1,4 @@
-const { default: axios } = require("axios");
+const axios = require("axios");
 const LoginModel = require("../model/LoginModel");
 const WaitersModel = require("../model/WaitersModel");
 const { Op } = require("sequelize");
@@ -36,9 +36,11 @@ const getWaitersList = async (passedProfileId) => {
       }
 
       // Insert / update
-      await WaitersModel.bulkCreate(apiWaiters, {
-        updateOnDuplicate: Object.keys(apiWaiters[0]),
-      });
+      if (apiWaiters.length > 0) {
+        await WaitersModel.bulkCreate(apiWaiters, {
+          updateOnDuplicate: Object.keys(apiWaiters[0]),
+        });
+      }
 
       console.log("DB sync olundu: insert/update + silindi");
     }

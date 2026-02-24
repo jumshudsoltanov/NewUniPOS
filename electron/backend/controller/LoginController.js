@@ -40,12 +40,29 @@ const getLogin = async (req, res) => {
 
     // Always clear old profile and upsert the current active one (Master or Slave)
     await LoginModel.destroy({ where: {} });
-    await LoginModel.upsert({
-      profile_id: profile.id,
-      is_master: isMaster ? 1 : 0,
-      is_master_slave_active: isMasterSlaveActive ? 1 : 0,
-      ...profile,
+
+    // Define allowed fields to avoid Sequelize errors from unknown API fields
+    const allowedFields = Object.keys(LoginModel.rawAttributes);
+    const filteredProfile = {};
+    Object.keys(profile).forEach(key => {
+      if (allowedFields.includes(key)) {
+        filteredProfile[key] = profile[key];
+      }
     });
+
+    try {
+      await LoginModel.upsert({
+        ...filteredProfile,
+        profile_id: profile.id,
+        is_master: isMaster ? 1 : 0,
+        is_master_slave_active: isMasterSlaveActive ? 1 : 0,
+        kitchen_receipt: terminal?.kitchen_receipt !== undefined ? terminal.kitchen_receipt : filteredProfile.kitchen_receipt,
+        customer_receipt: terminal?.customer_receipt !== undefined ? terminal.customer_receipt : filteredProfile.customer_receipt,
+      });
+    } catch (upsertError) {
+      console.error("LoginModel Upsert Error:", upsertError.message);
+      // Fallback: try to just create if upsert fails, though upsert is usually safer
+    }
 
     if (global.isMasterNode) {
       if (global.httpServer) {
@@ -80,9 +97,11 @@ const getLogin = async (req, res) => {
 
     res.status(200).json(response.data);
   } catch (error) {
+    console.error("Login Controller Error:", error);
     res.status(500).json({
       message: "Login zamanı xəta baş verdi",
       error: error.response?.data || error.message,
+      stack: error.stack
     });
   }
 };

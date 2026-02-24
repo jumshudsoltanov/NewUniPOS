@@ -26,7 +26,11 @@ const KitchenReceipt = ({
     const cleanWaiter = String(waiter).replace(/ofisiant/gi, "").trim();
 
     const baseFont = Number(terminalInfo?.kitchen_receipt || checkData?.kitchen_receipt || 0);
-    const fs = (n) => `${n + baseFont}px`;
+    // If baseFont is non-zero, apply a more significant increase (e.g. baseFont * 2)
+    const fs = (n) => {
+        if (baseFont === 0) return `${n}px`;
+        return `${n + (baseFont * 2)}px`;
+    };
 
     const styles = {
         receipt: {

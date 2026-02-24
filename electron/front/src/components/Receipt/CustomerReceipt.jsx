@@ -42,7 +42,10 @@ const CustomerReceipt = ({
     ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     const baseFont = Number(terminalInfo?.customer_receipt || profileData?.data?.customer_receipt || profileData?.data?.profile?.customer_receipt || 0);
-    const fs = (baseSize) => `${baseSize + baseFont}px`;
+    const fs = (baseSize) => {
+        if (baseFont === 0) return `${baseSize}px`;
+        return `${baseSize + (baseFont * 2)}px`;
+    };
 
     const isQrHidden = Number(terminalInfo?.qr_on_check) === 1;
 

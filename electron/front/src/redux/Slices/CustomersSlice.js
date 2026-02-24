@@ -3,32 +3,14 @@ import axios from "axios";
 
 const ADMIN_API = "https://api.unipos.tech/api";
 
-// Check if internet is available
-const checkOnline = async () => {
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
-        await fetch("https://api.unipos.tech/api", {
-            method: "HEAD",
-            mode: "no-cors",
-            signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        return true;
-    } catch {
-        return false;
-    }
-};
+
 
 // Fetch customers from admin API
 export const fetchCustomersFromAdmin = createAsyncThunk(
     "customers/fetchFromAdmin",
     async (params = {}, thunkAPI) => {
         try {
-            const isOnline = await checkOnline();
-            if (!isOnline) {
-                return thunkAPI.rejectWithValue("No internet connection");
-            }
+
 
             const state = thunkAPI.getState();
             const profileId = state.LoginSlice?.loginedProfileData?.data?.profile?.id;
@@ -56,10 +38,7 @@ export const fetchCustomerGroupsFromAdmin = createAsyncThunk(
     "customers/fetchGroupsFromAdmin",
     async (_, thunkAPI) => {
         try {
-            const isOnline = await checkOnline();
-            if (!isOnline) {
-                return thunkAPI.rejectWithValue("No internet connection");
-            }
+
 
             const state = thunkAPI.getState();
             const profileId = state.LoginSlice?.loginedProfileData?.data?.profile?.id;
@@ -82,10 +61,7 @@ export const createCustomerViaAdmin = createAsyncThunk(
     "customers/createViaAdmin",
     async (customerData, thunkAPI) => {
         try {
-            const isOnline = await checkOnline();
-            if (!isOnline) {
-                return thunkAPI.rejectWithValue("No internet connection");
-            }
+
 
             const state = thunkAPI.getState();
             const profileId = state.LoginSlice?.loginedProfileData?.data?.profile?.id;
@@ -109,10 +85,7 @@ export const updateCustomerViaAdmin = createAsyncThunk(
     "customers/updateViaAdmin",
     async ({ id, customerData }, thunkAPI) => {
         try {
-            const isOnline = await checkOnline();
-            if (!isOnline) {
-                return thunkAPI.rejectWithValue("No internet connection");
-            }
+
 
             const state = thunkAPI.getState();
             const profileId = state.LoginSlice?.loginedProfileData?.data?.profile?.id;

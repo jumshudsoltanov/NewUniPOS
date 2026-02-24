@@ -11,6 +11,7 @@ const OrdersModel = require("./model/OrdersModel");
 const OrdersItemsModel = require("./model/OrdersItemsModel");
 const WaitersModel = require("./model/WaitersModel");
 const LoginModel = require("./model/LoginModel");
+const OrderPaymentsModel = require("./model/OrderPaymentsModel");
 const GeneralCategoriesModel = require("./model/GeneralCategoriesModel");
 const CategoriesModel = require("./model/CategoriesModel");
 const ProductsModel = require("./model/ProductsModel");
@@ -255,9 +256,6 @@ ipcMain.handle("re-evaluate-role", async () => {
 
   // Initial check
   await checkTerminalRole(server);
-
-  // Safety re-check after 10 seconds just in case of slow DB/Migrations or delayed initial data
-  setTimeout(() => checkTerminalRole(server), 10000);
 })();
 
 // Discovery Endpoint for TCP Sweeping

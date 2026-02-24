@@ -1,4 +1,4 @@
-const { default: axios } = require("axios");
+const axios = require("axios");
 const { Op } = require("sequelize");
 const TagsModel = require("../model/TagsModel");
 const LoginModel = require("../model/LoginModel");
@@ -35,9 +35,11 @@ const getTags = async (passedProfileId) => {
       }
 
       // Insert / update
-      await TagsModel.bulkCreate(apiTables, {
-        updateOnDuplicate: Object.keys(apiTables[0]),
-      });
+      if (apiTables.length > 0) {
+        await TagsModel.bulkCreate(apiTables, {
+          updateOnDuplicate: Object.keys(apiTables[0]),
+        });
+      }
 
       console.log("DB sync olundu: insert/update + silindi");
     }

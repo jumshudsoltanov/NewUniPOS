@@ -1,7 +1,7 @@
 const PaymentMethodsModel = require("../model/PaymentMethodsModel");
 const LoginModel = require("../model/LoginModel");
 const { Op } = require("sequelize");
-const { default: axios } = require("axios");
+const axios = require("axios");
 
 const profileData = async () => {
   const profile = await LoginModel.findOne({ attributes: ["id"], raw: true });
