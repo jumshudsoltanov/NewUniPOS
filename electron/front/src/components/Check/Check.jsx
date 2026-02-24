@@ -1439,7 +1439,7 @@ const Check = () => {
                                 toast.success("Sıralama uğurla yadda saxlanıldı!");
 
                                 // 3. Sync and Refresh in Background
-                                axios.post(LOCAL_SYNC_URL).then(() => {
+                                axios.post(`/sync/refresh/${loginedProfileData?.data?.profile?.id}`).then(() => {
                                   const profileId = loginedProfileData?.data?.profile?.id;
                                   if (profileId) {
                                     dispatch(menuWithGeneralCategories(profileId));

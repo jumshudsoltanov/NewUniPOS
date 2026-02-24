@@ -96,24 +96,28 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 root.unmount();
                 document.body.removeChild(container);
 
-                const logError = async (errorMsg) => {
-                    try {
-                        await axios.post(`/orders-items/${orderData.orderId}/logs`, {
-                            action: "Mətbəx Çapı Xətası",
-                            waiterName: orderData.waiter || "Sistem",
-                            details: `${printerName} printerinə çap göndərilə bilmədi. Xəta: ${errorMsg}`,
-                            time: new Date().toISOString()
-                        });
-                    } catch (e) {
-                        console.error("Error logging print failure:", e);
+                const profile = orderData.profileData?.data?.profile || JSON.parse(localStorage.getItem("profile") || "{}");
+                const isMasterProductPrinting = profile.is_master_product_printing === 1;
+                const isMaster = profile.is_master === 1;
+                const isMasterSlaveActive = profile.is_master_slave_active === 1;
+
+                // Delegation Logic: Product/Kitchen Prints
+                if (isMasterProductPrinting && isMasterSlaveActive && !isMaster) {
+                    const { getSocket } = require("./apiConfig");
+                    const socket = getSocket();
+                    if (socket && socket.connected) {
+                        console.log(`[PRINTER] Delegating Product print to Master: ${printerName}`);
+                        socket.emit("delegate_print", { html, printerName });
+                        continue;
                     }
-                };
+                }
+
+                // Local Print Logic (fetch actual printer target)
+                const targetPrinter = batch[printerName][0]?.usb_name || printerName;
 
                 if (window.electronAPI && window.electronAPI.printReceipt) {
-                    console.log(`[PRINTER] Sending to Electron API: ${printerName}`);
-
-                    // Use a race to prevent permanent hang if Electron API doesn't return
-                    const printPromise = window.electronAPI.printReceipt({ html, printerName });
+                    console.log(`[PRINTER] Sending to Electron API: ${targetPrinter}`);
+                    const printPromise = window.electronAPI.printReceipt({ html, printerName: targetPrinter });
                     const timeoutPromise = new Promise((_, reject) =>
                         setTimeout(() => reject(new Error("Çap vaxtı bitdi (Timeout)")), 15000)
                     );
@@ -213,10 +217,28 @@ export const printCustomerReceipt = async (orderData, profileData) => {
     try {
         const html = container.innerHTML;
 
+        const profile = profileData?.data?.profile || JSON.parse(localStorage.getItem("profile") || "{}");
+        const isMasterCashierPrinting = profile.is_master_cashier_printing === 1;
+        const isMaster = profile.is_master === 1;
+        const isMasterSlaveActive = profile.is_master_slave_active === 1;
+
+        if (isMasterCashierPrinting && isMasterSlaveActive && !isMaster) {
+            const { getSocket } = require("./apiConfig");
+            const socket = getSocket();
+            if (socket && socket.connected) {
+                console.log(`[PRINTER] Delegating Customer Receipt to Master: ${printerName}`);
+                socket.emit("delegate_print", { html, printerName });
+                return { success: true, delegated: true };
+            }
+        }
+
+        // Local target printer (USB or IP)
+        const targetPrinter = printer?.usb_name || printerName;
+
         if (window.electronAPI && window.electronAPI.printReceipt) {
             const result = await window.electronAPI.printReceipt({
                 html,
-                printerName: printerName
+                printerName: targetPrinter
             });
 
             if (!result || !result.success) {

@@ -92,6 +92,46 @@ const Header = ({ showBack, backPath, onBack }) => {
     setDragOverHallIndex(null);
   };
 
+  const touchRef = useRef({ startIndex: null, currentIndex: null });
+
+  const handleHallTouchStart = (index) => {
+    if (!isTableEditMode) return;
+    touchRef.current.startIndex = index;
+    setDraggedHallIndex(index);
+  };
+
+  const handleHallTouchMove = (e) => {
+    if (!isTableEditMode || touchRef.current.startIndex === null) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el) {
+      const li = el.closest('.hall-btn');
+      if (li) {
+        const allItems = Array.from(li.parentElement.children);
+        const idx = allItems.indexOf(li);
+        if (idx !== -1) {
+          touchRef.current.currentIndex = idx;
+          setDragOverHallIndex(idx);
+        }
+      }
+    }
+  };
+
+  const handleHallTouchEnd = () => {
+    if (!isTableEditMode) return;
+    const { startIndex, currentIndex } = touchRef.current;
+    if (startIndex !== null && currentIndex !== null && startIndex !== currentIndex) {
+      const newHalls = [...orderedHalls];
+      const [moved] = newHalls.splice(startIndex, 1);
+      newHalls.splice(currentIndex, 0, moved);
+      const newOrder = newHalls.map(h => h.id);
+      dispatch(setTempHallOrder(newOrder));
+    }
+    touchRef.current = { startIndex: null, currentIndex: null };
+    setDraggedHallIndex(null);
+    setDragOverHallIndex(null);
+  };
+
   // Clock state
   const [showClock, setShowClock] = useState(() => {
     return localStorage.getItem("showHeaderClock") === "true";
@@ -247,6 +287,9 @@ const Header = ({ showBack, backPath, onBack }) => {
                     onDragOver={(e) => handleHallDragOver(e, index)}
                     onDrop={(e) => handleHallDrop(e, index)}
                     onDragEnd={handleHallDragEnd}
+                    onTouchStart={() => handleHallTouchStart(index)}
+                    onTouchMove={handleHallTouchMove}
+                    onTouchEnd={handleHallTouchEnd}
                     style={{
                       cursor: isTableEditMode ? 'grab' : 'pointer',
                       opacity: isTableEditMode && draggedHallIndex === index ? 0.5 : 1

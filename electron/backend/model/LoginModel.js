@@ -100,6 +100,14 @@ const LoginModel = db.sequelize.define(
       defaultValue: 0,
     },
 
+    is_master_cashier_printing: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
+    is_master_product_printing: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
     mobile_token: DataTypes.TEXT,
   },
   {

@@ -27,9 +27,25 @@ const PrintersModel = db.sequelize.define(
       allowNull: true,
     },
     type: {
-      type: DataTypes.TEXT, 
+      type: DataTypes.TEXT,
       allowNull: true,
     },
+    ip: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    port: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    connection_type: {
+      type: DataTypes.TEXT, // 'network' or 'usb'
+      defaultValue: 'network',
+    },
+    usb_name: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    }
   },
   {
     tableName: "printers",

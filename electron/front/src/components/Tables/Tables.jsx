@@ -370,6 +370,46 @@ const Tables = () => {
     setDragOverIndex(null);
   };
 
+  const tableTouchRef = useRef({ startIndex: null, currentIndex: null });
+
+  const handleTableTouchStart = (index) => {
+    if (!isTableEditMode) return;
+    tableTouchRef.current.startIndex = index;
+    setDraggedIndex(index);
+  };
+
+  const handleTableTouchMove = (e) => {
+    if (!isTableEditMode || tableTouchRef.current.startIndex === null) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el) {
+      const col = el.closest('.drag-target');
+      if (col) {
+        const allItems = Array.from(col.parentElement.children).filter(c => c.classList.contains('drag-target'));
+        const idx = allItems.indexOf(col);
+        if (idx !== -1) {
+          tableTouchRef.current.currentIndex = idx;
+          setDragOverIndex(idx);
+        }
+      }
+    }
+  };
+
+  const handleTableTouchEnd = () => {
+    if (!isTableEditMode) return;
+    const { startIndex, currentIndex } = tableTouchRef.current;
+    if (startIndex !== null && currentIndex !== null && startIndex !== currentIndex) {
+      const newTables = [...currentTables];
+      const [movedItem] = newTables.splice(startIndex, 1);
+      newTables.splice(currentIndex, 0, movedItem);
+      const newOrderIds = newTables.map(t => t.id);
+      dispatch(setTempTableOrder({ hallId: currentHallId, order: newOrderIds }));
+    }
+    tableTouchRef.current = { startIndex: null, currentIndex: null };
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   if (currentTables.length === 0) {
     return (
       <Container className="mt-4">
@@ -449,7 +489,7 @@ const Tables = () => {
           <Row className="g-3">
             {currentTables.map((table, index) => (
               <Col
-                xs={6}
+                xs={4}
                 sm={4}
                 md={3}
                 lg={2}
@@ -462,6 +502,9 @@ const Tables = () => {
                 onDragOver={isTableEditMode ? (e) => handleDragOver(e, index) : undefined}
                 onDrop={isTableEditMode ? (e) => handleDrop(e, index) : undefined}
                 onDragEnd={isTableEditMode ? handleDragEnd : undefined}
+                onTouchStart={isTableEditMode ? () => handleTableTouchStart(index) : undefined}
+                onTouchMove={isTableEditMode ? handleTableTouchMove : undefined}
+                onTouchEnd={isTableEditMode ? handleTableTouchEnd : undefined}
                 style={{
                   opacity: isTableEditMode && draggedIndex === index ? 0.4 : 1,
                   transform: isTableEditMode && dragOverIndex === index && draggedIndex !== index ? 'scale(1.05)' : 'none',

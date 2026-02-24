@@ -1,9 +1,12 @@
 /* Base Modal Styles */
 .product-modal .modal-content {
-    border-radius: 12px;
+    border-radius: 8px;
     border: none;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .product-modal-header {
@@ -49,8 +52,10 @@
 }
 
 .product-modal-body {
-    padding: 24px;
+    padding: 20px;
     background: white;
+    overflow-y: auto;
+    flex: 1;
 }
 
 /* Form Styles */

@@ -97,6 +97,23 @@ ipcMain.handle("open-anydesk", () => {
   return true;
 });
 
+ipcMain.handle("get-system-printers", async () => {
+  try {
+    if (mainWindow && mainWindow.webContents) {
+      if (typeof mainWindow.webContents.getPrintersAsync === 'function') {
+        return await mainWindow.webContents.getPrintersAsync();
+      }
+      if (typeof mainWindow.webContents.getPrinters === 'function') {
+        return mainWindow.webContents.getPrinters();
+      }
+    }
+    return [];
+  } catch (e) {
+    console.error("Error getting system printers:", e);
+    return [];
+  }
+});
+
 ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
   let printWindow = new BrowserWindow({
     show: false,

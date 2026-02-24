@@ -79,6 +79,17 @@ function AppContent() {
     const syncInt = setInterval(fetchSyncCount, 1000);
     const socketInt = setInterval(checkSocket, 5000);
 
+    // Master terminal listener for delegated prints
+    const socket = getSocket();
+    if (socket) {
+      socket.on("print_delegated", async (data) => {
+        console.log("🖨️ Delegated print received for:", data.printerName);
+        if (window.electronAPI?.printReceipt) {
+          await window.electronAPI.printReceipt(data);
+        }
+      });
+    }
+
     return () => {
       window.removeEventListener("online", handleConnectivity);
       window.removeEventListener("offline", handleConnectivity);

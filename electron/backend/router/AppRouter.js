@@ -20,6 +20,9 @@ router.post("/other-sale", SalesController.CreateNewOtherOrders);
 router.get("/waiters/:pin", WaitersController.getWaiterInfo);
 router.get("/tables/:profileId", TablesController.getTables);
 router.get("/pos/printers/:profileId", PrintersController.getPrinters);
+router.put("/printers/:id", PrintersController.updatePrinter);
+router.post("/printers/test-print", PrintersController.testPrint);
+router.patch("/profiles/master-printing", PrintersController.toggleMasterPrinting);
 router.get("/waiters/:profileId/list", WaitersController.getWaiterLists);
 router.get("/tags/:profileId/list", TagsController.getTagsList);
 router.get(
@@ -184,5 +187,34 @@ router.post(
   "/orders-items/:orderId/increment-print-count",
   OrdersItemsController.incrementPrintCount,
 );
+
+router.post("/sync/refresh/:profileId", async (req, res) => {
+  try {
+    const { getPrinters } = require("../data/PrintersData");
+    const { getWaitersList } = require("../data/WaitersData");
+    const { getTableGroups, getTables } = require("../data/TablesData");
+    const { getGeneralCategories, getCategories, getProducts } = require("../data/ProductsData");
+    const { getPaymentMethods } = require("../data/PaymentMethodsData");
+    const { getTags } = require("../data/TagsData");
+    const { getSalesTypes } = require("../data/SalesTypesData");
+    const profileId = req.params.profileId;
+    await Promise.all([
+      getWaitersList(profileId),
+      getTableGroups(profileId),
+      getTables(profileId),
+      getGeneralCategories(profileId),
+      getCategories(profileId),
+      getProducts(profileId),
+      getTags(profileId),
+      getPaymentMethods(profileId),
+      getSalesTypes(profileId),
+      getPrinters(profileId),
+    ]);
+    res.json({ success: true, message: "Data synced" });
+  } catch (e) {
+    console.error("Sync refresh error:", e.message);
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
 
 module.exports = router;

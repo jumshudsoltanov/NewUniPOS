@@ -4,10 +4,12 @@ import { useSelector, useDispatch } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "sonner";
+import apiConfig from "../../utils/apiConfig";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
+import DevicesModal from "./DevicesModal";
 import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import "./Settings.css";
 
@@ -20,6 +22,7 @@ const Settings = () => {
     const [showSupportModal, setShowSupportModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
     const [showCustomersModal, setShowCustomersModal] = useState(false);
+    const [showDevicesModal, setShowDevicesModal] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showClock, setShowClock] = useState(() => {
         return localStorage.getItem("showHeaderClock") === "true";
@@ -66,10 +69,12 @@ const Settings = () => {
         setIsRefreshing(true);
         const toastId = toast.loading("Məlumatlar yenilənir...");
         try {
+            const profileId = loginedProfileData.data.profile.id;
             await Promise.all([
-                dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap(),
-                dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id })).unwrap(),
-                new Promise(resolve => setTimeout(resolve, 5000))
+                apiConfig.post(`/sync/refresh/${profileId}`),
+                dispatch(getTableGroups(profileId)).unwrap(),
+                dispatch(getActiveOrders({ profileId })).unwrap(),
+                new Promise(resolve => setTimeout(resolve, 3000))
             ]);
             toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
         } catch (error) {
@@ -120,6 +125,7 @@ const Settings = () => {
             label: "Cihazlar",
             icon: <i className="bi bi-laptop"></i>,
             highlight: true,
+            onClick: () => setShowDevicesModal(true),
         },
     ];
 
@@ -228,6 +234,11 @@ const Settings = () => {
             <CustomersSourceModal
                 show={showCustomersModal}
                 onHide={() => setShowCustomersModal(false)}
+            />
+
+            <DevicesModal
+                show={showDevicesModal}
+                onHide={() => setShowDevicesModal(false)}
             />
 
             {/* Refreshing Overlay */}

@@ -1,0 +1,283 @@
+.devices-modal .modal-content {
+    border-radius: 24px;
+    border: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.devices-modal .modal-dialog {
+    max-width: 960px;
+}
+
+.devices-modal .modal-header {
+    background: #4F85F4;
+    border-bottom: none;
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.devices-modal .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.devices-modal .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.9;
+    margin: 0;
+}
+
+.devices-modal .modal-body {
+    padding: 0;
+    display: flex;
+    background: #fff;
+}
+
+.devices-sidebar {
+    width: 190px;
+    min-width: 190px;
+    border-right: 1px solid #f0f2f5;
+    padding: 16px 0;
+}
+
+.devices-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    color: #64748b;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+}
+
+.devices-menu-item.active {
+    background: #f0f5ff;
+    color: #4F85F4;
+    border-left-color: #4F85F4;
+    font-weight: 600;
+}
+
+.devices-menu-item i {
+    font-size: 17px;
+    width: 20px;
+    text-align: center;
+}
+
+.devices-content {
+    flex: 1;
+    padding: 20px 24px;
+    background: #f8fafc;
+    overflow-y: auto;
+    max-height: 70vh;
+}
+
+.master-modes-grid {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.master-printing-card {
+    flex: 1;
+    padding: 14px 16px;
+    background: #fff;
+    border: 2px solid #f0f2f5;
+    border-radius: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.master-printing-info h4 {
+    margin: 0 0 2px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.master-printing-info p {
+    margin: 0;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.printers-grid {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.printer-edit-card {
+    flex: 1;
+    min-width: 300px;
+    background: #fff;
+    border: 2px solid #f0f2f5;
+    border-radius: 18px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.printer-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.printer-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: #f0f5ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #4F85F4;
+    flex-shrink: 0;
+}
+
+.printer-card-title h5 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.printer-card-title span {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.connection-toggle {
+    display: flex;
+    background: #f1f5f9;
+    padding: 3px;
+    border-radius: 10px;
+    gap: 3px;
+}
+
+.conn-btn {
+    flex: 1;
+    height: 30px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.conn-btn.active {
+    background: #fff;
+    color: #1e293b;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.printer-form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 5px;
+}
+
+.printer-input,
+.printer-select {
+    width: 100%;
+    height: 38px;
+    border-radius: 12px;
+    border: 2px solid #f0f2f5;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1e293b;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fff;
+}
+
+.printer-input::placeholder {
+    color: #cbd5e1;
+}
+
+.printer-input:focus,
+.printer-select:focus {
+    border-color: #4F85F4;
+}
+
+.printer-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.btn-test {
+    flex: 1;
+    height: 38px;
+    border-radius: 12px;
+    border: 2px solid #f0f2f5;
+    background: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.btn-save-printer {
+    flex: 2;
+    height: 38px;
+    border-radius: 12px;
+    background: #4F85F4;
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(79, 133, 244, 0.25);
+}
+
+.btn-save-printer:active {
+    transform: translateY(1px) scale(0.99);
+    box-shadow: 0 2px 6px rgba(79, 133, 244, 0.2);
+}
+
+.premium-switch {
+    width: 40px;
+    height: 20px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.25s;
+    flex-shrink: 0;
+}
+
+.premium-switch.active {
+    background: #10b981;
+}
+
+.switch-handle {
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.25s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.premium-switch.active .switch-handle {
+    transform: translateX(20px);
+}

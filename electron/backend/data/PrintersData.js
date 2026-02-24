@@ -38,7 +38,7 @@ const getPrinters = async (passedProfileId) => {
             // Insert / update
             if (apiPrinters.length > 0) {
                 await PrintersModel.bulkCreate(apiPrinters, {
-                    updateOnDuplicate: ["profile_id", "name", "local_name", "is_cashier", "type"],
+                    updateOnDuplicate: ["profile_id", "name", "local_name", "is_cashier", "type", "connection_type", "usb_name", "ip", "port"],
                 });
             }
 

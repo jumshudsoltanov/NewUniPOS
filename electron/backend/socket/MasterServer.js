@@ -110,6 +110,13 @@ const initMasterServer = (server) => {
 
     io.on("connection", (socket) => {
         console.log(`🔌 Yeni terminal qoşuldu: ${socket.id}`);
+
+        socket.on("delegate_print", (data) => {
+            console.log("🖨️ Çap delegasiyası qəbul edildi:", data.printerName);
+            // Broadcast to all (Master's frontend will pick this up)
+            io.emit("print_delegated", data);
+        });
+
         socket.on("disconnect", (reason) => {
             console.log(`❌ Terminal bağlantısı kəsildi (${reason}): ${socket.id}`);
         });

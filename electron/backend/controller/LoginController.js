@@ -17,14 +17,33 @@ const getLogin = async (req, res) => {
   try {
     const { username, terminalId, password } = req.body;
 
-    const response = await axios.post(
-      "http://46.224.8.157:35627/api/terminal/login",
-      {
-        username: username,
-        terminal_id: terminalId,
-        terminal_password: password,
-      },
-    );
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      try {
+        response = await axios.post(
+          "http://46.224.8.157:35627/api/terminal/login",
+          {
+            username: username,
+            terminal_id: terminalId,
+            terminal_password: password,
+          },
+        );
+        break;
+      } catch (apiErr) {
+        if (apiErr.response?.status === 429 && attempts < maxAttempts - 1) {
+          const retryAfter = parseInt(apiErr.response.headers['retry-after'] || '30', 10);
+          const waitTime = Math.min(retryAfter, 60) * 1000;
+          console.log(`Login 429 - retry ${attempts + 1}/${maxAttempts} after ${waitTime / 1000}s`);
+          await new Promise(r => setTimeout(r, waitTime));
+          attempts++;
+        } else {
+          throw apiErr;
+        }
+      }
+    }
 
     const profile = response.data?.data?.profile;
     const terminal = response.data?.data?.terminal;
@@ -38,10 +57,8 @@ const getLogin = async (req, res) => {
 
     global.isMasterNode = isMaster;
 
-    // Always clear old profile and upsert the current active one (Master or Slave)
     await LoginModel.destroy({ where: {} });
 
-    // Define allowed fields to avoid Sequelize errors from unknown API fields
     const allowedFields = Object.keys(LoginModel.rawAttributes);
     const filteredProfile = {};
     Object.keys(profile).forEach(key => {
@@ -61,7 +78,6 @@ const getLogin = async (req, res) => {
       });
     } catch (upsertError) {
       console.error("LoginModel Upsert Error:", upsertError.message);
-      // Fallback: try to just create if upsert fails, though upsert is usually safer
     }
 
     if (global.isMasterNode) {
@@ -70,7 +86,6 @@ const getLogin = async (req, res) => {
         initMasterServer(global.httpServer);
       }
 
-      // Fetch initial data after login for the Master Cache
       await getWaitersList(profile.id);
       await getTableGroups(profile.id);
       await getTables(profile.id);
@@ -82,7 +97,6 @@ const getLogin = async (req, res) => {
       await getSalesTypes(profile.id);
     }
 
-    // Fetch the stored profile so we include local fields like background_img
     try {
       const storedProfile = await LoginModel.findOne({ where: { id: profile.id } });
       if (storedProfile && response.data && response.data.data && response.data.data.profile) {
@@ -97,11 +111,14 @@ const getLogin = async (req, res) => {
 
     res.status(200).json(response.data);
   } catch (error) {
-    console.error("Login Controller Error:", error);
-    res.status(500).json({
-      message: "Login zamanı xəta baş verdi",
+    const status = error.response?.status || 500;
+    const message = status === 429
+      ? "Server çox yüklənib. Bir neçə dəqiqə gözləyib yenidən cəhd edin."
+      : "Login zamanı xəta baş verdi";
+    console.error("Login Controller Error:", status, error.response?.data?.message || error.message);
+    res.status(status).json({
+      message,
       error: error.response?.data || error.message,
-      stack: error.stack
     });
   }
 };

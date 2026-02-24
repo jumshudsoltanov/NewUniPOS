@@ -175,6 +175,31 @@ let creaedtToTabel = async () => {
     });
 
     await db.sequelize.sync();
+
+    const safeAddColumn = async (table, col, colDef) => {
+      try {
+        const pool = db.sequelize.connectionManager.pool;
+        const conn = await pool.acquire();
+        try {
+          await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${col}\` ${colDef}`);
+          console.log(`+ Added ${table}.${col}`);
+        } catch (innerErr) {
+          if (innerErr.message && innerErr.message.includes('Duplicate')) { /* exists */ }
+          else console.warn(`Column ${table}.${col}:`, innerErr.message);
+        } finally {
+          pool.release(conn);
+        }
+      } catch (e) {
+        console.warn(`SafeAddColumn pool error for ${table}.${col}:`, e.message);
+      }
+    };
+    await safeAddColumn('profiles', 'is_master_cashier_printing', 'TINYINT DEFAULT 0');
+    await safeAddColumn('profiles', 'is_master_product_printing', 'TINYINT DEFAULT 0');
+    await safeAddColumn('printers', 'connection_type', "VARCHAR(255) DEFAULT 'network'");
+    await safeAddColumn('printers', 'usb_name', 'VARCHAR(255) DEFAULT NULL');
+    await safeAddColumn('printers', 'ip', 'VARCHAR(255) DEFAULT NULL');
+    await safeAddColumn('printers', 'port', 'INT DEFAULT NULL');
+
     console.log("Created Table Success!");
   } catch (error) {
     console.log("Table Created Error", error);
@@ -184,19 +209,24 @@ let creaedtToTabel = async () => {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const InsertData = async (profileId) => {
-  try {
-    await getWaitersList(profileId);
-    await getTableGroups(profileId);
-    await getTables(profileId);
-    await getGeneralCategories(profileId);
-    await getCategories(profileId);
-    await getProducts(profileId);
-    await getTags(profileId);
-    await getPaymentMethods(profileId);
-    await getSalesTypes(profileId);
-    await getPrinters(profileId);
-  } catch (error) {
-    console.log("error insert", error);
+  const tasks = [
+    { name: "Waiters", fn: () => getWaitersList(profileId) },
+    { name: "TableGroups", fn: () => getTableGroups(profileId) },
+    { name: "Tables", fn: () => getTables(profileId) },
+    { name: "GenCategories", fn: () => getGeneralCategories(profileId) },
+    { name: "Categories", fn: () => getCategories(profileId) },
+    { name: "Products", fn: () => getProducts(profileId) },
+    { name: "Tags", fn: () => getTags(profileId) },
+    { name: "PaymentMethods", fn: () => getPaymentMethods(profileId) },
+    { name: "SalesTypes", fn: () => getSalesTypes(profileId) },
+    { name: "Printers", fn: () => getPrinters(profileId) },
+  ];
+  for (const task of tasks) {
+    try {
+      await task.fn();
+    } catch (error) {
+      console.warn(`InsertData ${task.name} failed:`, error.message);
+    }
   }
 };
 
@@ -238,6 +268,9 @@ const checkTerminalRole = async (targetServer) => {
       global.isMasterNode = false;
       console.log(`DEBUG: Terminal role is SLAVE or NOT MASTER. profile exist: ${!!profile}, is_master: ${profile?.is_master}. global.isMasterNode set to FALSE.`);
       console.log("Terminal is NOT Master. Running as Slave. (Broadcasting disabled)");
+      if (profile?.id) {
+        InsertData(profile.id);
+      }
     }
   } catch (err) {
     console.error("Error in checkTerminalRole:", err);

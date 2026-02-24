@@ -1,18 +1,16 @@
 /* ReportModal.css */
 
 .report-modal .modal-content {
-    border-radius: 12px;
+    border-radius: 8px;
     border: none;
     overflow: hidden;
-    height: 75vh;
-    min-height: 550px;
+    max-height: 75vh;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
 
 .report-modal-dialog {
-    max-width: 1200px !important;
-    /* Significantly increased width */
+    max-width: 900px !important;
     margin: 1.75rem auto;
-    /* Ensure centering */
 }
 
 .report-modal-header {
@@ -50,24 +48,23 @@
 .report-modal-body {
     padding: 0;
     background-color: #ffffff;
-    height: calc(100% - 3.5rem);
     display: flex;
-    /* Use flexbox for the main body layout */
     overflow: hidden;
+    max-height: calc(75vh - 56px);
 }
 
 /* Sidebar (Filter Section) */
 .report-sidebar {
     background-color: #f8f9fa;
-    /* Slight off-white to distinguish sidebar */
-    padding: 1.5rem;
+    padding: 1rem;
     border-right: 1px solid #dee2e6;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    justify-content: space-between;
     overflow-y: auto;
     overflow-x: hidden;
-    /* Prevent horizontal scroll */
+    width: 340px;
+    min-width: 340px;
 }
 
 .report-content {
@@ -83,16 +80,16 @@
 .report-sidebar .form-label {
     font-weight: 600;
     color: #343a40;
-    font-size: 0.9rem;
-    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
 }
 
 .report-sidebar .form-control,
 .report-sidebar .form-select {
     border-radius: 6px;
     border: 1px solid #ced4da;
-    padding: 0.5rem 0.6rem;
-    font-size: 0.95rem;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.9rem;
     color: #495057;
     box-shadow: none;
 }
@@ -104,28 +101,23 @@
 }
 
 .report-sidebar .form-group {
-    margin-bottom: 1.5rem;
-    /* Increased spacing between groups */
+    margin-bottom: 0.6rem;
 }
 
 /* Date/Time Row Styling */
 .date-time-row {
     display: flex;
-    gap: 10px;
-    align-items: center;
+    flex-direction: column;
+    gap: 6px;
     width: 100%;
 }
 
 .date-time-row input[type="date"] {
-    flex: 1;
-    min-width: auto;
-    /* Allow natural width */
+    width: 100%;
 }
 
 .date-time-row select {
-    width: 90px !important;
-    /* Fixed width for time */
-    flex-shrink: 0;
+    width: 100% !important;
 }
 
 /* Switch Styles */
@@ -133,7 +125,7 @@
     padding-left: 0;
     display: flex;
     align-items: center;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.5rem;
     min-height: auto;
 }
 
@@ -160,7 +152,7 @@
     background-color: #0d6efd;
     color: white;
     border: none;
-    padding: 0.8rem;
+    padding: 0.6rem;
     border-radius: 6px;
     font-weight: 500;
     font-size: 1rem;
