@@ -174,7 +174,7 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
-    await db.sequelize.sync({ alter: true });
+    await db.sequelize.sync();
     console.log("Created Table Success!");
   } catch (error) {
     console.log("Table Created Error", error);
@@ -183,18 +183,18 @@ let creaedtToTabel = async () => {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const InsertData = async () => {
+const InsertData = async (profileId) => {
   try {
-    await getWaitersList();
-    await getTableGroups();
-    await getTables();
-    await getGeneralCategories();
-    await getCategories();
-    await getProducts();
-    await getTags();
-    await getPaymentMethods();
-    await getSalesTypes();
-    await getPrinters();
+    await getWaitersList(profileId);
+    await getTableGroups(profileId);
+    await getTables(profileId);
+    await getGeneralCategories(profileId);
+    await getCategories(profileId);
+    await getProducts(profileId);
+    await getTags(profileId);
+    await getPaymentMethods(profileId);
+    await getSalesTypes(profileId);
+    await getPrinters(profileId);
   } catch (error) {
     console.log("error insert", error);
   }
@@ -222,7 +222,7 @@ const checkTerminalRole = async (targetServer) => {
 
     if (profile && (Number(profile.is_master) === 1 || profile.is_master === true)) {
       global.isMasterNode = true;
-      console.log("Terminal is CONFIRMED as Master.");
+      console.log("DEBUG: Terminal role CONFIRMED as MASTER. global.isMasterNode set to TRUE.");
 
       if (profile.is_master_slave_active === 1) {
         console.log("Master-Slave mode is active. Ensuring MasterServer...");
@@ -233,9 +233,10 @@ const checkTerminalRole = async (targetServer) => {
       }
 
       // Sərfəli (Master) terminal üçün ilkin məlumatları çək və sinxronizasiyanı təmin et
-      InsertData();
+      InsertData(profile.id);
     } else {
       global.isMasterNode = false;
+      console.log(`DEBUG: Terminal role is SLAVE or NOT MASTER. profile exist: ${!!profile}, is_master: ${profile?.is_master}. global.isMasterNode set to FALSE.`);
       console.log("Terminal is NOT Master. Running as Slave. (Broadcasting disabled)");
     }
   } catch (err) {
@@ -271,8 +272,9 @@ app.get("/api/discover", (req, res) => {
 // Sync Endpoint
 app.post("/api/sync", async (req, res) => {
   try {
-    console.log("Manual sync triggered...");
-    await InsertData();
+    const { profileId } = req.body;
+    console.log("Manual sync triggered...", profileId ? `for profile ${profileId}` : "(no profileId provided)");
+    await InsertData(profileId);
     console.log("Manual sync completed.");
     res.status(200).json({ message: "Sync completed" });
   } catch (error) {

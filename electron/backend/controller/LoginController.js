@@ -36,7 +36,7 @@ const getLogin = async (req, res) => {
     const isMaster = terminal?.is_master == 1;
     const isMasterSlaveActive = terminal?.is_master_slave_active == 1;
 
-    global.isMasterNode = isMaster && isMasterSlaveActive;
+    global.isMasterNode = isMaster;
 
     // Always clear old profile and upsert the current active one (Master or Slave)
     await LoginModel.destroy({ where: {} });

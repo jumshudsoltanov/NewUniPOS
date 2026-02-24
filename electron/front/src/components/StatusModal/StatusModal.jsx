@@ -113,9 +113,19 @@ const StatusModal = ({ show, onHide }) => {
         };
     }, [show, loginedProfileData]); // Added loginedProfileData to dependencies for fetchPrinters
 
-    const handleSync = () => {
-        fetchPrinters();
-        toast.success("Məlumatlar yeniləndi");
+    const handleSync = async () => {
+        setSyncStatus(prev => ({ ...prev, isSyncing: true }));
+        try {
+            const profileId = loginedProfileData?.data?.profile?.id;
+            await axios.post("/sync", { profileId });
+            await fetchPrinters();
+            toast.success("Məlumatlar buludla sinxronizasiya olundu");
+        } catch (error) {
+            console.error("Manual sync error:", error);
+            toast.error("Sinxronizasiya xətası");
+        } finally {
+            setSyncStatus(prev => ({ ...prev, isSyncing: false }));
+        }
     };
 
     const formatDate = (dateInput) => {

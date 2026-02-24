@@ -1361,30 +1361,9 @@ const onDeleteCheck = async (req, res) => {
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
-    const updatedOrder = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
-
-    res.status(200).json({ message: "success", data: updatedOrder });
+    return res.status(200).json({ message: "success" });
   } catch (error) {
+    console.error("Delete check error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

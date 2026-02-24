@@ -32,7 +32,7 @@ import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscount
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
-import { printCustomerReceipt } from "../../utils/printerHelpers";
+import { printCustomerReceipt, processAndPrintOrders } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
@@ -82,7 +82,7 @@ const Check = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  const { products, menu } = useSelector((state) => state.OrderSlice);
+  const { products, menu, categories } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { tableGroups, currentHallId } = useSelector(
@@ -90,6 +90,7 @@ const Check = () => {
   );
   const { books } = useSelector((state) => state.BooksSlice);
   const { customers } = useSelector((state) => state.CustomersSlice);
+  const { menuDataWithCategories } = useSelector((state) => state.MenuSlice);
 
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const newOrderBtnRef = useRef(null);
@@ -455,27 +456,80 @@ const Check = () => {
   }
 
 
-  const handleDeleteCheckFunction = ({ reason, reasonName, orderId }) => {
+  const handleDeleteCheckFunction = async ({ reason, reasonName, orderId }) => {
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
     const profileId = loginedProfileData?.data?.profile?.id;
 
     // 1. Instant Redirection
     navigate("/tables", { replace: true });
+    const toastId = toast.loading("Çek silinir...");
 
-    // 2. background execution
-    dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName }))
-      .unwrap()
-      .then(() => {
+    // 2. Background execution block
+    const performBackgroundDeletion = async () => {
+      // a. Kitchen Print for all confirmed items
+      if (currentOrder?.orders_items && currentOrder.orders_items.length > 0) {
+        const itemsToPrint = currentOrder.orders_items.map(item => {
+          const menuRef = menu?.find(m => m.id == (item.product_id || item.id));
+          return {
+            ...item,
+            name: menuRef?.name || item.product?.name || item.name || "Məhsul",
+            quantity: Number(item.count || item.quantity || 0),
+            printer_details: menuRef?.printer_details || item.printer_details || [],
+            category_id: menuRef?.category_id || item.category_id,
+            changeType: 'decrease' // Mark as deleted
+          };
+        });
+
+        const menuDataWithCategoriesObj = {
+          data: menu || [],
+          categories: categories || []
+        };
+
+        const getSaleTypeNameTemp = (type, typeName) => {
+          if (typeName) return typeName;
+          if (type == 1 || type === "takeaway") return "Al-götür";
+          if (type == 2 || type === "delivery") return "Çatdırılma";
+          return "Restoranda";
+        };
+
+        const displaySaleType = getSaleTypeNameTemp(currentOrder?.sale_type, currentOrder?.sale_type_name);
+
+        try {
+          await processAndPrintOrders(
+            itemsToPrint,
+            {
+              table: currentOrder?.table_name || currentTable?.name || "Masa",
+              waiter: waiterName,
+              hallName: currentHall?.name || "",
+              orderId: currentOrder?.uuid,
+              terminalInfo: loginedProfileData?.data?.terminal || {},
+              typeName: displaySaleType,
+              checkData: currentOrder,
+              isDecrease: true
+            },
+            menuDataWithCategories || menuDataWithCategoriesObj
+          );
+        } catch (printErr) {
+          console.error("Delete Check Printing Error:", printErr);
+        }
+      }
+
+      // b. Dispatch deletion to backend
+      try {
+        await dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName })).unwrap();
         if (profileId) {
           dispatch(getTableGroups(profileId));
           dispatch(getActiveOrders({ profileId }));
         }
-        toast.success("Çek uğurla silindi");
-      })
-      .catch((error) => {
+        toast.success("Çek uğurla silindi", { id: toastId });
+      } catch (error) {
         console.error("Delayed Delete Error:", error);
-        toast.error("Silinmə zamanı xəta baş verdi");
-      });
+        toast.error("Silinmə zamanı xəta baş verdi", { id: toastId });
+      }
+    };
+
+    // Execute background logic without awaiting
+    performBackgroundDeletion();
   }
 
   const handleDeleteProduct = async () => {

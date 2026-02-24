@@ -12,6 +12,7 @@ const sequelize = new Sequelize(
     pool: 5,
     retry: 4,
     timezone: "+04:00",
+    logging: false,
   },
 );
 
