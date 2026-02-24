@@ -107,14 +107,14 @@ const CheckLockModal = ({ show, onClose, order }) => {
               ? "Kilidlənmiş qəbzlərdə dəyişiklik etmək mümkün olmayacaq."
               : "Kilid açıldıqdan sonra qəbzdə dəyişiklik etmək mümkün olacaq."}
           </p>
+        </div>
 
-          <div className="modal-footer-custom">
-            <button className="btn-cancel" onClick={onClose}>Ləğv et</button>
-            <button className="check-lock-save-btn" onClick={handleUpdateStatus}>
-              <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'} me-2`}></i>
-              {status === 0 ? "Kilidlə" : "Kilidi Aç"}
-            </button>
-          </div>
+        <div className="modal-footer-custom">
+          <button className="btn-cancel" onClick={onClose}>Ləğv et</button>
+          <button className="check-lock-save-btn" onClick={handleUpdateStatus}>
+            <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'} me-2`}></i>
+            {status === 0 ? "Kilidlə" : "Kilidi Aç"}
+          </button>
         </div>
       </div>
     </Modal>

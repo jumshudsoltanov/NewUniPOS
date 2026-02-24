@@ -277,8 +277,10 @@ const Tables = () => {
   // Canvas Interaction Handlers
   const handleInteractionStart = (e, table, type) => {
     if (!isTableEditMode) return;
-    e.preventDefault();
     e.stopPropagation();
+
+    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
 
     const defaultLayout = generatedLayout[table.id] || { x: 0, y: 0 };
     const layout = activeLayouts?.[table.id] || defaultLayout;
@@ -294,8 +296,8 @@ const Tables = () => {
     setInteractionState({
       type,
       tableId: table.id,
-      startX: e.clientX,
-      startY: e.clientY,
+      startX: clientX,
+      startY: clientY,
       initialLeft: layout.x || 0,
       initialTop: layout.y || 0,
       initialWidth: currentW,
@@ -304,17 +306,19 @@ const Tables = () => {
   };
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMove = (e) => {
       if (!interactionState.type || !isTableEditMode) return;
 
+      const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+
       if (interactionState.type === 'drag') {
-        const dx = e.clientX - interactionState.startX;
-        const dy = e.clientY - interactionState.startY;
+        const dx = clientX - interactionState.startX;
+        const dy = clientY - interactionState.startY;
 
         const newX = interactionState.initialLeft + dx;
         const newY = interactionState.initialTop + dy;
 
-        // Dispatch Update (throttling would be good in real app)
         dispatch(setTempTableLayout({
           hallId: currentHallId,
           layout: {
@@ -327,8 +331,8 @@ const Tables = () => {
           }
         }));
       } else if (interactionState.type === 'resize') {
-        const dx = e.clientX - interactionState.startX;
-        const dy = e.clientY - interactionState.startY;
+        const dx = clientX - interactionState.startX;
+        const dy = clientY - interactionState.startY;
 
         const newW = Math.max(100, interactionState.initialWidth + dx);
         const newH = Math.max(100, interactionState.initialHeight + dy);
@@ -347,20 +351,24 @@ const Tables = () => {
       }
     };
 
-    const handleMouseUp = () => {
+    const handleEnd = () => {
       if (interactionState.type) {
         setInteractionState({ type: null, tableId: null });
       }
     };
 
     if (isTableEditMode) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
+      window.addEventListener('touchmove', handleMove, { passive: false });
+      window.addEventListener('touchend', handleEnd);
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
     };
   }, [interactionState, isTableEditMode, currentHallId, dispatch]);
 
@@ -380,6 +388,7 @@ const Tables = () => {
 
   const handleTableTouchMove = (e) => {
     if (!isTableEditMode || tableTouchRef.current.startIndex === null) return;
+    if (e.cancelable) e.preventDefault();
     const touch = e.touches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     if (el) {
@@ -451,6 +460,7 @@ const Tables = () => {
                   key={table.id}
                   style={style}
                   onMouseDown={(e) => handleInteractionStart(e, table, 'drag')}
+                  onTouchStart={(e) => handleInteractionStart(e, table, 'drag')}
                 >
                   <Table
                     table={table}
@@ -466,6 +476,7 @@ const Tables = () => {
                     <div
                       className="resize-handle"
                       onMouseDown={(e) => handleInteractionStart(e, table, 'resize')}
+                      onTouchStart={(e) => handleInteractionStart(e, table, 'resize')}
                       style={{
                         position: 'absolute',
                         bottom: 0,
@@ -491,8 +502,9 @@ const Tables = () => {
               <Col
                 xs={4}
                 sm={4}
-                md={3}
-                lg={2}
+                md={4}
+
+                lg={3}
                 xl={2}
                 xxl={2}
                 key={table.id || table.name}

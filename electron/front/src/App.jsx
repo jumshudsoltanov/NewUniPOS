@@ -22,6 +22,7 @@ import NetworkOverlay from "./components/NetworkOverlay/NetworkOverlay";
 import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
 import { initNetwork, getSocket } from "./utils/apiConfig";
+import { addNotification } from "./utils/notificationService";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -79,17 +80,6 @@ function AppContent() {
     const syncInt = setInterval(fetchSyncCount, 1000);
     const socketInt = setInterval(checkSocket, 5000);
 
-    // Master terminal listener for delegated prints
-    const socket = getSocket();
-    if (socket) {
-      socket.on("print_delegated", async (data) => {
-        console.log("🖨️ Delegated print received for:", data.printerName);
-        if (window.electronAPI?.printReceipt) {
-          await window.electronAPI.printReceipt(data);
-        }
-      });
-    }
-
     return () => {
       window.removeEventListener("online", handleConnectivity);
       window.removeEventListener("offline", handleConnectivity);
@@ -98,6 +88,37 @@ function AppContent() {
       clearInterval(socketInt);
     };
   }, [dispatch]);
+
+  // Master terminal listener for delegated prints
+  const authResultRedux = useSelector((state) => state.LoginSlice.loginedProfileData);
+  const isMasterTerminal = authResultRedux?.data?.terminal?.is_master === 1 || authResultRedux?.data?.profile?.is_master === 1;
+
+  const isSocketConnected = useSelector((state) => state.SyncSlice.isSocketConnected);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (socket && isMasterTerminal) {
+      console.warn("[MASTER] Attaching delegated print listener...");
+
+      const handleDelegatedPrint = async (data) => {
+        console.warn("🖨️ Delegated print received for:", data.printerName);
+        if (window.electronAPI?.printReceipt) {
+          try {
+            await window.electronAPI.printReceipt(data);
+          } catch (e) {
+            console.error("Delegated print execution failed:", e);
+          }
+        }
+      };
+
+      socket.off("print_delegated"); // Avoid duplicates
+      socket.on("print_delegated", handleDelegatedPrint);
+
+      return () => {
+        socket.off("print_delegated", handleDelegatedPrint);
+      };
+    }
+  }, [isMasterTerminal, authResultRedux, isSocketConnected]);
 
   // Handle Synced Badge Timeout
   const showSyncedBadge = useSelector((state) => state.SyncSlice.showSyncedBadge);

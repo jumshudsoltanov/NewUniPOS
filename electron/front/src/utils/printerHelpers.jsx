@@ -106,9 +106,13 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                     const { getSocket } = require("./apiConfig");
                     const socket = getSocket();
                     if (socket && socket.connected) {
-                        console.log(`[PRINTER] Delegating Product print to Master: ${printerName}`);
+                        console.warn(`[PRINTER] Delegating Product print to Master: ${printerName}`);
                         socket.emit("delegate_print", { html, printerName });
                         continue;
+                    } else {
+                        console.error(`[PRINTER] Delegation failed: Socket not connected. Falling back to local.`);
+                        const displayId = orderData.checkData?.id || orderData.orderId;
+                        addNotification("Delegasiya Xətası", "Master terminala qoşulma yoxdur. Çap lokal yerinə yetirilir.", { orderId: displayId, category: "system", type: "warning" });
                     }
                 }
 
@@ -226,9 +230,12 @@ export const printCustomerReceipt = async (orderData, profileData) => {
             const { getSocket } = require("./apiConfig");
             const socket = getSocket();
             if (socket && socket.connected) {
-                console.log(`[PRINTER] Delegating Customer Receipt to Master: ${printerName}`);
+                console.warn(`[PRINTER] Delegating Customer Receipt to Master: ${printerName}`);
                 socket.emit("delegate_print", { html, printerName });
                 return { success: true, delegated: true };
+            } else {
+                console.error(`[PRINTER] Customer Receipt Delegation failed. Falling back to local.`);
+                addNotification("Delegasiya Xətası", "Master terminala qoşulma yoxdur. Kassa çeki lokal çap olunur.", { orderId: orderData.checkData?.id, category: "system", type: "warning" });
             }
         }
 

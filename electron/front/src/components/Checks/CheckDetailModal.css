@@ -3,12 +3,41 @@
     max-width: 800px;
 }
 
+/* Custom Scrollbars for Modal Content */
+.check-detail-modal-custom .items-section .table-responsive::-webkit-scrollbar,
+.check-detail-modal-custom .sidebar-section::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.check-detail-modal-custom .items-section .table-responsive::-webkit-scrollbar-track,
+.check-detail-modal-custom .sidebar-section::-webkit-scrollbar-track {
+    background: transparent;
+    /* Changed to transparent for a cleaner look */
+    border-radius: 4px;
+}
+
+.check-detail-modal-custom .items-section .table-responsive::-webkit-scrollbar-thumb,
+.check-detail-modal-custom .sidebar-section::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.check-detail-modal-custom .items-section .table-responsive::-webkit-scrollbar-thumb:hover,
+.check-detail-modal-custom .sidebar-section::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
 .check-detail-modal-custom .modal-content {
     border-radius: 12px;
     overflow: hidden;
     border: none;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     font-family: "Poppins", sans-serif;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .check-detail-modal-custom .modal-header {
@@ -30,10 +59,15 @@
 
 .check-detail-modal-custom .modal-body {
     padding: 0;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .check-detail-modal-custom .modal-body-split {
-    min-height: 550px;
+    flex: 1;
+    overflow: hidden;
 }
 
 /* Sidebar Section (Left) */
@@ -44,6 +78,24 @@
     border-right: 1px solid #dee2e6;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+}
+
+/* Summary section styles are now consolidated in the footer section of this file */
+
+.summary-row {
+    padding: 4px 0;
+}
+
+.summary-label {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.summary-value {
+    font-size: 15px;
+    color: #1e293b;
+    text-align: right;
 }
 
 @media (max-width: 991.98px) {
@@ -179,6 +231,16 @@
     background: #fff;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    max-height: 100%;
+    padding-right: 40px;
+    /* Increased padding to move scrollbar further from the edge */
+}
+
+.check-detail-modal-custom .items-section .table-responsive {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 0;
 }
 
 .check-detail-modal-custom .order-items-table th {
@@ -186,7 +248,8 @@
     text-transform: uppercase;
     color: #80868b;
     border-bottom: 1px solid #f1f3f4;
-    padding-bottom: 10px;
+    padding: 10px 15px;
+    /* Added padding to match offset */
 }
 
 .check-detail-modal-custom .order-items-table td {
@@ -195,10 +258,20 @@
     border-bottom: 1px solid #f8f9fa;
 }
 
+.check-detail-modal-custom .order-items-table th.text-end,
+.check-detail-modal-custom .order-items-table td.text-end {
+    padding-right: 20px;
+    /* Added padding to keep content away from scrollbar */
+}
+
 .check-detail-modal-custom .summary-section {
     border-top: 1px solid #f1f3f4;
-    padding-top: 20px;
-    margin-top: auto;
+    padding: 32px 18px;
+    /* Further increased padding */
+    margin-top: 50px;
+    /* Further increased margin from table */
+    background: #fcfcfc;
+    border-radius: 8px;
 }
 
 /* Footer */
@@ -210,4 +283,58 @@
     font-weight: 600;
     font-size: 14px;
     letter-spacing: 0.5px;
+}
+
+@media (max-width: 991.98px) {
+    .check-detail-modal-custom .modal-content {
+        max-height: 95vh;
+    }
+
+    .check-detail-modal-custom .modal-body {
+        overflow-y: auto;
+    }
+
+    .check-detail-modal-custom .modal-body-split {
+        flex-direction: column;
+        overflow: visible;
+        flex: none;
+    }
+
+    .check-detail-modal-custom .items-section {
+        overflow: visible;
+        max-height: none;
+    }
+
+    .check-detail-modal-custom .items-section .table-responsive {
+        max-height: 400px;
+        flex: none;
+    }
+
+    .check-detail-modal-custom .sidebar-section {
+        overflow-y: visible;
+    }
+
+    .check-detail-modal-custom .footer-left {
+        width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .check-detail-modal-custom .footer-right {
+        width: 100%;
+    }
+
+    .check-detail-modal-custom .w-100.d-flex.gap-0 {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .check-detail-modal-custom .footer-right {
+        flex-direction: column;
+    }
+
+    .check-detail-modal-custom .footer-right .btn {
+        width: 100%;
+    }
 }

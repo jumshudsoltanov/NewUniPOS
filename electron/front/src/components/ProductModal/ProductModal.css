@@ -51,6 +51,13 @@
     opacity: 0.8;
 }
 
+.product-modal-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
 .product-modal-body {
     padding: 20px;
     background: white;
@@ -193,9 +200,11 @@
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    margin-top: 24px;
-    padding-top: 20px;
+    margin-top: 0;
+    padding: 15px 20px;
     border-top: 1px solid #f0f0f0;
+    background: #fff;
+    flex-shrink: 0;
 }
 
 .btn-cancel {
@@ -260,4 +269,33 @@
 
 .product-modal.danger-theme .btn-cancel:hover {
     background: #fee2e2 !important;
+}
+
+@media (max-width: 767px) {
+    .product-modal .modal-content {
+        max-height: 95vh;
+    }
+
+    .product-modal-body {
+        padding: 15px;
+    }
+
+    .form-group-custom {
+        margin-bottom: 15px;
+    }
+
+    .image-upload-box {
+        height: 120px;
+    }
+
+    .modal-footer-custom {
+        padding: 12px 15px;
+    }
+
+    .btn-save,
+    .btn-cancel {
+        padding: 8px 16px;
+        font-size: 14px;
+        min-width: 100px;
+    }
 }

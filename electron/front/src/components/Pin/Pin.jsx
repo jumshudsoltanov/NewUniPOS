@@ -261,7 +261,7 @@ const Pin = () => {
   const handleExit = () => {
     localStorage.removeItem("profile");
     localStorage.removeItem("authResult");
-    window.location.href = "/";
+    window.location.href = "/#/";
   };
 
   const handlePinSubmit = async (submittedPin) => {

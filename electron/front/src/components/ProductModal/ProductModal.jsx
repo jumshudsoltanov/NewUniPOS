@@ -130,8 +130,8 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                 </button>
             </div>
 
-            <div className="product-modal-body">
-                <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="product-modal-form">
+                <div className="product-modal-body">
                     <Row>
                         <Col md={12}>
                             <div className="form-group-custom">
@@ -268,25 +268,26 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                             </div>
                         </Col>
                     </Row>
+                </div>
 
-                    <div className="modal-footer-custom">
-                        <button type="button" className="btn-cancel" onClick={onHide}>Ləğv Et</button>
-                        <button type="submit" className="btn-save" disabled={isLoading}>
-                            {isLoading ? (
-                                <>
-                                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    Saxlanılır...
-                                </>
-                            ) : (
-                                <>
-                                    <i className="bi bi-check-lg"></i>
-                                    Yadda Saxla
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <div className="modal-footer-custom">
+                    <button type="button" className="btn-cancel" onClick={onHide}>Ləğv Et</button>
+                    <button type="submit" className="btn-save" disabled={isLoading}>
+                        {isLoading ? (
+                            <>
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                Saxlanılır...
+                            </>
+                        ) : (
+                            <>
+                                <i className="bi bi-check-lg"></i>
+                                Yadda Saxla
+                            </>
+                        )}
+                    </button>
+                </div>
+            </form>
+
         </Modal>
     );
 };

@@ -197,7 +197,7 @@
     justify-content: center;
 }
 
-@media (min-width: 576px) and (max-width: 1399.98px) {
+@media (min-width: 576px) and (max-width: 991.98px) {
 
     /* Restore wrapper size for seats but scale down */
     .table-wrapper {

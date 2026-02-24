@@ -284,7 +284,12 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
       discountAmount = Number(orders.discount);
     }
 
-    // Calculate Service Fee
+    const depositAmount = Number(orders?.deposit || 0);
+
+    // Calculate base amount (item total after discount)
+    const subtotalAfterDiscount = total - discountAmount;
+
+    // Calculate Service Fee (Always on items)
     let serviceValue = 0;
     let serviceType = orders?.service_type || "percent";
 
@@ -292,14 +297,12 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
       serviceValue = Number(orders.service_value);
     } else if (hall?.service_fee) {
       serviceValue = Number(hall.service_fee);
-      serviceType = "percent"; // Default for hall fee
+      serviceType = "percent";
     }
 
     let serviceAmount = 0;
-
     if (serviceValue > 0) {
       if (serviceType === "percent") {
-        // Apply percent service fee only to eligible items
         serviceAmount = (totalForService * serviceValue) / 100;
       } else {
         serviceAmount = serviceValue;
@@ -308,9 +311,10 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
       serviceAmount = Number(orders.service_charge);
     }
 
-    const depositAmount = Number(orders?.deposit || 0);
+    // Final Total is the GREATER of (items + service) or deposit
+    const totalWithService = subtotalAfterDiscount + serviceAmount;
+    let sumTotal = Math.max(totalWithService, depositAmount);
 
-    let sumTotal = total - discountAmount + serviceAmount + depositAmount;
     if (sumTotal < 0) sumTotal = 0;
 
     // Calculate effective percentage for display
@@ -374,8 +378,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
             </div>
           )}
           <div className="summary-row">
-            <span>Cəm:</span>
-            <span>{calcTotal.total} ₼</span>
+            <span>{depositAmount > (subtotalAfterDiscount + serviceAmount) ? 'Minimal məbləğ:' : 'Cəm:'}</span>
+            <span>{Math.max((subtotalAfterDiscount + serviceAmount), depositAmount).toFixed(2)} ₼</span>
           </div>
           {selectedCustomer?.group && (
             <div className="summary-row">
@@ -404,7 +408,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
             </div>
           )}
           {Number(calcTotal.depositAmount) > 0 && (
-            <div className="summary-row">
+            <div className="summary-row" style={{ color: '#fff', borderTop: '1px dashed rgba(255,255,255,0.1)', marginTop: '2px', paddingTop: '2px' }}>
               <span>Depozit:</span>
               <span>{calcTotal.depositAmount} ₼</span>
             </div>

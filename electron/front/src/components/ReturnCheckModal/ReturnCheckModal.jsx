@@ -260,6 +260,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
                 type="checks"
                 order={order}
                 tagsType={5}
+                title="Geri qaytarılma səbəbi"
             />
         </>
     );

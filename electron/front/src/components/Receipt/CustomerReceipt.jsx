@@ -221,9 +221,12 @@ const CustomerReceipt = ({
         const type = checkData.serviceFeeType || checkData.service_fee_type || "";
         const value = Number(checkData.serviceFeeValue || checkData.service_fee_value || checkData.serviceFee || checkData.service_charge || 0);
 
+        // Base for service calculation should be the items' subtotal
+        const serviceBase = subtotal;
+
         if (type === "percent") {
             return {
-                amount: (subtotal * value) / 100,
+                amount: (serviceBase * value) / 100,
                 percent: value,
                 isPercent: true
             };
@@ -443,7 +446,9 @@ const CustomerReceipt = ({
 
                 {checkData?.deposit > 0 && (
                     <div style={styles.summaryRow}>
-                        <span style={{ flex: 1 }}>Depozit</span>
+                        <span style={{ flex: 1 }}>
+                            {Number(checkData.deposit) > (subtotal - discountInfo.amount) ? 'Depozit (Minimal)' : 'Depozit'}
+                        </span>
                         <span style={styles.colTotal}>{Number(checkData.deposit || 0).toFixed(2)} ₼</span>
                     </div>
                 )}
@@ -455,9 +460,11 @@ const CustomerReceipt = ({
 
             {/* TOTAL */}
             <div style={styles.total}>
-                <span style={{ flex: 1 }}>YEKUN</span>
+                <span style={{ flex: 1 }}>
+                    {Number(checkData?.deposit || 0) > (subtotal - discountInfo.amount + serviceInfo.amount) ? 'MİNİMAL MƏBLƏĞ' : 'YEKUN'}
+                </span>
                 <span style={styles.colTotal}>
-                    {(subtotal - discountInfo.amount + serviceInfo.amount).toFixed(2)} ₼
+                    {Math.max(subtotal - discountInfo.amount + serviceInfo.amount, Number(checkData?.deposit || 0)).toFixed(2)} ₼
                 </span>
             </div>
 

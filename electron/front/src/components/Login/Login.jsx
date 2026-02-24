@@ -145,7 +145,7 @@ const Login = () => {
   const handleExit = () => {
     localStorage.removeItem("profile");
     localStorage.removeItem("authResult");
-    window.location.href = "/";
+    window.location.href = "/#/";
   };
 
   const senToLoginBrand = async (e) => {

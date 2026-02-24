@@ -102,6 +102,7 @@ const Header = ({ showBack, backPath, onBack }) => {
 
   const handleHallTouchMove = (e) => {
     if (!isTableEditMode || touchRef.current.startIndex === null) return;
+    if (e.cancelable) e.preventDefault();
     const touch = e.touches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     if (el) {

@@ -4,8 +4,8 @@ import "./CheckDeleteModal.css";
 import { useDispatch, useSelector } from "react-redux"
 import { getTagsList } from "../../redux/Slices/TagsSlice";
 
-const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, actionName }) => {
-    let headerName = type === "checks" ? "Çeki sil" : "Məhsulu sil";
+const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, actionName, title }) => {
+    let headerName = title || (type === "checks" ? "Çeki sil" : "Məhsulu sil");
     const [selectedReason, setSelectedReason] = useState(null);
     const [tagsListData, setTagsListData] = useState([]);
     const dispatch = useDispatch();
@@ -92,7 +92,9 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
                             </div>
                         ))}
                     </div>
+                </div>
 
+                <div className="modal-footer-custom">
                     <button
                         className="check-delete-save-btn"
                         disabled={!selectedReason}

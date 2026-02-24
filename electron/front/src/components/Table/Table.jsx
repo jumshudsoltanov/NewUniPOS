@@ -68,7 +68,31 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter, customStyle }) =
             <p
               className={`table-amount ${status} ${orders?.length > 0 ? "" : ""}`}
             >
-              {orders?.[0]?.total?.toFixed(2) ?? 0.0} ₼
+              {(() => {
+                const order = orders?.[0];
+                if (!order) return "0.00 ₼";
+
+                // Consistency with CheckDetailModal and CheckBottom
+                const subtotal = Number(order.total || 0);
+                const discount = Number(order.discount || 0);
+                const deposit = Number(order.deposit || 0);
+                const service = Number(order.service_charge || 0);
+
+                const subtotalAfterDiscount = subtotal - discount;
+                const displayAmount = Math.max(subtotalAfterDiscount + service, deposit);
+                const isDepositFloor = deposit > (subtotalAfterDiscount + service);
+
+                return (
+                  <>
+                    {displayAmount.toFixed(2)} ₼
+                    {isDepositFloor && (
+                      <span style={{ fontSize: '0.7em', display: 'block', marginTop: '-2px', fontWeight: 'bold', color: '#fff' }}>
+                        DEPOZİT
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
             </p>
 
             <div

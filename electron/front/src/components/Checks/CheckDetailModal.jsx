@@ -42,6 +42,22 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         return Array.from(types);
     }, [orderLogs]);
 
+    const subtotal = useMemo(() => {
+        return (order?.orders_items || []).reduce((acc, item) => acc + (Number(item.count || 0) * Number(item.price || 0)), 0);
+    }, [order?.orders_items]);
+
+    const discountPercentage = useMemo(() => {
+        if (order?.discount_percentage) return order.discount_percentage;
+        if (!subtotal || !order?.discount) return 0;
+        return ((Math.abs(Number(order.discount)) / subtotal) * 100).toFixed(0);
+    }, [subtotal, order?.discount, order?.discount_percentage]);
+
+    const servicePercentage = useMemo(() => {
+        if (order?.service_percentage) return order.service_percentage;
+        if (!subtotal || !order?.service_charge) return 0;
+        return ((Number(order.service_charge) / subtotal) * 100).toFixed(0);
+    }, [subtotal, order?.service_charge, order?.service_percentage]);
+
     const handleReopenConfirm = async ({ reason, reasonName }) => {
         try {
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
@@ -316,12 +332,39 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                             <div className="summary-section mt-auto">
                                 <div className="summary-row d-flex justify-content-between mb-2">
                                     <span className="summary-label text-muted">Cəm:</span>
-                                    <span className="summary-value fw-bold">{(order.total || 0).toFixed(2)} ₼</span>
+                                    <span className="summary-value fw-bold">{(subtotal || 0).toFixed(2)} ₼</span>
                                 </div>
 
-                                <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top">
-                                    <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>Yekun:</span>
-                                    <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>{(Number(order.total) - Number(order.discount || 0) + Number(order.service_charge || 0)).toFixed(2)} ₼</span>
+                                {Number(order.discount || 0) !== 0 && (
+                                    <div className="summary-row d-flex justify-content-between mb-2">
+                                        <span className="summary-label text-muted">Endirim ({discountPercentage}%):</span>
+                                        <span className="summary-value text-danger fw-bold">
+                                            {Number(order.discount) > 0 ? '-' : ''}{Math.abs(Number(order.discount)).toFixed(2)} ₼
+                                        </span>
+                                    </div>
+                                )}
+
+                                {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0) + Number(order.service_charge || 0)) && (
+                                    <div className="summary-row d-flex justify-content-between mb-2">
+                                        <span className="summary-label text-muted">Depozit (Minimal):</span>
+                                        <span className="summary-value fw-bold">{Number(order.deposit).toFixed(2)} ₼</span>
+                                    </div>
+                                )}
+
+                                {Number(order.service_charge || 0) !== 0 && (
+                                    <div className="summary-row d-flex justify-content-between mb-2">
+                                        <span className="summary-label text-muted">Servis haqqı ({servicePercentage}%):</span>
+                                        <span className="summary-value fw-bold">{Number(order.service_charge).toFixed(2)} ₼</span>
+                                    </div>
+                                )}
+
+                                <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top mt-2">
+                                    <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>
+                                        {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0) + Number(order.service_charge || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
+                                    </span>
+                                    <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
+                                        {Math.max(subtotal - Number(order.discount || 0) + Number(order.service_charge || 0), Number(order.deposit || 0)).toFixed(2)} ₼
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -351,7 +394,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 }}
                                 style={{ backgroundColor: "#f39c12", color: "#fff" }}
                             >
-                                <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i> ÇEKİ YENİDƏN AÇ
+                                <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i> ÇEKİ QAYTAR
                             </Button>
                             <Button
                                 variant="primary"
@@ -384,6 +427,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 order={order}
                 tagsType={5} // Return reasons
                 actionName="Aç"
+                title="Çeki qaytarma səbəbi"
             />
         </>
     );

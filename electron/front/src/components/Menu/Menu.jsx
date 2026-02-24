@@ -265,6 +265,50 @@ const Menu = ({
     setDragOverIndex(null);
   };
 
+  const touchRef = useRef({ startIndex: null, currentIndex: null });
+
+  const handleTouchStart = (index) => {
+    if (!isDragMode) return;
+    touchRef.current.startIndex = index;
+    setDraggedIndex(index);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragMode || touchRef.current.startIndex === null) return;
+    if (e.cancelable) e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el) {
+      const card = el.closest('.menu-card');
+      if (card) {
+        const col = card.parentElement;
+        const allCols = Array.from(col.parentElement.children);
+        // Col might have non-menu-card children (like "No data" message), but we only iterate over itemsToRender
+        const idx = allCols.indexOf(col);
+        if (idx !== -1 && idx < itemsToRender.length) {
+          touchRef.current.currentIndex = idx;
+          setDragOverIndex(idx);
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragMode) return;
+    const { startIndex, currentIndex } = touchRef.current;
+    if (startIndex !== null && currentIndex !== null && startIndex !== currentIndex) {
+      const newItems = [...itemsToRender];
+      const [removed] = newItems.splice(startIndex, 1);
+      newItems.splice(currentIndex, 0, removed);
+
+      const newOrder = newItems.map(item => item.id);
+      onCategoryOrderChange(newOrder);
+    }
+    touchRef.current = { startIndex: null, currentIndex: null };
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   return (
     <Container fluid className="p-0 h-100 d-flex flex-column">
       <Row
@@ -316,6 +360,9 @@ const Menu = ({
                   onDragLeave={isDragMode ? handleDragLeave : undefined}
                   onDrop={isDragMode ? (e) => handleDrop(e, index) : undefined}
                   onDragEnd={isDragMode ? handleDragEnd : undefined}
+                  onTouchStart={isDragMode ? () => handleTouchStart(index) : undefined}
+                  onTouchMove={isDragMode ? handleTouchMove : undefined}
+                  onTouchEnd={isDragMode ? handleTouchEnd : undefined}
                   onClick={() => {
                     if (isDragMode) return;
 
