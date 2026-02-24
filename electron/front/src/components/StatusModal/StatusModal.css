@@ -319,9 +319,3 @@
         font-size: 1.1rem;
     }
 }
-
-@media (max-width: 575px) {
-    .devices-items-container.full-width {
-        grid-template-columns: 1fr;
-    }
-}

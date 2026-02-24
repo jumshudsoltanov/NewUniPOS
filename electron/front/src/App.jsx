@@ -10,7 +10,7 @@ import Checks from "./components/Checks/Checks";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
-import { updateSyncStatus, resetSyncedBadge, updateConnectivity } from "./redux/Slices/SyncSlice";
+import { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } from "./redux/Slices/SyncSlice";
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
 import Layout from "./components/Layout/Layout";
@@ -20,7 +20,7 @@ import "react-toastify/dist/ReactToastify.css";
 import NetworkOverlay from "./components/NetworkOverlay/NetworkOverlay";
 import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
-import { initNetwork } from "./utils/apiConfig";
+import { initNetwork, getSocket } from "./utils/apiConfig";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -62,20 +62,28 @@ function AppContent() {
       }
     };
 
+    const checkSocket = () => {
+      const socket = getSocket();
+      dispatch(updateSocketStatus(socket?.connected || false));
+    };
+
     window.addEventListener("online", handleConnectivity);
     window.addEventListener("offline", handleConnectivity);
 
     handleConnectivity();
     fetchSyncCount();
+    checkSocket();
 
     const connInt = setInterval(handleConnectivity, 5000);
-    const syncInt = setInterval(fetchSyncCount, 15000);
+    const syncInt = setInterval(fetchSyncCount, 1000);
+    const socketInt = setInterval(checkSocket, 5000);
 
     return () => {
       window.removeEventListener("online", handleConnectivity);
       window.removeEventListener("offline", handleConnectivity);
       clearInterval(connInt);
       clearInterval(syncInt);
+      clearInterval(socketInt);
     };
   }, [dispatch]);
 
@@ -113,6 +121,11 @@ function AppContent() {
         await initNetwork(false, !isMasterSlaveActive); // Attempt to find Master
       } else {
         await initNetwork(true, !isMasterSlaveActive); // Standalone or Master
+      }
+
+      // Re-evaluate backend role as well
+      if (window.electronAPI && window.electronAPI.reEvaluateRole) {
+        window.electronAPI.reEvaluateRole().catch(console.error);
       }
 
       if (storageData) {

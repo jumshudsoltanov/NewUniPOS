@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 const StatusModal = ({ show, onHide }) => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const { isSocketConnected, hasInternet } = useSelector((state) => state.SyncSlice);
     const [localIp, setLocalIp] = useState("...");
     const [memoryUsage, setMemoryUsage] = useState({ used: 0, total: 128 });
     const [diskUsage, setDiskUsage] = useState({ used: 0, total: 0 });
@@ -180,6 +181,17 @@ const StatusModal = ({ show, onHide }) => {
                                         <span className="value">{terminal.name || terminal.terminal_id || "POS-TERM-001"}</span>
                                     </div>
                                     <div className="info-item">
+                                        <span className="label">Rol:</span>
+                                        <span className="value">
+                                            {terminal.is_master === 1 ? "MASTER (Ana Terminal)" : "SLAVE (Köməkçi Terminal)"}
+                                            {terminal.is_master === 1 && (
+                                                <div style={{ fontSize: '0.8rem', color: '#718096', fontWeight: 'normal' }}>
+                                                    {terminal.is_master_slave_active === 1 ? "Master-Slave: Aktiv" : "Master-Slave: Deaktiv"}
+                                                </div>
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="info-item">
                                         <span className="label">Last sync</span>
                                         <span className="value">{formatDate(syncStatus.lastSyncTime || terminal.last_sync)}</span>
                                     </div>
@@ -216,7 +228,7 @@ const StatusModal = ({ show, onHide }) => {
                                         <span>İnternet</span>
                                     </div>
                                     <div className="status-row">
-                                        <span className={`sys-status-dot ${networkStatus.ws ? 'green' : 'red'}`}></span>
+                                        <span className={`sys-status-dot ${isSocketConnected ? 'green' : 'red'}`}></span>
                                         <span>WS</span>
                                     </div>
                                     <div className="status-row">
@@ -224,7 +236,7 @@ const StatusModal = ({ show, onHide }) => {
                                         <span>Syncer - {syncStatus.pendingCount > 0 ? `${syncStatus.pendingCount} pending` : 'Synced'}</span>
                                     </div>
                                     <div className="status-row">
-                                        <span className={`sys-status-dot ${networkStatus.pos ? 'orange' : 'red'}`}></span>
+                                        <span className={`sys-status-dot ${hasInternet ? 'green' : 'red'}`}></span>
                                         <span>POS</span>
                                     </div>
                                 </div>

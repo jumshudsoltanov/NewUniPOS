@@ -137,8 +137,9 @@ body,
 
 .sync-badge-done {
     top: -5px;
-    right: 12px;
-    background: #00FF6A;
+    right: -6px;
+    background: #10B981;
+    /* Professional Emerald Green */
 }
 
 .sync-badge-pending {

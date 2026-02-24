@@ -8,6 +8,7 @@ const initialState = {
     isOnline: navigator.onLine,
     hasInternet: true,
     lastUpdated: null,
+    isSocketConnected: false,
 };
 
 const syncSlice = createSlice({
@@ -18,7 +19,7 @@ const syncSlice = createSlice({
             const { pendingCount, syncedCount } = action.payload;
 
             // Calculate delta only if we already had a count (avoid showing initial database total as a new sync)
-            if (state.lastUpdated && syncedCount > state.totalSyncedCount) {
+            if (state.lastUpdated && syncedCount > state.totalSyncedCount && state.totalSyncedCount > 0) {
                 state.lastSyncedDelta = syncedCount - state.totalSyncedCount;
                 state.showSyncedBadge = true;
             } else {
@@ -37,8 +38,11 @@ const syncSlice = createSlice({
             state.isOnline = action.payload.isOnline;
             state.hasInternet = action.payload.hasInternet;
         },
+        updateSocketStatus: (state, action) => {
+            state.isSocketConnected = action.payload;
+        },
     },
 });
 
-export const { updateSyncStatus, resetSyncedBadge, updateConnectivity } = syncSlice.actions;
+export const { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } = syncSlice.actions;
 export default syncSlice.reducer;

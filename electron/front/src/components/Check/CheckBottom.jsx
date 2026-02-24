@@ -78,7 +78,15 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
         return { printers: combined, categoryId };
       };
 
-      // Start loading state immediately to prevent user from re-triggering while deletions are processing
+      // Start loading state immediately IF we have something to do to prevent user from re-triggering
+      const hasDeletions = pendingDeletions && pendingDeletions.length > 0;
+      const hasNewProducts = products && products.length > 0;
+
+      if (!hasDeletions && !hasNewProducts) {
+        console.warn("handleSendOrders called but no items to send/delete");
+        return;
+      }
+
       setIsSending(true);
 
       // 1. Process Pending Deletions first

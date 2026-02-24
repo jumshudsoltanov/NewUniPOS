@@ -214,23 +214,19 @@ server.on("error", (e) => {
 global.httpServer = server;
 global.isMasterNode = false;
 
-// Initialize and start
-(async () => {
-  await connectToDatabase();
-  await creaedtToTabel();
-
+const checkTerminalRole = async (targetServer) => {
   try {
     const profile = await LoginModel.findOne();
-    console.log("DEBUG: Current Terminal Profile is_master:", profile ? profile.is_master : "NULL");
+    console.log("DEBUG: Checking Terminal Role. is_master:", profile ? profile.is_master : "NULL");
 
     if (profile && (Number(profile.is_master) === 1 || profile.is_master === true)) {
       global.isMasterNode = true;
-      console.log("Terminal is confirmed as Master in DB.");
+      console.log("Terminal is CONFIRMED as Master.");
 
       if (profile.is_master_slave_active === 1) {
-        console.log("Master-Slave mode is active. Starting MasterServer...");
+        console.log("Master-Slave mode is active. Ensuring MasterServer...");
         const { initMasterServer } = require("./socket/MasterServer");
-        initMasterServer(server);
+        initMasterServer(targetServer || server);
       } else {
         console.log("Standalone Master mode. MasterServer not started.");
       }
@@ -238,11 +234,30 @@ global.isMasterNode = false;
       // Sərfəli (Master) terminal üçün ilkin məlumatları çək və sinxronizasiyanı təmin et
       InsertData();
     } else {
+      global.isMasterNode = false;
       console.log("Terminal is NOT Master. Running as Slave. (Broadcasting disabled)");
     }
-  } catch (e) {
-    console.log("Error checking master profile on boot:", e.message);
+  } catch (err) {
+    console.error("Error in checkTerminalRole:", err);
   }
+};
+
+const ipcMain = require("electron").ipcMain;
+ipcMain.handle("re-evaluate-role", async () => {
+  console.log("IPC: Re-evaluating terminal role requested...");
+  return await checkTerminalRole(server);
+});
+
+// Initialize and start
+(async () => {
+  await connectToDatabase();
+  await creaedtToTabel();
+
+  // Initial check
+  await checkTerminalRole(server);
+
+  // Safety re-check after 10 seconds just in case of slow DB/Migrations or delayed initial data
+  setTimeout(() => checkTerminalRole(server), 10000);
 })();
 
 // Discovery Endpoint for TCP Sweeping

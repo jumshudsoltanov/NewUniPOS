@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getSyncStatus: () => ipcRenderer.invoke("get-sync-status"),
     getLocalIp: () => ipcRenderer.invoke("get-local-ip"),
     checkInternet: () => ipcRenderer.invoke("check-internet"),
+    reEvaluateRole: () => ipcRenderer.invoke("re-evaluate-role"),
     onBackendLog: (callback) => ipcRenderer.on("backend-log", (event, ...args) => callback(...args)),
 });
