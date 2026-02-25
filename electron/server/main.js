@@ -474,6 +474,10 @@ ipcMain.handle("check-internet", async () => {
   });
 });
 
+ipcMain.handle("quit-app", () => {
+  app.quit();
+});
+
 ipcMain.handle("scan-master", async () => {
   return new Promise((resolve) => {
     let resolved = false;

@@ -268,6 +268,14 @@ const Pin = () => {
     window.location.href = "/#/";
   };
 
+  const handleQuitApp = () => {
+    if (window.electronAPI?.quitApp) {
+      window.electronAPI.quitApp();
+    } else {
+      window.close();
+    }
+  };
+
   const handlePinSubmit = async (submittedPin) => {
     try {
       const waiterResult = await dispatch(getWaiter(submittedPin)).unwrap();
@@ -540,6 +548,7 @@ const Pin = () => {
         onBrandList={handleBrandList}
         onDownloadData={handleDownloadData}
         onExit={handleExit}
+        onQuitApp={handleQuitApp}
       />
 
       <RefreshLoader isOpen={isRefreshing} />

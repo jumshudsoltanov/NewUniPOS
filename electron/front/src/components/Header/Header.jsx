@@ -339,22 +339,24 @@ const Header = ({ showBack, backPath, onBack }) => {
                   />
                 </svg>
               </Link>
-              <button className="header-icon-btn" onClick={() => navigate("/settings")}>
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    d="M3 12H21M3 6H21M3 18H21"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
+              {Number(loginedWaiter?.data?.can_access_settings) === 1 && (
+                <button className="header-icon-btn" onClick={() => navigate("/settings")}>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      d="M3 12H21M3 6H21M3 18H21"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
             </div>
           </Col>
 
@@ -387,34 +389,32 @@ const Header = ({ showBack, backPath, onBack }) => {
 
               <div className="tools-divider"></div>
 
-              {/* Checks */}
-              <div
-                className="header-action-item small-item"
-                style={{ cursor: "pointer" }}
-                onClick={() => {
-                  if (Number(loginedWaiter?.data?.can_view_archived_checks) === 1) {
-                    navigate("/checks");
-                  } else {
-                    // Optional: toast.error("İcazəniz yoxdur");
-                  }
-                }}
-              >
-                <span className="d-none d-xl-inline">Çeklər</span>
-                <svg
-                  className="d-xl-none"
-                  width="22"
-                  height="22"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51z" />
-                  <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" />
-                </svg>
-                <span className="count-badge text-white" style={{ background: "#A5B4FC" }}>{books?.data?.length || 0}</span>
-              </div>
+              {Number(loginedWaiter?.data?.can_view_archived_checks) === 1 && (
+                <>
+                  {/* Checks */}
+                  <div
+                    className="header-action-item small-item"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate("/checks")}
+                  >
+                    <span className="d-none d-xl-inline">Çeklər</span>
+                    <svg
+                      className="d-xl-none"
+                      width="22"
+                      height="22"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51z" />
+                      <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" />
+                    </svg>
+                    <span className="count-badge text-white" style={{ background: "#A5B4FC" }}>{books?.data?.length || 0}</span>
+                  </div>
 
-              <div className="tools-divider"></div>
+                  <div className="tools-divider"></div>
+                </>
+              )}
 
               {showClock && (
                 <>
@@ -426,25 +426,29 @@ const Header = ({ showBack, backPath, onBack }) => {
                 </>
               )}
 
-              {/* Menu Hamburger */}
-              <button className="header-icon-btn small-icon-btn" onClick={() => navigate("/settings")}>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    d="M3 12H21M3 6H21M3 18H21"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
+              {Number(loginedWaiter?.data?.can_access_settings) === 1 && (
+                <>
+                  {/* Menu Hamburger */}
+                  <button className="header-icon-btn small-icon-btn" onClick={() => navigate("/settings")}>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M3 12H21M3 6H21M3 18H21"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
 
-              <div className="tools-divider"></div>
+                  <div className="tools-divider"></div>
+                </>
+              )}
 
               {/* Waiter/Exit Icon */}
               <Link
@@ -484,38 +488,39 @@ const Header = ({ showBack, backPath, onBack }) => {
 
               <div className="tools-divider"></div>
 
-              {/* Notification Bell */}
-              <button
-                className="header-icon-btn small-icon-btn"
-                onClick={() => {
-                  if (Number(loginedWaiter?.data?.can_see_notif) !== 1) return;
-                  setShowNotifications(true);
-                }}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    d="M18 8A6 6 0 0 0 6 8C6 15 3 21 3 21H21S18 15 18 8Z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M13.73 21A2 2 0 0 1 10.27 21" />
-                </svg>
-                {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
-              </button>
+              {Number(loginedWaiter?.data?.can_see_notif) === 1 && (
+                <>
+                  {/* Notification Bell */}
+                  <button
+                    className="header-icon-btn small-icon-btn"
+                    onClick={() => setShowNotifications(true)}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M18 8A6 6 0 0 0 6 8C6 15 3 21 3 21H21S18 15 18 8Z"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path d="M13.73 21A2 2 0 0 1 10.27 21" />
+                    </svg>
+                    {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
+                  </button>
 
-              <div className="tools-divider"></div>
+                  <div className="tools-divider"></div>
+                </>
+              )}
 
               {/* Wifi Icon */}
               <button
                 className="header-icon-btn small-icon-btn wifi-icon position-relative"
-                onClick={() => setShowStatusModal(true)}
+                onClick={() => { if (Number(loginedWaiter?.data?.can_access_settings) === 1) setShowStatusModal(true); }}
                 style={{ cursor: "pointer", border: "none", background: "none", padding: "0 12px" }}
               >
                 <div className="wifi-badge-container">

@@ -1,7 +1,7 @@
 import "./SettingsMenu.css";
 import { useSelector } from "react-redux";
 
-const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData, onExit }) => {
+const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData, onExit, onQuitApp }) => {
     if (!isOpen) return null;
 
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -62,6 +62,19 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
                 </svg>
             ),
             onClick: onExit,
+            isDanger: true,
+        },
+        {
+            id: "quitApp",
+            label: "Proqramdan çıx",
+            icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M15 9L9 15"></path>
+                    <path d="M9 9L15 15"></path>
+                </svg>
+            ),
+            onClick: onQuitApp,
             isDanger: true,
         },
     ];

@@ -126,6 +126,7 @@ const Settings = () => {
             icon: <i className="bi bi-laptop"></i>,
             highlight: true,
             onClick: () => setShowDevicesModal(true),
+            permission: Number(loginedWaiter?.data?.can_access_settings) === 1,
         },
     ];
 
@@ -182,7 +183,7 @@ const Settings = () => {
                 <div className="settings-page-content">
                     {/* Top Menu Grid */}
                     <div className="settings-grid settings-grid-top">
-                        {topMenuItems.map((item) => (
+                        {topMenuItems.filter(item => item.permission !== false).map((item) => (
                             <button
                                 key={item.id}
                                 className="settings-card"

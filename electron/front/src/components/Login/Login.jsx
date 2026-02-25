@@ -148,6 +148,14 @@ const Login = () => {
     window.location.href = "/#/";
   };
 
+  const handleQuitApp = () => {
+    if (window.electronAPI?.quitApp) {
+      window.electronAPI.quitApp();
+    } else {
+      window.close();
+    }
+  };
+
   const senToLoginBrand = async (e) => {
     if (e) e.preventDefault();
     const profileData = {
@@ -499,6 +507,7 @@ const Login = () => {
         onBrandList={handleBrandList}
         onDownloadData={handleDownloadData}
         onExit={handleExit}
+        onQuitApp={handleQuitApp}
       />
 
       {/* Refreshing Overlay */}

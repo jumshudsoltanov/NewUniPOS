@@ -181,39 +181,35 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 <span>Dəyişmək</span>
               </button>
 
-              <button
-                className={`sidebar-btn ${activeTab === "transfer" ? "active" : ""}`}
-                onClick={() => {
-                  if (!Number(loginedWaiter?.data?.can_transfer_product)) return;
-                  setActiveTab("transfer")
-                }}
+              {Number(loginedWaiter?.data?.can_transfer_product) === 1 && (
+                <button
+                  className={`sidebar-btn ${activeTab === "transfer" ? "active" : ""}`}
+                  onClick={() => setActiveTab("transfer")}
+                >
+                  <i className="bi bi-arrow-left-right"></i>
+                  <span>Köçürmə</span>
+                </button>
+              )}
 
-              >
-                <i className="bi bi-arrow-left-right"></i>
-                <span>Köçürmə</span>
-              </button>
+              {Number(loginedWaiter?.data?.can_give_treats) === 1 && (
+                <button
+                  className={`sidebar-btn ${activeTab === "gift" ? "active" : ""}`}
+                  onClick={() => setActiveTab("gift")}
+                >
+                  <i className="bi bi-gift-fill"></i>
+                  <span>İkram</span>
+                </button>
+              )}
 
-              <button
-                className={`sidebar-btn ${activeTab === "gift" ? "active" : ""}`}
-                onClick={() => {
-                  if (!Number(loginedWaiter?.data?.can_give_treats)) return;
-                  setActiveTab("gift")
-                }}
-              >
-                <i className="bi bi-gift-fill"></i>
-                <span>İkram</span>
-              </button>
-
-              <button
-                className={`sidebar-btn ${activeTab === "discount" ? "active" : ""}`}
-                onClick={() => {
-                  if (!Number(loginedWaiter?.data?.can_give_product_discount)) return;
-                  setActiveTab("discount")
-                }}
-              >
-                <i className="bi bi-percent"></i>
-                <span>Endirim</span>
-              </button>
+              {Number(loginedWaiter?.data?.can_give_product_discount) === 1 && (
+                <button
+                  className={`sidebar-btn ${activeTab === "discount" ? "active" : ""}`}
+                  onClick={() => setActiveTab("discount")}
+                >
+                  <i className="bi bi-percent"></i>
+                  <span>Endirim</span>
+                </button>
+              )}
 
               <button
                 className={`d-none sidebar-btn ${activeTab === "seller" ? "active" : ""}`}
@@ -225,27 +221,25 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
             </div>
 
             <div className="sidebar-bottom">
-              <button
-                className="sidebar-btn btn-delete"
-                onClick={() => {
-                  if (product.isNew) {
-                    const index = products.findIndex(p => p.id === (product.product_id || product.id));
-                    if (index !== -1) {
-                      dispatch(removeProduct(index));
+              {(product?.isNew || Number(loginedWaiter?.data?.can_delete_product) === 1) && (
+                <button
+                  className="sidebar-btn btn-delete"
+                  onClick={() => {
+                    if (product.isNew) {
+                      const index = products.findIndex(p => p.id === (product.product_id || product.id));
+                      if (index !== -1) {
+                        dispatch(removeProduct(index));
+                      }
+                      onClose();
+                    } else {
+                      onOpenDeleteModal('full', product);
                     }
-                    onClose();
-                  } else {
-                    if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                      toast.error("Sizin məhsul silmək icazəniz yoxdur!");
-                      return;
-                    }
-                    onOpenDeleteModal('full', product);
-                  }
-                }}
-              >
-                <i className="bi bi-trash3-fill"></i>
-                <span>Sil</span>
-              </button>
+                  }}
+                >
+                  <i className="bi bi-trash3-fill"></i>
+                  <span>Sil</span>
+                </button>
+              )}
             </div>
           </div>
 

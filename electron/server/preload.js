@@ -16,4 +16,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getScreens: () => ipcRenderer.invoke("get-screens"),
     toggleCustomerDisplay: (data) => ipcRenderer.invoke("toggle-customer-display", data),
     toggleKitchenDisplay: (data) => ipcRenderer.invoke("toggle-kitchen-display", data),
+    quitApp: () => ipcRenderer.invoke("quit-app"),
 });

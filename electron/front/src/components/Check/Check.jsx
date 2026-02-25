@@ -766,288 +766,11 @@ const Check = () => {
                   </svg>
                 </div>
 
-                <div className="sidebar-icon"
-                  onClick={() => {
-                    if (!loginedWaiter?.data?.can_view_customers) return
-                    setShowCustomerModal(true)
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
+                {Number(loginedWaiter?.data?.can_view_customers) === 1 && (
+                  <div className="sidebar-icon"
+                    onClick={() => setShowCustomerModal(true)}
+                    style={{ cursor: 'pointer' }}
                   >
-                    <path
-                      d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
-                      stroke={selectedCustomer ? "#053796" : "#343434"}
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
-                      stroke={selectedCustomer ? "#053796" : "#343434"}
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  {selectedCustomer && (
-                    <span className="icon-badge" style={{ background: '#053796', fontSize: '7px', width: '14px', height: '14px' }}>✓</span>
-                  )}
-                </div>
-
-                <div className="sidebar-icon discount" onClick={() => {
-                  if (currentOrder?.is_locked === 1) {
-                    toast.error("Qəbz kilidlidir!");
-                    return;
-                  }
-                  if (!loginedWaiter?.data?.can_add_discount) return
-                  setOnShowDiscount(true);
-                }}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <path
-                      d="M19.5 12.5C19.5 11.12 20.62 10 22 10V9C22 5 21 4 17 4H7C3 4 2 5 2 9V9.5C3.38 9.5 4.5 10.62 4.5 12C4.5 13.38 3.38 14.5 2 14.5V15C2 19 3 20 7 20H17C21 20 22 19 22 15C20.62 15 19.5 13.88 19.5 12.5Z"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M9 14.75L15 8.75"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M14.9945 14.75H15.0035"
-                      stroke="#343434"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M8.99451 9.25H9.00349"
-                      stroke="#343434"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-
-                <div className="sidebar-icon service_fee" onClick={() => {
-                  if (currentOrder?.is_locked === 1) {
-                    toast.error("Qəbz kilidlidir!");
-                    return;
-                  }
-                  if (!loginedWaiter?.data?.can_edit_service_fee) return
-                  setOnShowServiceFee(true);
-                }}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <path
-                      d="M18.97 22H4.97C1.97 22 1.97 20.65 1.97 19V18C1.97 17.45 2.42 17 2.97 17H20.97C21.52 17 21.97 17.45 21.97 18V19C21.97 20.65 21.97 22 18.97 22Z"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M20.72 13V17H3.26999V13C3.26999 9.16 5.97999 5.95 9.58999 5.18C10.13 5.06 10.69 5 11.27 5H12.72C13.3 5 13.87 5.06 14.41 5.18C18.02 5.96 20.72 9.16 20.72 13Z"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M14.5 4.5C14.5 4.74 14.47 4.96 14.41 5.18C13.87 5.06 13.3 5 12.72 5H11.27C10.69 5 10.13 5.06 9.59 5.18C9.53 4.96 9.5 4.74 9.5 4.5C9.5 3.12 10.62 2 12 2C13.38 2 14.5 3.12 14.5 4.5Z"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M15 11H9"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-
-                <div
-                  className="sidebar-icon comment-button"
-                  onClick={() => {
-                    if (currentOrder?.is_locked === 1) {
-                      toast.error("Qəbz kilidlidir!");
-                      return;
-                    }
-                    if (!loginedWaiter?.data?.can_add_check_comment) return
-                    setComment(true);
-                  }}
-
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <path
-                      d="M8.5 19H8C4 19 2 18 2 13V8C2 4 4 2 8 2H16C20 2 22 4 22 8V13C22 17 20 19 16 19H15.5C15.19 19 14.89 19.15 14.7 19.4L13.2 21.4C12.54 22.28 11.46 22.28 10.8 21.4L9.3 19.4C9.14 19.18 8.77 19 8.5 19Z"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeMiterlimit="10"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M15.9965 11H16.0054"
-                      stroke="#343434"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M11.9955 11H12.0045"
-                      stroke="#343434"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M7.99451 11H8.00349"
-                      stroke="#343434"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-                <div
-                  className={`sidebar-icon history ${showHistoryModal ? 'active-sidebar-icon' : ''}`}
-                  onClick={() => {
-                    if (loginedWaiter?.data?.can_view_logs) {
-                      setShowHistoryModal(true);
-                    }
-                  }}                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#343434"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
-
-                <div
-                  className="sidebar-icon check-lock"
-                  onClick={() => {
-                    if (!loginedWaiter?.data?.can_lock_check) return
-                    setLockCheck(true);
-                  }}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <path
-                      d="M6 10V8C6 4.69 7 2 12 2C17 2 18 4.69 18 8V10"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M12 18.5C13.3807 18.5 14.5 17.3807 14.5 16C14.5 14.6193 13.3807 13.5 12 13.5C10.6193 13.5 9.5 14.6193 9.5 16C9.5 17.3807 10.6193 18.5 12 18.5Z"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M17 22H7C3 22 2 21 2 17V15C2 11 3 10 7 10H17C21 10 22 11 22 15V17C22 21 21 22 17 22Z"
-                      stroke="#343434"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-
-                <div
-                  className={`sidebar-icon position-relative ${isPrintingCheck ? "disabled" : ""}`}
-                  title="Çap et"
-                  onClick={async () => {
-                    if (isDragMode || isPrintingCheck || !loginedWaiter?.data?.can_print_before_close) return;
-
-                    if (currentOrder?.uuid) {
-                      setIsPrintingCheck(true);
-                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-
-                      try {
-                        const result = await printCustomerReceipt({
-                          items: products,
-                          checkData: { ...currentOrder, customer_name: selectedCustomer?.name || currentOrder?.customer_name || "" },
-                          tableName: currentTable?.name,
-                          hallName: currentHall?.name,
-                          waiterName
-                        }, loginedProfileData);
-
-                        if (result.success) {
-                          toast.success("Ön çap uğurla tamamlandı");
-                          await dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName })).unwrap();
-
-                          // Refresh Data
-                          await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
-                          if (tableGroups?.data) {
-                            await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
-                          }
-                        }
-                      } catch (error) {
-                        console.error("Print Check Error:", error);
-                      } finally {
-                        setIsPrintingCheck(false);
-                      }
-                    }
-                  }}
-                >
-                  {isPrintingCheck ? (
-                    <div className="spinner-border spinner-border-sm text-primary" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                  ) : (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -1056,54 +779,331 @@ const Check = () => {
                       fill="none"
                     >
                       <path
-                        d="M7.25 7H16.75V5C16.75 3 16 2 13.75 2H10.25C8 2 7.25 3 7.25 5V7Z"
-                        fill="#EBF2FE"
-                        stroke="#343434"
+                        d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z"
+                        stroke={selectedCustomer ? "#053796" : "#343434"}
                         strokeWidth="1.5"
-                        strokeMiterlimit="10"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                       <path
-                        d="M16 15V19C16 21 15 22 13 22H11C9 22 8 21 8 19V15H16Z"
-                        fill="#EBF2FE"
-                        stroke="#343434"
+                        d="M20.59 22C20.59 18.13 16.74 15 12 15C7.26 15 3.41 18.13 3.41 22"
+                        stroke={selectedCustomer ? "#053796" : "#343434"}
                         strokeWidth="1.5"
-                        strokeMiterlimit="10"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M21 10V15C21 17 20 18 18 18H16V15H8V18H6C4 18 3 17 3 15V10C3 8 4 7 6 7H18C20 7 21 8 21 10Z"
-                        fill="#EBF2FE"
-                        stroke="#343434"
-                        strokeWidth="1.5"
-                        strokeMiterlimit="10"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M17 15H15.79H7"
-                        stroke="#343434"
-                        strokeWidth="1.5"
-                        strokeMiterlimit="10"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M7 11H10"
-                        stroke="#343434"
-                        strokeWidth="1.5"
-                        strokeMiterlimit="10"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                     </svg>
-                  )}
-                  {!isPrintingCheck && (
-                    <span className="icon-badge">{currentOrder?.print_count || 0}</span>
-                  )}
-                </div>
+                    {selectedCustomer && (
+                      <span className="icon-badge" style={{ background: '#053796', fontSize: '7px', width: '14px', height: '14px' }}>✓</span>
+                    )}
+                  </div>
+                )}
+
+                {Number(loginedWaiter?.data?.can_add_discount) === 1 && (
+                  <div className="sidebar-icon discount" onClick={() => {
+                    if (currentOrder?.is_locked === 1) {
+                      toast.error("Qəbz kilidlidir!");
+                      return;
+                    }
+                    setOnShowDiscount(true);
+                  }}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M19.5 12.5C19.5 11.12 20.62 10 22 10V9C22 5 21 4 17 4H7C3 4 2 5 2 9V9.5C3.38 9.5 4.5 10.62 4.5 12C4.5 13.38 3.38 14.5 2 14.5V15C2 19 3 20 7 20H17C21 20 22 19 22 15C20.62 15 19.5 13.88 19.5 12.5Z"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M9 14.75L15 8.75"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M14.9945 14.75H15.0035"
+                        stroke="#343434"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M8.99451 9.25H9.00349"
+                        stroke="#343434"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                {Number(loginedWaiter?.data?.can_edit_service_fee) === 1 && (
+                  <div className="sidebar-icon service_fee" onClick={() => {
+                    if (currentOrder?.is_locked === 1) {
+                      toast.error("Qəbz kilidlidir!");
+                      return;
+                    }
+                    setOnShowServiceFee(true);
+                  }}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M18.97 22H4.97C1.97 22 1.97 20.65 1.97 19V18C1.97 17.45 2.42 17 2.97 17H20.97C21.52 17 21.97 17.45 21.97 18V19C21.97 20.65 21.97 22 18.97 22Z"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M20.72 13V17H3.26999V13C3.26999 9.16 5.97999 5.95 9.58999 5.18C10.13 5.06 10.69 5 11.27 5H12.72C13.3 5 13.87 5.06 14.41 5.18C18.02 5.96 20.72 9.16 20.72 13Z"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M14.5 4.5C14.5 4.74 14.47 4.96 14.41 5.18C13.87 5.06 13.3 5 12.72 5H11.27C10.69 5 10.13 5.06 9.59 5.18C9.53 4.96 9.5 4.74 9.5 4.5C9.5 3.12 10.62 2 12 2C13.38 2 14.5 3.12 14.5 4.5Z"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M15 11H9"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                {Number(loginedWaiter?.data?.can_add_check_comment) === 1 && (
+                  <div
+                    className="sidebar-icon comment-button"
+                    onClick={() => {
+                      if (currentOrder?.is_locked === 1) {
+                        toast.error("Qəbz kilidlidir!");
+                        return;
+                      }
+                      setComment(true);
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M8.5 19H8C4 19 2 18 2 13V8C2 4 4 2 8 2H16C20 2 22 4 22 8V13C22 17 20 19 16 19H15.5C15.19 19 14.89 19.15 14.7 19.4L13.2 21.4C12.54 22.28 11.46 22.28 10.8 21.4L9.3 19.4C9.14 19.18 8.77 19 8.5 19Z"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeMiterlimit="10"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M15.9965 11H16.0054"
+                        stroke="#343434"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M11.9955 11H12.0045"
+                        stroke="#343434"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M7.99451 11H8.00349"
+                        stroke="#343434"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                )}
+                {Number(loginedWaiter?.data?.can_view_logs) === 1 && (
+                  <div
+                    className={`sidebar-icon history ${showHistoryModal ? 'active-sidebar-icon' : ''}`}
+                    onClick={() => setShowHistoryModal(true)}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#343434"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+
+              <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
+
+                {Number(loginedWaiter?.data?.can_lock_check) === 1 && (
+                  <div
+                    className="sidebar-icon check-lock"
+                    onClick={() => setLockCheck(true)}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M6 10V8C6 4.69 7 2 12 2C17 2 18 4.69 18 8V10"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 18.5C13.3807 18.5 14.5 17.3807 14.5 16C14.5 14.6193 13.3807 13.5 12 13.5C10.6193 13.5 9.5 14.6193 9.5 16C9.5 17.3807 10.6193 18.5 12 18.5Z"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M17 22H7C3 22 2 21 2 17V15C2 11 3 10 7 10H17C21 10 22 11 22 15V17C22 21 21 22 17 22Z"
+                        stroke="#343434"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                {Number(loginedWaiter?.data?.can_print_before_close) === 1 && (
+                  <div
+                    className={`sidebar-icon position-relative ${isPrintingCheck ? "disabled" : ""}`}
+                    title="Çap et"
+                    onClick={async () => {
+                      if (isDragMode || isPrintingCheck) return;
+
+                      if (currentOrder?.uuid) {
+                        setIsPrintingCheck(true);
+                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+                        try {
+                          const result = await printCustomerReceipt({
+                            items: products,
+                            checkData: { ...currentOrder, customer_name: selectedCustomer?.name || currentOrder?.customer_name || "" },
+                            tableName: currentTable?.name,
+                            hallName: currentHall?.name,
+                            waiterName
+                          }, loginedProfileData);
+
+                          if (result.success) {
+                            toast.success("Ön çap uğurla tamamlandı");
+                            await dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName })).unwrap();
+
+                            await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+                            if (tableGroups?.data) {
+                              await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
+                            }
+                          }
+                        } catch (error) {
+                          console.error("Print Check Error:", error);
+                        } finally {
+                          setIsPrintingCheck(false);
+                        }
+                      }
+                    }}
+                  >
+                    {isPrintingCheck ? (
+                      <div className="spinner-border spinner-border-sm text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M7.25 7H16.75V5C16.75 3 16 2 13.75 2H10.25C8 2 7.25 3 7.25 5V7Z"
+                          fill="#EBF2FE"
+                          stroke="#343434"
+                          strokeWidth="1.5"
+                          strokeMiterlimit="10"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M16 15V19C16 21 15 22 13 22H11C9 22 8 21 8 19V15H16Z"
+                          fill="#EBF2FE"
+                          stroke="#343434"
+                          strokeWidth="1.5"
+                          strokeMiterlimit="10"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M21 10V15C21 17 20 18 18 18H16V15H8V18H6C4 18 3 17 3 15V10C3 8 4 7 6 7H18C20 7 21 8 21 10Z"
+                          fill="#EBF2FE"
+                          stroke="#343434"
+                          strokeWidth="1.5"
+                          strokeMiterlimit="10"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M17 15H15.79H7"
+                          stroke="#343434"
+                          strokeWidth="1.5"
+                          strokeMiterlimit="10"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M7 11H10"
+                          stroke="#343434"
+                          strokeWidth="1.5"
+                          strokeMiterlimit="10"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                    {!isPrintingCheck && (
+                      <span className="icon-badge">{currentOrder?.print_count || 0}</span>
+                    )}
+                  </div>
+                )}
 
                 <div
                   className="sidebar-icon operations"
@@ -1192,34 +1192,32 @@ const Check = () => {
 
               <div className="tools-divider"></div>
 
-              {/* Checks */}
-              <div
-                className="header-action-item small-item"
-                style={{ cursor: "pointer" }}
-                onClick={() => {
-                  if (Number(loginedWaiter?.data?.can_view_archived_checks) === 1) {
-                    navigate("/checks");
-                  } else {
-                    // Optional: toast.error("İcazəniz yoxdur");
-                  }
-                }}
-              >
-                <span className="d-none d-xl-inline">Çeklər</span>
-                <svg
-                  className="d-xl-none"
-                  width="22"
-                  height="22"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51z" />
-                  <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" />
-                </svg>
-                <span className="count-badge text-white" style={{ background: "#A5B4FC" }}>{books?.data?.length || 0}</span>
-              </div>
+              {Number(loginedWaiter?.data?.can_view_archived_checks) === 1 && (
+                <>
+                  {/* Checks */}
+                  <div
+                    className="header-action-item small-item"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate("/checks")}
+                  >
+                    <span className="d-none d-xl-inline">Çeklər</span>
+                    <svg
+                      className="d-xl-none"
+                      width="22"
+                      height="22"
+                      viewBox="0 0 16 16"
+                      fill="currentColor"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51z" />
+                      <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z" />
+                    </svg>
+                    <span className="count-badge text-white" style={{ background: "#A5B4FC" }}>{books?.data?.length || 0}</span>
+                  </div>
 
-              <div className="tools-divider"></div>
+                  <div className="tools-divider"></div>
+                </>
+              )}
 
               {/* Clock Display */}
               {showClock && (
@@ -1232,28 +1230,32 @@ const Check = () => {
                 </>
               )}
 
-              {/* Menu Hamburger */}
-              <button
-                className="header-icon-btn small-icon-btn"
-                onClick={() => navigate("/settings")}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    d="M3 12H21M3 6H21M3 18H21"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
+              {Number(loginedWaiter?.data?.can_access_settings) === 1 && (
+                <>
+                  {/* Menu Hamburger */}
+                  <button
+                    className="header-icon-btn small-icon-btn"
+                    onClick={() => navigate("/settings")}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M3 12H21M3 6H21M3 18H21"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
 
-              <div className="tools-divider"></div>
+                  <div className="tools-divider"></div>
+                </>
+              )}
 
               {/* Waiter */}
 
@@ -1294,37 +1296,38 @@ const Check = () => {
 
               <div className="tools-divider"></div>
 
-              {/* Notification Bell */}
-              <button
-                className="header-icon-btn small-icon-btn position-relative"
-                onClick={() => {
-                  if (Number(loginedWaiter?.data?.can_see_notif) !== 1) return;
-                  setShowNotifications(true);
-                }}
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    d="M18 8A6 6 0 0 0 6 8C6 15 3 21 3 21H21S18 15 18 8Z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M13.73 21A2 2 0 0 1 10.27 21" />
-                </svg>
-                {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
-              </button>
+              {Number(loginedWaiter?.data?.can_see_notif) === 1 && (
+                <>
+                  {/* Notification Bell */}
+                  <button
+                    className="header-icon-btn small-icon-btn position-relative"
+                    onClick={() => setShowNotifications(true)}
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        d="M18 8A6 6 0 0 0 6 8C6 15 3 21 3 21H21S18 15 18 8Z"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path d="M13.73 21A2 2 0 0 1 10.27 21" />
+                    </svg>
+                    {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
+                  </button>
 
-              <div className="tools-divider"></div>
+                  <div className="tools-divider"></div>
+                </>
+              )}
 
               <button
                 className="header-icon-btn small-icon-btn wifi-icon position-relative"
-                onClick={() => setShowStatusModal(true)}
+                onClick={() => { if (Number(loginedWaiter?.data?.can_access_settings) === 1) setShowStatusModal(true); }}
                 style={{ cursor: "pointer", border: "none", background: "none", padding: "0 20px 0 12px" }}
               >
                 <div className="wifi-badge-container">
@@ -1488,12 +1491,11 @@ const Check = () => {
                   </div> */}
 
                 {/* Settings Toolbar - hidden when search is expanded */}
-                {!isSearchExpanded && (
+                {!isSearchExpanded && Number(loginedWaiter?.data?.can_manage_products) === 1 && (
                   <div className="settings-toolbar-wrapper">
                     <div
                       className={`settings-gear-btn ${isSettingsOpen ? 'active' : ''}`}
                       onClick={() => {
-                        if (Number(loginedWaiter?.data?.can_manage_products) !== 1) return;
                         if (isDragMode) return;
                         setIsSettingsOpen(!isSettingsOpen);
                       }}
