@@ -90,7 +90,7 @@ pause`;
     }
 };
 
-const initMasterServer = (server) => {
+const initMasterServer = (server, isBroadcastingActive = true) => {
     if (io) {
         console.log("⚠️ Master Socket.io Server artıq aktivdir.");
         return;
@@ -111,6 +111,11 @@ const initMasterServer = (server) => {
     io.on("connection", (socket) => {
         console.log(`🔌 Yeni terminal qoşuldu: ${socket.id}`);
 
+        // Customer Display event handling
+        socket.on("broadcast_customer_display", (data) => {
+            socket.broadcast.emit("customer_display_update", data);
+        });
+
         socket.on("delegate_print", (data) => {
             console.log("🖨️ Çap delegasiyası qəbul edildi:", data.printerName);
             // Broadcast to all (Master's frontend will pick this up)
@@ -122,8 +127,12 @@ const initMasterServer = (server) => {
         });
     });
 
-    startBroadcasting();
-    openFirewallPorts();
+    if (isBroadcastingActive) {
+        startBroadcasting();
+        openFirewallPorts();
+    } else {
+        console.log("ℹ️ Local Socket Server started (Master/Slave broadcasting is disabled)");
+    }
 };
 
 let broadcastInterval = null;

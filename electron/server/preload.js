@@ -13,4 +13,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     reEvaluateRole: () => ipcRenderer.invoke("re-evaluate-role"),
     onBackendLog: (callback) => ipcRenderer.on("backend-log", (event, ...args) => callback(...args)),
     getSystemPrinters: () => ipcRenderer.invoke("get-system-printers"),
+    getScreens: () => ipcRenderer.invoke("get-screens"),
+    toggleCustomerDisplay: (data) => ipcRenderer.invoke("toggle-customer-display", data),
 });

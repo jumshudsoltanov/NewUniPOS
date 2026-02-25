@@ -1,4 +1,4 @@
-const { BrowserWindow, app, ipcMain, shell } = require("electron");
+const { BrowserWindow, app, ipcMain, shell, screen } = require("electron");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
@@ -6,6 +6,7 @@ const { exec } = require("child_process");
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
+let customerWindow = null;
 
 function createWindow() {
   const appPath = app.getAppPath();
@@ -56,7 +57,59 @@ function createWindow() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("backend-log", "[NODE ERROR]", ...args);
     }
-  };
+  }
+
+  if (!isDev && mainWindow) {
+    mainWindow.setKiosk(true);
+  }
+
+  // Auto-start customer display if enabled in DB
+  setTimeout(() => {
+    checkCustomerDisplayAutoStart();
+  }, 3000);
+
+  async function checkCustomerDisplayAutoStart() {
+    try {
+      const LoginModel = require("../backend/model/LoginModel");
+      const profile = await LoginModel.findOne({ order: [['id', 'DESC']] });
+
+      if (profile && profile.is_customer_display_active === 1 && profile.customer_display_screen_id) {
+        console.log("[ELECTRON] Auto-starting Customer Display on screen:", profile.customer_display_screen_id);
+
+        const displays = screen.getAllDisplays();
+        const targetDisplay = displays.find(d => String(d.id) === String(profile.customer_display_screen_id)) || screen.getPrimaryDisplay();
+
+        if (customerWindow) {
+          customerWindow.close();
+        }
+
+        customerWindow = new BrowserWindow({
+          x: targetDisplay.bounds.x,
+          y: targetDisplay.bounds.y,
+          width: targetDisplay.bounds.width,
+          height: targetDisplay.bounds.height,
+          fullscreen: true,
+          autoHideMenuBar: true,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+          },
+        });
+
+        if (isDev) {
+          customerWindow.loadURL("http://localhost:5173/#/customer");
+        } else {
+          customerWindow.loadFile(path.join(app.getAppPath(), "electron", "front", "dist", "index.html"), { hash: "/customer" });
+        }
+
+        customerWindow.on("closed", () => {
+          customerWindow = null;
+        });
+      }
+    } catch (err) {
+      console.error("[ELECTRON] Auto-start Customer Display Error:", err.message);
+    }
+  }
 }
 
 // IPC Handlers
@@ -112,6 +165,62 @@ ipcMain.handle("get-system-printers", async () => {
     console.error("Error getting system printers:", e);
     return [];
   }
+});
+
+ipcMain.handle("get-screens", () => {
+  const displays = screen.getAllDisplays();
+  return displays.map((d, index) => ({
+    id: d.id,
+    label: d.label || `Ekran ${index + 1}`,
+    bounds: d.bounds,
+    isPrimary: d.id === screen.getPrimaryDisplay().id
+  }));
+});
+
+ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
+  if (!active) {
+    if (customerWindow) {
+      customerWindow.close();
+      customerWindow = null;
+    }
+    return { success: true, active: false };
+  }
+
+  // If already open, just focus or move? 
+  // For simplicity, let's recreation logic
+  if (customerWindow) {
+    customerWindow.close();
+  }
+
+  const displays = screen.getAllDisplays();
+  const targetDisplay = displays.find(d => String(d.id) === String(screenId)) || screen.getPrimaryDisplay();
+
+  customerWindow = new BrowserWindow({
+    x: targetDisplay.bounds.x,
+    y: targetDisplay.bounds.y,
+    width: targetDisplay.bounds.width,
+    height: targetDisplay.bounds.height,
+    fullscreen: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  const url = isDev ? "http://localhost:5173/#/customer" : `file://${path.join(app.getAppPath(), "electron", "front", "dist", "index.html")}#/customer`;
+
+  if (isDev) {
+    customerWindow.loadURL("http://localhost:5173/#/customer");
+  } else {
+    customerWindow.loadFile(path.join(app.getAppPath(), "electron", "front", "dist", "index.html"), { hash: "/customer" });
+  }
+
+  customerWindow.on("closed", () => {
+    customerWindow = null;
+  });
+
+  return { success: true, active: true };
 });
 
 ipcMain.handle("print-receipt", async (event, { html, printerName }) => {

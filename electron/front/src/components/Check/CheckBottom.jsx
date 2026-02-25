@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   sendOrders,
@@ -12,12 +12,11 @@ import {
 } from "../../redux/Slices/OrdersSlice";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
-import { useCallback } from "react";
-import { useMemo } from "react";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
 import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printerHelpers.jsx";
+import { getSocket } from "../../utils/apiConfig";
 
 const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending }) => {
   const dispatch = useDispatch();
@@ -26,6 +25,63 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   const navigate = useNavigate();
 
   const [showNewItemsModal, setShowNewItemsModal] = useState(false);
+
+  // BroadCast to Customer Display
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    // Aggregate all items
+    const allItems = [];
+
+    // 1. Items already in the check (sent)
+    if (orders?.orders_items) {
+      orders.orders_items.forEach(item => {
+        allItems.push({
+          name: item.name || item.product_name || item.product?.name || "Məhsul",
+          price: item.price,
+          qty: item.count || item.quantity,
+          unit: item.unit || "əd.",
+          modifiers: item.modifiers || [],
+          discount: item.discount || 0,
+          is_discount_percent: item.is_discount_percent || 0
+        });
+      });
+    }
+
+    // 2. New products added but not yet sent
+    if (products) {
+      products.forEach(item => {
+        allItems.push({
+          name: item.name || item.product_name || item.product?.name || "Məhsul",
+          price: item.price,
+          qty: item.count || item.quantity,
+          unit: item.unit || "əd.",
+          modifiers: item.modifiers || [],
+          discount: item.discount || 0,
+          is_discount_percent: item.is_discount_percent || 0
+        });
+      });
+    }
+
+    // 3. Sent products (this might redundant with orders?.orders_items, but checking local state just in case)
+    // In this app, sentProducts often acts as a transition state.
+    // However, if we aggregate both, we might double-count. 
+    // Usually, the POS truth is orders.orders_items + local products.
+
+    socket.emit("broadcast_customer_display", {
+      items: allItems,
+      discount: orders?.discount || 0,
+      is_discount_percent: orders?.is_discount_percent || 0,
+      service_charge: orders?.service_charge || 0,
+      deposit: orders?.deposit || 0,
+      check_id: orders?.id,
+      guest_count: orders?.guest_count || 0,
+      table_name: table?.name || orders?.table_name,
+      hall_name: hall?.name || orders?.hall_name
+    });
+
+  }, [orders, products, sentProducts, pendingDeletions]);
 
   // Close Check
 

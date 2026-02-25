@@ -162,6 +162,10 @@ const ImageSection = React.memo(({ backgroundImg }) => {
         className="RightBoxContainer"
         style={{ opacity: loaded ? 1 : 0, transition: "opacity 0.5s ease" }}
       >
+        <div className="pin-brand-badge">
+          <img src={DefaultLogo} alt="UniPOS Tech" />
+          <span>UniPOS Tech</span>
+        </div>
         <img
           src={currentSrc}
           alt="Background"

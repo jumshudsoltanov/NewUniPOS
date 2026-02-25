@@ -43,15 +43,23 @@ const testPrint = async (req, res) => {
     const { printerName } = req.body;
     try {
         const { ipcMain } = require("electron");
-        // We can't call ipcMain directly from here usually, but since this is Electron backend running in same process or via IPC...
-        // Actually, the backend runs in a way that we might need to send a message back to main.
-        // But the user asked for "test cap falan cixara bilim".
-        // I will implement a service or utility in main.js if needed.
-        // For now, let's assume we can trigger it.
         res.status(200).json({ message: "Test print command sent" });
     } catch (error) {
         res.status(500).json({ message: "Test print failed" });
     }
 };
 
-module.exports = { getPrinters, updatePrinter, toggleMasterPrinting, testPrint };
+const updateCustomerDisplaySettings = async (req, res) => {
+    const { profileId, isActive, screenId } = req.body;
+    try {
+        await LoginModel.update({
+            is_customer_display_active: isActive ? 1 : 0,
+            customer_display_screen_id: screenId
+        }, { where: { id: profileId } });
+        res.status(200).json({ message: "success" });
+    } catch (error) {
+        res.status(500).json({ message: "Update failed", error: error.message });
+    }
+};
+
+module.exports = { getPrinters, updatePrinter, toggleMasterPrinting, testPrint, updateCustomerDisplaySettings };

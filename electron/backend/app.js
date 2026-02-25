@@ -250,16 +250,19 @@ const checkTerminalRole = async (targetServer) => {
     const profile = await LoginModel.findOne();
     console.log("DEBUG: Checking Terminal Role. is_master:", profile ? profile.is_master : "NULL");
 
+    // ALWAYS start the local Socket.io server so the Customer Display can connect locally
+    const { initMasterServer } = require("./socket/MasterServer");
+
     if (profile && (Number(profile.is_master) === 1 || profile.is_master === true)) {
       global.isMasterNode = true;
       console.log("DEBUG: Terminal role CONFIRMED as MASTER. global.isMasterNode set to TRUE.");
 
       if (profile.is_master_slave_active === 1) {
-        console.log("Master-Slave mode is active. Ensuring MasterServer...");
-        const { initMasterServer } = require("./socket/MasterServer");
-        initMasterServer(targetServer || server);
+        console.log("Master-Slave mode is active. Starting MasterServer with UDP Broadcasting...");
+        initMasterServer(targetServer || server, true);
       } else {
-        console.log("Standalone Master mode. MasterServer not started.");
+        console.log("Standalone Master mode. Starting local Socket Server only.");
+        initMasterServer(targetServer || server, false);
       }
 
       // Sərfəli (Master) terminal üçün ilkin məlumatları çək və sinxronizasiyanı təmin et
@@ -267,7 +270,9 @@ const checkTerminalRole = async (targetServer) => {
     } else {
       global.isMasterNode = false;
       console.log(`DEBUG: Terminal role is SLAVE or NOT MASTER. profile exist: ${!!profile}, is_master: ${profile?.is_master}. global.isMasterNode set to FALSE.`);
-      console.log("Terminal is NOT Master. Running as Slave. (Broadcasting disabled)");
+      console.log("Terminal is NOT Master. Running as Slave. Starting local Socket Server only.");
+      initMasterServer(targetServer || server, false);
+
       if (profile?.id) {
         InsertData(profile.id);
       }

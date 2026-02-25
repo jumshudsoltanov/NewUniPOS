@@ -23,6 +23,7 @@ router.get("/pos/printers/:profileId", PrintersController.getPrinters);
 router.put("/printers/:id", PrintersController.updatePrinter);
 router.post("/printers/test-print", PrintersController.testPrint);
 router.patch("/profiles/master-printing", PrintersController.toggleMasterPrinting);
+router.patch("/profiles/customer-display", PrintersController.updateCustomerDisplaySettings);
 router.get("/waiters/:profileId/list", WaitersController.getWaiterLists);
 router.get("/tags/:profileId/list", TagsController.getTagsList);
 router.get(

@@ -16,6 +16,11 @@ const DevicesModal = ({ show, onHide }) => {
         cashier: false,
         product: false
     });
+    const [screens, setScreens] = useState([]);
+    const [customerDisplay, setCustomerDisplay] = useState({
+        active: false,
+        screenId: ""
+    });
 
     useEffect(() => {
         if (show && profileId) {
@@ -45,10 +50,20 @@ const DevicesModal = ({ show, onHide }) => {
                     const sysPrinters = await window.electronAPI.getSystemPrinters();
                     setSystemPrinters(sysPrinters || []);
                 }
+                if (window.electronAPI?.getScreens) {
+                    const scr = await window.electronAPI.getScreens();
+                    setScreens(scr || []);
+                }
             } catch (printerErr) {
-                console.warn("System printers not available:", printerErr.message);
+                console.warn("System devices not available:", printerErr.message);
                 setSystemPrinters([]);
             }
+
+            const profile = JSON.parse(localStorage.getItem("profile") || "{}");
+            setCustomerDisplay({
+                active: profile.is_customer_display_active === 1,
+                screenId: profile.customer_display_screen_id || ""
+            });
         } catch (error) {
             console.error("Fetch Data Error:", error);
         }
@@ -111,6 +126,36 @@ const DevicesModal = ({ show, onHide }) => {
         }
     };
 
+    const handleUpdateCustomerDisplay = async (active = null, screenId = null) => {
+        const nextActive = active !== null ? active : customerDisplay.active;
+        const nextScreenId = screenId !== null ? screenId : customerDisplay.screenId;
+
+        try {
+            await apiConfig.patch("/profiles/customer-display", {
+                profileId,
+                isActive: nextActive,
+                screenId: nextScreenId
+            });
+
+            // Update local storage
+            const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+            storedProfile.is_customer_display_active = nextActive ? 1 : 0;
+            storedProfile.customer_display_screen_id = nextScreenId;
+            localStorage.setItem("profile", JSON.stringify(storedProfile));
+
+            setCustomerDisplay({ active: nextActive, screenId: nextScreenId });
+
+            // Trigger Electron window
+            if (window.electronAPI?.toggleCustomerDisplay) {
+                await window.electronAPI.toggleCustomerDisplay({ active: nextActive, screenId: nextScreenId });
+            }
+
+            toast.success("Müştəri ekranı tənzimləmələri yadda saxlanıldı");
+        } catch (error) {
+            toast.error("Xəta baş verdi");
+        }
+    };
+
     return (
         <Modal show={show} onHide={onHide} centered size="xl" className="devices-modal">
             <Modal.Header closeButton>
@@ -126,7 +171,10 @@ const DevicesModal = ({ show, onHide }) => {
                             <i className="bi bi-printer"></i>
                             <span>Printerlər</span>
                         </div>
-                        <div className="devices-menu-item">
+                        <div
+                            className={`devices-menu-item ${activeTab === "display" ? "active" : ""}`}
+                            onClick={() => setActiveTab("display")}
+                        >
                             <i className="bi bi-display"></i>
                             <span>Müştəri Ekranı</span>
                         </div>
@@ -276,6 +324,46 @@ const DevicesModal = ({ show, onHide }) => {
                                     ))}
                                 </div>
                             </>
+                        ) : activeTab === "display" ? (
+                            <div className="display-settings">
+                                <div className="display-config-card">
+                                    <div className="display-config-header">
+                                        <div className="display-config-info">
+                                            <h4>İkinci Monitor (Dual-Monitor)</h4>
+                                            <p>Cihaza bağlı olan ikinci ekranda müştəri menyusunu aktivləşdirin.</p>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${customerDisplay.active ? "active" : ""}`}
+                                            onClick={() => handleUpdateCustomerDisplay(!customerDisplay.active)}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="display-config-body">
+                                        <div className="printer-form-group">
+                                            <label>Monitor Seçimi</label>
+                                            <select
+                                                className="printer-select"
+                                                value={customerDisplay.screenId}
+                                                onChange={(e) => handleUpdateCustomerDisplay(null, e.target.value)}
+                                            >
+                                                <option value="">Seçilməyib</option>
+                                                {screens.map(s => (
+                                                    <option key={s.id} value={s.id}>
+                                                        {s.label} {s.isPrimary ? "(Əsas)" : ""} - {s.bounds.width}x{s.bounds.height}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="display-preview-info">
+                                            <i className="bi bi-info-circle"></i>
+                                            <span>Əgər cihazınızda ikinci ekran qoşuludursa, onu siyahıdan seçin və yuxarıdakı açarı aktiv edin.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         ) : (
                             <div style={{ textAlign: 'center', marginTop: '100px', color: '#64748b' }}>
                                 <i className="bi bi-gear" style={{ fontSize: '48px' }}></i>

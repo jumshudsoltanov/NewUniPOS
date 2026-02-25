@@ -288,3 +288,61 @@
 .premium-switch.active .switch-handle {
     transform: translateX(20px);
 }
+
+/* Display Settings */
+.display-settings {
+    padding: 10px 0;
+}
+
+.display-config-card {
+    background: #fff;
+    border: 2px solid #f0f2f5;
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.display-config-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.display-config-info h4 {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.display-config-info p {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.display-config-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.display-preview-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #f0f7ff;
+    border-radius: 12px;
+    color: #4F85F4;
+    font-size: 12px;
+}
+
+.display-preview-info i {
+    font-size: 16px;
+}

@@ -19,6 +19,7 @@ import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 import Toastify from "./components/Toastify/Toastify";
 import "react-toastify/dist/ReactToastify.css";
 import NetworkOverlay from "./components/NetworkOverlay/NetworkOverlay";
+import CustomerDisplay from './components/CustomerDisplay/CustomerDisplay';
 import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
 import { initNetwork, getSocket } from "./utils/apiConfig";
@@ -244,6 +245,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/pin" element={<Pin />} />
+        <Route path="/customer" element={<CustomerDisplay />} />
 
         <Route element={<Layout />}>
           <Route path="/tables" element={<Tables />} />
