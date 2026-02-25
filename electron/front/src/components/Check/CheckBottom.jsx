@@ -19,180 +19,13 @@ import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
 import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 
-const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
+const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions, menu } = useSelector((state) => state.OrderSlice);
-  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-  const { menuDataWithCategories } = useSelector((state) => state.MenuSlice); // Import menu data for printing
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [showNewItemsModal, setShowNewItemsModal] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-
-  const payload = {
-    orderId: id,
-    profileId: loginedProfileData?.data?.profile?.id,
-    productList: products,
-    waiterId: loginedWaiter?.data?.id,
-  };
-
-  const handleSendOrders = async (itemComments = {}) => {
-    try {
-      const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || orders?.waiter?.name || "Naməlum";
-
-      const getSaleTypeName = (type, typeName) => {
-        if (typeName) return typeName;
-        if (type == 1 || type === "takeaway") return "Al-götür";
-        if (type == 2 || type === "delivery") return "Çatdırılma";
-        return "Restoranda";
-      };
-      const displaySaleType = getSaleTypeName(orders?.sale_type, orders?.sale_type_name);
-
-      const getAllPrintersForItem = (item) => {
-        // Use loose equality (==) for ID comparison because item IDs can be strings from params/UUIDs
-        const menuRef = menu?.find(m => m.id == (item.product_id || item.itemId || item.id));
-        const categoryId = menuRef?.category_id || item.category_id;
-
-        // 1. Get explicitly assigned product printers from menu (most reliable) or the item itself
-        const productPrinters = (menuRef?.printer_details && menuRef.printer_details.length > 0)
-          ? menuRef.printer_details
-          : (item.printer_details || []);
-
-        // 2. Get category printers
-        let categoryPrinters = [];
-        if (categoryId && menuDataWithCategories?.data) {
-          for (const genCat of menuDataWithCategories.data) {
-            if (genCat.is_general && genCat.categories) {
-              const subCat = genCat.categories.find(c => c.id === categoryId);
-              if (subCat && subCat.printer_details) categoryPrinters = subCat.printer_details;
-            } else if (genCat.id === categoryId && genCat.printer_details) {
-              categoryPrinters = genCat.printer_details;
-            }
-          }
-        }
-
-        // 3. Merge both to guarantee all assigned printers are hit, duplicate prevention is downstream
-        const combined = [...productPrinters, ...categoryPrinters];
-        return { printers: combined, categoryId };
-      };
-
-      // Start loading state immediately IF we have something to do to prevent user from re-triggering
-      const hasDeletions = pendingDeletions && pendingDeletions.length > 0;
-      const hasNewProducts = products && products.length > 0;
-
-      if (!hasDeletions && !hasNewProducts) {
-        console.warn("handleSendOrders called but no items to send/delete");
-        return;
-      }
-
-      setIsSending(true);
-
-      // 1. Process Pending Deletions first
-      if (pendingDeletions && pendingDeletions.length > 0) {
-        for (const deletion of pendingDeletions) {
-          try {
-            await dispatch(deleteOrderItem({
-              orderId: deletion.orderId,
-              itemId: deletion.itemId,
-              reasonId: deletion.reasonId,
-              qty: deletion.type === 'partial' ? deletion.qty : undefined,
-              reasonName: deletion.reasonName, // Pass reason name
-              productName: deletion.name, // Pass product name
-              waiterName
-            })).unwrap();
-          } catch (deleteError) {
-            console.error("Single Item Deletion Error:", deleteError);
-            // We continue processing other deletions even if one fails
-          }
-        }
-      }
-
-      // Print Deletions
-      if (pendingDeletions && pendingDeletions.length > 0) {
-        const deletedItemsForPrint = pendingDeletions.map(d => {
-          const { printers, categoryId } = getAllPrintersForItem(d);
-
-          return {
-            ...d,
-            printer_details: printers,
-            category_id: categoryId,
-            changeType: 'decrease',
-            quantity: d.type === 'partial' ? d.qty : d.originalQty
-          };
-        });
-
-        try {
-          await processAndPrintOrders(
-            deletedItemsForPrint,
-            {
-              table: table?.name || orders?.table_name || "Masa",
-              waiter: waiterName,
-              hallName: hall?.name || "",
-              orderId: orders?.uuid || id,
-              terminalInfo: loginedProfileData?.data?.terminal || {},
-              typeName: displaySaleType,
-              checkData: orders,
-              isDecrease: true
-            },
-            menuDataWithCategories
-          );
-        } catch (printError) {
-          console.error("Deletion Printing Error:", printError);
-          // Don't stop the whole process if printing fails
-        }
-      }
-
-      // 2. Send New Items
-      if (products.length > 0) {
-        // Apply comments to products for printing and saving
-        const productsWithComments = products.map((p, idx) => {
-          const { printers, categoryId } = getAllPrintersForItem(p);
-
-          return {
-            ...p,
-            printer_details: printers,
-            category_id: categoryId,
-            comment: itemComments[idx] !== undefined ? itemComments[idx] : p.comment
-          };
-        });
-
-        // 1. Send New Items to Server FIRST (so "New" badges disappear immediately)
-        await dispatch(sendOrdersItems({
-          ...payload,
-          productList: productsWithComments,
-          waiterName
-        })).unwrap();
-
-        // 2. Print New Items AFTER (while server request is processing or finished)
-        processAndPrintOrders(
-          productsWithComments,
-          {
-            table: table?.name || orders?.table_name || "Masa",
-            waiter: waiterName,
-            hallName: hall?.name || "",
-            orderId: orders?.uuid || id,
-            terminalInfo: loginedProfileData?.data?.terminal || {},
-            typeName: displaySaleType,
-            checkData: orders,
-            isDecrease: false
-          },
-          menuDataWithCategories
-        );
-      }
-
-      // 3. Refresh Data (Handled by Redux Matchers)
-
-      toast.success("Əməliyyat uğurla tamamlandı!");
-
-    } catch (e) {
-      console.error(e);
-      toast.error("Xəta baş verdi");
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   // Close Check
 
@@ -336,6 +169,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
       }
     }
 
+    const isDepositFloor = depositAmount > (subtotalAfterDiscount + serviceAmount);
+
     return {
       total: total.toFixed(2),
       sumTotal: sumTotal.toFixed(2),
@@ -346,6 +181,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
       serviceAmount: serviceAmount.toFixed(2),
       effectiveServicePercentage,
       depositAmount: depositAmount.toFixed(2),
+      isDepositFloor
     };
   }, [
     orders?.orders_items,
@@ -378,8 +214,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer }) => {
             </div>
           )}
           <div className="summary-row">
-            <span>{depositAmount > (subtotalAfterDiscount + serviceAmount) ? 'Minimal məbləğ:' : 'Cəm:'}</span>
-            <span>{Math.max((subtotalAfterDiscount + serviceAmount), depositAmount).toFixed(2)} ₼</span>
+            <span>{calcTotal.isDepositFloor ? 'Minimal məbləğ:' : 'Cəm:'}</span>
+            <span>{calcTotal.sumTotal} ₼</span>
           </div>
           {selectedCustomer?.group && (
             <div className="summary-row">

@@ -195,7 +195,7 @@ const KitchenReceipt = ({
                             borderBottom: idx === items.length - 1 ? "none" : styles.itemRow.borderBottom
                         }}>
                             <div style={styles.colName}>
-                                <span style={{ textDecoration: item.changeType === "decrease" ? "line-through" : "none" }}>
+                                <span>
                                     {itemName}
                                 </span>
                                 {item.comment && (
@@ -204,7 +204,7 @@ const KitchenReceipt = ({
                                     </div>
                                 )}
                                 {item.reasonName && item.changeType === "decrease" && (
-                                    <div style={{ ...styles.modifier, fontWeight: "900", fontSize: fs(12), border: "1px solid #000", display: "inline-block", padding: "1px 3px", marginTop: "2px" }}>
+                                    <div style={{ ...styles.modifier, fontWeight: "900", fontSize: fs(12), border: "1px solid #000", display: "block", width: "fit-content", padding: "1px 3px", marginTop: "2px" }}>
                                         SƏBƏB: {item.reasonName}
                                     </div>
                                 )}

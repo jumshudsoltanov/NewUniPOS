@@ -101,8 +101,7 @@ const sendOrdersItemsToDb = async (req, res) => {
       }
     }
 
-    let netTotal = total - discount + service + deposit;
-    netTotal = Math.max(netTotal, 0);
+    const netTotal = Math.max(total - discount + service, deposit);
 
     // Order update
     await OrdersModel.update(
@@ -201,7 +200,7 @@ const onUpdateDiscountOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid discount type" });
     }
 
-    newTotal = total - discount + serviceCharge + deposit;
+    newTotal = Math.max(total - discount + serviceCharge, deposit);
 
     newTotal = Math.max(newTotal, 0);
 
@@ -278,7 +277,7 @@ const onUpdateServiceFeeOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid service type" });
     }
 
-    newTotal = total + service - discountAmount + deposit;
+    newTotal = Math.max(total + service - discountAmount, deposit);
 
     newTotal = Math.max(newTotal, 0);
 
@@ -604,8 +603,7 @@ const onMergeChecks = async (req, res) => {
     }
 
     // Final total
-    let total = subtotal - discountAmount + serviceCharge;
-    total = Math.max(total, 0);
+    const total = Math.max(subtotal - discountAmount + serviceCharge, parseFloat(currentOrder.deposit || 0));
 
     // Update the order
     await OrdersModel.update(
@@ -910,8 +908,7 @@ const onSplitOrder = async (req, res) => {
         }
       }
 
-      let netTotal = totalAmount - discount + service;
-      netTotal = Math.max(netTotal, 0);
+      const netTotal = Math.max(totalAmount - discount + service, parseFloat(ord.deposit || 0));
 
       await OrdersModel.update(
         {
@@ -1138,8 +1135,7 @@ const onGiftItem = async (req, res) => {
       }
     }
 
-    let netTotal = total - discount + service;
-    if (netTotal < 0) netTotal = 0;
+    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0));
 
     await OrdersModel.update(
       {
@@ -1283,8 +1279,7 @@ const onUpdateItemDiscount = async (req, res) => {
       }
     }
 
-    let netTotal = total - discount + service;
-    if (netTotal < 0) netTotal = 0;
+    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0));
 
     await OrdersModel.update(
       {
@@ -1472,8 +1467,8 @@ const onUpdateDepositOrder = async (req, res) => {
     const service_charge = parseFloat(currentOrder.service_charge || 0);
 
     const newTotal = Math.max(
-      amount - discount + service_charge + depositValue,
-      0,
+      amount - discount + service_charge,
+      depositValue,
     );
 
     await OrdersModel.update(
@@ -1655,7 +1650,7 @@ const onDeleteItemWithReason = async (req, res) => {
       }
     }
 
-    let netTotal = Math.max(0, total - discount + service);
+    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0));
 
     await OrdersModel.update(
       {
@@ -1782,8 +1777,7 @@ const onUpdateItemPrice = async (req, res) => {
       }
     }
 
-    let netTotal = total - discount + service + deposit;
-    netTotal = Math.max(netTotal, 0);
+    const netTotal = Math.max(total - discount + service, deposit);
 
     // 4. Update OrdersModel
     await OrdersModel.update(
@@ -1906,8 +1900,7 @@ const onUpdateItemCount = async (req, res) => {
       }
     }
 
-    let netTotal = total - discount + service + deposit;
-    netTotal = Math.max(netTotal, 0);
+    const netTotal = Math.max(total - discount + service, deposit);
 
     await OrdersModel.update(
       {

@@ -28,7 +28,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem } from "../../redux/Slices/OrdersSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
@@ -111,6 +111,8 @@ const Check = () => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const { pendingDeletions } = useSelector((state) => state.OrderSlice);
+  const [isSending, setIsSending] = useState(false);
   const {
     pendingCount: syncCount,
     lastSyncedDelta: syncedCount,
@@ -132,6 +134,176 @@ const Check = () => {
         getTableGroups(loginedProfileData?.data?.profile?.id),
       ).unwrap();
       navigate("/tables");
+    }
+  };
+
+  const handleSendOrders = async (itemComments = {}) => {
+    try {
+      const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || "Naməlum";
+
+      const getSaleTypeName = (type, typeName) => {
+        if (typeName) return typeName;
+        if (type == 1 || type === "takeaway") return "Al-götür";
+        if (type == 2 || type === "delivery") return "Çatdırılma";
+        return "Restoranda";
+      };
+      const displaySaleType = getSaleTypeName(currentOrder?.sale_type, currentOrder?.sale_type_name);
+
+      const getAllPrintersForItem = (item) => {
+        const menuRef = menu?.find(m => m.id == (item.product_id || item.itemId || item.id));
+        const categoryId = menuRef?.category_id || item.category_id;
+
+        const productPrinters = (menuRef?.printer_details && menuRef.printer_details.length > 0)
+          ? menuRef.printer_details
+          : (item.printer_details || []);
+
+        let categoryPrinters = [];
+        if (categoryId && menuDataWithCategories?.data) {
+          for (const genCat of menuDataWithCategories.data) {
+            if (genCat.is_general && genCat.categories) {
+              const subCat = genCat.categories.find(c => c.id === categoryId);
+              if (subCat && subCat.printer_details) categoryPrinters = subCat.printer_details;
+            } else if (genCat.id === categoryId && genCat.printer_details) {
+              categoryPrinters = genCat.printer_details;
+            }
+          }
+        }
+
+        const combined = [...productPrinters, ...categoryPrinters];
+        return { printers: combined, categoryId };
+      };
+
+      const hasDeletions = pendingDeletions && pendingDeletions.length > 0;
+      const hasNewProducts = products && products.length > 0;
+
+      if (!hasDeletions && !hasNewProducts) {
+        return;
+      }
+
+      setIsSending(true);
+
+      if (hasDeletions) {
+        for (const deletion of pendingDeletions) {
+          try {
+            await dispatch(deleteOrderItem({
+              orderId: deletion.orderId,
+              itemId: deletion.itemId,
+              reasonId: deletion.reasonId,
+              qty: deletion.type === 'partial' ? deletion.qty : undefined,
+              reasonName: deletion.reasonName,
+              productName: deletion.name,
+              waiterName
+            })).unwrap();
+          } catch (deleteError) {
+            console.error("Single Item Deletion Error:", deleteError);
+          }
+        }
+
+        const deletedItemsForPrint = pendingDeletions.map(d => {
+          const { printers, categoryId } = getAllPrintersForItem(d);
+          return {
+            ...d,
+            printer_details: printers,
+            category_id: categoryId,
+            changeType: 'decrease',
+            quantity: d.type === 'partial' ? d.qty : d.originalQty
+          };
+        });
+
+        try {
+          await processAndPrintOrders(
+            deletedItemsForPrint,
+            {
+              table: currentTable?.name || currentOrder?.table_name || "Masa",
+              waiter: waiterName,
+              hallName: currentHall?.name || "",
+              orderId: currentOrder?.uuid || id,
+              terminalInfo: loginedProfileData?.data?.terminal || {},
+              typeName: displaySaleType,
+              checkData: currentOrder,
+              isDecrease: true
+            },
+            menuDataWithCategories
+          );
+        } catch (printError) {
+          console.error("Deletion Printing Error:", printError);
+        }
+      }
+
+      if (hasNewProducts) {
+        const productsWithComments = products.map((p, idx) => {
+          const { printers, categoryId } = getAllPrintersForItem(p);
+          return {
+            ...p,
+            printer_details: printers,
+            category_id: categoryId,
+            comment: itemComments[idx] !== undefined ? itemComments[idx] : p.comment
+          };
+        });
+
+        await dispatch(sendOrdersItems({
+          orderId: id,
+          profileId: loginedProfileData?.data?.profile?.id,
+          productList: productsWithComments,
+          waiterId: loginedWaiter?.data?.id,
+          waiterName
+        })).unwrap();
+
+        processAndPrintOrders(
+          productsWithComments,
+          {
+            table: currentTable?.name || currentOrder?.table_name || "Masa",
+            waiter: waiterName,
+            hallName: currentHall?.name || "",
+            orderId: currentOrder?.uuid || id,
+            terminalInfo: loginedProfileData?.data?.terminal || {},
+            typeName: displaySaleType,
+            checkData: currentOrder,
+            isDecrease: false
+          },
+          menuDataWithCategories
+        );
+      }
+
+    } catch (e) {
+      console.error(e);
+      toast.error("Xəta baş verdi");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleAutoSaveAndExit = async (targetPath) => {
+    const resultingItemCount = (currentOrder?.orders_items?.length || 0) - (pendingDeletions?.length || 0) + (products?.length || 0);
+
+    if (resultingItemCount === 0 && currentOrder?.uuid) {
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const profileId = loginedProfileData?.data?.profile?.id;
+
+      try {
+        await dispatch(deleteCheck({
+          orderId: currentOrder.uuid,
+          reason: 0,
+          reasonText: "Masa boş olduğu üçün silindi",
+          waiterName
+        })).unwrap();
+
+        if (profileId) {
+          dispatch(getTableGroups(profileId));
+          dispatch(getActiveOrders({ profileId }));
+        }
+        toast.info("Masa boş olduğu üçün silindi");
+      } catch (error) {
+        console.error("Auto-delete error:", error);
+      }
+    } else if (products.length > 0 || pendingDeletions.length > 0) {
+      await handleSendOrders();
+    }
+
+    if (targetPath === -1) {
+      goTables();
+    } else {
+      navigate(targetPath);
     }
   };
 
@@ -568,7 +740,7 @@ const Check = () => {
               className={`check-sidebar flex-column justify-content-between align-items-center ${isSidebarOpen ? "d-flex" : "d-none d-lg-flex"}`}
             >
               <div className="sidebar-top d-flex flex-column align-items-center gap-4">
-                <div className="checkBackBtn" onClick={goTables}>
+                <div className="checkBackBtn" onClick={() => handleAutoSaveAndExit(-1)}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="20"
@@ -979,7 +1151,7 @@ const Check = () => {
                 selectedCustomer={selectedCustomer}
               />
               <CheckMain orders={currentOrder} />
-              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} />
+              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} />
             </div>
           </div>
         </Col>
@@ -1086,9 +1258,10 @@ const Check = () => {
               {/* Waiter */}
 
               {/* Waiter/Exit Icon */}
-              <Link
+              <div
                 className="header-icon-btn small-icon-btn waiter-btn"
-                to="/pin"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleAutoSaveAndExit("/pin")}
               >
                 <div className="d-flex align-items-center gap-2">
                   <svg
@@ -1117,7 +1290,7 @@ const Check = () => {
                   </svg>
                   <span className="d-none d-xl-inline">{loginedWaiter?.data?.name}</span>
                 </div>
-              </Link>
+              </div>
 
               <div className="tools-divider"></div>
 

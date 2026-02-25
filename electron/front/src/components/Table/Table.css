@@ -479,3 +479,30 @@
 .resizable-mode .seat-right-3 {
     bottom: 15%;
 }
+
+.deposit-indicator {
+    font-size: 0.6em;
+    font-weight: 800;
+    background: rgba(30, 58, 138, 0.1);
+    color: #1e3a8a;
+    padding: 1px 6px;
+    border-radius: 4px;
+    display: block;
+    width: fit-content;
+    margin: 0 auto;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: 1px solid rgba(30, 58, 138, 0.2);
+}
+
+.table-surface.my-table .deposit-indicator {
+    background: #10B981;
+    color: #fff;
+    border: none;
+}
+
+.table-surface.other-waiter-table .deposit-indicator {
+    background: #EF4444;
+    color: #fff;
+    border: none;
+}

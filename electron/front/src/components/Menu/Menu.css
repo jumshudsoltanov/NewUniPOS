@@ -198,3 +198,23 @@
     font-size: 0.8rem !important;
     font-weight: 700 !important;
 }
+
+/* Drag and Drop Visual Feedback */
+.menu-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.95) !important;
+    border: 2px dashed #4F85F4 !important;
+    box-shadow: 0 0 15px rgba(79, 133, 244, 0.5) !important;
+    z-index: 20;
+}
+
+.menu-card.drag-over {
+    transform: scale(1.05) !important;
+    border: 2px solid #10b981 !important;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6) !important;
+    z-index: 21;
+}
+
+.menu-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}

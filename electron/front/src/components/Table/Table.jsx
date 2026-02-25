@@ -73,7 +73,7 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter, customStyle }) =
                 if (!order) return "0.00 ₼";
 
                 // Consistency with CheckDetailModal and CheckBottom
-                const subtotal = Number(order.total || 0);
+                const subtotal = Number(order.amount || 0);
                 const discount = Number(order.discount || 0);
                 const deposit = Number(order.deposit || 0);
                 const service = Number(order.service_charge || 0);
@@ -86,7 +86,7 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter, customStyle }) =
                   <>
                     {displayAmount.toFixed(2)} ₼
                     {isDepositFloor && (
-                      <span style={{ fontSize: '0.7em', display: 'block', marginTop: '-2px', fontWeight: 'bold', color: '#fff' }}>
+                      <span className="deposit-indicator">
                         DEPOZİT
                       </span>
                     )}

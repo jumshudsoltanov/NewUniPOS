@@ -44,6 +44,13 @@ const Tables = () => {
 
   // Custom Layout Interaction State
   const containerRef = useRef(null);
+  const [transitionsEnabled, setTransitionsEnabled] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setTransitionsEnabled(true), 150);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [interactionState, setInteractionState] = useState({
     type: null, // 'drag' | 'resize'
     tableId: null,
@@ -99,8 +106,8 @@ const Tables = () => {
   const [generatedLayout, setGeneratedLayout] = useState({});
 
   useEffect(() => {
-    // Only generate layout if we are in edit mode and there are tables
-    if (isTableEditMode && currentTables.length > 0) {
+    // Generate layout whenever tables or hall change
+    if (currentTables.length > 0) {
       const w = window.innerWidth;
       let cols = 2; // xs
       if (w >= 992) cols = 6; // lg
@@ -140,7 +147,7 @@ const Tables = () => {
       });
       setGeneratedLayout(layout);
     }
-  }, [isTableEditMode, currentTables, currentHallId]);
+  }, [currentTables, currentHallId]);
 
   React.useEffect(() => {
     if (tableGroups?.data && currentHallId) {
@@ -452,7 +459,7 @@ const Tables = () => {
                 height: layout.h || defaultH,
                 zIndex: interactionState.tableId === table.id ? 100 : 1,
                 cursor: isTableEditMode ? 'move' : 'default',
-                transition: interactionState.tableId === table.id ? 'none' : 'all 0.2s ease'
+                transition: (!transitionsEnabled || interactionState.tableId === table.id) ? 'none' : 'all 0.2s ease'
               };
 
               return (
