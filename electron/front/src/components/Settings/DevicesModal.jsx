@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import { useSelector } from "react-redux";
 import { toast } from "sonner";
-import apiConfig from "../../utils/apiConfig";
+import apiConfig, { localApi } from "../../utils/apiConfig";
 import "./DevicesModal.css";
 
 const DevicesModal = ({ show, onHide }) => {
@@ -18,6 +18,10 @@ const DevicesModal = ({ show, onHide }) => {
     });
     const [screens, setScreens] = useState([]);
     const [customerDisplay, setCustomerDisplay] = useState({
+        active: false,
+        screenId: ""
+    });
+    const [kitchenDisplay, setKitchenDisplay] = useState({
         active: false,
         screenId: ""
     });
@@ -63,6 +67,10 @@ const DevicesModal = ({ show, onHide }) => {
             setCustomerDisplay({
                 active: profile.is_customer_display_active === 1,
                 screenId: profile.customer_display_screen_id || ""
+            });
+            setKitchenDisplay({
+                active: profile.is_kitchen_display_active === 1,
+                screenId: profile.kitchen_display_screen_id || ""
             });
         } catch (error) {
             console.error("Fetch Data Error:", error);
@@ -130,29 +138,59 @@ const DevicesModal = ({ show, onHide }) => {
         const nextActive = active !== null ? active : customerDisplay.active;
         const nextScreenId = screenId !== null ? screenId : customerDisplay.screenId;
 
+        // Update local state and UI immediately
+        setCustomerDisplay({ active: nextActive, screenId: nextScreenId });
+        if (window.electronAPI?.toggleCustomerDisplay) {
+            window.electronAPI.toggleCustomerDisplay({ active: nextActive, screenId: nextScreenId });
+        }
+
         try {
-            await apiConfig.patch("/profiles/customer-display", {
+            await localApi.patch("/profiles/customer-display", {
                 profileId,
                 isActive: nextActive,
                 screenId: nextScreenId
             });
 
-            // Update local storage
+            // Update local storage for persistence
             const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
             storedProfile.is_customer_display_active = nextActive ? 1 : 0;
             storedProfile.customer_display_screen_id = nextScreenId;
             localStorage.setItem("profile", JSON.stringify(storedProfile));
 
-            setCustomerDisplay({ active: nextActive, screenId: nextScreenId });
-
-            // Trigger Electron window
-            if (window.electronAPI?.toggleCustomerDisplay) {
-                await window.electronAPI.toggleCustomerDisplay({ active: nextActive, screenId: nextScreenId });
-            }
-
             toast.success("Müştəri ekranı tənzimləmələri yadda saxlanıldı");
         } catch (error) {
-            toast.error("Xəta baş verdi");
+            console.error("Customer Display Sync Error:", error);
+            toast.error("Sinxronizasiya xətası: " + error.message);
+        }
+    };
+
+    const handleUpdateKitchenDisplay = async (active = null, screenId = null) => {
+        const nextActive = active !== null ? active : kitchenDisplay.active;
+        const nextScreenId = screenId !== null ? screenId : kitchenDisplay.screenId;
+
+        // Update local state and UI immediately
+        setKitchenDisplay({ active: nextActive, screenId: nextScreenId });
+        if (window.electronAPI?.toggleKitchenDisplay) {
+            window.electronAPI.toggleKitchenDisplay({ active: nextActive, screenId: nextScreenId });
+        }
+
+        try {
+            await localApi.patch("/profiles/kitchen-display", {
+                profileId,
+                isActive: nextActive,
+                screenId: nextScreenId
+            });
+
+            // Update local storage for persistence
+            const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+            storedProfile.is_kitchen_display_active = nextActive ? 1 : 0;
+            storedProfile.kitchen_display_screen_id = nextScreenId;
+            localStorage.setItem("profile", JSON.stringify(storedProfile));
+
+            toast.success("Mətbəx ekranı tənzimləmələri yadda saxlanıldı");
+        } catch (error) {
+            console.error("KDS Sync Error:", error);
+            toast.error("Sinxronizasiya xətası (KDS marşrutu tapılmadı, amma ekran açıldı)");
         }
     };
 
@@ -177,6 +215,13 @@ const DevicesModal = ({ show, onHide }) => {
                         >
                             <i className="bi bi-display"></i>
                             <span>Müştəri Ekranı</span>
+                        </div>
+                        <div
+                            className={`devices-menu-item ${activeTab === "kitchen" ? "active" : ""}`}
+                            onClick={() => setActiveTab("kitchen")}
+                        >
+                            <i className="bi bi-egg-fried"></i>
+                            <span>Mətbəx Ekranı</span>
                         </div>
                         <div className="devices-menu-item">
                             <i className="bi bi-rulers"></i>
@@ -360,6 +405,46 @@ const DevicesModal = ({ show, onHide }) => {
                                         <div className="display-preview-info">
                                             <i className="bi bi-info-circle"></i>
                                             <span>Əgər cihazınızda ikinci ekran qoşuludursa, onu siyahıdan seçin və yuxarıdakı açarı aktiv edin.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : activeTab === "kitchen" ? (
+                            <div className="display-settings">
+                                <div className="display-config-card">
+                                    <div className="display-config-header">
+                                        <div className="display-config-info">
+                                            <h4>Mətbəx Ekranı (KDS)</h4>
+                                            <p>Sifarişlərin mətbəxdə izlənməsi üçün rəqəmsal ekranı aktivləşdirin.</p>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${kitchenDisplay.active ? "active" : ""}`}
+                                            onClick={() => handleUpdateKitchenDisplay(!kitchenDisplay.active)}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="display-config-body">
+                                        <div className="printer-form-group">
+                                            <label>Monitor Seçimi</label>
+                                            <select
+                                                className="printer-select"
+                                                value={kitchenDisplay.screenId}
+                                                onChange={(e) => handleUpdateKitchenDisplay(null, e.target.value)}
+                                            >
+                                                <option value="">Seçilməyib</option>
+                                                {screens.map(s => (
+                                                    <option key={s.id} value={s.id}>
+                                                        {s.label} {s.isPrimary ? "(Əsas)" : ""} - {s.bounds.width}x{s.bounds.height}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="display-preview-info">
+                                            <i className="bi bi-info-circle"></i>
+                                            <span>Mətbəx ekranı açıldıqda bütün aktiv sifarişlər orada rəqəmsal kartlar şəklində görünəcək.</span>
                                         </div>
                                     </div>
                                 </div>

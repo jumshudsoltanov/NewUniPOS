@@ -12,6 +12,7 @@ const PaymentMethodsController = require("../controller/PaymentMethodsController
 const SaleTypesController = require("../controller/SaleTypesContoller");
 const PrintersController = require("../controller/PrintersController");
 const ProductsController = require("../controller/ProductsController");
+const KitchenController = require("../controller/KitchenController");
 
 // Routers lists
 router.post("/login", LoginController.getLogin);
@@ -24,6 +25,9 @@ router.put("/printers/:id", PrintersController.updatePrinter);
 router.post("/printers/test-print", PrintersController.testPrint);
 router.patch("/profiles/master-printing", PrintersController.toggleMasterPrinting);
 router.patch("/profiles/customer-display", PrintersController.updateCustomerDisplaySettings);
+router.patch("/profiles/kitchen-display", KitchenController.updateKitchenDisplaySettings);
+router.get("/kitchen/:profileId/orders", KitchenController.getKitchenOrders);
+router.patch("/kitchen/item/:itemId/status", KitchenController.updateKdsStatus);
 router.get("/waiters/:profileId/list", WaitersController.getWaiterLists);
 router.get("/tags/:profileId/list", TagsController.getTagsList);
 router.get(

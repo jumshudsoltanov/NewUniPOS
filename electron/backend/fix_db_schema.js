@@ -34,7 +34,9 @@ const fixSchema = async () => {
     // Columns for 'profiles' table
     const profileColumns = [
         { name: "is_master_cashier_printing", type: DataTypes.TINYINT, defaultValue: 0 },
-        { name: "is_master_product_printing", type: DataTypes.TINYINT, defaultValue: 0 }
+        { name: "is_master_product_printing", type: DataTypes.TINYINT, defaultValue: 0 },
+        { name: "is_kitchen_display_active", type: DataTypes.TINYINT, defaultValue: 0 },
+        { name: "kitchen_display_screen_id", type: DataTypes.TEXT }
     ];
 
     for (const col of profileColumns) {
@@ -42,7 +44,7 @@ const fixSchema = async () => {
             await queryInterface.addColumn("profiles", col.name, {
                 type: col.type,
                 allowNull: true,
-                defaultValue: col.defaultValue
+                defaultValue: col.defaultValue !== undefined ? col.defaultValue : null
             });
             console.log(`Added column ${col.name} to profiles table.`);
         } catch (err) {
@@ -54,12 +56,29 @@ const fixSchema = async () => {
         }
     }
 
-    // Handle old column removal if necessary (is_master_printing)
-    try {
-        // We don't remove it yet to be safe, but we'll assume it's replaced.
-        console.log("Schema update finished.");
-    } catch (err) { }
+    // Columns for 'orders_items' table
+    const orderItemColumns = [
+        { name: "kds_status", type: DataTypes.INTEGER, defaultValue: 0 } // 0=pending, 1=preparing, 2=ready
+    ];
 
+    for (const col of orderItemColumns) {
+        try {
+            await queryInterface.addColumn("orders_items", col.name, {
+                type: col.type,
+                allowNull: true,
+                defaultValue: col.defaultValue
+            });
+            console.log(`Added column ${col.name} to orders_items table.`);
+        } catch (err) {
+            if (err.name === 'SequelizeDatabaseError' && err.message.includes('Duplicate column name')) {
+                console.log(`Column ${col.name} already exists in orders_items table.`);
+            } else {
+                console.error(`Error adding column ${col.name} to orders_items:`, err.message);
+            }
+        }
+    }
+
+    console.log("Schema update finished.");
     process.exit(0);
 };
 

@@ -113,6 +113,11 @@ const LoginModel = db.sequelize.define(
       defaultValue: 0,
     },
     customer_display_screen_id: DataTypes.TEXT,
+    is_kitchen_display_active: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
+    kitchen_display_screen_id: DataTypes.TEXT,
     mobile_token: DataTypes.TEXT,
   },
   {

@@ -98,6 +98,7 @@ let creaedtToTabel = async () => {
     OrdersItemsModel.belongsTo(OrdersModel, {
       foreignKey: "order_id",
       targetKey: "uuid",
+      as: "order",
       constraints: false,
     });
 
@@ -171,6 +172,7 @@ let creaedtToTabel = async () => {
     });
     ProductsModel.belongsTo(CategoriesModel, {
       foreignKey: "category_id",
+      as: "category",
       constraints: false,
     });
 

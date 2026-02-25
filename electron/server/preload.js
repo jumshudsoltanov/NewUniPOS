@@ -15,4 +15,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getSystemPrinters: () => ipcRenderer.invoke("get-system-printers"),
     getScreens: () => ipcRenderer.invoke("get-screens"),
     toggleCustomerDisplay: (data) => ipcRenderer.invoke("toggle-customer-display", data),
+    toggleKitchenDisplay: (data) => ipcRenderer.invoke("toggle-kitchen-display", data),
 });

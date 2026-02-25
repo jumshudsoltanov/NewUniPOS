@@ -20,6 +20,7 @@ import Toastify from "./components/Toastify/Toastify";
 import "react-toastify/dist/ReactToastify.css";
 import NetworkOverlay from "./components/NetworkOverlay/NetworkOverlay";
 import CustomerDisplay from './components/CustomerDisplay/CustomerDisplay';
+import KitchenDisplay from './components/Kitchen/KitchenDisplay';
 import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
 import { initNetwork, getSocket } from "./utils/apiConfig";
@@ -115,8 +116,23 @@ function AppContent() {
       socket.off("print_delegated"); // Avoid duplicates
       socket.on("print_delegated", handleDelegatedPrint);
 
+      // KDS Ready listener
+      socket.on("kitchen_item_ready", (data) => {
+        console.warn("🍳 Kitchen Item Ready:", data);
+        addNotification(
+          `${data.tableName} - ${data.productName} HAZIRDIR!`,
+          "Məhsul mətbəxdə tamamlandı və servis üçün hazırdır.",
+          { type: "success", category: "order", orderId: data.orderId, displayId: `#${data.orderId}` }
+        );
+        toast.success(`${data.tableName}: ${data.productName} hazırdır!`, {
+          icon: '🍳',
+          duration: 5000
+        });
+      });
+
       return () => {
         socket.off("print_delegated", handleDelegatedPrint);
+        socket.off("kitchen_item_ready");
       };
     }
   }, [isMasterTerminal, authResultRedux, isSocketConnected]);
@@ -246,6 +262,7 @@ function AppContent() {
         <Route path="/" element={<Login />} />
         <Route path="/pin" element={<Pin />} />
         <Route path="/customer" element={<CustomerDisplay />} />
+        <Route path="/kitchen-display" element={<KitchenDisplay />} />
 
         <Route element={<Layout />}>
           <Route path="/tables" element={<Tables />} />

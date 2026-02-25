@@ -34,6 +34,7 @@ const sendOrdersItemsToDb = async (req, res) => {
         existingItem.count += Number(item.quantity || 0);
         existingItem.price = item.price;
         existingItem.operator_id = waiterId;
+        existingItem.kds_status = 0; // Reset for KDS visibility
         await existingItem.save();
         savedItems.push(existingItem);
       } else {
@@ -45,6 +46,7 @@ const sendOrdersItemsToDb = async (req, res) => {
           price: item.price,
           operator_id: waiterId,
           profile_id: profileId,
+          kds_status: 0,
         });
         savedItems.push(newItem);
       }
@@ -118,7 +120,11 @@ const sendOrdersItemsToDb = async (req, res) => {
     // Sync trigger
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
-    if (getIo()) getIo().emit("table_updated", { orderId });
+    const io = getIo();
+    if (io) {
+      io.emit("table_updated", { orderId });
+      io.emit("kds_update_trigger");
+    }
 
     // Return the full updated order for frontend state sync
     const updatedOrder = await OrdersModel.findOne({
@@ -1849,6 +1855,7 @@ const onUpdateItemCount = async (req, res) => {
     }
 
     item.count = parseInt(newCount);
+    item.kds_status = 0; // Reset for KDS
     await item.save();
 
     // Recalculate Order Total
@@ -1914,7 +1921,10 @@ const onUpdateItemCount = async (req, res) => {
     );
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
-    if (getIo()) getIo().emit("table_updated", { orderId });
+    if (getIo()) {
+      getIo().emit("table_updated", { orderId });
+      getIo().emit("kds_update_trigger");
+    }
 
     // Return success with full order data for frontend updates
     const updatedOrder = await OrdersModel.findOne({

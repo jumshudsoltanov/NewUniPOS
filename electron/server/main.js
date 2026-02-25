@@ -7,6 +7,7 @@ const { exec } = require("child_process");
 const isDev = !app.isPackaged;
 let mainWindow = null;
 let customerWindow = null;
+let kitchenWindow = null;
 
 function createWindow() {
   const appPath = app.getAppPath();
@@ -66,7 +67,22 @@ function createWindow() {
   // Auto-start customer display if enabled in DB
   setTimeout(() => {
     checkCustomerDisplayAutoStart();
+    checkKitchenDisplayAutoStart();
   }, 3000);
+
+  async function checkKitchenDisplayAutoStart() {
+    try {
+      const LoginModel = require("../backend/model/LoginModel");
+      const profile = await LoginModel.findOne({ order: [['id', 'DESC']] });
+
+      if (profile && profile.is_kitchen_display_active === 1 && profile.kitchen_display_screen_id) {
+        console.log("[ELECTRON] Auto-starting Kitchen Display on screen:", profile.kitchen_display_screen_id);
+        createKitchenWindow(profile.kitchen_display_screen_id);
+      }
+    } catch (err) {
+      console.error("[ELECTRON] Auto-start Kitchen Display Error:", err.message);
+    }
+  }
 
   async function checkCustomerDisplayAutoStart() {
     try {
@@ -222,6 +238,76 @@ ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
 
   return { success: true, active: true };
 });
+
+ipcMain.handle("toggle-kitchen-display", (event, { active, screenId }) => {
+  if (!active) {
+    if (kitchenWindow) {
+      kitchenWindow.close();
+      kitchenWindow = null;
+    }
+    return { success: true, active: false };
+  }
+
+  if (kitchenWindow) {
+    kitchenWindow.close();
+  }
+
+  const displays = screen.getAllDisplays();
+  const targetDisplay = displays.find(d => String(d.id) === String(screenId)) || screen.getPrimaryDisplay();
+
+  kitchenWindow = new BrowserWindow({
+    x: targetDisplay.bounds.x,
+    y: targetDisplay.bounds.y,
+    width: targetDisplay.bounds.width,
+    height: targetDisplay.bounds.height,
+    fullscreen: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  if (isDev) {
+    kitchenWindow.loadURL("http://localhost:5173/#/kitchen-display");
+  } else {
+    kitchenWindow.loadFile(path.join(app.getAppPath(), "electron", "front", "dist", "index.html"), { hash: "/kitchen-display" });
+  }
+
+  kitchenWindow.on("closed", () => {
+    kitchenWindow = null;
+  });
+
+  return { success: true, active: true };
+});
+
+function createKitchenWindow(screenId) {
+  const displays = screen.getAllDisplays();
+  const targetDisplay = displays.find(d => String(d.id) === String(screenId)) || screen.getPrimaryDisplay();
+
+  kitchenWindow = new BrowserWindow({
+    x: targetDisplay.bounds.x,
+    y: targetDisplay.bounds.y,
+    width: targetDisplay.bounds.width,
+    height: targetDisplay.bounds.height,
+    fullscreen: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+
+  if (isDev) {
+    kitchenWindow.loadURL("http://localhost:5173/#/kitchen-display");
+  } else {
+    kitchenWindow.loadFile(path.join(app.getAppPath(), "electron", "front", "dist", "index.html"), { hash: "/kitchen-display" });
+  }
+
+  kitchenWindow.on("closed", () => {
+    kitchenWindow = null;
+  });
+}
 
 ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
   let printWindow = new BrowserWindow({

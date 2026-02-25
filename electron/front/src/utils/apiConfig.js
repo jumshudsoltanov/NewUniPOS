@@ -5,6 +5,10 @@ const apiConfig = axios.create({
     baseURL: "http://localhost:55667/api",
 });
 
+export const localApi = axios.create({
+    baseURL: "http://localhost:55667/api",
+});
+
 let socket = null;
 
 export const initNetwork = async (forceLocal = false, disableSocket = false) => {

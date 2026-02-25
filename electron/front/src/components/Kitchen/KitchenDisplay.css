@@ -1,0 +1,459 @@
+/* ══════════════════════════════════════
+   KDS — POS Dizaynı ilə tam uyğun
+   ══════════════════════════════════════ */
+
+.kds-container {
+    background: #EBF2FE;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: "Poppins", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ── HEADER ── */
+.kds-header {
+    height: 60px;
+    background: #053796;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.3);
+}
+
+.kds-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.kds-logo {
+    height: 36px;
+    width: auto;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.kds-brand-text h1 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: -0.01em;
+}
+
+.kds-brand-text span {
+    font-size: 10px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.55);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-top: 2px;
+}
+
+.kds-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.header-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 5px 16px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    min-width: 80px;
+}
+
+.header-stat .label {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+}
+
+.header-stat .value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+}
+
+.header-stat.active-orders {
+    background: #4F85F4;
+}
+
+/* ── GRID ── */
+.kds-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+    padding: 14px;
+    overflow-y: auto;
+    align-content: flex-start;
+}
+
+.kds-grid::-webkit-scrollbar {
+    width: 5px;
+}
+
+.kds-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.kds-grid::-webkit-scrollbar-thumb {
+    background: #a8c0e8;
+    border-radius: 99px;
+}
+
+/* ── ORDER CARD ── */
+.kds-order-card {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #ccdaf5;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(5, 55, 150, 0.1);
+    transition: none;
+}
+
+.kds-order-card.urgent {
+    border: 2px solid #D32F2F;
+    box-shadow: 0 3px 12px rgba(211, 47, 47, 0.2);
+}
+
+/* ── ORDER HEADER ── */
+.order-header {
+    background: #053796;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.order-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table-num {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0;
+    color: #fff;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+}
+
+.order-id-badge {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.time-badge {
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.time-badge.warning {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
+.time-badge.danger {
+    background: #FFEBEE;
+    color: #C62828;
+    animation: urgentPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes urgentPulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.order-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.meta-item {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.meta-item i {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* ── ORDER ITEMS ── */
+.order-items {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Kateqoriya rəngləri */
+.category-group:nth-child(6n+1) {
+    --cat-color: #1565C0;
+}
+
+.category-group:nth-child(6n+2) {
+    --cat-color: #2E7D32;
+}
+
+.category-group:nth-child(6n+3) {
+    --cat-color: #6A1B9A;
+}
+
+.category-group:nth-child(6n+4) {
+    --cat-color: #E65100;
+}
+
+.category-group:nth-child(6n+5) {
+    --cat-color: #00695C;
+}
+
+.category-group:nth-child(6n+6) {
+    --cat-color: #37474F;
+}
+
+.category-header {
+    background: var(--cat-color, #1565C0);
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.category-header .cat-count {
+    background: rgba(255, 255, 255, 0.25);
+    padding: 1px 8px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.kds-item {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #f0f4fc;
+    background: #fff;
+    gap: 12px;
+}
+
+.kds-item.preparing {
+    background: #EBF2FE;
+}
+
+.item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.category-group:nth-child(6n+1) .item-quantity {
+    color: #1565C0;
+}
+
+.category-group:nth-child(6n+2) .item-quantity {
+    color: #2E7D32;
+}
+
+.category-group:nth-child(6n+3) .item-quantity {
+    color: #6A1B9A;
+}
+
+.category-group:nth-child(6n+4) .item-quantity {
+    color: #E65100;
+}
+
+.category-group:nth-child(6n+5) .item-quantity {
+    color: #00695C;
+}
+
+.category-group:nth-child(6n+6) .item-quantity {
+    color: #37474F;
+}
+
+.item-quantity {
+    font-size: 18px;
+    font-weight: 800;
+    min-width: 30px;
+    line-height: 1;
+}
+
+.item-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.item-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-modifier {
+    font-size: 11px;
+    color: #C62828;
+    font-weight: 500;
+    margin-top: 1px;
+}
+
+/* ── STATUS BUTTONS ── */
+.status-btn {
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: none;
+    background: #EBF2FE;
+    color: #053796;
+    min-width: 80px;
+    text-align: center;
+    flex-shrink: 0;
+    font-family: "Poppins", system-ui, sans-serif;
+}
+
+.kds-item.preparing .status-btn {
+    background: #2E7D32;
+    color: #fff;
+}
+
+/* ── CARD FOOTER ── */
+.order-footer {
+    padding: 12px 16px;
+    background: #EBF2FE;
+    border-top: 1px solid #ccdaf5;
+}
+
+.complete-all-btn {
+    width: 100%;
+    padding: 13px;
+    border-radius: 6px;
+    border: none;
+    background: #053796;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: none;
+    font-family: "Poppins", system-ui, sans-serif;
+    letter-spacing: 0.01em;
+}
+
+/* ── LOADER ── */
+.premium-loader {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 16px;
+}
+
+.loader-ring {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid #ccdaf5;
+    border-top-color: #053796;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ── EMPTY STATE ── */
+.kds-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    grid-column: 1 / -1;
+}
+
+.kds-empty-state i {
+    font-size: 64px;
+    color: #a8c0e8;
+    margin-bottom: 16px;
+}
+
+.kds-empty-state h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #053796;
+    margin-bottom: 6px;
+}
+
+.kds-empty-state p {
+    font-size: 13px;
+    color: #6b8cc7;
+}
+
+.no-select {
+    user-select: none;
+    -webkit-user-select: none;
+}

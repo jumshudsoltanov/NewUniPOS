@@ -61,6 +61,11 @@ const OrdersItemsModel = db.sequelize.define(
       allowNull: true,
     },
 
+    kds_status: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0, // 0=pending, 1=preparing, 2=ready
+    },
+
     operator_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
