@@ -70,9 +70,13 @@ const CustomerDisplay = () => {
         // Connect to the local backend on port 55667
         // On a tablet, this would connect to the POS's IP address (e.g. http://192.168.1.X:55667)
         // Since the tablet loads the frontend from the POS IP:5173, we can use window.location.hostname
-        const backendUrl = `http://${window.location.hostname}:55667`;
+        const hostname = window.location.hostname || "localhost";
+        const backendUrl = `http://${hostname}:55667`;
         const newSocket = io(backendUrl, {
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 2000
         });
 
         newSocket.on("connect", () => {

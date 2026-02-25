@@ -81,6 +81,17 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       hall_name: hall?.name || orders?.hall_name
     });
 
+    return () => {
+      const s = getSocket();
+      if (s) {
+        s.emit("broadcast_customer_display", {
+          items: [], total: 0, received: 0, change: 0,
+          discount: 0, service_charge: 0, deposit: 0,
+          check_id: null, guest_count: 0, table_name: "", hall_name: ""
+        });
+      }
+    };
+
   }, [orders, products, sentProducts, pendingDeletions]);
 
   // Close Check

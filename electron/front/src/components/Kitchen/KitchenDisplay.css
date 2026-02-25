@@ -1,6 +1,7 @@
-/* ══════════════════════════════════════
-   KDS — POS Dizaynı ilə tam uyğun
-   ══════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   KDS – Nümunə layout + POS rəngləri
+   #053796, #EBF2FE, #4F85F4, #fff
+   ═══════════════════════════════════════════════ */
 
 .kds-container {
     background: #EBF2FE;
@@ -10,92 +11,111 @@
     overflow: hidden;
     font-family: "Poppins", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
+    color: #1a1a2e;
 }
 
-/* ── HEADER ── */
+/* ═══ HEADER ═══ */
 .kds-header {
-    height: 60px;
+    height: 52px;
     background: #053796;
-    padding: 0 24px;
+    padding: 0 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.3);
+    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.25);
 }
 
-.kds-brand {
+.kds-header-left {
     display: flex;
     align-items: center;
-    gap: 14px;
+    height: 100%;
 }
 
-.kds-logo {
-    height: 36px;
-    width: auto;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
+.kds-tabs {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    gap: 0;
 }
 
-.kds-brand-text h1 {
-    font-size: 17px;
-    font-weight: 700;
-    margin: 0;
-    color: #fff;
-    line-height: 1;
-    letter-spacing: -0.01em;
-}
-
-.kds-brand-text span {
-    font-size: 10px;
-    font-weight: 400;
+.kds-tab {
+    height: 100%;
+    padding: 0 18px;
+    border: none;
+    background: transparent;
     color: rgba(255, 255, 255, 0.55);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    display: block;
-    margin-top: 2px;
+    font-family: "Poppins", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    white-space: nowrap;
+    transition: none;
+}
+
+.kds-tab.active {
+    color: #fff;
+    font-weight: 600;
+    background: #021c4c;
+}
+
+.kds-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.kds-tab.active .kds-tab-badge.all {
+    background: #4F85F4;
+    color: #fff;
+}
+
+.kds-tab.active .kds-tab-badge.preparing {
+    background: #F59E0B;
+    color: #fff;
+}
+
+.kds-tab.active .kds-tab-badge.late,
+.kds-tab.has-late .kds-tab-badge.late {
+    background: #EF4444;
+    color: #fff;
+}
+
+.kds-tab.active .kds-tab-badge.ready {
+    background: #2E7D32;
+    color: #fff;
 }
 
 .kds-header-right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 16px;
 }
 
-.header-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 5px 16px;
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
-    min-width: 80px;
-}
-
-.header-stat .label {
-    font-size: 9px;
-    color: rgba(255, 255, 255, 0.6);
-    text-transform: uppercase;
-    font-weight: 600;
-    letter-spacing: 0.07em;
-}
-
-.header-stat .value {
-    font-size: 16px;
+.kds-clock {
+    font-size: 18px;
     font-weight: 700;
     color: #fff;
-    line-height: 1.3;
+    letter-spacing: 0.5px;
 }
 
-.header-stat.active-orders {
-    background: #4F85F4;
-}
-
-/* ── GRID ── */
+/* ═══ GRID ═══ */
 .kds-grid {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
     gap: 14px;
     padding: 14px;
     overflow-y: auto;
@@ -111,319 +131,343 @@
 }
 
 .kds-grid::-webkit-scrollbar-thumb {
-    background: #a8c0e8;
+    background: #b0c4e8;
     border-radius: 99px;
 }
 
-/* ── ORDER CARD ── */
-.kds-order-card {
+/* ═══ CARD ═══ */
+.kds-card {
     background: #fff;
     border-radius: 10px;
-    border: 1px solid #ccdaf5;
+    border: 1.5px solid #d0e2f8;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 3px 10px rgba(5, 55, 150, 0.1);
+    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.08);
     transition: none;
 }
 
-.kds-order-card.urgent {
-    border: 2px solid #D32F2F;
-    box-shadow: 0 3px 12px rgba(211, 47, 47, 0.2);
+.kds-card.urgent {
+    border-color: #EF4444;
+    box-shadow: 0 2px 12px rgba(239, 68, 68, 0.2);
 }
 
-/* ── ORDER HEADER ── */
-.order-header {
+/* ═══ CARD HEADER ═══ */
+.kds-card-header {
+    padding: 10px 14px;
     background: #053796;
-    padding: 12px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    color: #fff;
 }
 
-.order-top-row {
+.kds-card-title-row {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
+    margin-bottom: 4px;
 }
 
-.table-num {
-    font-size: 20px;
+.kds-card-check {
+    font-size: 15px;
     font-weight: 700;
-    margin: 0;
-    color: #fff;
-    letter-spacing: -0.01em;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    line-height: 1;
+    letter-spacing: 0.3px;
 }
 
-.order-id-badge {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.7);
-    font-weight: 500;
-    background: rgba(255, 255, 255, 0.15);
-    padding: 2px 8px;
+.kds-sale-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
     border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.time-badge {
-    padding: 5px 12px;
-    border-radius: 5px;
-    font-size: 12px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    background: rgba(255, 255, 255, 0.2);
+.kds-sale-badge.dine_in {
+    background: #6F9FFA;
     color: #fff;
 }
 
-.time-badge.warning {
-    background: #FFF3E0;
-    color: #E65100;
+.kds-sale-badge.takeaway {
+    background: #F59E0B;
+    color: #fff;
 }
 
-.time-badge.danger {
-    background: #FFEBEE;
-    color: #C62828;
-    animation: urgentPulse 1.6s ease-in-out infinite;
+.kds-sale-badge.delivery {
+    background: #8B5CF6;
+    color: #fff;
 }
 
-@keyframes urgentPulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.6;
-    }
+.kds-sale-badge.bolt_food {
+    background: #34D399;
+    color: #064E3B;
 }
 
-.order-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
+.kds-sale-badge.uber_eats {
+    background: #111;
+    color: #06C167;
 }
 
-.meta-item {
-    font-size: 12px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.8);
+.kds-sale-badge.wolt {
+    background: #009DE0;
+    color: #fff;
+}
+
+.kds-card-meta {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
     display: flex;
     align-items: center;
     gap: 4px;
+    font-weight: 400;
 }
 
-.meta-item i {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.6);
+.kds-meta-sep {
+    opacity: 0.3;
 }
 
-/* ── ORDER ITEMS ── */
-.order-items {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+/* ═══ CATEGORY BANNER ═══ */
+.kds-cat-group[data-cat-idx="0"] .kds-cat-banner {
+    background: #0ea5b5;
 }
 
-/* Kateqoriya rəngləri */
-.category-group:nth-child(6n+1) {
-    --cat-color: #1565C0;
+.kds-cat-group[data-cat-idx="1"] .kds-cat-banner {
+    background: #e67e22;
 }
 
-.category-group:nth-child(6n+2) {
-    --cat-color: #2E7D32;
+.kds-cat-group[data-cat-idx="2"] .kds-cat-banner {
+    background: #8B5CF6;
 }
 
-.category-group:nth-child(6n+3) {
-    --cat-color: #6A1B9A;
+.kds-cat-group[data-cat-idx="3"] .kds-cat-banner {
+    background: #2E7D32;
 }
 
-.category-group:nth-child(6n+4) {
-    --cat-color: #E65100;
+.kds-cat-group[data-cat-idx="4"] .kds-cat-banner {
+    background: #c0392b;
 }
 
-.category-group:nth-child(6n+5) {
-    --cat-color: #00695C;
+.kds-cat-group[data-cat-idx="5"] .kds-cat-banner {
+    background: #795548;
 }
 
-.category-group:nth-child(6n+6) {
-    --cat-color: #37474F;
-}
-
-.category-header {
-    background: var(--cat-color, #1565C0);
-    padding: 8px 16px;
-    font-size: 11px;
-    font-weight: 700;
+.kds-cat-banner {
+    padding: 7px 14px;
+    background: #0ea5b5;
     color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.kds-cat-banner span:first-child {
+    font-size: 12px;
+    font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    letter-spacing: 0.06em;
 }
 
-.category-header .cat-count {
-    background: rgba(255, 255, 255, 0.25);
-    padding: 1px 8px;
-    border-radius: 99px;
+.kds-cat-note {
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 400;
+    opacity: 0.8;
+    font-style: italic;
 }
 
+/* ═══ ITEM ═══ */
 .kds-item {
-    padding: 12px 16px;
+    padding: 10px 14px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid #f0f4fc;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 10px;
+    min-height: 50px;
     background: #fff;
-    gap: 12px;
 }
 
 .kds-item.preparing {
     background: #EBF2FE;
 }
 
-.item-left {
+.kds-item.done {
+    opacity: 0.45;
+}
+
+.kds-item-left {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    align-items: flex-start;
+    gap: 10px;
     flex: 1;
     min-width: 0;
 }
 
-.category-group:nth-child(6n+1) .item-quantity {
-    color: #1565C0;
-}
-
-.category-group:nth-child(6n+2) .item-quantity {
-    color: #2E7D32;
-}
-
-.category-group:nth-child(6n+3) .item-quantity {
-    color: #6A1B9A;
-}
-
-.category-group:nth-child(6n+4) .item-quantity {
-    color: #E65100;
-}
-
-.category-group:nth-child(6n+5) .item-quantity {
-    color: #00695C;
-}
-
-.category-group:nth-child(6n+6) .item-quantity {
-    color: #37474F;
-}
-
-.item-quantity {
-    font-size: 18px;
+.kds-item-qty {
+    font-size: 14px;
     font-weight: 800;
-    min-width: 30px;
-    line-height: 1;
+    color: #053796;
+    min-width: 26px;
 }
 
-.item-details {
+.kds-item-info {
     display: flex;
     flex-direction: column;
     min-width: 0;
 }
 
-.item-name {
-    font-size: 14px;
+.kds-item-name {
+    font-size: 13px;
     font-weight: 600;
     color: #1a1a2e;
-    line-height: 1.3;
+    line-height: 1.35;
+}
+
+.kds-item-note {
+    font-size: 11px;
+    color: #888;
+    margin-top: 1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.item-modifier {
-    font-size: 11px;
-    color: #C62828;
-    font-weight: 500;
-    margin-top: 1px;
+.kds-item-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
 }
 
-/* ── STATUS BUTTONS ── */
-.status-btn {
+.kds-item-time {
+    font-size: 11px;
+    font-weight: 500;
+    color: #999;
+}
+
+/* ═══ STATUS BUTTONS ═══ */
+.kds-status-btn {
     border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
     cursor: pointer;
+    font-family: "Poppins", sans-serif;
     transition: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.kds-status-btn.start {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     background: #EBF2FE;
     color: #053796;
-    min-width: 80px;
-    text-align: center;
-    flex-shrink: 0;
-    font-family: "Poppins", system-ui, sans-serif;
+    font-size: 18px;
+    border: 1.5px solid #d0e2f8;
 }
 
-.kds-item.preparing .status-btn {
+.kds-status-btn.ready {
+    padding: 6px 16px;
+    border-radius: 6px;
     background: #2E7D32;
     color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
 }
 
-/* ── CARD FOOTER ── */
-.order-footer {
-    padding: 12px 16px;
+.kds-done-check {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #d1fae5;
+    color: #059669;
+    font-size: 18px;
+}
+
+/* ═══ CARD FOOTER ═══ */
+.kds-card-footer {
+    padding: 10px 14px;
     background: #EBF2FE;
-    border-top: 1px solid #ccdaf5;
+    border-top: 1px solid #d0e2f8;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
-.complete-all-btn {
-    width: 100%;
-    padding: 13px;
+.kds-complete-btn {
+    flex: 1;
+    padding: 11px;
     border-radius: 6px;
     border: none;
     background: #053796;
     color: #fff;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    letter-spacing: 0.3px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    cursor: pointer;
     transition: none;
-    font-family: "Poppins", system-ui, sans-serif;
-    letter-spacing: 0.01em;
 }
 
-/* ── LOADER ── */
-.premium-loader {
-    width: 50px;
-    height: 50px;
+.kds-complete-btn.done {
+    background: #2E7D32;
+}
+
+.kds-elapsed {
+    font-size: 14px;
+    font-weight: 700;
+    color: #053796;
+    background: #fff;
+    border: 1.5px solid #d0e2f8;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+    min-width: 64px;
+    text-align: center;
+}
+
+.kds-elapsed.warning {
+    color: #E65100;
+    border-color: #FFCC80;
+    background: #FFF8E1;
+}
+
+.kds-elapsed.danger {
+    color: #C62828;
+    border-color: #EF9A9A;
+    background: #FFF5F5;
+}
+
+/* ═══ LOADER ═══ */
+.kds-loader {
+    width: 48px;
+    height: 48px;
     margin-bottom: 16px;
 }
 
-.loader-ring {
+.kds-loader-ring {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    border: 3px solid #ccdaf5;
+    border: 3px solid #d0e2f8;
     border-top-color: #053796;
-    animation: spin 1s linear infinite;
+    animation: kds-spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes kds-spin {
     to {
         transform: rotate(360deg);
     }
 }
 
-/* ── EMPTY STATE ── */
+/* ═══ EMPTY STATE ═══ */
 .kds-empty-state {
     flex: 1;
     display: flex;
@@ -436,21 +480,22 @@
 }
 
 .kds-empty-state i {
-    font-size: 64px;
-    color: #a8c0e8;
-    margin-bottom: 16px;
+    font-size: 56px;
+    color: #b0c4e8;
+    margin-bottom: 14px;
 }
 
 .kds-empty-state h2 {
-    font-size: 18px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 600;
     color: #053796;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .kds-empty-state p {
     font-size: 13px;
     color: #6b8cc7;
+    margin: 0;
 }
 
 .no-select {

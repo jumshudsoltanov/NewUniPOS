@@ -92,11 +92,11 @@ export const OperationsModal = ({
         )}
         <Modal.Body className="p-3 position-relative">
           <Row className="g-2">
-            {operations.map((op, index) => (
+            {operations.filter(op => op.permissions).map((op, index) => (
               <Col xs={12} md={6} key={index}>
                 <div
                   className="operation-item d-flex align-items-center gap-2 py-2 px-2 rounded cursor-pointer"
-                  onClick={op.permissions ? op.functions : undefined}
+                  onClick={op.functions}
                 >
                   <i className={`bi ${op.icon} fs-5 operation-icon`}></i>
                   <span className="text-dark fw-medium fs-6">{op.text}</span>

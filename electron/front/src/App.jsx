@@ -263,6 +263,8 @@ function AppContent() {
         <Route path="/pin" element={<Pin />} />
         <Route path="/customer" element={<CustomerDisplay />} />
         <Route path="/kitchen-display" element={<KitchenDisplay />} />
+        <Route path="/kds" element={<KitchenDisplay />} />
+        <Route path="/kitchen" element={<KitchenDisplay />} />
 
         <Route element={<Layout />}>
           <Route path="/tables" element={<Tables />} />

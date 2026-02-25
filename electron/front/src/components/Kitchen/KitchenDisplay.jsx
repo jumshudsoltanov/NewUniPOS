@@ -1,40 +1,47 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSelector } from "react-redux";
-import apiConfig, { getSocket, localApi } from "../../utils/apiConfig";
+import { getSocket, localApi } from "../../utils/apiConfig";
 import { toast } from "sonner";
 import "./KitchenDisplay.css";
-import uniposLogo from "../../assets/images/unipos_logo.png";
+
+const TABS = [
+    { key: "all", label: "Bütün çeklər" },
+    { key: "preparing", label: "Hazırlanır" },
+    { key: "late", label: "Gecikir" },
+    { key: "ready", label: "Hazırdır" },
+];
 
 const KitchenDisplay = () => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const profileId = loginedProfileData?.data?.profile?.id;
-    const terminalName = loginedProfileData?.data?.terminal?.name || "KDS Terminal";
+    const terminalName = loginedProfileData?.data?.terminal?.name || "KDS";
 
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState("all");
     const [currentTime, setCurrentTime] = useState(new Date());
     const prevOrdersCount = useRef(0);
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 30000);
+        const timer = setInterval(() => setCurrentTime(new Date()), 10000);
         return () => clearInterval(timer);
     }, []);
 
     const playNotificationSound = () => {
         try {
-            const context = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = context.createOscillator();
-            const gainNode = context.createGain();
-            oscillator.type = "sine";
-            oscillator.frequency.setValueAtTime(880, context.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.5);
-            gainNode.gain.setValueAtTime(0.1, context.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
-            oscillator.connect(gainNode);
-            gainNode.connect(context.destination);
-            oscillator.start();
-            oscillator.stop(context.currentTime + 0.5);
-        } catch (e) {}
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        } catch (e) { }
     };
 
     const fetchOrders = useCallback(async () => {
@@ -43,9 +50,7 @@ const KitchenDisplay = () => {
             const res = await localApi.get(`/kitchen/${profileId}/orders`);
             if (res.data.success) {
                 const newOrders = res.data.data || [];
-                if (newOrders.length > prevOrdersCount.current) {
-                    playNotificationSound();
-                }
+                if (newOrders.length > prevOrdersCount.current) playNotificationSound();
                 setOrders(newOrders);
                 prevOrdersCount.current = newOrders.length;
             }
@@ -76,7 +81,7 @@ const KitchenDisplay = () => {
     const handleUpdateStatus = async (itemId, currentStatus) => {
         const nextStatus = currentStatus === 0 ? 1 : 2;
         try {
-            const res = await localApi.post(`/kitchen/status/${itemId}`, { status: nextStatus });
+            const res = await localApi.patch(`/kitchen/item/${itemId}/status`, { status: nextStatus });
             if (res.data.success) {
                 fetchOrders();
                 if (nextStatus === 2) toast.success("Məhsul hazırdır!");
@@ -90,7 +95,7 @@ const KitchenDisplay = () => {
         try {
             const pendingItems = orderItems.filter(item => item.kds_status < 2);
             for (const item of pendingItems) {
-                await localApi.post(`/kitchen/status/${item.id}`, { status: 2 });
+                await localApi.patch(`/kitchen/item/${item.id}/status`, { status: 2 });
             }
             fetchOrders();
             toast.success("Bütün masa tamamlandı!");
@@ -100,8 +105,13 @@ const KitchenDisplay = () => {
     };
 
     const getElapsedTime = (startTime) => {
-        const diff = Math.floor((new Date() - new Date(startTime)) / 60000);
-        return diff;
+        return Math.floor((new Date() - new Date(startTime)) / 60000);
+    };
+
+    const getItemTime = (item) => {
+        if (!item.createdAt) return "";
+        const d = new Date(item.createdAt);
+        return d.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
     };
 
     const groupItemsByCategories = (items) => {
@@ -114,14 +124,52 @@ const KitchenDisplay = () => {
         return groups;
     };
 
+    const tabCounts = useMemo(() => {
+        let preparing = 0, late = 0, ready = 0;
+        orders.forEach(order => {
+            const elapsed = getElapsedTime(order.createdAt);
+            const allReady = order.orders_items?.every(i => i.kds_status === 2);
+            const anyPreparing = order.orders_items?.some(i => i.kds_status === 1);
+            if (allReady) { ready++; }
+            else if (elapsed > 15) { late++; }
+            else if (anyPreparing) { preparing++; }
+        });
+        return { all: orders.length, preparing, late, ready };
+    }, [orders, currentTime]);
+
+    const filteredOrders = useMemo(() => {
+        if (activeTab === "all") return orders;
+        return orders.filter(order => {
+            const elapsed = getElapsedTime(order.createdAt);
+            const allReady = order.orders_items?.every(i => i.kds_status === 2);
+            const anyPreparing = order.orders_items?.some(i => i.kds_status === 1);
+            if (activeTab === "ready") return allReady;
+            if (activeTab === "late") return elapsed > 15 && !allReady;
+            if (activeTab === "preparing") return anyPreparing && !allReady;
+            return true;
+        });
+    }, [orders, activeTab, currentTime]);
+
+    const getSaleTypeBadge = (order) => {
+        const type = order.sale_type || order.saleType;
+        if (!type) return null;
+        const labels = {
+            dine_in: "Məkanda",
+            takeaway: "Paket",
+            delivery: "Çatdırılma",
+            bolt_food: "Bolt Food",
+            uber_eats: "Uber Eats",
+            wolt: "Wolt",
+        };
+        return labels[type] || type;
+    };
+
     if (loading) {
         return (
             <div className="kds-container">
                 <div className="kds-empty-state">
-                    <div className="premium-loader">
-                        <div className="loader-ring"></div>
-                    </div>
-                    <h2>Məlumatlar yüklənir...</h2>
+                    <div className="kds-loader"><div className="kds-loader-ring"></div></div>
+                    <h2>Yüklənir...</h2>
                 </div>
             </div>
         );
@@ -130,106 +178,124 @@ const KitchenDisplay = () => {
     return (
         <div className="kds-container no-select">
             <header className="kds-header">
-                <div className="kds-brand">
-                    <img src={uniposLogo} alt="UniPOS" className="kds-logo" />
-                    <div className="kds-brand-text">
-                        <h1>Kitchen Display</h1>
-                        <span>Mətbəx İdarəetmə Sistemi</span>
-                    </div>
+                <div className="kds-header-left">
+                    <nav className="kds-tabs">
+                        {TABS.map(tab => (
+                            <button
+                                key={tab.key}
+                                className={`kds-tab ${activeTab === tab.key ? 'active' : ''} ${tab.key === 'late' && tabCounts.late > 0 ? 'has-late' : ''}`}
+                                onClick={() => setActiveTab(tab.key)}
+                            >
+                                {tab.label}
+                                <span className={`kds-tab-badge ${tab.key}`}>
+                                    {tabCounts[tab.key]}
+                                </span>
+                            </button>
+                        ))}
+                    </nav>
                 </div>
-
                 <div className="kds-header-right">
-                    <div className="header-stat">
-                        <span className="label">Terminal</span>
-                        <span className="value" style={{ fontSize: 14 }}>{terminalName}</span>
-                    </div>
-                    <div className="header-stat active-orders">
-                        <span className="label">Aktiv Sifariş</span>
-                        <span className="value">{orders.length}</span>
-                    </div>
-                    <div className="header-stat">
-                        <span className="label">Cari Saat</span>
-                        <span className="value" style={{ fontSize: 16 }}>
-                            {currentTime.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    </div>
+                    <span className="kds-clock">
+                        {currentTime.toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                 </div>
             </header>
 
             <main className="kds-grid">
-                {orders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                     <div className="kds-empty-state">
                         <i className="bi bi-cup-hot"></i>
                         <h2>Aktiv sifariş yoxdur</h2>
-                        <p>Yeni sifarişlər daxil olanda bura avtomatik yenilənəcək</p>
+                        <p>Yeni sifarişlər daxil olanda avtomatik yenilənəcək</p>
                     </div>
                 ) : (
-                    orders.map((order) => {
+                    filteredOrders.map((order) => {
                         const elapsed = getElapsedTime(order.createdAt);
                         const isUrgent = elapsed > 20;
                         const groupedItems = groupItemsByCategories(order.orders_items);
+                        const saleType = getSaleTypeBadge(order);
 
                         return (
-                            <div key={order.uuid} className={`kds-order-card ${isUrgent ? 'urgent' : ''}`}>
-                                <div className="order-header">
-                                    <div className="order-top-row">
-                                        <h3 className="table-num">
-                                            {order.table?.name || "Masa"}
-                                            <span className="order-id-badge">#{order.id}</span>
-                                        </h3>
-                                        <div className={`time-badge ${elapsed > 20 ? 'danger' : elapsed > 12 ? 'warning' : ''}`}>
-                                            <i className="bi bi-stopwatch-fill"></i>
-                                            {elapsed} DƏQ
-                                        </div>
+                            <div key={order.uuid} className={`kds-card ${isUrgent ? 'urgent' : ''}`}>
+                                <div className="kds-card-header">
+                                    <div className="kds-card-title-row">
+                                        <span className="kds-card-check">Çek №{order.id}</span>
+                                        {saleType && (
+                                            <span className={`kds-sale-badge ${order.sale_type || order.saleType || ''}`}>
+                                                {saleType}
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="order-meta">
-                                        <div className="meta-item">
-                                            <i className="bi bi-person-fill"></i>
-                                            {order.waiter?.name || "Xidmətçi"}
-                                        </div>
-                                        <div className="meta-item">
-                                            <i className="bi bi-geo-alt-fill"></i>
-                                            {order.table?.hall?.name || "Zal"}
-                                        </div>
+                                    <div className="kds-card-meta">
+                                        <span>{order.waiter?.name || "Xidmətçi"}</span>
+                                        <span className="kds-meta-sep">/</span>
+                                        <span>{order.table?.hall?.name || "Zal"}</span>
+                                        <span className="kds-meta-sep">/</span>
+                                        <span>{order.table?.name || "Masa"}</span>
                                     </div>
                                 </div>
 
-                                <div className="order-items">
-                                    {Object.entries(groupedItems).map(([category, items]) => (
-                                        <div key={category} className="category-group">
-                                            <div className="category-header">
+                                <div className="kds-card-body">
+                                    {Object.entries(groupedItems).map(([category, items], catIdx) => (
+                                        <div key={category} className="kds-cat-group" data-cat-idx={catIdx % 6}>
+                                            <div className="kds-cat-banner">
                                                 <span>{category}</span>
-                                                <span className="cat-count">{items.length}</span>
+                                                <span className="kds-cat-note">
+                                                    Yeməkləri heç birinə düz vurmayın
+                                                </span>
                                             </div>
-                                            {items.map((item) => (
-                                                <div key={item.id} className={`kds-item ${item.kds_status === 1 ? 'preparing' : ''}`}>
-                                                    <div className="item-left">
-                                                        <span className="item-quantity">{item.count}×</span>
-                                                        <div className="item-details">
-                                                            <span className="item-name">{item.product?.name}</span>
-                                                            {item.note && <span className="item-modifier">{item.note}</span>}
+                                            {items.map((item) => {
+                                                const isDone = item.kds_status === 2;
+                                                const isPreparing = item.kds_status === 1;
+                                                return (
+                                                    <div key={item.id} className={`kds-item ${isPreparing ? 'preparing' : ''} ${isDone ? 'done' : ''}`}>
+                                                        <div className="kds-item-left">
+                                                            <span className="kds-item-qty">{item.count}x</span>
+                                                            <div className="kds-item-info">
+                                                                <span className="kds-item-name">{item.product?.name}</span>
+                                                                {item.note && <span className="kds-item-note">{item.note}</span>}
+                                                            </div>
+                                                        </div>
+                                                        <div className="kds-item-right">
+                                                            <span className="kds-item-time">{getItemTime(item)}</span>
+                                                            {!isDone && (
+                                                                <button
+                                                                    className={`kds-status-btn ${isPreparing ? 'ready' : 'start'}`}
+                                                                    onClick={() => handleUpdateStatus(item.id, item.kds_status)}
+                                                                >
+                                                                    {isPreparing ? 'HAZIR' : <i className="bi bi-play-fill"></i>}
+                                                                </button>
+                                                            )}
+                                                            {isDone && (
+                                                                <span className="kds-done-check">
+                                                                    <i className="bi bi-check-lg"></i>
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <button
-                                                        className="status-btn"
-                                                        onClick={() => handleUpdateStatus(item.id, item.kds_status)}
-                                                    >
-                                                        {item.kds_status === 1 ? 'HAZIR' : 'BAŞLA'}
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="order-footer">
-                                    <button
-                                        className="complete-all-btn"
-                                        onClick={() => handleAllDone(order.orders_items)}
-                                    >
-                                        <i className="bi bi-check2-all"></i>
-                                        Hamısını Qəbul Et
-                                    </button>
+                                <div className="kds-card-footer">
+                                    {order.orders_items?.every(i => i.kds_status === 2) ? (
+                                        <button className="kds-complete-btn done">
+                                            <i className="bi bi-check2-all"></i>
+                                            HAZIRDIR
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="kds-complete-btn"
+                                            onClick={() => handleAllDone(order.orders_items)}
+                                        >
+                                            HAMISINI QƏBUL ET
+                                        </button>
+                                    )}
+                                    <span className={`kds-elapsed ${elapsed > 20 ? 'danger' : elapsed > 12 ? 'warning' : ''}`}>
+                                        {elapsed < 0 ? `${Math.abs(elapsed)}` : elapsed}:{String(Math.floor((new Date() - new Date(order.createdAt)) / 1000 % 60)).padStart(2, '0')}
+                                    </span>
                                 </div>
                             </div>
                         );

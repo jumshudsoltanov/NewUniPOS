@@ -219,6 +219,7 @@ const DevicesModal = ({ show, onHide }) => {
                         <div
                             className={`devices-menu-item ${activeTab === "kitchen" ? "active" : ""}`}
                             onClick={() => setActiveTab("kitchen")}
+                            style={{ display: 'none' }}
                         >
                             <i className="bi bi-egg-fried"></i>
                             <span>Mətbəx Ekranı</span>

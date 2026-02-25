@@ -64,11 +64,23 @@ function createWindow() {
     mainWindow.setKiosk(true);
   }
 
-  // Auto-start customer display if enabled in DB
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+    if (customerWindow && !customerWindow.isDestroyed()) {
+      customerWindow.close();
+      customerWindow = null;
+    }
+    if (kitchenWindow && !kitchenWindow.isDestroyed()) {
+      kitchenWindow.close();
+      kitchenWindow = null;
+    }
+  });
+
+  // Auto-start customer/kitchen display if enabled in DB
   setTimeout(() => {
     checkCustomerDisplayAutoStart();
     checkKitchenDisplayAutoStart();
-  }, 3000);
+  }, 6000);
 
   async function checkKitchenDisplayAutoStart() {
     try {
