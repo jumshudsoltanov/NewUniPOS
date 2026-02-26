@@ -23,6 +23,7 @@ import CustomerDisplay from './components/CustomerDisplay/CustomerDisplay';
 import KitchenDisplay from './components/Kitchen/KitchenDisplay';
 import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
+import BlockPage from "./components/BlockPage/BlockPage";
 import { initNetwork, getSocket } from "./utils/apiConfig";
 import { addNotification } from "./utils/notificationService";
 
@@ -192,7 +193,25 @@ function AppContent() {
           dispatch(fetchCustomersFromAdmin());
           dispatch(fetchCustomerGroupsFromAdmin());
 
-          // Yalnız root-dursa /pin-ə yönləndir, yoxsa olduğu yerdə qalsın
+          // Blok yoxlaması: is_pos_block və ya ödəniş müddəti keçib
+          const profile = data?.data?.profile;
+          if (Number(profile?.is_pos_block) === 1) {
+            setShowInitialLoading(false);
+            navigate("/blocked");
+            return;
+          }
+
+          const npd = profile?.next_payment_date;
+          if (npd) {
+            const now = new Date(); now.setHours(0, 0, 0, 0);
+            const payDate = new Date(npd); payDate.setHours(0, 0, 0, 0);
+            if (payDate < now) {
+              setShowInitialLoading(false);
+              navigate("/blocked");
+              return;
+            }
+          }
+
           if (currentPath === "/") {
             navigate("/pin");
           }
@@ -261,6 +280,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/pin" element={<Pin />} />
+        <Route path="/blocked" element={<BlockPage />} />
         <Route path="/customer" element={<CustomerDisplay />} />
         <Route path="/kitchen-display" element={<KitchenDisplay />} />
         <Route path="/kds" element={<KitchenDisplay />} />
