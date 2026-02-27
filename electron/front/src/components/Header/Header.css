@@ -139,8 +139,8 @@
 .header-icon-btn {
   height: 58px;
   /* Match hall-btn height */
-  padding: 0 clamp(16px, 2.5vw, 32px);
-  /* Increased significantly to prevent overlap */
+  padding: 0 clamp(8px, 1.5vw, 16px);
+  /* Reduced for tighter layout */
   border: none;
   background: transparent;
   color: #fff;
@@ -213,22 +213,23 @@ ul li {
 /* Divider Styling */
 .tools-divider {
   width: 1px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.5);
-  margin: 0 8px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.6);
+  margin: 0 4px;
   flex-shrink: 0;
+  align-self: center;
 }
 
 /* Header Clock */
 .header-clock {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: #fff;
   font-family: "Poppins", sans-serif;
   font-size: 14px;
   font-weight: 600;
-  padding: 0 16px;
+  padding: 0 12px;
   height: 100%;
 }
 

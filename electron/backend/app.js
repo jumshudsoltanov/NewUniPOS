@@ -201,6 +201,8 @@ let creaedtToTabel = async () => {
     await safeAddColumn('printers', 'usb_name', 'VARCHAR(255) DEFAULT NULL');
     await safeAddColumn('printers', 'ip', 'VARCHAR(255) DEFAULT NULL');
     await safeAddColumn('printers', 'port', 'INT DEFAULT NULL');
+    await safeAddColumn('waiters', 'can_create_order', 'TINYINT DEFAULT 0');
+    await safeAddColumn('waiters', 'can_see_shortcuts', 'TINYINT DEFAULT 0');
 
     console.log("Created Table Success!");
   } catch (error) {

@@ -622,45 +622,71 @@
 
 /* Restored Desktop Buttons */
 .action-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    /* Exactly 50% each */
-    gap: 10px;
+    display: flex;
+    gap: 12px;
     width: 100%;
+    margin-top: 5px;
+}
+
+.btn-send-group {
+    display: flex;
+    width: 100%;
+    height: 52px;
 }
 
 .btn-send,
 .btn-pay {
-    width: 100%;
-    min-width: 0;
-    height: 50px;
-    border: none;
-    border-radius: 4px;
-    padding: 0;
+    height: 52px;
+    border-radius: 6px;
+    padding: 0 15px;
     font-weight: 600;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 0.95rem;
     white-space: nowrap;
+    transition: background-color 0.2s;
+    border: none;
+    min-width: 0;
 }
 
 .btn-send {
+    flex: 1;
     background-color: #fff;
     color: #4F85F4;
     border: 1px solid #e8eaed;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.btn-send-group .btn-send {
+    border-radius: 6px;
+}
+
+.btn-send-group:has(.btn-menu-dots) .btn-send {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
 }
 
 .btn-send i {
     color: #4F85F4;
 }
 
+.btn-send:not(.disabled):hover {
+    background-color: #f8f9fa;
+}
+
 .btn-pay {
+    width: 100%;
     background-color: #053796;
     color: #fff;
+    box-shadow: 0 2px 6px rgba(5, 55, 150, 0.15);
+}
+
+.btn-pay:not(.disabled):hover {
+    background-color: #042d7a;
 }
 
 /* New Items Badge on Send Button */
@@ -681,10 +707,12 @@
 
 /* 3-dot Menu Button */
 .btn-menu-dots {
-    width: 50px;
-    height: 50px;
+    width: 44px;
+    height: 52px;
     border: 1px solid #e8eaed;
-    border-radius: 4px;
+    border-radius: 6px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
     background-color: #fff;
     color: #6c757d;
     display: flex;
@@ -693,58 +721,12 @@
     font-size: 18px;
     cursor: pointer;
     flex-shrink: 0;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .btn-menu-dots:hover {
     background-color: #f8f9fa;
     color: #333;
-}
-
-/* Adjust action-buttons grid when 3-dot menu is visible */
-.action-buttons {
-    display: flex;
-    gap: 10px;
-    width: 100%;
-}
-
-/* Combined Send + Menu Button Group */
-.btn-send-group {
-    display: flex;
-    flex: 1;
-    position: relative;
-    z-index: 1;
-    /* No gap for joined buttons */
-}
-
-.btn-send-group .btn-send {
-    flex: 1;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    border-right: none;
-    /* Remove right border so it merges with menu button */
-    cursor: pointer;
-    pointer-events: auto;
-}
-
-.btn-send-group .btn-send:not(.disabled):hover {
-    background-color: #f0f0f0;
-}
-
-.btn-send-group .btn-menu-dots {
-    width: 48px;
-    height: 50px;
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    border-left: 1px solid #e8eaed;
-    /* Divider border */
-    box-shadow: none;
-    cursor: pointer;
-    pointer-events: auto;
-}
-
-.btn-pay {
-    flex: 1;
 }
 
 /* Mobile View Only - Neat White Design */

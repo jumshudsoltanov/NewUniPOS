@@ -79,8 +79,8 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter, customStyle }) =
                 const service = Number(order.service_charge || 0);
 
                 const subtotalAfterDiscount = subtotal - discount;
-                const displayAmount = Math.max(subtotalAfterDiscount + service, deposit);
-                const isDepositFloor = deposit > (subtotalAfterDiscount + service);
+                const displayAmount = Math.max(subtotalAfterDiscount, deposit) + service;
+                const isDepositFloor = deposit > subtotalAfterDiscount;
 
                 return (
                   <>

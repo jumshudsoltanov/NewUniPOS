@@ -362,35 +362,37 @@ const Header = ({ showBack, backPath, onBack }) => {
 
           <Col lg={6} md={6} className="headerLeftBox h-100 d-none d-md-block">
             <div className="right-tools-container h-100 d-flex align-items-center justify-content-end">
-              <div className="tools-divider"></div>
-              {/* New Order Button */}
-              <button
-                ref={newOrderBtnRef}
-                className="create-order-btn small-btn"
-                onClick={() => setOnShowSalesTypeModal(true)}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 5V19M5 12H19"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="d-none d-xl-inline">Yeni sifariş</span>
-              </button>
-
-              <div className="tools-divider"></div>
+              {Number(loginedWaiter?.data?.can_create_order) === 1 && (
+                <>
+                  <div className="tools-divider"></div>
+                  <button
+                    ref={newOrderBtnRef}
+                    className="create-order-btn small-btn"
+                    onClick={() => setOnShowSalesTypeModal(true)}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 5V19M5 12H19"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span className="d-none d-xl-inline">Yeni sifariş</span>
+                  </button>
+                </>
+              )}
 
               {Number(loginedWaiter?.data?.can_view_archived_checks) === 1 && (
                 <>
+                  <div className="tools-divider"></div>
                   {/* Checks */}
                   <div
                     className="header-action-item small-item"
@@ -411,23 +413,22 @@ const Header = ({ showBack, backPath, onBack }) => {
                     </svg>
                     <span className="count-badge text-white" style={{ background: "#A5B4FC" }}>{books?.data?.length || 0}</span>
                   </div>
-
-                  <div className="tools-divider"></div>
                 </>
               )}
 
               {showClock && (
                 <>
+                  <div className="tools-divider"></div>
                   <div className="header-clock">
                     <i className="bi bi-clock"></i>
                     <span>{formatTime(currentTime)}</span>
                   </div>
-                  <div className="tools-divider"></div>
                 </>
               )}
 
               {Number(loginedWaiter?.data?.can_access_settings) === 1 && (
                 <>
+                  <div className="tools-divider"></div>
                   {/* Menu Hamburger */}
                   <button className="header-icon-btn small-icon-btn" onClick={() => navigate("/settings")}>
                     <svg
@@ -445,11 +446,10 @@ const Header = ({ showBack, backPath, onBack }) => {
                       />
                     </svg>
                   </button>
-
-                  <div className="tools-divider"></div>
                 </>
               )}
 
+              <div className="tools-divider"></div>
               {/* Waiter/Exit Icon */}
               <Link
                 className="header-icon-btn small-icon-btn waiter-btn"
@@ -486,13 +486,12 @@ const Header = ({ showBack, backPath, onBack }) => {
                 </div>
               </Link>
 
-              <div className="tools-divider"></div>
-
               {Number(loginedWaiter?.data?.can_see_notif) === 1 && (
                 <>
+                  <div className="tools-divider"></div>
                   {/* Notification Bell */}
                   <button
-                    className="header-icon-btn small-icon-btn"
+                    className="header-icon-btn small-icon-btn position-relative"
                     onClick={() => setShowNotifications(true)}
                   >
                     <svg
@@ -512,11 +511,10 @@ const Header = ({ showBack, backPath, onBack }) => {
                     </svg>
                     {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
                   </button>
-
-                  <div className="tools-divider"></div>
                 </>
               )}
 
+              <div className="tools-divider"></div>
               {/* Wifi Icon */}
               <button
                 className="header-icon-btn small-icon-btn wifi-icon position-relative"
@@ -581,26 +579,28 @@ const Header = ({ showBack, backPath, onBack }) => {
               {hall.name}
             </button>
           ))}
-        <button
-          className="mobile-add-btn"
-          onClick={() => setOnShowSalesTypeModal(true)}
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+        {Number(loginedWaiter?.data?.can_create_order) === 1 && (
+          <button
+            className="mobile-add-btn"
+            onClick={() => setOnShowSalesTypeModal(true)}
           >
-            <path
-              d="M12 5V19M5 12H19"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 5V19M5 12H19"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       <SalesTypesModal

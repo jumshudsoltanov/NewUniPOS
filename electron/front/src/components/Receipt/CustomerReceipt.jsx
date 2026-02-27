@@ -461,10 +461,10 @@ const CustomerReceipt = ({
             {/* TOTAL */}
             <div style={styles.total}>
                 <span style={{ flex: 1 }}>
-                    {Number(checkData?.deposit || 0) > (subtotal - discountInfo.amount + serviceInfo.amount) ? 'MİNİMAL MƏBLƏĞ' : 'YEKUN'}
+                    {Number(checkData?.deposit || 0) > (subtotal - discountInfo.amount) ? 'MİNİMAL MƏBLƏĞ' : 'YEKUN'}
                 </span>
                 <span style={styles.colTotal}>
-                    {Math.max(subtotal - discountInfo.amount + serviceInfo.amount, Number(checkData?.deposit || 0)).toFixed(2)} ₼
+                    {(Math.max(subtotal - discountInfo.amount, Number(checkData?.deposit || 0)) + serviceInfo.amount).toFixed(2)} ₼
                 </span>
             </div>
 

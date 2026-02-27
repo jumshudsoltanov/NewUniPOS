@@ -766,7 +766,7 @@ const Check = () => {
                   </svg>
                 </div>
 
-                {Number(loginedWaiter?.data?.can_view_customers) === 1 && (
+                {Number(loginedWaiter?.data?.can_view_customers) === 1 && Number(loginedWaiter?.data?.can_see_shortcuts) === 1 && (
                   <div className="sidebar-icon"
                     onClick={() => setShowCustomerModal(true)}
                     style={{ cursor: 'pointer' }}
@@ -799,7 +799,7 @@ const Check = () => {
                   </div>
                 )}
 
-                {Number(loginedWaiter?.data?.can_add_discount) === 1 && (
+                {Number(loginedWaiter?.data?.can_add_discount) === 1 && Number(loginedWaiter?.data?.can_see_shortcuts) === 1 && (
                   <div className="sidebar-icon discount" onClick={() => {
                     if (currentOrder?.is_locked === 1) {
                       toast.error("Qəbz kilidlidir!");
@@ -846,7 +846,7 @@ const Check = () => {
                   </div>
                 )}
 
-                {Number(loginedWaiter?.data?.can_edit_service_fee) === 1 && (
+                {Number(loginedWaiter?.data?.can_edit_service_fee) === 1 && Number(loginedWaiter?.data?.can_see_shortcuts) === 1 && (
                   <div className="sidebar-icon service_fee" onClick={() => {
                     if (currentOrder?.is_locked === 1) {
                       toast.error("Qəbz kilidlidir!");
@@ -893,7 +893,7 @@ const Check = () => {
                   </div>
                 )}
 
-                {Number(loginedWaiter?.data?.can_add_check_comment) === 1 && (
+                {Number(loginedWaiter?.data?.can_add_check_comment) === 1 && Number(loginedWaiter?.data?.can_see_shortcuts) === 1 && (
                   <div
                     className="sidebar-icon comment-button"
                     onClick={() => {
@@ -1166,34 +1166,37 @@ const Check = () => {
           <div className="checkRightBox h-100 d-flex flex-column bg-light mobile-content-adjust">
             {/* Top Info Bar (Dark Blue) */}
             <div className="right-top-header right-tools-container d-none d-md-flex justify-content-end align-items-center">
-              <div className="tools-divider"></div>
-              <button
-                ref={newOrderBtnRef}
-                className="create-order-btn small-btn"
-                onClick={() => setOnShowSalesTypeModal(true)}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 5V19M5 12H19"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span className="d-none d-xl-inline">Yeni sifariş</span>
-              </button>
-
-              <div className="tools-divider"></div>
+              {Number(loginedWaiter?.data?.can_create_order) === 1 && (
+                <>
+                  <div className="tools-divider"></div>
+                  <button
+                    ref={newOrderBtnRef}
+                    className="create-order-btn small-btn"
+                    onClick={() => setOnShowSalesTypeModal(true)}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 5V19M5 12H19"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span className="d-none d-xl-inline">Yeni sifariş</span>
+                  </button>
+                </>
+              )}
 
               {Number(loginedWaiter?.data?.can_view_archived_checks) === 1 && (
                 <>
+                  <div className="tools-divider"></div>
                   {/* Checks */}
                   <div
                     className="header-action-item small-item"
@@ -1214,24 +1217,23 @@ const Check = () => {
                     </svg>
                     <span className="count-badge text-white" style={{ background: "#A5B4FC" }}>{books?.data?.length || 0}</span>
                   </div>
-
-                  <div className="tools-divider"></div>
                 </>
               )}
 
               {/* Clock Display */}
               {showClock && (
                 <>
+                  <div className="tools-divider"></div>
                   <div className="header-clock">
                     <i className="bi bi-clock"></i>
                     <span>{formatTime(currentTime)}</span>
                   </div>
-                  <div className="tools-divider"></div>
                 </>
               )}
 
               {Number(loginedWaiter?.data?.can_access_settings) === 1 && (
                 <>
+                  <div className="tools-divider"></div>
                   {/* Menu Hamburger */}
                   <button
                     className="header-icon-btn small-icon-btn"
@@ -1252,13 +1254,12 @@ const Check = () => {
                       />
                     </svg>
                   </button>
-
-                  <div className="tools-divider"></div>
                 </>
               )}
 
               {/* Waiter */}
 
+              <div className="tools-divider"></div>
               {/* Waiter/Exit Icon */}
               <div
                 className="header-icon-btn small-icon-btn waiter-btn"
@@ -1294,10 +1295,9 @@ const Check = () => {
                 </div>
               </div>
 
-              <div className="tools-divider"></div>
-
               {Number(loginedWaiter?.data?.can_see_notif) === 1 && (
                 <>
+                  <div className="tools-divider"></div>
                   {/* Notification Bell */}
                   <button
                     className="header-icon-btn small-icon-btn position-relative"
@@ -1320,15 +1320,14 @@ const Check = () => {
                     </svg>
                     {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
                   </button>
-
-                  <div className="tools-divider"></div>
                 </>
               )}
 
+              <div className="tools-divider"></div>
               <button
                 className="header-icon-btn small-icon-btn wifi-icon position-relative"
                 onClick={() => { if (Number(loginedWaiter?.data?.can_access_settings) === 1) setShowStatusModal(true); }}
-                style={{ cursor: "pointer", border: "none", background: "none", padding: "0 20px 0 12px" }}
+                style={{ cursor: "pointer", border: "none", background: "none", padding: "0 12px" }}
               >
                 <div className="wifi-badge-container">
                   <svg

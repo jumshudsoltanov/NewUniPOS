@@ -344,7 +344,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                     </div>
                                 )}
 
-                                {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0) + Number(order.service_charge || 0)) && (
+                                {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) && (
                                     <div className="summary-row d-flex justify-content-between mb-2">
                                         <span className="summary-label text-muted">Depozit (Minimal):</span>
                                         <span className="summary-value fw-bold">{Number(order.deposit).toFixed(2)} ₼</span>
@@ -360,10 +360,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
                                 <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top mt-2">
                                     <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>
-                                        {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0) + Number(order.service_charge || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
+                                        {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
                                     </span>
                                     <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
-                                        {Math.max(subtotal - Number(order.discount || 0) + Number(order.service_charge || 0), Number(order.deposit || 0)).toFixed(2)} ₼
+                                        {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0)).toFixed(2)} ₼
                                     </span>
                                 </div>
                             </div>

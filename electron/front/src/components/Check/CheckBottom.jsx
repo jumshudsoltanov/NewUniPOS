@@ -17,14 +17,18 @@ import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
 import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import { getSocket } from "../../utils/apiConfig";
+import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 
 const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions, menu } = useSelector((state) => state.OrderSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [showNewItemsModal, setShowNewItemsModal] = useState(false);
+  const [showSalesTypeModal, setShowSalesTypeModal] = useState(false);
 
   // BroadCast to Customer Display
   useEffect(() => {
@@ -95,9 +99,15 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   }, [orders, products, sentProducts, pendingDeletions]);
 
   // Close Check
-
   const goCloseCheck = async () => {
-    if (!loginedWaiter?.data?.cannot_close_check) return
+    const isMaster = loginedProfileData?.data?.profile?.is_master === 1 || loginedProfileData?.data?.terminal?.is_master === 1;
+    const hasPermission = Number(loginedWaiter?.data?.cannot_close_check) === 1;
+
+    if (!isMaster && !hasPermission) {
+      toast.error("İcazəniz yoxdur: Çek bağlamaq hüququnuz yoxdur.");
+      return;
+    }
+
     if (products.length > 0 || pendingDeletions.length > 0) {
       await handleSendOrders()
     }
@@ -211,9 +221,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       serviceAmount = Number(orders.service_charge);
     }
 
-    // Final Total is the GREATER of (items + service) or deposit
-    const totalWithService = subtotalAfterDiscount + serviceAmount;
-    let sumTotal = Math.max(totalWithService, depositAmount);
+    // Final Total is the GREATER of (items - discount) or deposit, THEN add service fee
+    let sumTotal = Math.max(subtotalAfterDiscount, depositAmount) + serviceAmount;
 
     if (sumTotal < 0) sumTotal = 0;
 
@@ -236,7 +245,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       }
     }
 
-    const isDepositFloor = depositAmount > (subtotalAfterDiscount + serviceAmount);
+    const isDepositFloor = depositAmount > subtotalAfterDiscount;
 
     return {
       total: total.toFixed(2),
@@ -319,6 +328,29 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         </div>
 
         <div className="pt-3 action-buttons">
+          {Number(loginedWaiter?.data?.can_create_order) === 1 && (
+            <button
+              className="btn-new-order"
+              onClick={() => setShowSalesTypeModal(true)}
+              style={{
+                background: "rgba(255, 255, 255, 0.1)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                color: "white",
+                borderRadius: "12px",
+                padding: "10px 15px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "14px",
+                fontWeight: "500",
+                transition: "all 0.2s ease"
+              }}
+            >
+              <i className="bi bi-plus-lg"></i>
+              <span>Yeni sifariş</span>
+            </button>
+          )}
+
           <div className="btn-send-group">
             <button
               className={`btn-send ${(orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0) || isSending) ? 'disabled' : ''}`}
@@ -358,19 +390,37 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
             )}
           </div>
 
-          <button
-            className={`btn-pay ${orders?.is_locked == 1 ? 'disabled' : ''}`}
-            disabled={orders?.is_locked == 1}
-            onClick={goCloseCheck}
-          >
-            <i className="bi bi-check2-all"></i>
-            <span>{calcTotal.sumTotal} ₼</span>
-          </button>
+          {(() => {
+            const isMaster = loginedProfileData?.data?.profile?.is_master === 1 || loginedProfileData?.data?.terminal?.is_master === 1;
+            const hasPermission = Number(loginedWaiter?.data?.cannot_close_check) === 1;
+
+            if (isMaster || hasPermission) {
+              return (
+                <button
+                  className={`btn-pay ${orders?.is_locked == 1 ? 'disabled' : ''}`}
+                  disabled={orders?.is_locked == 1}
+                  onClick={goCloseCheck}
+                >
+                  <i className="bi bi-check2-all"></i>
+                  <span>{calcTotal.sumTotal} ₼</span>
+                </button>
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
 
       {/* Mobile View */}
       <div className="checkBottomMobile d-flex d-lg-none">
+        {Number(loginedWaiter?.data?.can_create_order) === 1 && (
+          <button
+            className="mobile-icon-btn gray-btn"
+            onClick={() => setShowSalesTypeModal(true)}
+          >
+            <i className="bi bi-plus-lg"></i>
+          </button>
+        )}
         <button
           className="mobile-icon-btn gray-btn"
           onClick={() => {
@@ -409,14 +459,30 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         >
           <i className="bi bi-trash-fill"></i>
         </button>
-        <button
-          className="mobile-pay-btn"
-          disabled={orders?.is_locked == 1}
-        >
-          <i className="bi bi-check2-all fs-4 text-white"></i>
-          <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
-        </button>
+        {(() => {
+          const isMaster = loginedProfileData?.data?.profile?.is_master === 1 || loginedProfileData?.data?.terminal?.is_master === 1;
+          const hasPermission = Number(loginedWaiter?.data?.cannot_close_check) === 1;
+
+          if (isMaster || hasPermission) {
+            return (
+              <button
+                className="mobile-pay-btn"
+                disabled={orders?.is_locked == 1}
+                onClick={goCloseCheck}
+              >
+                <i className="bi bi-check2-all fs-4 text-white"></i>
+                <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
+              </button>
+            );
+          }
+          return null;
+        })()}
       </div>
+
+      <SalesTypesModal
+        show={showSalesTypeModal}
+        onClose={() => setShowSalesTypeModal(false)}
+      />
 
       {/* New Items Modal */}
       <NewItemsModal

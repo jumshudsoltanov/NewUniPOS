@@ -164,7 +164,7 @@ const OtherChecks = ({
           )}
         </div>
 
-        {table && (
+        {table && Number(loginedWaiter?.data?.can_create_order) === 1 && (
           <button
             className="check-item create-check-item"
             onClick={onCreateNew}
