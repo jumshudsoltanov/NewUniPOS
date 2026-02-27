@@ -8,9 +8,20 @@ import { StatusBar } from 'expo-status-bar';
 import ConnectionScreen from './src/screens/ConnectionScreen';
 import WebViewScreen from './src/screens/WebViewScreen';
 
+import * as NavigationBar from 'expo-navigation-bar';
+import { Platform } from 'react-native';
+
 const Stack = createStackNavigator();
 
 export default function App() {
+  React.useEffect(() => {
+    if (Platform.OS === 'android') {
+      // Hide navigation bar but keep status bar visible
+      NavigationBar.setVisibilityAsync('hidden');
+      NavigationBar.setBehaviorAsync('inset-touch');
+    }
+  }, []);
+
   return (
     <Provider store={store}>
       <NavigationContainer>
@@ -19,7 +30,7 @@ export default function App() {
           <Stack.Screen
             name="Connection"
             component={ConnectionScreen}
-            options={{ title: 'Bağlantı Ayarları' }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="WebView"

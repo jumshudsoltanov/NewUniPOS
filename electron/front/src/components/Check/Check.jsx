@@ -725,9 +725,11 @@ const Check = () => {
   };
 
 
+  const isMobile = window.innerWidth < 992;
+
   return (
-    <Container fluid className="p-0 vh-100 overflow-hidden">
-      <Row className="h-100 g-0">
+    <Container fluid className={`p-0 overflow-hidden ${isMobile ? "vh-100 d-flex flex-column" : "h-100"}`}>
+      <Row className={`g-0 ${isMobile ? "flex-grow-1" : "h-100"}`}>
         <Col
           md={12}
           lg={5}

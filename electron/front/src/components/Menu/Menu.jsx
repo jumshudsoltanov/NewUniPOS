@@ -343,9 +343,10 @@ const Menu = ({
             return (
               <Col
                 key={item.id ? `${item.id}-${index}` : index}
-                xs={6}
-                md={4}
-                style={{ flex: "0 0 20%", maxWidth: "20%" }}
+                xs={4}
+                md={3}
+                lg={2}
+                className="category-col"
               >
                 <div
                   className={`menu-card ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}

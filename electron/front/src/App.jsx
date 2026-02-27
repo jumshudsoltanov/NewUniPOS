@@ -218,12 +218,9 @@ function AppContent() {
         } catch (err) {
           console.error("Auto-login failed:", err);
 
-          const isNetworkError = !err.status || err.status === 500 || err.code === "ERR_NETWORK";
+          if (authResult) {
+            console.log("Using cached authResult for offline/fallback mode");
 
-          if (isNetworkError && authResult) {
-            console.log("Offline mode: using cached authResult");
-
-            // Also try to fetch cached/initial customers if possible (though they are online-only)
             dispatch(fetchCustomersFromAdmin());
             dispatch(fetchCustomerGroupsFromAdmin());
 
@@ -231,7 +228,6 @@ function AppContent() {
               navigate("/pin");
             }
           } else {
-            // Əgər həqiqətən yetki yoxdursa (401/403) və ya profil silinibsə
             console.log("Auth failure: redirecting to login");
             if (currentPath !== "/" && currentPath !== "") {
               navigate("/");

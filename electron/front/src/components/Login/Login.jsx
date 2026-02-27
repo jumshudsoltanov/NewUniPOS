@@ -169,22 +169,31 @@ const Login = () => {
     setIsRefreshing(true);
     try {
       const data = await dispatch(authPos(profileData)).unwrap();
-      localStorage.setItem("profile", JSON.stringify(profileData));
-      localStorage.setItem("authResult", JSON.stringify(data));
 
-      const existingProfiles = JSON.parse(localStorage.getItem("authProfiles") || "[]");
-      const filtered = existingProfiles.filter(p => !(p.profile.username === profileData.username && p.profile.terminalId === profileData.terminalId));
-      filtered.push({ profile: profileData, authResult: data });
-      localStorage.setItem("authProfiles", JSON.stringify(filtered));
+      try {
+        localStorage.setItem("profile", JSON.stringify(profileData));
+        localStorage.setItem("authResult", JSON.stringify(data));
+
+        const existingProfiles = JSON.parse(localStorage.getItem("authProfiles") || "[]");
+        const filtered = existingProfiles.filter(p => !(p.profile.username === profileData.username && p.profile.terminalId === profileData.terminalId));
+        filtered.push({ profile: profileData, authResult: data });
+        localStorage.setItem("authProfiles", JSON.stringify(filtered));
+      } catch (storageErr) {
+        console.warn("Storage save failed (non-fatal):", storageErr);
+      }
 
       if (data?.data?.profile?.id) {
-        await Promise.all([
-          dispatch(getTableGroups(data.data.profile.id)).unwrap(),
-          dispatch(getActiveOrders({ profileId: data.data.profile.id })).unwrap(),
-          dispatch(menuWithCategories(data.data.profile.id)).unwrap(),
-          dispatch(menuWithGeneralCategories(data.data.profile.id)).unwrap(),
-          new Promise(resolve => setTimeout(resolve, 5000))
-        ]);
+        try {
+          await Promise.all([
+            dispatch(getTableGroups(data.data.profile.id)).unwrap(),
+            dispatch(getActiveOrders({ profileId: data.data.profile.id })).unwrap(),
+            dispatch(menuWithCategories(data.data.profile.id)).unwrap(),
+            dispatch(menuWithGeneralCategories(data.data.profile.id)).unwrap(),
+            new Promise(resolve => setTimeout(resolve, 5000))
+          ]);
+        } catch (preloadErr) {
+          console.warn("Pre-load data failed (non-fatal):", preloadErr);
+        }
       }
 
       navigate("/pin");

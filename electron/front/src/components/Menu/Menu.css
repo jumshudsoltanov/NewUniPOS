@@ -199,6 +199,13 @@
     font-weight: 700 !important;
 }
 
+@media (max-width: 768px) {
+    .menu-card-content span {
+        font-size: 0.75rem !important;
+        line-height: 1.1;
+    }
+}
+
 /* Drag and Drop Visual Feedback */
 .menu-card.dragging {
     opacity: 0.5;
@@ -217,4 +224,27 @@
 
 .menu-card {
     transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.category-col {
+    flex: 0 0 20%;
+    max-width: 20%;
+    padding: 6px !important;
+}
+
+@media (max-width: 991.98px) {
+    .category-col {
+        flex: 0 0 33.333% !important;
+        max-width: 33.333% !important;
+    }
+
+    .menu-card {
+        height: 100px !important;
+        border-radius: 10px !important;
+    }
+
+    .menu-card-content span {
+        font-size: 0.9rem !important;
+        line-height: 1.2 !important;
+    }
 }

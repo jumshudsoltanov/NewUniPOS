@@ -1,112 +1,154 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { saveData, getData } from '../utils/storage';
+import {
+    View, Text, TextInput, TouchableOpacity, StyleSheet,
+    ActivityIndicator, Alert, Platform,
+    KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, ScrollView
+} from 'react-native';
+import { saveData, getData, removeData } from '../utils/storage';
 import { setBaseUrl } from '../utils/apiConfig';
 
 const ConnectionScreen = ({ navigation }) => {
     const [ip, setIp] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const checkExistingIp = async () => {
+        const init = async () => {
             const savedIp = await getData('master_ip');
             if (savedIp) {
                 setIp(savedIp);
                 setBaseUrl(savedIp);
-                // Auto navigate if IP exists
-                setTimeout(() => {
-                    navigation.replace('WebView');
-                }, 500);
+                navigation.replace('WebView');
+            } else {
+                setLoading(false);
             }
         };
-        checkExistingIp();
+        init();
     }, []);
 
     const handleConnect = async () => {
-        if (!ip) {
-            Alert.alert('Xəta', 'Zəhmət olmasa Master IP daxil edin');
+        const trimmed = ip.trim();
+        if (!trimmed) {
+            Alert.alert('Xəta', 'IP ünvanı daxil edin');
             return;
         }
-
-        setLoading(true);
-        try {
-            // In a real scenario, we might want to ping the IP here to verify
-            await saveData('master_ip', ip);
-            setBaseUrl(ip);
-            navigation.navigate('WebView');
-        } catch (error) {
-            Alert.alert('Bağlantı Xətası', 'Master kompüterə bağlanmaq mümkün olmadı');
-        } finally {
-            setLoading(false);
-        }
+        Keyboard.dismiss();
+        await saveData('master_ip', trimmed);
+        setBaseUrl(trimmed);
+        navigation.replace('WebView');
     };
 
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#053796" />
+            </View>
+        );
+    }
+
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Mobile POS Connection</Text>
-            <Text style={styles.subtitle}>Master kompüterin IP ünvanını daxil edin</Text>
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView
+                    contentContainerStyle={styles.container}
+                    keyboardShouldPersistTaps="handled"
+                    bounces={false}
+                >
+                    <View style={styles.brandArea}>
+                        <Text style={styles.brandIcon}>📡</Text>
+                        <Text style={styles.title}>UniPOS Mobile</Text>
+                        <Text style={styles.subtitle}>Master kompüterin IP ünvanını daxil edin</Text>
+                    </View>
 
-            <TextInput
-                style={styles.input}
-                placeholder="Məsələn: 192.168.1.10"
-                value={ip}
-                onChangeText={setIp}
-                keyboardType="numeric"
-            />
+                    <View style={styles.inputArea}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="192.168.1.10"
+                            placeholderTextColor="#aaa"
+                            value={ip}
+                            onChangeText={setIp}
+                            keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                            returnKeyType="go"
+                            onSubmitEditing={handleConnect}
+                            autoFocus={true}
+                        />
+                    </View>
 
-            <TouchableOpacity style={styles.button} onPress={handleConnect} disabled={loading}>
-                {loading ? (
-                    <ActivityIndicator color="#fff" />
-                ) : (
-                    <Text style={styles.buttonText}>Qoşul</Text>
-                )}
-            </TouchableOpacity>
-        </View>
+                    <TouchableOpacity style={styles.connectBtn} onPress={handleConnect}>
+                        <Text style={styles.connectBtnText}>Qoşul</Text>
+                    </TouchableOpacity>
+                </ScrollView>
+            </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
+    loadingContainer: {
         flex: 1,
-        padding: 20,
-        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#F8FAFF',
+    },
+    container: {
+        flexGrow: 1,
+        backgroundColor: '#F8FAFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 30,
+    },
+    brandArea: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    brandIcon: {
+        fontSize: 48,
+        marginBottom: 12,
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        color: '#333',
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#053796',
     },
     subtitle: {
-        fontSize: 16,
+        fontSize: 15,
         color: '#666',
-        marginBottom: 30,
+        marginTop: 8,
         textAlign: 'center',
+    },
+    inputArea: {
+        width: '100%',
+        marginBottom: 20,
     },
     input: {
         width: '100%',
-        height: 50,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        paddingHorizontal: 15,
-        marginBottom: 20,
-        fontSize: 18,
+        height: 56,
+        borderWidth: 1.5,
+        borderColor: '#D1D5DB',
+        borderRadius: 14,
+        paddingHorizontal: 20,
+        fontSize: 22,
+        backgroundColor: '#fff',
+        textAlign: 'center',
+        fontWeight: '600',
+        color: '#333',
     },
-    button: {
+    connectBtn: {
         width: '100%',
-        height: 50,
-        backgroundColor: '#007AFF',
-        borderRadius: 8,
+        height: 56,
+        backgroundColor: '#053796',
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    buttonText: {
+    connectBtnText: {
         color: '#fff',
         fontSize: 18,
-        fontWeight: '600',
+        fontWeight: '700',
     },
 });
 

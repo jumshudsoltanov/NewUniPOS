@@ -42,6 +42,32 @@
     border-radius: 24px;
 }
 
+/* Base state colors for Desktop */
+.table-surface.occupied {
+    background-color: #DBEAFE !important;
+    border: 1.5px solid #1E40AF;
+}
+
+.table-surface.pending {
+    background-color: #EDE9FE !important;
+    border: 1.5px solid #6B21A8;
+}
+
+.table-surface.my-table {
+    background-color: #D1FAE5 !important;
+    border: 1.5px solid #059669;
+}
+
+.table-surface.other-waiter-table {
+    background-color: #FEE2E2 !important;
+    border: 1.5px solid #DC2626;
+}
+
+.table-surface.free {
+    background-color: #FFFFFF !important;
+    border: 1px solid #D1D5DB;
+}
+
 /* Wrapper adjustments based on type */
 .wrapper-rectangle {
     height: 300px;
@@ -242,170 +268,152 @@
         display: none !important;
     }
 
-    /* Premium Card Style */
+    /* High-Contrast Flat Card Style */
     .table-surface {
         width: 100% !important;
         height: 100% !important;
         border-radius: 12px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        box-shadow: none !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
-        /* Center content vertically */
         align-items: center !important;
-        /* Center content horizontally */
-        padding: 10px !important;
-        border: 1px solid rgba(0, 0, 0, 0.04) !important;
-        transition: all 0.2s ease;
+        padding: 10px 6px !important;
+        border: 2px solid #D1D5DB !important;
+        /* Sharper gray border for free tables */
+        background: #FFFFFF !important;
+        transition: transform 0.1s ease;
         position: relative;
         overflow: hidden;
     }
 
     .table-surface:active {
         transform: scale(0.96);
+        background-color: #F3F4F6 !important;
     }
 
-    /* Richer Status Colors with better gradients */
+    /* Vibrant Flat Status Colors */
     .table-surface.occupied {
-        background: linear-gradient(145deg, #2563EB, #1E40AF) !important;
+        background: #DBEAFE !important;
+        /* More saturated light blue */
+        border: 2px solid #1E40AF !important;
+        /* Strong dark blue border */
     }
 
     .table-surface.pending {
-        background: linear-gradient(145deg, #9333EA, #6B21A8) !important;
+        background: #EDE9FE !important;
+        /* More saturated light purple */
+        border: 2px solid #6B21A8 !important;
+        /* Strong purple border */
     }
 
     .table-surface.free {
         background: #FFFFFF !important;
-        border: 1px solid #E5E7EB !important;
+        border: 2px solid #9CA3AF !important;
+        /* Clearly visible gray border */
     }
 
     .table-content {
         text-align: center !important;
-        /* Center text */
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        height: 100%;
-        width: 100%;
+        gap: 2px;
     }
 
-    /* Text Styling */
+    /* High-Visibility Typography */
     .table-name {
-        font-size: 15px !important;
-        font-weight: 700 !important;
+        font-size: 14px !important;
+        font-weight: 800 !important;
+        /* Extra bold for visibility */
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin: 0 0 4px 0 !important;
+        color: #374151 !important;
+        /* Darker text */
+        margin-bottom: 2px !important;
     }
 
     .table-surface.occupied .table-name,
     .table-surface.pending .table-name {
-        color: rgba(255, 255, 255, 0.95) !important;
-    }
-
-    .table-surface.free .table-name {
-        color: #1F2937 !important;
+        color: #1E3A8A !important;
     }
 
     .table-amount {
-        font-size: 16px !important;
+        font-size: 18px !important;
+        font-weight: 900 !important;
+        /* Heavy font for price */
+        color: #000000 !important;
+        /* Pure black for maximum contrast */
         margin: 0 !important;
-        font-weight: 800 !important;
-    }
-
-    .table-surface.occupied .table-amount,
-    .table-surface.pending .table-amount {
-        color: #FFFFFF !important;
-    }
-
-    .table-surface.free .table-amount {
-        color: #2563EB !important;
     }
 
     .table-waiter-info {
         font-size: 11px !important;
-        margin-top: 6px !important;
-        font-weight: 500 !important;
-        opacity: 0.8;
-    }
-
-    .table-surface.occupied .table-waiter-info,
-    .table-surface.pending .table-waiter-info {
-        color: rgba(255, 255, 255, 0.85) !important;
-    }
-
-    .table-surface.free .table-waiter-info {
-        color: #6B7280 !important;
+        font-weight: 600 !important;
+        color: #4B5563 !important;
+        margin-top: 5px !important;
     }
 
     /* Reset specific wrapper heights */
     .wrapper-rectangle {
         height: 100px !important;
     }
+
+    /* Move high-visibility mobile-specific status styles here */
+    .has-orders {
+        background-color: #047857;
+    }
+
+    /* My Active Table - Vibrant High-Contrast Green */
+    .table-surface.my-table {
+        background: #D1FAE5 !important;
+        border: 2.5px solid #059669 !important;
+        box-shadow: none !important;
+    }
+
+    /* Other Waiter's Table - Vibrant High-Contrast Red */
+    .table-surface.other-waiter-table {
+        background: #FEE2E2 !important;
+        border: 2.5px solid #DC2626 !important;
+        box-shadow: none !important;
+        opacity: 1 !important;
+    }
+
+    /* Text Colors for Mobile */
+    .table-surface.my-table .table-name,
+    .table-surface.my-table .table-amount {
+        color: #065F46 !important;
+    }
+
+    .table-surface.other-waiter-table .table-name,
+    .table-surface.other-waiter-table .table-amount {
+        color: #991B1B !important;
+    }
+
+    .table-surface.my-table .table-waiter-info {
+        color: #059669 !important;
+        opacity: 1 !important;
+    }
+
+    .table-surface.other-waiter-table .table-waiter-info {
+        color: #DC2626 !important;
+        opacity: 1 !important;
+    }
+
+    .table-surface.my-table .table-waiter-info span,
+    .table-surface.other-waiter-table .table-waiter-info span {
+        font-weight: 700;
+    }
 }
 
-.has-orders {
-    background-color: #047857;
-}
+/* Hide status dot on colored tables - Mobile only logic could go here or remain global if safe */
+@media (max-width: 767.98px) {
 
-/* My Active Table - Very Light Chic Green (Mint) */
-.table-surface.my-table {
-    background: #ECFDF5 !important;
-    /* Emerald 50 - Very Light & Fresh */
-    border: 1px solid #10B981 !important;
-    /* Distinct but light border */
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1) !important;
-}
-
-/* Other Waiter's Table - Very Light Chic Red (Rose) */
-.table-surface.other-waiter-table {
-    background: #FEF2F2 !important;
-    /* Rose 50 - Very Light & Professional */
-    border: 1px solid #F87171 !important;
-    /* Distinct but light border */
-    box-shadow: 0 4px 12px rgba(248, 113, 113, 0.1) !important;
-    opacity: 1 !important;
-}
-
-/* Text Colors - Dark for readability on light background */
-.table-surface.my-table .table-name,
-.table-surface.my-table .table-amount {
-    color: #10B981 !important;
-    /* Emerald 500 */
-}
-
-.table-surface.other-waiter-table .table-name,
-.table-surface.other-waiter-table .table-amount {
-    color: #EF4444 !important;
-    /* Red 500 */
-}
-
-.table-surface.my-table .table-waiter-info,
-.table-surface.my-table .table-waiter-info i {
-    color: #059669 !important;
-    /* Darker Emerald for info */
-    opacity: 1 !important;
-    text-shadow: none !important;
-}
-
-.table-surface.other-waiter-table .table-waiter-info,
-.table-surface.other-waiter-table .table-waiter-info i {
-    color: #B91C1C !important;
-    /* Darker Red for info */
-    opacity: 1 !important;
-    text-shadow: none !important;
-}
-
-/* Hide status dot on colored tables */
-.table-surface.my-table .status-dot,
-.table-surface.other-waiter-table .status-dot {
-    display: none !important;
-}
-
-.table-surface.my-table .table-waiter-info span,
-.table-surface.other-waiter-table .table-waiter-info span {
-    font-weight: 600;
+    .table-surface.my-table .status-dot,
+    .table-surface.other-waiter-table .status-dot {
+        display: none !important;
+    }
 }
 
 

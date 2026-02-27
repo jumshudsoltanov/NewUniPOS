@@ -12,7 +12,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,14 +29,14 @@
       },
       "package": "com.unipos.mobile",
       "statusBar": {
-        "hidden": true
+        "hidden": false
       },
       "navigationBar": {
         "visible": false
       }
     },
     "androidStatusBar": {
-      "hidden": true
+      "hidden": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
