@@ -233,7 +233,7 @@ function AppContent() {
           } else {
             // Əgər həqiqətən yetki yoxdursa (401/403) və ya profil silinibsə
             console.log("Auth failure: redirecting to login");
-            if (currentPath !== "/") {
+            if (currentPath !== "/" && currentPath !== "") {
               navigate("/");
             }
           }

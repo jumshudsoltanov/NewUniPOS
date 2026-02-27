@@ -20,6 +20,25 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
         socket = null;
     }
 
+    if (!window.electronAPI) {
+        // Web/Mobile mode: Always use the current hostname as the Master IP
+        const hostname = window.location.hostname;
+        const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+
+        if (!isLocalhost) {
+            const baseURL = `http://${hostname}:55667`;
+            console.warn(`[CONNECTION] Mobile/Web Mode: Connecting to ${baseURL}`);
+            apiConfig.defaults.baseURL = `${baseURL}/api`;
+
+            if (!disableSocket) {
+                socket = io(baseURL, {
+                    transports: ['websocket', 'polling']
+                });
+            }
+            return { masterIp: hostname, socket };
+        }
+    }
+
     if (!forceLocal && window.electronAPI && window.electronAPI.scanMaster) {
         try {
             console.warn("[CONNECTION] Scanning for Master Terminal...");
@@ -30,7 +49,6 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
                 apiConfig.defaults.baseURL = `${baseURL}/api`;
 
                 if (!disableSocket) {
-                    // Force WebSocket first to avoid polling 404s and reduce overhead
                     socket = io(baseURL, {
                         transports: ['websocket', 'polling'],
                         reconnection: true,
@@ -54,7 +72,7 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
     }
 
     // Fallback to local (only if forceLocal is true or it's genuinely the Electron Master)
-    if (!disableSocket && forceLocal) {
+    if (!disableSocket && (forceLocal || (window.electronAPI && !window.electronAPI.scanMaster))) {
         socket = io("http://localhost:55667", {
             transports: ['websocket', 'polling']
         });
@@ -63,8 +81,8 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
         });
     } else if (!disableSocket && !forceLocal) {
         // Essential: If it was scanning for a master (Slave) and failed, it must NOT connect to localhost
-        console.warn("[CONNECTION] Slave failed to find Master. Network blocked.");
-        apiConfig.defaults.baseURL = "http://255.255.255.255/api"; // Force immediate Axios timeout
+        console.warn("[CONNECTION] Slave/Mobile failed to find Master. Network blocked.");
+        apiConfig.defaults.baseURL = `http://${window.location.hostname}:55667/api`;
         socket = null;
     } else {
         console.warn("[CONNECTION] Running in Standalone Mode. Sockets explicitly deactivated.");

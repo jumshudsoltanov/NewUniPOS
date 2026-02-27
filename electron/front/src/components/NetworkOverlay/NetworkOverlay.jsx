@@ -29,6 +29,13 @@ const NetworkOverlay = () => {
             }
 
             const socket = getSocket();
+            if (socket) {
+                const uri = socket.io?.uri || "";
+                if (uri.includes("://")) {
+                    const host = uri.split("://")[1].split(":")[0];
+                    setMasterIp(host);
+                }
+            }
 
             // If we are a slave and disconnected, try a background re-scan occasionally
             if ((!socket || !socket.connected) && isConfiguredSlave) {
@@ -41,8 +48,9 @@ const NetworkOverlay = () => {
                     retryCounter = 0;
                     try {
                         const result = await initNetwork(false, false);
-                        if (result && result.socket) {
+                        if (result && (result.socket || result.masterIp)) {
                             console.warn("[NETWORK] Master found in background!");
+                            if (result.masterIp) setMasterIp(result.masterIp);
                             setIsDisconnected(false);
                         }
                     } catch (e) {
@@ -64,6 +72,9 @@ const NetworkOverlay = () => {
                     } else {
                         setIsDisconnected(false);
                         retryCounter = 0; // Reset counter on successful connection
+                        if (uri.includes("://")) {
+                            setMasterIp(uri.split("://")[1].split(":")[0]);
+                        }
                     }
                 }
             } else {
@@ -138,7 +149,7 @@ const NetworkOverlay = () => {
                 <div style={{ width: "1px", background: "#2D3748" }}></div>
                 <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: "0.85rem", color: "#718096", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>Sizin İP ünvanınız (Slave)</div>
-                    <div style={{ fontSize: "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{slaveIp || "Bilinmir"}</div>
+                    <div style={{ fontSize: "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{window.location.hostname || "Bilinmir"}</div>
                 </div>
             </div>
 
