@@ -243,7 +243,7 @@ const Login = () => {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span>Texniki dəstək</span>
+                  <span className="support-text">Texniki dəstək</span>
                 </button>
 
                 <div className="statusIcons">

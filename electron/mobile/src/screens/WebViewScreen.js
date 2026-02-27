@@ -27,7 +27,7 @@ const WebViewScreen = () => {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <WebView
                 source={{ uri: url }}
                 style={styles.webview}
@@ -43,7 +43,7 @@ const WebViewScreen = () => {
                     </View>
                 )}
             />
-        </SafeAreaView>
+        </View>
     );
 };
 
