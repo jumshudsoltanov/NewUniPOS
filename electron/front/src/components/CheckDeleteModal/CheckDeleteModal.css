@@ -210,24 +210,68 @@
 }
 
 @media (max-width: 767px) {
-    .check-delete-modal .modal-content {
-        max-height: 95vh;
+    .check-delete-modal .modal-dialog {
+        max-width: 92% !important;
+        margin: 1rem auto !important;
     }
 
     .check-delete-modal-header {
-        height: 60px;
+        height: 55px;
+        padding: 10px 15px;
+    }
+
+    .check-delete-modal-title {
+        font-size: 16px;
+    }
+
+    .check-delete-icon-circle {
+        width: 32px;
+        height: 32px;
     }
 
     .check-delete-modal-body {
         padding: 15px;
+        gap: 10px;
+    }
+
+    .lock-icon-wrapper {
+        width: 45px;
+        height: 45px;
+        margin-bottom: 5px;
+    }
+
+    .lock-icon-wrapper i {
+        font-size: 20px;
+    }
+
+    .modal-question-text {
+        font-size: 15px;
+    }
+
+    .modal-sub-text {
+        font-size: 12px;
+        margin-bottom: 12px;
+    }
+
+    .reasons-list {
+        max-height: 250px;
+    }
+
+    .reason-item {
+        padding: 10px 12px;
+    }
+
+    .reason-text {
+        font-size: 13px;
     }
 
     .modal-footer-custom {
-        padding: 12px 15px;
+        padding: 10px 15px;
     }
 
     .check-delete-save-btn {
         height: 48px;
         font-size: 14px;
+        border-radius: 8px;
     }
 }

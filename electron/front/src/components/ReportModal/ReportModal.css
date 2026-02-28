@@ -391,32 +391,132 @@
 }
 
 @media (max-width: 991px) {
+    .report-modal .modal-content {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0;
+    }
+
+    .report-modal-dialog {
+        margin: 0 !important;
+        max-width: 100% !important;
+        height: 100vh !important;
+    }
+
+    .report-mobile-tabs {
+        display: flex;
+        background: #4F85F4;
+        padding: 5px 15px 0 15px;
+        gap: 10px;
+    }
+
+    .report-mobile-tab {
+        flex: 1;
+        padding: 12px 5px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.6);
+        font-family: "Poppins", sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .report-mobile-tab.active {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.15);
+        font-weight: 600;
+    }
+
+    .report-mobile-tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 15%;
+        right: 15%;
+        height: 3px;
+        background: #fff;
+        border-radius: 3px 3px 0 0;
+    }
+
+    .tab-dot {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        width: 7px;
+        height: 7px;
+        background: #4ade80;
+        border-radius: 50%;
+        box-shadow: 0 0 10px rgba(74, 222, 128, 0.6);
+    }
+
     .report-modal-body {
         flex-direction: column;
-        overflow-y: auto;
+        overflow: hidden;
+        height: calc(100vh - 110px);
     }
 
     .report-sidebar {
-        width: 100%;
-        min-width: 100%;
-        border-right: none;
-        border-bottom: 1px solid #dee2e6;
-        padding: 1.5rem;
-        overflow-y: visible;
+        width: 100% !important;
+        min-width: 100% !important;
+        padding: 20px !important;
+        background: #f8f9fa !important;
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;
+        overflow-y: auto !important;
+    }
+
+    .mobile-section-wrapper {
+        flex: 1;
+    }
+
+    .mobile-group-title {
+        font-family: "Poppins", sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        color: #053796;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+        padding-bottom: 4px;
+        border-bottom: 1px solid rgba(5, 55, 150, 0.1);
+    }
+
+    .switch-group {
+        background: #fff;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        margin-top: 15px;
     }
 
     .report-content {
-        padding: 1.5rem;
-        overflow-y: visible;
+        padding: 15px !important;
+        height: 100% !important;
+        background: #fff !important;
+    }
+
+    .report-create-btn {
+        margin-top: 20px !important;
+        padding: 16px !important;
+        border-radius: 12px !important;
+        background: #053796 !important;
+        font-size: 16px !important;
+        box-shadow: 0 4px 12px rgba(5, 55, 150, 0.2) !important;
     }
 
     .report-data-header {
         flex-direction: column;
-        gap: 15px;
+        gap: 12px;
+        padding-bottom: 15px;
     }
 
     .report-data-time {
-        width: fit-content;
+        width: 100%;
+        justify-content: center;
     }
 
     .premium-receipt {
@@ -424,9 +524,11 @@
     }
 }
 
+
 @media (max-width: 575px) {
     .report-modal .modal-content {
-        max-height: 95vh;
+        height: 100vh !important;
+        max-height: 100vh !important;
     }
 
     .report-sidebar,

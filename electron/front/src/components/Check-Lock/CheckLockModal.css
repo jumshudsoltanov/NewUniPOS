@@ -172,25 +172,59 @@
 }
 
 @media (max-width: 767px) {
+    .check-lock-modal .modal-dialog {
+        max-width: 92% !important;
+        margin: 1rem auto !important;
+    }
+
     .check-lock-modal .modal-content {
-        max-height: 95vh;
+        max-height: 90vh;
     }
 
     .check-lock-modal-header {
-        height: 60px;
+        height: 55px;
+        padding: 10px 15px;
+    }
+
+    .check-lock-modal-title {
+        font-size: 16px;
+    }
+
+    .check-lock-icon-circle {
+        width: 32px;
+        height: 32px;
+    }
+
+    .lock-icon-big-wrapper {
+        width: 50px;
+        height: 50px;
+    }
+
+    .lock-icon-big-wrapper i {
+        font-size: 22px;
+    }
+
+    .modal-question-text {
+        font-size: 14px;
+    }
+
+    .modal-sub-text {
+        font-size: 12px;
     }
 
     .check-lock-modal-body {
-        padding: 15px;
+        padding: 20px 15px;
+        gap: 12px;
     }
 
     .modal-footer-custom {
         padding: 12px 15px;
+        gap: 10px;
     }
 
     .btn-cancel,
     .check-lock-save-btn {
-        height: 48px;
+        height: 45px;
         font-size: 14px;
         border-radius: 8px;
     }

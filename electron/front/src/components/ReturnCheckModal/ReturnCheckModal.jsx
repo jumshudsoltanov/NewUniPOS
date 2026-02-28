@@ -16,6 +16,9 @@ const ReturnCheckModal = ({ show, onClose }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [showReasonModal, setShowReasonModal] = useState(false);
+    const [activeMobileTab, setActiveMobileTab] = useState("keypad"); // 'keypad' or 'details'
+
+    const isMobile = window.innerWidth < 768;
 
     // Reset state when modal opens/closes
     useEffect(() => {
@@ -23,6 +26,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
             setCheckId("");
             setOrder(null);
             setError("");
+            setActiveMobileTab("keypad");
         }
     }, [show]);
 
@@ -56,15 +60,19 @@ const ReturnCheckModal = ({ show, onClose }) => {
                 // Only allow closed or deleted orders
                 if (foundOrder.status === 2 || foundOrder.status === 3) {
                     setOrder(foundOrder);
+                    if (isMobile) setActiveMobileTab("details");
                 } else {
                     setError("Bu çek hələ açıqdır. Yalnız bağlanmış çekləri qaytarmaq olar.");
+                    if (isMobile) setActiveMobileTab("details");
                 }
             } else {
                 setError("Çek tapılmadı");
+                if (isMobile) setActiveMobileTab("details");
             }
         } catch (err) {
             console.error("Search error:", err);
             setError("Çek tapılmadı");
+            if (isMobile) setActiveMobileTab("details");
         } finally {
             setLoading(false);
         }
@@ -130,124 +138,147 @@ const ReturnCheckModal = ({ show, onClose }) => {
                     </button>
                 </div>
 
+                {isMobile && (
+                    <div className="return-mobile-tabs">
+                        <div
+                            className={`return-mobile-tab ${activeMobileTab === "keypad" ? "active" : ""}`}
+                            onClick={() => setActiveMobileTab("keypad")}
+                        >
+                            Axtarış
+                        </div>
+                        <div
+                            className={`return-mobile-tab ${activeMobileTab === "details" ? "active" : ""}`}
+                            onClick={() => setActiveMobileTab("details")}
+                        >
+                            Nəticə {order && <span className="tab-dot"></span>}
+                        </div>
+                    </div>
+                )}
+
                 <Modal.Body className="return-body p-0">
                     <Row className="g-0 h-100">
                         {/* Left Side - Keypad */}
-                        <Col md={5} className="return-keypad-section">
-                            <div className="return-check-id-display">
-                                <span className="return-check-id-label">Çek</span>
-                                <div className="return-check-id-value">{checkId || "—"}</div>
-                            </div>
+                        {(!isMobile || activeMobileTab === "keypad") && (
+                            <Col md={5} className="return-keypad-section">
+                                <div className="return-check-id-display">
+                                    <span className="return-check-id-label">Çek</span>
+                                    <div className="return-check-id-value">{checkId || "—"}</div>
+                                </div>
 
-                            <div className="return-keypad-grid">
-                                {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"].map((key) => (
+                                <div className="return-keypad-grid">
+                                    {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"].map((key) => (
+                                        <button
+                                            key={key}
+                                            className="return-keypad-btn"
+                                            onClick={() => handleKeyPress(key)}
+                                        >
+                                            {key}
+                                        </button>
+                                    ))}
                                     <button
-                                        key={key}
-                                        className="return-keypad-btn"
-                                        onClick={() => handleKeyPress(key)}
+                                        className="return-keypad-btn return-backspace-btn"
+                                        onClick={() => handleKeyPress("backspace")}
                                     >
-                                        {key}
+                                        <i className="bi bi-backspace"></i>
                                     </button>
-                                ))}
-                                <button
-                                    className="return-keypad-btn return-backspace-btn"
-                                    onClick={() => handleKeyPress("backspace")}
-                                >
-                                    <i className="bi bi-backspace"></i>
-                                </button>
-                            </div>
+                                </div>
 
-                            <button
-                                className="return-search-btn"
-                                onClick={handleSearch}
-                                disabled={!checkId || loading}
-                            >
-                                {loading ? "Axtarılır..." : "Axtar"}
-                            </button>
-                        </Col>
+                                <button
+                                    className="return-search-btn"
+                                    onClick={handleSearch}
+                                    disabled={!checkId || loading}
+                                >
+                                    {loading ? "Axtarılır..." : "Axtar"}
+                                </button>
+                            </Col>
+                        )}
 
                         {/* Right Side - Order Details */}
-                        <Col md={7} className="return-details-section">
-                            {error && (
-                                <div className="return-error-message">
-                                    <i className="bi bi-exclamation-circle me-2"></i>
-                                    {error}
-                                </div>
-                            )}
-
-                            {!order && !error && (
-                                <div className="return-empty-state">
-                                    <i className="bi bi-receipt"></i>
-                                    <p>Çek ID-sini daxil edin və axtarın</p>
-                                </div>
-                            )}
-
-                            {order && (
-                                <>
-                                    <div className="return-order-header">
-                                        <span className="return-order-id">Çek #{order.id}</span>
-                                        <span className={`return-order-status ${order.status === 3 ? "deleted" : "closed"}`}>
-                                            {order.status === 3 ? "Silinib" : "Bağlı"}
-                                        </span>
+                        {(!isMobile || activeMobileTab === "details") && (
+                            <Col md={7} className="return-details-section">
+                                {error && (
+                                    <div className="return-error-message">
+                                        <i className="bi bi-exclamation-circle me-2"></i>
+                                        {error}
                                     </div>
+                                )}
 
-                                    <div className="return-order-items">
-                                        <table className="return-items-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Məhsul</th>
-                                                    <th>Miq</th>
-                                                    <th>Qiymət</th>
-                                                    <th className="text-end">Cəm</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {order.orders_items?.map((item, i) => (
-                                                    <tr key={i}>
-                                                        <td>{item.product?.name || "Məhsul"}</td>
-                                                        <td>{item.count}</td>
-                                                        <td>{Number(item.price).toFixed(2)}</td>
-                                                        <td className="text-end">
-                                                            {(item.count * item.price).toFixed(2)}
-                                                        </td>
+
+                                {!order && !error && (
+                                    <div className="return-empty-state">
+                                        <i className="bi bi-receipt"></i>
+                                        <p>Çek ID-sini daxil edin və axtarın</p>
+                                    </div>
+                                )}
+
+                                {order && (
+                                    <>
+                                        <div className="return-order-header">
+                                            <span className="return-order-id">Çek #{order.id}</span>
+                                            <span className={`return-order-status ${order.status === 3 ? "deleted" : "closed"}`}>
+                                                {order.status === 3 ? "Silinib" : "Bağlı"}
+                                            </span>
+                                        </div>
+
+                                        <div className="return-order-items">
+                                            <table className="return-items-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Məhsul</th>
+                                                        <th>Miq</th>
+                                                        <th>Qiymət</th>
+                                                        <th className="text-end">Cəm</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <div className="return-order-summary">
-                                        <div className="return-summary-row">
-                                            <span>Cəm:</span>
-                                            <span>{totals.subtotal.toFixed(2)} ₼</span>
+                                                </thead>
+                                                <tbody>
+                                                    {order.orders_items?.map((item, i) => (
+                                                        <tr key={i}>
+                                                            <td>{item.product?.name || "Məhsul"}</td>
+                                                            <td>{item.count}</td>
+                                                            <td>{Number(item.price).toFixed(2)}</td>
+                                                            <td className="text-end">
+                                                                {(item.count * item.price).toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
-                                        {totals.discount > 0 && (
-                                            <div className="return-summary-row return-discount">
-                                                <span>Endirim:</span>
-                                                <span>-{totals.discount.toFixed(2)} ₼</span>
-                                            </div>
-                                        )}
-                                        {totals.service > 0 && (
+
+                                        <div className="return-order-summary">
                                             <div className="return-summary-row">
-                                                <span>Servis:</span>
-                                                <span>{totals.service.toFixed(2)} ₼</span>
+                                                <span>Cəm:</span>
+                                                <span>{totals.subtotal.toFixed(2)} ₼</span>
                                             </div>
-                                        )}
-                                        <div className="return-summary-row return-total">
-                                            <span>Yekun:</span>
-                                            <span>{totals.total.toFixed(2)} ₼</span>
+                                            {totals.discount > 0 && (
+                                                <div className="return-summary-row return-discount">
+                                                    <span>Endirim:</span>
+                                                    <span>-{totals.discount.toFixed(2)} ₼</span>
+                                                </div>
+                                            )}
+                                            {totals.service > 0 && (
+                                                <div className="return-summary-row">
+                                                    <span>Servis:</span>
+                                                    <span>{totals.service.toFixed(2)} ₼</span>
+                                                </div>
+                                            )}
+                                            <div className="return-summary-row return-total">
+                                                <span>Yekun:</span>
+                                                <span>{totals.total.toFixed(2)} ₼</span>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <button
-                                        className="return-action-btn"
-                                        onClick={() => setShowReasonModal(true)}
-                                    >
-                                        Geri qaytarılma
-                                    </button>
-                                </>
-                            )}
-                        </Col>
+                                        <button
+                                            className="return-action-btn"
+                                            onClick={() => setShowReasonModal(true)}
+                                        >
+                                            <i className="bi bi-arrow-return-left me-2"></i>
+                                            Geri qaytar
+                                        </button>
+                                    </>
+                                )}
+                            </Col>
+                        )}
                     </Row>
                 </Modal.Body>
             </Modal>

@@ -130,6 +130,8 @@ const Settings = () => {
         },
     ];
 
+    const isMobile = window.innerWidth < 992;
+
     const bottomMenuItems = [
         {
             id: "refresh",
@@ -153,6 +155,7 @@ const Settings = () => {
             label: "Pəncərə rejimi",
             icon: <i className="bi bi-arrows-fullscreen"></i>,
             onClick: handleFullscreenToggle,
+            hiddenOnMobile: true,
         },
         {
             id: "support",
@@ -165,6 +168,7 @@ const Settings = () => {
             label: "AnyDesk",
             icon: <i className="bi bi-display"></i>,
             onClick: handleOpenAnyDesk,
+            hiddenOnMobile: true,
         },
     ];
 
@@ -199,16 +203,18 @@ const Settings = () => {
 
                     {/* Bottom Menu Row */}
                     <div className="settings-grid settings-grid-bottom">
-                        {bottomMenuItems.map((item) => (
-                            <button
-                                key={item.id}
-                                className="settings-card"
-                                onClick={item.onClick}
-                            >
-                                <span className="settings-card-icon">{item.icon}</span>
-                                <span className="settings-card-label">{item.label}</span>
-                            </button>
-                        ))}
+                        {bottomMenuItems
+                            .filter(item => !item.hiddenOnMobile || !isMobile)
+                            .map((item) => (
+                                <button
+                                    key={item.id}
+                                    className="settings-card"
+                                    onClick={item.onClick}
+                                >
+                                    <span className="settings-card-icon">{item.icon}</span>
+                                    <span className="settings-card-label">{item.label}</span>
+                                </button>
+                            ))}
                     </div>
                 </div>
             </div>

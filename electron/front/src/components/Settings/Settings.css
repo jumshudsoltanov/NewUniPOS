@@ -117,16 +117,37 @@
 /* Responsive */
 @media (max-width: 768px) {
     .settings-page-content {
-        padding: 16px;
+        padding: 12px;
     }
 
-    .settings-grid-top,
+    .settings-grid-top {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
     .settings-grid-bottom {
         grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
     }
 
     .settings-card {
-        height: 56px;
+        width: 100% !important;
+        height: auto !important;
+        min-height: 64px !important;
+        padding: 12px 10px !important;
+        gap: 8px !important;
+    }
+
+    .settings-card-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+
+    .settings-card-label {
+        font-size: 13px !important;
+        word-break: break-word;
     }
 }
 

@@ -1506,19 +1506,32 @@
 }
 
 @media (max-width: 991.98px) {
-    .settings-gear-btn {
+
+    .settings-gear-btn,
+    .settings-action-btn,
+    .drag-mode-btn {
         transform: none !important;
-        border-radius: 6px !important;
-        width: 40px !important;
-        height: 40px !important;
+        border-radius: 8px !important;
+        width: 42px !important;
+        height: 42px !important;
     }
 
-    .settings-gear-btn i {
+    .settings-gear-btn i,
+    .settings-action-btn i,
+    .drag-mode-btn i {
         transform: none !important;
+        font-size: 18px !important;
     }
 
     .settings-toolbar-wrapper {
-        margin-left: 4px;
+        margin-left: 0;
+        gap: 6px;
+    }
+
+    .settings-actions,
+    .drag-mode-actions {
+        margin-left: 0;
+        gap: 6px;
     }
 }
 

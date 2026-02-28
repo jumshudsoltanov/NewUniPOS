@@ -346,3 +346,103 @@
 .display-preview-info i {
     font-size: 16px;
 }
+
+@media (max-width: 991px) {
+    .devices-modal .modal-content {
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0;
+    }
+
+    .devices-modal .modal-dialog {
+        margin: 0 !important;
+        max-width: 100% !important;
+        height: 100vh !important;
+    }
+
+    .devices-modal .modal-header {
+        background: #4F85F4;
+        padding: 15px 20px;
+    }
+
+    .devices-mobile-tabs {
+        display: flex;
+        background: #4F85F4;
+        padding: 0 10px;
+        gap: 5px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        /* Firefox */
+    }
+
+    .devices-mobile-tabs::-webkit-scrollbar {
+        display: none;
+        /* Chrome/Safari */
+    }
+
+    .devices-mobile-tab {
+        flex: 1;
+        min-width: 100px;
+        padding: 12px 5px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.6);
+        font-family: "Poppins", sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+
+    .devices-mobile-tab.active {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.15);
+        font-weight: 600;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .devices-mobile-tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 20%;
+        right: 20%;
+        height: 3px;
+        background: #fff;
+        border-radius: 3px 3px 0 0;
+    }
+
+    .devices-modal .modal-body {
+        flex-direction: column;
+        height: calc(100vh - 110px);
+        overflow: hidden;
+    }
+
+    .devices-content {
+        padding: 15px;
+        height: 100%;
+        background: #f8f9fa;
+    }
+
+    .master-modes-grid {
+        flex-direction: column;
+    }
+
+    .printers-grid {
+        flex-direction: column;
+    }
+
+    .printer-edit-card {
+        min-width: 100%;
+    }
+
+    .display-config-card {
+        padding: 15px;
+    }
+
+    .display-config-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+}

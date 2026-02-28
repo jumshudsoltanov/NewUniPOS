@@ -21,6 +21,8 @@ const ReportModal = ({ show, onClose }) => {
     const [reportType, setReportType] = useState("simple");
     const [showTransactions, setShowTransactions] = useState(false);
     const [showAccounts, setShowAccounts] = useState(false);
+    const [activeMobileTab, setActiveMobileTab] = useState("filters"); // 'filters' or 'result'
+    const isMobile = window.innerWidth < 992;
 
     // Dynamic states
     const [terminals, setTerminals] = useState([{ id: "all", name: "Hamısı" }]);
@@ -93,6 +95,7 @@ const ReportModal = ({ show, onClose }) => {
                     data: summaryRes.data.data
                 });
             }
+            if (isMobile) setActiveMobileTab("result");
         } catch (error) {
             console.error("Error generating report:", error);
         } finally {
@@ -357,117 +360,144 @@ const ReportModal = ({ show, onClose }) => {
                 </button>
             </div>
 
+            {isMobile && (
+                <div className="report-mobile-tabs">
+                    <div
+                        className={`report-mobile-tab ${activeMobileTab === "filters" ? "active" : ""}`}
+                        onClick={() => setActiveMobileTab("filters")}
+                    >
+                        Ayarlar
+                    </div>
+                    <div
+                        className={`report-mobile-tab ${activeMobileTab === "result" ? "active" : ""}`}
+                        onClick={() => setActiveMobileTab("result")}
+                    >
+                        Nəticə {reportResults && !loading && <span className="tab-dot"></span>}
+                    </div>
+                </div>
+            )}
+
             <Modal.Body className="report-modal-body">
                 <Row className="h-100 g-0 w-100">
                     {/* Left Sidebar - Filters */}
-                    <Col md={5} lg={4} className="report-sidebar">
-                        <Form.Group className="mb-3">
-                            <Form.Label>Bu tarixdən</Form.Label>
-                            <div className="date-time-row">
-                                <Form.Control
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                />
-                                <Form.Select
-                                    value={startTime}
-                                    onChange={(e) => setStartTime(e.target.value)}
-                                >
-                                    {Array.from({ length: 48 }, (_, i) => {
-                                        const hour = Math.floor(i / 2).toString().padStart(2, '0');
-                                        const minute = (i % 2 === 0 ? '00' : '30');
-                                        const time = `${hour}:${minute}`;
-                                        return <option key={time} value={time}>{time}</option>;
-                                    })}
-                                </Form.Select>
+                    {(!isMobile || activeMobileTab === "filters") && (
+                        <Col md={5} lg={4} className="report-sidebar">
+                            <div className="mobile-section-wrapper">
+                                <div className="mobile-group-title">Vaxt aralığı</div>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Bu tarixdən</Form.Label>
+                                    <div className="date-time-row">
+                                        <Form.Control
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                        />
+                                        <Form.Select
+                                            value={startTime}
+                                            onChange={(e) => setStartTime(e.target.value)}
+                                        >
+                                            {Array.from({ length: 48 }, (_, i) => {
+                                                const hour = Math.floor(i / 2).toString().padStart(2, '0');
+                                                const minute = (i % 2 === 0 ? '00' : '30');
+                                                const time = `${hour}:${minute}`;
+                                                return <option key={time} value={time}>{time}</option>;
+                                            })}
+                                        </Form.Select>
+                                    </div>
+                                </Form.Group>
+
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Bu tarixə qədər</Form.Label>
+                                    <div className="date-time-row">
+                                        <Form.Control
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                        />
+                                        <Form.Select
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                        >
+                                            {Array.from({ length: 48 }, (_, i) => {
+                                                const hour = Math.floor(i / 2).toString().padStart(2, '0');
+                                                const minute = (i % 2 === 0 ? '00' : '30');
+                                                const time = `${hour}:${minute}`;
+                                                return <option key={time} value={time}>{time}</option>;
+                                            })}
+                                        </Form.Select>
+                                    </div>
+                                </Form.Group>
+
+                                <div className="mobile-group-title mt-4">Növ və Filtr</div>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Terminallar</Form.Label>
+                                    <Form.Select
+                                        value={terminal}
+                                        onChange={(e) => setTerminal(e.target.value)}
+                                    >
+                                        {terminals.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))}
+                                    </Form.Select>
+                                </Form.Group>
+
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Hesabat növü</Form.Label>
+                                    <Form.Select
+                                        value={reportType}
+                                        onChange={(e) => setReportType(e.target.value)}
+                                    >
+                                        {reportTypes.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))}
+                                    </Form.Select>
+                                </Form.Group>
+
+                                <div className="switch-group">
+                                    <Form.Group className="mb-2">
+                                        <Form.Check
+                                            type="switch"
+                                            id="transactions-switch"
+                                            label="Əməliyyatlarla"
+                                            checked={showTransactions}
+                                            onChange={(e) => setShowTransactions(e.target.checked)}
+                                        />
+                                    </Form.Group>
+
+                                    <Form.Group className="mb-4">
+                                        <Form.Check
+                                            type="switch"
+                                            id="accounts-switch"
+                                            label="Hesablar"
+                                            checked={showAccounts}
+                                            onChange={(e) => setShowAccounts(e.target.checked)}
+                                        />
+                                    </Form.Group>
+                                </div>
                             </div>
-                        </Form.Group>
 
-                        <Form.Group className="mb-3">
-                            <Form.Label>Bu tarixə qədər</Form.Label>
-                            <div className="date-time-row">
-                                <Form.Control
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                />
-                                <Form.Select
-                                    value={endTime}
-                                    onChange={(e) => setEndTime(e.target.value)}
-                                >
-                                    {Array.from({ length: 48 }, (_, i) => {
-                                        const hour = Math.floor(i / 2).toString().padStart(2, '0');
-                                        const minute = (i % 2 === 0 ? '00' : '30');
-                                        const time = `${hour}:${minute}`;
-                                        return <option key={time} value={time}>{time}</option>;
-                                    })}
-                                </Form.Select>
-                            </div>
-                        </Form.Group>
-
-                        <Form.Group className="mb-3">
-                            <Form.Label>Terminallar</Form.Label>
-                            <Form.Select
-                                value={terminal}
-                                onChange={(e) => setTerminal(e.target.value)}
+                            <button
+                                className="report-create-btn"
+                                onClick={handleCreateReport}
+                                disabled={loading}
                             >
-                                {terminals.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
-
-                        <Form.Group className="mb-3">
-                            <Form.Label>Hesabat növü</Form.Label>
-                            <Form.Select
-                                value={reportType}
-                                onChange={(e) => setReportType(e.target.value)}
-                            >
-                                {reportTypes.map(t => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
-
-                        <Form.Group className="mb-2">
-                            <Form.Check
-                                type="switch"
-                                id="transactions-switch"
-                                label="Əməliyyatlarla"
-                                checked={showTransactions}
-                                onChange={(e) => setShowTransactions(e.target.checked)}
-                            />
-                        </Form.Group>
-
-                        <Form.Group className="mb-4">
-                            <Form.Check
-                                type="switch"
-                                id="accounts-switch"
-                                label="Hesablar"
-                                checked={showAccounts}
-                                onChange={(e) => setShowAccounts(e.target.checked)}
-                            />
-                        </Form.Group>
-
-                        <button
-                            className="report-create-btn mt-auto"
-                            onClick={handleCreateReport}
-                            disabled={loading}
-                        >
-                            <i className="bi bi-file-earmark-bar-graph-fill me-2"></i>
-                            {loading ? "Yüklənir..." : "Hesabat yarat"}
-                        </button>
-                    </Col>
+                                <i className="bi bi-file-earmark-bar-graph-fill me-2"></i>
+                                {loading ? "Yüklənir..." : "Hesabat yarat"}
+                            </button>
+                        </Col>
+                    )}
 
                     {/* Right Content - Results */}
-                    <Col
-                        md={7}
-                        lg={8}
-                        className={`report-content ${!reportResults || loading ? 'd-flex align-items-center justify-content-center text-center' : 'p-4'}`}
-                        style={{ overflowY: 'auto' }}
-                    >
-                        {renderResults()}
-                    </Col>
+                    {(!isMobile || activeMobileTab === "result") && (
+                        <Col
+                            md={7}
+                            lg={8}
+                            className={`report-content ${!reportResults || loading ? 'd-flex align-items-center justify-content-center text-center' : 'p-4'}`}
+                            style={{ overflowY: 'auto' }}
+                        >
+                            {renderResults()}
+                        </Col>
+                    )}
                 </Row>
             </Modal.Body>
         </Modal>

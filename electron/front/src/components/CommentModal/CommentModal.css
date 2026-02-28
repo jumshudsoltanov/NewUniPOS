@@ -116,3 +116,41 @@
 .comment-save-btn:hover {
     background-color: #042d7a;
 }
+
+@media (max-width: 767px) {
+    .comment-modal .modal-dialog {
+        max-width: 92% !important;
+        margin: 1rem auto !important;
+    }
+
+    .comment-modal-header {
+        height: 55px;
+        padding: 10px 15px;
+    }
+
+    .comment-modal-title {
+        font-size: 16px;
+    }
+
+    .comment-icon-circle {
+        width: 32px;
+        height: 32px;
+    }
+
+    .comment-modal-body {
+        padding: 20px 15px;
+        gap: 15px;
+    }
+
+    .comment-textarea {
+        font-size: 14px;
+        min-height: 100px;
+    }
+
+    .comment-cancel-btn,
+    .comment-save-btn {
+        height: 48px;
+        font-size: 14px;
+        border-radius: 8px;
+    }
+}

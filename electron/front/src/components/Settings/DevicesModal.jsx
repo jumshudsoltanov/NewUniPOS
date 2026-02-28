@@ -10,6 +10,7 @@ const DevicesModal = ({ show, onHide }) => {
     const profileId = loginedProfileData?.data?.profile?.id;
 
     const [activeTab, setActiveTab] = useState("printers");
+    const isMobile = window.innerWidth < 992;
     const [printers, setPrinters] = useState([]);
     const [systemPrinters, setSystemPrinters] = useState([]);
     const [masterModes, setMasterModes] = useState({
@@ -199,42 +200,81 @@ const DevicesModal = ({ show, onHide }) => {
             <Modal.Header closeButton>
                 <Modal.Title>Cihazlar və Printerlər</Modal.Title>
             </Modal.Header>
-            <Modal.Body>
-                <div className="devices-sidebar">
-                    <div className="devices-sidebar-menu">
+
+            {
+                isMobile && (
+                    <div className="devices-mobile-tabs">
                         <div
-                            className={`devices-menu-item ${activeTab === "printers" ? "active" : ""}`}
+                            className={`devices-mobile-tab ${activeTab === "printers" ? "active" : ""}`}
                             onClick={() => setActiveTab("printers")}
                         >
-                            <i className="bi bi-printer"></i>
-                            <span>Printerlər</span>
+                            Printerlər
                         </div>
                         <div
-                            className={`devices-menu-item ${activeTab === "display" ? "active" : ""}`}
+                            className={`devices-mobile-tab ${activeTab === "display" ? "active" : ""}`}
                             onClick={() => setActiveTab("display")}
                         >
-                            <i className="bi bi-display"></i>
-                            <span>Müştəri Ekranı</span>
+                            Müştəri Ekranı
                         </div>
                         <div
-                            className={`devices-menu-item ${activeTab === "kitchen" ? "active" : ""}`}
-                            onClick={() => setActiveTab("kitchen")}
-                            style={{ display: 'none' }}
+                            className={`devices-mobile-tab ${activeTab === "scales" ? "active" : ""}`}
+                            onClick={() => setActiveTab("scales")}
                         >
-                            <i className="bi bi-egg-fried"></i>
-                            <span>Mətbəx Ekranı</span>
+                            Tərəzilər
                         </div>
-                        <div className="devices-menu-item">
-                            <i className="bi bi-rulers"></i>
-                            <span>Tərəzilər</span>
-                        </div>
-                        <div className="devices-menu-item">
-                            <i className="bi bi-qr-code-scan"></i>
-                            <span>Skanerlər</span>
+                        <div
+                            className={`devices-mobile-tab ${activeTab === "scanners" ? "active" : ""}`}
+                            onClick={() => setActiveTab("scanners")}
+                        >
+                            Skanerlər
                         </div>
                     </div>
+                )
+            }
 
-                </div>
+            <Modal.Body>
+                {!isMobile && (
+                    <div className="devices-sidebar">
+                        <div className="devices-sidebar-menu">
+                            <div
+                                className={`devices-menu-item ${activeTab === "printers" ? "active" : ""}`}
+                                onClick={() => setActiveTab("printers")}
+                            >
+                                <i className="bi bi-printer"></i>
+                                <span>Printerlər</span>
+                            </div>
+                            <div
+                                className={`devices-menu-item ${activeTab === "display" ? "active" : ""}`}
+                                onClick={() => setActiveTab("display")}
+                            >
+                                <i className="bi bi-display"></i>
+                                <span>Müştəri Ekranı</span>
+                            </div>
+                            <div
+                                className={`devices-menu-item ${activeTab === "kitchen" ? "active" : ""}`}
+                                onClick={() => setActiveTab("kitchen")}
+                                style={{ display: 'none' }}
+                            >
+                                <i className="bi bi-egg-fried"></i>
+                                <span>Mətbəx Ekranı</span>
+                            </div>
+                            <div
+                                className={`devices-menu-item ${activeTab === "scales" ? "active" : ""}`}
+                                onClick={() => setActiveTab("scales")}
+                            >
+                                <i className="bi bi-rulers"></i>
+                                <span>Tərəzilər</span>
+                            </div>
+                            <div
+                                className={`devices-menu-item ${activeTab === "scanners" ? "active" : ""}`}
+                                onClick={() => setActiveTab("scanners")}
+                            >
+                                <i className="bi bi-qr-code-scan"></i>
+                                <span>Skanerlər</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div className="devices-content">
                     <div className="devices-main-scroll">
@@ -459,7 +499,7 @@ const DevicesModal = ({ show, onHide }) => {
                     </div>
                 </div>
             </Modal.Body>
-        </Modal>
+        </Modal >
     );
 };
 

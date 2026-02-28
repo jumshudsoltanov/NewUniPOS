@@ -58,7 +58,7 @@ const SplitTableSelect = ({ show, onClose, onSelect }) => {
                                         style={{
                                             background: 'white',
                                             borderRadius: '12px',
-                                            padding: '24px',
+                                            padding: '12px', // Reduced from 24px
                                             textAlign: 'center',
                                             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                                             cursor: 'pointer',
@@ -68,7 +68,7 @@ const SplitTableSelect = ({ show, onClose, onSelect }) => {
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            fontSize: '18px'
+                                            fontSize: '15px' // Reduced from 18px
                                         }}
                                     >
                                         {table.number || table.name}

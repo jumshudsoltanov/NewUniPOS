@@ -301,25 +301,53 @@
     }
 
     .split-table-select-modal .modal-content {
-        height: auto !important;
-        max-height: 65vh !important;
+        height: 70vh !important;
+        max-height: 70vh !important;
     }
 
     .split-table-select-modal .modal-body {
         min-height: 0 !important;
-        padding: 8px !important;
+        padding: 10px !important;
     }
 
-    .split-table-select-modal .modal-body .g-3 {
+    .split-table-select-modal .modal-body .row {
         --bs-gutter-x: 0.5rem !important;
         --bs-gutter-y: 0.5rem !important;
     }
 
-    .split-table-select-modal .modal-body .table-card[style] {
-        padding: 10px !important;
-        font-size: 13px !important;
-        border-radius: 8px !important;
+    /* Force 3 columns on mobile */
+    .split-table-select-modal .modal-body .col-4 {
+        width: 33.333% !important;
+        flex: 0 0 auto !important;
     }
+
+    .split-table-select-modal .modal-body .table-card[style] {
+        padding: 12px 5px !important;
+        font-size: 14px !important;
+        border-radius: 10px !important;
+        min-height: 60px !important;
+    }
+
+    .split-table-select-modal .modal-tab {
+        padding: 8px 15px;
+        font-size: 13px;
+        white-space: nowrap;
+        border: none !important;
+    }
+
+    .split-table-select-modal .modal-tab.active {
+        border: none !important;
+        background-color: transparent !important;
+        color: white !important;
+    }
+}
+
+/* Global fix for the active tab underline in split table modal */
+.split-table-select-modal .modal-tab,
+.split-table-select-modal .modal-tab.active {
+    border: none !important;
+    border-bottom: none !important;
+    background-color: transparent !important;
 }
 
 .sales-type-icon {
@@ -348,7 +376,9 @@
 
     .split-order-container {
         height: auto;
-        max-height: 80vh;
+        max-height: 85vh;
+        overflow: visible;
+        /* Prevent clipping popover */
     }
 
     .split-header {
@@ -371,6 +401,7 @@
 
     .split-body {
         padding: 0 16px;
+        overflow-y: auto;
     }
 
     .split-item-row {
@@ -402,27 +433,90 @@
     }
 
     .split-footer {
-        padding: 10px 12px;
-        gap: 6px;
+        padding: 12px;
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        position: relative;
+        z-index: 20;
     }
 
     .footer-left-actions {
-        gap: 4px;
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 8px;
+        width: 100%;
+        position: relative;
     }
 
     .mock-selector {
-        padding: 6px 8px;
-        font-size: 10px;
+        padding: 8px;
+        padding: 10px 8px;
+        /* Slightly larger tap area */
+        font-size: 11px;
+        justify-content: center;
+        white-space: nowrap;
+        overflow: visible !important;
+        /* Force overflow visible for popover */
+        text-overflow: ellipsis;
+        position: relative;
+        background-color: #f0f2f5;
+        /* Slightly darker to see on mobile */
     }
 
     .btn-secondary-action {
-        padding: 6px 8px;
-        font-size: 10px;
+        padding: 8px;
+        font-size: 11px;
+        justify-content: center;
+    }
+
+    .btn-secondary-action.icon-only {
+        width: 44px;
+        padding: 0;
+        justify-content: center;
     }
 
     .btn-primary-split {
-        padding: 8px 12px;
-        font-size: 12px;
-        white-space: nowrap;
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+        font-size: 14px;
+        margin-top: 4px;
+    }
+
+    .sales-type-popover {
+        position: absolute;
+        bottom: calc(100% + 10px);
+        left: 0;
+        width: 200px;
+        z-index: 10000;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 12px;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
+        pointer-events: auto;
+        /* Ensure it captures clicks */
+    }
+
+    .sales-type-options {
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .sales-type-option {
+        padding: 12px;
+        /* Much better for mobile tap */
+        font-size: 14px;
+        background: #fff;
+        border: 1px solid #f0f0f0;
+        border-radius: 8px;
+        text-align: center;
+        color: #333;
+    }
+
+    .sales-type-option:active {
+        background-color: #f0f7ff;
     }
 }

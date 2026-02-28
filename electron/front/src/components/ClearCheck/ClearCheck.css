@@ -118,3 +118,44 @@
 .clear-check-confirm-btn:hover {
     background-color: #042d7a;
 }
+
+@media (max-width: 767px) {
+    .clear-check-modal .modal-dialog {
+        max-width: 92% !important;
+        margin: 1rem auto !important;
+    }
+
+    .clear-check-modal-header {
+        height: 55px;
+        padding: 10px 15px;
+    }
+
+    .clear-check-modal-title {
+        font-size: 16px;
+    }
+
+    .clear-check-icon-circle {
+        width: 32px;
+        height: 32px;
+    }
+
+    .clear-check-modal-body {
+        padding: 20px 15px;
+        gap: 15px;
+    }
+
+    .clear-check-question {
+        font-size: 14px;
+    }
+
+    .clear-check-warning {
+        font-size: 12px;
+    }
+
+    .clear-check-cancel-btn,
+    .clear-check-confirm-btn {
+        height: 48px;
+        font-size: 14px;
+        border-radius: 8px;
+    }
+}
