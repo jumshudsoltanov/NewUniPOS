@@ -279,13 +279,11 @@
 /* Split Table Select Modal Customization */
 .split-table-select-modal {
     max-width: 900px !important;
-    /* Slightly smaller than XL (1140px) */
     margin: 1.75rem auto;
 }
 
 .split-table-select-modal .modal-content {
     height: 85vh;
-    /* Increased height */
     display: flex;
     flex-direction: column;
 }
@@ -294,7 +292,34 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    /* Important for flex scroll */
+}
+
+@media (max-width: 768px) {
+    .split-table-select-modal {
+        max-width: 95% !important;
+        margin: 0.5rem auto;
+    }
+
+    .split-table-select-modal .modal-content {
+        height: auto !important;
+        max-height: 65vh !important;
+    }
+
+    .split-table-select-modal .modal-body {
+        min-height: 0 !important;
+        padding: 8px !important;
+    }
+
+    .split-table-select-modal .modal-body .g-3 {
+        --bs-gutter-x: 0.5rem !important;
+        --bs-gutter-y: 0.5rem !important;
+    }
+
+    .split-table-select-modal .modal-body .table-card[style] {
+        padding: 10px !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+    }
 }
 
 .sales-type-icon {
@@ -313,4 +338,91 @@
     font-size: 16px;
     font-weight: 500;
     color: #333;
+}
+
+@media (max-width: 768px) {
+    .split-order-modal-dialog {
+        width: 95%;
+        margin: 0.5rem auto;
+    }
+
+    .split-order-container {
+        height: auto;
+        max-height: 80vh;
+    }
+
+    .split-header {
+        padding: 14px 16px;
+    }
+
+    .split-title {
+        font-size: 16px;
+    }
+
+    .split-list-header {
+        padding: 10px 16px;
+    }
+
+    .col-product,
+    .col-qty,
+    .col-action {
+        font-size: 13px;
+    }
+
+    .split-body {
+        padding: 0 16px;
+    }
+
+    .split-item-row {
+        padding: 12px 0;
+    }
+
+    .product-name {
+        font-size: 13px;
+    }
+
+    .product-qty {
+        font-size: 13px;
+    }
+
+    .btn-control {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+    }
+
+    .control-group {
+        gap: 6px;
+    }
+
+    .split-value-display {
+        width: 44px;
+        height: 32px;
+        font-size: 15px;
+    }
+
+    .split-footer {
+        padding: 10px 12px;
+        gap: 6px;
+    }
+
+    .footer-left-actions {
+        gap: 4px;
+    }
+
+    .mock-selector {
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+
+    .btn-secondary-action {
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+
+    .btn-primary-split {
+        padding: 8px 12px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
 }

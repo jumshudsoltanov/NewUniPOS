@@ -49,6 +49,9 @@
     border-radius: 12px;
     padding: 12px;
     transition: all 0.2s;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
 }
 
 .close-operation-btn:hover {
@@ -60,14 +63,29 @@
 @media (max-width: 768px) {
     .operations-modal .modal-dialog {
         max-width: 100%;
-        margin: 1rem;
+        margin: 0.5rem;
         display: flex;
         align-items: center;
-        min-height: calc(100% - 2rem);
+        min-height: calc(100% - 1rem);
+    }
+
+    .operations-modal .modal-content {
+        max-height: 70vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .operations-modal .modal-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .operation-item {
+        padding: 10px 12px !important;
     }
 
     .operation-item span {
-        font-size: 1rem;
+        font-size: 0.9rem;
     }
 }
 

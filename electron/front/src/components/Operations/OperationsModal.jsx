@@ -104,13 +104,15 @@ export const OperationsModal = ({
               </Col>
             ))}
           </Row>
+        </Modal.Body>
+        <div className="p-3 d-md-none" style={{ borderTop: '1px solid #eee' }}>
           <button
-            className="btn w-100 mt-4 close-operation-btn d-md-none"
+            className="btn w-100 close-operation-btn"
             onClick={onHide}
           >
             Bağla
           </button>
-        </Modal.Body>
+        </div>
       </Modal>
     </>
   );

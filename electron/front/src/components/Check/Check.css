@@ -7,13 +7,10 @@
 /* Sidebar Styling */
 .check-sidebar {
     width: 64px;
-    /* Fixed width */
     background: var(--Surface-Subtle, #EBF2FE);
-    /* Light blue background */
     padding: 20px 0;
     flex-shrink: 0;
     border-right: 1px dashed #A5B4FC;
-    /* Dashed border as per image hint */
 }
 
 /* Icons */

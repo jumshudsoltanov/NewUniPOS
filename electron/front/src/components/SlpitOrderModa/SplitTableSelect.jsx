@@ -46,7 +46,7 @@ const SplitTableSelect = ({ show, onClose, onSelect }) => {
                     ))}
                 </div>
             </Modal.Header>
-            <Modal.Body className="p-3" style={{ backgroundColor: "#f8f9fa", minHeight: "400px" }}>
+            <Modal.Body className="p-3" style={{ backgroundColor: "#f8f9fa" }}>
                 <Container fluid>
                     <div className="tables-grid-container">
                         <Row className="g-3">

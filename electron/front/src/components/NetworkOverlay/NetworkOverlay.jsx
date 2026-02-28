@@ -101,6 +101,8 @@ const NetworkOverlay = () => {
 
     if (!isDisconnected) return null;
 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
     return (
         <div
             style={{
@@ -109,7 +111,7 @@ const NetworkOverlay = () => {
                 left: 0,
                 width: "100vw",
                 height: "100vh",
-                backgroundColor: "rgba(18, 20, 28, 0.95)", // Much closer to custom POS dark themes
+                backgroundColor: "rgba(18, 20, 28, 0.95)",
                 backdropFilter: "blur(12px)",
                 color: "white",
                 display: "flex",
@@ -117,71 +119,75 @@ const NetworkOverlay = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 zIndex: 9999999,
-                padding: "20px",
+                padding: isMobile ? "15px" : "20px",
                 textAlign: "center",
                 fontFamily: "'Inter', sans-serif"
             }}
         >
-            <div style={{ marginBottom: "25px", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "5rem", color: "#4F85F4" }}></i>
+            <div style={{ marginBottom: isMobile ? "15px" : "25px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <span style={{ fontSize: isMobile ? "3rem" : "5rem" }}>⚠️</span>
             </div>
 
-            <h1 style={{ fontSize: "2.8rem", fontWeight: "700", marginBottom: "15px", color: "#FFFFFF", letterSpacing: "-0.5px" }}>
+            <h1 style={{ fontSize: isMobile ? "1.4rem" : "2.8rem", fontWeight: "700", marginBottom: isMobile ? "10px" : "15px", color: "#FFFFFF", letterSpacing: "-0.5px" }}>
                 Şəbəkə Əlaqəsi Kəsildi
             </h1>
-            <p style={{ fontSize: "1.15rem", color: "#A0AEC0", maxWidth: "600px", lineHeight: "1.6", marginBottom: "35px" }}>
+            <p style={{ fontSize: isMobile ? "0.85rem" : "1.15rem", color: "#A0AEC0", maxWidth: "600px", lineHeight: "1.6", marginBottom: isMobile ? "20px" : "35px", padding: isMobile ? "0 10px" : "0" }}>
                 Master terminal ilə əlaqə qurmaq mümkün olmadı. Zəhmət olmasa şəbəkə bağlantısını (Wi-Fi/LAN) və ya Master kompyuterin açıq olub-olmadığını yoxlayın.
             </p>
 
             <div style={{
                 display: "flex",
-                gap: "50px",
+                flexDirection: isMobile ? "column" : "row",
+                gap: isMobile ? "15px" : "50px",
                 background: "#1A202C",
-                padding: "25px 50px",
+                padding: isMobile ? "15px 20px" : "25px 50px",
                 borderRadius: "16px",
                 border: "1px solid #2D3748",
-                boxShadow: "0 10px 25px rgba(0,0,0,0.3)"
+                boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
+                width: isMobile ? "90%" : "auto"
             }}>
                 <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "0.85rem", color: "#718096", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>Master İP ünvanı</div>
-                    <div style={{ fontSize: "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{masterIp || "Bilinmir"}</div>
+                    <div style={{ fontSize: isMobile ? "0.7rem" : "0.85rem", color: "#718096", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>Master İP ünvanı</div>
+                    <div style={{ fontSize: isMobile ? "1.1rem" : "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{masterIp || "Bilinmir"}</div>
                 </div>
-                <div style={{ width: "1px", background: "#2D3748" }}></div>
+                <div style={{ width: isMobile ? "100%" : "1px", height: isMobile ? "1px" : "auto", background: "#2D3748" }}></div>
                 <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: "0.85rem", color: "#718096", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>Sizin İP ünvanınız (Slave)</div>
-                    <div style={{ fontSize: "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{window.location.hostname || "Bilinmir"}</div>
+                    <div style={{ fontSize: isMobile ? "0.7rem" : "0.85rem", color: "#718096", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>Sizin İP ünvanınız (Slave)</div>
+                    <div style={{ fontSize: isMobile ? "1.1rem" : "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{window.location.hostname || "Bilinmir"}</div>
                 </div>
             </div>
 
-            <div style={{ marginTop: "50px", display: "flex", alignItems: "center", gap: "12px", background: "rgba(255,255,255,0.05)", padding: "12px 24px", borderRadius: "50px" }}>
+            <div style={{ marginTop: isMobile ? "25px" : "50px", display: "flex", alignItems: "center", gap: "10px", background: "rgba(255,255,255,0.05)", padding: isMobile ? "10px 18px" : "12px 24px", borderRadius: "50px" }}>
                 <div className="spinner-border spinner-border-sm" style={{ color: "#4F85F4", width: "1.2rem", height: "1.2rem" }} role="status"></div>
-                <span style={{ color: "#CBD5E0", fontSize: "1rem", fontWeight: "500" }}>Yenidən bağlanmağa cəhd edilir...</span>
+                <span style={{ color: "#CBD5E0", fontSize: isMobile ? "0.85rem" : "1rem", fontWeight: "500" }}>Yenidən bağlanmağa cəhd edilir...</span>
             </div>
 
-            <button
-                onClick={() => {
-                    if (window.electronAPI && window.electronAPI.minimizeApp) {
-                        window.close();
-                    } else {
-                        window.close();
-                    }
-                }}
-                style={{
-                    marginTop: "35px",
-                    padding: "12px 30px",
-                    backgroundColor: "#4F85F4",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "1.05rem",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    boxShadow: "0 4px 15px rgba(79, 133, 244, 0.4)",
-                    transition: "all 0.2s ease"
-                }}
-            >
-                <i className="bi bi-power me-2"></i> Sistemdən Çıxış (Bağla)
-            </button>
+            {!isMobile && (
+                <button
+                    onClick={() => {
+                        if (window.electronAPI) {
+                            window.close();
+                        } else {
+                            window.location.href = '/#/';
+                        }
+                    }}
+                    style={{
+                        marginTop: "35px",
+                        padding: "12px 30px",
+                        backgroundColor: "#4F85F4",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "1.05rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        boxShadow: "0 4px 15px rgba(79, 133, 244, 0.4)",
+                        transition: "all 0.2s ease"
+                    }}
+                >
+                    ⚠️ Sistemdən Çıxış (Bağla)
+                </button>
+            )}
         </div>
     );
 };

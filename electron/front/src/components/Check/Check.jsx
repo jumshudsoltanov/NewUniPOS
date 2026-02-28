@@ -1698,7 +1698,10 @@ const Check = () => {
       <div className="mobile-bottom-nav d-flex d-lg-none">
         <div
           className={`mobile-nav-item ${isSidebarOpen ? "active" : ""}`}
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          onClick={() => {
+            if (activeMobileTab !== "check") setActiveMobileTab("check");
+            setIsSidebarOpen(!isSidebarOpen);
+          }}
         >
           <i className="bi bi-list"></i>
         </div>
