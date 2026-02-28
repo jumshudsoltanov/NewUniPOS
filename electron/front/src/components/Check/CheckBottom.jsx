@@ -19,7 +19,7 @@ import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printer
 import { getSocket } from "../../utils/apiConfig";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 
-const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending }) => {
+const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending, clearCheck }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions, menu } = useSelector((state) => state.OrderSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -453,7 +453,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               toast.error("Qəbz kilidlidir!");
               return;
             }
-            dispatch(clearOrders());
+            if (clearCheck) {
+              clearCheck();
+            } else {
+              dispatch(clearOrders());
+            }
           }}
           disabled={orders?.is_locked == 1}
         >

@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { getData, removeData } from '../utils/storage';
 import { CommonActions } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const WebViewScreen = ({ navigation }) => {
     const [url, setUrl] = useState(null);
+    const [masterIp, setMasterIp] = useState(null);
     const [hasError, setHasError] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const webViewRef = useRef(null);
@@ -15,7 +17,10 @@ const WebViewScreen = ({ navigation }) => {
         const loadUrl = async () => {
             const ip = await getData('master_ip');
             if (ip) {
-                setUrl(`http://${ip}:5173`);
+                setMasterIp(ip);
+                // Point to the live mobile domain but inject the local Master IP as a parameter
+                // Use HTTP to avoid "Mixed Content" issues when calling the local Master POS IP
+                setUrl(`http://mobile.unipos.tech/?master_ip=${ip}#/login?master_ip=${ip}`);
             } else {
                 goToConnection();
             }
@@ -47,17 +52,23 @@ const WebViewScreen = ({ navigation }) => {
     if (hasError) {
         return (
             <SafeAreaView style={styles.center}>
-                <Text style={{ fontSize: 48, marginBottom: 16 }}>⚠️</Text>
+                <MaterialCommunityIcons name="alert-circle-outline" size={72} color="#DC2626" style={{ marginBottom: 16 }} />
                 <Text style={styles.errorTitle}>Bağlantı xətası</Text>
                 <Text style={styles.errorMsg}>{errorMsg}</Text>
                 <Text style={styles.errorUrl}>{url}</Text>
 
                 <TouchableOpacity style={styles.btn} onPress={() => { setHasError(false); webViewRef.current?.reload(); }}>
-                    <Text style={styles.btnText}>🔄 Yenidən cəhd et</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialCommunityIcons name="refresh" size={20} color="#fff" style={{ marginRight: 8 }} />
+                        <Text style={styles.btnText}>Yenidən cəhd et</Text>
+                    </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={goToConnection}>
-                    <Text style={[styles.btnText, { color: '#053796' }]}>📡 Yeni IP daxil et</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialCommunityIcons name="wifi-settings" size={20} color="#053796" style={{ marginRight: 8 }} />
+                        <Text style={[styles.btnText, { color: '#053796' }]}>Yeni IP daxil et</Text>
+                    </View>
                 </TouchableOpacity>
             </SafeAreaView>
         );
@@ -83,6 +94,11 @@ const WebViewScreen = ({ navigation }) => {
                     contentMode="mobile"
                     mixedContentMode="always"
                     allowsBackForwardNavigationGestures={false}
+                    originWhitelist={['*']}
+                    injectedJavaScriptBeforeContentLoaded={masterIp ? `
+                        window.localStorage.setItem('master_ip', '${masterIp}');
+                        true;
+                    ` : 'true;'}
                     onError={handleError}
                     onMessage={(event) => {
                         console.log('[WebView]', event.nativeEvent.data);

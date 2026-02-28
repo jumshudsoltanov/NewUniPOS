@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import KitchenReceipt from "../components/Receipt/KitchenReceipt";
 import { addNotification } from "./notificationService";
-import axios from "./apiConfig";
+import axios, { getSocket } from "./apiConfig";
 import CustomerReceipt from "../components/Receipt/CustomerReceipt";
 
 export const processAndPrintOrders = async (items, orderData, menuDataWithCategories) => {
@@ -102,18 +102,19 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 const isMasterSlaveActive = profile.is_master_slave_active === 1;
 
                 // Delegation Logic: Product/Kitchen Prints
-                if (isMasterProductPrinting && isMasterSlaveActive && !isMaster) {
-                    const { getSocket } = require("./apiConfig");
-                    const socket = getSocket();
-                    if (socket && socket.connected) {
-                        console.warn(`[PRINTER] Delegating Product print to Master: ${printerName}`);
-                        socket.emit("delegate_print", { html, printerName });
-                        continue;
-                    } else {
-                        console.error(`[PRINTER] Delegation failed: Socket not connected. Falling back to local.`);
-                        const displayId = orderData.checkData?.id || orderData.orderId;
-                        addNotification("Delegasiya Xətası", "Master terminala qoşulma yoxdur. Çap lokal yerinə yetirilir.", { orderId: displayId, category: "system", type: "warning" });
-                    }
+                const socket = getSocket();
+                const canDelegate = socket && socket.connected;
+                const forceDelegate = !window.electronAPI;
+
+                if (canDelegate && (forceDelegate || (isMasterProductPrinting && isMasterSlaveActive && !isMaster))) {
+                    console.warn(`[PRINTER] Delegating Product print to Master: ${printerName}`);
+                    socket.emit("delegate_print", { html, printerName });
+                    continue;
+                } else if (forceDelegate && !canDelegate) {
+                    const displayId = orderData.checkData?.id || orderData.orderId;
+                    console.error(`[PRINTER] Delegation failed: Not connected to Master POS.`);
+                    addNotification("Çap Xətası", "Master POS terminalına qoşulma yoxdur.", { orderId: displayId, category: "system", type: "error" });
+                    continue; // Skip local print since it's mobile
                 }
 
                 // Local Print Logic (fetch actual printer target)
@@ -226,17 +227,18 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         const isMaster = profile.is_master === 1;
         const isMasterSlaveActive = profile.is_master_slave_active === 1;
 
-        if (isMasterCashierPrinting && isMasterSlaveActive && !isMaster) {
-            const { getSocket } = require("./apiConfig");
-            const socket = getSocket();
-            if (socket && socket.connected) {
-                console.warn(`[PRINTER] Delegating Customer Receipt to Master: ${printerName}`);
-                socket.emit("delegate_print", { html, printerName });
-                return { success: true, delegated: true };
-            } else {
-                console.error(`[PRINTER] Customer Receipt Delegation failed. Falling back to local.`);
-                addNotification("Delegasiya Xətası", "Master terminala qoşulma yoxdur. Kassa çeki lokal çap olunur.", { orderId: orderData.checkData?.id, category: "system", type: "warning" });
-            }
+        const socket = getSocket();
+        const canDelegate = socket && socket.connected;
+        const forceDelegate = !window.electronAPI;
+
+        if (canDelegate && (forceDelegate || (isMasterCashierPrinting && isMasterSlaveActive && !isMaster))) {
+            console.warn(`[PRINTER] Delegating Customer Receipt to Master: ${printerName}`);
+            socket.emit("delegate_print", { html, printerName });
+            return { success: true, delegated: true };
+        } else if (forceDelegate && !canDelegate) {
+            console.error(`[PRINTER] Customer Receipt Delegation failed. Not connected to Master.`);
+            addNotification("Çap Xətası", "Master POS terminalına qoşulma yoxdur.", { orderId: orderData.checkData?.id, category: "system", type: "error" });
+            return { success: false, error: "Master POS qoşulması yoxdur" };
         }
 
         // Local target printer (USB or IP)

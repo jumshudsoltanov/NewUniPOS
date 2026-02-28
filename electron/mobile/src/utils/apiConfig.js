@@ -6,7 +6,7 @@ let baseURL = '';
 let socket = null;
 
 export const setBaseUrl = (ip) => {
-    baseURL = `http://${ip}:5000`; // Assuming 5000 is the backend port
+    baseURL = `http://${ip}:55667`; // Updated port to match Electron server
 };
 
 export const getBaseUrl = () => baseURL;
@@ -17,7 +17,7 @@ api.interceptors.request.use(async (config) => {
     if (!config.baseURL) {
         const ip = await getData('master_ip');
         if (ip) {
-            config.baseURL = `http://${ip}:5000/api`;
+            config.baseURL = `http://${ip}:55667/api`;
         }
     }
     return config;
@@ -25,7 +25,7 @@ api.interceptors.request.use(async (config) => {
 
 export const initSocket = (ip) => {
     if (socket) socket.disconnect();
-    socket = io(`http://${ip}:5000`);
+    socket = io(`http://${ip}:55667`);
     return socket;
 };
 

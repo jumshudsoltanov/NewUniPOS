@@ -21,13 +21,31 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
     }
 
     if (!window.electronAPI) {
-        // Web/Mobile mode: Always use the current hostname as the Master IP
+        // Web/Mobile mode: Determine Master IP from URL parameter, localStorage, or current hostname
+        const searchParams = new URLSearchParams(window.location.search);
+
+        // Also check hash for params (sometimes routers move them there)
+        const hashSearch = window.location.hash.includes('?')
+            ? new URLSearchParams(window.location.hash.split('?')[1])
+            : new URLSearchParams();
+
+        const urlMasterIp = searchParams.get('master_ip') || hashSearch.get('master_ip');
+        const savedMasterIp = localStorage.getItem('master_ip');
+
         const hostname = window.location.hostname;
         const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
-        if (!isLocalhost) {
-            const baseURL = `http://${hostname}:55667`;
-            console.warn(`[CONNECTION] Mobile/Web Mode: Connecting to ${baseURL}`);
+        // Priority: 1. URL Param, 2. Saved in LocalStorage, 3. Current Hostname (if not localhost)
+        const effectiveIp = urlMasterIp || savedMasterIp || (!isLocalhost ? hostname : null);
+
+        if (effectiveIp) {
+            // Save it for future sessions without the URL param if it's a real IP/hostname
+            if (urlMasterIp) {
+                localStorage.setItem('master_ip', urlMasterIp);
+            }
+
+            const baseURL = `http://${effectiveIp}:55667`;
+            console.warn(`[CONNECTION] Mobile/Web Mode: Connecting to ${baseURL} (Source: ${urlMasterIp ? 'URL Param' : (savedMasterIp ? 'LocalStorage' : 'Fallback Hostname')})`);
             apiConfig.defaults.baseURL = `${baseURL}/api`;
 
             if (!disableSocket) {
@@ -35,7 +53,7 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
                     transports: ['websocket', 'polling']
                 });
             }
-            return { masterIp: hostname, socket };
+            return { masterIp: effectiveIp, socket };
         }
     }
 

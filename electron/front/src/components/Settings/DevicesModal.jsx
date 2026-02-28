@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import { useSelector } from "react-redux";
 import { toast } from "sonner";
+import QRCode from "react-qr-code";
 import apiConfig, { localApi } from "../../utils/apiConfig";
 import "./DevicesModal.css";
 
@@ -11,6 +12,8 @@ const DevicesModal = ({ show, onHide }) => {
 
     const [activeTab, setActiveTab] = useState("printers");
     const isMobile = window.innerWidth < 992;
+    const isMaster = loginedProfileData?.data?.terminal?.is_master === 1 || loginedProfileData?.data?.profile?.is_master === 1;
+    const [localIp, setLocalIp] = useState("");
     const [printers, setPrinters] = useState([]);
     const [systemPrinters, setSystemPrinters] = useState([]);
     const [masterModes, setMasterModes] = useState({
@@ -73,6 +76,11 @@ const DevicesModal = ({ show, onHide }) => {
                 active: profile.is_kitchen_display_active === 1,
                 screenId: profile.kitchen_display_screen_id || ""
             });
+
+            if (isMaster && window.electronAPI?.getLocalIp) {
+                const ip = await window.electronAPI.getLocalIp();
+                setLocalIp(ip);
+            }
         } catch (error) {
             console.error("Fetch Data Error:", error);
         }
@@ -228,6 +236,14 @@ const DevicesModal = ({ show, onHide }) => {
                         >
                             Skanerlər
                         </div>
+                        {isMaster && (
+                            <div
+                                className={`devices-mobile-tab ${activeTab === "mobile" ? "active" : ""}`}
+                                onClick={() => setActiveTab("mobile")}
+                            >
+                                Mobil Qoşulma
+                            </div>
+                        )}
                     </div>
                 )
             }
@@ -272,6 +288,16 @@ const DevicesModal = ({ show, onHide }) => {
                                 <i className="bi bi-qr-code-scan"></i>
                                 <span>Skanerlər</span>
                             </div>
+
+                            {isMaster && (
+                                <div
+                                    className={`devices-menu-item ${activeTab === "mobile" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("mobile")}
+                                >
+                                    <i className="bi bi-phone"></i>
+                                    <span>Mobil Qoşulma</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -486,6 +512,51 @@ const DevicesModal = ({ show, onHide }) => {
                                         <div className="display-preview-info">
                                             <i className="bi bi-info-circle"></i>
                                             <span>Mətbəx ekranı açıldıqda bütün aktiv sifarişlər orada rəqəmsal kartlar şəklində görünəcək.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : activeTab === "mobile" && isMaster ? (
+                            <div className="mobile-qr-section">
+                                <div className="qr-container-card">
+                                    <div className="qr-header">
+                                        <h3>Mobil Terminal Qoşulması</h3>
+                                        <p>Android tətbiqdə bu QR kodu skan edərək Master bazasına qoşula bilərsiniz.</p>
+                                    </div>
+
+                                    <div className="qr-display-box">
+                                        {localIp && localIp !== "Unknown" ? (
+                                            <div className="qr-wrapper">
+                                                <QRCode
+                                                    value={localIp}
+                                                    size={200}
+                                                    level="H"
+                                                    style={{ height: "auto", maxWidth: "200px", margin: "0 auto" }}
+                                                />
+                                                <div className="ip-badge">
+                                                    IP: {localIp}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="qr-error">
+                                                <i className="bi bi-exclamation-triangle"></i>
+                                                <p>IP ünvanı müəyyən edilə bilmədi. Şəbəkə bağlantısını yoxlayın.</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="qr-steps">
+                                        <div className="step-item">
+                                            <span className="step-num">1</span>
+                                            <p>Mobil tətbiqi açın</p>
+                                        </div>
+                                        <div className="step-item">
+                                            <span className="step-num">2</span>
+                                            <p>Qr Skaner düyməsinə klikləyin</p>
+                                        </div>
+                                        <div className="step-item">
+                                            <span className="step-num">3</span>
+                                            <p>Kodu ekranın önünə tutun</p>
                                         </div>
                                     </div>
                                 </div>

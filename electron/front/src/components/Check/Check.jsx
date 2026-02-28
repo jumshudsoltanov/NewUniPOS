@@ -1153,7 +1153,7 @@ const Check = () => {
                 selectedCustomer={selectedCustomer}
               />
               <CheckMain orders={currentOrder} />
-              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} />
+              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} />
             </div>
           </div>
         </Col>

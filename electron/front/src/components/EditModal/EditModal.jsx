@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
 import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion, updateItemPrice, updateItemCount, saveLog } from "../../redux/Slices/OrdersSlice";
@@ -12,8 +12,14 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
-  console.log("EditModal render:", { show, product, orders });
   const [activeTab, setActiveTab] = useState("edit");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 576);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 576);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [qty, setQty] = useState(product?.count || 1);
   const [price, setPrice] = useState(product?.price || 0);
   const dispatch = useDispatch();
@@ -169,6 +175,16 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
       animation={false}
     >
       <Modal.Body>
+        {/* Header moved to top level */}
+        <div className="edit-header">
+          <div className="edit-product-title">
+            {product?.name || "Məhsul adı"}
+          </div>
+          <button className="btn-close-custom" onClick={onClose}>
+            <i className="bi bi-x-lg"></i>
+          </button>
+        </div>
+
         <div className="edit-modal-layout">
           {/* Sidebar Navigation */}
           <div className="edit-sidebar">
@@ -245,16 +261,6 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
           {/* Main Content Area */}
           <div className="edit-main-content">
-            {/* Header */}
-            <div className="edit-header">
-              <div className="edit-product-title">
-                {product?.name || "Məhsul adı"}
-              </div>
-              <button className="btn-close-custom" onClick={onClose}>
-                <i className="bi bi-x-lg"></i>
-              </button>
-            </div>
-
             {/* Dynamic Content */}
             {activeTab === "edit" ? (
               <>
