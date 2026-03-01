@@ -1,20 +1,32 @@
 {
-  "name": "pos-redesing",
+  "name": "UniPOS Desktop Application",
   "version": "1.0.0",
-  "description": "",
+  "description": "UniPOS Desktop Application",
   "main": "electron/server/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jumshudsoltanov/NewUniPOS.git"
+  },
   "scripts": {
     "start": "concurrently \"npm run dev-react\" \"npm run start-electron\"",
     "dev-react": "npm run dev --prefix electron/front",
     "start-electron": "wait-on http://localhost:5173 && electron .",
     "build-front": "npm run build --prefix electron/front",
-    "dist": "npm run build-front && electron .",
-    "pack": "npm run build-front && electron-builder --win --dir"
+    "dist": "npm run build-front && electron-builder --win publish=always",
+    "pack": "npm run build-front && electron-builder --win --dir",
+    "release": "npm run build-front && electron-builder --win"
   },
   "build": {
     "appId": "com.pos.redesing",
-    "productName": "POS Redesing",
+    "productName": "UniPOS Desktop Application",
     "asar": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "jumshudsoltanov",
+        "repo": "NewUniPOS"
+      }
+    ],
     "extraResources": [
       ".env"
     ],
@@ -24,13 +36,20 @@
       "node_modules/**/*"
     ],
     "win": {
-      "target": "dir",
-      "requestedExecutionLevel": "asInvoker"
+      "target": "nsis",
+      "icon": "electron/static/images/logo.png",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "runAfterFinish": true
     }
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "electron": "^40.0.0",
+    "electron": "^33.0.0",
     "electron-builder": "^24.13.3",
     "wait-on": "^9.0.3"
   },
@@ -38,6 +57,7 @@
     "axios": "^1.13.3",
     "cors": "^2.8.6",
     "dotenv": "^16.4.7",
+    "electron-updater": "^6.3.9",
     "express": "^4.21.2",
     "mariadb": "^3.4.5",
     "sequelize": "^6.37.7",

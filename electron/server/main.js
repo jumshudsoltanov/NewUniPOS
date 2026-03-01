@@ -1,4 +1,5 @@
 const { BrowserWindow, app, ipcMain, shell, screen } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
@@ -19,6 +20,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     fullscreen: true, // Start in fullscreen
+    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
     webPreferences: {
       preload: preloadPath,
       nodeIntegration: false,
@@ -117,6 +119,7 @@ function createWindow() {
           width: targetDisplay.bounds.width,
           height: targetDisplay.bounds.height,
           fullscreen: true,
+          icon: path.join(__dirname, "..", "static", "images", "logo.png"),
           autoHideMenuBar: true,
           webPreferences: {
             nodeIntegration: false,
@@ -229,6 +232,7 @@ ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
     width: targetDisplay.bounds.width,
     height: targetDisplay.bounds.height,
     fullscreen: true,
+    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -324,6 +328,7 @@ function createKitchenWindow(screenId) {
 ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
   let printWindow = new BrowserWindow({
     show: false,
+    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
     webPreferences: { nodeIntegration: true, contextIsolation: false, webSecurity: false }
   });
 
@@ -627,6 +632,46 @@ try {
 
 app.whenReady().then(() => {
   createWindow();
+
+  // --- Auto-Update Initialization ---
+  if (!isDev) {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
+
+  autoUpdater.on("checking-for-update", () => {
+    console.log("[AUTO-UPDATE] Yenilənmə yoxlanılır...");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    console.log("[AUTO-UPDATE] Yeni versiya tapıldı:", info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send("backend-log", "[AUTO-UPDATE]", `Yeni versiya (${info.version}) tapıldı. Yüklənir...`);
+    }
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    console.log("[AUTO-UPDATE] Cari versiya ən sonuncudur.");
+  });
+
+  autoUpdater.on("error", (err) => {
+    console.error("[AUTO-UPDATE] Xəta baş verdi:", err);
+  });
+
+  autoUpdater.on("download-progress", (progressObj) => {
+    let log_message = "Yükləmə sürəti: " + progressObj.bytesPerSecond;
+    log_message = log_message + ' - Yüklənib ' + progressObj.percent + '%';
+    log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+    console.log("[AUTO-UPDATE]", log_message);
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    console.log("[AUTO-UPDATE] Yenilənmə yükləndi. Tətbiq yenidən başladılacaq.");
+    if (mainWindow) {
+      mainWindow.webContents.send("backend-log", "[AUTO-UPDATE]", "Yenilənmə hazırdır. Tətbiq indi yenidən açıla bilər.");
+    }
+    // You can also prompt the user here or just call autoUpdater.quitAndInstall()
+  });
+  // ----------------------------------
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
