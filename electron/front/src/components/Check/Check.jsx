@@ -308,16 +308,19 @@ const Check = () => {
     }
   };
 
-  const handleShowOperationsTab = () => {
+  const handleShowOperationsTab = useCallback(() => {
     setShowOperationsModal(true);
-  };
+  }, []);
+
+  const onHideOperations = useCallback(() => {
+    setShowOperationsModal(false);
+  }, []);
 
 
   console.log(loginedProfileData);
 
 
-  const clearCheck = () => {
-
+  const clearCheck = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
@@ -336,9 +339,9 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowClearModal(true);
-  };
+  }, [currentOrder, products]);
 
-  const openCommentModal = () => {
+  const openCommentModal = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
@@ -346,9 +349,9 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setComment(true);
-  };
+  }, [currentOrder]);
 
-  const openDiscountModal = () => {
+  const openDiscountModal = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
@@ -356,9 +359,9 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowDiscount(true);
-  };
+  }, [currentOrder]);
 
-  const openServiceFee = () => {
+  const openServiceFee = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
@@ -366,9 +369,9 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowServiceFee(true);
-  };
+  }, [currentOrder]);
 
-  const openDepositModal = () => {
+  const openDepositModal = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
@@ -376,9 +379,9 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowDeposit(true);
-  };
+  }, [currentOrder]);
 
-  const openWaitersModal = () => {
+  const openWaitersModal = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
@@ -386,9 +389,9 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setShowWaitersModal(true);
-  };
+  }, [currentOrder]);
 
-  const openACtiveCheck = () => {
+  const openACtiveCheck = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
@@ -396,9 +399,9 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOpenActiveChecks(true);
-  };
+  }, [currentOrder]);
 
-  const handleOpenChangeSaleType = () => {
+  const handleOpenChangeSaleType = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
@@ -406,20 +409,17 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOpenChangeSaleType(true);
-  };
+  }, [currentOrder]);
 
   // ChangeTables
-  const handleChangeTable = () => {
-
-    // lock check
+  const handleChangeTable = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
     }
 
-
     navigate(`/tables/${currentOrder?.uuid}`);
-  };
+  }, [navigate, currentOrder]);
 
 
   const { currentOrder, currentHall, currentTable } = useMemo(() => {
@@ -574,18 +574,33 @@ const Check = () => {
     return "";
   };
 
-  const handleOpenSplitModel = () => {
+  const handleOpenSplitModel = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
     }
 
     setShowOperationsModal(false);
-    setOpenSplitModal(true)
-  }
+    setOpenSplitModal(true);
+  }, [currentOrder]);
 
 
-  const handleSplitOrder = async (splitData) => {
+  const openHistoryModalFunc = useCallback(() => {
+    setShowHistoryModal(true);
+    setShowOperationsModal(false);
+  }, []);
+
+  const openCustomersModalFunc = useCallback(() => {
+    setShowCustomerModal(true);
+    setShowOperationsModal(false);
+  }, []);
+
+  const openGuestCountModalFunc = useCallback(() => {
+    setShowGuestCountModal(true);
+    setShowOperationsModal(false);
+  }, []);
+
+  const handleSplitOrder = useCallback(async (splitData) => {
     const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table?.hall_id })
     try {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
@@ -616,17 +631,17 @@ const Check = () => {
     } catch (error) {
       console.error("Split order error:", error);
     }
-  }
+  }, [dispatch, loginedProfileData, tableGroups, navigate]);
 
-  const handleDeleteCheckModal = () => {
+  const handleDeleteCheckModal = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
       return;
     }
 
     setShowOperationsModal(false);
-    setOpenDeleteCheckModal(true)
-  }
+    setOpenDeleteCheckModal(true);
+  }, [currentOrder]);
 
 
   const handleDeleteCheckFunction = async ({ reason, reasonName, orderId }) => {
@@ -725,6 +740,37 @@ const Check = () => {
     }
   };
 
+
+  const categoryOrderMemo = useMemo(() => {
+    if (menuViewMode === "ROOT") return customOrders["ROOT"] || [];
+    if (menuViewMode === "CATEGORIES" && selectedGenCat) return customOrders[`GEN_${selectedGenCat.id}`] || [];
+    if (menuViewMode === "PRODUCTS" && selectedCat) return customOrders[`CAT_${selectedCat.id}`] || [];
+    return [];
+  }, [menuViewMode, customOrders, selectedGenCat, selectedCat]);
+
+  const handleCategoryOrderChange = useCallback((newOrder) => {
+    let key = null;
+    if (menuViewMode === "ROOT") key = "ROOT";
+    else if (menuViewMode === "CATEGORIES" && selectedGenCat) key = `GEN_${selectedGenCat.id}`;
+    else if (menuViewMode === "PRODUCTS" && selectedCat) key = `CAT_${selectedCat.id}`;
+
+    if (key) {
+      setCustomOrders(prev => ({
+        ...prev,
+        [key]: newOrder
+      }));
+    }
+  }, [menuViewMode, selectedGenCat, selectedCat]);
+
+  const handleEditProductMemo = useCallback((product) => {
+    setProductToEdit(product);
+    setShowProductModal(true);
+  }, []);
+
+  const handleDeleteItemMemo = useCallback((product) => {
+    setProductToDelete(product);
+    setShowDeleteConfirm(true);
+  }, []);
 
   const isMobile = window.innerWidth < 992;
 
@@ -1656,35 +1702,12 @@ const Check = () => {
                 selectedCat={selectedCat}
                 setSelectedCat={setSelectedCat}
                 isDragMode={isDragMode}
-                categoryOrder={(() => {
-                  if (menuViewMode === "ROOT") return customOrders["ROOT"] || [];
-                  if (menuViewMode === "CATEGORIES" && selectedGenCat) return customOrders[`GEN_${selectedGenCat.id}`] || [];
-                  if (menuViewMode === "PRODUCTS" && selectedCat) return customOrders[`CAT_${selectedCat.id}`] || [];
-                  return [];
-                })()}
-                onCategoryOrderChange={(newOrder) => {
-                  let key = null;
-                  if (menuViewMode === "ROOT") key = "ROOT";
-                  else if (menuViewMode === "CATEGORIES" && selectedGenCat) key = `GEN_${selectedGenCat.id}`;
-                  else if (menuViewMode === "PRODUCTS" && selectedCat) key = `CAT_${selectedCat.id}`;
-
-                  if (key) {
-                    setCustomOrders(prev => ({
-                      ...prev,
-                      [key]: newOrder
-                    }));
-                  }
-                }}
+                categoryOrder={categoryOrderMemo}
+                onCategoryOrderChange={handleCategoryOrderChange}
                 isEditMode={isEditMode}
                 isDeleteMode={isDeleteMode}
-                onEditProduct={(product) => {
-                  setProductToEdit(product);
-                  setShowProductModal(true);
-                }}
-                onDeleteItem={(product) => {
-                  setProductToDelete(product);
-                  setShowDeleteConfirm(true);
-                }}
+                onEditProduct={handleEditProductMemo}
+                onDeleteItem={handleDeleteItemMemo}
               />
             </div>
           </div>
@@ -1733,7 +1756,7 @@ const Check = () => {
       </div>
       <OperationsModal
         show={showOpeationsModal}
-        onHide={() => setShowOperationsModal(false)}
+        onHide={onHideOperations}
         clearCheck={clearCheck}
         openCommentModal={openCommentModal}
         openDiscountModal={openDiscountModal}
@@ -1745,18 +1768,9 @@ const Check = () => {
         handleOpenSplitModel={handleOpenSplitModel}
         handleDeleteCheckModal={handleDeleteCheckModal}
         openDepositModal={openDepositModal}
-        openHistory={() => {
-          setShowHistoryModal(true);
-          setShowOperationsModal(false);
-        }}
-        openCustomersModal={() => {
-          setShowCustomerModal(true);
-          setShowOperationsModal(false);
-        }}
-        openGuestCountModal={() => {
-          setShowGuestCountModal(true);
-          setShowOperationsModal(false);
-        }}
+        openHistory={openHistoryModalFunc}
+        openCustomersModal={openCustomersModalFunc}
+        openGuestCountModal={openGuestCountModalFunc}
         loginedWaiter={loginedWaiter}
       />
 

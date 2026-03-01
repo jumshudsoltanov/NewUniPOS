@@ -158,93 +158,83 @@ function AppContent() {
     img.src = PinBackground;
 
     const initApp = async () => {
-      const storageData = JSON.parse(localStorage.getItem("profile"));
-      const authResult = JSON.parse(localStorage.getItem("authResult"));
-      const currentPath = window.location.hash.replace("#", "") || "/";
+      try {
+        const storageData = JSON.parse(localStorage.getItem("profile"));
+        const authResult = JSON.parse(localStorage.getItem("authResult"));
+        const currentPath = window.location.hash.replace("#", "") || "/";
 
-      // Tətbiqi başlamadan və APİ müraciətlərini etmədən əvvəl UDP scan edib BaseUrl və Socket yaradırıq.
-      const terminalData = authResult?.data?.terminal || {};
-      const profileData = authResult?.data?.profile || {};
-      const isMaster = terminalData.is_master === 1 || profileData.is_master === 1;
-      const isMasterSlaveActive = terminalData.is_master_slave_active === 1 || profileData.is_master_slave_active === 1;
+        const terminalData = authResult?.data?.terminal || {};
+        const profileData = authResult?.data?.profile || {};
+        const isMaster = terminalData.is_master === 1 || profileData.is_master === 1;
+        const isMasterSlaveActive = terminalData.is_master_slave_active === 1 || profileData.is_master_slave_active === 1;
 
-      if (!storageData || (isMasterSlaveActive && !isMaster)) {
-        await initNetwork(false, !isMasterSlaveActive); // Attempt to find Master
-      } else {
-        await initNetwork(true, !isMasterSlaveActive); // Standalone or Master
-      }
-
-      // Re-evaluate backend role as well
-      if (window.electronAPI && window.electronAPI.reEvaluateRole) {
-        window.electronAPI.reEvaluateRole().catch(console.error);
-      }
-
-      if (storageData) {
-        // Redux-da login datasını bərpa edirik (offline işləməsi üçün)
-        if (authResult) {
-          dispatch(setLoginData(authResult));
+        if (!storageData || (isMasterSlaveActive && !isMaster)) {
+          await initNetwork(false, !isMasterSlaveActive);
+        } else {
+          await initNetwork(true, !isMasterSlaveActive);
         }
 
-        try {
-          const data = await dispatch(authPos(storageData)).unwrap();
-          localStorage.setItem("authResult", JSON.stringify(data));
+        if (window.electronAPI && window.electronAPI.reEvaluateRole) {
+          window.electronAPI.reEvaluateRole().catch(console.error);
+        }
 
-          // Pre-load customers and groups
-          dispatch(fetchCustomersFromAdmin());
-          dispatch(fetchCustomerGroupsFromAdmin());
-
-          // Blok yoxlaması: is_pos_block və ya ödəniş müddəti keçib
-          const profile = data?.data?.profile;
-          if (Number(profile?.is_pos_block) === 1) {
-            setShowInitialLoading(false);
-            navigate("/blocked");
-            return;
-          }
-
-          const npd = profile?.next_payment_date;
-          if (npd) {
-            const now = new Date(); now.setHours(0, 0, 0, 0);
-            const payDate = new Date(npd); payDate.setHours(0, 0, 0, 0);
-            if (payDate < now) {
-              setShowInitialLoading(false);
-              navigate("/blocked");
-              return;
-            }
-          }
-
-          if (currentPath === "/") {
-            navigate("/pin");
-          }
-        } catch (err) {
-          console.error("Auto-login failed:", err);
-
+        if (storageData) {
           if (authResult) {
-            console.log("Using cached authResult for offline/fallback mode");
+            dispatch(setLoginData(authResult));
+          }
+
+          try {
+            const data = await dispatch(authPos(storageData)).unwrap();
+            localStorage.setItem("authResult", JSON.stringify(data));
 
             dispatch(fetchCustomersFromAdmin());
             dispatch(fetchCustomerGroupsFromAdmin());
 
+            const profile = data?.data?.profile;
+            if (Number(profile?.is_pos_block) === 1) {
+              navigate("/blocked");
+              return;
+            }
+
+            const npd = profile?.next_payment_date;
+            if (npd) {
+              const now = new Date(); now.setHours(0, 0, 0, 0);
+              const payDate = new Date(npd); payDate.setHours(0, 0, 0, 0);
+              if (payDate < now) {
+                navigate("/blocked");
+                return;
+              }
+            }
+
             if (currentPath === "/") {
               navigate("/pin");
             }
-          } else {
-            console.log("Auth failure: redirecting to login");
-            if (currentPath !== "/" && currentPath !== "") {
-              navigate("/");
+          } catch (err) {
+            console.error("Auto-login failed:", err);
+            if (authResult) {
+              dispatch(fetchCustomersFromAdmin());
+              dispatch(fetchCustomerGroupsFromAdmin());
+              if (currentPath === "/") navigate("/pin");
+            } else {
+              if (currentPath !== "/" && currentPath !== "") navigate("/");
             }
           }
+        } else {
+          if (currentPath !== "/" && currentPath !== "") navigate("/");
         }
-      } else {
-        if (currentPath !== "/") {
-          navigate("/");
-        }
+      } catch (globalErr) {
+        console.error("Critical boot error:", globalErr);
+      } finally {
+        setShowInitialLoading(false);
       }
-
-      // Loading-i 1.5 saniyə sonra gizlət
-      setTimeout(() => setShowInitialLoading(false), 1000);
     };
 
-    initApp();
+    // Safety timeout: əgər initApp 10 saniyədən çox çəkərsə, məcburi loading-i bağla
+    const safetyTimer = setTimeout(() => {
+      setShowInitialLoading(false);
+    }, 10000);
+
+    initApp().then(() => clearTimeout(safetyTimer));
   }, [dispatch, navigate]);
 
   if (showInitialLoading) {

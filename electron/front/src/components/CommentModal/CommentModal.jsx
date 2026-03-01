@@ -9,7 +9,7 @@ import { updateComments } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
-const CommentModal = ({ show, onClose, order }) => {
+const CommentModal = React.memo(({ show, onClose, order }) => {
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -89,6 +89,6 @@ const CommentModal = ({ show, onClose, order }) => {
       </div>
     </Modal>
   );
-};
+});
 
 export default CommentModal;

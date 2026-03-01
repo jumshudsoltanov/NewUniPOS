@@ -377,12 +377,15 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
         }
     };
 
-    const filteredCustomers = customers.filter(c =>
-        (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredCustomers = useMemo(() => {
+        if (!show) return [];
+        return customers.filter(c =>
+            (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (c.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (c.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [customers, searchTerm, show]);
 
     // Shared form renderer for create and edit
     const renderForm = () => {
@@ -919,4 +922,4 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
     );
 };
 
-export default CustomersSourceModal;
+export default React.memo(CustomersSourceModal);

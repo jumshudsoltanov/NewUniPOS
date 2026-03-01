@@ -139,6 +139,15 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         }
     };
 
+    const [mobileActiveTab, setMobileActiveTab] = useState("info"); // 'info' | 'items' | 'history'
+    const [isMobileSize, setIsMobileSize] = useState(window.innerWidth < 992);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobileSize(window.innerWidth < 992);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
     if (!order) return null;
 
     const formatFullDateTime = (date) => {
@@ -162,229 +171,281 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     return (
         <>
             <Modal show={show} onHide={onClose} size="lg" centered className="check-detail-modal-custom">
-                <Modal.Header closeButton>
-                    <Modal.Title>Çek #{order.id}</Modal.Title>
+                <Modal.Header closeButton className="justify-content-center position-relative">
+                    <Modal.Title className="w-100 text-center pe-4">Çek #{order.id}</Modal.Title>
                 </Modal.Header>
-                <Modal.Body className="p-0">
+                <Modal.Body className="p-0 border-0">
+                    {/* Mobile Tabs Navigation */}
+                    {isMobileSize && (
+                        <div className="mobile-tabs-nav d-flex border-bottom">
+                            <div
+                                className={`mobile-tab-item flex-grow-1 text-center py-3 ${mobileActiveTab === 'info' ? 'active' : ''}`}
+                                onClick={() => setMobileActiveTab('info')}
+                            >
+                                Məlumat
+                            </div>
+                            <div
+                                className={`mobile-tab-item flex-grow-1 text-center py-3 ${mobileActiveTab === 'items' ? 'active' : ''}`}
+                                onClick={() => setMobileActiveTab('items')}
+                            >
+                                Sifariş
+                            </div>
+                            <div
+                                className={`mobile-tab-item flex-grow-1 text-center py-3 ${mobileActiveTab === 'history' ? 'active' : ''}`}
+                                onClick={() => setMobileActiveTab('history')}
+                            >
+                                Tarixçə
+                            </div>
+                        </div>
+                    )}
+
                     <div className="d-flex flex-column flex-lg-row modal-body-split">
-                        {/* Left Sidebar: Meta Info OR History */}
-                        <div className="sidebar-section border-end-lg">
-                            {currentView === "details" ? (
-                                <div className="meta-items-container p-4">
-                                    <div className="meta-item-box">
-                                        <div className="meta-icon-col">
-                                            <i className="bi bi-arrow-right-short text-success fs-3"></i>
-                                        </div>
-                                        <div className="meta-content-col">
-                                            <small className="text-muted text-uppercase fw-bold" style={{ fontSize: '11px' }}>Açıldı</small>
-                                            <div className="meta-value">{formatFullDateTime(order.start_date)}</div>
-                                            <div className="meta-sub">ID:{order.waiter_id}</div>
-                                        </div>
-                                    </div>
+                        {/* Left Sidebar: Meta Info OR History (Desktop) / Mobile Conditional */}
+                        {(!isMobileSize || mobileActiveTab === 'info' || mobileActiveTab === 'history') && (
+                            <div className={`sidebar-section border-end-lg ${isMobileSize && mobileActiveTab === 'history' ? 'flex-grow-1' : ''}`}
+                                style={isMobileSize ? { display: (mobileActiveTab === 'info' || mobileActiveTab === 'history') ? 'block' : 'none' } : {}}>
 
-                                    <div className="meta-item-box closed-date-box">
-                                        <div className="meta-icon-col">
-                                            <i className="bi bi-check-circle text-primary fs-5 pt-1"></i>
+                                {((!isMobileSize && currentView === "details") || (isMobileSize && mobileActiveTab === 'info')) ? (
+                                    <div className="meta-items-container p-4">
+                                        <div className="meta-item-box">
+                                            <div className="meta-icon-col">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5">
+                                                    <path d="M5 12h14m-7-7 7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                            <div className="meta-content-col">
+                                                <div className="meta-label">AÇILDI</div>
+                                                <div className="meta-value">{formatFullDateTime(order.start_date)}</div>
+                                                <div className="meta-sub text-muted">ID:{order.waiter_id}</div>
+                                            </div>
                                         </div>
-                                        <div className="meta-content-col">
-                                            <small className="text-primary text-uppercase fw-bold" style={{ fontSize: '11px' }}>
-                                                {order.status === 3 ? "Silindi" : "Bağlandı"}
-                                            </small>
-                                            <div className="meta-value text-primary">{formatFullDateTime(order.end_date)}</div>
-                                            <div className="meta-sub">ID:{order.waiter_id}</div>
-                                        </div>
-                                    </div>
 
-                                    <div className="meta-item-box">
-                                        <div className="meta-icon-col">
-                                            <i className="bi bi-box-seam fs-5 text-secondary"></i>
+                                        <div className="meta-item-box">
+                                            <div className="meta-icon-col">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4F85F4" strokeWidth="2.5">
+                                                    <path d="M20 6L9 17L4 12" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                            <div className="meta-content-col">
+                                                <div className="meta-label status-label text-primary">
+                                                    {order.status === 3 ? "SİLİNDİ" : "BAĞLANDI"}
+                                                </div>
+                                                <div className="meta-value text-primary">{formatFullDateTime(order.end_date)}</div>
+                                                <div className="meta-sub text-muted">ID:{order.waiter_id}</div>
+                                            </div>
                                         </div>
-                                        <div className="meta-content-col">
-                                            <small className="text-muted text-uppercase fw-bold" style={{ fontSize: '11px' }}>Satış üsulu</small>
-                                            <div className="meta-value">
-                                                {(() => {
-                                                    if (!order.sale_type) return "Naməlum";
-                                                    if (saleTypeLabels[order.sale_type]) return saleTypeLabels[order.sale_type];
-                                                    return order.sale_type.charAt(0).toUpperCase() + order.sale_type.slice(1);
-                                                })()}
+
+                                        <div className="meta-item-box">
+                                            <div className="meta-icon-col">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <polyline points="7.5 4.21 12 6.81 16.5 4.21" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <polyline points="7.5 19.79 7.5 14.6 3 12" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <polyline points="21 12 16.5 14.6 16.5 19.79" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <polyline points="12 22.71 12 12.3" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <line x1="12" y1="12" x2="20.29" y2="7.21" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <line x1="12" y1="12" x2="3.71" y2="7.21" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                            <div className="meta-content-col">
+                                                <div className="meta-label">SATIŞ ÜSULU</div>
+                                                <div className="meta-value">
+                                                    {(() => {
+                                                        if (!order.sale_type) return "Naməlum";
+                                                        if (saleTypeLabels[order.sale_type]) return saleTypeLabels[order.sale_type];
+                                                        return order.sale_type.charAt(0).toUpperCase() + order.sale_type.slice(1);
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="meta-item-box">
+                                            <div className="meta-icon-col">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <circle cx="12" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                            <div className="meta-content-col">
+                                                <div className="meta-label">OFİSİANT</div>
+                                                <div className="meta-value">{order.waiter?.name || "Naməlum"}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="meta-item-box">
+                                            <div className="meta-icon-col">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                                                    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <path d="M4 6v12c0 1.1.9 2 2 2h14v-4" strokeLinecap="round" strokeLinejoin="round" />
+                                                    <path d="M18 12c0-1.1.9-2 2-2h2v4h-2a2 2 0 0 1-2-2z" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                            <div className="meta-content-col">
+                                                <div className="meta-label">ÖDƏNİŞ ÜSULU</div>
+                                                <div className="meta-value">
+                                                    {order.status === 3 ? (
+                                                        <span className="text-danger">Silinib</span>
+                                                    ) : order.order_payments?.length > 0 ? (
+                                                        order.order_payments.map((p, i) => (
+                                                            <div key={i} className="d-flex justify-content-between w-100">
+                                                                <span>{p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Naməlum")}</span>
+                                                                <span className="ms-2">{Number(p.paid).toFixed(2)}₼</span>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        "Gözləyir"
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
+                                ) : (
+                                    <div className="history-section bg-white p-0">
+                                        <div className="history-filter-bar p-3 px-4">
+                                            <div className="filter-label mb-2 text-muted" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                FİLTRLƏ:
+                                            </div>
+                                            <Form.Select
+                                                value={logFilter}
+                                                onChange={(e) => setLogFilter(e.target.value)}
+                                                className="history-filter-select shadow-none"
+                                            >
+                                                <option value="all">Siyahı (Hamısı)</option>
+                                                {logTypes.map((type, idx) => (
+                                                    <option key={idx} value={type}>{type}</option>
+                                                ))}
+                                            </Form.Select>
+                                        </div>
 
-                                    <div className="meta-item-box">
-                                        <div className="meta-icon-col">
-                                            <i className="bi bi-person fs-5 text-secondary"></i>
-                                        </div>
-                                        <div className="meta-content-col">
-                                            <small className="text-muted text-uppercase fw-bold" style={{ fontSize: '11px' }}>Ofisiant</small>
-                                            <div className="meta-value">{order.waiter?.name || "Naməlum"}</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="meta-item-box">
-                                        <div className="meta-icon-col">
-                                            <i className="bi bi-wallet2 fs-5 text-secondary"></i>
-                                        </div>
-                                        <div className="meta-content-col">
-                                            <small className="text-muted text-uppercase fw-bold" style={{ fontSize: '11px' }}>Ödəniş üsulu</small>
-                                            <div className="meta-value">
-                                                {order.status === 3 ? (
-                                                    <span className="text-danger">Silinib</span>
-                                                ) : order.order_payments?.length > 0 ? (
-                                                    order.order_payments.map((p, i) => (
-                                                        <div key={i} className="d-flex justify-content-between w-100">
-                                                            <span>{p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Naməlum")}</span>
-                                                            <span className="ms-2">{Number(p.paid).toFixed(2)}₼</span>
+                                        <div className="history-timeline-container overflow-auto" style={{ maxHeight: isMobileSize ? 'none' : '460px', scrollbarWidth: 'thin' }}>
+                                            <div className="timeline-wrapper position-relative ps-5 pt-4">
+                                                <div className="timeline-line-custom"></div>
+                                                {filteredLogs.length === 0 ? (
+                                                    <div className="text-center py-5 text-muted">Hərəkət tapılmadı</div>
+                                                ) : (
+                                                    filteredLogs.map((log, idx) => (
+                                                        <div key={idx} className="timeline-item-custom mb-4 position-relative">
+                                                            <div className="timeline-dot-custom"></div>
+                                                            <div className="timeline-content-custom">
+                                                                <div className="action-name fw-bold text-dark mb-1" style={{ fontSize: '14px' }}>
+                                                                    {log.action}
+                                                                </div>
+                                                                <div className="d-flex align-items-center gap-3 text-secondary mb-1" style={{ fontSize: '12px' }}>
+                                                                    <div className="d-flex align-items-center gap-1">
+                                                                        <i className="bi bi-clock text-secondary opacity-75"></i>
+                                                                        <span>{new Date(log.time || log.createdAt).toLocaleDateString('az-AZ')} {new Date(log.time || log.createdAt).toLocaleTimeString('az-AZ')}</span>
+                                                                    </div>
+                                                                    <div className="d-flex align-items-center gap-1">
+                                                                        <i className="bi bi-person text-secondary opacity-75"></i>
+                                                                        <span>{log.waiterName || "Naməlum"}</span>
+                                                                    </div>
+                                                                </div>
+                                                                {log.terminal_id && (
+                                                                    <div className="d-flex align-items-center gap-1 text-secondary" style={{ fontSize: '12px' }}>
+                                                                        <i className="bi bi-display text-secondary opacity-75"></i>
+                                                                        <span>ID:{log.terminal_id} {log.details}</span>
+                                                                    </div>
+                                                                )}
+                                                                {!log.terminal_id && log.details && (
+                                                                    <div className="details-text text-secondary" style={{ fontSize: '12px' }}>
+                                                                        {log.details}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     ))
-                                                ) : (
-                                                    "Gözləyir"
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="history-section bg-white p-0">
-                                    <div className="history-filter-bar px-4 py-3 border-bottom">
-                                        <Form.Select
-                                            value={logFilter}
-                                            onChange={(e) => setLogFilter(e.target.value)}
-                                            className="history-filter-select border-0 shadow-none ps-0"
-                                            style={{ fontWeight: 500, color: "#202124" }}
-                                        >
-                                            <option value="all">Hərəkətlər</option>
-                                            {logTypes.map((type, idx) => (
-                                                <option key={idx} value={type}>{type}</option>
-                                            ))}
-                                        </Form.Select>
-                                    </div>
-
-                                    <div className="history-timeline-container overflow-auto" style={{ maxHeight: '460px', scrollbarWidth: 'thin' }}>
-                                        <div className="timeline-wrapper position-relative ps-5 pt-4">
-                                            <div className="timeline-line-custom"></div>
-                                            {filteredLogs.length === 0 ? (
-                                                <div className="text-center py-5 text-muted">Hərəkət tapılmadı</div>
-                                            ) : (
-                                                filteredLogs.map((log, idx) => (
-                                                    <div key={idx} className="timeline-item-custom mb-4 position-relative">
-                                                        <div className="timeline-dot-custom"></div>
-                                                        <div className="timeline-content-custom">
-                                                            <div className="action-name fw-bold text-dark mb-1" style={{ fontSize: '14px' }}>
-                                                                {log.action}
-                                                            </div>
-                                                            <div className="d-flex align-items-center gap-3 text-secondary mb-1" style={{ fontSize: '12px' }}>
-                                                                <div className="d-flex align-items-center gap-1">
-                                                                    <i className="bi bi-clock text-secondary opacity-75"></i>
-                                                                    <span>{new Date(log.time || log.createdAt).toLocaleDateString('az-AZ')} {new Date(log.time || log.createdAt).toLocaleTimeString('az-AZ')}</span>
-                                                                </div>
-                                                                <div className="d-flex align-items-center gap-1">
-                                                                    <i className="bi bi-person text-secondary opacity-75"></i>
-                                                                    <span>{log.waiterName || "Naməlum"}</span>
-                                                                </div>
-                                                            </div>
-                                                            {log.terminal_id && (
-                                                                <div className="d-flex align-items-center gap-1 text-secondary" style={{ fontSize: '12px' }}>
-                                                                    <i className="bi bi-display text-secondary opacity-75"></i>
-                                                                    <span>ID:{log.terminal_id} {log.details}</span>
-                                                                </div>
-                                                            )}
-                                                            {!log.terminal_id && log.details && (
-                                                                <div className="details-text text-secondary" style={{ fontSize: '12px' }}>
-                                                                    {log.details}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Right Main Content: Order Items */}
-                        <div className="items-section flex-grow-1 p-4">
-                            <div className="table-responsive">
-                                <table className="table table-borderless table-sm order-items-table">
-                                    <thead>
-                                        <tr>
-                                            <th className="text-muted fw-normal">Ad</th>
-                                            <th className="text-muted fw-normal">Miq</th>
-                                            <th className="text-muted fw-normal">Qiymət</th>
-                                            <th className="text-muted fw-normal text-end">Cəm</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {order.orders_items?.map((item, i) => (
-                                            <tr key={i}>
-                                                <td>{item.product?.name || "Məhsul"}</td>
-                                                <td>{item.count}</td>
-                                                <td>{Number(item.price).toFixed(2)}</td>
-                                                <td className="text-end">{(item.count * item.price).toFixed(2)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                )}
                             </div>
+                        )}
 
-                            <div className="summary-section mt-auto">
-                                <div className="summary-row d-flex justify-content-between mb-2">
-                                    <span className="summary-label text-muted">Cəm:</span>
-                                    <span className="summary-value fw-bold">{(subtotal || 0).toFixed(2)} ₼</span>
+                        {/* Right Main Content: Order Items (Desktop) / Mobile Conditional */}
+                        {(!isMobileSize || mobileActiveTab === 'items') && (
+                            <div className="items-section flex-grow-1 p-4">
+                                <div className="table-responsive">
+                                    <table className="table table-borderless table-sm order-items-table">
+                                        <thead>
+                                            <tr>
+                                                <th className="text-muted fw-normal">Ad</th>
+                                                <th className="text-muted fw-normal">Miq</th>
+                                                <th className="text-muted fw-normal">Qiymət</th>
+                                                <th className="text-muted fw-normal text-end">Cəm</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {order.orders_items?.map((item, i) => (
+                                                <tr key={i}>
+                                                    <td>{item.product?.name || "Məhsul"}</td>
+                                                    <td>{item.count}</td>
+                                                    <td>{Number(item.price).toFixed(2)}</td>
+                                                    <td className="text-end">{(item.count * item.price).toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
 
-                                {Number(order.discount || 0) !== 0 && (
+                                <div className="summary-section mt-auto">
                                     <div className="summary-row d-flex justify-content-between mb-2">
-                                        <span className="summary-label text-muted">Endirim ({discountPercentage}%):</span>
-                                        <span className="summary-value text-danger fw-bold">
-                                            {Number(order.discount) > 0 ? '-' : ''}{Math.abs(Number(order.discount)).toFixed(2)} ₼
+                                        <span className="summary-label text-muted">Cəm:</span>
+                                        <span className="summary-value fw-bold">{(subtotal || 0).toFixed(2)} ₼</span>
+                                    </div>
+
+                                    {Number(order.discount || 0) !== 0 && (
+                                        <div className="summary-row d-flex justify-content-between mb-2">
+                                            <span className="summary-label text-muted">Endirim ({discountPercentage}%):</span>
+                                            <span className="summary-value text-danger fw-bold">
+                                                {Number(order.discount) > 0 ? '-' : ''}{Math.abs(Number(order.discount)).toFixed(2)} ₼
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) && (
+                                        <div className="summary-row d-flex justify-content-between mb-2">
+                                            <span className="summary-label text-muted">Depozit (Minimal):</span>
+                                            <span className="summary-value fw-bold">{Number(order.deposit).toFixed(2)} ₼</span>
+                                        </div>
+                                    )}
+
+                                    {Number(order.service_charge || 0) !== 0 && (
+                                        <div className="summary-row d-flex justify-content-between mb-2">
+                                            <span className="summary-label text-muted">Servis haqqı ({servicePercentage}%):</span>
+                                            <span className="summary-value fw-bold">{Number(order.service_charge).toFixed(2)} ₼</span>
+                                        </div>
+                                    )}
+
+                                    <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top mt-2">
+                                        <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>
+                                            {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
+                                        </span>
+                                        <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
+                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0)).toFixed(2)} ₼
                                         </span>
                                     </div>
-                                )}
-
-                                {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) && (
-                                    <div className="summary-row d-flex justify-content-between mb-2">
-                                        <span className="summary-label text-muted">Depozit (Minimal):</span>
-                                        <span className="summary-value fw-bold">{Number(order.deposit).toFixed(2)} ₼</span>
-                                    </div>
-                                )}
-
-                                {Number(order.service_charge || 0) !== 0 && (
-                                    <div className="summary-row d-flex justify-content-between mb-2">
-                                        <span className="summary-label text-muted">Servis haqqı ({servicePercentage}%):</span>
-                                        <span className="summary-value fw-bold">{Number(order.service_charge).toFixed(2)} ₼</span>
-                                    </div>
-                                )}
-
-                                <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top mt-2">
-                                    <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>
-                                        {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
-                                    </span>
-                                    <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
-                                        {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0)).toFixed(2)} ₼
-                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
-                    {/* Custom Flush Footer */}
+                    {/* Custom Flush Footer - Hidden on Mobile if we use Bottom Tabs or refined actions */}
                     <div className="w-100 d-flex gap-0" style={{ background: "#f8f9fa", borderTop: "1px solid #dee2e6" }}>
-                        {/* Foot Left: Toggle */}
-                        <div className="footer-left" style={{ width: "40%", borderRight: "1px solid #dee2e6" }}>
-                            <Button
-                                variant="light"
-                                className="w-100 h-100 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
-                                onClick={() => setCurrentView(currentView === "details" ? "history" : "details")}
-                                style={{ color: "#0d6efd", background: "transparent", fontWeight: 500 }}
-                            >
-                                <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me-2 fs-5`}></i>
-                                {currentView === "details" ? "TARİXÇƏ" : "ÇEK MƏLUMATLARI"}
-                            </Button>
-                        </div>
+                        {!isMobileSize && (
+                            <div className="footer-left" style={{ width: "40%", borderRight: "1px solid #dee2e6" }}>
+                                <Button
+                                    variant="light"
+                                    className="w-100 h-100 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
+                                    onClick={() => setCurrentView(currentView === "details" ? "history" : "details")}
+                                    style={{ color: "#0d6efd", background: "transparent", fontWeight: 500 }}
+                                >
+                                    <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me-2 fs-5`}></i>
+                                    {currentView === "details" ? "TARİXÇƏ" : "ÇEK MƏLUMATLARI"}
+                                </Button>
+                            </div>
+                        )}
                         {/* Foot Right: Actions */}
-                        <div className="footer-right d-flex flex-grow-1">
+                        <div className={`footer-right d-flex ${isMobileSize ? 'w-100' : 'flex-grow-1'}`}>
                             <Button
                                 variant="warning"
                                 className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
@@ -406,11 +467,11 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 {isPrinting ? (
                                     <>
                                         <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                                        ÇAP EDİLİR...
+                                        ÇAP...
                                     </>
                                 ) : (
                                     <>
-                                        <i className="bi bi-printer me-2 fs-5"></i> ÇAP ET
+                                        <i className="bi bi-printer me-2 fs-5"></i> ÇAP
                                     </>
                                 )}
                             </Button>

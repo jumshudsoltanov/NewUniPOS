@@ -6,7 +6,7 @@ import { updateDiscountOnOrders } from "../../redux/Slices/OrdersSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 
-const DiscountModal = ({ show, onClose, order }) => {
+const DiscountModal = React.memo(({ show, onClose, order }) => {
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -242,6 +242,6 @@ const DiscountModal = ({ show, onClose, order }) => {
       </div>
     </Modal>
   );
-};
+});
 
 export default DiscountModal;

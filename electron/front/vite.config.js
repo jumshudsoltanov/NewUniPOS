@@ -9,5 +9,8 @@ export default defineConfig({
     host: '0.0.0.0', // Allow all network interfaces
     port: 5173,
     strictPort: true,
+  },
+  build: {
+    sourcemap: true
   }
 })

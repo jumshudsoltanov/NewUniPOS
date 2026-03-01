@@ -39,14 +39,16 @@ const OtherChecks = ({
     );
   }, [dispatch, loginedProfileData]);
 
-  const filteredOrders =
-    showAll || !table
+  const filteredOrders = useMemo(() => {
+    if (!show) return [];
+    return showAll || !table
       ? books?.data?.filter((o) => o.uuid != id) || []
       : table?.orders?.filter((o) => o.uuid != id) || [];
+  }, [show, showAll, table, books?.data, id]);
 
-  const currentHallName = tableGroups?.data?.find(
-    (h) => h.id === currentHallId,
-  )?.name;
+  const currentHallName = useMemo(() => {
+    return tableGroups?.data?.find((h) => h.id === currentHallId)?.name;
+  }, [tableGroups?.data, currentHallId]);
 
   const resolveNames = (item) => {
     if (item.sale_type !== "dine_in") {
@@ -180,4 +182,4 @@ const OtherChecks = ({
   );
 };
 
-export default OtherChecks;
+export default React.memo(OtherChecks);
