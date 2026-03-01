@@ -24,7 +24,7 @@ db.connect = async () => {
     await db.sequelize.authenticate();
     console.log("Connected");
   } catch (error) {
-    console.log("Error", error);
+    console.error("Database Error:", error ? (error.message || error.toString()) : "Naməlum xəta");
   }
 };
 

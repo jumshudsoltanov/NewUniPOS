@@ -12,20 +12,42 @@ let mainWindow = null;
 let customerWindow = null;
 let kitchenWindow = null;
 
-// --- Single Instance Lock ---
-const gotTheLock = app.requestSingleInstanceLock();
+// --- GLOBAL CRASH REPORTER ---
+const crashLogPath = path.join(app.getPath('userData'), "UniPOS_Crash_Log.txt");
 
-if (!gotTheLock) {
-  app.quit();
-} else {
-  app.on("second-instance", (event, commandLine, workingDirectory) => {
-    // If someone tries to run a second instance, we should focus our window.
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
+function logErrorToFile(errorType, errorObj) {
+  try {
+    const timestamp = new Date().toISOString();
+    let errorDetails = "";
+    if (errorObj instanceof Error) {
+      errorDetails = `${errorObj.name}: ${errorObj.message}\n${errorObj.stack}`;
+    } else {
+      errorDetails = String(errorObj);
     }
-  });
+    const logMessage = `\n[${timestamp}] [${errorType}]\n${errorDetails}\n-----------------------------------\n`;
+    fs.appendFileSync(crashLogPath, logMessage, "utf8");
+    fs.appendFileSync(path.join(os.tmpdir(), "UniPOS_Crash_Log.txt"), logMessage, "utf8");
+  } catch (e) {
+    console.error("LOGGERS FAILURE", e);
+  }
 }
+
+process.on("uncaughtException", (error) => {
+  logErrorToFile("uncaughtException", error);
+  // Do not crash immediately for debugging purposes
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  logErrorToFile("unhandledRejection", reason);
+});
+// -----------------------------
+
+// --- Single Instance Lock Yığışdırıldı ---
+// if (!gotTheLock) {
+//   app.quit();
+// } else {
+//   app.on("second-instance", ...
+// }
 // ----------------------------
 
 function createWindow() {
@@ -63,22 +85,7 @@ function createWindow() {
     }
   }
 
-  // Intercept all backend console.logs and pipe them to the frontend DevTools
-  const originalLog = console.log;
-  console.log = function (...args) {
-    originalLog.apply(console, args);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send("backend-log", "[NODE BACKEND]", ...args);
-    }
-  };
 
-  const originalError = console.error;
-  console.error = function (...args) {
-    originalError.apply(console, args);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send("backend-log", "[NODE ERROR]", ...args);
-    }
-  }
 
   if (!isDev && mainWindow) {
     mainWindow.setKiosk(true);
@@ -186,7 +193,9 @@ ipcMain.handle("open-anydesk", () => {
   for (const adPath of anyDeskPaths) {
     if (fs.existsSync(adPath)) {
       exec(`"${adPath}"`, (error) => {
-        if (error) console.error("Failed to open AnyDesk:", error);
+        if (error) {
+          console.error("Failed to open AnyDesk:", error ? String(error) : "Unknown Error");
+        }
       });
       return true;
     }
@@ -194,7 +203,9 @@ ipcMain.handle("open-anydesk", () => {
 
   // Try running anydesk from PATH
   exec("anydesk", (error) => {
-    if (error) console.error("AnyDesk not found in PATH:", error);
+    if (error) {
+      console.error("AnyDesk not found in PATH:", error ? String(error) : "Unknown Error");
+    }
   });
   return true;
 });
@@ -211,7 +222,7 @@ ipcMain.handle("get-system-printers", async () => {
     }
     return [];
   } catch (e) {
-    console.error("Error getting system printers:", e);
+    console.error("Error getting system printers:", e ? String(e) : "Unknown Printer Error");
     return [];
   }
 });
@@ -647,7 +658,7 @@ try {
     console.error("Backend file not found:", backendPath);
   }
 } catch (err) {
-  console.error("Failed to start backend:", err);
+  console.error("Failed to start backend:", err ? (err.message || err.toString()) : "Naməlum xəta");
 }
 
 app.whenReady().then(() => {
@@ -663,10 +674,9 @@ app.whenReady().then(() => {
   globalShortcut.register('CommandOrControl+Shift+C+N', toggleDevTools);
   globalShortcut.register('CommandOrControl+Shift+N+C', toggleDevTools);
 
-  // --- Auto-Update Initialization ---
   if (!isDev) {
     autoUpdater.checkForUpdatesAndNotify().catch(err => {
-      console.error("[AUTO-UPDATE] Yenilənmə yoxlanışı zamanı xəta (Böyük ehtimalla GitHub-da release yoxdur):", err.message);
+      console.error("[AUTO-UPDATE] Yenilənmə yoxlanışı zamanı xəta (Böyük ehtimalla GitHub-da release yoxdur):", err ? (err.message || err.toString()) : "Naməlum xəta");
     });
   }
 
@@ -686,7 +696,7 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on("error", (err) => {
-    console.error("[AUTO-UPDATE] Xəta baş verdi:", err);
+    console.error("[AUTO-UPDATE] Xəta baş verdi:", err ? (err.message || err.toString()) : "Naməlum xəta");
   });
 
   autoUpdater.on("download-progress", (progressObj) => {

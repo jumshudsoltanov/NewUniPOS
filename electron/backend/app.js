@@ -206,7 +206,7 @@ let creaedtToTabel = async () => {
 
     console.log("Created Table Success!");
   } catch (error) {
-    console.log("Table Created Error", error);
+    console.error("Table Created Error:", error ? (error.message || error.toString()) : "Naməlum xəta");
   }
 };
 
@@ -242,7 +242,7 @@ server.on("error", (e) => {
   if (e.code === "EADDRINUSE") {
     console.log("Port 55667 is already in use. Running as a Slave instance on the same machine without a local API port.");
   } else {
-    console.error("Express server error:", e);
+    console.error("Express server error:", e ? (e.message || e.toString()) : "Naməlum xəta");
   }
 });
 
@@ -282,7 +282,7 @@ const checkTerminalRole = async (targetServer) => {
       }
     }
   } catch (err) {
-    console.error("Error in checkTerminalRole:", err);
+    console.error("Error in checkTerminalRole:", err ? (err.message || err.toString()) : "Naməlum xəta");
   }
 };
 
@@ -320,7 +320,7 @@ app.post("/api/sync", async (req, res) => {
     console.log("Manual sync completed.");
     res.status(200).json({ message: "Sync completed" });
   } catch (error) {
-    console.error("Sync error:", error);
+    console.error("Sync error:", error ? (error.message || error.toString()) : "Naməlum xəta");
     res.status(500).json({ message: "Sync failed", error: error.message });
   }
 });

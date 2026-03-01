@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.0.4",
+  "version": "2.0.9",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -44,7 +44,7 @@
     "extraResources": [
       ".env"
     ],
-    "asar": true,
+    "asar": false,
     "asarUnpack": [
       "**/*.{node,dll}",
       "node_modules/electron-updater/**/*"
@@ -52,13 +52,17 @@
     "win": {
       "target": "nsis",
       "icon": "electron/static/images/logo.png",
-      "requestedExecutionLevel": "requireAdministrator"
+      "requestedExecutionLevel": "asInvoker",
+      "verifyUpdateCodeSignature": false,
+      "publisherName": "UniPOS LLC"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "warningsAsErrors": false
     }
   },
   "devDependencies": {
