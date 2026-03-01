@@ -80,7 +80,7 @@ function AppContent() {
     checkSocket();
 
     const connInt = setInterval(handleConnectivity, 5000);
-    const syncInt = setInterval(fetchSyncCount, 1000);
+    const syncInt = setInterval(fetchSyncCount, 5000);
     const socketInt = setInterval(checkSocket, 5000);
 
     return () => {

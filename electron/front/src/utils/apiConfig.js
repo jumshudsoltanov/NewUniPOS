@@ -3,10 +3,12 @@ import { io } from "socket.io-client";
 
 const apiConfig = axios.create({
     baseURL: "http://localhost:55667/api",
+    timeout: 10000,
 });
 
 export const localApi = axios.create({
     baseURL: "http://localhost:55667/api",
+    timeout: 10000,
 });
 
 let socket = null;

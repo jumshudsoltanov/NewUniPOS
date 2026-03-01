@@ -107,14 +107,15 @@ const ConnectionScreen = ({ navigation }) => {
                         />
                     </View>
 
-                    <TouchableOpacity style={styles.connectBtn} onPress={() => handleConnect()}>
-                        <Text style={styles.connectBtnText}>Qoşul</Text>
-                    </TouchableOpacity>
+                    <View style={styles.buttonRow}>
+                        <TouchableOpacity style={styles.connectBtn} onPress={() => handleConnect()}>
+                            <Text style={styles.connectBtnText}>Qoşul</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.qrBtn} onPress={openScanner}>
-                        <MaterialCommunityIcons name="qrcode-scan" size={20} color="#053796" style={{ marginRight: 8 }} />
-                        <Text style={styles.qrBtnText}>QR Skaner</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity style={styles.qrBtn} onPress={openScanner}>
+                            <MaterialCommunityIcons name="qrcode-scan" size={24} color="#053796" />
+                        </TouchableOpacity>
+                    </View>
 
                     <Modal
                         visible={showScanner}
@@ -196,13 +197,24 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#333',
     },
-    connectBtn: {
+    buttonRow: {
+        flexDirection: 'row',
         width: '100%',
+        gap: 12,
+        marginTop: 10,
+    },
+    connectBtn: {
+        flex: 1,
         height: 56,
         backgroundColor: '#053796',
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
+        shadowColor: '#053796',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 3,
     },
     connectBtnText: {
         color: '#fff',
@@ -210,20 +222,19 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     qrBtn: {
-        width: '100%',
+        width: 65,
         height: 56,
         backgroundColor: '#fff',
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 12,
         borderWidth: 1.5,
         borderColor: '#053796',
-    },
-    qrBtnText: {
-        color: '#053796',
-        fontSize: 18,
-        fontWeight: '700',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     scannerContainer: {
         flex: 1,

@@ -110,33 +110,32 @@ const Tables = () => {
     if (currentTables.length > 0) {
       const w = window.innerWidth;
       let cols = 2; // xs
-      if (w >= 992) cols = 6; // lg
-      else if (w >= 768) cols = 4; // md
+      if (w >= 1200) cols = 5; // xl
+      else if (w >= 992) cols = 4; // lg
+      else if (w >= 768) cols = 3; // md
       else if (w >= 576) cols = 3; // sm
 
-      const containerW = containerRef.current ? containerRef.current.offsetWidth : w;
-      // We can approximate the column width. Container might have padding.
+      // Use a consistent width calculation
+      const containerW = containerRef.current?.offsetWidth || w;
       const colWidth = containerW / cols;
 
-      // First pass: Calculate row heights
-      const rowHeights = {};
-      currentTables.forEach((table, index) => {
-        const row = Math.floor(index / cols);
-        const isRect = table.shape_type === "rectangle";
-        const h = isRect ? 300 : 200; // 300 for rectangle, 200 for others (from CSS)
-        rowHeights[row] = Math.max(rowHeights[row] || 0, h);
-      });
-
       const layout = {};
-      currentTables.forEach((table, index) => {
-        const row = Math.floor(index / cols);
-        const col = index % cols;
-        const offsetX = Math.max(0, (colWidth - 200) / 2);
+      let currentRow = 0;
+      let currentY = 20;
+      let rowMaxH = 0;
 
-        let currentY = 20;
-        for (let r = 0; r < row; r++) {
-          currentY += (rowHeights[r] || 200) + 20; // Height + Gap
+      currentTables.forEach((table, index) => {
+        const col = index % cols;
+        const isRect = table.shape_type === "rectangle";
+        const h = isRect ? 300 : 200;
+
+        if (col === 0 && index !== 0) {
+          currentY += rowMaxH + 20;
+          rowMaxH = 0;
         }
+
+        rowMaxH = Math.max(rowMaxH, h);
+        const offsetX = Math.max(0, (colWidth - 200) / 2);
 
         layout[table.id] = {
           x: col * colWidth + offsetX,
@@ -145,6 +144,7 @@ const Tables = () => {
           h: undefined
         };
       });
+
       setGeneratedLayout(layout);
     }
   }, [currentTables, currentHallId]);
@@ -159,13 +159,18 @@ const Tables = () => {
   }, [tableGroups, currentHallId]);
 
   // Handle Socket.IO Real-Time Table Synchronization
+  const lastSyncRef = useRef(0);
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
     const handleTableUpdated = (data) => {
-      // Re-fetch the tables to reflect updated order states visually
+      // Throttle getTableGroups to once every 2 seconds to prevent re-render flooding
+      const now = Date.now();
+      if (now - lastSyncRef.current < 2000) return;
+
       if (loginedProfileData?.data?.profile?.id) {
+        lastSyncRef.current = now;
         dispatch(getTableGroups(loginedProfileData.data.profile.id));
       }
     };
@@ -184,7 +189,8 @@ const Tables = () => {
       const { orders } = table || {};
 
       const hasOrders = orders && orders.length > 0;
-      const isMyTable = hasOrders && loginedWaiter?.data?.id && (orders[0]?.waiter_id == loginedWaiter.data.id || orders[0]?.waiter?.id == loginedWaiter.data.id);
+      const waiterId = orders?.[0]?.waiter_id || orders?.[0]?.waiter?.id;
+      const isMyTable = hasOrders && loginedWaiter?.data?.id && waiterId == loginedWaiter.data.id;
       const isOtherTable = hasOrders && !isMyTable;
 
       if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 1 && isOtherTable) {
@@ -247,7 +253,7 @@ const Tables = () => {
         setShowModal(true);
       }
     },
-    [id, dispatch, currentHallId, loginedProfileData, navigate, tableGroups, currentHallData, isTableEditMode],
+    [id, dispatch, currentHallId, loginedProfileData, navigate, tableGroups, currentHallData, isTableEditMode, loginedWaiter],
   );
 
   // Drag Handlers

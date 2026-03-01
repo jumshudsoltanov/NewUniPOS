@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "UniPos Mobile POS",
+    "name": "UniPOS Mobile POS",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,11 +23,10 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/unipos_logo.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/unipos_logo.png"
       },
       "package": "com.unipos.mobile",
+      "usesCleartextTraffic": true,
       "statusBar": {
         "hidden": false
       },

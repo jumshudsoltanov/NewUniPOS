@@ -5,9 +5,15 @@ import { useParams } from "react-router-dom";
 const Table = React.memo(({ table, onTableClick, loginedWaiter, customStyle }) => {
   const { name, status, shape_type, orders } = table || {};
 
-  const hasOrders = orders && orders.length > 0;
-  const isMyTable = hasOrders && loginedWaiter?.data?.id && (orders[0]?.waiter_id == loginedWaiter.data.id || orders[0]?.waiter?.id == loginedWaiter.data.id);
-  const isOtherTable = hasOrders && !isMyTable;
+  const hasOrders = React.useMemo(() => orders && orders.length > 0, [orders]);
+
+  const isMyTable = React.useMemo(() => {
+    if (!hasOrders || !loginedWaiter?.data?.id) return false;
+    const waiterId = orders[0]?.waiter_id || orders[0]?.waiter?.id;
+    return waiterId == loginedWaiter.data.id;
+  }, [hasOrders, orders, loginedWaiter]);
+
+  const isOtherTable = React.useMemo(() => hasOrders && !isMyTable, [hasOrders, isMyTable]);
 
   const renderSeats = () => {
     if (shape_type === "rectangle") {

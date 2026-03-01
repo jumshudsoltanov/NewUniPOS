@@ -126,13 +126,14 @@ const Check = () => {
   });
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  const goTables = async () => {
+  const goTables = () => {
     if (location.state?.from === "/checks") {
       navigate("/checks");
     } else {
-      await dispatch(
-        getTableGroups(loginedProfileData?.data?.profile?.id),
-      ).unwrap();
+      const profileId = loginedProfileData?.data?.profile?.id;
+      if (profileId) {
+        dispatch(getTableGroups(profileId));
+      }
       navigate("/tables");
     }
   };

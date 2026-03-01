@@ -18,7 +18,7 @@ import BrandsModal from "../BrandsModal/BrandsModal";
 
 const PIN_LENGTH = 4;
 
-const PinDot = ({ filled, isError }) => (
+const PinDot = React.memo(({ filled, isError }) => (
   <div
     className={`pin-dot ${filled ? "filled" : ""} ${isError ? "error" : ""}`}
   >
@@ -51,9 +51,9 @@ const PinDot = ({ filled, isError }) => (
       </svg>
     )}
   </div>
-);
+));
 
-const NumberButton = ({ value, onClick, children, variant = "default" }) => (
+const NumberButton = React.memo(({ value, onClick, children, variant = "default" }) => (
   <button
     className={`pin-btn pin-btn-${variant}`}
     onClick={() => onClick(value)}
@@ -61,7 +61,7 @@ const NumberButton = ({ value, onClick, children, variant = "default" }) => (
   >
     {children || value}
   </button>
-);
+));
 
 const BackspaceIcon = () => (
   <svg
@@ -282,14 +282,16 @@ const Pin = () => {
       const waiterResult = await dispatch(getWaiter(submittedPin)).unwrap();
 
       if (waiterResult.message === "success") {
-        if (loginedProfileData?.data?.profile?.id) {
-          await Promise.all([
-            dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap(),
-            dispatch(menuWithCategories(loginedProfileData.data.profile.id)).unwrap(),
-            dispatch(menuWithGeneralCategories(loginedProfileData.data.profile.id)).unwrap()
-          ]);
-        }
+        // Immediate navigation to eliminate perceived lag
         navigate("/tables");
+
+        // Prefetch data in the background without blocking the UI transition
+        if (loginedProfileData?.data?.profile?.id) {
+          const profileId = loginedProfileData.data.profile.id;
+          dispatch(getTableGroups(profileId));
+          dispatch(menuWithCategories(profileId));
+          dispatch(menuWithGeneralCategories(profileId));
+        }
       } else {
         setIsError(true);
         setTimeout(() => {
@@ -308,24 +310,30 @@ const Pin = () => {
 
   const handleNumberClick = useCallback(
     (num) => {
-      if (pin.length < PIN_LENGTH) {
-        const newPin = pin + num;
-        setPin(newPin);
-        setIsError(false);
-        if (newPin.length === PIN_LENGTH) {
-          handlePinSubmit(newPin);
+      setPin((prev) => {
+        if (prev.length < PIN_LENGTH) {
+          const next = prev + num;
+          setIsError(false);
+          if (next.length === PIN_LENGTH) {
+            handlePinSubmit(next);
+          }
+          return next;
         }
-      }
+        return prev;
+      });
     },
-    [pin],
+    [dispatch, navigate, loginedProfileData],
   );
 
   const handleBackspace = useCallback(() => {
-    if (pin.length > 0) {
-      setPin(pin.slice(0, -1));
-      setIsError(false);
-    }
-  }, [pin]);
+    setPin((prev) => {
+      if (prev.length > 0) {
+        setIsError(false);
+        return prev.slice(0, -1);
+      }
+      return prev;
+    });
+  }, []);
 
   const handleClear = useCallback(() => {
     setPin("");
