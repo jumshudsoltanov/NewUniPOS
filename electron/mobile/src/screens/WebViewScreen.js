@@ -18,7 +18,7 @@ const WebViewScreen = ({ navigation }) => {
             const ip = await getData('master_ip');
             if (ip) {
                 setMasterIp(ip);
-                setUrl(`http://mobile.unipos.tech/?master_ip=${ip}#/login?master_ip=${ip}`);
+                setUrl(`http://mobile.unipos.tech/?master_ip=${ip}&t=${Date.now()}#/login?master_ip=${ip}`);
             } else {
                 goToConnection();
             }
@@ -73,15 +73,17 @@ const WebViewScreen = ({ navigation }) => {
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#000' }}>
-            <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
-            <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
+            <StatusBar barStyle="dark-content" backgroundColor="#F3F4F6" />
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F4F6' }} edges={['top', 'bottom']}>
                 <WebView
                     ref={webViewRef}
                     source={{ uri: url }}
-                    style={{ flex: 1, backgroundColor: '#fff' }}
+                    style={{ flex: 1, backgroundColor: '#F3F4F6' }}
                     javaScriptEnabled={true}
                     domStorageEnabled={true}
+                    cacheEnabled={false}
+                    cacheMode="LOAD_NO_CACHE"
                     allowsInlineMediaPlayback={true}
                     startInLoadingState={true}
                     scalesPageToFit={false}
@@ -93,33 +95,23 @@ const WebViewScreen = ({ navigation }) => {
                     mixedContentMode="always"
                     allowsBackForwardNavigationGestures={false}
                     originWhitelist={['*']}
-                    injectedJavaScriptBeforeContentLoaded={masterIp ? `
-                        (function() {
-                            try {
-                                window.localStorage.setItem('master_ip', '${masterIp}');
-                                console.log('Master IP injected: ${masterIp}');
-                            } catch (e) {
-                                console.error('Injection failed', e);
-                            }
-                        })();
-                        true;
-                    ` : 'true;'}
                     onError={handleError}
-                    androidLayerType="hardware"
+                    onHttpError={(e) => console.log('HTTP Error:', e.nativeEvent)}
+                    androidLayerType="software"
                     injectedJavaScript={`
                         (function() {
                             var meta = document.querySelector('meta[name="viewport"]');
                             if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); document.head.appendChild(meta); }
-                            meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no');
+                            meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover');
                             var style = document.createElement('style');
-                            style.textContent = 'input, select, textarea { font-size: 16px !important; } body, html { -webkit-text-size-adjust: 100%; background-color: #fff; }';
+                            style.textContent = 'input, select, textarea { font-size: 16px !important; } body, html { -webkit-text-size-adjust: 100%; background-color: #F3F4F6 !important; }';
                             document.head.appendChild(style);
                             document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
                         })();
                         true;
                     `}
                     renderLoading={() => (
-                        <View style={[styles.center, { backgroundColor: '#fff' }]}>
+                        <View style={[styles.center, { backgroundColor: '#F3F4F6' }]}>
                             <ActivityIndicator size="large" color="#053796" />
                         </View>
                     )}

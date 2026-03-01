@@ -17,7 +17,7 @@ import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import StatusModal from "../StatusModal/StatusModal";
 import { useLocation, useNavigate } from "react-router-dom"; // Moved here
 
-const Header = ({ showBack, backPath, onBack }) => {
+const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const {
     tableGroups,
@@ -342,7 +342,7 @@ const Header = ({ showBack, backPath, onBack }) => {
                   </svg>
                 </button>
               )}
-              {isChecksPage ? "Çeklər" : loginedWaiter?.data?.name}
+              {isChecksPage ? "Çeklər" : (!showBack && !hideWaiterName && loginedWaiter?.data?.name)}
             </div>
             <div className="d-flex align-items-center gap-2">
               <Link className="header-icon-btn" to="/pin">

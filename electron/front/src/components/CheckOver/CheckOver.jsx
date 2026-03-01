@@ -279,7 +279,7 @@ const CheckOver = () => {
 
     return (
         <div className="check-over-page">
-            <Header showBack={true} onBack={() => navigate(-1)} />
+            <Header showBack={true} onBack={() => navigate(-1)} hideWaiterName={true} />
             <Container fluid className="check-over-content p-0">
                 <Row className="g-0 h-100">
                     <Col lg={5} md={6} className="calculator-section p-4 d-none d-md-flex flex-column">

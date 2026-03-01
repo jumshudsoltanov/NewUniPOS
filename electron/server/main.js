@@ -1,4 +1,4 @@
-const { BrowserWindow, app, ipcMain, shell, screen, Menu } = require("electron");
+const { BrowserWindow, app, ipcMain, shell, screen, Menu, globalShortcut } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
 Menu.setApplicationMenu(null);
@@ -652,6 +652,16 @@ try {
 
 app.whenReady().then(() => {
   createWindow();
+
+  // Konsolu acmaq ucun qisa yol (Ctrl+Shift+C ve Ctrl+Shift+N)
+  const toggleDevTools = () => {
+    if (mainWindow) mainWindow.webContents.toggleDevTools();
+    if (customerWindow) customerWindow.webContents.toggleDevTools();
+    if (kitchenWindow) kitchenWindow.webContents.toggleDevTools();
+  };
+
+  globalShortcut.register('CommandOrControl+Shift+C+N', toggleDevTools);
+  globalShortcut.register('CommandOrControl+Shift+N+C', toggleDevTools);
 
   // --- Auto-Update Initialization ---
   if (!isDev) {
