@@ -1,5 +1,7 @@
-const { BrowserWindow, app, ipcMain, shell, screen } = require("electron");
+const { BrowserWindow, app, ipcMain, shell, screen, Menu } = require("electron");
 const { autoUpdater } = require("electron-updater");
+
+Menu.setApplicationMenu(null);
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
@@ -9,6 +11,22 @@ const isDev = !app.isPackaged;
 let mainWindow = null;
 let customerWindow = null;
 let kitchenWindow = null;
+
+// --- Single Instance Lock ---
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (event, commandLine, workingDirectory) => {
+    // If someone tries to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+// ----------------------------
 
 function createWindow() {
   const appPath = app.getAppPath();
@@ -86,7 +104,7 @@ function createWindow() {
 
   async function checkKitchenDisplayAutoStart() {
     try {
-      const LoginModel = require("../backend/model/LoginModel");
+      const LoginModel = require(path.join(__dirname, "..", "backend", "model", "LoginModel"));
       const profile = await LoginModel.findOne({ order: [['id', 'DESC']] });
 
       if (profile && profile.is_kitchen_display_active === 1 && profile.kitchen_display_screen_id) {
@@ -100,7 +118,7 @@ function createWindow() {
 
   async function checkCustomerDisplayAutoStart() {
     try {
-      const LoginModel = require("../backend/model/LoginModel");
+      const LoginModel = require(path.join(__dirname, "..", "backend", "model", "LoginModel"));
       const profile = await LoginModel.findOne({ order: [['id', 'DESC']] });
 
       if (profile && profile.is_customer_display_active === 1 && profile.customer_display_screen_id) {
@@ -277,6 +295,7 @@ ipcMain.handle("toggle-kitchen-display", (event, { active, screenId }) => {
     width: targetDisplay.bounds.width,
     height: targetDisplay.bounds.height,
     fullscreen: true,
+    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -307,6 +326,7 @@ function createKitchenWindow(screenId) {
     width: targetDisplay.bounds.width,
     height: targetDisplay.bounds.height,
     fullscreen: true,
+    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -442,7 +462,7 @@ ipcMain.handle("get-disk-info", async () => {
 
 ipcMain.handle("get-sync-status", async () => {
   try {
-    const SyncService = require("../backend/services/SyncService");
+    const SyncService = require(path.join(__dirname, "..", "backend", "services", "SyncService"));
     return await SyncService.getSyncStatus();
   } catch (error) {
     console.error("IPC get-sync-status error:", error);
@@ -635,7 +655,9 @@ app.whenReady().then(() => {
 
   // --- Auto-Update Initialization ---
   if (!isDev) {
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdatesAndNotify().catch(err => {
+      console.error("[AUTO-UPDATE] Yenilənmə yoxlanışı zamanı xəta (Böyük ehtimalla GitHub-da release yoxdur):", err.message);
+    });
   }
 
   autoUpdater.on("checking-for-update", () => {
@@ -681,7 +703,13 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  // On most platforms, we want to quit the app completely when windows are closed
+  app.quit();
+});
+
+// Extra safety: ensure all processes are terminated
+app.on("before-quit", () => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy();
+  if (customerWindow && !customerWindow.isDestroyed()) customerWindow.destroy();
+  if (kitchenWindow && !kitchenWindow.isDestroyed()) kitchenWindow.destroy();
 });

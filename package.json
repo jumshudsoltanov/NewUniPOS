@@ -1,7 +1,8 @@
 {
-  "name": "UniPOS Desktop Application",
-  "version": "1.0.0",
+  "name": "unipos-desktop-app",
+  "version": "2.0.4",
   "description": "UniPOS Desktop Application",
+  "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
   "repository": {
     "type": "git",
@@ -19,7 +20,6 @@
   "build": {
     "appId": "com.pos.redesing",
     "productName": "UniPOS Desktop Application",
-    "asar": true,
     "publish": [
       {
         "provider": "github",
@@ -27,13 +27,27 @@
         "repo": "NewUniPOS"
       }
     ],
+    "files": [
+      "electron/server/**/*",
+      "electron/backend/**/*",
+      "electron/front/dist/**/*",
+      "electron/static/**/*",
+      "package.json",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!electron/front/src/**/*",
+      "!electron/front/node_modules/**/*",
+      "!electron/mobile/**/*"
+    ],
     "extraResources": [
       ".env"
     ],
-    "files": [
-      "electron/**/*",
-      "package.json",
-      "node_modules/**/*"
+    "asar": true,
+    "asarUnpack": [
+      "**/*.{node,dll}",
+      "node_modules/electron-updater/**/*"
     ],
     "win": {
       "target": "nsis",
