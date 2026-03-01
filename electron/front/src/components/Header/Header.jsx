@@ -310,7 +310,7 @@ const Header = ({ showBack, backPath, onBack }) => {
             className="p-0 d-md-none d-flex align-items-center justify-content-between px-3 h-100"
           >
             <div className="mobile-header-title d-flex align-items-center gap-2">
-              {showBack && (
+              {(showBack || isChecksPage) && (
                 <button
                   className="mobile-back-btn"
                   style={{ border: "none", background: "none", color: "inherit", padding: "0" }}
@@ -319,6 +319,8 @@ const Header = ({ showBack, backPath, onBack }) => {
                       onBack();
                     } else if (backPath) {
                       navigate(backPath);
+                    } else if (isChecksPage) {
+                      navigate("/tables");
                     } else {
                       navigate(-1);
                     }
@@ -340,7 +342,7 @@ const Header = ({ showBack, backPath, onBack }) => {
                   </svg>
                 </button>
               )}
-              {loginedWaiter?.data?.name}
+              {isChecksPage ? "Çeklər" : loginedWaiter?.data?.name}
             </div>
             <div className="d-flex align-items-center gap-2">
               <Link className="header-icon-btn" to="/pin">

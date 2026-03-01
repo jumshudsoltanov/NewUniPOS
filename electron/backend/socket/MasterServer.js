@@ -102,8 +102,9 @@ const initMasterServer = (server, isBroadcastingActive = true) => {
             methods: ["GET", "POST"]
         },
         transports: ['websocket', 'polling'], // Alignment with Slave side
-        pingTimeout: 60000,
-        pingInterval: 25000
+        pingTimeout: 120000,
+        pingInterval: 25000,
+        maxHttpBufferSize: 1e8 // 100 MB payload limit for large data
     });
 
     console.log("✅ Master Socket.io Server Başladı");

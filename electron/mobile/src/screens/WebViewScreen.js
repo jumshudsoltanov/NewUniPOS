@@ -18,8 +18,6 @@ const WebViewScreen = ({ navigation }) => {
             const ip = await getData('master_ip');
             if (ip) {
                 setMasterIp(ip);
-                // Point to the live mobile domain but inject the local Master IP as a parameter
-                // Use HTTP to avoid "Mixed Content" issues when calling the local Master POS IP
                 setUrl(`http://mobile.unipos.tech/?master_ip=${ip}#/login?master_ip=${ip}`);
             } else {
                 goToConnection();
@@ -81,7 +79,7 @@ const WebViewScreen = ({ navigation }) => {
                 <WebView
                     ref={webViewRef}
                     source={{ uri: url }}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, backgroundColor: '#fff' }}
                     javaScriptEnabled={true}
                     domStorageEnabled={true}
                     allowsInlineMediaPlayback={true}
@@ -99,7 +97,6 @@ const WebViewScreen = ({ navigation }) => {
                         (function() {
                             try {
                                 window.localStorage.setItem('master_ip', '${masterIp}');
-                                window.localStorage.setItem('profile', JSON.stringify({id: '${masterIp}'})); // Fallback for initApp
                                 console.log('Master IP injected: ${masterIp}');
                             } catch (e) {
                                 console.error('Injection failed', e);
@@ -108,43 +105,21 @@ const WebViewScreen = ({ navigation }) => {
                         true;
                     ` : 'true;'}
                     onError={handleError}
-                    onMessage={(event) => {
-                        console.log('[WebView]', event.nativeEvent.data);
-                    }}
+                    androidLayerType="hardware"
                     injectedJavaScript={`
                         (function() {
-                            // Forward console to React Native
-                            var origLog = console.log;
-                            var origWarn = console.warn;
-                            var origError = console.error;
-                            function send(type, args) {
-                                try {
-                                    window.ReactNativeWebView.postMessage(JSON.stringify({type: type, data: Array.from(args).map(function(a) { return typeof a === 'object' ? JSON.stringify(a) : String(a); }).join(' ')}));
-                                } catch(e) {}
-                            }
-                            console.log = function() { send('log', arguments); origLog.apply(console, arguments); };
-                            console.warn = function() { send('warn', arguments); origWarn.apply(console, arguments); };
-                            console.error = function() { send('error', arguments); origError.apply(console, arguments); };
-                            window.addEventListener('error', function(e) { send('error', ['UNCAUGHT: ' + e.message + ' at ' + e.filename + ':' + e.lineno]); });
-                            window.addEventListener('unhandledrejection', function(e) { send('error', ['UNHANDLED PROMISE: ' + (e.reason ? (e.reason.message || JSON.stringify(e.reason)) : 'unknown')]); });
-
-                            // Viewport
                             var meta = document.querySelector('meta[name="viewport"]');
                             if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); document.head.appendChild(meta); }
                             meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no');
-
-                            // Prevent iOS zoom on inputs
                             var style = document.createElement('style');
-                            style.textContent = 'input, select, textarea { font-size: 16px !important; } body, html { -webkit-text-size-adjust: 100%; }';
+                            style.textContent = 'input, select, textarea { font-size: 16px !important; } body, html { -webkit-text-size-adjust: 100%; background-color: #fff; }';
                             document.head.appendChild(style);
-
-                            // Prevent pinch zoom
                             document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
                         })();
                         true;
                     `}
                     renderLoading={() => (
-                        <View style={styles.center}>
+                        <View style={[styles.center, { backgroundColor: '#fff' }]}>
                             <ActivityIndicator size="large" color="#053796" />
                         </View>
                     )}

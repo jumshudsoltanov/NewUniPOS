@@ -52,7 +52,18 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
 
             if (!disableSocket) {
                 socket = io(baseURL, {
-                    transports: ['websocket', 'polling']
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionAttempts: Infinity,
+                    reconnectionDelay: 1000,
+                    reconnectionDelayMax: 5000,
+                    timeout: 20000,
+                    autoConnect: true,
+                    forceNew: true
+                });
+
+                socket.on("connect_error", (err) => {
+                    console.error("[CONNECTION] Mobile Socket Connect Error:", err.message);
                 });
             }
             return { masterIp: effectiveIp, socket };

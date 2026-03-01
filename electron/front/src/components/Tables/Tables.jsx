@@ -168,9 +168,9 @@ const Tables = () => {
     if (!socket) return;
 
     const handleTableUpdated = (data) => {
-      // Throttle getTableGroups to once every 2 seconds to prevent re-render flooding
+      // Throttle getTableGroups to once every 500ms to allow faster updates
       const now = Date.now();
-      if (now - lastSyncRef.current < 2000) return;
+      if (now - lastSyncRef.current < 500) return;
 
       if (loginedProfileData?.data?.profile?.id) {
         lastSyncRef.current = now;

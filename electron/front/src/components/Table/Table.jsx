@@ -2,7 +2,7 @@ import React from "react";
 import "./Table.css";
 import { useParams } from "react-router-dom";
 
-const Table = React.memo(({ table, onTableClick, loginedWaiter, customStyle }) => {
+const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
   const { name, status, shape_type, orders } = table || {};
 
   const hasOrders = React.useMemo(() => orders && orders.length > 0, [orders]);
@@ -133,6 +133,15 @@ const Table = React.memo(({ table, onTableClick, loginedWaiter, customStyle }) =
       </div>
     </>
   );
-});
+};
 
-export default Table;
+// Performans optimizasiyası: Yalnız masanın öz məlumatı və ya loginedWaiter dəyişəndə render et
+const areEqual = (prevProps, nextProps) => {
+  return (
+    prevProps.table === nextProps.table &&
+    prevProps.loginedWaiter === nextProps.loginedWaiter &&
+    prevProps.customStyle === nextProps.customStyle
+  );
+};
+
+export default React.memo(Table, areEqual);
