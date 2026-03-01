@@ -355,7 +355,13 @@ const CheckOver = () => {
                                                     className={`payment-method-item ${isSelected ? "active" : ""} ${method.name.toLowerCase().includes("kart") ? "card-method" : ""}`}
                                                     onClick={() => handleMethodSelect(method)}
                                                 >
-                                                    <span className="method-name">{method.name}</span>
+                                                    <div className="d-flex align-items-center gap-3">
+                                                        <div className={`custom-selection-indicator ${isSelected ? 'selected' : ''}`}>
+                                                            {isSelected && <i className="bi bi-check-lg"></i>}
+                                                        </div>
+                                                        <span className="method-name">{method.name}</span>
+                                                    </div>
+
                                                     {isSelected && (
                                                         <div className="method-right-content">
                                                             {isSplitActive ? (
@@ -400,7 +406,7 @@ const CheckOver = () => {
                                     />
                                 </div>
 
-                                <div className="action-buttons-section mt-auto d-flex justify-content-between align-items-center">
+                                <div className="action-buttons-section mt-auto">
                                     <button
                                         className="unpaid-mode-btn"
                                         onClick={() => {
@@ -438,20 +444,19 @@ const CheckOver = () => {
                                 <div className="unpaid-reasons gap-1 d-flex flex-column">
                                     {tagsListData.map((tag, index) => {
                                         const reasonName = tag.name || tag.text || `Reason ${index + 1}`;
+                                        const isSelected = unpaidReason === reasonName;
                                         return (
                                             <div
                                                 key={tag.id || index}
-                                                className={`unpaid-reason-item d-flex justify-content-between align-items-center py-3 ${unpaidReason === reasonName ? "active" : ""}`}
+                                                className={`unpaid-reason-item d-flex justify-content-between align-items-center py-3 ${isSelected ? "active" : ""}`}
                                                 onClick={() => setUnpaidReason(reasonName)}
                                             >
-                                                <span className="reason-label">{reasonName}</span>
-                                                <Form.Check
-                                                    type="radio"
-                                                    name="unpaidReason"
-                                                    id={`reason-${tag.id || index}`}
-                                                    checked={unpaidReason === reasonName}
-                                                    onChange={() => setUnpaidReason(reasonName)}
-                                                />
+                                                <div className="d-flex align-items-center gap-3">
+                                                    <div className={`custom-selection-indicator ${isSelected ? 'selected' : ''}`}>
+                                                        {isSelected && <i className="bi bi-check-lg"></i>}
+                                                    </div>
+                                                    <span className="reason-label">{reasonName}</span>
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -482,7 +487,7 @@ const CheckOver = () => {
                                     />
                                 </div>
 
-                                <div className="action-buttons-section mt-auto d-flex justify-content-between align-items-center">
+                                <div className="action-buttons-section mt-auto">
                                     <button className="back-to-payment-btn" onClick={() => setViewMode("PAYMENT")}>
                                         Ödənişə qayıt
                                     </button>

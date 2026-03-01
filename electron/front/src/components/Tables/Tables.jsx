@@ -36,7 +36,7 @@ const Tables = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id } = useParams();
-  const [currentHallData, setCurrentHallData] = React.useState(null);
+
 
   // Edit Mode & Ordering States (Drag indices kept local as they are transient UI state)
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -149,14 +149,17 @@ const Tables = () => {
     }
   }, [currentTables, currentHallId]);
 
-  React.useEffect(() => {
-    if (tableGroups?.data && currentHallId) {
-      const selectedHall = tableGroups.data.find(hall => hall.id === currentHallId);
-      setCurrentHallData(selectedHall);
-    } else if (tableGroups?.data) {
-      setCurrentHallData(tableGroups.data[0]);
-    }
+  const currentHallData = useMemo(() => {
+    if (!tableGroups?.data) return null;
+    return tableGroups.data.find(hall => hall.id === currentHallId) || tableGroups.data[0];
   }, [tableGroups, currentHallId]);
+
+  // Debug logging for mobile white-screen investigation
+  useEffect(() => {
+    if (!tableGroups?.data) {
+      console.warn("[TABLES] No tableGroups data available yet.");
+    }
+  }, [tableGroups]);
 
   // Handle Socket.IO Real-Time Table Synchronization
   const lastSyncRef = useRef(0);

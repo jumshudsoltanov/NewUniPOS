@@ -309,7 +309,37 @@ const Header = ({ showBack, backPath, onBack }) => {
             xs={12}
             className="p-0 d-md-none d-flex align-items-center justify-content-between px-3 h-100"
           >
-            <div className="mobile-header-title">
+            <div className="mobile-header-title d-flex align-items-center gap-2">
+              {showBack && (
+                <button
+                  className="mobile-back-btn"
+                  style={{ border: "none", background: "none", color: "inherit", padding: "0" }}
+                  onClick={() => {
+                    if (onBack) {
+                      onBack();
+                    } else if (backPath) {
+                      navigate(backPath);
+                    } else {
+                      navigate(-1);
+                    }
+                  }}
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path
+                      d="M19 12H5M12 19L5 12L12 5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
               {loginedWaiter?.data?.name}
             </div>
             <div className="d-flex align-items-center gap-2">
@@ -567,41 +597,43 @@ const Header = ({ showBack, backPath, onBack }) => {
         </Row>
       </Container>
 
-      {/* MOBILE FOOTER (Visible only on mobile) */}
-      <div className="mobile-footer d-flex d-md-none">
-        {tableGroups &&
-          tableGroups?.data?.map((hall, index) => (
+      {/* MOBILE FOOTER (Visible only on mobile, hidden if showBack is active to prevent overlap) */}
+      {!showBack && (
+        <div className="mobile-footer d-flex d-md-none">
+          {tableGroups &&
+            tableGroups?.data?.map((hall, index) => (
+              <button
+                key={index}
+                className={`mobile-tab-btn ${activeHall === hall.id ? "active" : ""}`}
+                onClick={() => setActiveHall(hall.id)}
+              >
+                {hall.name}
+              </button>
+            ))}
+          {Number(loginedWaiter?.data?.can_create_order) === 1 && (
             <button
-              key={index}
-              className={`mobile-tab-btn ${activeHall === hall.id ? "active" : ""}`}
-              onClick={() => setActiveHall(hall.id)}
+              className="mobile-add-btn"
+              onClick={() => setOnShowSalesTypeModal(true)}
             >
-              {hall.name}
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 5V19M5 12H19"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
             </button>
-          ))}
-        {Number(loginedWaiter?.data?.can_create_order) === 1 && (
-          <button
-            className="mobile-add-btn"
-            onClick={() => setOnShowSalesTypeModal(true)}
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 5V19M5 12H19"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <SalesTypesModal
         show={onShowSalesTypeModal}

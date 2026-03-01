@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
@@ -24,9 +24,6 @@ const CheckMain = ({ orders }) => {
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-
-
-
 
   const allItems = useMemo(() => {
     const groupedMap = new Map();
@@ -127,7 +124,6 @@ const CheckMain = ({ orders }) => {
     setEditItemModal(true);
   };
 
-
   let fallbackProfileData = null;
   try {
     const authResultStr = localStorage.getItem("authResult");
@@ -155,9 +151,6 @@ const CheckMain = ({ orders }) => {
       : `http://46.224.8.157:35627/${cloudBgRaw}`;
   }
 
-
-  console.log(loginedProfileData)
-
   return (
     <>
       <div
@@ -171,14 +164,12 @@ const CheckMain = ({ orders }) => {
           backgroundRepeat: "no-repeat"
         }}
       >
-        {/* Header Row */}
         <div className="order-table-header">
           <div className="header-col col-name-header">Məhsul</div>
           <div className="header-col col-qty-header">Say</div>
           <div className="header-col col-total-header">Cəm</div>
         </div>
 
-        {/* Scrollable List */}
         <div className="order-list-container">
           {allItems.length > 0 &&
             allItems.map((item, index) => {
@@ -188,11 +179,8 @@ const CheckMain = ({ orders }) => {
               const currentPrice = Number(item.price || 0);
               const totalAmount = (currentPrice * Number(item.count)).toFixed(2);
 
-              // Determine if discounted
               const isDiscounted = item.discount_value > 0 && !isNoDiscount;
               const isGift = item.is_gift === 1;
-
-              // Visual styles for deleted items
               const rowStyle = item.isDeleted ? { textDecoration: 'line-through', color: 'red', opacity: 0.7 } : {};
 
               return (
@@ -202,7 +190,6 @@ const CheckMain = ({ orders }) => {
                   key={`${item.product_id}-${item.is_gift}-${index}`}
                   style={rowStyle}
                 >
-                  {/* Product Name Column */}
                   <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="d-flex align-items-center flex-wrap gap-2">
                       <span className="fw-bold">{item.name}</span>
@@ -211,7 +198,6 @@ const CheckMain = ({ orders }) => {
                       {item.partialDelete > 0 && !item.isDeleted && <span className="badge bg-warning text-dark">-{item.partialDelete}</span>}
                     </div>
 
-                    {/* Sub-details: Discount & Printer */}
                     <div className="d-flex flex-column gap-1 mt-1">
                       {isDiscounted && !isGift && (
                         <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
@@ -228,7 +214,6 @@ const CheckMain = ({ orders }) => {
                     </div>
                   </div>
 
-                  {/* Quantity & Price Column */}
                   <div className="col-qty d-flex justify-content-center align-items-center">
                     <div className="d-flex align-items-center gap-1">
                       <span className="fw-bold">{item.count}</span>
@@ -250,7 +235,6 @@ const CheckMain = ({ orders }) => {
                     </div>
                   </div>
 
-                  {/* Total Column */}
                   <div className="col-total d-flex align-items-center justify-content-end fw-bold">
                     {totalAmount} ₼
                   </div>
@@ -276,8 +260,7 @@ const CheckMain = ({ orders }) => {
             setOpenDeleteProductModal(true);
           }}
         />
-      )
-      }
+      )}
 
       {/* Product Delete Modal */}
       <CheckDeleteModal
@@ -287,7 +270,6 @@ const CheckMain = ({ orders }) => {
           setOpenDeleteProductModal(false);
           const product = productToDelete;
 
-          // Enrich with category/printer info from menu if missing
           const pId = product.product_id || product.id;
           const productInfo = menu.find(m => m.id === pId);
           const finalCategoryId = product.category_id || productInfo?.category_id;
@@ -340,4 +322,5 @@ const CheckMain = ({ orders }) => {
   );
 };
 
-export default CheckMain;
+const CheckMainWithMemo = React.memo(CheckMain);
+export default CheckMainWithMemo;

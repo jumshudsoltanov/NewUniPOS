@@ -40,20 +40,17 @@ const Menu = ({
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [pendingProduct, setPendingProduct] = useState(null);
 
-  // Fetch Data
+  // Fetch Data - Only if not already present
   useEffect(() => {
     const getMenu = async () => {
-      if (loginedProfileData?.data?.profile?.id) {
-        await dispatch(
-          menuWithGeneralCategories(loginedProfileData?.data?.profile?.id),
-        ).unwrap();
-        await dispatch(
-          menuWithCategories(loginedProfileData?.data?.profile?.id),
-        ).unwrap();
+      const hasData = (menuDataWithGeneralCategories?.data?.length > 0 || menuDataWithCategories?.data?.length > 0);
+      if (loginedProfileData?.data?.profile?.id && !hasData) {
+        dispatch(menuWithGeneralCategories(loginedProfileData?.data?.profile?.id));
+        dispatch(menuWithCategories(loginedProfileData?.data?.profile?.id));
       }
     };
     getMenu();
-  }, [dispatch, loginedProfileData]);
+  }, [dispatch, loginedProfileData, menuDataWithGeneralCategories?.data?.length, menuDataWithCategories?.data?.length]);
 
   // Determine if we have General Categories
   const hasGeneralCategories =
@@ -423,4 +420,5 @@ const Menu = ({
   );
 };
 
-export default Menu;
+const MenuWithMemo = React.memo(Menu);
+export default MenuWithMemo;

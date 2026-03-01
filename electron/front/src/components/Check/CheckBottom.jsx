@@ -68,11 +68,6 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       });
     }
 
-    // 3. Sent products (this might redundant with orders?.orders_items, but checking local state just in case)
-    // In this app, sentProducts often acts as a transition state.
-    // However, if we aggregate both, we might double-count. 
-    // Usually, the POS truth is orders.orders_items + local products.
-
     socket.emit("broadcast_customer_display", {
       items: allItems,
       discount: orders?.discount || 0,
@@ -114,8 +109,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     navigate(`/closecheck/${id}`)
   }
 
-  // Caclculate total
-
+  // Calculate total
   const calcTotal = useMemo(() => {
     let total = 0;
     let totalForDiscount = 0;
@@ -130,15 +124,12 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
         total += itemTotal;
 
-        // Check for no_discount flag
-        // Lookup product in menu to get full details (including backend flags)
         const productInfo = menu?.find(m => m.id === (item.product_id || item.id));
         const isNoDiscount = (item.no_discount === 1 || productInfo?.no_discount === 1);
         if (!isNoDiscount) {
           totalForDiscount += itemTotal;
         }
 
-        // Check for no_service_fee flag
         const isNoService = (item.no_service_fee === 1 || productInfo?.no_service_fee === 1);
         if (!isNoService) {
           totalForService += itemTotal;
@@ -150,7 +141,6 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     addItems(products);
     addItems(sentProducts);
 
-    // Subtract Pending Deletions
     if (pendingDeletions && pendingDeletions.length > 0) {
       pendingDeletions.forEach((del) => {
         const delQty = del.type === 'partial' ? del.qty : del.originalQty;
@@ -173,19 +163,16 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       });
     }
 
-    // Ensure totals don't go below zero
     if (total < 0) total = 0;
     if (totalForDiscount < 0) totalForDiscount = 0;
     if (totalForService < 0) totalForService = 0;
 
-    // Calculate Dynamic Discount
     const discountValue = Number(orders?.discount_value || 0);
     const discountType = orders?.discount_type || "percent";
     let discountAmount = 0;
 
     if (discountValue > 0) {
       if (discountType === "percent") {
-        // Apply percent discount only to eligible items
         discountAmount = (totalForDiscount * discountValue) / 100;
       } else {
         discountAmount = discountValue;
@@ -195,11 +182,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     }
 
     const depositAmount = Number(orders?.deposit || 0);
-
-    // Calculate base amount (item total after discount)
     const subtotalAfterDiscount = total - discountAmount;
 
-    // Calculate Service Fee (Always on items)
     let serviceValue = 0;
     let serviceType = orders?.service_type || "percent";
 
@@ -221,22 +205,17 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       serviceAmount = Number(orders.service_charge);
     }
 
-    // Final Total is the GREATER of (items - discount) or deposit, THEN add service fee
     let sumTotal = Math.max(subtotalAfterDiscount, depositAmount) + serviceAmount;
-
     if (sumTotal < 0) sumTotal = 0;
 
-    // Calculate effective percentage for display
     let effectivePercentage = 0;
     if (total > 0 && discountAmount > 0) {
-      // Calculate effective % against TOTAL (not just eligible total) for display context
       effectivePercentage = ((discountAmount / total) * 100).toFixed(1);
       if (effectivePercentage.endsWith(".0")) {
         effectivePercentage = parseInt(effectivePercentage);
       }
     }
 
-    // Calculate effective service percentage for display
     let effectiveServicePercentage = 0;
     if (total > 0 && serviceAmount > 0) {
       effectiveServicePercentage = ((serviceAmount / total) * 100).toFixed(1);
@@ -271,7 +250,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     orders?.service_charge,
     orders?.deposit,
     pendingDeletions,
-    menu // Added dependency
+    menu
   ]);
 
   const totalChanges = products.length + (pendingDeletions?.length || 0);
@@ -379,7 +358,6 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               )}
             </button>
 
-            {/* 3-dot menu button - attached to send */}
             {(products.length > 0 || pendingDeletions.length > 0) && (
               <button
                 className="btn-menu-dots"
@@ -428,7 +406,6 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               toast.error(isSending ? "Əməliyyat davam edir..." : "Qəbz kilidlidir!");
               return;
             }
-            // Log Print
             const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || orders?.waiter?.name || "Naməlum";
             dispatch(saveLog({
               orderId: orders.uuid,
@@ -488,7 +465,6 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         onClose={() => setShowSalesTypeModal(false)}
       />
 
-      {/* New Items Modal */}
       <NewItemsModal
         show={showNewItemsModal}
         onClose={() => setShowNewItemsModal(false)}
@@ -501,4 +477,5 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   );
 };
 
-export default CheckBottom;
+const CheckBottomWithMemo = React.memo(CheckBottom);
+export default CheckBottomWithMemo;

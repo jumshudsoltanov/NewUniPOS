@@ -18,8 +18,9 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Only fetch if data is missing
     if (loginedProfileData?.data?.profile?.id) {
-      dispatch(getTableGroups(loginedProfileData.data.profile.id));
+      // dispatch(getTableGroups(loginedProfileData.data.profile.id)); // TableGroups are pre-fetched
     }
   }, [dispatch, loginedProfileData]);
 
@@ -71,12 +72,11 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
     if (!startDate) return { hours: "00", minutes: "00" };
 
     const start = new Date(startDate);
-    if (isNaN(start.getTime())) return { hours: "00", minutes: "00" }; // Prevent NaN from invalid date
+    if (isNaN(start.getTime())) return { hours: "00", minutes: "00" };
 
     const now = new Date();
-
     const diffMs = now - start;
-    if (diffMs < 0) return { hours: "00", minutes: "00" }; // Prevent negative time if clocks skew
+    if (diffMs < 0) return { hours: "00", minutes: "00" };
 
     const diffMinutes = Math.floor(diffMs / 60000);
     const hours = Math.floor(diffMinutes / 60);
@@ -157,4 +157,5 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
   );
 };
 
-export default CheckHeader;
+const CheckHeaderWithMemo = React.memo(CheckHeader);
+export default CheckHeaderWithMemo;

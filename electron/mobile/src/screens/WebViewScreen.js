@@ -96,7 +96,15 @@ const WebViewScreen = ({ navigation }) => {
                     allowsBackForwardNavigationGestures={false}
                     originWhitelist={['*']}
                     injectedJavaScriptBeforeContentLoaded={masterIp ? `
-                        window.localStorage.setItem('master_ip', '${masterIp}');
+                        (function() {
+                            try {
+                                window.localStorage.setItem('master_ip', '${masterIp}');
+                                window.localStorage.setItem('profile', JSON.stringify({id: '${masterIp}'})); // Fallback for initApp
+                                console.log('Master IP injected: ${masterIp}');
+                            } catch (e) {
+                                console.error('Injection failed', e);
+                            }
+                        })();
                         true;
                     ` : 'true;'}
                     onError={handleError}
