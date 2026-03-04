@@ -196,7 +196,13 @@ const KitchenReceipt = ({
                         }}>
                             <div style={styles.colName}>
                                 <span>
+                                    {item.isModifierStandalone && <span style={{ color: '#d32f2f' }}>ƏLAVƏ: </span>}
                                     {itemName}
+                                    {item.isModifierStandalone && item.parentName && (
+                                        <span style={{ fontSize: fs(10), display: 'block', color: '#666' }}>
+                                            ({item.parentName} üçün)
+                                        </span>
+                                    )}
                                 </span>
                                 {item.comment && (
                                     <div style={{ ...styles.modifier, fontWeight: "900", fontStyle: "italic", fontSize: fs(12) }}>

@@ -120,7 +120,18 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       items.forEach((item) => {
         const count = Number(item.count || item.quantity || 0);
         const price = Number(item.price || 0);
-        const itemTotal = count * price;
+
+        // Calculate Modifiers
+        let modifiersTotal = 0;
+        try {
+          let mods = item.modifiers;
+          if (typeof mods === 'string') mods = JSON.parse(mods);
+          if (Array.isArray(mods)) {
+            modifiersTotal = mods.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
+          }
+        } catch (e) { /* ignore */ }
+
+        const itemTotal = count * (price + modifiersTotal);
 
         total += itemTotal;
 
@@ -145,7 +156,18 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       pendingDeletions.forEach((del) => {
         const delQty = del.type === 'partial' ? del.qty : del.originalQty;
         const delPrice = Number(del.price || 0);
-        const delTotal = delQty * delPrice;
+
+        // Calculate Modifiers for deleted item
+        let modifiersTotal = 0;
+        try {
+          let mods = del.modifiers;
+          if (typeof mods === 'string') mods = JSON.parse(mods);
+          if (Array.isArray(mods)) {
+            modifiersTotal = mods.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
+          }
+        } catch (e) { /* ignore */ }
+
+        const delTotal = delQty * (delPrice + modifiersTotal);
 
         total -= delTotal;
 

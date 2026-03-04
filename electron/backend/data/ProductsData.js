@@ -140,8 +140,10 @@ const getProducts = async (passedProfileId) => {
       const v2Response = await axios.get(`https://api.unipos.tech/api/products?profile_id=${profile_id}&per_page=1000`);
       if (v2Response.data && Array.isArray(v2Response.data.items)) {
         v2Response.data.items.forEach(item => {
-          if (item.id && item.printer_id) {
-            printerMap[item.id] = Array.isArray(item.printer_id) ? item.printer_id.join(",") : item.printer_id.toString();
+          if (item.id) {
+            if (item.printer_id) {
+              printerMap[item.id] = Array.isArray(item.printer_id) ? item.printer_id.join(",") : item.printer_id.toString();
+            }
           }
         });
       }

@@ -99,6 +99,10 @@ const ProductsModel = db.sequelize.define(
       allowNull: true,
       defaultValue: "simple",
     },
+    modifier_groups: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
   },
   {
     tableName: "products",

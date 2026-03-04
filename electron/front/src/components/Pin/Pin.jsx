@@ -15,6 +15,7 @@ import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slice
 import { toast } from "sonner";
 import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import BrandsModal from "../BrandsModal/BrandsModal";
+import axios from "axios";
 
 const PIN_LENGTH = 4;
 
@@ -237,14 +238,19 @@ const Pin = () => {
     }
 
     setIsRefreshing(true);
-    const toastId = toast.loading("Məlumatlar yenilənir...");
+    const toastId = toast.loading("Məlumatlar arxa planda yenilənir...");
     try {
+      // 1. Force the backend to fetch fresh data from the remote API (api.unipos.tech)
+      const profileId = activeProfileData.data.profile.id;
+      await axios.post(`http://localhost:55667/api/sync/refresh/${profileId}`);
+
+      // 2. Fetch the newly saved data from local SQLite into the Redux store
       await Promise.all([
-        dispatch(getTableGroups(activeProfileData.data.profile.id)).unwrap(),
-        dispatch(getActiveOrders({ profileId: activeProfileData.data.profile.id })).unwrap(),
-        dispatch(menuWithCategories(activeProfileData.data.profile.id)).unwrap(),
-        dispatch(menuWithGeneralCategories(activeProfileData.data.profile.id)).unwrap(),
-        new Promise(resolve => setTimeout(resolve, 5000))
+        dispatch(getTableGroups(profileId)).unwrap(),
+        dispatch(getActiveOrders({ profileId })).unwrap(),
+        dispatch(menuWithCategories(profileId)).unwrap(),
+        dispatch(menuWithGeneralCategories(profileId)).unwrap(),
+        new Promise(resolve => setTimeout(resolve, 2000))
       ]);
       toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
     } catch (error) {

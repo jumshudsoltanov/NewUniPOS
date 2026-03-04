@@ -203,6 +203,8 @@ let creaedtToTabel = async () => {
     await safeAddColumn('printers', 'port', 'INT DEFAULT NULL');
     await safeAddColumn('waiters', 'can_create_order', 'TINYINT DEFAULT 0');
     await safeAddColumn('waiters', 'can_see_shortcuts', 'TINYINT DEFAULT 0');
+    await safeAddColumn('orders_items', 'modifiers', 'TEXT DEFAULT NULL');
+    await safeAddColumn('orders_items', 'comment', 'TEXT DEFAULT NULL');
 
     console.log("Created Table Success!");
   } catch (error) {

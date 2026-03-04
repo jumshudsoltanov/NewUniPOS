@@ -27,6 +27,10 @@ async function fixSchema() {
     await addCol('printers', 'ip', 'TEXT', null);
     await addCol('printers', 'port', 'INTEGER', null);
 
+    // orders_items table enhancements
+    await addCol('orders_items', 'modifiers', 'TEXT', null);
+    await addCol('orders_items', 'comment', 'TEXT', null);
+
     console.log('\nDone!');
     process.exit();
 }

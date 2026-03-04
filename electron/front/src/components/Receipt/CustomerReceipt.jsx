@@ -189,7 +189,18 @@ const CustomerReceipt = ({
         const qty = Number(item.quantity || item.count || 0);
         const price = Number(item.price || 0);
         const isGift = Number(item.is_gift || 0) === 1;
-        return sum + (isGift ? 0 : qty * price);
+
+        // Modifiers
+        let modifiersTotal = 0;
+        try {
+            let mods = item.modifiers;
+            if (typeof mods === 'string') mods = JSON.parse(mods);
+            if (Array.isArray(mods)) {
+                modifiersTotal = mods.reduce((mSum, mod) => mSum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
+            }
+        } catch (e) { /* ignore */ }
+
+        return sum + (isGift ? 0 : qty * (price + modifiersTotal));
     }, 0) + (Number(checkData?.rate_per_minute) || 0);
 
     const calcPercent = (val, total) => {
@@ -398,12 +409,12 @@ const CustomerReceipt = ({
                                     </span>
                                 ) : (
                                     <span style={styles.colPrice}>
-                                        {params.price.toFixed(2)}
+                                        {(params.price + (params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0))).toFixed(2)}
                                     </span>
                                 )}
 
                                 <span style={styles.colTotal}>
-                                    {(params.price * params.quantity).toFixed(2)} ₼
+                                    {((params.price + (params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0))) * params.quantity).toFixed(2)} ₼
                                 </span>
                             </div>
                         );

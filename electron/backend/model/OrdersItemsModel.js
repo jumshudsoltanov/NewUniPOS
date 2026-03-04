@@ -70,6 +70,14 @@ const OrdersItemsModel = db.sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    modifiers: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    comment: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: "orders_items",

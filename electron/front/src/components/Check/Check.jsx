@@ -317,20 +317,53 @@ const Check = () => {
           waiterName
         })).unwrap();
 
+        const combinedForPrinting = [...productsWithComments];
+
+        // Scan for modifiers that have their own designated printers
+        const standaloneModifiers = [];
+        productsWithComments.forEach(p => {
+          if (p.modifiers && Array.isArray(p.modifiers)) {
+            p.modifiers.forEach(mod => {
+              if (mod.printer_details && mod.printer_details.length > 0) {
+                standaloneModifiers.push({
+                  ...mod,
+                  product_name: mod.name,
+                  count: mod.count,
+                  quantity: mod.count,
+                  isModifierStandalone: true,
+                  parentName: p.name
+                });
+              }
+            });
+          }
+        });
+
+        const printContext = {
+          table: currentTable?.name || currentOrder?.table_name || "Masa",
+          waiter: waiterName,
+          hallName: currentHall?.name || "",
+          orderId: currentOrder?.uuid || id,
+          terminalInfo: loginedProfileData?.data?.terminal || {},
+          typeName: displaySaleType,
+          checkData: currentOrder,
+          isDecrease: false
+        };
+
+        // 1. Regular items print (Kitchen/Product)
         processAndPrintOrders(
-          productsWithComments,
-          {
-            table: currentTable?.name || currentOrder?.table_name || "Masa",
-            waiter: waiterName,
-            hallName: currentHall?.name || "",
-            orderId: currentOrder?.uuid || id,
-            terminalInfo: loginedProfileData?.data?.terminal || {},
-            typeName: displaySaleType,
-            checkData: currentOrder,
-            isDecrease: false
-          },
+          combinedForPrinting,
+          printContext,
           menuDataWithCategories
         );
+
+        // 2. Standalone Modifier prints (e.g. Bar/Label)
+        if (standaloneModifiers.length > 0) {
+          processAndPrintOrders(
+            standaloneModifiers,
+            printContext,
+            menuDataWithCategories
+          );
+        }
       }
 
     } catch (e) {

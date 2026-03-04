@@ -18,38 +18,21 @@ const sendOrdersItemsToDb = async (req, res) => {
   }
 
   try {
-    // insert / updates items
+    // insert items (Always separate to preserve modifiers/comments)
     const savedItems = [];
     for (const item of productList) {
-      const existingItem = await OrdersItemsModel.findOne({
-        where: {
-          order_id: orderId,
-          product_id: item.id,
-          price: item.price,
-        },
+      const newItem = await OrdersItemsModel.create({
+        order_id: orderId,
+        product_id: item.product_id || item.id,
+        count: item.quantity || item.count || 1,
+        price: item.price,
+        operator_id: waiterId,
+        profile_id: profileId,
+        kds_status: 0,
+        modifiers: item.modifiers || null,
+        comment: item.comment || null,
       });
-
-      if (existingItem) {
-        // Update existing item (increment count and update price)
-        existingItem.count += Number(item.quantity || 0);
-        existingItem.price = item.price;
-        existingItem.operator_id = waiterId;
-        existingItem.kds_status = 0; // Reset for KDS visibility
-        await existingItem.save();
-        savedItems.push(existingItem);
-      } else {
-        // Create new item
-        const newItem = await OrdersItemsModel.create({
-          order_id: orderId,
-          product_id: item.id,
-          count: item.quantity,
-          price: item.price,
-          operator_id: waiterId,
-          profile_id: profileId,
-          kds_status: 0,
-        });
-        savedItems.push(newItem);
-      }
+      savedItems.push(newItem);
     }
 
     // All order on backend

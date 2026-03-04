@@ -34,8 +34,11 @@ const CheckMain = ({ orders }) => {
         const prodId = Number(orderItem.product_id);
         const isGift = orderItem.is_gift ? 1 : 0;
         const price = parseFloat(orderItem.price || orderItem.amount || 0).toFixed(2);
-        // Key now includes price to separate items with different prices
-        const key = `${prodId}-${isGift}-${price}`;
+        const modifiersStr = typeof orderItem.modifiers === 'string' ? orderItem.modifiers : JSON.stringify(orderItem.modifiers || []);
+        const commentStr = orderItem.comment || '';
+        const modObj = typeof orderItem.modifiers === 'string' ? JSON.parse(orderItem.modifiers || '[]') : (orderItem.modifiers || []);
+        const uniqueKeyPart = modObj.length > 0 ? `-${orderItem.id}` : '';
+        const key = `${prodId}-${isGift}-${price}-${modifiersStr}-${commentStr}${uniqueKeyPart}`;
         const existing = groupedMap.get(key);
 
         if (existing) {
@@ -55,7 +58,9 @@ const CheckMain = ({ orders }) => {
             isNew: false,
             is_gift: isGift, // Ensure it's passed
             firstId: orderItem.id, // Capture ID for sorting
-            printer_details: menuItem?.printer_details || []
+            printer_details: menuItem?.printer_details || [],
+            modifiers: orderItem.modifiers,
+            comment: orderItem.comment
           });
         }
       });
@@ -68,7 +73,14 @@ const CheckMain = ({ orders }) => {
       const prodId = Number(item.id || item.product_id);
       const isGift = item.is_gift ? 1 : 0;
       const price = parseFloat(item.price || 0).toFixed(2);
-      const key = `${prodId}-${isGift}-${price}`;
+      const modifiersStr = typeof item.modifiers === 'string' ? item.modifiers : JSON.stringify(item.modifiers || []);
+      const commentStr = item.comment || '';
+
+      // If has modifiers, make key unique using index to ALWAYS separate them
+      const hasModifiers = (item.modifiers && item.modifiers.length > 0);
+      const uniqueKeyPart = hasModifiers ? `-local-idx-${idx}` : '';
+
+      const key = `${prodId}-${isGift}-${price}-${modifiersStr}-${commentStr}${uniqueKeyPart}`;
       const existing = groupedMap.get(key);
 
       const qtyToAdd = Number(item.quantity || item.count || 1);
@@ -88,7 +100,9 @@ const CheckMain = ({ orders }) => {
           isNew: true,
           is_gift: isGift,
           firstId: 999999999 + idx,
-          printer_details: item.printer_details || []
+          printer_details: item.printer_details || [],
+          modifiers: item.modifiers,
+          comment: item.comment
         });
       }
     });
@@ -177,7 +191,19 @@ const CheckMain = ({ orders }) => {
               const isNoDiscount = (item.no_discount === 1 || productInfo?.no_discount === 1);
               const originalPrice = Number(productInfo?.price || item.price || 0);
               const currentPrice = Number(item.price || 0);
-              const totalAmount = (currentPrice * Number(item.count)).toFixed(2);
+
+              // Modifiers
+              let modifiers = [];
+              try {
+                if (Array.isArray(item.modifiers)) {
+                  modifiers = item.modifiers;
+                } else if (typeof item.modifiers === "string") {
+                  modifiers = JSON.parse(item.modifiers || '[]');
+                }
+              } catch (e) { /* ignore */ }
+
+              const modifiersTotal = modifiers.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
+              const totalAmount = ((currentPrice + modifiersTotal) * Number(item.count)).toFixed(2);
 
               const isDiscounted = item.discount_value > 0 && !isNoDiscount;
               const isGift = item.is_gift === 1;
@@ -193,12 +219,36 @@ const CheckMain = ({ orders }) => {
                   <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="d-flex align-items-center flex-wrap gap-2">
                       <span className="fw-bold">{item.name}</span>
+                      {modifiers.length > 0 && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title="Modifikatorlar">
+                          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                          <polyline points="2 17 12 22 22 17"></polyline>
+                          <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                      )}
                       {isGift && <i className="bi bi-gift-fill text-danger" title="İkram"></i>}
                       {item.isDeleted && <span className="badge bg-danger">Silinəcək</span>}
                       {item.partialDelete > 0 && !item.isDeleted && <span className="badge bg-warning text-dark">-{item.partialDelete}</span>}
                     </div>
 
                     <div className="d-flex flex-column gap-1 mt-1">
+                      {modifiers.length > 0 && (
+                        <div className="check-item-modifiers">
+                          {modifiers.map((m, i) => (
+                            <span key={i} className="modifier-tag">
+                              {m.name} {m.count > 1 ? `(x${m.count})` : ""}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {item.comment && (
+                        <div style={{ fontSize: "0.75rem", color: "#856404", fontStyle: "italic", lineHeight: "1.2" }}>
+                          <i className="fa-solid fa-comment-dots me-1"></i>
+                          {item.comment}
+                        </div>
+                      )}
+
                       {isDiscounted && !isGift && (
                         <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
                           Endirim: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
@@ -227,10 +277,10 @@ const CheckMain = ({ orders }) => {
                       ) : (currentPrice !== originalPrice) ? (
                         <div className="d-flex align-items-center gap-1">
                           <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
-                          <span className="fw-bold">{currentPrice.toFixed(2)}</span>
+                          <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
                         </div>
                       ) : (
-                        <span className="fw-bold">{currentPrice.toFixed(2)}</span>
+                        <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
                       )}
                     </div>
                   </div>

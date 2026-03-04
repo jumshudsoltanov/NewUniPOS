@@ -8,6 +8,7 @@ import {
   menuWithCategories,
 } from "../../redux/Slices/MenuSlice";
 import ManualPriceModal from "../Modals/ManualPriceModal";
+import ModifierModal from "../ModifierModal/ModifierModal";
 
 const Menu = ({
   order,
@@ -39,6 +40,10 @@ const Menu = ({
   // Modal State
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [pendingProduct, setPendingProduct] = useState(null);
+
+  // Modifier Modal State
+  const [showModifierModal, setShowModifierModal] = useState(false);
+  const [modifierProduct, setModifierProduct] = useState(null);
 
   // Fetch Data - Only if not already present
   useEffect(() => {
@@ -130,6 +135,12 @@ const Menu = ({
       return;
     }
 
+    if (product.modifier_groups && product.modifier_groups.length > 0) {
+      setModifierProduct(product);
+      setShowModifierModal(true);
+      return;
+    }
+
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
     dispatch(saveLog({
       orderId: order?.uuid,
@@ -157,6 +168,26 @@ const Menu = ({
 
       setPendingProduct(null);
     }
+  };
+
+  const handleModifierConfirm = (productWithModifiers) => {
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+    // Create a detail string for the log that includes the selected modifiers
+    let details = productWithModifiers.name;
+    if (productWithModifiers.modifiers && productWithModifiers.modifiers.length > 0) {
+      const modifierText = productWithModifiers.modifiers.map(m => `${m.name}(x${m.count})`).join(', ');
+      details += ` [+ ${modifierText}]`;
+    }
+
+    dispatch(saveLog({
+      orderId: order?.uuid,
+      action: "Məhsul əlavə edildi (Modifikatorlarla)",
+      waiterName,
+      details: details
+    }));
+
+    dispatch(addProducts(productWithModifiers));
   };
 
   // Apply custom ordering
@@ -415,6 +446,12 @@ const Menu = ({
         onClose={() => setShowPriceModal(false)}
         product={pendingProduct}
         onConfirm={handlePriceConfirm}
+      />
+      <ModifierModal
+        show={showModifierModal}
+        onHide={() => setShowModifierModal(false)}
+        product={modifierProduct}
+        onConfirm={handleModifierConfirm}
       />
     </Container>
   );
