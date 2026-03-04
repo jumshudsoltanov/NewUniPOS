@@ -98,7 +98,74 @@ const Check = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get("tableId");
-  const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false)
+
+
+  const { currentOrder, currentHall, currentTable } = useMemo(() => {
+    if (!id)
+      return { currentOrder: null, currentHall: null, currentTable: null };
+
+    // ALL ORDERS LOGIC
+    if (books?.data) {
+      // 1. Try to find the latest updated version of the order in Books (Redux)
+      const order = books.data.find((item) => item.uuid == id);
+      if (order) {
+        return {
+          currentOrder: order,
+          currentHall: order.table?.hall || null,
+          currentTable: order.table || null,
+        };
+      }
+    }
+
+    // 2. Fallback to tableGroups if not found in Books (for initial load Edge Cases)
+    if (tableId && tableId !== "null" && tableId !== "0" && tableGroups?.data) {
+      let foundHall = null;
+      let foundTable = null;
+
+      for (const hall of tableGroups.data) {
+        const table = hall.tables.find((t) => t.id == tableId);
+        if (table) {
+          foundHall = hall;
+          foundTable = table;
+          break;
+        }
+      }
+
+      if (foundTable) {
+        const order = foundTable.orders.find((o) => o.uuid == id);
+        if (order) {
+          return {
+            currentOrder: order,
+            currentHall: foundHall,
+            currentTable: foundTable,
+          };
+        }
+      }
+    }
+
+    return { currentOrder: null, currentHall: null, currentTable: null };
+
+  }, [id, tableId, tableGroups, books]);
+
+  const selectedCustomer = useMemo(() => {
+    if (currentOrder?.customer_id) {
+      if (customers?.length > 0) {
+        const customer = customers.find(c => c.id === currentOrder.customer_id);
+        if (customer) return customer;
+      }
+
+      const fallbackName = currentOrder?.customer_name || currentOrder?.customerName || currentOrder?.customer?.name;
+      if (fallbackName) {
+        return {
+          id: currentOrder.customer_id,
+          name: fallbackName
+        };
+      }
+    }
+    return null;
+  }, [currentOrder?.customer_id, currentOrder?.customer_name, currentOrder?.customerName, currentOrder?.customer?.name, customers]);
+
+  const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showGuestCountModal, setShowGuestCountModal] = useState(false);
@@ -422,72 +489,7 @@ const Check = () => {
   }, [navigate, currentOrder]);
 
 
-  const { currentOrder, currentHall, currentTable } = useMemo(() => {
-    if (!id)
-      return { currentOrder: null, currentHall: null, currentTable: null };
 
-    // ALL ORDERS LOGIC
-    if (books?.data) {
-      // 1. Try to find the latest updated version of the order in Books (Redux)
-      const order = books.data.find((item) => item.uuid == id);
-      if (order) {
-        return {
-          currentOrder: order,
-          currentHall: order.table?.hall || null,
-          currentTable: order.table || null,
-        };
-      }
-    }
-
-    // 2. Fallback to tableGroups if not found in Books (for initial load Edge Cases)
-    if (tableId && tableId !== "null" && tableId !== "0" && tableGroups?.data) {
-      let foundHall = null;
-      let foundTable = null;
-
-      for (const hall of tableGroups.data) {
-        const table = hall.tables.find((t) => t.id == tableId);
-        if (table) {
-          foundHall = hall;
-          foundTable = table;
-          break;
-        }
-      }
-
-      if (foundTable) {
-        const order = foundTable.orders.find((o) => o.uuid == id);
-        if (order) {
-          return {
-            currentOrder: order,
-            currentHall: foundHall,
-            currentTable: foundTable,
-          };
-        }
-      }
-    }
-
-    return { currentOrder: null, currentHall: null, currentTable: null };
-
-    // Handled in the block above
-
-  }, [id, tableId, tableGroups, books]);
-
-  const selectedCustomer = useMemo(() => {
-    if (currentOrder?.customer_id) {
-      if (customers?.length > 0) {
-        const customer = customers.find(c => c.id === currentOrder.customer_id);
-        if (customer) return customer;
-      }
-
-      const fallbackName = currentOrder?.customer_name || currentOrder?.customerName || currentOrder?.customer?.name;
-      if (fallbackName) {
-        return {
-          id: currentOrder.customer_id,
-          name: fallbackName
-        };
-      }
-    }
-    return null;
-  }, [currentOrder?.customer_id, currentOrder?.customer_name, currentOrder?.customerName, currentOrder?.customer?.name, customers]);
 
   useEffect(() => {
     if (
@@ -528,9 +530,7 @@ const Check = () => {
   const [selectedGenCat, setSelectedGenCat] = useState(null);
   const [selectedCat, setSelectedCat] = useState(null);
 
-  const handleManualSync = () => {
-    console.log("Manually triggering sync...");
-  };
+
 
   const formatTime = (date) => {
     return date.toLocaleTimeString("az-AZ", {

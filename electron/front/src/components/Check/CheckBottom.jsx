@@ -307,28 +307,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         </div>
 
         <div className="pt-3 action-buttons">
-          {Number(loginedWaiter?.data?.can_create_order) === 1 && (
-            <button
-              className="btn-new-order"
-              onClick={() => setShowSalesTypeModal(true)}
-              style={{
-                background: "rgba(255, 255, 255, 0.1)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                color: "white",
-                borderRadius: "12px",
-                padding: "10px 15px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                fontSize: "14px",
-                fontWeight: "500",
-                transition: "all 0.2s ease"
-              }}
-            >
-              <i className="bi bi-plus-lg"></i>
-              <span>Yeni sifariş</span>
-            </button>
-          )}
+
 
           <div className="btn-send-group">
             <button
