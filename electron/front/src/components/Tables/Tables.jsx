@@ -47,9 +47,11 @@ const Tables = () => {
   const [transitionsEnabled, setTransitionsEnabled] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setTransitionsEnabled(true), 150);
+    setTransitionsEnabled(false);
+    const timer = setTimeout(() => setTransitionsEnabled(true), 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [currentHallId]);
+
 
   const [interactionState, setInteractionState] = useState({
     type: null, // 'drag' | 'resize'
@@ -536,7 +538,7 @@ const Tables = () => {
                 style={{
                   opacity: isTableEditMode && draggedIndex === index ? 0.4 : 1,
                   transform: isTableEditMode && dragOverIndex === index && draggedIndex !== index ? 'scale(1.05)' : 'none',
-                  transition: 'all 0.2s ease',
+                  transition: 'none',
                   cursor: isTableEditMode ? 'grab' : 'default'
                 }}
               >

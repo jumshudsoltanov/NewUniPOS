@@ -4,7 +4,7 @@ import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
     ActivityIndicator, Alert, Platform,
     KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, ScrollView,
-    Modal, Image
+    Modal, Image, StatusBar
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { saveData, getData, removeData } from '../utils/storage';
@@ -23,7 +23,7 @@ const ConnectionScreen = ({ navigation }) => {
             if (savedIp) {
                 setIp(savedIp);
                 setBaseUrl(savedIp);
-                navigation.replace('WebView');
+                setTimeout(() => navigation.replace('WebView'), 300);
             } else {
                 setLoading(false);
             }
@@ -39,9 +39,39 @@ const ConnectionScreen = ({ navigation }) => {
             return;
         }
         Keyboard.dismiss();
-        await saveData('master_ip', trimmed);
-        setBaseUrl(trimmed);
-        navigation.replace('WebView');
+        setLoading(true);
+
+        try {
+            // Validate connection to Master POS before saving
+            // Use a short timeout to not keep the user waiting too long
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 sec timeout
+
+            const response = await fetch(`http://${trimmed}:55667/api/ping`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    await saveData('master_ip', trimmed);
+                    setBaseUrl(trimmed);
+                    setTimeout(() => navigation.replace('WebView'), 300);
+                } else {
+                    throw new Error('Yanlış cavab');
+                }
+            } else {
+                throw new Error('Server tapılmadı');
+            }
+        } catch (error) {
+            setLoading(false);
+            console.warn('[Connection] Validation failed:', error);
+            Alert.alert(
+                'Bağlantı xətası',
+                `Master POS (${trimmed}) tapılmadı.\n\nEyni şəbəkədə olduğunuzu və Master POS-da UniPOS-un açıq olduğunu yoxlayın.`
+            );
+        }
     };
 
     const handleBarCodeScanned = ({ data }) => {
@@ -65,17 +95,25 @@ const ConnectionScreen = ({ navigation }) => {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#053796" />
+            <View style={[styles.loadingContainer, { backgroundColor: '#FFFFFF' }]}>
+                <StatusBar hidden={false} backgroundColor="#FFFFFF" barStyle="dark-content" />
+                <Image
+                    source={require('../../assets/unipos_logo.png')}
+                    style={[styles.logo, { width: 180, height: 180 }]}
+                    resizeMode="contain"
+                />
+                <ActivityIndicator size="large" color="#053796" style={{ marginTop: 10 }} />
+                <Text style={{ marginTop: 15, color: '#64748B', fontSize: 13, fontWeight: '500' }}>Haqlar qorunur © UniPOS</Text>
             </View>
         );
     }
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1 }}
+            style={{ flex: 1, backgroundColor: '#FFFFFF' }}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+            <StatusBar hidden={false} backgroundColor="#FFFFFF" barStyle="dark-content" />
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <ScrollView
                     contentContainerStyle={styles.container}
@@ -130,14 +168,14 @@ const ConnectionScreen = ({ navigation }) => {
                                     barcodeTypes: ["qr"],
                                 }}
                             />
-                            <View style={styles.overlay}>
+                            <View style={styles.lightOverlay}>
                                 <View style={styles.scanBox} />
-                                <Text style={styles.scanText}>QR kodu bu çərçivəyə tuşlayın</Text>
+                                <Text style={styles.scanTextDark}>QR kodu bu çərçivəyə tuşlayın</Text>
                                 <TouchableOpacity
-                                    style={styles.closeBtn}
+                                    style={styles.closeBtnDark}
                                     onPress={() => setShowScanner(false)}
                                 >
-                                    <Text style={styles.closeBtnText}>Bağla</Text>
+                                    <Text style={styles.closeBtnTextDark}>Bağla</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -153,11 +191,11 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#F8FAFF',
+        backgroundColor: '#0A0E17',
     },
     container: {
         flexGrow: 1,
-        backgroundColor: '#F8FAFF',
+        backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 30,
@@ -176,7 +214,7 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         fontSize: 14,
-        color: '#64748B',
+        color: '#94A3B8',
         textAlign: 'center',
         paddingHorizontal: 20,
     },
@@ -188,14 +226,14 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 56,
         borderWidth: 1.5,
-        borderColor: '#D1D5DB',
+        borderColor: '#E2E8F0',
         borderRadius: 14,
         paddingHorizontal: 20,
         fontSize: 22,
-        backgroundColor: '#fff',
+        backgroundColor: '#F8FAFF',
         textAlign: 'center',
         fontWeight: '600',
-        color: '#333',
+        color: '#1E293B',
     },
     buttonRow: {
         flexDirection: 'row',
@@ -206,14 +244,10 @@ const styles = StyleSheet.create({
     connectBtn: {
         flex: 1,
         height: 56,
-        backgroundColor: '#053796',
+        backgroundColor: '#4F46E5',
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#053796',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
         elevation: 3,
     },
     connectBtnText: {
@@ -224,25 +258,25 @@ const styles = StyleSheet.create({
     qrBtn: {
         width: 65,
         height: 56,
-        backgroundColor: '#fff',
+        backgroundColor: '#F1F5F9',
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1.5,
-        borderColor: '#053796',
+        borderColor: '#4F46E5',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
     },
     scannerContainer: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: '#FFFFFF',
     },
-    overlay: {
+    lightOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(255,255,255,0.7)',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -254,24 +288,24 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         backgroundColor: 'transparent',
     },
-    scanText: {
-        color: '#fff',
+    scanTextDark: {
+        color: '#1E293B',
         fontSize: 16,
         marginTop: 20,
         fontWeight: '600',
     },
-    closeBtn: {
+    closeBtnDark: {
         position: 'absolute',
         bottom: 50,
         paddingHorizontal: 30,
         paddingVertical: 12,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: 'rgba(0,0,0,0.05)',
         borderRadius: 25,
         borderWidth: 1,
-        borderColor: '#fff',
+        borderColor: '#1E293B',
     },
-    closeBtnText: {
-        color: '#fff',
+    closeBtnTextDark: {
+        color: '#1E293B',
         fontSize: 16,
         fontWeight: '600',
     }

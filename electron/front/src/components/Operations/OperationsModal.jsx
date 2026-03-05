@@ -70,6 +70,7 @@ const OperationsModal = React.memo(({
       onHide={onHide}
       centered
       size="lg"
+      animation={false}
       className="operations-modal"
     >
       <Modal.Body className="p-3 position-relative">

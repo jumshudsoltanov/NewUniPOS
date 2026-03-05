@@ -160,9 +160,9 @@ const Login = () => {
   const senToLoginBrand = async (e) => {
     if (e) e.preventDefault();
     const profileData = {
-      username: brand,
-      terminalId: terminalId,
-      password: password,
+      username: brand ? brand.trim() : brand,
+      terminalId: terminalId ? terminalId.trim() : terminalId,
+      password: password ? String(password).trim() : password,
       login: true,
     };
 
@@ -201,6 +201,7 @@ const Login = () => {
       console.error("Manual login failed:", err);
       setIsError(true);
       setIsRefreshing(false);
+      toast.error(err?.data?.message || err?.message || "Login zamanı xəta baş verdi");
     }
   };
 

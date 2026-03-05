@@ -15,6 +15,7 @@ const ProductsController = require("../controller/ProductsController");
 const KitchenController = require("../controller/KitchenController");
 
 // Routers lists
+router.get("/ping", (req, res) => res.json({ success: true }));
 router.post("/login", LoginController.getLogin);
 router.post("/sale", SalesController.CreateNewOrders);
 router.post("/other-sale", SalesController.CreateNewOtherOrders);
