@@ -206,7 +206,11 @@ function AppContent() {
               }
             }
 
-            if (currentPath === "/") {
+            const cleanPath = currentPath.split("?")[0];
+            console.log(`[AUTH] Path check: Clean='${cleanPath}', Raw='${currentPath}'`);
+
+            if (cleanPath === "/" || cleanPath === "/login" || cleanPath === "") {
+              console.log("[AUTH] Auto-login SUCCESS. Redirecting to /pin...");
               navigate("/pin");
             }
           } catch (err) {

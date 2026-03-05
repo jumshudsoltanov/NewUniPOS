@@ -30,13 +30,14 @@ const getLogin = async (req, res) => {
             terminal_id: terminalId,
             terminal_password: password,
           },
+          { timeout: 15000 }
         );
         break;
       } catch (apiErr) {
         if (apiErr.response?.status === 429 && attempts < maxAttempts - 1) {
           const retryAfter = parseInt(apiErr.response.headers['retry-after'] || '30', 10);
           const waitTime = Math.min(retryAfter, 60) * 1000;
-          console.log(`Login 429 - retry ${attempts + 1}/${maxAttempts} after ${waitTime / 1000}s`);
+          console.log(`[LOGIN] 429 - retrying after ${waitTime / 1000}s`);
           await new Promise(r => setTimeout(r, waitTime));
           attempts++;
         } else {
@@ -55,48 +56,64 @@ const getLogin = async (req, res) => {
     const isMaster = terminal?.is_master == 1;
     const isMasterSlaveActive = terminal?.is_master_slave_active == 1;
 
-    global.isMasterNode = isMaster;
+    // CRITICAL FIX: Only update the Master terminal's local database if the login 
+    // coming in is actually for a Master terminal. Mobile (slave) logins MUST NOT 
+    // overwrite the Master's local profile or change global.isMasterNode.
+    if (isMaster) {
+      console.log(`[LOGIN] Master Terminal (${terminalId}) detected. Updating local database...`);
+      global.isMasterNode = true;
 
-    await LoginModel.destroy({ where: {} });
+      try {
+        await LoginModel.destroy({ where: {} });
+        const allowedFields = Object.keys(LoginModel.rawAttributes);
+        const filteredProfile = {};
+        Object.keys(profile).forEach(key => {
+          if (allowedFields.includes(key)) {
+            filteredProfile[key] = profile[key];
+          }
+        });
 
-    const allowedFields = Object.keys(LoginModel.rawAttributes);
-    const filteredProfile = {};
-    Object.keys(profile).forEach(key => {
-      if (allowedFields.includes(key)) {
-        filteredProfile[key] = profile[key];
+        await LoginModel.upsert({
+          ...filteredProfile,
+          id: profile.id, // Primary Key map
+          is_master: 1,
+          is_master_slave_active: isMasterSlaveActive ? 1 : 0,
+          kitchen_receipt: terminal?.kitchen_receipt !== undefined ? terminal.kitchen_receipt : filteredProfile.kitchen_receipt,
+          customer_receipt: terminal?.customer_receipt !== undefined ? terminal.customer_receipt : filteredProfile.customer_receipt,
+        });
+
+        if (global.httpServer) {
+          const { initMasterServer } = require("../socket/MasterServer");
+          initMasterServer(global.httpServer);
+        }
+
+        // Trigger background sync for Master without blocking the response
+        setImmediate(async () => {
+          try {
+            console.log("[SYNC] Starting background data update...");
+            await getWaitersList(profile.id);
+            await getTableGroups(profile.id);
+            await getTables(profile.id);
+            await getGeneralCategories(profile.id);
+            await getCategories(profile.id);
+            await getProducts(profile.id);
+            await getTags(profile.id);
+            await getPaymentMethods(profile.id);
+            await getSalesTypes(profile.id);
+            console.log("[SYNC] Background update completed successfully.");
+          } catch (syncErr) {
+            console.error("[SYNC] Background update error:", syncErr.message);
+          }
+        });
+
+      } catch (dbErr) {
+        console.error("[LOGIN] Database Update Error:", dbErr.message);
       }
-    });
-
-    try {
-      await LoginModel.upsert({
-        ...filteredProfile,
-        profile_id: profile.id,
-        is_master: isMaster ? 1 : 0,
-        is_master_slave_active: isMasterSlaveActive ? 1 : 0,
-        kitchen_receipt: terminal?.kitchen_receipt !== undefined ? terminal.kitchen_receipt : filteredProfile.kitchen_receipt,
-        customer_receipt: terminal?.customer_receipt !== undefined ? terminal.customer_receipt : filteredProfile.customer_receipt,
-      });
-    } catch (upsertError) {
-      console.error("LoginModel Upsert Error:", upsertError.message);
+    } else {
+      console.log(`[LOGIN] Slave/Mobile terminal (${terminalId}) logged in. Skipping local database overwrite.`);
     }
 
-    if (global.isMasterNode) {
-      if (global.httpServer) {
-        const { initMasterServer } = require("../socket/MasterServer");
-        initMasterServer(global.httpServer);
-      }
-
-      await getWaitersList(profile.id);
-      await getTableGroups(profile.id);
-      await getTables(profile.id);
-      await getGeneralCategories(profile.id);
-      await getCategories(profile.id);
-      await getProducts(profile.id);
-      await getTags(profile.id);
-      await getPaymentMethods(profile.id);
-      await getSalesTypes(profile.id);
-    }
-
+    // Merge local metadata if it matches the current profile (to show correct logo etc)
     try {
       const storedProfile = await LoginModel.findOne({ where: { id: profile.id } });
       if (storedProfile && response.data && response.data.data && response.data.data.profile) {
@@ -106,7 +123,7 @@ const getLogin = async (req, res) => {
         };
       }
     } catch (dbError) {
-      console.log("No local database available to fetch stored profile, continuing with cloud profile");
+      // Non-fatal
     }
 
     res.status(200).json(response.data);
@@ -115,7 +132,7 @@ const getLogin = async (req, res) => {
     const message = status === 429
       ? "Server çox yüklənib. Bir neçə dəqiqə gözləyib yenidən cəhd edin."
       : "Login zamanı xəta baş verdi";
-    console.error("Login Controller Error:", status, error.response?.data?.message || error.message);
+    console.error(`[LOGIN] Final Error: ${status} - ${error.message}`);
     res.status(status).json({
       message,
       error: error.response?.data || error.message,

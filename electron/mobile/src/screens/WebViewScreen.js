@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { StyleSheet, ActivityIndicator, View, Text, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { StyleSheet, ActivityIndicator, View, Text, TouchableOpacity, StatusBar, Platform, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { getData, removeData } from '../utils/storage';
@@ -12,29 +12,38 @@ const WebViewScreen = ({ navigation }) => {
     const [hasError, setHasError] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const webViewRef = useRef(null);
+    const appState = useRef(AppState.currentState);
     const isFocused = useIsFocused();
 
+    const loadUrl = useCallback(async () => {
+        const ip = await getData('master_ip');
+        if (ip) {
+            setMasterIp(ip);
+            const timestamp = Date.now();
+            const cleanUrl = `http://mobile.unipos.tech/?master_ip=${ip}&t=${timestamp}#/login?master_ip=${ip}`;
+            setUrl(cleanUrl);
+        } else {
+            goToConnection();
+        }
+    }, []);
+
     useEffect(() => {
-        let isMounted = true;
-        const loadUrl = async () => {
-            const ip = await getData('master_ip');
-            if (isMounted) {
-                if (ip) {
-                    setMasterIp(ip);
-                    // HashRouter üçün parametrləri həm hash-dən əvvəl, həm də sonra veririk ki, hər iki halda pick up olunsun
-                    const timestamp = Date.now();
-                    const cleanUrl = `http://mobile.unipos.tech/?master_ip=${ip}&t=${timestamp}#/login?master_ip=${ip}`;
-                    setUrl(cleanUrl);
-                } else {
-                    goToConnection();
-                }
-            }
-        };
-        // Gözləmə müddətini artırdıq ki, Navigation transition bitməmiş WebView render olmasın və donmasın
         setTimeout(loadUrl, 200);
 
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+                if (webViewRef.current) {
+                    webViewRef.current.reload();
+                } else {
+                    loadUrl();
+                }
+                setHasError(false);
+            }
+            appState.current = nextAppState;
+        });
+
         return () => {
-            isMounted = false;
+            subscription.remove();
         };
     }, []);
 
@@ -110,7 +119,7 @@ const WebViewScreen = ({ navigation }) => {
                         originWhitelist={['*']}
                         onError={handleError}
                         onHttpError={(e) => console.log('HTTP Error:', e.nativeEvent)}
-                        androidLayerType="software"
+                        androidLayerType="hardware"
                         injectedJavaScript={`
                             (function() {
                                 var meta = document.querySelector('meta[name="viewport"]');

@@ -183,24 +183,23 @@ const Login = () => {
       }
 
       if (data?.data?.profile?.id) {
+        // Fire data preloading in background, don't await blocking the UI
         try {
-          await Promise.all([
-            dispatch(getTableGroups(data.data.profile.id)).unwrap(),
-            dispatch(getActiveOrders({ profileId: data.data.profile.id })).unwrap(),
-            dispatch(menuWithCategories(data.data.profile.id)).unwrap(),
-            dispatch(menuWithGeneralCategories(data.data.profile.id)).unwrap(),
-            new Promise(resolve => setTimeout(resolve, 5000))
-          ]);
+          dispatch(getTableGroups(data.data.profile.id));
+          dispatch(getActiveOrders({ profileId: data.data.profile.id }));
+          dispatch(menuWithCategories(data.data.profile.id));
+          dispatch(menuWithGeneralCategories(data.data.profile.id));
         } catch (preloadErr) {
-          console.warn("Pre-load data failed (non-fatal):", preloadErr);
+          console.warn("Background pre-load triggered:", preloadErr);
         }
       }
 
+      console.log("[AUTH] Login Thunk Success. Hiding loader and navigating...");
+      setIsRefreshing(false);
       navigate("/pin");
     } catch (err) {
       console.error("Manual login failed:", err);
       setIsError(true);
-    } finally {
       setIsRefreshing(false);
     }
   };
