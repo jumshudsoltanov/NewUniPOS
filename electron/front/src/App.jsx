@@ -211,10 +211,14 @@ function AppContent() {
 
             if (cleanPath === "/" || cleanPath === "/login" || cleanPath === "") {
               console.log("[AUTH] Auto-login SUCCESS. Redirecting to /pin...");
-              navigate("/pin");
+              setTimeout(() => navigate("/pin"), 500);
             }
           } catch (err) {
-            console.error("Auto-login failed:", err);
+            console.error("[AUTH] InitApp/Auto-login failed:", err);
+            // Even if init fails, try to show the Login page instead of a white screen
+            if (currentPath === "/" || currentPath === "/login") {
+              console.log("[AUTH] Init failed, forcing navigation to login UI");
+            }
             if (authResult) {
               dispatch(fetchCustomersFromAdmin());
               dispatch(fetchCustomerGroupsFromAdmin());

@@ -28,7 +28,7 @@
       "package": "com.unipos.mobile",
       "usesCleartextTraffic": true,
       "statusBar": {
-        "hidden": false
+        "hidden": true
       },
       "navigationBar": {
         "visible": false

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, ActivityIndicator, View, Text, TouchableOpacity, StatusBar, Platform, AppState } from 'react-native';
+import { StyleSheet, ActivityIndicator, View, Text, TouchableOpacity, StatusBar, Platform, AppState, TouchableWithoutFeedback, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { getData, removeData } from '../utils/storage';
@@ -47,8 +47,36 @@ const WebViewScreen = ({ navigation }) => {
         };
     }, []);
 
+    const [tapCount, setTapCount] = useState(0);
+    const lastTap = useRef(0);
+
+    const handleTripleTap = () => {
+        const now = Date.now();
+        if (now - lastTap.current < 400) {
+            setTapCount(prev => prev + 1);
+        } else {
+            setTapCount(1);
+        }
+        lastTap.current = now;
+
+        if (tapCount + 1 >= 3) {
+            setTapCount(0);
+            Alert.alert(
+                'Sistem Tənzimləmələri',
+                `Aktiv Master IP: ${masterIp}\nURL: ${url}`,
+                [
+                    { text: 'Bağla', style: 'cancel' },
+                    { text: 'Yenilə', onPress: () => webViewRef.current?.reload() },
+                    { text: 'IP-ni Sıfırla (Reset)', onPress: goToConnection, style: 'destructive' },
+                ]
+            );
+        }
+    };
+
     const goToConnection = async () => {
+        console.log('[WebView] Resetting connection settings...');
         await removeData('master_ip');
+        setUrl(null);
         navigation.dispatch(
             CommonActions.reset({ index: 0, routes: [{ name: 'Connection' }] })
         );
@@ -56,52 +84,54 @@ const WebViewScreen = ({ navigation }) => {
 
     const handleError = (syntheticEvent) => {
         const { nativeEvent } = syntheticEvent;
+        console.warn('[WebView] Error:', nativeEvent);
         setHasError(true);
-        setErrorMsg(nativeEvent.description || 'Server tapılmadı');
+        setErrorMsg(nativeEvent.description || 'Server tapılmadı. IP düzgündürmü?');
     };
 
     if (!url) {
         return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#053796" />
-            </View>
+            <TouchableWithoutFeedback onPress={handleTripleTap}>
+                <View style={styles.center}>
+                    <ActivityIndicator size="large" color="#053796" />
+                    <Text style={{ marginTop: 15, color: '#64748B', fontSize: 13 }}>Master POS-a qoşulur...</Text>
+                </View>
+            </TouchableWithoutFeedback>
         );
     }
 
     if (hasError) {
         return (
             <SafeAreaView style={styles.center}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={72} color="#DC2626" style={{ marginBottom: 16 }} />
-                <Text style={styles.errorTitle}>Bağlantı xətası</Text>
-                <Text style={styles.errorMsg}>{errorMsg}</Text>
-                <Text style={styles.errorUrl}>{url}</Text>
+                <TouchableWithoutFeedback onPress={handleTripleTap}>
+                    <View style={{ alignItems: 'center' }}>
+                        <MaterialCommunityIcons name="wifi-off" size={80} color="#64748B" style={{ marginBottom: 20 }} />
+                        <Text style={styles.errorTitle}>Bağlantı uğursuz oldu</Text>
+                        <Text style={styles.errorMsg}>Master POS (IP: {masterIp}) ilə əlaqə qurula bilmir.</Text>
+                        <Text style={styles.errorUrl}>{url}</Text>
+                    </View>
+                </TouchableWithoutFeedback>
 
                 <TouchableOpacity style={styles.btn} onPress={() => { setHasError(false); webViewRef.current?.reload(); }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <MaterialCommunityIcons name="refresh" size={20} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.btnText}>Yenidən cəhd et</Text>
-                    </View>
+                    <Text style={styles.btnText}>Yenidən yoxla</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={goToConnection}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <MaterialCommunityIcons name="wifi-settings" size={20} color="#053796" style={{ marginRight: 8 }} />
-                        <Text style={[styles.btnText, { color: '#053796' }]}>Yeni IP daxil et</Text>
-                    </View>
+                    <Text style={[styles.btnText, { color: '#053796' }]}>Parametrlərə qayıt</Text>
                 </TouchableOpacity>
             </SafeAreaView>
         );
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
-            <StatusBar barStyle="dark-content" backgroundColor="#F3F4F6" />
-            <SafeAreaView style={{ flex: 1, backgroundColor: '#F3F4F6' }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1 }}>
+            <StatusBar hidden={true} />
+            <SafeAreaView style={{ flex: 1 }} edges={['top']}>
                 {isFocused ? (
                     <WebView
                         ref={webViewRef}
                         source={{ uri: url }}
-                        style={{ flex: 1, backgroundColor: '#F3F4F6' }}
+                        style={{ flex: 1 }}
                         javaScriptEnabled={true}
                         domStorageEnabled={true}
                         cacheEnabled={false}
@@ -118,32 +148,43 @@ const WebViewScreen = ({ navigation }) => {
                         allowsBackForwardNavigationGestures={false}
                         originWhitelist={['*']}
                         onError={handleError}
-                        onHttpError={(e) => console.log('HTTP Error:', e.nativeEvent)}
-                        androidLayerType="hardware"
                         injectedJavaScript={`
                             (function() {
                                 var meta = document.querySelector('meta[name="viewport"]');
                                 if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name', 'viewport'); document.head.appendChild(meta); }
-                                meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover');
+                                meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover');
                                 var style = document.createElement('style');
-                                style.textContent = 'input, select, textarea { font-size: 16px !important; } body, html { -webkit-text-size-adjust: 100%; background-color: #F3F4F6 !important; }';
+                                style.textContent = '::-webkit-scrollbar { display: none !important; } * { -webkit-tap-highlight-color: transparent; }';
                                 document.head.appendChild(style);
-                                document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
                             })();
                             true;
                         `}
                         renderLoading={() => (
-                            <View style={[styles.center, { backgroundColor: '#F3F4F6' }]}>
+                            <View style={styles.center}>
                                 <ActivityIndicator size="large" color="#053796" />
                             </View>
                         )}
                     />
-                ) : (
-                    <View style={[styles.center, { backgroundColor: '#F3F4F6' }]}>
-                        <ActivityIndicator size="large" color="#053796" />
-                    </View>
-                )}
+                ) : null}
             </SafeAreaView>
+
+            {/* Small settings icon - top left corner */}
+            <TouchableOpacity
+                style={styles.floatingBtn}
+                onPress={() => {
+                    Alert.alert(
+                        'Bağlantı',
+                        `Master IP: ${masterIp}`,
+                        [
+                            { text: 'Bağla', style: 'cancel' },
+                            { text: 'Yenilə', onPress: () => { setHasError(false); webViewRef.current?.reload(); } },
+                            { text: 'Yeni QR Skan', onPress: goToConnection, style: 'destructive' },
+                        ]
+                    );
+                }}
+            >
+                <MaterialCommunityIcons name="cog" size={16} color="rgba(255,255,255,0.8)" />
+            </TouchableOpacity>
         </View>
     );
 };
@@ -189,6 +230,18 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 15,
         fontWeight: '700',
+    },
+    floatingBtn: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: 'rgba(0,0,0,0.25)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 999,
     },
 });
 
