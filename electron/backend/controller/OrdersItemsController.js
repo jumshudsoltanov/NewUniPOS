@@ -1354,7 +1354,7 @@ const onDeleteCheck = async (req, res) => {
 
 const onCloseOrder = async (req, res) => {
   const { orderId } = req.params;
-  const { payments, status, profileId, waiterId, note } = req.body;
+  const { payments, status, profileId, waiterId, note, is_tax } = req.body;
 
   if (!orderId || !status || !profileId || !waiterId) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -1365,7 +1365,7 @@ const onCloseOrder = async (req, res) => {
   try {
     // 1. Update Order Status, Note, and End Date
     await OrdersModel.update(
-      { status: status, note: note || "", end_date: new Date(), is_synced: 0 },
+      { status: status, note: note || "", end_date: new Date(), is_synced: 0, is_tax: is_tax !== undefined ? is_tax : 0 },
       { where: { uuid: orderId }, transaction },
     );
 

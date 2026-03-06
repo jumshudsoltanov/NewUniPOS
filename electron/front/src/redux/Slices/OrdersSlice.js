@@ -487,11 +487,11 @@ export const updateItemCount = createAsyncThunk(
 
 export const closeOrder = createAsyncThunk(
   "orders/close",
-  async ({ orderId, payments, status, profileId, waiterId, note, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, payments, status, profileId, waiterId, note, is_tax, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
         `/orders-items/${orderId}/close`,
-        { payments, status, profileId, waiterId, note },
+        { payments, status, profileId, waiterId, note, is_tax },
       );
 
       // Persistent Log

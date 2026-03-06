@@ -20,6 +20,7 @@ const CheckOver = () => {
 
     const [viewMode, setViewMode] = useState("PAYMENT"); // 'PAYMENT' or 'UNPAID'
     const [printCheck, setPrintCheck] = useState(false);
+    const [taxPrint, setTaxPrint] = useState(false);
     const [unpaidReason, setUnpaidReason] = useState("");
     const [comment, setComment] = useState("");
     const [tagsListData, setTagsListData] = useState([])
@@ -122,6 +123,12 @@ const CheckOver = () => {
             depositAmount: depositAmount.toFixed(2)
         };
     }, [currentOrder]);
+
+    useEffect(() => {
+        if (currentOrder && Number(currentOrder.is_tax) === 1) {
+            setTaxPrint(true);
+        }
+    }, [currentOrder?.is_tax]);
 
     const handleMethodSelect = (method) => {
         const isAlreadySelected = selectedMethods.find(m => m.id === method.id);
@@ -228,7 +235,8 @@ const CheckOver = () => {
                 profileId,
                 waiterId,
                 note: noteStr,
-                waiterName
+                waiterName,
+                is_tax: viewMode === "PAYMENT" && taxPrint ? 1 : 0
             })).unwrap();
 
             // Persistent Log
@@ -392,8 +400,24 @@ const CheckOver = () => {
                                     })}
                                 </div>
 
+                                {loginedProfileData?.data?.taxes?.length > 0 && (
+                                    <div
+                                        className="print-toggle-section mt-3 pt-3 d-flex justify-content-between align-items-center clickable-row"
+                                        onClick={() => setTaxPrint(!taxPrint)}
+                                    >
+                                        <span className="toggle-label">Vergi ilə çap</span>
+                                        <Form.Check
+                                            type="switch"
+                                            id="tax-print-switch"
+                                            className="large-switch"
+                                            checked={taxPrint}
+                                            onChange={(e) => setTaxPrint(e.target.checked)}
+                                        />
+                                    </div>
+                                )}
+
                                 <div
-                                    className="print-toggle-section mt-5 pt-3 d-flex justify-content-between align-items-center clickable-row"
+                                    className="print-toggle-section mt-3 pt-3 d-flex justify-content-between align-items-center clickable-row"
                                     onClick={() => setPrintCheck(!printCheck)}
                                 >
                                     <span className="toggle-label">Çeki çap et</span>

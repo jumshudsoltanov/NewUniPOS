@@ -795,6 +795,8 @@ const Check = () => {
     }
   }, [menuViewMode, selectedGenCat, selectedCat]);
 
+
+
   const handleEditProductMemo = useCallback((product) => {
     setProductToEdit(product);
     setShowProductModal(true);

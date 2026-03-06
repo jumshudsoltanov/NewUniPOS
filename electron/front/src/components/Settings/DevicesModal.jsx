@@ -9,6 +9,7 @@ import "./DevicesModal.css";
 const DevicesModal = ({ show, onHide }) => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const profileId = loginedProfileData?.data?.profile?.id;
+    const taxes = loginedProfileData?.data?.taxes || [];
 
     const [activeTab, setActiveTab] = useState("printers");
     const isMobile = window.innerWidth < 992;
@@ -236,6 +237,14 @@ const DevicesModal = ({ show, onHide }) => {
                         >
                             Skanerlər
                         </div>
+                        {taxes.length > 0 && (
+                            <div
+                                className={`devices-mobile-tab ${activeTab === "taxes" ? "active" : ""}`}
+                                onClick={() => setActiveTab("taxes")}
+                            >
+                                E-kassalar
+                            </div>
+                        )}
                         {isMaster && (
                             <div
                                 className={`devices-mobile-tab ${activeTab === "mobile" ? "active" : ""}`}
@@ -288,6 +297,16 @@ const DevicesModal = ({ show, onHide }) => {
                                 <i className="bi bi-qr-code-scan"></i>
                                 <span>Skanerlər</span>
                             </div>
+
+                            {taxes.length > 0 && (
+                                <div
+                                    className={`devices-menu-item ${activeTab === "taxes" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("taxes")}
+                                >
+                                    <i className="bi bi-receipt"></i>
+                                    <span>E-kassalar</span>
+                                </div>
+                            )}
 
                             {isMaster && (
                                 <div
@@ -514,6 +533,54 @@ const DevicesModal = ({ show, onHide }) => {
                                             <span>Mətbəx ekranı açıldıqda bütün aktiv sifarişlər orada rəqəmsal kartlar şəklində görünəcək.</span>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        ) : activeTab === "taxes" && taxes.length > 0 ? (
+                            <div className="display-settings">
+                                <div style={{ marginBottom: '16px' }}>
+                                    <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>E-kassa Cihazları</h4>
+                                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Profildə qeydiyyatda olan fiskal cihazların siyahısı</p>
+                                </div>
+                                <div className="printers-grid">
+                                    {taxes.map((tax, index) => (
+                                        <div key={tax.id || index} className="printer-edit-card">
+                                            <div className="printer-card-header">
+                                                <div className="printer-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+                                                    <i className="bi bi-receipt"></i>
+                                                </div>
+                                                <div className="printer-card-title">
+                                                    <h5>{tax.tax_cash_type || 'E-kassa'}</h5>
+                                                    <span>Fiskal Cihaz #{index + 1}</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                                <div className="printer-form-group" style={{ flex: 2 }}>
+                                                    <label>IP Ünvan</label>
+                                                    <input className="printer-input" value={tax.ip_addr || '—'} readOnly />
+                                                </div>
+                                                <div className="printer-form-group" style={{ flex: 1 }}>
+                                                    <label>Port</label>
+                                                    <input className="printer-input" value={tax.port_addr || '—'} readOnly />
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                                <div className="printer-form-group" style={{ flex: 1 }}>
+                                                    <label>Vergi faizi</label>
+                                                    <input className="printer-input" value={`${tax.tax_percent || 0}%`} readOnly />
+                                                </div>
+                                                <div className="printer-form-group" style={{ flex: 1 }}>
+                                                    <label>Cihaz tipi</label>
+                                                    <input className="printer-input" value={tax.tax_cash_type || '—'} readOnly />
+                                                </div>
+                                            </div>
+                                            {tax.tax_merchant && (
+                                                <div className="printer-form-group">
+                                                    <label>Merchant</label>
+                                                    <input className="printer-input" value={tax.tax_merchant} readOnly />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ) : activeTab === "mobile" && isMaster ? (
