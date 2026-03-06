@@ -1,5 +1,6 @@
 const OrdersModel = require("../model/OrdersModel");
 const SyncService = require("../services/SyncService");
+const MaxCheckService = require("../services/MaxCheckService");
 
 const CreateNewOrders = async (req, res) => {
   try {
@@ -25,9 +26,7 @@ const CreateNewOrders = async (req, res) => {
       return;
     }
 
-    // Use MAX(id) + 1 to avoid conflicts with deleted rows
-    const maxId = await OrdersModel.max("id", { paranoid: false });
-    const newId = (maxId || 0) + 1;
+    const newId = await MaxCheckService.getNextId(profileId);
 
     // Check if the table has a deposit
     const table = await require("../model/TablesModel").findOne({
@@ -76,9 +75,7 @@ const CreateNewOtherOrders = async (req, res) => {
       return;
     }
 
-    // Use MAX(id) + 1 to avoid conflicts with deleted rows
-    const maxId = await OrdersModel.max("id", { paranoid: false });
-    const newId = (maxId || 0) + 1;
+    const newId = await MaxCheckService.getNextId(profileId);
 
     let newSale = await OrdersModel.create({
       id: newId,

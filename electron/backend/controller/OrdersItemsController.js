@@ -6,6 +6,7 @@ const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 const SyncService = require("../services/SyncService");
+const MaxCheckService = require("../services/MaxCheckService");
 
 const sendOrdersItemsToDb = async (req, res) => {
   const { orderId } = req.params;
@@ -782,8 +783,7 @@ const onSplitOrder = async (req, res) => {
 
     if (!targetOrder) {
       // CREATE NEW ORDER logic
-      const maxId = await OrdersModel.max("id", { paranoid: false });
-      const newId = (maxId || 0) + 1;
+      const newId = await MaxCheckService.getNextId(profileId);
 
       // Service Fee Logic
       let serviceValue = null;

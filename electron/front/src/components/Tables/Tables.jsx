@@ -22,6 +22,7 @@ const Tables = () => {
   const {
     tableGroups,
     currentHallId,
+    isTablesLoading,
     isTableEditMode,
     tableOrder,
     tempTableOrder,
@@ -438,6 +439,9 @@ const Tables = () => {
   };
 
   if (currentTables.length === 0) {
+    if (isTablesLoading) {
+      return <Container className="mt-4" />;
+    }
     return (
       <Container className="mt-4">
         <Alert variant="warning" className="text-center shadow-sm border-0">

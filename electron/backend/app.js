@@ -214,6 +214,8 @@ let creaedtToTabel = async () => {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const MaxCheckService = require("./services/MaxCheckService");
+
 const InsertData = async (profileId) => {
   const tasks = [
     { name: "Waiters", fn: () => getWaitersList(profileId) },
@@ -234,6 +236,9 @@ const InsertData = async (profileId) => {
       console.warn(`InsertData ${task.name} failed:`, error.message);
     }
   }
+  MaxCheckService.fetchAndSyncOnStartup(profileId).catch(e =>
+    console.warn("[MAX_CHECK] Startup sync error:", e.message)
+  );
 };
 
 const server = app.listen(55667, "0.0.0.0", () => {

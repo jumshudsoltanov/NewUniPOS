@@ -77,24 +77,22 @@ const BlockPage = () => {
                 const paymentDate = new Date(profile.next_payment_date);
                 paymentDate.setHours(0, 0, 0, 0);
 
-                if (paymentDate >= now) {
-                    toast.success("Abunəlik yeniləndi!");
-                    if (profile.id) {
-                        await Promise.all([
-                            dispatch(getTableGroups(profile.id)).unwrap(),
-                            dispatch(getActiveOrders({ profileId: profile.id })).unwrap(),
-                            dispatch(menuWithCategories(profile.id)).unwrap(),
-                            dispatch(menuWithGeneralCategories(profile.id)).unwrap(),
-                        ]);
-                    }
-                    navigate("/pin");
+                if (paymentDate < now) {
+                    toast.error("Abunəlik hələ yenilənməyib.");
                     return;
                 }
             }
 
-            if (!isPosBlock) {
-                toast.error("Abunəlik hələ yenilənməyib.");
+            toast.success("Sistem yeniləndi!");
+            if (profile?.id) {
+                await Promise.all([
+                    dispatch(getTableGroups(profile.id)).unwrap(),
+                    dispatch(getActiveOrders({ profileId: profile.id })).unwrap(),
+                    dispatch(menuWithCategories(profile.id)).unwrap(),
+                    dispatch(menuWithGeneralCategories(profile.id)).unwrap(),
+                ]);
             }
+            navigate("/pin");
         } catch (error) {
             console.error("Refresh error:", error);
             toast.error("Yeniləmə zamanı xəta baş verdi");

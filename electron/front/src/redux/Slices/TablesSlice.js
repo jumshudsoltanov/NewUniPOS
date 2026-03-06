@@ -20,6 +20,7 @@ const TablesSlice = createSlice({
   initialState: {
     tableGroups: {},
     currentHallId: null,
+    isTablesLoading: true,
     isTableEditMode: false,
     hallOrder: JSON.parse(localStorage.getItem("pos_hall_order") || "[]"),
     tableOrder: JSON.parse(localStorage.getItem("pos_table_orders") || "{}"),
@@ -72,7 +73,13 @@ const TablesSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    builder.addCase(getTableGroups.pending, (state) => {
+      if (!state.tableGroups?.data || state.tableGroups.data.length === 0) {
+        state.isTablesLoading = true;
+      }
+    });
     builder.addCase(getTableGroups.fulfilled, (state, action) => {
+      state.isTablesLoading = false;
       const payload = action.payload;
       if (payload?.data) {
         state.tableGroups = {
@@ -93,6 +100,9 @@ const TablesSlice = createSlice({
       if (!state.currentHallId && state.tableGroups?.data?.length > 0) {
         state.currentHallId = state.tableGroups.data[0].id;
       }
+    });
+    builder.addCase(getTableGroups.rejected, (state) => {
+      state.isTablesLoading = false;
     });
 
     builder.addMatcher(

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { authPos } from "../../redux/Slices/LoginSlice";
 import { toast } from "sonner";
 import apiConfig from "../../utils/apiConfig";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
@@ -76,6 +77,32 @@ const Settings = () => {
                 dispatch(getActiveOrders({ profileId })).unwrap(),
                 new Promise(resolve => setTimeout(resolve, 3000))
             ]);
+
+            const storageData = JSON.parse(localStorage.getItem("profile"));
+            if (storageData) {
+                const data = await dispatch(authPos(storageData)).unwrap();
+                localStorage.setItem("authResult", JSON.stringify(data));
+                const profile = data?.data?.profile;
+
+                if (Number(profile?.is_pos_block) === 1) {
+                    toast.dismiss(toastId);
+                    navigate("/block");
+                    return;
+                }
+
+                if (profile?.next_payment_date) {
+                    const now = new Date();
+                    now.setHours(0, 0, 0, 0);
+                    const paymentDate = new Date(profile.next_payment_date);
+                    paymentDate.setHours(0, 0, 0, 0);
+                    if (paymentDate < now) {
+                        toast.dismiss(toastId);
+                        navigate("/block");
+                        return;
+                    }
+                }
+            }
+
             toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
         } catch (error) {
             console.error("Yeniləmə xətası:", error);
