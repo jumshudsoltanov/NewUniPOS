@@ -1598,11 +1598,15 @@ const onDeleteItemWithReason = async (req, res) => {
     console.log(`[DELETE REASON] Order: ${orderId}, Item: ${itemId}, Reason: ${reasonId}, Qty: ${qty || 'ALL'}`);
 
     if (qty && qty > 0 && qty < item.count) {
-      // Partial delete
+      // Partial delete - currently we don't have a good place to store reason for partial, 
+      // but let's at least update the item if we were to keep track. 
+      // For now, full delete is more common for "reasons".
       item.count -= qty;
       await item.save({ transaction });
     } else {
       // Full delete
+      item.is_delete_reason_id = reasonId;
+      await item.save({ transaction }); // Save reason before soft delete
       await item.destroy({ transaction });
     }
 

@@ -23,6 +23,20 @@ class OmnitechService {
         }
     }
 
+    _azToLatin(text) {
+        if (!text) return "";
+        const mapping = {
+            'ə': 'e', 'Ə': 'E',
+            'ş': 's', 'Ş': 'S',
+            'ç': 'c', 'Ç': 'C',
+            'ğ': 'g', 'Ğ': 'G',
+            'ö': 'o', 'Ö': 'O',
+            'ü': 'u', 'Ü': 'U',
+            'ı': 'i', 'İ': 'I'
+        };
+        return text.split('').map(char => mapping[char] || char).join('');
+    }
+
     async _ensureToken() {
         if (!this.accessToken) {
             await this.login();
@@ -118,6 +132,19 @@ class OmnitechService {
         });
     }
 
+    // check_type: 19 - Journal/Operation History
+    async getOperationHistory(beginDate, endDate) {
+        const token = await this._ensureToken();
+        return this._request({
+            requestData: {
+                checkData: { check_type: 19 },
+                access_token: token,
+                begin_date: beginDate,
+                end_date: endDate
+            }
+        });
+    }
+
     // check_type: 7
     async deposit(amount) {
         const token = await this._ensureToken();
@@ -201,7 +228,7 @@ class OmnitechService {
                     parameters: {
                         doc_type: 'sale',
                         data: {
-                            cashier: (cashierName || 'Cashier').substring(0, 64),
+                            cashier: this._azToLatin(cashierName || 'Cashier').substring(0, 64),
                             currency: 'AZN',
                             items: omniItems,
                             sum: totalSum,
@@ -289,7 +316,7 @@ class OmnitechService {
                         data: {
                             bonusSum: 0,
                             cashSum,
-                            cashier: (cashierName || 'Cashier').substring(0, 64),
+                            cashier: this._azToLatin(cashierName || 'Cashier').substring(0, 64),
                             cashlessSum,
                             creditSum: 0,
                             currency: 'AZN',

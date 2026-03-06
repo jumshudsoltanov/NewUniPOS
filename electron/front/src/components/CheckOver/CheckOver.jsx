@@ -11,6 +11,7 @@ import { closeOrder, saveLog } from '../../redux/Slices/OrdersSlice';
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import axios from "axios";
+import apiConfig, { localApi } from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 
 const CheckOver = () => {
@@ -313,7 +314,7 @@ const CheckOver = () => {
                             count: item.count || 1,
                             price: item.price || 0
                         }));
-                        const taxResult = await axios.post('/tax/sale', {
+                        const taxResult = await localApi.post('/tax/sale', {
                             taxConfigs: taxConfigsToUse,
                             saleData: {
                                 items: saleItems,
@@ -327,7 +328,7 @@ const CheckOver = () => {
                             const firstSuccess = taxResult.data.results?.find(r => r.success && r.data);
                             if (firstSuccess?.data) {
                                 const fd = firstSuccess.data;
-                                axios.patch(`/tax/save-fiscal/${id}`, {
+                                localApi.patch(`/tax/save-fiscal/${id}`, {
                                     fiscal_id: fd.long_id || '',
                                     fiscal_doc_number: String(fd.document_number || ''),
                                     fiscal_short_id: fd.short_id || ''

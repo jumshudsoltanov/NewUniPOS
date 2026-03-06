@@ -2,9 +2,6 @@ const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
 const OrdersModel = require("../model/OrdersModel");
 const WaitersModel = require("../model/WaitersModel");
-const OrdersItemsModel = require("../model/OrdersItemsModel");
-const ProductsModel = require("../model/ProductsModel");
-const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 
 const getTables = async (req, res) => {
   const { profileId } = req.params;
@@ -17,26 +14,12 @@ const getTables = async (req, res) => {
           model: OrdersModel,
           where: { status: 1 },
           required: false,
+          attributes: ["id", "uuid", "amount", "discount", "deposit", "service_charge", "print_count", "waiter_id", "status", "guest_count"],
           include: [
             {
               model: WaitersModel,
               as: "waiter",
               attributes: ["id", "name"],
-            },
-            {
-              model: OrdersItemsModel,
-              as: "orders_items",
-              include: [
-                {
-                  model: ProductsModel,
-                  as: "product",
-                  attributes: ["id", "name"],
-                },
-              ],
-            },
-            {
-              model: OrderPaymentsModel,
-              as: "order_payments",
             },
           ],
           as: "orders",

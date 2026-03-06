@@ -4,10 +4,10 @@ import "./SupportModal.css";
 const SupportModal = ({ isOpen, onClose, terminalId, terminalName, branchName }) => {
     if (!isOpen) return null;
 
-    const phoneNumber = "+994705401040";
+    const phoneNumber = "+994775012507";
 
     // QR kod URL - WhatsApp link
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://wa.me/994705401040`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://wa.me/994775012507`;
 
     const handleCall = () => {
         window.location.href = `tel:${phoneNumber}`;

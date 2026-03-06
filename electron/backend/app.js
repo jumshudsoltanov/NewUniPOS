@@ -112,6 +112,12 @@ let creaedtToTabel = async () => {
       as: "product",
       constraints: false,
     });
+    
+    OrdersItemsModel.belongsTo(TagsModel, {
+      foreignKey: "is_delete_reason_id",
+      as: "delete_reason",
+      constraints: false,
+    });
 
     // Order Payments
     OrdersModel.hasMany(OrderPaymentsModel, {
@@ -136,6 +142,12 @@ let creaedtToTabel = async () => {
     OrderPaymentsModel.belongsTo(TagsModel, {
       foreignKey: "without_payment_method_id",
       as: "tag",
+      constraints: false,
+    });
+
+    OrdersModel.belongsTo(TagsModel, {
+      foreignKey: "is_delete_reason_id",
+      as: "delete_reason",
       constraints: false,
     });
 
@@ -177,34 +189,6 @@ let creaedtToTabel = async () => {
     });
 
     await db.sequelize.sync({ alter: true });
-
-    const safeAddColumn = async (table, col, colDef) => {
-      try {
-        const pool = db.sequelize.connectionManager.pool;
-        const conn = await pool.acquire();
-        try {
-          await conn.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${col}\` ${colDef}`);
-          console.log(`+ Added ${table}.${col}`);
-        } catch (innerErr) {
-          if (innerErr.message && innerErr.message.includes('Duplicate')) { /* exists */ }
-          else console.warn(`Column ${table}.${col}:`, innerErr.message);
-        } finally {
-          pool.release(conn);
-        }
-      } catch (e) {
-        console.warn(`SafeAddColumn pool error for ${table}.${col}:`, e.message);
-      }
-    };
-    await safeAddColumn('profiles', 'is_master_cashier_printing', 'TINYINT DEFAULT 0');
-    await safeAddColumn('profiles', 'is_master_product_printing', 'TINYINT DEFAULT 0');
-    await safeAddColumn('printers', 'connection_type', "VARCHAR(255) DEFAULT 'network'");
-    await safeAddColumn('printers', 'usb_name', 'VARCHAR(255) DEFAULT NULL');
-    await safeAddColumn('printers', 'ip', 'VARCHAR(255) DEFAULT NULL');
-    await safeAddColumn('printers', 'port', 'INT DEFAULT NULL');
-    await safeAddColumn('waiters', 'can_create_order', 'TINYINT DEFAULT 0');
-    await safeAddColumn('waiters', 'can_see_shortcuts', 'TINYINT DEFAULT 0');
-    await safeAddColumn('orders_items', 'modifiers', 'TEXT DEFAULT NULL');
-    await safeAddColumn('orders_items', 'comment', 'TEXT DEFAULT NULL');
 
     console.log("Created Table Success!");
   } catch (error) {

@@ -361,6 +361,23 @@ router.post("/tax/periodic-report", async (req, res) => {
   }
 });
 
+router.post("/tax/operation-history", async (req, res) => {
+  try {
+    const { taxConfig, beginDate, endDate } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+
+    const result = await service.getOperationHistory(beginDate, endDate);
+
+    if (result && result.error_code && result.error_code !== 0) {
+      return res.status(400).json({ message: result.error_message || "Əməliyyat tarixçəsi xətası" });
+    }
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 const OrdersModel = require("../model/OrdersModel");
 
 router.patch("/tax/save-fiscal/:orderId", async (req, res) => {

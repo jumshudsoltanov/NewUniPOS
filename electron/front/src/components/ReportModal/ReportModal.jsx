@@ -46,9 +46,12 @@ const ReportModal = ({ show, onClose }) => {
         { id: "financial", name: "Maliyyə hesabatı" },
     ];
 
+    const [cashierPrinter, setCashierPrinter] = useState(null);
+
     useEffect(() => {
         if (show && profileId) {
             fetchTerminals();
+            fetchCashierPrinter();
         }
     }, [show, profileId]);
 
@@ -63,12 +66,56 @@ const ReportModal = ({ show, onClose }) => {
         }
     };
 
+    const fetchCashierPrinter = async () => {
+        try {
+            const response = await axios.get(`/pos/printers/${profileId}`);
+            if (response.data?.data) {
+                const cashier = response.data.data.find(p => p.is_cashier === 1);
+                if (cashier) setCashierPrinter(cashier);
+            }
+        } catch (e) {}
+    };
+
+    const handlePrint = async () => {
+        const reportEl = document.querySelector('.report-view');
+        if (!reportEl) return;
+
+        const html = `
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', monospace; font-size: 11px; color: #000; }
+                .report-data-header { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 10px; }
+                .report-data-info p, .report-data-time span { font-size: 10px; }
+                .report-data-time { margin-top: 4px; }
+                .section-title { font-weight: bold; font-size: 11px; border-left: 3px solid #000; padding: 2px 6px; margin: 8px 0 4px; background: none; color: #000; }
+                .receipt-row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dotted #bbb; }
+                .receipt-row .dots { display: none; }
+                .receipt-row .value { font-weight: bold; }
+                .total-line { border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; font-size: 13px; padding: 3px 0; margin-top: 4px; }
+                .report-details-section { margin-top: 10px; padding-top: 6px; border-top: 1px dashed #000; }
+                table { width: 100%; border-collapse: collapse; font-size: 10px; }
+                th, td { border-bottom: 1px dotted #999; padding: 2px 3px; }
+                .text-end { text-align: right; }
+                .text-center { text-align: center; }
+                .alert { display: none; }
+            </style>
+            ${reportEl.innerHTML}
+        `;
+
+        if (window.electronAPI?.printReceipt && cashierPrinter) {
+            const targetPrinter = cashierPrinter.usb_name || cashierPrinter.local_name || cashierPrinter.name;
+            await window.electronAPI.printReceipt({ html, printerName: targetPrinter });
+        } else {
+            window.print();
+        }
+    };
+
     const handleCreateReport = async () => {
         if (!profileId) return;
 
         setLoading(true);
+        setReportResults(null);
+        setReportSummary(null);
         try {
-            // Always fetch simple summary first
             const summaryRes = await axios.get(`/reports/${profileId}/data`, {
                 params: { startDate, startTime, endDate, endTime, terminal, reportType: 'simple', showTransactions }
             });
@@ -77,23 +124,16 @@ const ReportModal = ({ show, onClose }) => {
                 setReportSummary(summaryRes.data.data);
             }
 
-            // If selected report is not simple, fetch it too
             if (reportType !== "simple") {
                 const response = await axios.get(`/reports/${profileId}/data`, {
                     params: { startDate, startTime, endDate, endTime, terminal, reportType, showTransactions }
                 });
 
                 if (response.data.status === "success") {
-                    setReportResults({
-                        type: reportType,
-                        data: response.data.data
-                    });
+                    setReportResults({ type: reportType, data: response.data.data });
                 }
             } else {
-                setReportResults({
-                    type: "simple",
-                    data: summaryRes.data.data
-                });
+                setReportResults({ type: "simple", data: summaryRes.data.data });
             }
             if (isMobile) setActiveMobileTab("result");
         } catch (error) {
@@ -145,12 +185,13 @@ const ReportModal = ({ show, onClose }) => {
             <div className="report-section mb-5">
                 <div className="section-title">Satış hesabatı</div>
                 <div className="receipt-row"><span>Cəm</span><div className="dots"></div><span className="value">{(reportSummary.total_amount || 0).toFixed(2)}</span></div>
-                <div className="receipt-row"><span>Vergi</span><div className="dots"></div><span className="value">0.00</span></div>
+                <div className="receipt-row"><span>Vergi</span><div className="dots"></div><span className="value">{(reportSummary.total_tax || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>İkram</span><div className="dots"></div><span className="value">{(reportSummary.total_gift || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>Xidmət</span><div className="dots"></div><span className="value">{(reportSummary.total_service || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>Endirim</span><div className="dots"></div><span className="value">{(reportSummary.total_discount || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>Çatdırılma haqqı</span><div className="dots"></div><span className="value">0.00</span></div>
                 <div className="receipt-row"><span>Geri qaytarılma</span><div className="dots"></div><span className="value">{(reportSummary.total_refund || 0).toFixed(2)}</span></div>
+                <div className="receipt-row"><span>Silinmələr</span><div className="dots"></div><span className="value">{(reportSummary.total_deleted || 0).toFixed(2)}</span></div>
                 <div className="receipt-row total-line"><span>Yekun:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
 
                 <div className="section-title mt-4">Digər detallar</div>
@@ -183,12 +224,13 @@ const ReportModal = ({ show, onClose }) => {
         return (
             <div className="report-view premium-receipt">
                 <ReportHeader />
-                <SalesSummary />
 
-                {type !== "simple" && (
-                    <div className="report-details-section mt-5 pt-4 border-top">
+                {type === "simple" ? (
+                    <SalesSummary />
+                ) : (
+                    <div className="report-details-section">
                         <div className="section-title mb-4">
-                            {reportTypes.find(t => t.id === type)?.name} Detalları
+                            {reportTypes.find(t => t.id === type)?.name}
                         </div>
                         {renderSpecificData(type, data)}
                     </div>
@@ -328,10 +370,36 @@ const ReportModal = ({ show, onClose }) => {
                         <tbody>
                             {data.map((item, i) => (
                                 <tr key={i}>
-                                    <td>{item.name === 'dine_in' ? 'Zalda' : item.name === 'takeaway' ? 'Götür' : 'Çatdırılma'}</td>
+                                    <td>{item.name}</td>
                                     <td className="text-center">{item.count}</td>
                                     <td className="text-end">{item.total?.toFixed(2)} AZN</td>
                                 </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "department":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Şöbə</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                );
+            case "financial":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Ödəniş üsulu</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => (
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
                             ))}
                         </tbody>
                     </Table>
@@ -355,9 +423,17 @@ const ReportModal = ({ show, onClose }) => {
         >
             <div className="report-modal-header">
                 <span className="report-modal-title">Hesabat</span>
-                <button className="report-modal-close-btn" onClick={onClose}>
-                    <i className="bi bi-x-lg"></i>
-                </button>
+                <div className="report-header-actions">
+                    {reportResults && !loading && (
+                        <button className="report-print-btn" onClick={handlePrint} title="Çap et">
+                            <i className="bi bi-printer-fill"></i>
+                            <span>Çap et</span>
+                        </button>
+                    )}
+                    <button className="report-modal-close-btn" onClick={onClose}>
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
             </div>
 
             {isMobile && (
@@ -378,10 +454,11 @@ const ReportModal = ({ show, onClose }) => {
             )}
 
             <Modal.Body className="report-modal-body">
-                <Row className="h-100 g-0 w-100">
+                <Row className="h-100 g-0 w-100" style={{ overflow: 'hidden', flexWrap: 'nowrap' }}>
                     {/* Left Sidebar - Filters */}
                     {(!isMobile || activeMobileTab === "filters") && (
                         <Col md={5} lg={4} className="report-sidebar">
+                            <div className="report-sidebar-scroll">
                             <div className="mobile-section-wrapper">
                                 <div className="mobile-group-title">Vaxt aralığı</div>
                                 <Form.Group className="mb-3">
@@ -475,15 +552,18 @@ const ReportModal = ({ show, onClose }) => {
                                     </Form.Group>
                                 </div>
                             </div>
+                            </div>
 
-                            <button
-                                className="report-create-btn"
-                                onClick={handleCreateReport}
-                                disabled={loading}
-                            >
-                                <i className="bi bi-file-earmark-bar-graph-fill me-2"></i>
-                                {loading ? "Yüklənir..." : "Hesabat yarat"}
-                            </button>
+                            <div className="report-sidebar-footer">
+                                <button
+                                    className="report-create-btn"
+                                    onClick={handleCreateReport}
+                                    disabled={loading}
+                                >
+                                    <i className="bi bi-file-earmark-bar-graph-fill me-2"></i>
+                                    {loading ? "Yüklənir..." : "Hesabat yarat"}
+                                </button>
+                            </div>
                         </Col>
                     )}
 

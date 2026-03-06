@@ -285,19 +285,19 @@ const Pin = () => {
 
   const handlePinSubmit = async (submittedPin) => {
     try {
+      const profileId = loginedProfileData?.data?.profile?.id;
+
+      // Start table/menu fetches in parallel with waiter check so data is ready when we navigate
+      if (profileId) {
+        dispatch(getTableGroups(profileId));
+        dispatch(menuWithCategories(profileId));
+        dispatch(menuWithGeneralCategories(profileId));
+      }
+
       const waiterResult = await dispatch(getWaiter(submittedPin)).unwrap();
 
       if (waiterResult.message === "success") {
-        // Immediate navigation to eliminate perceived lag
         navigate("/tables");
-
-        // Prefetch data in the background without blocking the UI transition
-        if (loginedProfileData?.data?.profile?.id) {
-          const profileId = loginedProfileData.data.profile.id;
-          dispatch(getTableGroups(profileId));
-          dispatch(menuWithCategories(profileId));
-          dispatch(menuWithGeneralCategories(profileId));
-        }
       } else {
         setIsError(true);
         setTimeout(() => {

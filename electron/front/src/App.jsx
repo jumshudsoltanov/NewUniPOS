@@ -211,7 +211,7 @@ function AppContent() {
 
             if (cleanPath === "/" || cleanPath === "/login" || cleanPath === "") {
               console.log("[AUTH] Auto-login SUCCESS. Redirecting to /pin...");
-              setTimeout(() => navigate("/pin"), 500);
+              navigate("/pin");
             }
           } catch (err) {
             console.error("[AUTH] InitApp/Auto-login failed:", err);

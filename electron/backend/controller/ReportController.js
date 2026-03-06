@@ -8,6 +8,7 @@ const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 const PaymentMethodsModel = require("../model/PaymentMethodsModel");
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
+const LoginModel = require("../model/LoginModel");
 
 const getReportData = async (req, res) => {
     const { profileId } = req.params;
@@ -38,20 +39,17 @@ const getReportData = async (req, res) => {
             },
         };
 
-        if (terminal && terminal !== "all") {
-            whereClause.terminal_id = terminal;
-        }
-
         let data = [];
 
         switch (reportType) {
             case "simple":
-                data = await getSimpleReport(baseWhere, startStr, endStr, showTransactions === 'true');
+                data = await getSimpleReport(profileId, baseWhere, startStr, endStr, showTransactions === 'true');
                 break;
             case "products":
                 data = await getProductsReport(closedWhere);
                 break;
             case "hall":
+            case "department":
                 data = await getHallReport(closedWhere);
                 break;
             case "tables":
@@ -70,13 +68,19 @@ const getReportData = async (req, res) => {
                 data = await getCategoryReport(closedWhere);
                 break;
             case "refunds":
-                data = await getRefundsReport(profileId, startStr, endStr);
+                data = await getRefundsReport(baseWhere, startStr, endStr);
                 break;
             case "gifted_products":
                 data = await getGiftedProductsReport(closedWhere);
                 break;
+            case "financial":
+                data = await getFinancialReport(baseWhere, startStr, endStr);
+                break;
+            case "inventory":
+                data = [];
+                break;
             default:
-                data = { message: "Report type not implemented yet" };
+                data = [];
         }
 
         res.status(200).json({ status: "success", data });
@@ -86,7 +90,9 @@ const getReportData = async (req, res) => {
     }
 };
 
-const getSimpleReport = async (baseWhere, start, end, showTransactions) => {
+const getSimpleReport = async (profileId, baseWhere, start, end, showTransactions) => {
+    const profile = await LoginModel.findOne({ where: { id: profileId } });
+    const taxPercent = parseFloat(profile?.tax_percent || 0);
     // 1. Fetch Closed Orders (sales)
     const closedOrders = await OrdersModel.findAll({
         where: {
@@ -98,7 +104,10 @@ const getSimpleReport = async (baseWhere, start, end, showTransactions) => {
             {
                 model: OrderPaymentsModel,
                 as: 'order_payments',
-                include: [{ model: PaymentMethodsModel, as: 'payment_method' }]
+                include: [
+                    { model: PaymentMethodsModel, as: 'payment_method' },
+                    { model: require("../model/TagsModel"), as: 'tag' }
+                ]
             },
             {
                 model: OrdersItemsModel,
@@ -107,14 +116,40 @@ const getSimpleReport = async (baseWhere, start, end, showTransactions) => {
         ]
     });
 
-    // 2. Fetch Returned Orders separately (filter by end_date when they were returned/deleted)
+    // 2. Fetch Returned Orders separately
     const returnedOrders = await OrdersModel.findAll({
         where: {
             ...baseWhere,
             status: 3,
             is_return: 1,
-            updated_at: { [Op.between]: [start, end] } // Or end_date if set for returns too
-        }
+            updated_at: { [Op.between]: [start, end] }
+        },
+        include: [{ model: require("../model/TagsModel"), as: 'delete_reason' }],
+        paranoid: false
+    });
+
+    // 3. Fetch Deleted Orders
+    const deletedOrders = await OrdersModel.findAll({
+        where: {
+            ...baseWhere,
+            status: 3,
+            is_delete_reason_id: { [Op.not]: null },
+            [Op.or]: [{ is_return: null }, { is_return: 0 }],
+            updated_at: { [Op.between]: [start, end] }
+        },
+        include: [{ model: require("../model/TagsModel"), as: 'delete_reason' }],
+        paranoid: false
+    });
+
+    // 4. Fetch Deleted Items (Soft-deleted)
+    const deletedItems = await OrdersItemsModel.findAll({
+        where: {
+            profile_id: profileId,
+            deleted_at: { [Op.between]: [start, end] },
+            is_delete_reason_id: { [Op.not]: null }
+        },
+        include: [{ model: require("../model/TagsModel"), as: 'delete_reason' }],
+        paranoid: false // Include soft-deleted
     });
 
     let summary = {
@@ -123,6 +158,8 @@ const getSimpleReport = async (baseWhere, start, end, showTransactions) => {
         total_service: 0,
         total_gift: 0,
         total_refund: 0,
+        total_deleted: 0,
+        total_tax: 0,
         net_total: 0,
         guest_count: 0,
         payments: {},
@@ -135,8 +172,14 @@ const getSimpleReport = async (baseWhere, start, end, showTransactions) => {
         summary.total_amount += parseFloat(order.amount || 0);
         summary.total_discount += parseFloat(order.discount || 0);
         summary.total_service += parseFloat(order.service_charge || 0);
-        summary.net_total += parseFloat(order.total || 0);
+        const orderTotal = parseFloat(order.total || 0);
+        summary.net_total += orderTotal;
         summary.guest_count += parseInt(order.guest_count || 0);
+
+        // Tax calculation: inclusive VAT = total * taxPercent / (100 + taxPercent)
+        if (order.is_tax === 1 && taxPercent > 0) {
+            summary.total_tax += orderTotal * taxPercent / (100 + taxPercent);
+        }
 
         // Calculate Gifts within these orders
         if (order.orders_items) {
@@ -156,21 +199,87 @@ const getSimpleReport = async (baseWhere, start, end, showTransactions) => {
         }
 
         // Tags summary
-        if (showTransactions && order.tags) {
-            const tagNames = order.tags.split(',').map(t => t.trim()).filter(t => t);
-            tagNames.forEach(tagName => {
-                if (!summary.tags[tagName]) {
-                    summary.tags[tagName] = { count: 0, total: 0 };
+        let orderTags = [];
+        // 1. From order.tags field
+        if (order.tags) {
+            orderTags = orderTags.concat(order.tags.split(',').map(t => t.trim()).filter(t => t));
+        }
+        // 2. From order_payments tags (without_payment_method_id)
+        if (order.order_payments) {
+            order.order_payments.forEach(p => {
+                if (p.tag && p.tag.name) {
+                    orderTags.push(p.tag.name);
                 }
-                summary.tags[tagName].count += 1;
-                summary.tags[tagName].total += parseFloat(order.total || 0);
             });
         }
+
+        // Aggregate unique tags for this order
+        const uniqueTags = [...new Set(orderTags)];
+        uniqueTags.forEach(tagName => {
+            if (!summary.tags[tagName]) {
+                summary.tags[tagName] = { count: 0, total: 0 };
+            }
+            summary.tags[tagName].count += 1;
+            summary.tags[tagName].total += parseFloat(order.total || 0);
+        });
     });
 
-    // Process Returned Orders for the refund line
+    // Process Returned Orders for the refund line and tags
     returnedOrders.forEach(order => {
-        summary.total_refund += parseFloat(order.total || order.amount || 0);
+        const orderVal = parseFloat(order.total || order.amount || 0);
+        summary.total_refund += orderVal;
+        
+        let orderTags = [];
+        if (order.tags) {
+            orderTags = orderTags.concat(order.tags.split(',').map(t => t.trim()).filter(t => t));
+        }
+        if (order.delete_reason && order.delete_reason.name) {
+            orderTags.push(order.delete_reason.name);
+        }
+
+        const uniqueTags = [...new Set(orderTags)];
+        uniqueTags.forEach(tagName => {
+            if (!summary.tags[tagName]) {
+                summary.tags[tagName] = { count: 0, total: 0 };
+            }
+            summary.tags[tagName].count += 1;
+            summary.tags[tagName].total += orderVal;
+        });
+    });
+
+    // Process Deleted Orders (manager permission) and tags
+    deletedOrders.forEach(order => {
+        const orderVal = parseFloat(order.total || order.amount || 0);
+        summary.total_deleted += orderVal;
+
+        let orderTags = [];
+        if (order.tags) {
+            orderTags = orderTags.concat(order.tags.split(',').map(t => t.trim()).filter(t => t));
+        }
+        if (order.delete_reason && order.delete_reason.name) {
+            orderTags.push(order.delete_reason.name);
+        }
+
+        const uniqueTags = [...new Set(orderTags)];
+        uniqueTags.forEach(tagName => {
+            if (!summary.tags[tagName]) {
+                summary.tags[tagName] = { count: 0, total: 0 };
+            }
+            summary.tags[tagName].count += 1;
+            summary.tags[tagName].total += orderVal;
+        });
+    });
+
+    // Process Deleted Items tags
+    deletedItems.forEach(item => {
+        if (item.delete_reason && item.delete_reason.name) {
+            const tagName = item.delete_reason.name;
+            if (!summary.tags[tagName]) {
+                summary.tags[tagName] = { count: 0, total: 0 };
+            }
+            summary.tags[tagName].count += 1;
+            summary.tags[tagName].total += (parseFloat(item.count || 0) * parseFloat(item.price || 0));
+        }
     });
 
     return summary;
@@ -389,20 +498,55 @@ const getSaleMethodReport = async (whereClause) => {
     return Object.values(methodMap);
 };
 
-const getRefundsReport = async (profileId, start, end) => {
-    // 3 usually means deleted/refunded in status
-    return await OrdersModel.findAll({
+const getRefundsReport = async (baseWhere, start, end) => {
+    const orders = await OrdersModel.findAll({
         where: {
-            profile_id: profileId,
+            ...baseWhere,
             status: 3,
-            end_date: {
-                [Op.between]: [start, end],
-            }
+            is_return: 1,
+            updated_at: { [Op.between]: [start, end] }
         },
         include: [
             { model: WaitersModel, as: 'waiter', attributes: ['name'] }
-        ]
+        ],
+        order: [['updated_at', 'DESC']]
     });
+    return orders.map(o => o.toJSON());
+};
+
+const getFinancialReport = async (baseWhere, start, end) => {
+    const orders = await OrdersModel.findAll({
+        where: {
+            ...baseWhere,
+            status: 2,
+            end_date: { [Op.between]: [start, end] }
+        },
+        include: [{
+            model: OrderPaymentsModel,
+            as: 'order_payments',
+            include: [{ model: PaymentMethodsModel, as: 'payment_method' }]
+        }]
+    });
+
+    let paymentMap = {};
+    let total = 0;
+
+    orders.forEach(order => {
+        if (order.order_payments) {
+            order.order_payments.forEach(p => {
+                const name = p.payment_method?.name || 'Digər';
+                const amount = parseFloat(p.paid || 0);
+                if (!paymentMap[name]) {
+                    paymentMap[name] = { name, count: 0, total: 0 };
+                }
+                paymentMap[name].count += 1;
+                paymentMap[name].total += amount;
+                total += amount;
+            });
+        }
+    });
+
+    return Object.values(paymentMap).sort((a, b) => b.total - a.total);
 };
 
 const getGiftedProductsReport = async (whereClause) => {

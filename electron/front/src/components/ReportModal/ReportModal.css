@@ -4,6 +4,7 @@
     border-radius: 8px;
     border: none;
     overflow: hidden;
+    height: 85vh;
     max-height: 85vh;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
     display: flex;
@@ -24,6 +25,26 @@
     align-items: center;
 }
 
+.report-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.report-print-btn {
+    background: #1a3a6b;
+    border: none;
+    color: white;
+    padding: 0.35rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .report-modal-title {
     font-size: 1.1rem;
     font-weight: 500;
@@ -35,16 +56,11 @@
     color: white;
     font-size: 1.25rem;
     cursor: pointer;
-    transition: opacity 0.2s;
     padding: 0;
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.report-modal-close-btn:hover {
-    opacity: 0.8;
 }
 
 .report-modal-body {
@@ -53,29 +69,42 @@
     display: flex;
     overflow: hidden;
     flex: 1;
+    min-height: 0;
 }
 
 /* Sidebar (Filter Section) */
 .report-sidebar {
     background-color: #f8f9fa;
-    padding: 1rem;
     border-right: 1px solid #dee2e6;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     width: 340px;
     min-width: 340px;
+    height: 100%;
+}
+
+.report-sidebar-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1rem;
+}
+
+.report-sidebar-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    flex-shrink: 0;
 }
 
 .report-content {
     background-color: #ffffff;
     padding: 2rem;
-    height: 100%;
+    padding-bottom: 4rem;
     overflow-y: auto;
     flex: 1;
-    /* Take remaining space */
+    min-height: 0;
 }
 
 /* Form Styles */
@@ -158,23 +187,10 @@
     border-radius: 6px;
     font-weight: 500;
     font-size: 1rem;
-    transition: all 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: auto;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     gap: 8px;
-}
-
-.report-create-btn:hover {
-    background-color: #0b5ed7;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.report-create-btn:active {
-    transform: translateY(0);
 }
 
 .report-create-btn i {
@@ -551,5 +567,104 @@
 
     .total-line {
         font-size: 1.1rem;
+    }
+}
+
+/* ===================== PRINT STYLES ===================== */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+
+    .report-view,
+    .report-view * {
+        visibility: visible !important;
+    }
+
+    .report-view {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 20px;
+        background: white;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: #000;
+    }
+
+    .report-data-header {
+        border-bottom: 1px dashed #000;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+    }
+
+    .report-data-info p,
+    .report-data-time span {
+        font-size: 11px;
+        color: #000;
+    }
+
+    .section-title {
+        font-size: 12px;
+        font-weight: bold;
+        background: none !important;
+        color: #000 !important;
+        border-left: 3px solid #000;
+        padding: 3px 8px;
+        margin: 10px 0 6px;
+    }
+
+    .receipt-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        padding: 2px 0;
+        border-bottom: 1px dotted #ccc;
+    }
+
+    .receipt-row .dots {
+        display: none;
+    }
+
+    .receipt-row .value {
+        font-weight: bold;
+    }
+
+    .total-line {
+        border-top: 2px solid #000 !important;
+        border-bottom: 2px solid #000 !important;
+        font-weight: bold;
+        font-size: 13px;
+        padding: 4px 0;
+        margin-top: 4px;
+    }
+
+    .custom-report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+    }
+
+    .custom-report-table th,
+    .custom-report-table td {
+        border-bottom: 1px dotted #999;
+        padding: 3px 4px;
+        color: #000;
+    }
+
+    .report-details-section {
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px dashed #000;
+    }
+
+    .report-print-btn,
+    .report-modal-header,
+    .report-sidebar,
+    .report-mobile-tabs,
+    .modal-backdrop,
+    .report-data-time i {
+        display: none !important;
     }
 }

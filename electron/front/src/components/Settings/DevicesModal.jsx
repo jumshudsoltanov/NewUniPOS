@@ -238,7 +238,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleTaxLogin = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await axios.post('/tax/login', { taxConfig: tax });
+            const result = await localApi.post('/tax/login', { taxConfig: tax });
             if (result.data?.access_token) {
                 toast.success(`${tax.tax_cash_type} — Login u\u011Furlu`);
                 handleShiftStatus(tax, index);
@@ -257,7 +257,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleShiftStatus = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await axios.post('/tax/shift-status', { taxConfig: tax });
+            const result = await localApi.post('/tax/shift-status', { taxConfig: tax });
             setShiftStates(prev => ({ ...prev, [index]: result.data }));
             const isOpen = result.data?.shiftStatus === true;
             toast.info(`N\u00F6vb\u0259: ${isOpen ? 'A\u00e7\u0131qd\u0131r' : 'Ba\u011Fl\u0131d\u0131r'}`);
@@ -273,7 +273,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleOpenShift = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            await axios.post('/tax/open-shift', { taxConfig: tax });
+            await localApi.post('/tax/open-shift', { taxConfig: tax });
             toast.success('N\u00F6vb\u0259 a\u00E7\u0131ld\u0131');
             handleShiftStatus(tax, index);
         } catch (err) {
@@ -288,7 +288,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleCloseShift = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await axios.post('/tax/close-shift', { taxConfig: tax });
+            const result = await localApi.post('/tax/close-shift', { taxConfig: tax });
             toast.success('N\u00F6vb\u0259 ba\u011Fland\u0131 (Z-Report)');
             setShiftStates(prev => ({ ...prev, [index]: { shiftStatus: false } }));
         } catch (err) {
@@ -303,7 +303,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleXReport = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            await axios.post('/tax/x-report', { taxConfig: tax });
+            await localApi.post('/tax/x-report', { taxConfig: tax });
             toast.success('X-Report \u00E7ap edildi');
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -320,7 +320,7 @@ const DevicesModal = ({ show, onHide }) => {
             const bDate = reportStart.date ? `${reportStart.date}T${reportStart.time}:00` : "";
             const eDate = reportEnd.date ? `${reportEnd.date}T${reportEnd.time}:00` : "";
 
-            await axios.post('/tax/periodic-report', {
+            await localApi.post('/tax/periodic-report', {
                 taxConfig: tax,
                 beginDate: bDate,
                 endDate: eDate
@@ -335,10 +335,31 @@ const DevicesModal = ({ show, onHide }) => {
         }
     };
 
+    const handleOperationHistory = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            const bDate = reportStart.date ? `${reportStart.date}T${reportStart.time}:00` : "";
+            const eDate = reportEnd.date ? `${reportEnd.date}T${reportEnd.time}:00` : "";
+
+            await localApi.post('/tax/operation-history', {
+                taxConfig: tax,
+                beginDate: bDate,
+                endDate: eDate
+            });
+            toast.success('\u018fm\u0259liyyat tarix\u00e7\u0259si \u00e7ap edildi');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('Tarix\u00e7\u0259 \u00e7ap x\u0259tas\u0131: ' + msg);
+            addNotification('Fiskal Tarix\u00e7\u0259', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
     const handleReprintAfterError = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            await axios.post('/tax/reprint-error', { taxConfig: tax });
+            await localApi.post('/tax/reprint-error', { taxConfig: tax });
             toast.success('Yenid\u0259n \u00E7ap sor\u011Fusu g\u00F6nd\u0259rildi');
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -352,7 +373,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleTaxInfo = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await axios.post('/tax/info', { taxConfig: tax });
+            const result = await localApi.post('/tax/info', { taxConfig: tax });
             if (result.data?.data) {
                 const d = result.data.data;
                 toast.success(`${d.company_name || tax.tax_cash_type} \u2014 S/N: ${d.cashbox_factory_number || '?'}, Son s\u0259n\u0259d: #${d.last_doc_number || '?'}`);
@@ -854,7 +875,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                             </div>
                                                         </div>
                                                         <div style={{ display: 'flex', gap: '12px' }}>
-                                                            <button onClick={() => handlePeriodicReport(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 2, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                                                            <button onClick={() => handleOperationHistory(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 2, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
                                                                 Əməliyyat tarixçəsi
                                                             </button>
                                                             <button onClick={() => handlePeriodicReport(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 1, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
