@@ -1,4 +1,5 @@
 const OmnitechService = require('./OmnitechService');
+const SunmiService = require('./SunmiService');
 
 const serviceInstances = {};
 
@@ -14,6 +15,9 @@ function getTaxService(taxConfig) {
     switch (type) {
         case 'omnitech':
             service = new OmnitechService(taxConfig);
+            break;
+        case 'sunmi':
+            service = new SunmiService(taxConfig);
             break;
         default:
             console.warn(`[TAX] Unknown tax device type: ${taxConfig.tax_cash_type}`);
