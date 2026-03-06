@@ -34,7 +34,7 @@
 
 .settings-menu {
     background: #fff;
-    border-radius: 16px;
+    border-radius: 6px;
     width: 280px;
     overflow: hidden;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
@@ -105,7 +105,7 @@
     padding: 14px 16px;
     border: none;
     background: transparent;
-    border-radius: 12px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
     text-align: left;
@@ -123,7 +123,7 @@
     align-items: center;
     justify-content: center;
     background: #f0f4f8;
-    border-radius: 10px;
+    border-radius: 6px;
     color: #495057;
     flex-shrink: 0;
     transition: all 0.15s ease;
@@ -200,7 +200,7 @@
         width: 100%;
         max-width: 340px;
         margin-top: 0;
-        border-radius: 16px;
+        border-radius: 6px;
     }
 
     .settings-menu-header {
@@ -228,7 +228,7 @@
     .settings-menu-item-icon {
         width: 44px;
         height: 44px;
-        border-radius: 12px;
+        border-radius: 6px;
     }
 
     .settings-menu-item-label {

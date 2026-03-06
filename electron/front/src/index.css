@@ -19,3 +19,16 @@
 ul li {
   list-style: none;
 }
+
+/* Ensure all modal headers stay within the squared borders of the content */
+.modal-content>.modal-header,
+[class*="-modal-header"] {
+  border-top-left-radius: 6px !important;
+  border-top-right-radius: 6px !important;
+}
+
+.modal-content,
+[class*="-modal-wrapper"] {
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}

@@ -1,6 +1,6 @@
 /* Main Modal Container Overrides */
 .check-lock-modal .modal-content {
-    border-radius: 10px !important;
+    border-radius: 6px !important;
     border: none !important;
     overflow: hidden;
     background-color: transparent !important;
@@ -140,7 +140,7 @@
     height: 52px;
     background-color: #fff;
     border: 1px solid #C0C0C0;
-    border-radius: 12px;
+    border-radius: 6px;
     font-size: 16px;
     font-weight: 500;
     color: #333;
@@ -156,7 +156,7 @@
     height: 52px;
     background-color: #053796;
     border: none;
-    border-radius: 12px;
+    border-radius: 6px;
     color: #fff;
     font-size: 16px;
     font-weight: 500;

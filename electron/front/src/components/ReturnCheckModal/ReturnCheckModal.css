@@ -5,14 +5,14 @@
 
 .return-check-modal .modal-content {
     border: none;
-    border-radius: 16px;
+    border-radius: 6px;
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
 /* Header */
 .return-header {
-    background: #053796;
+    background: #4F85F4;
     padding: 16px 20px;
     display: flex;
     justify-content: space-between;
@@ -54,7 +54,7 @@
 .return-check-id-display {
     background: #fff;
     border: 2px solid #e8eaed;
-    border-radius: 12px;
+    border-radius: 6px;
     padding: 18px 20px;
     margin-bottom: 20px;
     display: flex;
@@ -72,7 +72,7 @@
     font-family: "Poppins", sans-serif;
     font-size: 28px;
     font-weight: 700;
-    color: #053796;
+    color: #4F85F4;
 }
 
 .return-keypad-grid {
@@ -86,7 +86,7 @@
 .return-keypad-btn {
     background: #fff;
     border: 2px solid #e8eaed;
-    border-radius: 12px;
+    border-radius: 6px;
     padding: 20px;
     font-family: "Poppins", sans-serif;
     font-size: 24px;
@@ -98,7 +98,7 @@
 
 .return-keypad-btn:hover {
     background: #f0f4ff;
-    border-color: #053796;
+    border-color: #4F85F4;
 }
 
 .return-keypad-btn:active {
@@ -112,9 +112,9 @@
 }
 
 .return-search-btn {
-    background: #053796;
+    background: #4F85F4;
     border: none;
-    border-radius: 12px;
+    border-radius: 6px;
     padding: 20px;
     font-family: "Poppins", sans-serif;
     font-size: 18px;
@@ -126,7 +126,7 @@
 }
 
 .return-search-btn:hover {
-    background: #042b7a;
+    background: #3b75e5;
 }
 
 .return-search-btn:disabled {
@@ -192,7 +192,7 @@
     font-size: 12px;
     font-weight: 500;
     padding: 4px 12px;
-    border-radius: 20px;
+    border-radius: 6px;
 }
 
 .return-order-status.closed {
@@ -261,9 +261,9 @@
 
 /* Return Action Button */
 .return-action-btn {
-    background: linear-gradient(135deg, #053796 0%, #042b7a 100%);
+    background: linear-gradient(135deg, #4F85F4 0%, #3b75e5 100%);
     border: none;
-    border-radius: 14px;
+    border-radius: 6px;
     padding: 16px;
     font-family: "Poppins", sans-serif;
     font-size: 16px;
@@ -272,7 +272,7 @@
     cursor: pointer;
     width: 100%;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 15px rgba(5, 55, 150, 0.25);
+    box-shadow: 0 4px 15px rgba(79, 133, 244, 0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -282,7 +282,7 @@
 
 .return-action-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(5, 55, 150, 0.3);
+    box-shadow: 0 6px 20px rgba(79, 133, 244, 0.3);
 }
 
 .return-action-btn:active {
@@ -298,7 +298,7 @@
 
     .return-mobile-tabs {
         display: flex;
-        background: #053796;
+        background: #4F85F4;
         padding: 8px 16px 0 16px;
         gap: 8px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -378,7 +378,7 @@
     .return-keypad-btn {
         padding: 12px;
         font-size: 18px;
-        border-radius: 10px;
+        border-radius: 6px;
     }
 
     .return-search-btn {

@@ -1,14 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Container, Col, Row, Form } from "react-bootstrap";
+import { Container, Col, Row, Form, Modal } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../Header/Header";
 import "./CheckOver.css";
+import "../Customers-Modal/CustomersModal.css";
 import { getTagsList } from '../../redux/Slices/TagsSlice';
 import { getPaymentMethods } from '../../redux/Slices/PaymentMethodsSlice';
 import { closeOrder, saveLog } from '../../redux/Slices/OrdersSlice';
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
+import axios from "axios";
+import { addNotification } from "../../utils/notificationService";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -24,6 +27,17 @@ const CheckOver = () => {
     const [unpaidReason, setUnpaidReason] = useState("");
     const [comment, setComment] = useState("");
     const [tagsListData, setTagsListData] = useState([])
+
+    const [showTaxSelectionModal, setShowTaxSelectionModal] = useState(false);
+    const [taxLocalNames, setTaxLocalNames] = useState({});
+
+    // Fetch tax names
+    useEffect(() => {
+        const stored = localStorage.getItem("tax_local_names");
+        if (stored) {
+            try { setTaxLocalNames(JSON.parse(stored)); } catch (e) { }
+        }
+    }, []);
 
     const { books } = useSelector((state) => state.BooksSlice);
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -199,7 +213,16 @@ const CheckOver = () => {
 
     const isSplitActive = selectedMethods.length > 1;
 
-    const handleConfirmClose = async () => {
+    const handleConfirmReady = () => {
+        const taxConfigs = loginedProfileData?.data?.taxes || [];
+        if (viewMode === "PAYMENT" && taxPrint && taxConfigs.length > 1) {
+            setShowTaxSelectionModal(true);
+        } else {
+            handleConfirmClose(null);
+        }
+    };
+
+    const handleConfirmClose = async (selectedTaxForPrint = null) => {
         const profileId = loginedProfileData?.data?.profile?.id;
         const waiterId = currentOrder?.waiter_id || loginedWaiter?.data?.id;
         const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || "Naməlum";
@@ -278,7 +301,56 @@ const CheckOver = () => {
                 }, loginedProfileData);
             }
 
-            // Navigation on success
+            if (viewMode === "PAYMENT" && taxPrint) {
+                const allTaxConfigs = loginedProfileData?.data?.taxes || [];
+                const taxConfigsToUse = selectedTaxForPrint ? [selectedTaxForPrint] : allTaxConfigs;
+
+                if (taxConfigsToUse.length > 0) {
+                    try {
+                        const saleItems = (currentOrder?.orders_items || []).map(item => ({
+                            ...item,
+                            name: item.product?.name || item.name || 'Məhsul',
+                            count: item.count || 1,
+                            price: item.price || 0
+                        }));
+                        const taxResult = await axios.post('/tax/sale', {
+                            taxConfigs: taxConfigsToUse,
+                            saleData: {
+                                items: saleItems,
+                                payments,
+                                cashierName: waiterName,
+                                orderId: currentOrder?.id || id
+                            }
+                        });
+                        if (taxResult.data?.success) {
+                            toast.success('Vergi çeki kəsildi');
+                            const firstSuccess = taxResult.data.results?.find(r => r.success && r.data);
+                            if (firstSuccess?.data) {
+                                const fd = firstSuccess.data;
+                                axios.patch(`/tax/save-fiscal/${id}`, {
+                                    fiscal_id: fd.long_id || '',
+                                    fiscal_doc_number: String(fd.document_number || ''),
+                                    fiscal_short_id: fd.short_id || ''
+                                }).catch(err => console.error('Save fiscal data error:', err));
+                            }
+                        } else {
+                            toast.warning('Vergi çeki xətası');
+                        }
+                    } catch (taxErr) {
+                        console.error('Tax sale error:', taxErr);
+                        const errMsg = taxErr.response?.data?.message || taxErr.message;
+                        toast.warning('Vergi \u00E7\u0259ki g\u00F6nd\u0259ril\u0259 bilm\u0259di: ' + errMsg);
+                        addNotification('Fiskal \u00C7\u0259k X\u0259tas\u0131', errMsg, { category: 'system', type: 'error' });
+                        dispatch(saveLog({
+                            orderId: currentOrder?.uuid,
+                            action: 'Vergi çeki xətası',
+                            waiterName,
+                            details: errMsg
+                        }));
+                    }
+                }
+            }
+
             navigate("/tables");
         } catch (err) {
             console.error("Close order failed:", err);
@@ -449,7 +521,7 @@ const CheckOver = () => {
                                     </button>
                                     <button
                                         className="confirm-close-btn green-btn"
-                                        onClick={handleConfirmClose}
+                                        onClick={handleConfirmReady}
                                     >
                                         Bağla
                                     </button>
@@ -517,7 +589,7 @@ const CheckOver = () => {
                                     </button>
                                     <button
                                         className="confirm-close-btn maroon-btn"
-                                        onClick={handleConfirmClose}
+                                        onClick={handleConfirmReady}
                                     >
                                         Bağla
                                     </button>
@@ -527,6 +599,71 @@ const CheckOver = () => {
                     </Col>
                 </Row>
             </Container>
+
+            <Modal show={showTaxSelectionModal} onHide={() => setShowTaxSelectionModal(false)} centered className="customers-modal" dialogClassName="checkover-tax-modal-wide" backdrop="static" animation={false}>
+                <div className="modal-content-wrapper" style={{ borderRadius: '6px' }}>
+                    <div className="customers-modal-header" style={{ background: '#5D99FF', borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }}>
+                        <div className="customers-header-content">
+                            <div className="customers-icon-circle" style={{ borderRadius: '6px' }}>
+                                <i className="bi bi-receipt"></i>
+                            </div>
+                            <div className="customers-modal-title">Kassa Seçimi</div>
+                        </div>
+                        <button className="btn-close-custom" onClick={() => setShowTaxSelectionModal(false)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div className="customers-modal-body" style={{ padding: '24px', borderBottomLeftRadius: '6px', borderBottomRightRadius: '6px' }}>
+                        <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '16px' }}>
+                            Zəhmət olmasa təsdiqləmək üçün kassalardan birini seçin:
+                        </p>
+                        <div className="d-flex flex-column gap-3">
+                            {(loginedProfileData?.data?.taxes || []).map((tax, idx) => {
+                                const taxKey = tax.id || `${tax.ip_addr}:${tax.port_addr}`;
+                                const localName = taxLocalNames[taxKey] || tax.tax_cash_type || 'E-kassa';
+                                return (
+                                    <div
+                                        key={idx}
+                                        style={{
+                                            border: '1px solid #e2e8f0', background: '#fff', padding: '16px 20px',
+                                            borderRadius: '6px', cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', gap: '16px',
+                                            transition: 'all 0.2s ease-in-out'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.borderColor = '#5D99FF';
+                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(93, 153, 255, 0.15)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.borderColor = '#e2e8f0';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                        }}
+                                        onClick={() => {
+                                            setShowTaxSelectionModal(false);
+                                            handleConfirmClose(tax);
+                                        }}
+                                    >
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '6px', background: 'rgba(93, 153, 255, 0.1)', color: '#5D99FF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                                            <i className="bi bi-receipt"></i>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <h5 style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b', margin: '0 0 4px 0' }}>{localName}</h5>
+                                            <span style={{ fontSize: '13px', color: '#64748b' }}>IP: {tax.ip_addr}:{tax.port_addr}</span>
+                                        </div>
+                                        <div style={{ marginLeft: 'auto', background: '#f8fafc', width: '36px', height: '36px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <i className="bi bi-chevron-right" style={{ color: '#5D99FF', fontSize: '16px', strokeWidth: 1 }}></i>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }

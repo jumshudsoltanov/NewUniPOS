@@ -67,7 +67,7 @@
     background: #FFF;
     border: 1px solid #E5E7EB;
     /* Added border for better visibility */
-    border-radius: 12px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -139,7 +139,7 @@
 .payment-method-item {
     background: #F3F4F6;
     border: 2px solid transparent;
-    border-radius: 12px;
+    border-radius: 6px;
     padding: 15px 24px;
     display: flex;
     justify-content: space-between;
@@ -540,7 +540,7 @@
         width: 100%;
         padding: 16px;
         font-size: 19px;
-        border-radius: 12px;
+        border-radius: 6px;
     }
 
     .unpaid-mode-btn,
@@ -559,8 +559,16 @@
 
     .clickable-row {
         margin: 0;
-        border-radius: 12px;
+        border-radius: 6px;
         background: #F9FAFB;
         padding: 18px;
     }
+}
+
+.checkover-tax-modal-wide {
+    max-width: 440px !important;
+}
+
+.checkover-tax-modal-wide .modal-content {
+    border-radius: 6px !important;
 }

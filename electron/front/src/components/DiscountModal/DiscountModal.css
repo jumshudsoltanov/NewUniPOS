@@ -1,6 +1,6 @@
 /* Main Modal Container Overrides */
 .custom-modal-content {
-    border-radius: 10px !important;
+    border-radius: 6px !important;
     /* Small border radius */
     border: none !important;
     overflow: hidden;
@@ -157,7 +157,7 @@
     background-color: #fff;
     border: 1px solid #C0C0C0;
     /* Darker border */
-    border-radius: 12px;
+    border-radius: 6px;
     font-size: 24px;
     font-weight: 600;
     color: #053796;
@@ -192,7 +192,7 @@
     background-color: #fff;
     border: 1px solid #C0C0C0;
     /* Darker border */
-    border-radius: 12px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -212,7 +212,7 @@
     height: 56px;
     background-color: #053796;
     border: none;
-    border-radius: 12px;
+    border-radius: 6px;
     color: #fff;
     font-size: 18px;
     font-weight: 500;

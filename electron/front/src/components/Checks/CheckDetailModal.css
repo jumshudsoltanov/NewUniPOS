@@ -14,11 +14,11 @@
 .check-detail-modal-custom .sidebar-section::-webkit-scrollbar-thumb,
 .check-detail-modal-custom .history-timeline-container::-webkit-scrollbar-thumb {
     background: #e2e8f0;
-    border-radius: 10px;
+    border-radius: 6px;
 }
 
 .check-detail-modal-custom .modal-content {
-    border-radius: 20px;
+    border-radius: 0 !important;
     overflow: hidden;
     border: none;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -32,6 +32,8 @@
     border-bottom: none;
     padding: 1.25rem 1.5rem;
     text-align: center;
+    margin-bottom: 0;
+    border-radius: 0 !important;
 }
 
 .check-detail-modal-custom .modal-title {
@@ -102,7 +104,7 @@
     width: 42px;
     height: 42px;
     background: #fff;
-    border-radius: 12px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -167,7 +169,7 @@
     margin-top: 1.5rem;
     padding: 1.25rem;
     background: #f8fafc;
-    border-radius: 12px;
+    border-radius: 6px;
     border: 1px solid #f1f5f9;
 }
 
@@ -256,7 +258,7 @@
 .check-detail-modal-custom .history-filter-select {
     background-color: #fff !important;
     border: 1px solid #e2e8f0 !important;
-    border-radius: 10px !important;
+    border-radius: 6px !important;
     padding: 10px 15px !important;
     font-size: 14px !important;
     color: #334155 !important;
@@ -278,22 +280,26 @@
 /* Timeline Custom Styles */
 .check-detail-modal-custom .timeline-line-custom {
     position: absolute;
-    left: 24px;
+    left: -24px;
     top: 0;
     bottom: 0;
     width: 2px;
-    background: #f1f5f9;
+    background: #e2e8f0;
 }
 
 .check-detail-modal-custom .timeline-dot-custom {
     position: absolute;
-    left: 20px;
-    top: 6px;
-    width: 10px;
-    height: 10px;
+    left: -30px;
+    top: 4px;
+    width: 14px;
+    height: 14px;
     background: #053796;
     border-radius: 50%;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 3px rgba(5, 55, 150, 0.1);
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #053796;
     z-index: 2;
+}
+
+.check-detail-modal-custom .timeline-content-custom {
+    margin-left: 0;
 }

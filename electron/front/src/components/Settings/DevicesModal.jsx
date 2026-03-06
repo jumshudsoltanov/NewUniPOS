@@ -4,6 +4,8 @@ import { useSelector } from "react-redux";
 import { toast } from "sonner";
 import QRCode from "react-qr-code";
 import apiConfig, { localApi } from "../../utils/apiConfig";
+import axios from "axios";
+import { addNotification } from "../../utils/notificationService";
 import "./DevicesModal.css";
 
 const DevicesModal = ({ show, onHide }) => {
@@ -30,6 +32,31 @@ const DevicesModal = ({ show, onHide }) => {
         active: false,
         screenId: ""
     });
+    const [shiftStates, setShiftStates] = useState({});
+    const [taxLoading, setTaxLoading] = useState({});
+    const [selectedTaxIndex, setSelectedTaxIndex] = useState(null);
+    const [selectedPrinterIndex, setSelectedPrinterIndex] = useState(null);
+    const [taxDailyInfo, setTaxDailyInfo] = useState({});
+
+    // Periodic Report States
+    const [reportStart, setReportStart] = useState({ date: '', time: '06:00' });
+    const [reportEnd, setReportEnd] = useState({ date: '', time: '06:00' });
+
+    // Local Naming
+    const [taxLocalNames, setTaxLocalNames] = useState({});
+
+    useEffect(() => {
+        const stored = localStorage.getItem("tax_local_names");
+        if (stored) {
+            try { setTaxLocalNames(JSON.parse(stored)); } catch (e) { }
+        }
+    }, []);
+
+    const handleTaxNameChange = (taxKey, newName) => {
+        const updated = { ...taxLocalNames, [taxKey]: newName };
+        setTaxLocalNames(updated);
+        localStorage.setItem("tax_local_names", JSON.stringify(updated));
+    };
 
     useEffect(() => {
         if (show && profileId) {
@@ -204,6 +231,143 @@ const DevicesModal = ({ show, onHide }) => {
         }
     };
 
+    const setTaxDeviceLoading = (index, loading) => {
+        setTaxLoading(prev => ({ ...prev, [index]: loading }));
+    };
+
+    const handleTaxLogin = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            const result = await axios.post('/tax/login', { taxConfig: tax });
+            if (result.data?.access_token) {
+                toast.success(`${tax.tax_cash_type} — Login u\u011Furlu`);
+                handleShiftStatus(tax, index);
+            } else {
+                toast.error('Login u\u011Fursuz: ' + (result.data?.message || ''));
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('Login x\u0259tas\u0131: ' + msg);
+            addNotification('E-Kassa Login', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
+    const handleShiftStatus = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            const result = await axios.post('/tax/shift-status', { taxConfig: tax });
+            setShiftStates(prev => ({ ...prev, [index]: result.data }));
+            const isOpen = result.data?.shiftStatus === true;
+            toast.info(`N\u00F6vb\u0259: ${isOpen ? 'A\u00e7\u0131qd\u0131r' : 'Ba\u011Fl\u0131d\u0131r'}`);
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('Status x\u0259tas\u0131: ' + msg);
+            addNotification('E-Kassa Status', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
+    const handleOpenShift = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            await axios.post('/tax/open-shift', { taxConfig: tax });
+            toast.success('N\u00F6vb\u0259 a\u00E7\u0131ld\u0131');
+            handleShiftStatus(tax, index);
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('N\u00F6vb\u0259 a\u00E7ma x\u0259tas\u0131: ' + msg);
+            addNotification('E-Kassa N\u00F6vb\u0259 A\u00E7', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
+    const handleCloseShift = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            const result = await axios.post('/tax/close-shift', { taxConfig: tax });
+            toast.success('N\u00F6vb\u0259 ba\u011Fland\u0131 (Z-Report)');
+            setShiftStates(prev => ({ ...prev, [index]: { shiftStatus: false } }));
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('N\u00F6vb\u0259 ba\u011Flama x\u0259tas\u0131: ' + msg);
+            addNotification('E-Kassa Ba\u011Fla Z', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
+    const handleXReport = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            await axios.post('/tax/x-report', { taxConfig: tax });
+            toast.success('X-Report \u00E7ap edildi');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('X-Report x\u0259tas\u0131: ' + msg);
+            addNotification('E-Kassa X-Report', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
+    const handlePeriodicReport = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            const bDate = reportStart.date ? `${reportStart.date}T${reportStart.time}:00` : "";
+            const eDate = reportEnd.date ? `${reportEnd.date}T${reportEnd.time}:00` : "";
+
+            await axios.post('/tax/periodic-report', {
+                taxConfig: tax,
+                beginDate: bDate,
+                endDate: eDate
+            });
+            toast.success('D\u00f6vri hesabat s\u0259n\u0259di \u00e7ap edildi');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('Hesabat \u00e7ap x\u0259tas\u0131: ' + msg);
+            addNotification('Fiskal Hesabat', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
+    const handleReprintAfterError = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            await axios.post('/tax/reprint-error', { taxConfig: tax });
+            toast.success('Yenid\u0259n \u00E7ap sor\u011Fusu g\u00F6nd\u0259rildi');
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('\u00C7ap x\u0259tas\u0131: ' + msg);
+            addNotification('E-Kassa Yenid\u0259n \u00C7ap', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
+    const handleTaxInfo = async (tax, index) => {
+        setTaxDeviceLoading(index, true);
+        try {
+            const result = await axios.post('/tax/info', { taxConfig: tax });
+            if (result.data?.data) {
+                const d = result.data.data;
+                toast.success(`${d.company_name || tax.tax_cash_type} \u2014 S/N: ${d.cashbox_factory_number || '?'}, Son s\u0259n\u0259d: #${d.last_doc_number || '?'}`);
+            } else {
+                toast.info('Cihaz m\u0259lumat\u0131 al\u0131nd\u0131');
+            }
+        } catch (err) {
+            const msg = err.response?.data?.message || err.message;
+            toast.error('M\u0259lumat x\u0259tas\u0131: ' + msg);
+            addNotification('E-Kassa M\u0259lumat', msg, { category: 'system', type: 'error' });
+        } finally {
+            setTaxDeviceLoading(index, false);
+        }
+    };
+
     return (
         <Modal show={show} onHide={onHide} centered size="xl" className="devices-modal">
             <Modal.Header closeButton>
@@ -263,7 +427,7 @@ const DevicesModal = ({ show, onHide }) => {
                         <div className="devices-sidebar-menu">
                             <div
                                 className={`devices-menu-item ${activeTab === "printers" ? "active" : ""}`}
-                                onClick={() => setActiveTab("printers")}
+                                onClick={() => { setActiveTab("printers"); setSelectedPrinterIndex(null); }}
                             >
                                 <i className="bi bi-printer"></i>
                                 <span>Printerlər</span>
@@ -324,137 +488,181 @@ const DevicesModal = ({ show, onHide }) => {
                 <div className="devices-content">
                     <div className="devices-main-scroll">
                         {activeTab === "printers" ? (
-                            <>
-                                <div className="master-modes-grid">
-                                    <div className="master-printing-card">
-                                        <div className="master-printing-info">
-                                            <h4>Mərkəzi Kassa Çapı</h4>
-                                            <p>Kassa çekləri Masterə yönləndirilsin?</p>
-                                        </div>
-                                        <div
-                                            className={`premium-switch ${masterModes.cashier ? "active" : ""}`}
-                                            onClick={() => handleToggleMasterPrinting('cashier')}
-                                        >
-                                            <div className="switch-handle"></div>
-                                        </div>
-                                    </div>
-                                    <div className="master-printing-card">
-                                        <div className="master-printing-info">
-                                            <h4>Mərkəzi Mətbəx Çapı</h4>
-                                            <p>Məhsul çekləri Masterə yönləndirilsin?</p>
-                                        </div>
-                                        <div
-                                            className={`premium-switch ${masterModes.product ? "active" : ""}`}
-                                            onClick={() => handleToggleMasterPrinting('product')}
-                                        >
-                                            <div className="switch-handle"></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="printers-grid">
-                                    {printers.map((printer) => (
-                                        <div key={printer.id} className="printer-edit-card">
-                                            <div className="printer-card-header">
-                                                <div className="printer-card-icon">
-                                                    <i className="bi bi-printer"></i>
+                            <div className="display-settings">
+                                {selectedPrinterIndex === null ? (
+                                    <>
+                                        <div className="master-modes-grid">
+                                            <div className="master-printing-card">
+                                                <div className="master-printing-info">
+                                                    <h4>Mərkəzi Kassa Çapı</h4>
+                                                    <p>Kassa çekləri Masterə yönləndirilsin?</p>
                                                 </div>
-                                                <div className="printer-card-title">
-                                                    <h5>{printer.local_name || printer.name}</h5>
-                                                    <span>
-                                                        {printer.is_cashier === 1 ? "Kassa Printeri" : "Mətbəx Printeri"}
-                                                        {printer.connection_type === 'usb' && printer.usb_name ? ` • USB: ${printer.usb_name}` : ''}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="connection-toggle">
-                                                <button
-                                                    className={`conn-btn ${printer.connection_type !== 'usb' ? 'active' : ''}`}
-                                                    onClick={() => {
-                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, connection_type: 'network' } : p);
-                                                        setPrinters(newArr);
-                                                    }}
+                                                <div
+                                                    className={`premium-switch ${masterModes.cashier ? "active" : ""}`}
+                                                    onClick={() => handleToggleMasterPrinting('cashier')}
                                                 >
-                                                    Network (IP)
-                                                </button>
-                                                <button
-                                                    className={`conn-btn ${printer.connection_type === 'usb' ? 'active' : ''}`}
-                                                    onClick={() => {
-                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, connection_type: 'usb' } : p);
-                                                        setPrinters(newArr);
-                                                    }}
-                                                >
-                                                    USB / System
-                                                </button>
-                                            </div>
-
-                                            <div className="printer-form-group">
-                                                <label>Görünən adı</label>
-                                                <input
-                                                    className="printer-input"
-                                                    value={printer.local_name || ""}
-                                                    onChange={(e) => {
-                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, local_name: e.target.value } : p);
-                                                        setPrinters(newArr);
-                                                    }}
-                                                />
-                                            </div>
-
-                                            {printer.connection_type === 'usb' ? (
-                                                <div className="printer-form-group">
-                                                    <label>Sistem Printeri Seçin</label>
-                                                    <select
-                                                        className="printer-select"
-                                                        value={printer.usb_name || ""}
-                                                        onChange={(e) => {
-                                                            const newArr = printers.map(p => p.id === printer.id ? { ...p, usb_name: e.target.value } : p);
-                                                            setPrinters(newArr);
-                                                        }}
-                                                    >
-                                                        <option value="">Seçilməyib</option>
-                                                        {systemPrinters.map(sp => (
-                                                            <option key={sp.name} value={sp.name}>{sp.name}</option>
-                                                        ))}
-                                                    </select>
+                                                    <div className="switch-handle"></div>
                                                 </div>
-                                            ) : (
-                                                <div style={{ display: 'flex', gap: '10px' }}>
-                                                    <div className="printer-form-group" style={{ flex: 2 }}>
-                                                        <label>IP Address</label>
+                                            </div>
+                                            <div className="master-printing-card">
+                                                <div className="master-printing-info">
+                                                    <h4>Mərkəzi Mətbəx Çapı</h4>
+                                                    <p>Məhsul çekləri Masterə yönləndirilsin?</p>
+                                                </div>
+                                                <div
+                                                    className={`premium-switch ${masterModes.product ? "active" : ""}`}
+                                                    onClick={() => handleToggleMasterPrinting('product')}
+                                                >
+                                                    <div className="switch-handle"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ marginBottom: '16px', marginTop: '24px' }}>
+                                            <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>Printerlər</h4>
+                                            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Cihaza klikləyərək tənzimləmələri edin</p>
+                                        </div>
+                                        <div className="printers-grid">
+                                            {printers.map((printer, index) => (
+                                                <div
+                                                    key={printer.id || index}
+                                                    className="printer-edit-card"
+                                                    style={{ cursor: 'pointer', border: '1px solid #e2e8f0', boxShadow: 'none' }}
+                                                    onClick={() => setSelectedPrinterIndex(index)}
+                                                >
+                                                    <div className="printer-card-header">
+                                                        <div className="printer-card-icon" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+                                                            <i className="bi bi-printer"></i>
+                                                        </div>
+                                                        <div className="printer-card-title">
+                                                            <h5>{printer.local_name || printer.name}</h5>
+                                                            <span>
+                                                                {printer.is_cashier === 1 ? "Kassa Printeri" : "Mətbəx Printeri"}
+                                                                {printer.connection_type === 'usb' && printer.usb_name ? ` • USB: ${printer.usb_name}` : ''}
+                                                            </span>
+                                                        </div>
+                                                        <i className="bi bi-chevron-right" style={{ marginLeft: 'auto', color: '#94a3b8', fontSize: '18px' }}></i>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    (() => {
+                                        const printer = printers[selectedPrinterIndex];
+                                        return (
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '6px', background: '#fff' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                        <button
+                                                            onClick={() => setSelectedPrinterIndex(null)}
+                                                            style={{
+                                                                background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px',
+                                                                width: '36px', height: '36px', display: 'flex', alignItems: 'center',
+                                                                justifyContent: 'center', cursor: 'pointer', color: '#64748b'
+                                                            }}
+                                                        >
+                                                            <i className="bi bi-chevron-left" style={{ fontSize: '14px' }}></i>
+                                                        </button>
+                                                        <div>
+                                                            <h3 style={{ margin: 0, color: '#1e293b', fontWeight: 700, fontSize: '16px' }}>{printer.local_name || printer.name}</h3>
+                                                            <span style={{ fontSize: '13px', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                                                                {printer.is_cashier === 1 ? "Kassa Printeri" : "Mətbəx Printeri"}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '6px' }}>
+                                                    <div className="connection-toggle">
+                                                        <button
+                                                            className={`conn-btn ${printer.connection_type !== 'usb' ? 'active' : ''}`}
+                                                            onClick={() => {
+                                                                const newArr = printers.map(p => p.id === printer.id ? { ...p, connection_type: 'network' } : p);
+                                                                setPrinters(newArr);
+                                                            }}
+                                                        >
+                                                            Network (IP)
+                                                        </button>
+                                                        <button
+                                                            className={`conn-btn ${printer.connection_type === 'usb' ? 'active' : ''}`}
+                                                            onClick={() => {
+                                                                const newArr = printers.map(p => p.id === printer.id ? { ...p, connection_type: 'usb' } : p);
+                                                                setPrinters(newArr);
+                                                            }}
+                                                        >
+                                                            USB / System
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="printer-form-group">
+                                                        <label>Görünən adı</label>
                                                         <input
                                                             className="printer-input"
-                                                            placeholder="192.168.1.100"
-                                                            value={printer.ip || ""}
+                                                            value={printer.local_name || ""}
                                                             onChange={(e) => {
-                                                                const newArr = printers.map(p => p.id === printer.id ? { ...p, ip: e.target.value } : p);
+                                                                const newArr = printers.map(p => p.id === printer.id ? { ...p, local_name: e.target.value } : p);
                                                                 setPrinters(newArr);
                                                             }}
                                                         />
                                                     </div>
-                                                    <div className="printer-form-group" style={{ flex: 1 }}>
-                                                        <label>Port</label>
-                                                        <input
-                                                            className="printer-input"
-                                                            placeholder="9100"
-                                                            value={printer.port || ""}
-                                                            onChange={(e) => {
-                                                                const newArr = printers.map(p => p.id === printer.id ? { ...p, port: e.target.value } : p);
-                                                                setPrinters(newArr);
-                                                            }}
-                                                        />
+
+                                                    {printer.connection_type === 'usb' ? (
+                                                        <div className="printer-form-group">
+                                                            <label>Sistem Printeri Seçin</label>
+                                                            <select
+                                                                className="printer-select"
+                                                                value={printer.usb_name || ""}
+                                                                onChange={(e) => {
+                                                                    const newArr = printers.map(p => p.id === printer.id ? { ...p, usb_name: e.target.value } : p);
+                                                                    setPrinters(newArr);
+                                                                }}
+                                                            >
+                                                                <option value="">Seçilməyib</option>
+                                                                {systemPrinters.map(sp => (
+                                                                    <option key={sp.name} value={sp.name}>{sp.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                                            <div className="printer-form-group" style={{ flex: 2 }}>
+                                                                <label>IP Address</label>
+                                                                <input
+                                                                    className="printer-input"
+                                                                    placeholder="192.168.1.100"
+                                                                    value={printer.ip || ""}
+                                                                    onChange={(e) => {
+                                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, ip: e.target.value } : p);
+                                                                        setPrinters(newArr);
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                            <div className="printer-form-group" style={{ flex: 1 }}>
+                                                                <label>Port</label>
+                                                                <input
+                                                                    className="printer-input"
+                                                                    placeholder="9100"
+                                                                    value={printer.port || ""}
+                                                                    onChange={(e) => {
+                                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, port: e.target.value } : p);
+                                                                        setPrinters(newArr);
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="printer-actions" style={{ marginTop: '24px' }}>
+                                                        <button className="btn-test" onClick={() => handleTestPrint(printer.usb_name || printer.local_name || printer.name)}>Test çapı göndər</button>
+                                                        <button className="btn-save-printer" onClick={() => handleUpdatePrinter(printer)}>Yadda saxla</button>
                                                     </div>
                                                 </div>
-                                            )}
-
-                                            <div className="printer-actions">
-                                                <button className="btn-test" onClick={() => handleTestPrint(printer.usb_name || printer.local_name || printer.name)}>Test</button>
-                                                <button className="btn-save-printer" onClick={() => handleUpdatePrinter(printer)}>Yadda saxla</button>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
+                                        );
+                                    })()
+                                )}
+                            </div>
                         ) : activeTab === "display" ? (
                             <div className="display-settings">
                                 <div className="display-config-card">
@@ -537,51 +745,168 @@ const DevicesModal = ({ show, onHide }) => {
                             </div>
                         ) : activeTab === "taxes" && taxes.length > 0 ? (
                             <div className="display-settings">
-                                <div style={{ marginBottom: '16px' }}>
-                                    <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>E-kassa Cihazları</h4>
-                                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Profildə qeydiyyatda olan fiskal cihazların siyahısı</p>
-                                </div>
-                                <div className="printers-grid">
-                                    {taxes.map((tax, index) => (
-                                        <div key={tax.id || index} className="printer-edit-card">
-                                            <div className="printer-card-header">
-                                                <div className="printer-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
-                                                    <i className="bi bi-receipt"></i>
-                                                </div>
-                                                <div className="printer-card-title">
-                                                    <h5>{tax.tax_cash_type || 'E-kassa'}</h5>
-                                                    <span>Fiskal Cihaz #{index + 1}</span>
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                                <div className="printer-form-group" style={{ flex: 2 }}>
-                                                    <label>IP Ünvan</label>
-                                                    <input className="printer-input" value={tax.ip_addr || '—'} readOnly />
-                                                </div>
-                                                <div className="printer-form-group" style={{ flex: 1 }}>
-                                                    <label>Port</label>
-                                                    <input className="printer-input" value={tax.port_addr || '—'} readOnly />
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                                <div className="printer-form-group" style={{ flex: 1 }}>
-                                                    <label>Vergi faizi</label>
-                                                    <input className="printer-input" value={`${tax.tax_percent || 0}%`} readOnly />
-                                                </div>
-                                                <div className="printer-form-group" style={{ flex: 1 }}>
-                                                    <label>Cihaz tipi</label>
-                                                    <input className="printer-input" value={tax.tax_cash_type || '—'} readOnly />
-                                                </div>
-                                            </div>
-                                            {tax.tax_merchant && (
-                                                <div className="printer-form-group">
-                                                    <label>Merchant</label>
-                                                    <input className="printer-input" value={tax.tax_merchant} readOnly />
-                                                </div>
-                                            )}
+                                {selectedTaxIndex === null ? (
+                                    <>
+                                        <div style={{ marginBottom: '16px' }}>
+                                            <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>E-kassa Cihazları</h4>
+                                            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Cihaza klikləyərək ətraflı məlumatı görün</p>
                                         </div>
-                                    ))}
-                                </div>
+                                        <div className="printers-grid">
+                                            {taxes.map((tax, index) => {
+                                                const taxKey = tax.id || `${tax.ip_addr}:${tax.port_addr}`;
+                                                return (
+                                                    <div
+                                                        key={tax.id || index}
+                                                        className="printer-edit-card"
+                                                        style={{ cursor: 'pointer', border: '1px solid #e2e8f0', boxShadow: 'none' }}
+                                                        onClick={() => { setSelectedTaxIndex(index); handleTaxLogin(tax, index); }}
+                                                    >
+                                                        <div className="printer-card-header">
+                                                            <div className="printer-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
+                                                                <i className="bi bi-receipt"></i>
+                                                            </div>
+                                                            <div className="printer-card-title">
+                                                                <h5>{taxLocalNames[taxKey] || tax.tax_cash_type || 'E-kassa'}</h5>
+                                                                <span>{tax.ip_addr}:{tax.port_addr}</span>
+                                                            </div>
+                                                            <i className="bi bi-chevron-right" style={{ marginLeft: 'auto', color: '#94a3b8', fontSize: '18px' }}></i>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </>
+                                ) : (
+                                    (() => {
+                                        const tax = taxes[selectedTaxIndex];
+                                        const idx = selectedTaxIndex;
+                                        const shift = shiftStates[idx];
+
+                                        const handleNotImplemented = () => {
+                                            toast.info("Bu funskiya tezlikl\u0259 \u0259lav\u0259 edil\u0259c\u0259k");
+                                        };
+
+                                        return (
+                                            <div>
+                                                {/* Top Header */}
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '30px', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '12px', background: '#fff' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                        <button
+                                                            onClick={() => setSelectedTaxIndex(null)}
+                                                            style={{
+                                                                background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
+                                                                width: '36px', height: '36px', display: 'flex', alignItems: 'center',
+                                                                justifyContent: 'center', cursor: 'pointer', color: '#64748b'
+                                                            }}
+                                                        >
+                                                            <i className="bi bi-chevron-left" style={{ fontSize: '14px' }}></i>
+                                                        </button>
+                                                        <div>
+                                                            <input
+                                                                type="text"
+                                                                value={taxLocalNames[tax.id || `${tax.ip_addr}:${tax.port_addr}`] || ''}
+                                                                onChange={(e) => handleTaxNameChange(tax.id || `${tax.ip_addr}:${tax.port_addr}`, e.target.value)}
+                                                                placeholder={tax.tax_cash_type || 'OMNITECH'}
+                                                                style={{ margin: 0, color: '#1e293b', fontWeight: 700, fontSize: '16px', textTransform: 'uppercase', border: 'none', background: 'transparent', outline: 'none', width: '250px' }}
+                                                            />
+                                                            <span style={{ fontSize: '13px', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                                                                IP:{tax.ip_addr}:{tax.port_addr}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleTaxLogin(tax, idx)}
+                                                        disabled={taxLoading[idx]}
+                                                        style={{
+                                                            background: '#fff', border: '1px solid #93c5fd', color: '#3b82f6',
+                                                            padding: '8px 20px', borderRadius: '8px', fontWeight: 600,
+                                                            fontSize: '14px', cursor: 'pointer', outline: 'none'
+                                                        }}
+                                                    >
+                                                        {taxLoading[idx] ? 'Gözlə...' : 'Yoxla'}
+                                                    </button>
+                                                </div>
+
+                                                {/* 2-Column Layout */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
+                                                    {/* Left Column */}
+                                                    <div>
+                                                        <div style={{ marginBottom: '20px' }}>
+                                                            <label style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, display: 'block', marginBottom: '8px' }}>Bu tarixdən</label>
+                                                            <div style={{ display: 'flex', gap: '12px' }}>
+                                                                <div style={{ flex: 1.5, position: 'relative' }}>
+                                                                    <input type="date" value={reportStart.date} onChange={e => setReportStart({ ...reportStart, date: e.target.value })} style={{ width: '100%', height: '42px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', fontSize: '14px', color: '#334155' }} />
+                                                                </div>
+                                                                <div style={{ flex: 1, position: 'relative' }}>
+                                                                    <input type="time" value={reportStart.time} onChange={e => setReportStart({ ...reportStart, time: e.target.value })} style={{ width: '100%', height: '42px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', fontSize: '14px', color: '#334155' }} />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ marginBottom: '24px' }}>
+                                                            <label style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, display: 'block', marginBottom: '8px' }}>Bu tarixə qədər</label>
+                                                            <div style={{ display: 'flex', gap: '12px' }}>
+                                                                <div style={{ flex: 1.5, position: 'relative' }}>
+                                                                    <input type="date" value={reportEnd.date} onChange={e => setReportEnd({ ...reportEnd, date: e.target.value })} style={{ width: '100%', height: '42px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', fontSize: '14px', color: '#334155' }} />
+                                                                </div>
+                                                                <div style={{ flex: 1, position: 'relative' }}>
+                                                                    <input type="time" value={reportEnd.time} onChange={e => setReportEnd({ ...reportEnd, time: e.target.value })} style={{ width: '100%', height: '42px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', fontSize: '14px', color: '#334155' }} />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                                            <button onClick={() => handlePeriodicReport(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 2, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                                                                Əməliyyat tarixçəsi
+                                                            </button>
+                                                            <button onClick={() => handlePeriodicReport(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 1, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                                                                Hesabat
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Right Column */}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                        <button
+                                                            onClick={() => handleShiftStatus(tax, idx)}
+                                                            disabled={taxLoading[idx]}
+                                                            style={{ width: '100%', background: '#3b82f6', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+                                                        >
+                                                            Növbənin statusunu yoxla
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleOpenShift(tax, idx)}
+                                                            disabled={taxLoading[idx]}
+                                                            style={{ width: '100%', background: '#3b82f6', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+                                                        >
+                                                            Növbəni aç
+                                                        </button>
+                                                        <div style={{ height: '8px' }}></div> {/* Gap separator between primary and secondary exactly like requested shape */}
+                                                        <button
+                                                            onClick={() => handleCloseShift(tax, idx)}
+                                                            disabled={taxLoading[idx]}
+                                                            style={{ width: '100%', background: '#fff', color: '#475569', border: '1px solid #cbd5e1', padding: '14px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+                                                        >
+                                                            Növbəni bağla
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleReprintAfterError(tax, idx)}
+                                                            disabled={taxLoading[idx]}
+                                                            style={{ width: '100%', background: '#fff', color: '#475569', border: '1px solid #cbd5e1', padding: '14px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+                                                        >
+                                                            Yenidən çap
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleXReport(tax, idx)}
+                                                            disabled={taxLoading[idx]}
+                                                            style={{ width: '100%', background: '#fff', color: '#475569', border: '1px solid #cbd5e1', padding: '14px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
+                                                        >
+                                                            X-Hesabat
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()
+                                )}
                             </div>
                         ) : activeTab === "mobile" && isMaster ? (
                             <div className="mobile-qr-section">

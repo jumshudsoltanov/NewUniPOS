@@ -1,6 +1,6 @@
 /* Main Modal Container Overrides */
 .deposit-override-modal .modal-content {
-    border-radius: 10px !important;
+    border-radius: 6px !important;
     border: none !important;
     overflow: hidden;
     background-color: transparent !important;
@@ -117,7 +117,7 @@
     height: 60px;
     background-color: #fff;
     border: 1px solid #C0C0C0;
-    border-radius: 12px;
+    border-radius: 6px;
     font-size: 24px;
     font-weight: 600;
     color: #053796;
@@ -149,7 +149,7 @@
     height: 56px;
     background-color: #fff;
     border: 1px solid #C0C0C0;
-    border-radius: 12px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -169,7 +169,7 @@
     height: 56px;
     background-color: #053796;
     border: none;
-    border-radius: 12px;
+    border-radius: 6px;
     color: #fff;
     font-size: 18px;
     font-weight: 500;

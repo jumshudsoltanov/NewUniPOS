@@ -235,7 +235,7 @@
     padding: 18px 20px;
     margin: 8px 16px 16px 16px;
     border: 1.5px solid #e8eaed;
-    border-radius: 10px;
+    border-radius: 6px;
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -288,7 +288,7 @@
 
 .checks-check-badge {
     padding: 5px 14px;
-    border-radius: 20px;
+    border-radius: 6px;
     font-family: "Poppins", sans-serif;
     font-size: 11px;
     font-weight: 600;
@@ -533,7 +533,7 @@
 
 /* Custom styles for Modal and Archive elements (to be added safely) */
 .check-detail-modal .modal-content {
-    border-radius: 12px;
+    border-radius: 6px;
     overflow: hidden;
 }
 
@@ -572,7 +572,7 @@
     display: flex;
     align-items: center;
     background: #f1f3f4;
-    border-radius: 10px;
+    border-radius: 6px;
     padding: 4px;
     gap: 15px;
 }
@@ -607,7 +607,7 @@
 
 /* Calendar Modal */
 .calendar-modal .modal-content {
-    border-radius: 15px;
+    border-radius: 6px;
     width: 360px;
     margin: 0 auto;
     font-family: "Poppins", sans-serif;

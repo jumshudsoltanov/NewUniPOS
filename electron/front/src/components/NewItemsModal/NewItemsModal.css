@@ -1,7 +1,7 @@
 /* New Items Modal Styles */
 .new-items-modal .modal-content {
     border: none;
-    border-radius: 12px;
+    border-radius: 6px;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
@@ -189,7 +189,7 @@
     min-height: 80px;
     padding: 14px 16px;
     border: 2px solid #4da6ff;
-    border-radius: 10px;
+    border-radius: 6px;
     font-family: "Poppins", sans-serif;
     font-size: 14px;
     color: #1a1a2e;
@@ -242,7 +242,7 @@
     background: #4F85F4;
     /* Brand Light Blue */
     border: none;
-    border-radius: 10px;
+    border-radius: 6px;
     color: #fff;
     font-family: "Poppins", sans-serif;
     font-size: 16px;

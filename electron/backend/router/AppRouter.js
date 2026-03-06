@@ -223,4 +223,158 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
   }
 });
 
+// Tax Device Routes
+const TaxManager = require("../taxs/TaxManager");
+
+router.post("/tax/login", async (req, res) => {
+  try {
+    const { taxConfig, name, password } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    const result = await service.login(name, password);
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/shift-status", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    const result = await service.getShiftStatus();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/open-shift", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    const result = await service.openShift();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/close-shift", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    const result = await service.closeShift();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/x-report", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    const result = await service.getXReport();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/info", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    const result = await service.getInfo();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/sale", async (req, res) => {
+  try {
+    const { taxConfigs, saleData } = req.body;
+    const results = await TaxManager.processSale(taxConfigs, saleData);
+    const anyFailed = results.some(r => !r.success);
+    res.json({ success: !anyFailed, results });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/money-back", async (req, res) => {
+  try {
+    const { taxConfigs, moneyBackData } = req.body;
+    const results = await TaxManager.processMoneyBack(taxConfigs, moneyBackData);
+    const anyFailed = results.some(r => !r.success);
+    res.json({ success: !anyFailed, results });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/receipt-copy", async (req, res) => {
+  try {
+    const { taxConfigs, fiscalId } = req.body;
+    const results = await TaxManager.processReceiptCopy(taxConfigs, fiscalId);
+    const anyFailed = results.some(r => !r.success);
+    res.json({ success: !anyFailed, results });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/reprint-error", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    const result = await service.reprintAfterError();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.post("/tax/periodic-report", async (req, res) => {
+  try {
+    const { taxConfig, beginDate, endDate } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+
+    // For check_type 17 (Periodic Z-report by dates), Omnitech usually expects dates
+    const result = await service.getPeriodicReport(beginDate, endDate);
+
+    if (result && result.error_code && result.error_code !== 0) {
+      return res.status(400).json({ message: result.error_message || "D\u00f6vri hesabat x\u0259tas\u0131" });
+    }
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+const OrdersModel = require("../model/OrdersModel");
+
+router.patch("/tax/save-fiscal/:orderId", async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { fiscal_id, fiscal_doc_number, fiscal_short_id } = req.body;
+    await OrdersModel.update(
+      { fiscal_id, fiscal_doc_number, fiscal_short_id },
+      { where: { uuid: orderId } }
+    );
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 module.exports = router;

@@ -1,6 +1,6 @@
 /* Main Modal Container Overrides */
 .check-delete-modal .modal-content {
-    border-radius: 10px !important;
+    border-radius: 6px !important;
     border: none !important;
     overflow: hidden;
     background-color: transparent !important;
@@ -117,7 +117,7 @@
 
 .reasons-list::-webkit-scrollbar-thumb {
     background: #d1d5db;
-    border-radius: 10px;
+    border-radius: 6px;
 }
 
 .reason-item {

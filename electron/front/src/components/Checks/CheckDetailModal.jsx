@@ -8,6 +8,8 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
+import axios from "axios";
+import { addNotification } from "../../utils/notificationService";
 
 const CheckDetailModal = ({ show, onClose, order }) => {
     const dispatch = useDispatch();
@@ -17,6 +19,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const [logFilter, setLogFilter] = useState("all");
     const [showReasonModal, setShowReasonModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
+    const [taxLoading, setTaxLoading] = useState(false);
     const { orderLogs = [] } = useSelector((state) => state.OrderSlice);
 
     useEffect(() => {
@@ -139,6 +142,100 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         }
     };
 
+    const hasTax = Number(order?.is_tax) === 1;
+    const taxConfigs = loginedProfileData?.data?.taxes || [];
+
+    const handleTaxMoneyBack = async () => {
+        if (taxLoading || !order || taxConfigs.length === 0) return;
+        setTaxLoading(true);
+        try {
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const items = (order.orders_items || []).map(item => ({
+                ...item,
+                name: item.product?.name || 'Məhsul',
+                count: item.count || 1,
+                price: item.price || 0
+            }));
+            const payments = (order.order_payments || []).map(p => ({
+                name: p.payment_method?.name || 'Nağd',
+                amount: p.paid
+            }));
+            const result = await axios.post('/tax/money-back', {
+                taxConfigs,
+                moneyBackData: {
+                    items,
+                    payments,
+                    cashierName: waiterName,
+                    parentFiscalId: order.fiscal_id || '',
+                    documentNumber: String(order.fiscal_doc_number || order.id || ''),
+                    shortDocId: order.fiscal_short_id || ''
+                }
+            });
+            if (result.data?.success) {
+                toast.success('Vergi geri qaytarma uğurlu');
+                dispatch(saveLog({
+                    orderId: order.uuid,
+                    action: 'Vergi geri qaytarma',
+                    waiterName,
+                    details: 'Fiskal cihazdan geri qaytarma'
+                }));
+            } else {
+                toast.error('Vergi geri qaytarma xətası');
+            }
+        } catch (error) {
+            console.error('Tax moneyback error:', error);
+            const errMsg = error.response?.data?.message || error.message;
+            toast.error('Vergi geri qaytarma x\u0259tas\u0131: ' + errMsg);
+            addNotification('Fiskal Geri Qaytarma X\u0259tas\u0131', errMsg, { category: 'system', type: 'error' });
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || 'Nam\u0259lum';
+            dispatch(saveLog({
+                orderId: order.uuid,
+                action: 'Vergi geri qaytarma x\u0259tas\u0131',
+                waiterName,
+                details: errMsg
+            }));
+        } finally {
+            setTaxLoading(false);
+        }
+    };
+
+    const handleTaxReceiptCopy = async () => {
+        if (taxLoading || !order || taxConfigs.length === 0) return;
+        setTaxLoading(true);
+        try {
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const result = await axios.post('/tax/receipt-copy', {
+                taxConfigs,
+                fiscalId: order.fiscal_id || ''
+            });
+            if (result.data?.success) {
+                toast.success('Vergi çeki təkrar çap edildi');
+                dispatch(saveLog({
+                    orderId: order.uuid,
+                    action: 'Vergi təkrar çap',
+                    waiterName,
+                    details: 'Fiskal çek təkrar çap edildi'
+                }));
+            } else {
+                toast.error('Vergi təkrar çap xətası');
+            }
+        } catch (error) {
+            console.error('Tax receipt copy error:', error);
+            const errMsg = error.response?.data?.message || error.message;
+            toast.error('Vergi t\u0259krar \u00e7ap x\u0259tas\u0131: ' + errMsg);
+            addNotification('Fiskal T\u0259krar \u00C7ap X\u0259tas\u0131', errMsg, { category: 'system', type: 'error' });
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || 'Nam\u0259lum';
+            dispatch(saveLog({
+                orderId: order.uuid,
+                action: 'Vergi t\u0259krar \u00e7ap x\u0259tas\u0131',
+                waiterName,
+                details: errMsg
+            }));
+        } finally {
+            setTaxLoading(false);
+        }
+    };
+
     const [mobileActiveTab, setMobileActiveTab] = useState("info"); // 'info' | 'items' | 'history'
     const [isMobileSize, setIsMobileSize] = useState(window.innerWidth < 992);
 
@@ -174,6 +271,57 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 <Modal.Header closeButton className="justify-content-center position-relative">
                     <Modal.Title className="w-100 text-center pe-4">Çek #{order.id}</Modal.Title>
                 </Modal.Header>
+                {hasTax && taxConfigs.length > 0 && (
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        background: '#f0f4ff',
+                        borderBottom: '1px solid #e2e8f0'
+                    }}>
+                        <button
+                            onClick={handleTaxReceiptCopy}
+                            disabled={taxLoading}
+                            style={{
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                border: 'none',
+                                borderRadius: '4px',
+                                background: '#10b981',
+                                color: '#fff',
+                                cursor: taxLoading ? 'not-allowed' : 'pointer',
+                                opacity: taxLoading ? 0.6 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            <i className="bi bi-receipt"></i> Vergi Çap
+                        </button>
+                        <button
+                            onClick={handleTaxMoneyBack}
+                            disabled={taxLoading}
+                            style={{
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                border: 'none',
+                                borderRadius: '4px',
+                                background: '#dc2626',
+                                color: '#fff',
+                                cursor: taxLoading ? 'not-allowed' : 'pointer',
+                                opacity: taxLoading ? 0.6 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            <i className="bi bi-arrow-return-left"></i> Vergi Qaytar
+                        </button>
+                    </div>
+                )}
                 <Modal.Body className="p-0 border-0">
                     {/* Mobile Tabs Navigation */}
                     {isMobileSize && (
@@ -298,6 +446,26 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {hasTax && (
+                                            <div className="meta-item-box">
+                                                <div className="meta-icon-col">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                                                        <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l4.58-4.58c.94-.94.94-2.48 0-3.42L9 5z" strokeLinecap="round" strokeLinejoin="round" />
+                                                        <path d="M6 9h.01" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </div>
+                                                <div className="meta-content-col">
+                                                    <div className="meta-label" style={{ color: '#10b981' }}>VERGİ ÇEKİ</div>
+                                                    <div className="meta-value" style={{ color: '#10b981' }}>Fiskal çek kəsilib</div>
+                                                    {order.fiscal_id && (
+                                                        <div className="meta-sub text-muted" style={{ fontSize: '11px', wordBreak: 'break-all' }}>
+                                                            ID: {order.fiscal_short_id || order.fiscal_id}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="history-section bg-white p-0">
@@ -318,16 +486,20 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                         </div>
 
                                         <div className="history-timeline-container overflow-auto" style={{ maxHeight: isMobileSize ? 'none' : '460px', scrollbarWidth: 'thin' }}>
-                                            <div className="timeline-wrapper position-relative ps-5 pt-4">
-                                                <div className="timeline-line-custom"></div>
+                                            <div style={{ padding: '16px 20px' }}>
                                                 {filteredLogs.length === 0 ? (
                                                     <div className="text-center py-5 text-muted">Hərəkət tapılmadı</div>
                                                 ) : (
                                                     filteredLogs.map((log, idx) => (
-                                                        <div key={idx} className="timeline-item-custom mb-4 position-relative">
-                                                            <div className="timeline-dot-custom"></div>
-                                                            <div className="timeline-content-custom">
-                                                                <div className="action-name fw-bold text-dark mb-1" style={{ fontSize: '14px' }}>
+                                                        <div key={idx} style={{ display: 'flex', gap: '14px' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+                                                                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#053796', border: '2px solid #fff', boxShadow: '0 0 0 2px #053796', flexShrink: 0 }}></div>
+                                                                {idx < filteredLogs.length - 1 && (
+                                                                    <div style={{ width: '2px', flex: 1, background: '#e2e8f0', minHeight: '20px' }}></div>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ paddingBottom: '20px', flex: 1 }}>
+                                                                <div className="fw-bold text-dark mb-1" style={{ fontSize: '14px' }}>
                                                                     {log.action}
                                                                 </div>
                                                                 <div className="d-flex align-items-center gap-3 text-secondary mb-1" style={{ fontSize: '12px' }}>
@@ -475,6 +647,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                     </>
                                 )}
                             </Button>
+
                         </div>
                     </div>
                 </Modal.Body>

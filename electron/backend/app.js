@@ -176,7 +176,7 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
-    await db.sequelize.sync();
+    await db.sequelize.sync({ alter: true });
 
     const safeAddColumn = async (table, col, colDef) => {
       try {

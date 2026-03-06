@@ -45,7 +45,7 @@
 .notif-icon-circle {
     width: 44px;
     height: 44px;
-    border-radius: 12px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -68,7 +68,7 @@
     justify-content: center;
     width: 44px;
     height: 44px;
-    border-radius: 12px;
+    border-radius: 6px;
 }
 
 .notif-icon-item:hover {
@@ -122,7 +122,7 @@
 .count-badge {
     background: #28a745;
     color: #fff;
-    border-radius: 12px;
+    border-radius: 6px;
     padding: 2px 6px;
     font-size: 10px;
     font-weight: 700;
@@ -202,11 +202,11 @@
 .notif-toggle-container {
     background: #d1e0ff;
     padding: 5px;
-    border-radius: 12px;
+    border-radius: 6px;
     display: flex;
     background: #e5edff;
     padding: 4px;
-    border-radius: 12px;
+    border-radius: 6px;
     margin-bottom: 20px;
 }
 
@@ -214,7 +214,7 @@
     flex: 1;
     border: none;
     padding: 10px;
-    border-radius: 10px;
+    border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -250,12 +250,12 @@
 
 .notif-list-container::-webkit-scrollbar-track {
     background: #f1f1f1;
-    border-radius: 10px;
+    border-radius: 6px;
 }
 
 .notif-list-container::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 10px;
+    border-radius: 6px;
 }
 
 .notif-list-container::-webkit-scrollbar-thumb:hover {
