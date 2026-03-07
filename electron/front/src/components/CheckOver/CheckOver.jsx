@@ -11,7 +11,7 @@ import { closeOrder, saveLog } from '../../redux/Slices/OrdersSlice';
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import axios from "axios";
-import apiConfig, { localApi } from "../../utils/apiConfig";
+import apiConfig from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 
 const CheckOver = () => {
@@ -42,6 +42,13 @@ const CheckOver = () => {
 
     const { books } = useSelector((state) => state.BooksSlice);
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+    // Default taxPrint to true if taxes are configured
+    useEffect(() => {
+        if ((loginedProfileData?.data?.taxes?.length || 0) > 0) {
+            setTaxPrint(true);
+        }
+    }, [loginedProfileData?.data?.taxes?.length]);
     const { paymentMethods } = useSelector((state) => state.PaymentMethodsSlice);
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
     const { customers } = useSelector((state) => state.CustomersSlice);
@@ -302,7 +309,7 @@ const CheckOver = () => {
                 }, loginedProfileData);
             }
 
-            if (viewMode === "PAYMENT" && taxPrint) {
+            if (taxPrint) {
                 const allTaxConfigs = loginedProfileData?.data?.taxes || [];
                 const taxConfigsToUse = selectedTaxForPrint ? [selectedTaxForPrint] : allTaxConfigs;
 
@@ -314,7 +321,8 @@ const CheckOver = () => {
                             count: item.count || 1,
                             price: item.price || 0
                         }));
-                        const taxResult = await localApi.post('/tax/sale', {
+                        // Call tax sale API in the background (as requested: do not wait for fiscal device)
+                        apiConfig.post('/tax/sale', {
                             taxConfigs: taxConfigsToUse,
                             saleData: {
                                 items: saleItems,
@@ -322,21 +330,30 @@ const CheckOver = () => {
                                 cashierName: waiterName,
                                 orderId: currentOrder?.id || id
                             }
-                        });
-                        if (taxResult.data?.success) {
-                            toast.success('Vergi çeki kəsildi');
-                            const firstSuccess = taxResult.data.results?.find(r => r.success && r.data);
-                            if (firstSuccess?.data) {
-                                const fd = firstSuccess.data;
-                                localApi.patch(`/tax/save-fiscal/${id}`, {
-                                    fiscal_id: fd.long_id || '',
-                                    fiscal_doc_number: String(fd.document_number || ''),
-                                    fiscal_short_id: fd.short_id || ''
-                                }).catch(err => console.error('Save fiscal data error:', err));
+                        }).then(taxResult => {
+                            if (taxResult.data?.success) {
+                                toast.success('Vergi çeki kəsildi');
+                                const firstSuccess = taxResult.data.results?.find(r => r.success && r.data);
+                                if (firstSuccess?.data) {
+                                    const fd = firstSuccess.data;
+                                    apiConfig.patch(`/tax/save-fiscal/${id}`, {
+                                        fiscal_id: fd.long_id || '',
+                                        fiscal_doc_number: String(fd.document_number || ''),
+                                        fiscal_short_id: fd.short_id || '',
+                                        tax_cash_id: firstSuccess.config?.id || null
+                                    }).catch(err => console.error('Save fiscal data error:', err));
+                                }
+                            } else {
+                                addNotification('Fiskal Çək Xətası', 'Vergi çeki kəsilə bilmədi', { category: 'system', type: 'error' });
                             }
-                        } else {
-                            toast.warning('Vergi çeki xətası');
-                        }
+                        }).catch(taxErr => {
+                            console.error('Tax sale error:', taxErr);
+                            const errMsg = taxErr.response?.data?.message || taxErr.message;
+                            addNotification('Fiskal Çək Xətası', errMsg, { category: 'system', type: 'error' });
+                        });
+
+                        // Proceed without waiting for taxResult
+                        toast.info('Vergi çeki arxa planda kəsilir...');
                     } catch (taxErr) {
                         console.error('Tax sale error:', taxErr);
                         const errMsg = taxErr.response?.data?.message || taxErr.message;
@@ -583,6 +600,21 @@ const CheckOver = () => {
                                         onChange={(e) => setPrintCheck(e.target.checked)}
                                     />
                                 </div>
+                                {loginedProfileData?.data?.taxes?.length > 0 && (
+                                    <div
+                                        className="print-toggle-section mt-3 pt-3 d-flex justify-content-between align-items-center clickable-row"
+                                        onClick={() => setTaxPrint(!taxPrint)}
+                                    >
+                                        <span className="toggle-label">Vergi ilə çap</span>
+                                        <Form.Check
+                                            type="switch"
+                                            id="tax-print-switch-unpaid"
+                                            className="large-switch"
+                                            checked={taxPrint}
+                                            onChange={(e) => setTaxPrint(e.target.checked)}
+                                        />
+                                    </div>
+                                )}
 
                                 <div className="action-buttons-section mt-auto">
                                     <button className="back-to-payment-btn" onClick={() => setViewMode("PAYMENT")}>

@@ -62,6 +62,7 @@ const OrdersModel = db.sequelize.define(
     fiscal_id: { type: DataTypes.TEXT, allowNull: true },
     fiscal_doc_number: { type: DataTypes.TEXT, allowNull: true },
     fiscal_short_id: { type: DataTypes.TEXT, allowNull: true },
+    tax_cash_id: { type: DataTypes.INTEGER, allowNull: true },
     is_locked: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
     is_synced: { type: DataTypes.INTEGER, allowNull: true },
     customer_id: { type: DataTypes.INTEGER, allowNull: true },

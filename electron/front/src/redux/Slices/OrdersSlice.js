@@ -759,11 +759,7 @@ export const OrderSlice = createSlice({
     updateCount: (state, action) => {
       const { productId, count, price, name } = action.payload;
       const existingProductIndex = state.products.findIndex(
-        (product) => {
-          const p1 = Number(product.price || 0).toFixed(2);
-          const p2 = Number(price || 0).toFixed(2);
-          return product.id === productId && (!price || p1 === p2);
-        }
+        (product) => product.id === productId
       );
 
       if (existingProductIndex !== -1) {

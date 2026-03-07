@@ -13,20 +13,15 @@ function getTaxService(taxConfig) {
     }
 
     let service;
-    switch (type) {
-        case 'omnitech':
-            service = new OmnitechService(taxConfig);
-            break;
-        case 'sunmi':
-            service = new SunmiService(taxConfig);
-            break;
-        case 'oneclick':
-        case 'vizar':
-            service = new OneClickService(taxConfig);
-            break;
-        default:
-            console.warn(`[TAX] Unknown tax device type: ${taxConfig.tax_cash_type}`);
-            return null;
+    if (type.includes('omnitech')) {
+        service = new OmnitechService(taxConfig);
+    } else if (type.includes('sunmi')) {
+        service = new SunmiService(taxConfig);
+    } else if (type.includes('oneclick') || type.includes('vizar')) {
+        service = new OneClickService(taxConfig);
+    } else {
+        console.warn(`[TAX] Unknown tax device type: ${taxConfig.tax_cash_type}`);
+        return null;
     }
 
     serviceInstances[key] = service;
@@ -37,68 +32,97 @@ function clearInstances() {
     Object.keys(serviceInstances).forEach(key => delete serviceInstances[key]);
 }
 
-async function processSale(taxConfigs, saleData) {
-    const results = [];
+const withTimeout = (promise, ms, name = 'Operation') => {
+    let timeoutId;
+    const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+            reject(new Error(`[TAX-TIMEOUT] ${name} timed out after ${ms}ms`));
+        }, ms);
+    });
+    return Promise.race([
+        promise,
+        timeoutPromise
+    ]).finally(() => clearTimeout(timeoutId));
+};
 
-    for (const config of taxConfigs) {
+// Tries to ensure shift is open. statusTimeout controls how long we wait for getShiftStatus.
+async function ensureShiftOpen(service, label, statusTimeout = 5000) {
+    try {
+        const shiftStatus = await withTimeout(service.getShiftStatus(), statusTimeout, `getShiftStatus(${label})`);
+        if (shiftStatus.shiftStatus === false) {
+            await withTimeout(service.openShift(), 8000, `openShift(${label})`);
+            console.log(`[TAX] Shift auto-opened for ${label}`);
+        }
+    } catch (err) {
+        console.warn(`[TAX] Shift check skipped for ${label}:`, err.message);
+    }
+}
+
+async function processSale(taxConfigs, saleData) {
+    console.log('[TAX] ProcessSale Payments:', JSON.stringify(saleData.payments));
+
+    const promises = taxConfigs.map(async (config) => {
         const service = getTaxService(config);
-        if (!service) continue;
+        if (!service) return { success: false, config, error: 'Device not supported' };
 
         try {
-            const shiftStatus = await service.getShiftStatus();
-            if (shiftStatus.shiftStatus === false) {
-                await service.openShift();
-                console.log('[TAX] Shift auto-opened');
-            }
+            await ensureShiftOpen(service, config.tax_cash_type);
 
             const result = await service.createSale(saleData);
-            results.push({ success: true, config, data: result });
             console.log(`[TAX] Sale sent to ${config.tax_cash_type} (${config.ip_addr}):`, result.message);
+            return { success: true, config, data: result };
         } catch (error) {
-            results.push({ success: false, config, error: error.message });
             console.error(`[TAX] Sale failed for ${config.tax_cash_type} (${config.ip_addr}):`, error.message);
+            return { success: false, config, error: error.message };
         }
-    }
+    });
 
-    return results;
+    const settled = await Promise.allSettled(promises);
+    return settled.map(res => res.value || { success: false, error: res.reason });
 }
 
 async function processMoneyBack(taxConfigs, moneyBackData) {
-    const results = [];
+    console.log('[TAX] ProcessMoneyBack Payments:', JSON.stringify(moneyBackData.payments));
 
-    for (const config of taxConfigs) {
+    const promises = taxConfigs.map(async (config) => {
         const service = getTaxService(config);
-        if (!service) continue;
+        if (!service) return { success: false, config, error: 'Device not supported' };
 
         try {
-            const result = await service.moneyBack(moneyBackData);
-            results.push({ success: true, config, data: result });
-            console.log(`[TAX] MoneyBack sent to ${config.tax_cash_type}:`, result.message);
-        } catch (error) {
-            results.push({ success: false, config, error: error.message });
-            console.error(`[TAX] MoneyBack failed for ${config.tax_cash_type}:`, error.message);
-        }
-    }
+            await ensureShiftOpen(service, config.tax_cash_type);
 
-    return results;
+            const result = await withTimeout(service.moneyBack(moneyBackData), 15000, `MoneyBack on ${config.tax_cash_type}`);
+            console.log(`[TAX] MoneyBack sent to ${config.tax_cash_type}`);
+            return { success: true, config, data: result };
+        } catch (error) {
+            console.error(`[TAX] MoneyBack failed for ${config.tax_cash_type}:`, error.message);
+            return { success: false, config, error: error.message };
+        }
+    });
+
+    const settled = await Promise.allSettled(promises);
+    return settled.map(res => res.value || { success: false, error: res.reason });
 }
 
 async function processReceiptCopy(taxConfigs, fiscalId) {
-    const results = [];
-
-    for (const config of taxConfigs) {
+    const promises = taxConfigs.map(async (config) => {
         const service = getTaxService(config);
-        if (!service) continue;
+        if (!service) return { success: false, config, error: 'Device not supported' };
 
         try {
-            const result = await service.receiptCopy(fiscalId);
-            results.push({ success: true, config, data: result });
-        } catch (error) {
-            results.push({ success: false, config, error: error.message });
-        }
-    }
+            await ensureShiftOpen(service, config.tax_cash_type, 3000);
 
-    return results;
+            const result = await withTimeout(service.receiptCopy(fiscalId), 20000, `ReceiptCopy on ${config.tax_cash_type}`);
+            console.log(`[TAX] ReceiptCopy sent to ${config.tax_cash_type}`);
+            return { success: true, config, data: result };
+        } catch (error) {
+            console.error(`[TAX] ReceiptCopy failed for ${config.tax_cash_type}:`, error.message);
+            return { success: false, config, error: error.message };
+        }
+    });
+
+    const settled = await Promise.allSettled(promises);
+    return settled.map(res => res.value || { success: false, error: res.reason });
 }
 
 module.exports = {

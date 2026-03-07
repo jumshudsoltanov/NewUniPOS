@@ -239,8 +239,8 @@ const DevicesModal = ({ show, onHide }) => {
         setTaxDeviceLoading(index, true);
         try {
             const result = await localApi.post('/tax/login', { taxConfig: tax });
-            if (result.data?.access_token) {
-                toast.success(`${tax.tax_cash_type} — Login u\u011Furlu`);
+            if (result.data?.access_token || result.data?.data?.access_token) {
+                toast.success(`${tax.tax_cash_type} — Login uğurlu`);
                 handleShiftStatus(tax, index);
             } else {
                 toast.error('Login u\u011Fursuz: ' + (result.data?.message || ''));
@@ -320,12 +320,17 @@ const DevicesModal = ({ show, onHide }) => {
             const bDate = reportStart.date ? `${reportStart.date}T${reportStart.time}:00` : "";
             const eDate = reportEnd.date ? `${reportEnd.date}T${reportEnd.time}:00` : "";
 
-            await localApi.post('/tax/periodic-report', {
+            const result = await localApi.post('/tax/periodic-report', {
                 taxConfig: tax,
                 beginDate: bDate,
                 endDate: eDate
             });
-            toast.success('D\u00f6vri hesabat s\u0259n\u0259di \u00e7ap edildi');
+            const errCode = Number(result.data?.error_code || 0);
+            if (errCode !== 0) {
+                toast.error('Hesabat x\u0259tas\u0131: ' + (result.data?.error_message || `code ${errCode}`));
+            } else {
+                toast.success('D\u00f6vri hesabat s\u0259n\u0259di \u00e7ap edildi');
+            }
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
             toast.error('Hesabat \u00e7ap x\u0259tas\u0131: ' + msg);
@@ -341,12 +346,17 @@ const DevicesModal = ({ show, onHide }) => {
             const bDate = reportStart.date ? `${reportStart.date}T${reportStart.time}:00` : "";
             const eDate = reportEnd.date ? `${reportEnd.date}T${reportEnd.time}:00` : "";
 
-            await localApi.post('/tax/operation-history', {
+            const result = await localApi.post('/tax/operation-history', {
                 taxConfig: tax,
                 beginDate: bDate,
                 endDate: eDate
             });
-            toast.success('\u018fm\u0259liyyat tarix\u00e7\u0259si \u00e7ap edildi');
+            const errCode = Number(result.data?.error_code || 0);
+            if (errCode !== 0) {
+                toast.error('Tarix\u00e7\u0259 x\u0259tas\u0131: ' + (result.data?.error_message || `code ${errCode}`));
+            } else {
+                toast.success('\u018fm\u0259liyyat tarix\u00e7\u0259si \u00e7ap edildi');
+            }
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
             toast.error('Tarix\u00e7\u0259 \u00e7ap x\u0259tas\u0131: ' + msg);
@@ -900,7 +910,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                         >
                                                             Növbəni aç
                                                         </button>
-                                                        <div style={{ height: '8px' }}></div> {/* Gap separator between primary and secondary exactly like requested shape */}
+                                                        <div style={{ height: '8px' }}></div>
                                                         <button
                                                             onClick={() => handleCloseShift(tax, idx)}
                                                             disabled={taxLoading[idx]}

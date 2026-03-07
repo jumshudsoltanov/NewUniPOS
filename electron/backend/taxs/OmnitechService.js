@@ -14,7 +14,7 @@ class OmnitechService {
         try {
             const response = await axios.post(this.baseUrl, data, {
                 headers: { 'Content-Type': 'application/json' },
-                timeout: 15000
+                timeout: 30000
             });
             return response.data;
         } catch (error) {
@@ -32,7 +32,10 @@ class OmnitechService {
             'ğ': 'g', 'Ğ': 'G',
             'ö': 'o', 'Ö': 'O',
             'ü': 'u', 'Ü': 'U',
-            'ı': 'i', 'İ': 'I'
+            'ı': 'i', 'İ': 'I',
+            '№': 'No', '–': '-', '—': '-',
+            '«': '"', '»': '"', '“': '"', '”': '"',
+            '’': "'", '‘': "'"
         };
         return text.split('').map(char => mapping[char] || char).join('');
     }
@@ -70,7 +73,8 @@ class OmnitechService {
         return this._request({
             requestData: {
                 checkData: { check_type: 41 },
-                access_token: token
+                access_token: token,
+                tokenData: { parameters: {} }
             }
         });
     }
@@ -81,7 +85,8 @@ class OmnitechService {
         return this._request({
             requestData: {
                 checkData: { check_type: 14 },
-                access_token: token
+                access_token: token,
+                tokenData: { parameters: {} }
             }
         });
     }
@@ -92,7 +97,8 @@ class OmnitechService {
         return this._request({
             requestData: {
                 checkData: { check_type: 15 },
-                access_token: token
+                access_token: token,
+                tokenData: { parameters: {} }
             }
         });
     }
@@ -103,7 +109,8 @@ class OmnitechService {
         return this._request({
             requestData: {
                 checkData: { check_type: 13 },
-                access_token: token
+                access_token: token,
+                tokenData: { parameters: {} }
             }
         });
     }
@@ -114,33 +121,40 @@ class OmnitechService {
         return this._request({
             requestData: {
                 checkData: { check_type: 12 },
-                access_token: token
+                access_token: token,
+                tokenData: { parameters: {} }
             }
         });
     }
 
-    // check_type: 17 - Periodical Report
     async getPeriodicReport(beginDate, endDate) {
         const token = await this._ensureToken();
+        const formattedBegin = beginDate.replace('T', ' ');
+        const formattedEnd = endDate.replace('T', ' ');
+        
+        return this._request({
+            requestData: {
+                checkData: { check_type: 18 },
+                access_token: token,
+                date_start: formattedBegin,
+                date_end: formattedEnd
+            }
+        });
+    }
+
+    // check_type: 17 - Transaction history
+    async getOperationHistory(beginDate, endDate) {
+        const token = await this._ensureToken();
+        // The API wants format "YYYY-MM-DD HH:mm:ss", our inputs might be "YYYY-MM-DDTHH:mm:ss"
+        const formattedBegin = beginDate.replace('T', ' ');
+        const formattedEnd = endDate.replace('T', ' ');
+
         return this._request({
             requestData: {
                 checkData: { check_type: 17 },
                 access_token: token,
-                begin_date: beginDate,
-                end_date: endDate
-            }
-        });
-    }
-
-    // check_type: 19 - Journal/Operation History
-    async getOperationHistory(beginDate, endDate) {
-        const token = await this._ensureToken();
-        return this._request({
-            requestData: {
-                checkData: { check_type: 19 },
-                access_token: token,
-                begin_date: beginDate,
-                end_date: endDate
+                date_start: formattedBegin,
+                date_end: formattedEnd
             }
         });
     }
@@ -187,7 +201,7 @@ class OmnitechService {
             const price = Number(item.price || 0);
             const sum = qty * price;
             return {
-                itemName: (item.product?.name || item.name || 'Məhsul').substring(0, 64),
+                itemName: this._azToLatin(item.product?.name || item.name || 'Mahsul').substring(0, 64),
                 itemCodeType: 0,
                 itemCode: String(item.product_id || item.id || '0'),
                 itemQuantityType: 0,
@@ -208,7 +222,7 @@ class OmnitechService {
             payments.forEach(p => {
                 const name = (p.name || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-                if (name.includes('kart') || name.includes('card') || name.includes('cashless')) {
+                if (name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('nəğdsiz')) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;
@@ -261,7 +275,9 @@ class OmnitechService {
             requestData: {
                 access_token: token,
                 checkData: { check_type: 10 },
-                fiscalId
+                tokenData: {
+                    parameters: { fiscalId }
+                }
             }
         });
     }
@@ -276,7 +292,7 @@ class OmnitechService {
             const price = Number(item.price || 0);
             const sum = qty * price;
             return {
-                itemName: (item.product?.name || item.name || 'Məhsul').substring(0, 64),
+                itemName: this._azToLatin(item.product?.name || item.name || 'Mahsul').substring(0, 64),
                 itemCodeType: 0,
                 itemCode: String(item.product_id || item.id || '0'),
                 itemQuantityType: 0,
@@ -297,7 +313,7 @@ class OmnitechService {
             payments.forEach(p => {
                 const name = (p.name || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-                if (name.includes('kart') || name.includes('card') || name.includes('cashless')) {
+                if (name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('nəğdsiz')) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;
@@ -348,7 +364,9 @@ class OmnitechService {
             requestData: {
                 access_token: token,
                 checkData: { check_type: 11 },
-                fiscalId
+                tokenData: {
+                    parameters: { fiscalId }
+                }
             }
         });
     }
@@ -359,7 +377,8 @@ class OmnitechService {
         return this._request({
             requestData: {
                 checkData: { check_type: 16 },
-                access_token: token
+                access_token: token,
+                tokenData: { parameters: {} }
             }
         });
     }

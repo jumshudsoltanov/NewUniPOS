@@ -150,7 +150,7 @@ class OneClickService {
             payments.forEach(p => {
                 const name = (p.name || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-                if (name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nəğdsiz')) {
+                if (name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('nəğdsiz') || name.includes('bank')) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;
@@ -246,6 +246,11 @@ class OneClickService {
     async receiptCopy(fiscalId) {
         await this._ensureToken();
         return this._request('POST', '/kas_receipt_copy', { fiscalId });
+    }
+
+    async reprintAfterError() {
+        await this._ensureToken();
+        return this._request('POST', '/kas_receipt_copy', { fiscalId: '' });
     }
 
     async getPeriodicReport(startDate, endDate) {

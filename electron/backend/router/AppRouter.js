@@ -229,11 +229,21 @@ const TaxManager = require("../taxs/TaxManager");
 router.post("/tax/login", async (req, res) => {
   try {
     const { taxConfig, name, password } = req.body;
+    console.log('[TAX] Login request:', { taxConfig: taxConfig?.tax_cash_type, ip: taxConfig?.ip_addr });
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service) {
+        console.log('[TAX] Device not supported:', taxConfig);
+        return res.status(400).json({ message: "Tax device not supported" });
+    }
     const result = await service.login(name, password);
+    console.log('[TAX] Login result:', JSON.stringify(result));
+
+    if (result && result.code && String(result.code) !== "0" && String(result.code) !== "1") {
+      return res.status(400).json({ message: result.message || "Login failed" });
+    }
     res.json(result);
   } catch (e) {
+    console.error('[TAX] Login error:', e.message);
     res.status(500).json({ message: e.message });
   }
 });
@@ -302,8 +312,8 @@ router.post("/tax/sale", async (req, res) => {
   try {
     const { taxConfigs, saleData } = req.body;
     const results = await TaxManager.processSale(taxConfigs, saleData);
-    const anyFailed = results.some(r => !r.success);
-    res.json({ success: !anyFailed, results });
+    const anySuccess = results.some(r => r.success);
+    res.json({ success: anySuccess, results });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -313,8 +323,8 @@ router.post("/tax/money-back", async (req, res) => {
   try {
     const { taxConfigs, moneyBackData } = req.body;
     const results = await TaxManager.processMoneyBack(taxConfigs, moneyBackData);
-    const anyFailed = results.some(r => !r.success);
-    res.json({ success: !anyFailed, results });
+    const anySuccess = results.some(r => r.success);
+    res.json({ success: anySuccess, results });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -324,8 +334,8 @@ router.post("/tax/receipt-copy", async (req, res) => {
   try {
     const { taxConfigs, fiscalId } = req.body;
     const results = await TaxManager.processReceiptCopy(taxConfigs, fiscalId);
-    const anyFailed = results.some(r => !r.success);
-    res.json({ success: !anyFailed, results });
+    const anySuccess = results.some(r => r.success);
+    res.json({ success: anySuccess, results });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -349,11 +359,13 @@ router.post("/tax/periodic-report", async (req, res) => {
     const service = TaxManager.getTaxService(taxConfig);
     if (!service) return res.status(400).json({ message: "Tax device not supported" });
 
-    // For check_type 17 (Periodic Z-report by dates), Omnitech usually expects dates
+    console.log('[TAX] Periodic report request:', { beginDate, endDate });
     const result = await service.getPeriodicReport(beginDate, endDate);
+    console.log('[TAX] Periodic report response:', JSON.stringify(result));
 
-    if (result && result.error_code && result.error_code !== 0) {
-      return res.status(400).json({ message: result.error_message || "D\u00f6vri hesabat x\u0259tas\u0131" });
+    const errCode = Number(result?.error_code || 0);
+    if (errCode !== 0) {
+      return res.status(400).json({ message: result.error_message || `Dövri hesabat xətası (code: ${errCode})` });
     }
     res.json(result);
   } catch (e) {
@@ -367,10 +379,13 @@ router.post("/tax/operation-history", async (req, res) => {
     const service = TaxManager.getTaxService(taxConfig);
     if (!service) return res.status(400).json({ message: "Tax device not supported" });
 
+    console.log('[TAX] Operation history request:', { beginDate, endDate });
     const result = await service.getOperationHistory(beginDate, endDate);
+    console.log('[TAX] Operation history response:', JSON.stringify(result));
 
-    if (result && result.error_code && result.error_code !== 0) {
-      return res.status(400).json({ message: result.error_message || "Əməliyyat tarixçəsi xətası" });
+    const errCode = Number(result?.error_code || 0);
+    if (errCode !== 0) {
+      return res.status(400).json({ message: result.error_message || `Əməliyyat tarixçəsi xətası (code: ${errCode})` });
     }
     res.json(result);
   } catch (e) {
@@ -383,9 +398,9 @@ const OrdersModel = require("../model/OrdersModel");
 router.patch("/tax/save-fiscal/:orderId", async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { fiscal_id, fiscal_doc_number, fiscal_short_id } = req.body;
+    const { fiscal_id, fiscal_doc_number, fiscal_short_id, tax_cash_id } = req.body;
     await OrdersModel.update(
-      { fiscal_id, fiscal_doc_number, fiscal_short_id },
+      { fiscal_id, fiscal_doc_number, fiscal_short_id, tax_cash_id },
       { where: { uuid: orderId } }
     );
     res.json({ success: true });

@@ -8,6 +8,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
+import apiConfig from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 
@@ -147,6 +148,11 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
     const handleTaxMoneyBack = async () => {
         if (taxLoading || !order || taxConfigs.length === 0) return;
+
+        // Find the specific device that originally printed this order
+        const targetConfig = taxConfigs.find(c => c.id === order.tax_cash_id);
+        const configsToSend = targetConfig ? [targetConfig] : taxConfigs;
+
         setTaxLoading(true);
         try {
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
@@ -160,8 +166,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 name: p.payment_method?.name || 'Nağd',
                 amount: p.paid
             }));
-            const result = await axios.post('/tax/money-back', {
-                taxConfigs,
+            const result = await apiConfig.post('/tax/money-back', {
+                taxConfigs: configsToSend,
                 moneyBackData: {
                     items,
                     payments,
@@ -201,11 +207,16 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
     const handleTaxReceiptCopy = async () => {
         if (taxLoading || !order || taxConfigs.length === 0) return;
+
+        // Find the specific device that originally printed this order
+        const targetConfig = taxConfigs.find(c => c.id === order.tax_cash_id);
+        const configsToSend = targetConfig ? [targetConfig] : taxConfigs;
+
         setTaxLoading(true);
         try {
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-            const result = await axios.post('/tax/receipt-copy', {
-                taxConfigs,
+            const result = await apiConfig.post('/tax/receipt-copy', {
+                taxConfigs: configsToSend,
                 fiscalId: order.fiscal_id || ''
             });
             if (result.data?.success) {
