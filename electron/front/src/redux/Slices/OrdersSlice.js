@@ -16,7 +16,13 @@ export const sendOrdersItems = createAsyncThunk(
       // Persistent Log
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      const itemNames = productList?.map(item => `${item.quantity || item.count || 1} x ${item.name}`).join(', ');
+      const grouped = {};
+      productList?.forEach(item => {
+        const name = item.name || 'Məhsul';
+        const qty = Number(item.quantity || item.count || 1);
+        grouped[name] = (grouped[name] || 0) + qty;
+      });
+      const itemNames = Object.entries(grouped).map(([name, qty]) => `${qty} x ${name}`).join(', ');
 
       thunkAPI.dispatch(saveLog({
         orderId,

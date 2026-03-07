@@ -254,8 +254,7 @@
 @media (max-width: 767.98px) {
     .table-wrapper {
         width: 100%;
-        height: 100px;
-        /* Slightly taller for better padding */
+        height: 120px;
         margin: 0;
         transform: none !important;
     }
@@ -357,7 +356,7 @@
 
     /* Reset specific wrapper heights */
     .wrapper-rectangle {
-        height: 100px !important;
+        height: 120px !important;
     }
 
     /* Move high-visibility mobile-specific status styles here */

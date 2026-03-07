@@ -10,8 +10,10 @@ import "./DevicesModal.css";
 
 const DevicesModal = ({ show, onHide }) => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
     const profileId = loginedProfileData?.data?.profile?.id;
     const taxes = loginedProfileData?.data?.taxes || [];
+    const canSeeTax = Number(loginedWaiter?.data?.can_see_tax) === 1;
 
     const [activeTab, setActiveTab] = useState("printers");
     const isMobile = window.innerWidth < 992;
@@ -432,7 +434,7 @@ const DevicesModal = ({ show, onHide }) => {
                         >
                             Skanerlər
                         </div>
-                        {taxes.length > 0 && (
+                        {taxes.length > 0 && canSeeTax && (
                             <div
                                 className={`devices-mobile-tab ${activeTab === "taxes" ? "active" : ""}`}
                                 onClick={() => setActiveTab("taxes")}
@@ -493,7 +495,7 @@ const DevicesModal = ({ show, onHide }) => {
                                 <span>Skanerlər</span>
                             </div>
 
-                            {taxes.length > 0 && (
+                            {taxes.length > 0 && canSeeTax && (
                                 <div
                                     className={`devices-menu-item ${activeTab === "taxes" ? "active" : ""}`}
                                     onClick={() => setActiveTab("taxes")}
@@ -774,7 +776,7 @@ const DevicesModal = ({ show, onHide }) => {
                                     </div>
                                 </div>
                             </div>
-                        ) : activeTab === "taxes" && taxes.length > 0 ? (
+                        ) : activeTab === "taxes" && taxes.length > 0 && canSeeTax ? (
                             <div className="display-settings">
                                 {selectedTaxIndex === null ? (
                                     <>

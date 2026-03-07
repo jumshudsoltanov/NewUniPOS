@@ -1,11 +1,9 @@
 .header {
   width: 100%;
-  height: calc(60px + env(safe-area-inset-top, 0px));
-  /* Fixed height to match children */
+  height: 60px;
   background: var(--Surface-Default, #053796);
-  padding: env(safe-area-inset-top, 0px) clamp(8px, 2vw, 16px) 0;
+  padding: 0 clamp(8px, 2vw, 16px);
   overflow: hidden;
-  /* Prevent spillover */
 }
 
 /* Background container for the tabs */
@@ -338,8 +336,8 @@ body {
 
 @media (max-width: 768px) {
   .header {
-    height: calc(50px + env(safe-area-inset-top, 0px));
-    padding: env(safe-area-inset-top, 0px) 0 0;
+    height: 50px;
+    padding: 0;
   }
 }
 

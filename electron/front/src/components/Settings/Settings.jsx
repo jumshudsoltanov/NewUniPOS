@@ -117,15 +117,14 @@ const Settings = () => {
             id: "refund",
             label: "Geri qaytarılma",
             icon: <i className="bi bi-arrow-counterclockwise"></i>,
-            onClick: () => {
-                if (Number(loginedWaiter?.data?.can_return_receipt) !== 1) return;
-                setShowReturnModal(true);
-            },
+            permission: Number(loginedWaiter?.data?.can_return_receipt) === 1,
+            onClick: () => setShowReturnModal(true),
         },
         {
             id: "report",
             label: "Hesabat yarat",
             icon: <i className="bi bi-file-earmark-text"></i>,
+            permission: Number(loginedWaiter?.data?.can_create_report) === 1,
             onClick: () => setShowReportModal(true),
         },
         {
@@ -139,12 +138,14 @@ const Settings = () => {
             label: "Müştərilər",
             icon: <i className="bi bi-people"></i>,
             highlight: true,
+            permission: Number(loginedWaiter?.data?.can_view_customers) === 1,
             onClick: () => setShowCustomersModal(true),
         },
         {
             id: "archive",
             label: "Çek arxivi",
             icon: <i className="bi bi-archive"></i>,
+            permission: Number(loginedWaiter?.data?.can_edit_all_checks) === 1,
             onClick: () => navigate("/checks"),
         },
         {
@@ -153,7 +154,7 @@ const Settings = () => {
             icon: <i className="bi bi-laptop"></i>,
             highlight: true,
             onClick: () => setShowDevicesModal(true),
-            permission: Number(loginedWaiter?.data?.can_access_settings) === 1,
+            permission: Number(loginedWaiter?.data?.can_access_settings) === 1 && Number(loginedWaiter?.data?.can_see_device) === 1,
         },
     ];
 

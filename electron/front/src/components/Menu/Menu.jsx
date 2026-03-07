@@ -37,6 +37,10 @@ const Menu = ({
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
 
+  // Debounced log batching for product additions
+  const pendingLogNames = useRef([]);
+  const logDebounceTimer = useRef(null);
+
   // Modal State
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [pendingProduct, setPendingProduct] = useState(null);
@@ -142,12 +146,17 @@ const Menu = ({
     }
 
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-    dispatch(saveLog({
-      orderId: order?.uuid,
-      action: "Məhsul əlavə edildi",
-      waiterName,
-      details: product.name
-    }));
+
+    // Batch log: collect product names and flush after 800ms of inactivity
+    pendingLogNames.current.push(product.name);
+    if (logDebounceTimer.current) clearTimeout(logDebounceTimer.current);
+    logDebounceTimer.current = setTimeout(() => {
+      const grouped = {};
+      pendingLogNames.current.forEach(name => { grouped[name] = (grouped[name] || 0) + 1; });
+      const details = Object.entries(grouped).map(([name, qty]) => qty > 1 ? `${qty} x ${name}` : name).join(', ');
+      dispatch(saveLog({ orderId: order?.uuid, action: "Məhsul əlavə edildi", waiterName, details }));
+      pendingLogNames.current = [];
+    }, 800);
 
     dispatch(addProducts(product));
   };

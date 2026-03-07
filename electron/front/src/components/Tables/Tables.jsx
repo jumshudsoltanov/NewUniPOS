@@ -522,10 +522,9 @@ const Tables = () => {
           <Row className="g-3">
             {currentTables.map((table, index) => (
               <Col
-                xs={4}
+                xs={6}
                 sm={4}
                 md={4}
-
                 lg={3}
                 xl={2}
                 xxl={2}

@@ -203,9 +203,8 @@ const WebViewScreen = ({ navigation }) => {
 
     return (
         <View style={{ flex: 1, backgroundColor: '#053796' }}>
-            <StatusBar hidden={false} translucent={true} backgroundColor="transparent" barStyle="light-content" />
-            <SafeAreaView style={{ flex: 1, backgroundColor: '#053796' }} edges={[]}>
-                <WebView
+            <StatusBar hidden={false} translucent={false} backgroundColor="#053796" barStyle="light-content" />
+            <WebView
                     ref={webViewRef}
                     source={{ uri: url }}
                     javaScriptEnabled={true}
@@ -294,7 +293,6 @@ const WebViewScreen = ({ navigation }) => {
                         </View>
                     )}
                 />
-            </SafeAreaView>
 
             {/* Premium settings icon - Hidden by default, shown via Triple Tap */}
             {showFloatingBtn && (

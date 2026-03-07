@@ -4,118 +4,62 @@ import { getSocket, initNetwork } from "../../utils/apiConfig";
 const NetworkOverlay = () => {
     const [isDisconnected, setIsDisconnected] = useState(false);
     const [masterIp, setMasterIp] = useState("Axtarılır...");
-    const [slaveIp, setSlaveIp] = useState("...");
-    const hadDisconnect = useRef(false);
 
     useEffect(() => {
         let pollingInterval;
-        let retryCounter = 0;
+        let registeredSocket = null;
 
-        // Continuous network verification loop for Slaves
-        const verifyConnection = async () => {
-            const authResult = JSON.parse(localStorage.getItem("authResult"));
-            let isConfiguredSlave = false;
-            let isMaster = false;
-            let isMasterSlaveActive = false;
+        const onDisconnect = () => setIsDisconnected(true);
+        const onConnect = () => setIsDisconnected(false);
 
-            // Mobile mode: no Electron + has master_ip saved
-            const isMobileMode = !window.electronAPI && !!localStorage.getItem('master_ip');
+        const isSlave = () => {
+            if (!window.electronAPI && !!localStorage.getItem('master_ip')) return true;
+            const authResult = JSON.parse(localStorage.getItem("authResult") || "null");
+            if (!authResult) return false;
+            const profileData = authResult?.data?.profile || {};
+            const terminalData = authResult?.data?.terminal || {};
+            const isMaster = terminalData.is_master == 1 || profileData.is_master == 1;
+            const active = terminalData.is_master_slave_active == 1 || profileData.is_master_slave_active == 1;
+            return !isMaster && active;
+        };
 
-            if (authResult) {
-                const profileData = authResult?.data?.profile || {};
-                const terminalData = authResult?.data?.terminal || {};
-                isMaster = terminalData.is_master == 1 || profileData.is_master == 1;
-                isMasterSlaveActive = terminalData.is_master_slave_active == 1 || profileData.is_master_slave_active == 1;
-
-                if (!isMaster && isMasterSlaveActive) {
-                    isConfiguredSlave = true;
-                }
-            }
-
-            // Treat mobile mode same as configured slave
-            if (isMobileMode) isConfiguredSlave = true;
-
-            const socket = getSocket();
-            if (socket) {
-                const uri = socket.io?.uri || "";
-                if (uri.includes("://")) {
-                    const host = uri.split("://")[1].split(":")[0];
-                    setMasterIp(host);
-                }
-            }
-
-            // If we are a slave and disconnected, try a background re-scan occasionally
-            if ((!socket || !socket.connected) && isConfiguredSlave) {
-                setIsDisconnected(true);
-                hadDisconnect.current = true;
-
-                // Every 5 iterations (roughly 10 seconds), attempt a background re-init
-                retryCounter++;
-                if (retryCounter >= 5) {
-                    console.warn("[NETWORK] Background re-scan started...");
-                    retryCounter = 0;
-                    try {
-                        const result = await initNetwork(false, false);
-                        if (result && (result.socket || result.masterIp)) {
-                            console.warn("[NETWORK] Master found in background!");
-                            if (result.masterIp) setMasterIp(result.masterIp);
-                            setIsDisconnected(false);
-                            hadDisconnect.current = false;
-                            window.location.reload();
-                        }
-                    } catch (e) {
-                        console.error("[NETWORK] Background re-scan failed:", e.message);
-                    }
-                }
+        const poll = () => {
+            if (!isSlave()) {
+                setIsDisconnected(false);
                 return;
             }
 
-            // If we have a socket, we need to check if it's actually remote and connected
-            if (socket) {
-                let uri = socket.io?.uri || "";
-                let isRemoteSocket = !uri.includes("localhost") && !uri.includes("127.0.0.1");
-                let isConnectedToMaster = socket.connected;
+            const socket = getSocket();
 
-                if (isConfiguredSlave || isRemoteSocket) {
-                    if (!isConnectedToMaster) {
-                        setIsDisconnected(true);
-                        hadDisconnect.current = true;
-                    } else {
-                        setIsDisconnected(false);
-                        retryCounter = 0; // Reset counter on successful connection
-                        if (uri.includes("://")) {
-                            setMasterIp(uri.split("://")[1].split(":")[0]);
-                        }
-                    }
+            // Re-register handlers only when socket instance changes
+            if (socket !== registeredSocket) {
+                if (registeredSocket) {
+                    registeredSocket.off("disconnect", onDisconnect);
+                    registeredSocket.off("connect", onConnect);
                 }
-            } else {
-                // No socket and not a slave? Usually master/local mode.
-                setIsDisconnected(false);
+                if (socket) {
+                    socket.on("disconnect", onDisconnect);
+                    socket.on("connect", onConnect);
+                    const uri = socket.io?.uri || "";
+                    if (uri.includes("://")) setMasterIp(uri.split("://")[1].split(":")[0]);
+                }
+                registeredSocket = socket;
             }
 
-            if (socket) {
-                socket.off("disconnect").on("disconnect", () => {
-                    if (isConfiguredSlave) {
-                        setIsDisconnected(true);
-                        hadDisconnect.current = true;
-                    }
-                });
-                socket.off("connect").on("connect", () => {
-                    setIsDisconnected(false);
-                    retryCounter = 0;
-                    // If master was offline before and now reconnected, reload to re-init app
-                    if (hadDisconnect.current) {
-                        hadDisconnect.current = false;
-                        window.location.reload();
-                    }
-                });
-            }
+            // Sync current connection state
+            setIsDisconnected(!socket || !socket.connected);
         };
 
-        verifyConnection(); // Immediate check
-        pollingInterval = setInterval(verifyConnection, 2000); // 2-second continuous heartbeat
+        poll();
+        pollingInterval = setInterval(poll, 3000);
 
-        return () => clearInterval(pollingInterval);
+        return () => {
+            clearInterval(pollingInterval);
+            if (registeredSocket) {
+                registeredSocket.off("disconnect", onDisconnect);
+                registeredSocket.off("connect", onConnect);
+            }
+        };
     }, []);
 
     if (!isDisconnected) return null;
