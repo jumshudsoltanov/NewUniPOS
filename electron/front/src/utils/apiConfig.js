@@ -50,22 +50,23 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
             console.warn(`[CONNECTION] Mobile/Web Mode: Connecting to ${baseURL} (Source: ${urlMasterIp ? 'URL Param' : (savedMasterIp ? 'LocalStorage' : 'Fallback Hostname')})`);
             apiConfig.defaults.baseURL = `${baseURL}/api`;
 
-            if (!disableSocket) {
-                socket = io(baseURL, {
-                    transports: ['websocket', 'polling'],
-                    reconnection: true,
-                    reconnectionAttempts: Infinity,
-                    reconnectionDelay: 1000,
-                    reconnectionDelayMax: 5000,
-                    timeout: 20000,
-                    autoConnect: true,
-                    forceNew: true
-                });
+            // Web/Mobile always needs socket to delegate prints to master,
+            // regardless of is_master_slave_active or disableSocket flag
+            socket = io(baseURL, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                timeout: 20000,
+                autoConnect: true,
+                forceNew: true
+            });
 
-                socket.on("connect_error", (err) => {
-                    console.error("[CONNECTION] Mobile Socket Connect Error:", err.message);
-                });
-            }
+            socket.on("connect_error", (err) => {
+                console.error("[CONNECTION] Mobile Socket Connect Error:", err.message);
+            });
+
             return { masterIp: effectiveIp, socket };
         }
     }

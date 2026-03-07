@@ -815,7 +815,8 @@ const Check = () => {
         <Col
           md={12}
           lg={5}
-          xl={4}
+          xl={5}
+          xxl={4}
           className={`h-100 ${activeMobileTab !== "check" ? "d-none d-lg-block" : ""}`}
         >
           <div className="check-container h-100 d-flex mobile-content-adjust">
@@ -1244,7 +1245,8 @@ const Check = () => {
         <Col
           md={12}
           lg={7}
-          xl={8}
+          xl={7}
+          xxl={8}
           className={`h-100 bg-light ${activeMobileTab !== "menu" ? "d-none d-lg-block" : ""}`}
         >
           <div className="checkRightBox h-100 d-flex flex-column bg-light mobile-content-adjust">

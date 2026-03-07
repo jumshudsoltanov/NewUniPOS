@@ -1983,3 +1983,58 @@
     font-size: 0.8rem;
     color: #8b5cf6;
 }
+
+/* ==========================================
+   1200px – 1399px (xl) compact adjustments
+   ========================================== */
+@media (min-width: 992px) and (max-width: 1399px) {
+    .checkBottom {
+        padding: 8px 10px;
+    }
+
+    .summary-section {
+        margin-bottom: 4px;
+        padding: 0 6px;
+    }
+
+    .summary-row {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+    }
+
+    .summary-row.total-row {
+        font-size: 0.85rem;
+    }
+
+    .action-buttons {
+        gap: 8px;
+    }
+
+    .btn-send,
+    .btn-pay {
+        height: 46px;
+        font-size: 0.85rem;
+        padding: 0 10px;
+    }
+
+    .btn-send-group {
+        height: 46px;
+    }
+
+    .btn-menu-dots {
+        height: 46px;
+    }
+
+    .order-item {
+        padding: 8px 0;
+        font-size: 0.85rem;
+    }
+
+    .order-item .col-name {
+        font-size: 0.8rem;
+    }
+
+    .check-header-bar {
+        padding: 0 10px;
+    }
+}
