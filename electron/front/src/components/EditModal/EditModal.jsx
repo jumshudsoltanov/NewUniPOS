@@ -60,6 +60,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   ];
 
   const handleTransfer = async () => {
+    if (product?.isNew) {
+      toast.info("Gözləyən məhsulu köçürmək üçün əvvəlcə 'Göndər' düyməsini sıxın.");
+      return;
+    }
+
     const hallServiceFee = tableGroups?.data?.find(item => item?.id == selectedTable?.hall_id);
 
     if (isSubmitting) return;
@@ -570,6 +575,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     disabled={isSubmitting}
                     style={{ opacity: isSubmitting ? 0.7 : 1 }}
                     onClick={() => {
+                      if (product?.isNew) {
+                        toast.info("Gözləyən məhsulun ikramını ləğv etmək üçün əvvəlcə 'Göndər' düyməsini sıxın.");
+                        return;
+                      }
                       if (isSubmitting) return;
                       setIsSubmitting(true);
                       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
@@ -609,6 +618,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     disabled={isSubmitting}
                     style={{ opacity: isSubmitting ? 0.7 : 1 }}
                     onClick={() => {
+                      if (product?.isNew) {
+                        toast.info("Gözləyən məhsulu ikram etmək üçün əvvəlcə 'Göndər' düyməsini sıxın.");
+                        return;
+                      }
                       if (isSubmitting) return;
                       setIsSubmitting(true);
                       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";

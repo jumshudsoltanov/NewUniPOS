@@ -457,9 +457,14 @@ const Check = () => {
       return;
     }
 
+    if (products?.length > 0) {
+      toast.info("Endirim etmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOnShowDiscount(true);
-  }, [currentOrder]);
+  }, [currentOrder, products]);
 
   const openServiceFee = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
@@ -467,9 +472,14 @@ const Check = () => {
       return;
     }
 
+    if (products?.length > 0) {
+      toast.info("Xidmət haqqı əlavə etmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOnShowServiceFee(true);
-  }, [currentOrder]);
+  }, [currentOrder, products]);
 
   const openDepositModal = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
@@ -477,9 +487,14 @@ const Check = () => {
       return;
     }
 
+    if (products?.length > 0) {
+      toast.info("Depozit əlavə etmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOnShowDeposit(true);
-  }, [currentOrder]);
+  }, [currentOrder, products]);
 
   const openWaitersModal = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
@@ -497,9 +512,14 @@ const Check = () => {
       return;
     }
 
+    if (products?.length > 0) {
+      toast.info("Çeki birləşdirmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOpenActiveChecks(true);
-  }, [currentOrder]);
+  }, [currentOrder, products]);
 
   const handleOpenChangeSaleType = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
@@ -507,9 +527,14 @@ const Check = () => {
       return;
     }
 
+    if (products?.length > 0) {
+      toast.info("Satış üsulunu dəyişmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOpenChangeSaleType(true);
-  }, [currentOrder]);
+  }, [currentOrder, products]);
 
   // ChangeTables
   const handleChangeTable = useCallback(() => {
@@ -518,8 +543,13 @@ const Check = () => {
       return;
     }
 
+    if (products?.length > 0) {
+      toast.info("Masanı dəyişmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
+
     navigate(`/tables/${currentOrder?.uuid}`);
-  }, [navigate, currentOrder]);
+  }, [navigate, currentOrder, products]);
 
 
 
@@ -613,25 +643,42 @@ const Check = () => {
       return;
     }
 
+    if (products?.length > 0) {
+      toast.info("Çeki bölmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
+
     setShowOperationsModal(false);
     setOpenSplitModal(true);
-  }, [currentOrder]);
+  }, [currentOrder, products]);
 
 
   const openHistoryModalFunc = useCallback(() => {
+    if (products?.length > 0) {
+      toast.info("Əməliyyat tarixçəsinə baxmaq üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
     setShowHistoryModal(true);
     setShowOperationsModal(false);
-  }, []);
+  }, [products]);
 
   const openCustomersModalFunc = useCallback(() => {
+    if (products?.length > 0) {
+      toast.info("Müştəri seçmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
     setShowCustomerModal(true);
     setShowOperationsModal(false);
-  }, []);
+  }, [products]);
 
   const openGuestCountModalFunc = useCallback(() => {
+    if (products?.length > 0) {
+      toast.info("Qonaq sayını dəyişmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      return;
+    }
     setShowGuestCountModal(true);
     setShowOperationsModal(false);
-  }, []);
+  }, [products]);
 
   const handleSplitOrder = useCallback(async (splitData) => {
     const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table?.hall_id })
@@ -815,7 +862,7 @@ const Check = () => {
         <Col
           md={12}
           lg={5}
-          xl={5}
+          xl={4}
           xxl={4}
           className={`h-100 ${activeMobileTab !== "check" ? "d-none d-lg-block" : ""}`}
         >
@@ -1245,7 +1292,7 @@ const Check = () => {
         <Col
           md={12}
           lg={7}
-          xl={7}
+          xl={8}
           xxl={8}
           className={`h-100 bg-light ${activeMobileTab !== "menu" ? "d-none d-lg-block" : ""}`}
         >

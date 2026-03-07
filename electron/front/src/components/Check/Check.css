@@ -1985,9 +1985,9 @@
 }
 
 /* ==========================================
-   1200px – 1399px (xl) compact adjustments
+   1024px – 1299px compact adjustments
    ========================================== */
-@media (min-width: 992px) and (max-width: 1399px) {
+@media (min-width: 992px) and (max-width: 1299px) {
     .checkBottom {
         padding: 8px 10px;
     }
