@@ -25,7 +25,7 @@ export default function App() {
   return (
     <Provider store={store}>
       <NavigationContainer>
-        <StatusBar hidden={true} />
+        <StatusBar style="light" translucent={true} backgroundColor="transparent" />
         <Stack.Navigator initialRouteName="Connection">
           <Stack.Screen
             name="Connection"

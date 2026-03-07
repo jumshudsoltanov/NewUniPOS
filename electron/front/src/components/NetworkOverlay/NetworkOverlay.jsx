@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { getSocket, initNetwork } from "../../utils/apiConfig";
 
 const NetworkOverlay = () => {
     const [isDisconnected, setIsDisconnected] = useState(false);
     const [masterIp, setMasterIp] = useState("Axtarılır...");
     const [slaveIp, setSlaveIp] = useState("...");
+    const hadDisconnect = useRef(false);
 
     useEffect(() => {
         let pollingInterval;
@@ -17,6 +18,9 @@ const NetworkOverlay = () => {
             let isMaster = false;
             let isMasterSlaveActive = false;
 
+            // Mobile mode: no Electron + has master_ip saved
+            const isMobileMode = !window.electronAPI && !!localStorage.getItem('master_ip');
+
             if (authResult) {
                 const profileData = authResult?.data?.profile || {};
                 const terminalData = authResult?.data?.terminal || {};
@@ -27,6 +31,9 @@ const NetworkOverlay = () => {
                     isConfiguredSlave = true;
                 }
             }
+
+            // Treat mobile mode same as configured slave
+            if (isMobileMode) isConfiguredSlave = true;
 
             const socket = getSocket();
             if (socket) {
@@ -40,6 +47,7 @@ const NetworkOverlay = () => {
             // If we are a slave and disconnected, try a background re-scan occasionally
             if ((!socket || !socket.connected) && isConfiguredSlave) {
                 setIsDisconnected(true);
+                hadDisconnect.current = true;
 
                 // Every 5 iterations (roughly 10 seconds), attempt a background re-init
                 retryCounter++;
@@ -52,6 +60,8 @@ const NetworkOverlay = () => {
                             console.warn("[NETWORK] Master found in background!");
                             if (result.masterIp) setMasterIp(result.masterIp);
                             setIsDisconnected(false);
+                            hadDisconnect.current = false;
+                            window.location.reload();
                         }
                     } catch (e) {
                         console.error("[NETWORK] Background re-scan failed:", e.message);
@@ -69,6 +79,7 @@ const NetworkOverlay = () => {
                 if (isConfiguredSlave || isRemoteSocket) {
                     if (!isConnectedToMaster) {
                         setIsDisconnected(true);
+                        hadDisconnect.current = true;
                     } else {
                         setIsDisconnected(false);
                         retryCounter = 0; // Reset counter on successful connection
@@ -84,11 +95,19 @@ const NetworkOverlay = () => {
 
             if (socket) {
                 socket.off("disconnect").on("disconnect", () => {
-                    if (isConfiguredSlave) setIsDisconnected(true);
+                    if (isConfiguredSlave) {
+                        setIsDisconnected(true);
+                        hadDisconnect.current = true;
+                    }
                 });
                 socket.off("connect").on("connect", () => {
                     setIsDisconnected(false);
                     retryCounter = 0;
+                    // If master was offline before and now reconnected, reload to re-init app
+                    if (hadDisconnect.current) {
+                        hadDisconnect.current = false;
+                        window.location.reload();
+                    }
                 });
             }
         };

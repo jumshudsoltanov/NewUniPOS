@@ -33,6 +33,7 @@ const WebViewScreen = ({ navigation }) => {
     }, []);
 
     const watchdogTimer = useRef(null);
+    const retryInterval = useRef(null);
 
     const startWatchdog = () => {
         stopWatchdog();
@@ -52,6 +53,46 @@ const WebViewScreen = ({ navigation }) => {
         }
     };
 
+    const pingMaster = async (ip) => {
+        try {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 3000);
+            const response = await fetch(`http://${ip}:55667/api/ping`, { signal: controller.signal });
+            clearTimeout(id);
+            return response.ok;
+        } catch {
+            return false;
+        }
+    };
+
+    // Auto-retry when hasError: ping master every 4s, reload when available
+    useEffect(() => {
+        if (!hasError) {
+            if (retryInterval.current) {
+                clearInterval(retryInterval.current);
+                retryInterval.current = null;
+            }
+            return;
+        }
+
+        retryInterval.current = setInterval(async () => {
+            const ip = await getData('master_ip');
+            if (!ip) return;
+            const ok = await pingMaster(ip);
+            if (ok) {
+                console.log('[WebView] Master came online, auto-reloading...');
+                clearInterval(retryInterval.current);
+                retryInterval.current = null;
+                setHasError(false);
+                await loadUrl();
+            }
+        }, 4000);
+
+        return () => {
+            if (retryInterval.current) clearInterval(retryInterval.current);
+        };
+    }, [hasError, loadUrl]);
+
     useEffect(() => {
         setTimeout(loadUrl, 200);
 
@@ -60,21 +101,12 @@ const WebViewScreen = ({ navigation }) => {
                 console.log('[WebView] App resumed, checking connectivity...');
                 const ip = await getData('master_ip');
                 if (ip) {
-                    try {
-                        const controller = new AbortController();
-                        const id = setTimeout(() => controller.abort(), 3000);
-                        const response = await fetch(`http://${ip}:55667/api/ping`, { signal: controller.signal });
-                        clearTimeout(id);
-
-                        if (response.ok) {
-                            console.log('[WebView] Ping success, reloading...');
-                            webViewRef.current?.reload();
-                            setHasError(false);
-                        } else {
-                            throw new Error('Ping failed');
-                        }
-                    } catch (err) {
-                        console.warn('[WebView] Ping failed on resume:', err);
+                    const ok = await pingMaster(ip);
+                    if (ok) {
+                        console.log('[WebView] Ping success, reloading...');
+                        webViewRef.current?.reload();
+                        setHasError(false);
+                    } else {
                         setHasError(true);
                         setErrorMsg('Master POS tapılmadı. Şəbəkəni yoxlayın.');
                     }
@@ -86,6 +118,7 @@ const WebViewScreen = ({ navigation }) => {
         return () => {
             subscription.remove();
             stopWatchdog();
+            if (retryInterval.current) clearInterval(retryInterval.current);
         };
     }, [loadUrl]);
 
@@ -169,9 +202,9 @@ const WebViewScreen = ({ navigation }) => {
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-            <StatusBar hidden={true} backgroundColor="#FFFFFF" barStyle="dark-content" />
-            <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top']}>
+        <View style={{ flex: 1, backgroundColor: '#053796' }}>
+            <StatusBar hidden={false} translucent={true} backgroundColor="transparent" barStyle="light-content" />
+            <SafeAreaView style={{ flex: 1, backgroundColor: '#053796' }} edges={[]}>
                 <WebView
                     ref={webViewRef}
                     source={{ uri: url }}
