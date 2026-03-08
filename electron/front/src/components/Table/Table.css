@@ -223,6 +223,20 @@
     justify-content: center;
 }
 
+/* Medium desktop: fit 6-per-row tables at 1200-1299px */
+@media (min-width: 992px) and (max-width: 1299px) {
+    .table-wrapper {
+        transform: scale(0.88);
+        margin: -12px -12px !important;
+        width: 200px;
+        height: 200px;
+    }
+
+    .wrapper-rectangle {
+        height: 300px;
+    }
+}
+
 @media (min-width: 576px) and (max-width: 991.98px) {
 
     /* Restore wrapper size for seats but scale down */

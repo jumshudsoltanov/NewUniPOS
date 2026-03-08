@@ -51,7 +51,7 @@ const OtherChecks = ({
   }, [tableGroups?.data, currentHallId]);
 
   const resolveNames = (item) => {
-    if (item.sale_type !== "dine_in") {
+    if (item.sale_type && item.sale_type !== "dine_in") {
       if (item.sale_type === "delivery") return "Çatdırılma";
       if (item.sale_type === "takeaway") return "Takeaway";
       return item.sale_type.charAt(0).toUpperCase() + item.sale_type.slice(1);

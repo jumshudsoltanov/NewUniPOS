@@ -1162,9 +1162,8 @@
 .order-list-container {
     flex-grow: 1;
     overflow-y: auto;
-    /* padding: 10px 15px; */
+    padding: 0 10px;
     background-color: #fff;
-    /* Ensure white background for the list */
 }
 
 /* Custom Scrollbar */
@@ -1259,7 +1258,7 @@
     /* Order List Adjustments */
     .order-item {
         font-size: 0.8rem;
-        padding: 10px 0;
+        padding: 10px 12px;
     }
 
     .col-name {
@@ -1475,6 +1474,41 @@
 
     .check-container {
         border-radius: 0 !important;
+    }
+}
+
+/* ========================
+   MEDIUM DESKTOP (992-1199px)
+   ======================== */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .order-table-header {
+        height: 44px;
+        padding: 0 10px;
+        font-size: 0.78rem;
+    }
+
+    .order-item {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    .summary-row {
+        font-size: 0.75rem;
+    }
+
+    .summary-row.total-row {
+        font-size: 0.82rem;
+    }
+
+    .btn-send,
+    .btn-pay {
+        height: 46px;
+        font-size: 0.85rem;
+        padding: 0 10px;
+    }
+
+    .checkBottom {
+        padding: 8px 10px;
     }
 }
 

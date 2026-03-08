@@ -381,8 +381,10 @@ const Menu = ({
               <Col
                 key={item.id ? `${item.id}-${index}` : index}
                 xs={4}
+                sm={3}
                 md={3}
-                lg={2}
+                lg={3}
+                xl={2}
                 className="category-col"
               >
                 <div

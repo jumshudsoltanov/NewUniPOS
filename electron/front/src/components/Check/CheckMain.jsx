@@ -255,12 +255,6 @@ const CheckMain = ({ orders }) => {
                         </span>
                       )}
 
-                      {item.printer_details && item.printer_details.length > 0 && (
-                        <div style={{ fontSize: "0.7rem", color: "#666", display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <i className="bi bi-printer"></i>
-                          {item.printer_details.map(p => p.local_name || p.name).join(", ")}
-                        </div>
-                      )}
                     </div>
                   </div>
 

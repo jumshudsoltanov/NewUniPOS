@@ -232,8 +232,8 @@
     padding: 6px !important;
 }
 
-/* 1200px – 1399px: 4 cards per row, slightly shorter */
-@media (min-width: 992px) and (max-width: 1399px) {
+/* 1200px – 1399px: 4 cards per row */
+@media (min-width: 1200px) and (max-width: 1399px) {
     .category-col {
         flex: 0 0 25% !important;
         max-width: 25% !important;
@@ -242,6 +242,23 @@
 
     .menu-card {
         height: 80px !important;
+    }
+}
+
+/* 992px – 1199px: 3 cards per row, slightly smaller */
+@media (min-width: 992px) and (max-width: 1199px) {
+    .category-col {
+        flex: 0 0 33.333% !important;
+        max-width: 33.333% !important;
+        padding: 3px !important;
+    }
+
+    .menu-card {
+        height: 75px !important;
+    }
+
+    .menu-card-content span {
+        font-size: 0.78rem !important;
     }
 }
 

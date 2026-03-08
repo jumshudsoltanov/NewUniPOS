@@ -147,6 +147,7 @@ const StatusModal = ({ show, onHide }) => {
             show={show}
             onHide={onHide}
             centered
+            scrollable
             size="xl"
             className="status-modal"
             backdrop="static"

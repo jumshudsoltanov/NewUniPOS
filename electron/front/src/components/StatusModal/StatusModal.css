@@ -1,7 +1,13 @@
+.status-modal .modal-dialog {
+    max-height: 92vh;
+}
+
 .status-modal .modal-content {
     background: transparent;
     border: none;
     box-shadow: none;
+    max-height: 92vh;
+    overflow: hidden;
 }
 
 .status-modal-content {
