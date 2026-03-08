@@ -709,12 +709,6 @@ app.whenReady().then(() => {
   globalShortcut.register('CommandOrControl+Shift+C+N', toggleDevTools);
   globalShortcut.register('CommandOrControl+Shift+N+C', toggleDevTools);
 
-  if (!isDev) {
-    autoUpdater.checkForUpdatesAndNotify().catch(err => {
-      console.error("[AUTO-UPDATE] Yenilənmə yoxlanışı zamanı xəta (Böyük ehtimalla GitHub-da release yoxdur):", err ? (err.message || err.toString()) : "Naməlum xəta");
-    });
-  }
-
   autoUpdater.on("checking-for-update", () => {
     console.log("[AUTO-UPDATE] Yenilənmə yoxlanılır...");
   });
@@ -722,7 +716,7 @@ app.whenReady().then(() => {
   autoUpdater.on("update-available", (info) => {
     console.log("[AUTO-UPDATE] Yeni versiya tapıldı:", info.version);
     if (mainWindow) {
-      mainWindow.webContents.send("backend-log", "[AUTO-UPDATE]", `Yeni versiya (${info.version}) tapıldı. Yüklənir...`);
+      mainWindow.webContents.send("update-available", info);
     }
   });
 
@@ -735,19 +729,31 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on("download-progress", (progressObj) => {
-    let log_message = "Yükləmə sürəti: " + progressObj.bytesPerSecond;
-    log_message = log_message + ' - Yüklənib ' + progressObj.percent + '%';
-    log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
-    console.log("[AUTO-UPDATE]", log_message);
+    const percent = Math.round(progressObj.percent);
+    console.log(`[AUTO-UPDATE] Yüklənir: ${percent}%`);
+    if (mainWindow) {
+      mainWindow.webContents.send("update-download-progress", percent);
+    }
   });
 
   autoUpdater.on("update-downloaded", (info) => {
-    console.log("[AUTO-UPDATE] Yenilənmə yükləndi. Tətbiq yenidən başladılacaq.");
+    console.log("[AUTO-UPDATE] Yenilənmə yükləndi. Quraşdırılır...");
     if (mainWindow) {
-      mainWindow.webContents.send("backend-log", "[AUTO-UPDATE]", "Yenilənmə hazırdır. Tətbiq indi yenidən açıla bilər.");
+      mainWindow.webContents.send("update-downloaded", info);
     }
-    // You can also prompt the user here or just call autoUpdater.quitAndInstall()
+    // Install silently, keep the app running until user restarts or call immediately
+    autoUpdater.quitAndInstall(true, true);
   });
+
+  ipcMain.handle("install-update", () => {
+    autoUpdater.quitAndInstall(true, true);
+  });
+
+  if (!isDev) {
+    autoUpdater.checkForUpdatesAndNotify().catch(err => {
+      console.error("[AUTO-UPDATE] Yenilənmə yoxlanışı zamanı xəta:", err ? (err.message || err.toString()) : "Naməlum xəta");
+    });
+  }
   // ----------------------------------
 
   app.on("activate", () => {

@@ -18,4 +18,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     toggleCustomerDisplay: (data) => ipcRenderer.invoke("toggle-customer-display", data),
     toggleKitchenDisplay: (data) => ipcRenderer.invoke("toggle-kitchen-display", data),
     quitApp: () => ipcRenderer.invoke("quit-app"),
+    installUpdate: () => ipcRenderer.invoke("install-update"),
+    onUpdateAvailable: (callback) => ipcRenderer.on("update-available", (event, info) => callback(info)),
+    onUpdateDownloadProgress: (callback) => ipcRenderer.on("update-download-progress", (event, percent) => callback(percent)),
+    onUpdateDownloaded: (callback) => ipcRenderer.on("update-downloaded", (event, info) => callback(info)),
 });
