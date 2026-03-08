@@ -56,10 +56,10 @@ const CustomerReceipt = ({
             padding: "0 4px",
             margin: "0",
             background: "#fff",
-            fontFamily: "'Consolas', monospace",
+            fontFamily: "'Consolas', 'Courier New', 'Lucida Console', monospace",
             fontSize: fs(12),
             color: "#000",
-            fontWeight: "bold",
+            fontWeight: "500",
         },
         header: { textAlign: "center" },
         restaurantName: {
@@ -209,22 +209,26 @@ const CustomerReceipt = ({
         return p % 1 === 0 ? p.toFixed(0) : p.toFixed(1);
     };
 
+    const deposit = Number(checkData?.deposit || 0);
+    const maxDiscountAmount = Math.max(0, subtotal - deposit);
+
     // Helper to extract financial values safely
     const getDiscountInfo = () => {
         const type = checkData.discount_type || checkData.discountType || "";
         const value = Number(checkData.discountValue || checkData.discount_value || checkData.discount || 0);
 
+        let rawAmount;
         if (type === "percent") {
-            return {
-                amount: (subtotal * value) / 100,
-                percent: value,
-                isPercent: true
-            };
+            rawAmount = (subtotal * value) / 100;
+        } else {
+            rawAmount = value;
         }
+        // Cap discount so it never exceeds (subtotal - deposit)
+        const amount = Math.min(rawAmount, maxDiscountAmount);
         return {
-            amount: value,
-            percent: calcPercent(value, subtotal),
-            isPercent: false
+            amount,
+            percent: calcPercent(amount, subtotal),
+            isPercent: type === "percent"
         };
     };
 
@@ -455,12 +459,10 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
-                {checkData?.deposit > 0 && (
+                {deposit > 0 && (
                     <div style={styles.summaryRow}>
-                        <span style={{ flex: 1 }}>
-                            {Number(checkData.deposit) > (subtotal - discountInfo.amount) ? 'Depozit (Minimal)' : 'Depozit'}
-                        </span>
-                        <span style={styles.colTotal}>{Number(checkData.deposit || 0).toFixed(2)} ₼</span>
+                        <span style={{ flex: 1 }}>Depozit</span>
+                        <span style={styles.colTotal}>-{deposit.toFixed(2)} ₼</span>
                     </div>
                 )}
 
@@ -471,11 +473,9 @@ const CustomerReceipt = ({
 
             {/* TOTAL */}
             <div style={styles.total}>
-                <span style={{ flex: 1 }}>
-                    {Number(checkData?.deposit || 0) > (subtotal - discountInfo.amount) ? 'MİNİMAL MƏBLƏĞ' : 'YEKUN'}
-                </span>
+                <span style={{ flex: 1 }}>YEKUN</span>
                 <span style={styles.colTotal}>
-                    {(Math.max(subtotal - discountInfo.amount, Number(checkData?.deposit || 0)) + serviceInfo.amount).toFixed(2)} ₼
+                    {(Math.max(0, subtotal - discountInfo.amount - deposit) + serviceInfo.amount).toFixed(2)} ₼
                 </span>
             </div>
 

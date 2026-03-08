@@ -41,38 +41,50 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
 
 
 
+    // Merge items with same product_id + same price into one row
+    const getMergedItems = (items) => {
+        const groups = {};
+        (items || []).forEach(item => {
+            const price = item.price ?? item.sell_price ?? item.unit_price ?? 0;
+            const key = `${item.product_id}_${price}`;
+            if (!groups[key]) {
+                groups[key] = { ...item, count: 0, _key: key, _price: price };
+            }
+            groups[key].count += (item.count || 1);
+        });
+        return Object.values(groups);
+    };
+
     // Reset state when modal opens
     useEffect(() => {
         if (show) {
             const initialqs = {};
-            if (order && order.orders_items) {
-                order.orders_items.forEach(item => {
-                    initialqs[item.product_id] = 0;
-                });
-            }
+            const merged = getMergedItems(order?.orders_items);
+            merged.forEach(item => {
+                initialqs[item._key] = 0;
+            });
             setSplitQuantities(initialqs);
-            // Reset selections or initialize with defaults if needed
             setSelectedSalesType('dine_in');
             setSelectedTable(null);
             setSelectedWaiter(null);
         }
     }, [show, order]);
 
-    const handleIncrement = (itemId, maxQty) => {
+    const handleIncrement = (key, maxQty) => {
         setSplitQuantities(prev => {
-            const current = prev[itemId] || 0;
+            const current = prev[key] || 0;
             if (current < maxQty) {
-                return { ...prev, [itemId]: current + 1 };
+                return { ...prev, [key]: current + 1 };
             }
             return prev;
         });
     };
 
-    const handleDecrement = (itemId) => {
+    const handleDecrement = (key) => {
         setSplitQuantities(prev => {
-            const current = prev[itemId] || 0;
+            const current = prev[key] || 0;
             if (current > 0) {
-                return { ...prev, [itemId]: current - 1 };
+                return { ...prev, [key]: current - 1 };
             }
             return prev;
         });
@@ -81,12 +93,14 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
     const handleSplitAction = async () => {
         const itemsToSplit = Object.entries(splitQuantities)
             .filter(([_, qty]) => qty > 0)
-            .map(([id, qty]) => ({ id, qty }));
+            .map(([key, qty]) => {
+                const product_id = key.split('_')[0];
+                return { id: product_id, qty };
+            });
 
         if (itemsToSplit.length > 0 && !isSubmitting) {
             setIsSubmitting(true);
             try {
-                // Include selected metadata
                 await onSplit({
                     orderId: order.uuid,
                     items: itemsToSplit,
@@ -101,7 +115,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
         }
     };
 
-    const displayItems = order && order.orders_items && order.orders_items.length > 0 ? order.orders_items : [];
+    const displayItems = getMergedItems(order?.orders_items);
 
     const salesTypes = [
         { id: "dine_in", label: "Yerində" },
@@ -141,11 +155,11 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
                     {/* Product List */}
                     <div className="split-body">
                         {displayItems.map((item) => {
-                            const splitQty = splitQuantities[item.product_id] || 0; // Use product_id
+                            const splitQty = splitQuantities[item._key] || 0;
                             const remaining = item.count - splitQty;
 
                             return (
-                                <div key={item.id} className="split-item-row">
+                                <div key={item._key} className="split-item-row">
                                     <div className="col-product">
                                         <span className="product-name">{item.product?.name || item.product_name || item.name || "Məhsul"}</span>
                                     </div>
@@ -155,7 +169,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
                                     <div className="col-action control-group">
                                         <button
                                             className={`btn-control btn-minus ${splitQty === 0 ? 'disabled' : ''}`}
-                                            onClick={() => handleDecrement(item.product_id)}
+                                            onClick={() => handleDecrement(item._key)}
                                             disabled={splitQty === 0}
                                         >
                                             <MinusIcon />
@@ -167,7 +181,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
 
                                         <button
                                             className={`btn-control btn-plus ${remaining === 0 ? 'disabled' : ''}`}
-                                            onClick={() => handleIncrement(item.product_id, item.count)}
+                                            onClick={() => handleIncrement(item._key, item.count)}
                                             disabled={remaining === 0}
                                         >
                                             <PlusIcon />

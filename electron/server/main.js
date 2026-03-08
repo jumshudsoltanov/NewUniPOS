@@ -218,6 +218,27 @@ ipcMain.handle("open-anydesk", () => {
   return true;
 });
 
+ipcMain.handle("get-anydesk-id", () => {
+  const configPaths = [
+    "C:\\ProgramData\\AnyDesk\\system.conf",
+    path.join(process.env.APPDATA || "", "AnyDesk", "system.conf"),
+    path.join(process.env.LOCALAPPDATA || "", "AnyDesk", "system.conf"),
+  ];
+
+  for (const confPath of configPaths) {
+    if (fs.existsSync(confPath)) {
+      try {
+        const content = fs.readFileSync(confPath, "utf8");
+        const match = content.match(/ad\.anynet\.id\s*=\s*(\d+)/);
+        if (match) return match[1];
+      } catch (e) {
+        // continue to next path
+      }
+    }
+  }
+  return null;
+});
+
 ipcMain.handle("get-system-printers", async () => {
   try {
     if (mainWindow && mainWindow.webContents) {
@@ -372,9 +393,15 @@ ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
   });
 
   const htmlContent = `<!DOCTYPE html><html><head>
+    <meta charset="utf-8">
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      html, body { margin: 0; padding: 0; width: 72mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body {
+        margin: 0; padding: 0; width: 72mm;
+        font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
       body > div { width: 100% !important; max-width: 100% !important; }
     </style>
   </head><body>${html}</body></html>`;

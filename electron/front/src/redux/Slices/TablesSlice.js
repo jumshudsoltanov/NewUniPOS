@@ -71,6 +71,21 @@ const TablesSlice = createSlice({
         ...layout
       };
     },
+    removeOrderOptimistic: (state, action) => {
+      const orderId = action.payload;
+      if (!orderId || !state.tableGroups?.data) return;
+      state.tableGroups.data.forEach((hall) => {
+        if (hall.tables) {
+          hall.tables.forEach((table) => {
+            if (table.orders) {
+              table.orders = table.orders.filter(
+                (o) => String(o.uuid) !== String(orderId) && String(o.id) !== String(orderId)
+              );
+            }
+          });
+        }
+      });
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(getTableGroups.pending, (state) => {
@@ -173,8 +188,10 @@ export const {
   saveEditMode,
   setTempHallOrder,
   setTempTableOrder,
-  setTempTableLayout
+  setTempTableLayout,
+  removeOrderOptimistic: tablesRemoveOrderOptimistic
 } = TablesSlice.actions;
+export { tablesRemoveOrderOptimistic as removeOrderOptimisticFromTables };
 export default TablesSlice.reducer;
 
 

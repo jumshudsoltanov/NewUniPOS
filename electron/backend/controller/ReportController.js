@@ -435,8 +435,14 @@ const getHallReport = async (whereClause) => {
 
     let hallMap = {};
 
+    const saleTypeNames = {
+        delivery: 'Çatdırılma',
+        takeaway: 'Takeaway',
+        dine_in: 'Naməlum'
+    };
+
     orders.forEach(order => {
-        const hallName = order.table?.hall?.name || 'Naməlum';
+        const hallName = order.table?.hall?.name || saleTypeNames[order.sale_type] || 'Naməlum';
         if (!hallMap[hallName]) {
             hallMap[hallName] = {
                 name: hallName,

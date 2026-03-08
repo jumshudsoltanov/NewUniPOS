@@ -52,7 +52,21 @@ const BooksSlice = createSlice({
     status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
     error: null
   },
-  reducers: {},
+  reducers: {
+    removeOrderOptimistic: (state, action) => {
+      const orderId = action.payload;
+      if (!orderId) return;
+      if (Array.isArray(state.books)) {
+        state.books = state.books.filter(
+          (o) => String(o.uuid) !== String(orderId) && String(o.id) !== String(orderId)
+        );
+      } else if (state.books && Array.isArray(state.books.data)) {
+        state.books.data = state.books.data.filter(
+          (o) => String(o.uuid) !== String(orderId) && String(o.id) !== String(orderId)
+        );
+      }
+    },
+  },
   extraReducers: (builder) => {
     // getActiveOrders
     builder.addCase(getActiveOrders.pending, (state) => {
@@ -165,6 +179,7 @@ const BooksSlice = createSlice({
   },
 });
 
+export const { removeOrderOptimistic } = BooksSlice.actions;
 export default BooksSlice.reducer;
 
 

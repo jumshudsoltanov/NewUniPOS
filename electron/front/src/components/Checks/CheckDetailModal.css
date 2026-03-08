@@ -24,6 +24,8 @@
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     font-family: "Inter", -apple-system, sans-serif;
     max-height: 90vh;
+    display: flex;
+    flex-direction: column;
 }
 
 .check-detail-modal-custom .modal-header {
@@ -51,10 +53,16 @@
     padding: 0;
     background: #fff;
     overflow: hidden;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .check-detail-modal-custom .modal-body-split {
-    height: 600px;
+    flex: 1;
+    min-height: 0;
+    height: auto;
 }
 
 /* Mobile Tabs Nav */
@@ -204,8 +212,8 @@
     }
 
     .check-detail-modal-custom .modal-body-split {
-        height: auto;
-        max-height: calc(100vh - 150px);
+        flex: 1;
+        min-height: 0;
         overflow-y: auto;
     }
 

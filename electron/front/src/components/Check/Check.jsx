@@ -23,8 +23,8 @@ import DiscountModal from "../DiscountModal/DiscountModal";
 import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
 import DepositModal from "../DepositModal/DepositModal";
 import WaitersModal from "../Waiters/WaitersModal";
-import { getTableGroups } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getTableGroups, removeOrderOptimisticFromTables } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders, removeOrderOptimistic } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
@@ -684,9 +684,15 @@ const Check = () => {
     const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table?.hall_id })
     try {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      // Enrich items with product names for logging
+      const itemsWithNames = (splitData.items || []).map(item => {
+        const orderItem = currentOrder?.orders_items?.find(oi => String(oi.product_id) === String(item.id));
+        const name = orderItem?.product?.name || orderItem?.product_name || orderItem?.name || null;
+        return { ...item, name };
+      });
       const result = await dispatch(
         splitOrder({
-          data: splitData,
+          data: { ...splitData, items: itemsWithNames },
           profileId: loginedProfileData?.data?.profile?.id,
           profile: loginedProfileData?.data?.profile,
           hallData: hallServiceFee,
@@ -728,8 +734,10 @@ const Check = () => {
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
     const profileId = loginedProfileData?.data?.profile?.id;
 
-    // 1. Instant Redirection
+    // 1. Instant navigation + optimistic state removal (UI instantly shows table as empty)
     navigate("/tables", { replace: true });
+    dispatch(removeOrderOptimisticFromTables(orderId));
+    dispatch(removeOrderOptimistic(orderId));
     const toastId = toast.loading("Çek silinir...");
 
     // 2. Background execution block

@@ -25,9 +25,19 @@ const Settings = () => {
     const [showCustomersModal, setShowCustomersModal] = useState(false);
     const [showDevicesModal, setShowDevicesModal] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [anyDeskId, setAnyDeskId] = useState(null);
     const [showClock, setShowClock] = useState(() => {
         return localStorage.getItem("showHeaderClock") === "true";
     });
+
+    // Fetch AnyDesk ID on mount
+    useEffect(() => {
+        if (window.electronAPI?.getAnyDeskId) {
+            window.electronAPI.getAnyDeskId().then(id => {
+                if (id) setAnyDeskId(id);
+            }).catch(() => {});
+        }
+    }, []);
 
     // Toggle clock visibility in header
     const handleClockToggle = () => {
@@ -240,7 +250,12 @@ const Settings = () => {
                                     onClick={item.onClick}
                                 >
                                     <span className="settings-card-icon">{item.icon}</span>
-                                    <span className="settings-card-label">{item.label}</span>
+                                    <span className="settings-card-label">
+                                        {item.label}
+                                        {item.id === "anydesk" && anyDeskId && (
+                                            <span className="anydesk-id-badge">{anyDeskId}</span>
+                                        )}
+                                    </span>
                                 </button>
                             ))}
                     </div>

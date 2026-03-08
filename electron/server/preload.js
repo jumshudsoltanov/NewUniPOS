@@ -3,6 +3,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     toggleFullscreen: () => ipcRenderer.invoke("toggle-fullscreen"),
     getFullscreenState: () => ipcRenderer.invoke("get-fullscreen-state"),
     openAnyDesk: () => ipcRenderer.invoke("open-anydesk"),
+    getAnyDeskId: () => ipcRenderer.invoke("get-anydesk-id"),
     printReceipt: (data) => ipcRenderer.invoke("print-receipt", data),
     scanMaster: () => ipcRenderer.invoke("scan-master"),
     getMemoryInfo: () => ipcRenderer.invoke("get-memory-info"),

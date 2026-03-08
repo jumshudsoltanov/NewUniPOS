@@ -39,10 +39,10 @@ const KitchenReceipt = ({
             padding: "0 2px",
             margin: "0",
             background: "#fff",
-            fontFamily: "'Consolas', monospace",
+            fontFamily: "'Consolas', 'Courier New', 'Lucida Console', monospace",
             fontSize: fs(12),
             color: "#000",
-            fontWeight: "bold",
+            fontWeight: "500",
         },
         header: { textAlign: "center", marginBottom: "4px" },
         title: {

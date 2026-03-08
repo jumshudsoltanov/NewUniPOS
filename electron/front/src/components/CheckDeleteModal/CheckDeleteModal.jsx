@@ -11,6 +11,7 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
+    // Fetch tags only once per profile (not on every modal open)
     useEffect(() => {
         const getTagsData = async () => {
             const profileId = loginedProfileData?.data?.profile?.id;
@@ -26,7 +27,12 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
         };
 
         getTagsData();
-    }, [show, order, loginedProfileData]);
+    }, [loginedProfileData]);
+
+    // Reset selection when modal opens/closes
+    useEffect(() => {
+        if (!show) setSelectedReason(null);
+    }, [show]);
 
     const reasons = tagsListData?.filter((item) => Number(item.type) === tagsType) ?? [];
 

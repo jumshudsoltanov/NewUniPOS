@@ -13,6 +13,27 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
   const [value, setValue] = useState("0");
   const [discountType, setDiscountType] = useState("percent");
 
+  // Calculate order subtotal from items
+  const subtotal = (order?.orders_items || []).reduce((sum, item) => {
+    const qty = Number(item.count || item.quantity || 0);
+    const price = Number(item.price || 0);
+    if (Number(item.is_gift || 0) === 1) return sum;
+    return sum + qty * price;
+  }, 0);
+
+  const deposit = Number(order?.deposit || 0);
+  // Max cash discount = subtotal minus deposit (customer already paid deposit)
+  const maxCashDiscount = Math.max(0, subtotal - deposit);
+  // Max percent = percentage that corresponds to maxCashDiscount
+  const maxPercentDiscount = subtotal > 0 ? (maxCashDiscount / subtotal) * 100 : 100;
+
+  const clampValue = (raw, type) => {
+    const num = parseFloat(raw);
+    if (isNaN(num)) return raw;
+    if (type === "percent") return String(Math.min(num, maxPercentDiscount));
+    return String(Math.min(num, maxCashDiscount));
+  };
+
   useEffect(() => {
     if (order) {
       setValue(order.discount_value ? String(order.discount_value) : "0");
@@ -21,11 +42,13 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
   }, [order]);
 
   const handleNumClick = (num) => {
+    let newVal;
     if (String(value) === "0" && num !== ".") {
-      setValue(num.toString());
+      newVal = num.toString();
     } else {
-      setValue(value + num.toString());
+      newVal = value + num.toString();
     }
+    setValue(clampValue(newVal, discountType));
   };
 
   const handleBackspace = () => {
@@ -43,10 +66,11 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
   const handleUpdateDisCount = useCallback(async () => {
     try {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const safeValue = clampValue(value, discountType);
       await dispatch(
         updateDiscountOnOrders({
           orderId: order?.uuid,
-          discountValue: value,
+          discountValue: safeValue,
           discountType,
           oldDiscountValue: order?.discount_value,
           oldDiscountType: order?.discount_type,
@@ -129,6 +153,15 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
 
         {/* Body */}
         <div className="discount-body">
+          {/* Max limit hint */}
+          {deposit > 0 && (
+            <div style={{ fontSize: '12px', color: '#888', padding: '4px 12px 0', textAlign: 'right' }}>
+              Maks: {discountType === "percent"
+                ? `${maxPercentDiscount % 1 === 0 ? maxPercentDiscount.toFixed(0) : maxPercentDiscount.toFixed(1)}%`
+                : `${maxCashDiscount.toFixed(2)} ₼`}
+              {' '}(depozit: {deposit.toFixed(2)} ₼)
+            </div>
+          )}
           {/* Input Area */}
           <div className="input-row">
             <div className="input-wrapper">
@@ -142,13 +175,13 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
             <div className="toggle-group">
               <button
                 className={`toggle-btn ${discountType === "percent" ? "active" : ""}`}
-                onClick={() => setDiscountType("percent")}
+                onClick={() => { setDiscountType("percent"); setValue(v => clampValue(v, "percent")); }}
               >
                 %
               </button>
               <button
                 className={`toggle-btn ${discountType === "cash" ? "active" : ""}`}
-                onClick={() => setDiscountType("cash")}
+                onClick={() => { setDiscountType("cash"); setValue(v => clampValue(v, "cash")); }}
               >
                 ₼
               </button>

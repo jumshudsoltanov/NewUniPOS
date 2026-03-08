@@ -282,7 +282,7 @@ export const splitOrder = createAsyncThunk(
 
       const sourceOrderId = data?.orderId || profileId;
       const items = data?.items || [];
-      const itemNames = items.map(i => `${i.qty} ədəd (ID:${i.id})`).join(', ');
+      const itemNames = items.map(i => `${i.qty} ədəd (${i.name || 'ID:' + i.id})`).join(', ');
       const destTable = data?.table?.name || data?.table?.number || '';
       const destHall = data?.table?.hall_name || '';
       const salesType = data?.salesType === 'dine_in' ? 'Yerində' : data?.salesType === 'takeaway' ? 'Takeaway' : data?.salesType === 'delivery' ? 'Çatdırılma' : data?.salesType;
