@@ -108,10 +108,10 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
             details: `Satış növü: ${typeLabel}`
           }));
 
-          await dispatch(getTableGroups(payload.profileId));
-          await dispatch(getActiveOrders({ profileId: payload.profileId }));
           navigate(`/check/${result?.data?.uuid}`);
           onClose(false);
+          dispatch(getTableGroups(payload.profileId));
+          dispatch(getActiveOrders({ profileId: payload.profileId }));
         }
       } catch (err) {
         console.error("Check created error:", err);

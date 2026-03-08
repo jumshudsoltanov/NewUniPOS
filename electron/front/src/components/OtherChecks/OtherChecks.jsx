@@ -41,9 +41,10 @@ const OtherChecks = ({
 
   const filteredOrders = useMemo(() => {
     if (!show) return [];
-    return showAll || !table
-      ? books?.data?.filter((o) => o.uuid != id) || []
-      : table?.orders?.filter((o) => o.uuid != id) || [];
+    if (showAll || !table) {
+      return books?.data?.filter((o) => o.uuid != id) || [];
+    }
+    return books?.data?.filter((o) => o.uuid != id && o.table_id === table?.id) || [];
   }, [show, showAll, table, books?.data, id]);
 
   const currentHallName = useMemo(() => {

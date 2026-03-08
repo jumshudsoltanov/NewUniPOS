@@ -1,17 +1,97 @@
-.saleTypeModalBtn {
-    width: 100%;
-    padding: 20px 0;
-    font-size: 18px;
-    color: #333;
-    border-bottom: 1px solid #e9ecef;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
+.sale-type-modal .modal-content {
+    border-radius: 10px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
 }
 
-.saleTypeModalBtn:last-child {
+.sale-type-modal .modal-header {
+    background: #4F85F4;
+    padding: 16px 20px;
+}
+
+.sale-type-modal .modal-dialog {
+    max-width: 360px;
+}
+
+.st-icon-box {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.st-icon-box i {
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.st-close-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.9;
+}
+
+.st-close-btn:hover {
+    opacity: 1;
+}
+
+.st-list {
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.st-item {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.st-item:last-child {
     border-bottom: none;
 }
 
-.saleTypeModalBtn:hover {
-    background-color: #f8f9fa;
+.st-item:hover {
+    background-color: #f0f5ff;
+}
+
+.st-item:active {
+    background-color: #e0ecff;
+}
+
+.st-item-icon {
+    font-size: 1.2rem;
+    color: #4F85F4;
+}
+
+.st-item-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2D3748;
+}
+
+.st-chevron {
+    font-size: 0.85rem;
+    color: #A0AEC0;
 }

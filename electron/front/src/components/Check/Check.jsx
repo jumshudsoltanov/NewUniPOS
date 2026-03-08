@@ -742,66 +742,66 @@ const Check = () => {
 
     // 2. Background execution block
     const performBackgroundDeletion = async () => {
-      // a. Kitchen Print for all confirmed items
-      if (currentOrder?.orders_items && currentOrder.orders_items.length > 0) {
-        const itemsToPrint = currentOrder.orders_items.map(item => {
-          const menuRef = menu?.find(m => m.id == (item.product_id || item.id));
-          return {
-            ...item,
-            name: menuRef?.name || item.product?.name || item.name || "Məhsul",
-            quantity: Number(item.count || item.quantity || 0),
-            printer_details: menuRef?.printer_details || item.printer_details || [],
-            category_id: menuRef?.category_id || item.category_id,
-            changeType: 'decrease' // Mark as deleted
+      // a. Kitchen Print + API delete run in PARALLEL
+      const printPromise = (async () => {
+        if (currentOrder?.orders_items && currentOrder.orders_items.length > 0) {
+          const itemsToPrint = currentOrder.orders_items.map(item => {
+            const menuRef = menu?.find(m => m.id == (item.product_id || item.id));
+            return {
+              ...item,
+              name: menuRef?.name || item.product?.name || item.name || "Məhsul",
+              quantity: Number(item.count || item.quantity || 0),
+              printer_details: menuRef?.printer_details || item.printer_details || [],
+              category_id: menuRef?.category_id || item.category_id,
+              changeType: 'decrease'
+            };
+          });
+
+          const menuDataWithCategoriesObj = { data: menu || [], categories: categories || [] };
+
+          const getSaleTypeNameTemp = (type, typeName) => {
+            if (typeName) return typeName;
+            if (type == 1 || type === "takeaway") return "Al-götür";
+            if (type == 2 || type === "delivery") return "Çatdırılma";
+            return "Restoranda";
           };
-        });
 
-        const menuDataWithCategoriesObj = {
-          data: menu || [],
-          categories: categories || []
-        };
+          try {
+            await processAndPrintOrders(
+              itemsToPrint,
+              {
+                table: currentOrder?.table_name || currentTable?.name || "Masa",
+                waiter: waiterName,
+                hallName: currentHall?.name || "",
+                orderId: currentOrder?.uuid,
+                terminalInfo: loginedProfileData?.data?.terminal || {},
+                typeName: getSaleTypeNameTemp(currentOrder?.sale_type, currentOrder?.sale_type_name),
+                checkData: currentOrder,
+                isDecrease: true
+              },
+              menuDataWithCategories || menuDataWithCategoriesObj
+            );
+          } catch (printErr) {
+            console.error("Delete Check Printing Error:", printErr);
+          }
+        }
+      })();
 
-        const getSaleTypeNameTemp = (type, typeName) => {
-          if (typeName) return typeName;
-          if (type == 1 || type === "takeaway") return "Al-götür";
-          if (type == 2 || type === "delivery") return "Çatdırılma";
-          return "Restoranda";
-        };
-
-        const displaySaleType = getSaleTypeNameTemp(currentOrder?.sale_type, currentOrder?.sale_type_name);
-
+      const deletePromise = (async () => {
         try {
-          await processAndPrintOrders(
-            itemsToPrint,
-            {
-              table: currentOrder?.table_name || currentTable?.name || "Masa",
-              waiter: waiterName,
-              hallName: currentHall?.name || "",
-              orderId: currentOrder?.uuid,
-              terminalInfo: loginedProfileData?.data?.terminal || {},
-              typeName: displaySaleType,
-              checkData: currentOrder,
-              isDecrease: true
-            },
-            menuDataWithCategories || menuDataWithCategoriesObj
-          );
-        } catch (printErr) {
-          console.error("Delete Check Printing Error:", printErr);
+          await dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName })).unwrap();
+          if (profileId) {
+            dispatch(getTableGroups(profileId));
+            dispatch(getActiveOrders({ profileId }));
+          }
+          toast.success("Çek uğurla silindi", { id: toastId });
+        } catch (error) {
+          console.error("Delayed Delete Error:", error);
+          toast.error("Silinmə zamanı xəta baş verdi", { id: toastId });
         }
-      }
+      })();
 
-      // b. Dispatch deletion to backend
-      try {
-        await dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName })).unwrap();
-        if (profileId) {
-          dispatch(getTableGroups(profileId));
-          dispatch(getActiveOrders({ profileId }));
-        }
-        toast.success("Çek uğurla silindi", { id: toastId });
-      } catch (error) {
-        console.error("Delayed Delete Error:", error);
-        toast.error("Silinmə zamanı xəta baş verdi", { id: toastId });
-      }
+      await Promise.all([printPromise, deletePromise]);
     };
 
     // Execute background logic without awaiting
@@ -1963,10 +1963,10 @@ const Check = () => {
                 waiterName,
                 details: `Masa: ${currentTable?.name || "Naməlum"}`
               }));
-              await dispatch(getTableGroups(profileId));
-              await dispatch(getActiveOrders({ profileId }));
               navigate(`/check/${result?.data?.uuid}?tableId=${currentTable?.id}`);
               toast.success("Yeni çek yaradıldı");
+              dispatch(getTableGroups(profileId));
+              dispatch(getActiveOrders({ profileId }));
             }
           } catch (error) {
             console.error(error);

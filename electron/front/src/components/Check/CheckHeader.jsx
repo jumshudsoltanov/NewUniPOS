@@ -59,9 +59,9 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
           waiterName,
           details: `Masa: ${table?.name || "Naməlum"}`
         }));
-        await dispatch(getTableGroups(profileId));
-        await dispatch(getActiveOrders({ profileId }));
         navigate(`/check/${result?.data?.uuid}?tableId=${table?.id}`);
+        dispatch(getTableGroups(profileId));
+        dispatch(getActiveOrders({ profileId }));
       }
     } catch (error) {
       console.error(error);

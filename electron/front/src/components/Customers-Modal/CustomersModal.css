@@ -20,12 +20,12 @@
 
 /* Header */
 .customers-modal-header {
-    background-color: #5D99FF;
+    background-color: #4F85F4;
     padding: 16px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 70px;
+    height: 66px;
     border-bottom: none;
 }
 
@@ -36,18 +36,18 @@
 }
 
 .customers-icon-circle {
-    width: 40px;
-    height: 40px;
-    background-color: rgba(255, 255, 255, 0.4);
-    border-radius: 6px;
+    width: 36px;
+    height: 36px;
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .customers-icon-circle i {
-    font-size: 1.2rem;
-    color: #053796;
+    font-size: 1.1rem;
+    color: #fff;
 }
 
 .customers-modal-title {
@@ -120,7 +120,7 @@
     border-radius: 6px;
     font-size: 24px;
     font-weight: 600;
-    color: #053796;
+    color: #4F85F4;
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     transition: all 0.1s;
@@ -142,7 +142,7 @@
 .customers-save-btn {
     width: 100%;
     height: 56px;
-    background-color: #053796;
+    background-color: #4F85F4;
     border: none;
     border-radius: 6px;
     color: #fff;
@@ -152,12 +152,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
+    box-shadow: 0 4px 6px rgba(79, 133, 244, 0.3);
     margin-top: 5px;
 }
 
 .customers-save-btn:hover:not(:disabled) {
-    background-color: #042d7a;
+    background-color: #3a70d9;
 }
 
 .customers-save-btn:disabled {
