@@ -120,12 +120,19 @@ const CheckMain = ({ orders }) => {
         (i.allIds && i.allIds.some(aid => Number(aid) === Number(pd.itemId)))
       );
       if (target) {
+        let deductQty = 0;
         if (pd.type === 'full') {
-          target.isDeleted = true;
+          deductQty = pd.originalQty || 1;
         } else if (pd.type === 'partial') {
-          target.count -= pd.qty;
-          target.partialDelete = (target.partialDelete || 0) + pd.qty;
-          if (target.count <= 0) target.isDeleted = true;
+          deductQty = pd.qty || 1;
+        }
+        
+        target.count -= deductQty;
+        target.partialDelete = (target.partialDelete || 0) + deductQty;
+        
+        if (target.count <= 0) {
+          target.isDeleted = true;
+          target.count = 0;
         }
       }
     });
@@ -233,8 +240,8 @@ const CheckMain = ({ orders }) => {
                         </svg>
                       )}
                       {isGift && <i className="bi bi-gift-fill text-danger" title="İkram"></i>}
-                      {item.isDeleted && <span className="badge bg-danger">Silinəcək</span>}
-                      {item.partialDelete > 0 && !item.isDeleted && <span className="badge bg-warning text-dark">-{item.partialDelete}</span>}
+                      {item.isDeleted && <span className="badge bg-danger">{item.partialDelete || 0} Silinəcək</span>}
+                      {item.partialDelete > 0 && !item.isDeleted && <span className="badge bg-warning text-dark">{item.partialDelete} Silinəcək</span>}
                     </div>
 
                     <div className="d-flex flex-column gap-1 mt-1">
@@ -337,6 +344,10 @@ const CheckMain = ({ orders }) => {
               ? product.allIds
               : [product?.id || product?.firstId];
             idsToDelete.filter(Boolean).forEach(itemId => {
+               // Find the specific row to get its real count, or assume 1 if not found.
+              const row = orders?.orders_items?.find(oi => oi.id === itemId);
+              const realCount = row ? Number(row.count) : 1;
+
               dispatch(addPendingDeletion({
                 orderId: orders.uuid,
                 itemId,
@@ -345,7 +356,7 @@ const CheckMain = ({ orders }) => {
                 reasonName: data.reasonName,
                 type: 'full',
                 name: product.name,
-                originalQty: product.count,
+                originalQty: realCount,
                 price: product.price,
                 category_id: finalCategoryId,
                 printer_details: finalPrinters,

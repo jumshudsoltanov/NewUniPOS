@@ -100,7 +100,13 @@ function AppContent() {
 
   useEffect(() => {
     const socket = getSocket();
-    if (socket && isMasterTerminal) {
+    
+    // A more reliable check points out if the socket connected to itself (localhost) then it IS the master node
+    // or if the redudant flag isMasterTerminal is true.
+    const isLocalhostMaster = socket?.io?.uri?.includes("localhost") || socket?.io?.uri?.includes("127.0.0.1");
+    const shouldListenToDelegatedPrints = isMasterTerminal || isLocalhostMaster;
+
+    if (socket && shouldListenToDelegatedPrints) {
       console.warn("[MASTER] Attaching delegated print listener...");
 
       const handleDelegatedPrint = async (data) => {

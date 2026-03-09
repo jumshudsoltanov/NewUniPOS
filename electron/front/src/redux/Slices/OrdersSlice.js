@@ -763,17 +763,45 @@ export const OrderSlice = createSlice({
       state.products.splice(action.payload, 1);
     },
     removeAllProductsById: (state, action) => {
-      // action.payload = productId (menu item id)
       const productId = Number(action.payload);
       state.products = state.products.filter(p => Number(p.id || p.product_id) !== productId);
+      if (state.sentProducts) {
+        state.sentProducts = state.sentProducts.filter(p => Number(p.id || p.product_id) !== productId);
+      }
     },
     replaceProductQuantity: (state, action) => {
-      // action.payload = { productId, newQty, price }
-      // Removes ALL entries for productId and adds back ONE entry with newQty
-      const { productId, newQty, price } = action.payload;
+      const { productId, newQty, price, firstId } = action.payload;
+
+      if (firstId !== undefined && firstId >= 999999999) {
+        const idx = firstId - 999999999;
+        if (idx < state.products.length) {
+          const p = state.products[idx];
+          p.quantity = newQty;
+          p.count = newQty;
+          p.newOrder = newQty;
+          if (price !== undefined) p.price = parseFloat(price);
+          return;
+        } else {
+          const sentIdx = idx - state.products.length;
+          if (state.sentProducts && sentIdx < state.sentProducts.length) {
+            const sp = state.sentProducts[sentIdx];
+            sp.quantity = newQty;
+            sp.count = newQty;
+            sp.newOrder = newQty;
+            if (price !== undefined) sp.price = parseFloat(price);
+            return;
+          }
+        }
+      }
+
       const pid = Number(productId);
-      const existing = state.products.find(p => Number(p.id || p.product_id) === pid);
+      const existing =
+        state.products.find(p => Number(p.id || p.product_id) === pid) ||
+        state.sentProducts?.find(p => Number(p.id || p.product_id) === pid);
       state.products = state.products.filter(p => Number(p.id || p.product_id) !== pid);
+      if (state.sentProducts) {
+        state.sentProducts = state.sentProducts.filter(p => Number(p.id || p.product_id) !== pid);
+      }
       if (newQty > 0 && existing) {
         state.products.push({
           ...existing,
@@ -781,6 +809,20 @@ export const OrderSlice = createSlice({
           newOrder: newQty,
           price: price !== undefined ? parseFloat(price) : parseFloat(existing.price || 0)
         });
+      }
+    },
+    removeLocalProductByFirstId: (state, action) => {
+      const firstId = action.payload;
+      if (firstId !== undefined && firstId >= 999999999) {
+        const idx = firstId - 999999999;
+        if (idx < state.products.length) {
+          state.products.splice(idx, 1);
+        } else {
+          const sentIdx = idx - state.products.length;
+          if (state.sentProducts && sentIdx < state.sentProducts.length) {
+            state.sentProducts.splice(sentIdx, 1);
+          }
+        }
       }
     },
     addProducts: (state, action) => {
@@ -942,6 +984,7 @@ export const {
   addProducts,
   removeProduct,
   removeAllProductsById,
+  removeLocalProductByFirstId,
   replaceProductQuantity,
   sendOrders,
   clearOrders,

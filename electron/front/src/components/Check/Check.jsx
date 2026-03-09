@@ -300,7 +300,7 @@ const Check = () => {
         });
 
         try {
-          await processAndPrintOrders(
+          processAndPrintOrders(
             deletedItemsForPrint,
             {
               table: currentTable?.name || currentOrder?.table_name || "Masa",
@@ -313,9 +313,9 @@ const Check = () => {
               isDecrease: true
             },
             menuDataWithCategories
-          );
+          ).catch(printError => console.error("Deletion Printing Error:", printError));
         } catch (printError) {
-          console.error("Deletion Printing Error:", printError);
+          console.error("Deletion Printing Setup Error:", printError);
         }
       }
 

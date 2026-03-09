@@ -1,7 +1,25 @@
 import React, { useState, useEffect } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
-import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, removeAllProductsById, replaceProductQuantity, deleteOrderItem, addPendingDeletion, updateItemPrice, updateItemCount, saveLog } from "../../redux/Slices/OrdersSlice";
+import {
+  changeSaleType,
+  deleteOrderItem,
+  giftItem,
+  mergeChecks,
+  reopenOrder,
+  updateGuestCountOrder,
+  updateItemCount,
+  updateItemDiscount,
+  updateItemPrice,
+  updateTableOrders,
+  removeAllProductsById,
+  removeLocalProductByFirstId,
+  replaceProductQuantity,
+  updateCount,
+  saveLog,
+  splitOrder,
+  addPendingDeletion
+} from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -383,22 +401,30 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
                       if (newLocalQty < 0) {
                         if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                          toast.error("Sizin məhsul miqdarını azaltmaq (silmək) icazəniz yoxdur!");
-                          // Reset quantity back to saved, so they cannot bypass
+                          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
                           setQty(savedQty);
                           return;
                         }
-                        onOpenDeleteModal('partial', product, Math.abs(newLocalQty));
+                        if (product.isNew && product.localQuantity > 0) {
+                          dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+                        }
+                        const dbReduction = Math.abs(newLocalQty);
+                        onOpenDeleteModal('partial', { ...product, localQuantity: 0, isNew: false, count: savedQty }, dbReduction);
                         return;
                       }
 
                       if (product.isNew && !product.savedQuantity) {
-                        // Pure local item — replace all entries with correct qty atomically
-                        dispatch(replaceProductQuantity({
-                          productId: Number(product.product_id || product.id),
-                          newQty: newLocalQty,
-                          price: inputValue,
-                        }));
+                        // Pure local item — remove ALL copies and add ONE with the correct qty
+                        if (qty === 0) {
+                          dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+                        } else {
+                          dispatch(replaceProductQuantity({
+                            productId: Number(product.product_id || product.id),
+                            newQty: qty,
+                            price: inputValue,
+                            // No firstId: replaces ALL entries for this product
+                          }));
+                        }
                         // Log quantity change for new items too
                         if (qty !== (product.count || 0)) {
                           const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
@@ -429,14 +455,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
                         // Quantity change stays local - will be sent via "Göndər" button
                         if (newLocalQty > 0) {
-                          dispatch(
-                            updateCount({
-                              productId: product.product_id || product.id,
-                              count: newLocalQty,
-                              price: inputValue,
-                              name: product.name,
-                            }),
-                          );
+                          dispatch(replaceProductQuantity({
+                            productId: Number(product.product_id || product.id),
+                            newQty: newLocalQty,
+                            price: inputValue,
+                          }));
+                        } else {
+                          dispatch(removeAllProductsById(Number(product.product_id || product.id)));
                         }
                         // Log quantity change
                         if (qty !== (product.count || 0)) {

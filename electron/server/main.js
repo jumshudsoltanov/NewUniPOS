@@ -16,6 +16,7 @@ const isDev = !app.isPackaged;
 let mainWindow = null;
 let customerWindow = null;
 let kitchenWindow = null;
+let isCustomerDisplayManuallyClosed = false; // Global flag
 
 // --- GLOBAL CRASH REPORTER ---
 const crashLogPath = path.join(app.getPath('userData'), "UniPOS_Crash_Log.txt");
@@ -136,48 +137,85 @@ function createWindow() {
     }
   }
 
+  let customerDisplayInterval = null;
+  let isCustomerDisplayManuallyClosed = false; // Flag to prevent auto-revive if user toggled it off explicitly via IPC
+
   async function checkCustomerDisplayAutoStart() {
     try {
-      const LoginModel = require(path.join(__dirname, "..", "backend", "model", "LoginModel"));
-      const profile = await LoginModel.findOne({ order: [['id', 'DESC']] });
-
-      if (profile && profile.is_customer_display_active === 1 && profile.customer_display_screen_id) {
-        console.log("[ELECTRON] Auto-starting Customer Display on screen:", profile.customer_display_screen_id);
-
-        const displays = screen.getAllDisplays();
-        const targetDisplay = displays.find(d => String(d.id) === String(profile.customer_display_screen_id)) || screen.getPrimaryDisplay();
-
-        if (customerWindow) {
-          customerWindow.close();
-        }
-
-        customerWindow = new BrowserWindow({
-          x: targetDisplay.bounds.x,
-          y: targetDisplay.bounds.y,
-          width: targetDisplay.bounds.width,
-          height: targetDisplay.bounds.height,
-          fullscreen: true,
-          icon: path.join(__dirname, "..", "static", "images", "logo.png"),
-          autoHideMenuBar: true,
-          webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true,
-          },
-        });
-
-        if (isDev) {
-          customerWindow.loadURL("http://localhost:5173/#/customer");
-        } else {
-          customerWindow.loadFile(path.join(app.getAppPath(), "electron", "front", "dist", "index.html"), { hash: "/customer" });
-        }
-
-        customerWindow.on("closed", () => {
-          customerWindow = null;
-        });
+      // Clear existing interval if any
+      if (customerDisplayInterval) {
+        clearInterval(customerDisplayInterval);
       }
+
+      // Initial check & interval setup
+      const performCheck = async () => {
+        try {
+          const LoginModel = require(path.join(__dirname, "..", "backend", "model", "LoginModel"));
+          const profile = await LoginModel.findOne({ order: [['id', 'DESC']] });
+
+          if (profile && profile.is_customer_display_active === 1 && profile.customer_display_screen_id) {
+            
+            // If it's supposed to be active, but manually closed by IPC, do not revive.
+            if (isCustomerDisplayManuallyClosed) {
+              return;
+            }
+
+            // If active and NO customer window exists, revive it.
+            if (!customerWindow || customerWindow.isDestroyed()) {
+              console.log("[ELECTRON] Auto-reviving/starting Customer Display on screen:", profile.customer_display_screen_id);
+              createCustomerWindow(profile.customer_display_screen_id);
+            }
+          } else {
+             // If disabled in DB but window is open, close it cleanly
+             if (customerWindow && !customerWindow.isDestroyed()) {
+                 customerWindow.close();
+                 customerWindow = null;
+             }
+          }
+        } catch (innerErr) {
+           console.error("[ELECTRON] Auto-check Customer Display Inner Error:", innerErr.message);
+        }
+      };
+
+      await performCheck(); // Run once immediately
+      customerDisplayInterval = setInterval(performCheck, 10000); // Poll every 10 seconds
+      
     } catch (err) {
       console.error("[ELECTRON] Auto-start Customer Display Error:", err.message);
     }
+  }
+
+  function createCustomerWindow(screenId) {
+    if (customerWindow && !customerWindow.isDestroyed()) {
+        customerWindow.close();
+    }
+    
+    const displays = screen.getAllDisplays();
+    const targetDisplay = displays.find(d => String(d.id) === String(screenId)) || screen.getPrimaryDisplay();
+
+    customerWindow = new BrowserWindow({
+      x: targetDisplay.bounds.x,
+      y: targetDisplay.bounds.y,
+      width: targetDisplay.bounds.width,
+      height: targetDisplay.bounds.height,
+      fullscreen: true,
+      icon: path.join(__dirname, "..", "static", "images", "logo.png"),
+      autoHideMenuBar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    if (isDev) {
+      customerWindow.loadURL("http://localhost:5173/#/customer");
+    } else {
+      customerWindow.loadFile(path.join(app.getAppPath(), "electron", "front", "dist", "index.html"), { hash: "/customer" });
+    }
+
+    customerWindow.on("closed", () => {
+      customerWindow = null;
+    });
   }
 }
 
@@ -273,16 +311,22 @@ ipcMain.handle("get-screens", () => {
 
 ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
   if (!active) {
-    if (customerWindow) {
+    if (customerWindow && !customerWindow.isDestroyed()) {
       customerWindow.close();
       customerWindow = null;
     }
+    // Flag to true so auto-revive ignores it until turned back on
+    isCustomerDisplayManuallyClosed = true; 
     return { success: true, active: false };
   }
 
-  // If already open, just focus or move? 
-  // For simplicity, let's recreation logic
-  if (customerWindow) {
+  isCustomerDisplayManuallyClosed = false; // Turn off the manual override flag
+  
+  // Reuse the global scope function if available, but since this is outside `createWindow()`, 
+  // we either move it inside, or duplicate the logic for IPCHandler. It's safer to duplicate 
+  // creation here so IPC can be called from anywhere, OR we export `createCustomerWindow`.
+  
+  if (customerWindow && !customerWindow.isDestroyed()) {
     customerWindow.close();
   }
 
@@ -302,8 +346,6 @@ ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
       contextIsolation: true,
     },
   });
-
-  const url = isDev ? "http://localhost:5173/#/customer" : `file://${path.join(app.getAppPath(), "electron", "front", "dist", "index.html")}#/customer`;
 
   if (isDev) {
     customerWindow.loadURL("http://localhost:5173/#/customer");
@@ -746,8 +788,8 @@ app.whenReady().then(() => {
     if (mainWindow) {
       mainWindow.webContents.send("update-downloaded", info);
     }
-    // Install silently, keep the app running until user restarts or call immediately
-    autoUpdater.quitAndInstall(true, true);
+    // Only install on explicit IPC call or when the user quits, to prevent 'ms error' (locking issues and Squirrel crash).
+    // autoUpdater.quitAndInstall(true, true); 
   });
 
   ipcMain.handle("install-update", () => {

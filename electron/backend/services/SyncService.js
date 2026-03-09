@@ -32,7 +32,7 @@ class SyncService {
         OrdersModel.count({ where: { is_synced: 1 } }),
         OrdersModel.count({
           where: {
-            [Op.or]: [{ is_synced: 0 }, { is_synced: null }],
+            [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }],
             amount: { [Op.gt]: 0 }
           },
         }),
@@ -87,6 +87,11 @@ class SyncService {
       console.log(`[SYNC] Success: ${orderId}`);
     } catch (error) {
       console.error(`[SYNC_FAIL] ${orderId}: ${error.message}`);
+      // Head-of-Line Blocking Fix: If validation failed, skip order.
+      if (error.isValidationError) {
+        console.warn(`[SYNC_SKIP] Skipping order ${orderId} due to validation error.`);
+        await OrdersModel.update({ is_synced: 2 }, { where: { uuid: orderId } });
+      }
       throw error;
     }
   }
@@ -103,7 +108,7 @@ class SyncService {
       }
 
       const pendingOrders = await OrdersModel.findAll({
-        where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }], amount: { [Op.gt]: 0 } },
+        where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }], amount: { [Op.gt]: 0 } },
         limit: 10, // Small batches
       });
 
@@ -130,37 +135,51 @@ class SyncService {
 
   async checkConnectivity() {
     const endpoints = [
-      "http://46.224.8.157:35627/api/discover", // Using Admin IP directly
+      "http://46.224.8.157:35627/api/discover",
       "https://www.google.com",
       "https://1.1.1.1"
     ];
-    for (const url of endpoints) {
-      try {
-        await axios.get(url, { timeout: 5000 });
-        console.log(`[SYNC_CONN] Online via ${url}`);
-        return true;
-      } catch (e) {
-        // If we get a response (even 404/403), it means we have internet
-        if (e.response) {
-          console.log(`[SYNC_CONN] Online (Response received from ${url})`);
-          return true;
-        }
-        console.warn(`[SYNC_CONN] Failed to reach ${url}: ${e.message}`);
-      }
+
+    try {
+      await Promise.any(
+        endpoints.map((url) =>
+          axios.get(url, { timeout: 3000 }).then((res) => {
+             console.log(`[SYNC_CONN] Online via ${url}`);
+             return true;
+          }).catch((e) => {
+             if (e.response) {
+               console.log(`[SYNC_CONN] Online (Response received from ${url})`);
+               return true;
+             }
+             throw e;
+          })
+        )
+      );
+      return true;
+    } catch (aggregateError) {
+      console.error("[SYNC_CONN] All checks failed. System is OFFLINE.");
+      return false;
     }
-    console.error("[SYNC_CONN] All checks failed. System is OFFLINE.");
-    return false;
   }
 
   async sendToAdmin(payload) {
     const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
     let lastError = null;
+
     for (const url of urls) {
       try {
         const response = await axios.post(url, payload, { timeout: 5000 });
         if (response.status >= 200 && response.status < 300) return true;
       } catch (error) {
         lastError = error;
+        
+        // If Admin API explicitly rejects with 4xx validation error, fail fast and don't retry other urls
+        if (error.response && error.response.status >= 400 && error.response.status < 500) {
+           const validationErr = new Error(`Admin API Validation Error: ${error.response.status}`);
+           validationErr.isValidationError = true;
+           validationErr.originalError = error;
+           throw validationErr;
+        }
       }
     }
     throw lastError || new Error("All endpoints failed");
