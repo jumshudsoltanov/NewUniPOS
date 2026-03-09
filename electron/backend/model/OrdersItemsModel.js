@@ -15,6 +15,10 @@ const OrdersItemsModel = db.sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    order_id: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
 
     product_id: {
       type: DataTypes.INTEGER,

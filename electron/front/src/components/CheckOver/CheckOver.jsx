@@ -66,17 +66,9 @@ const CheckOver = () => {
                     ? tagRes.data.filter(tag => Number(tag.type) === 3)
                     : [];
                 setTagsListData(fetchedTags);
-                if (fetchedTags.length > 0) {
-                    setUnpaidReason(fetchedTags[0].name || fetchedTags[0].text);
-                }
 
                 // Fetch payment methods
-                const payRes = await dispatch(getPaymentMethods(profileId)).unwrap();
-                if (payRes.data && payRes.data.length > 0) {
-                    const cashMethod = payRes.data.find(m => m.name.toLowerCase().includes("nağd") || m.name.toLowerCase().includes("cash"));
-                    const defaultMethod = cashMethod || payRes.data[0];
-                    setSelectedMethods([{ ...defaultMethod, amount: "" }]);
-                }
+                await dispatch(getPaymentMethods(profileId)).unwrap();
             } catch (err) {
                 console.error("fetch error:", err);
             }
@@ -222,6 +214,15 @@ const CheckOver = () => {
     const isSplitActive = selectedMethods.length > 1;
 
     const handleConfirmReady = () => {
+        if (viewMode === "PAYMENT" && selectedMethods.length === 0) {
+            toast.error("Zəhmət olmasa ödəniş üsulunu seçin");
+            return;
+        }
+        if (viewMode === "UNPAID" && !unpaidReason) {
+            toast.error("Zəhmət olmasa ödənişsiz bağlanış səbəbini seçin");
+            return;
+        }
+
         const taxConfigs = loginedProfileData?.data?.taxes || [];
         if (viewMode === "PAYMENT" && taxPrint && taxConfigs.length > 1) {
             setShowTaxSelectionModal(true);

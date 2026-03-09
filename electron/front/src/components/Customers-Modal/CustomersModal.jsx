@@ -10,6 +10,7 @@ import {
   currentTableList,
 } from "../../redux/Slices/TablesSlice";
 import { saveLog, deleteCheck, updateGuestCountOrder } from "../../redux/Slices/OrdersSlice";
+import { addOrderOptimistic } from "../../redux/Slices/BooksSlice";
 
 const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   const [guestCount, setGuestCount] = useState("0");
@@ -20,11 +21,6 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   const [serviceValue, setServiceValue] = useState(0);
   const navigate = useNavigate();
 
-  // Pre-creation refs
-  const preCreatePromiseRef = useRef(null);
-  const preCreatedUuidRef = useRef(null);
-  const isCancelledRef = useRef(false);
-
   useEffect(() => {
     const hallFee = selectedHall?.service_fee;
     if (hallFee !== 0) {
@@ -32,74 +28,18 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
     } else {
       setServiceValue(Number(loginedProfileData?.data?.profile?.service_fee));
     }
-  }, [selectedHall]);
+  }, [selectedHall, loginedProfileData]);
 
-  // Pre-create the order as soon as the modal opens
   useEffect(() => {
-    if (!show) return;
-
-    const waiterId = loginedWaiter?.data?.id;
-    const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
-    const profileId = loginedProfileData?.data?.profile?.id;
-    if (!waiterId || !terminalId || !profileId || !table?.id) return;
-
-    isCancelledRef.current = false;
-    preCreatedUuidRef.current = null;
-
-    const sv = selectedHall?.service_fee !== 0
-      ? Number(selectedHall?.service_fee)
-      : Number(loginedProfileData?.data?.profile?.service_fee);
-
-    const payload = {
-      guestCount: 0,
-      tableId: table.id,
-      waiterId,
-      terminalId,
-      profileId,
-      sale_type: "dine_in",
-      hallId: currentHallId,
-      status: 1,
-      serviceType: sv ? "percent" : null,
-      serviceValue: sv,
-      is_selected: 1,
-    };
-
-    preCreatePromiseRef.current = dispatch(saleNewOrders(payload)).unwrap()
-      .then((result) => {
-        if (result?.message === "success") {
-          preCreatedUuidRef.current = result.data.uuid;
-          return result;
-        }
-        return null;
-      })
-      .catch((err) => {
-        console.error("Pre-create order error:", err);
-        return null;
-      });
-
-    return () => {
-      // Cleanup handled in handleCancel
-    };
-  }, [show, table?.id]);
-
-  const handleCancel = useCallback(async () => {
-    isCancelledRef.current = true;
-    // If order was pre-created, delete it
-    if (preCreatedUuidRef.current) {
-      dispatch(deleteCheck({ orderId: preCreatedUuidRef.current }));
-      preCreatedUuidRef.current = null;
-    } else if (preCreatePromiseRef.current) {
-      // Wait to see if it finishes, then delete
-      preCreatePromiseRef.current.then((result) => {
-        if (result?.data?.uuid && isCancelledRef.current) {
-          dispatch(deleteCheck({ orderId: result.data.uuid }));
-        }
-      });
+    if (show) {
+      setGuestCount("0");
     }
-    preCreatePromiseRef.current = null;
+  }, [show]);
+
+  const handleCancel = useCallback(() => {
     setGuestCount("0");
     onHide();
-  }, [dispatch, onHide]);
+  }, [onHide]);
 
   const handleNumberClick = (num) => {
     if (guestCount === "0") {
@@ -124,37 +64,73 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
 
   const createOrder = useCallback(async () => {
     if (isCreating) return;
+    
+    const waiterId = loginedWaiter?.data?.id;
+    const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
+    const profileId = loginedProfileData?.data?.profile?.id;
+    if (!waiterId || !terminalId || !profileId || !table?.id) return;
+
     setIsCreating(true);
-    isCancelledRef.current = false;
 
     try {
-      // Await the pre-created order (likely already done by now)
-      const result = await preCreatePromiseRef.current;
-      if (!result?.data?.uuid) {
-        setIsCreating(false);
-        return;
-      }
+      const sv = selectedHall?.service_fee !== 0
+        ? Number(selectedHall?.service_fee)
+        : Number(loginedProfileData?.data?.profile?.service_fee);
 
-      const uuid = result.data.uuid;
-
-      // Update guest count if user entered one
-      if (guestCount !== "0") {
-        dispatch(updateGuestCountOrder({ orderId: uuid, guestCount: Number(guestCount) }));
-      }
-
-      // Log
+      const generatedUuid = crypto.randomUUID();
+      const payload = {
+        guestCount: Number(guestCount),
+        tableId: table.id,
+        waiterId,
+        terminalId,
+        profileId,
+        sale_type: "dine_in",
+        hallId: currentHallId,
+        status: 1,
+        serviceType: sv ? "percent" : null,
+        serviceValue: sv,
+        is_selected: 1,
+        uuid: generatedUuid
+      };
+      
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const optimisticOrder = {
+        uuid: payload.uuid,
+        id: null,
+        waiter_id: waiterId,
+        profile_id: profileId,
+        terminal_id: terminalId,
+        sale_type: "dine_in",
+        sale_type_name: "Restoranda",
+        table_id: table.id,
+        guest_count: Number(guestCount),
+        status: 1,
+        is_selected: 1,
+        orders_items: [],
+        table: { id: table.id, name: table.name },
+        table_name: table.name,
+        amount: 0,
+        total: 0,
+        discount: 0,
+        service_value: sv || 0,
+        service_type: sv ? "percent" : null,
+        waiter: { id: waiterId, name: waiterName }
+      };
+
+      // Optimistic Table & Book Injection
+      dispatch(addOrderOptimistic(optimisticOrder));
+
+      // Fire API in background
+      dispatch(saleNewOrders(payload));
+
       dispatch(saveLog({
-        orderId: uuid,
+        orderId: payload.uuid,
         action: "Yeni sifariş yaradıldı",
         waiterName,
         details: `Masa: ${table?.name || "Naməlum"}, Qonaq sayı: ${guestCount}`
       }));
 
-      preCreatedUuidRef.current = null;
-      preCreatePromiseRef.current = null;
-      setGuestCount("0");
-      navigate(`/check/${uuid}?tableId=${table.id}`);
+      navigate(`/check/${payload.uuid}?tableId=${table.id}`);
     } catch (err) {
       console.error("Check created error:", err);
     } finally {
@@ -167,6 +143,8 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
     table?.name,
     loginedWaiter,
     loginedProfileData,
+    currentHallId,
+    selectedHall,
     navigate,
     isCreating,
   ]);

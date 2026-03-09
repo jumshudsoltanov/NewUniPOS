@@ -66,6 +66,14 @@ const BooksSlice = createSlice({
         );
       }
     },
+    addOrderOptimistic: (state, action) => {
+      const newOrder = action.payload;
+      if (Array.isArray(state.books)) {
+        state.books.unshift(newOrder);
+      } else if (state.books && Array.isArray(state.books.data)) {
+        state.books.data.unshift(newOrder);
+      }
+    },
   },
   extraReducers: (builder) => {
     // getActiveOrders
@@ -137,7 +145,9 @@ const BooksSlice = createSlice({
         action.type === "orders/change-saletype/fulfilled" ||
         action.type === "orders/waiters/fulfilled" ||
         action.type === "orders/incrementPrintCount/fulfilled" ||
-        action.type === "orders/split/fulfilled",
+        action.type === "orders/split/fulfilled" ||
+        action.type === "pos/sales/fulfilled" ||
+        action.type === "pos/otherorderS/fulfilled",
       (state, action) => {
         const payload = action.payload?.data || action.payload;
         if (!payload) return;
@@ -168,8 +178,12 @@ const BooksSlice = createSlice({
             );
             if (index !== -1) {
               ordersList[index] = { ...ordersList[index], ...updatedOrder };
-            } else if (payload.newOrder && updatedOrder === payload.newOrder) {
-              // If it's a completely new order (from split to new table), add it to the list
+            } else if (
+              (payload.newOrder && updatedOrder === payload.newOrder) ||
+              action.type === "pos/sales/fulfilled" ||
+              action.type === "pos/otherorderS/fulfilled"
+            ) {
+              // If it's a completely new order (from split to new order, or new sales type), add it to the list
               ordersList.unshift(updatedOrder);
             }
           });
@@ -179,7 +193,7 @@ const BooksSlice = createSlice({
   },
 });
 
-export const { removeOrderOptimistic } = BooksSlice.actions;
+export const { removeOrderOptimistic, addOrderOptimistic } = BooksSlice.actions;
 export default BooksSlice.reducer;
 
 

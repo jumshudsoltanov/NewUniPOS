@@ -7,7 +7,7 @@ import {
 } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, addOrderOptimistic } from "../../redux/Slices/BooksSlice";
 import { useNavigate } from "react-router-dom";
 
 import { getSalesTypes } from "../../redux/Slices/SalesTypesSlice";
@@ -21,6 +21,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
   const { salesTypes: fetchedSalesTypes } = useSelector((state) => state.SalesTypesSlice);
   const [saleType, setSaleType] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [creatingType, setCreatingType] = useState(null);
 
   useEffect(() => {
     if (loginedProfileData?.data?.profile?.id) {
@@ -84,6 +85,9 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
       }
 
       setIsCreating(true);
+      setCreatingType(saleTypeId);
+
+      const generatedUuid = crypto.randomUUID();
 
       const payload = {
         waiterId,
@@ -92,31 +96,54 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
         sale_type: saleTypeId,
         status: 1,
         is_selected: 1,
+        uuid: generatedUuid,
       };
 
       try {
-        const result = await dispatch(saleNewOtherOrders(payload)).unwrap();
-        if (result?.message === "success") {
-          // Persistent Log
-          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-          const typeLabel = salesTypes.find(t => t.id === saleTypeId)?.label || saleTypeId;
+        // Optimistic State Injection
+        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+        const typeLabel = salesTypes.find(t => t.id === saleTypeId)?.label || saleTypeId;
 
-          dispatch(saveLog({
-            orderId: result.data.uuid,
-            action: "Yeni sifariş yaradıldı",
-            waiterName,
-            details: `Satış növü: ${typeLabel}`
-          }));
+        const optimisticOrder = {
+          uuid: generatedUuid,
+          id: null,
+          waiter_id: waiterId,
+          profile_id: profileId,
+          terminal_id: terminalId,
+          sale_type: saleTypeId,
+          sale_type_name: typeLabel,
+          status: 1,
+          is_selected: 1,
+          orders_items: [],
+          table: null,
+          table_name: null,
+          amount: 0,
+          total: 0,
+          discount: 0,
+          service_value: 0,
+          waiter: { id: waiterId, name: waiterName }
+        };
 
-          navigate(`/check/${result?.data?.uuid}`);
-          onClose(false);
-          dispatch(getTableGroups(payload.profileId));
-          dispatch(getActiveOrders({ profileId: payload.profileId }));
-        }
+        dispatch(addOrderOptimistic(optimisticOrder));
+
+        // Background APIs (Don't Await)
+        dispatch(saleNewOtherOrders(payload));
+        
+        dispatch(saveLog({
+          orderId: generatedUuid,
+          action: "Yeni sifariş yaradıldı",
+          waiterName,
+          details: `Satış növü: ${typeLabel}`
+        }));
+
+        // Instant redirect
+        navigate(`/check/${generatedUuid}`);
+        onClose(false);
       } catch (err) {
         console.error("Check created error:", err);
       } finally {
         setIsCreating(false);
+        setCreatingType(null);
       }
     },
     [
@@ -165,8 +192,14 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
               key={type.id}
               className="sales-type-list-item"
               onClick={() => handleSelect(type)}
+              disabled={isCreating}
             >
-              <span className="sales-type-label">{type.label}</span>
+              <div className="d-flex align-items-center gap-2">
+                {creatingType === type.id && (
+                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                )}
+                <span className="sales-type-label">{type.label}</span>
+              </div>
               <i className="bi bi-chevron-right text-muted" style={{ fontSize: '14px' }}></i>
             </button>
           ))}

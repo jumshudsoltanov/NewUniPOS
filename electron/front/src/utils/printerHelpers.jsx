@@ -1,5 +1,5 @@
-import React from "react";
 import ReactDOM from "react-dom/client";
+import { flushSync } from "react-dom";
 import KitchenReceipt from "../components/Receipt/KitchenReceipt";
 import { addNotification } from "./notificationService";
 import axios, { getSocket } from "./apiConfig";
@@ -75,7 +75,7 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 document.body.appendChild(container);
 
                 const root = ReactDOM.createRoot(container);
-                await new Promise((resolve) => {
+                flushSync(() => {
                     root.render(
                         <KitchenReceipt
                             orderedItems={groupItems}
@@ -89,7 +89,6 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                             isDecrease={orderData.isDecrease}
                         />
                     );
-                    setTimeout(resolve, 100);
                 });
 
                 const html = container.innerHTML;
@@ -214,9 +213,8 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         hallName: orderData.hallName
     };
 
-    await new Promise((resolve) => {
+    flushSync(() => {
         root.render(<CustomerReceipt {...receiptProps} />);
-        setTimeout(resolve, 500);
     });
 
     try {

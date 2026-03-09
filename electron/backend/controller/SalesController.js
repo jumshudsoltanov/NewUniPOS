@@ -16,6 +16,7 @@ const CreateNewOrders = async (req, res) => {
       is_selected,
       serviceValue,
       serviceType,
+      uuid,
     } = req.body;
 
     if (!tableId || !waiterId || !terminalId || !profileId) {
@@ -47,7 +48,8 @@ const CreateNewOrders = async (req, res) => {
       service_type: serviceType,
       service_value: serviceValue,
       deposit: table?.deposit || 0,
-      is_synced: 0
+      is_synced: 0,
+      uuid: uuid || undefined,
     });
 
     // Trigger sync
@@ -65,7 +67,7 @@ const CreateNewOrders = async (req, res) => {
 
 const CreateNewOtherOrders = async (req, res) => {
   try {
-    const { waiterId, terminalId, profileId, sale_type, status, is_selected } =
+    const { waiterId, terminalId, profileId, sale_type, status, is_selected, uuid } =
       req.body;
 
     if (!profileId || !sale_type || !waiterId || !terminalId) {
@@ -84,8 +86,10 @@ const CreateNewOtherOrders = async (req, res) => {
       terminal_id: terminalId,
       sale_type: sale_type,
       status: status ?? 1,
+      status: status ?? 1,
       is_selected: is_selected ?? 1,
-      is_synced: 0
+      is_synced: 0,
+      uuid: uuid || undefined,
     });
 
     // Trigger sync

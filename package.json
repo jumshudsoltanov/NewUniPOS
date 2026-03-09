@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.0.14",
+  "version": "2.0.16",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -75,6 +75,7 @@
     "axios": "^1.13.3",
     "cors": "^2.8.6",
     "dotenv": "^16.4.7",
+    "electron-log": "^5.4.3",
     "electron-updater": "^6.3.9",
     "express": "^4.21.2",
     "mariadb": "^3.4.5",

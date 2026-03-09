@@ -1,5 +1,10 @@
-const { BrowserWindow, app, ipcMain, shell, screen, Menu, globalShortcut } = require("electron");
+const { app, Menu, BrowserWindow, ipcMain, screen, globalShortcut } = require("electron");
 const { autoUpdater } = require("electron-updater");
+const log = require("electron-log");
+
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = "info";
+log.info("UniPOS Desktop Application is starting...");
 
 Menu.setApplicationMenu(null);
 const os = require("os");

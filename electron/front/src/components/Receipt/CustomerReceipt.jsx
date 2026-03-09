@@ -14,6 +14,9 @@ const CustomerReceipt = ({
         terminalInfo?.filial ||
         "RESTORAN";
 
+    const address = profileData?.data?.profile?.address || "";
+    const phone = profileData?.data?.profile?.phone || "";
+
     const validLogo = (logo) => logo && logo !== "null" && logo !== "undefined" && logo !== "data:directory;base64,";
 
     let logoSrc = null;
@@ -284,17 +287,17 @@ const CustomerReceipt = ({
 
             {/* ORDER INFO */}
             <div style={styles.infoSection}>
-                {terminalInfo?.address && (
+                {address && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Ünvan</span>
-                        <span style={styles.value}>{terminalInfo.address}</span>
+                        <span style={styles.value}>{address}</span>
                     </div>
                 )}
 
-                {terminalInfo?.phone && (
+                {phone && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Əlaqə</span>
-                        <span style={styles.value}>{terminalInfo.phone}</span>
+                        <span style={styles.value}>{phone}</span>
                     </div>
                 )}
 

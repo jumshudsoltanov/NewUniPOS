@@ -20,6 +20,57 @@ const KitchenReceipt = ({
     ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     const items = orderedItems.length > 0 ? orderedItems : [];
+
+    // Group items by name, modifiers, and other properties
+    const groupedItems = React.useMemo(() => {
+        const groups = new Map();
+
+        items.forEach(item => {
+            const itemName = item.product_name || item.name || item.product?.name || "Naməlum";
+            
+            // Normalize modifiers for key generation
+            let mods = [];
+            try {
+                if (Array.isArray(item.modifiers)) {
+                    mods = item.modifiers;
+                } else if (typeof item.modifiers === "string") {
+                    const parsed = JSON.parse(item.modifiers);
+                    if (Array.isArray(parsed)) mods = parsed;
+                }
+            } catch (e) {
+                mods = [];
+            }
+            // Sort modifiers by ID or name to ensure consistent key
+            const sortedMods = [...mods].sort((a, b) => (a.id || a.name || "").toString().localeCompare((b.id || b.name || "").toString()));
+            const modsKey = JSON.stringify(sortedMods.map(m => ({ id: m.id, count: m.count })));
+
+            // Create a unique key for grouping
+            const key = `${itemName}|${modsKey}|${item.comment || ""}|${item.reasonName || ""}|${item.changeType || ""}|${item.isModifierStandalone || ""}|${item.parentName || ""}`;
+
+            if (groups.has(key)) {
+                const existing = groups.get(key);
+                if (item.changeType === "decrease") {
+                    existing.quantity = (existing.quantity || 0) + (Number(item.diff || item.quantity || item.qty || item.count || 0));
+                } else {
+                    existing.quantity = (existing.quantity || 0) + (Number(item.quantity || item.count || 0));
+                }
+            } else {
+                const qty = item.changeType === "decrease" 
+                    ? Number(item.diff || item.quantity || item.qty || item.count || 0)
+                    : Number(item.quantity || item.count || 0);
+                
+                groups.set(key, {
+                    ...item,
+                    itemName,
+                    mods, // Store original mods for rendering
+                    quantity: qty
+                });
+            }
+        });
+
+        return Array.from(groups.values());
+    }, [items]);
+
     const hasDecrease = isDecrease || items.some((i) => i.changeType === "decrease");
 
     const cleanTable = String(table).replace(/masa/gi, "").trim();
@@ -174,25 +225,14 @@ const KitchenReceipt = ({
                     <span style={styles.colQty}>Say</span>
                 </div>
 
-                {items.map((item, idx) => {
-                    let mods = [];
-                    try {
-                        if (Array.isArray(item.modifiers)) {
-                            mods = item.modifiers;
-                        } else if (typeof item.modifiers === "string") {
-                            const parsed = JSON.parse(item.modifiers);
-                            if (Array.isArray(parsed)) mods = parsed;
-                        }
-                    } catch (e) {
-                        mods = [];
-                    }
-
-                    const itemName = item.product_name || item.name || item.product?.name || "Naməlum";
+                {groupedItems.map((item, idx) => {
+                    const mods = item.mods || [];
+                    const itemName = item.itemName;
 
                     return (
                         <div key={idx} style={{
                             ...styles.itemRow,
-                            borderBottom: idx === items.length - 1 ? "none" : styles.itemRow.borderBottom
+                            borderBottom: idx === groupedItems.length - 1 ? "none" : styles.itemRow.borderBottom
                         }}>
                             <div style={styles.colName}>
                                 <span>
@@ -222,7 +262,7 @@ const KitchenReceipt = ({
                             </div>
 
                             <div style={styles.colQty}>
-                                {item.changeType === "decrease" ? `-${item.diff || item.quantity || item.qty || item.count || 0}` : `${item.quantity || item.count || 0}`}
+                                {item.changeType === "decrease" ? `-${item.quantity}` : `${item.quantity}`}
                             </div>
                         </div>
                     );
