@@ -78,8 +78,10 @@ const ClearCheck = ({ show, onClose, order }) => {
       ).unwrap();
 
       if (profileId) {
-        await dispatch(getTableGroups(profileId));
-        await dispatch(getActiveOrders({ profileId }));
+        Promise.all([
+          dispatch(getTableGroups(profileId)),
+          dispatch(getActiveOrders({ profileId }))
+        ]);
       }
       onClose(true);
     } catch (error) {

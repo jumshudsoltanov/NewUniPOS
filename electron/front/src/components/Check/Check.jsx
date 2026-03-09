@@ -251,21 +251,19 @@ const Check = () => {
       setIsSending(true);
 
       if (hasDeletions) {
-        for (const deletion of pendingDeletions) {
-          try {
-            await dispatch(deleteOrderItem({
-              orderId: deletion.orderId,
-              itemId: deletion.itemId,
-              reasonId: deletion.reasonId,
-              qty: deletion.type === 'partial' ? deletion.qty : undefined,
-              reasonName: deletion.reasonName,
-              productName: deletion.name,
-              waiterName
-            })).unwrap();
-          } catch (deleteError) {
+        await Promise.all(pendingDeletions.map(deletion =>
+          dispatch(deleteOrderItem({
+            orderId: deletion.orderId,
+            itemId: deletion.itemId,
+            reasonId: deletion.reasonId,
+            qty: deletion.type === 'partial' ? deletion.qty : undefined,
+            reasonName: deletion.reasonName,
+            productName: deletion.name,
+            waiterName
+          })).unwrap().catch(deleteError => {
             console.error("Single Item Deletion Error:", deleteError);
-          }
-        }
+          })
+        ));
 
         const deletedItemsForPrint = pendingDeletions.map(d => {
           const { printers, categoryId } = getAllPrintersForItem(d);
@@ -704,8 +702,11 @@ const Check = () => {
       setOpenSplitModal(false);
 
       if (result?.data?.newOrder?.uuid) {
-        await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
-        await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+        const profileId = loginedProfileData?.data?.profile?.id;
+        Promise.all([
+          dispatch(getTableGroups(profileId)),
+          dispatch(getActiveOrders({ profileId }))
+        ]);
 
         if (result.data.newOrder.sale_type === 'dine_in') {
           navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
@@ -1167,12 +1168,10 @@ const Check = () => {
 
                           if (result.success) {
                             toast.success("Ön çap uğurla tamamlandı");
-                            await dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName })).unwrap();
-
-                            await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
-                            if (tableGroups?.data) {
-                              await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
-                            }
+                            const profileId = loginedProfileData?.data?.profile?.id;
+                            dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName }));
+                            dispatch(getActiveOrders({ profileId }));
+                            if (tableGroups?.data) dispatch(getTableGroups(profileId));
                           }
                         } catch (error) {
                           console.error("Print Check Error:", error);
@@ -1533,9 +1532,20 @@ const Check = () => {
                     </div>
 
                     {(menuViewMode !== "ROOT" || (searchText && searchText.length > 0)) && (
-                      <div className="breadcrumb-tab next cursor-pointer" onClick={handleMenuHome}>
-                        <span>{getMenuBreadcrumbTitle()}</span>
-                      </div>
+                      menuViewMode === "PRODUCTS" && selectedGenCat ? (
+                        <>
+                          <div className="breadcrumb-tab next cursor-pointer" onClick={() => { setMenuViewMode("CATEGORIES"); setSelectedCat(null); }}>
+                            <span>{selectedGenCat.name}</span>
+                          </div>
+                          <div className="breadcrumb-tab next active-breadcrumb">
+                            <span>{selectedCat?.name}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="breadcrumb-tab next cursor-pointer" onClick={handleMenuHome}>
+                          <span>{getMenuBreadcrumbTitle()}</span>
+                        </div>
+                      )
                     )}
                   </div>
                 </div>

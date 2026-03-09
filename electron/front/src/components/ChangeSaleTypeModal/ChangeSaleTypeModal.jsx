@@ -39,8 +39,11 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
       ).unwrap();
 
       if (result) {
-        await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
-        await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }));
+        const profileId = loginedProfileData?.data?.profile?.id;
+        Promise.all([
+          dispatch(getTableGroups(profileId)),
+          dispatch(getActiveOrders({ profileId }))
+        ]);
       }
     } catch (error) {
       console.log("Sale Type Change Error", error);

@@ -19,10 +19,9 @@ const sendOrdersItemsToDb = async (req, res) => {
   }
 
   try {
-    // insert items (Always separate to preserve modifiers/comments)
-    const savedItems = [];
-    for (const item of productList) {
-      const newItem = await OrdersItemsModel.create({
+    // insert items in parallel (preserves modifiers/comments per item)
+    const savedItems = await Promise.all(productList.map(item =>
+      OrdersItemsModel.create({
         order_id: orderId,
         product_id: item.product_id || item.id,
         count: item.quantity || item.count || 1,
@@ -32,15 +31,26 @@ const sendOrdersItemsToDb = async (req, res) => {
         kds_status: 0,
         modifiers: item.modifiers || null,
         comment: item.comment || null,
-      });
-      savedItems.push(newItem);
-    }
+      })
+    ));
 
-    // All order on backend
-    const listOfProducts = await OrdersItemsModel.findAll({
-      where: { order_id: orderId },
-      attributes: ["count", "price"],
-    });
+    // Fetch totals and order discount info in parallel
+    const [listOfProducts, currentOrder] = await Promise.all([
+      OrdersItemsModel.findAll({
+        where: { order_id: orderId },
+        attributes: ["count", "price"],
+      }),
+      OrdersModel.findOne({
+        where: { uuid: orderId },
+        attributes: [
+          "discount_value",
+          "discount_type",
+          "service_value",
+          "service_type",
+          "deposit",
+        ],
+      }),
+    ]);
 
     // Calc total (Robust)
     const total = listOfProducts.reduce((sum, item) => {
@@ -48,17 +58,6 @@ const sendOrdersItemsToDb = async (req, res) => {
       const prc = parseFloat(item.price) || 0;
       return sum + qty * prc;
     }, 0);
-
-    const currentOrder = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      attributes: [
-        "discount_value",
-        "discount_type",
-        "service_value",
-        "service_type",
-        "deposit",
-      ],
-    });
 
     let discount = 0;
     let service = 0;
@@ -361,33 +360,12 @@ const onUpdateCheckTags = async (req, res) => {
       { tags: tags, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    res.status(200).json({ message: "tags update" });
+
+    // Background tasks (non-blocking after response)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    const updatedOrder = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
-
-    res.status(200).json({ message: "tags update", data: updatedOrder });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -406,33 +384,12 @@ const onUpdateCheckComments = async (req, res) => {
       { note: comments, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    res.status(200).json({ message: "comment update" });
+
+    // Background tasks (non-blocking after response)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    const updatedOrder = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
-
-    res.status(200).json({ message: "comment update", data: updatedOrder });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -713,33 +670,12 @@ const onUpdateWaiter = async (req, res) => {
       { waiter_id: waiterId, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    res.status(200).json({ message: "waiter update" });
+
+    // Background tasks (non-blocking after response)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    const updatedOrder = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
-
-    res.status(200).json({ message: "waiter  update", data: updatedOrder });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -910,57 +846,37 @@ const onSplitOrder = async (req, res) => {
       );
     };
 
-    await recalculateOrder(data.orderId, transaction);
-    await recalculateOrder(targetOrder.uuid, transaction);
+    await Promise.all([
+      recalculateOrder(data.orderId, transaction),
+      recalculateOrder(targetOrder.uuid, transaction),
+    ]);
 
     await transaction.commit();
 
     SyncService.triggerSync(data.orderId);
     SyncService.triggerSync(targetOrder.uuid);
 
-    const updatedOriginalOrder = await OrdersModel.findOne({
-      where: { uuid: data.orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
+    const includeSpec = [
+      { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+      {
+        model: OrdersItemsModel,
+        as: "orders_items",
+        separate: true,
+        order: [["id", "ASC"]],
+        include: [{ model: require("../model/ProductsModel"), as: "product" }]
+      },
+      {
+        model: TablesModel,
+        as: "table",
+        attributes: ["id", "name"],
+        include: [{ model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }],
+      },
+    ];
 
-    const updatedTargetOrder = await OrdersModel.findOne({
-      where: { uuid: targetOrder.uuid },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
+    const [updatedOriginalOrder, updatedTargetOrder] = await Promise.all([
+      OrdersModel.findOne({ where: { uuid: data.orderId }, include: includeSpec }),
+      OrdersModel.findOne({ where: { uuid: targetOrder.uuid }, include: includeSpec }),
+    ]);
 
     res.status(200).json({
       message: "success",
@@ -1385,36 +1301,14 @@ const onCloseOrder = async (req, res) => {
       await OrderPaymentsModel.bulkCreate(paymentRecords, { transaction });
     }
 
-    // 5. Commit and Trigger Sync
+    // 5. Commit and respond immediately
     await transaction.commit();
+    res.status(200).json({ message: "success" });
+
+    // Trigger sync in background (non-blocking)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    // 6. Fetch full updated order and return
-    const updatedOrder = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
-
-    res.status(200).json({ message: "success", data: updatedOrder });
   } catch (error) {
     if (transaction) {
       try { await transaction.rollback(); } catch (e) { }
@@ -1997,43 +1891,21 @@ const onUpdateGuestCount = async (req, res) => {
       return res.status(400).json({ message: "false", data: "Missing orderId" });
     }
 
-    const checkOrder = await OrdersModel.findOne({ where: { uuid: orderId } });
-    if (!checkOrder) {
-      return res.status(404).json({ message: "false", data: "Order not found" });
-    }
-
-    await OrdersModel.update(
+    const updated = await OrdersModel.update(
       { guest_count: guestCount, is_synced: 0 },
       { where: { uuid: orderId } }
     );
 
+    if (updated[0] === 0) {
+      return res.status(404).json({ message: "false", data: "Order not found" });
+    }
+
+    res.status(200).json({ message: "success" });
+
+    // Background tasks (non-blocking after response)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId: orderId });
-
-    const getOrders = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
-
-    return res.status(200).json({ message: "success", data: getOrders });
   } catch (error) {
     console.error("Guest count update error:", error);
     return res.status(500).json({ message: "false", data: error.message });

@@ -49,20 +49,16 @@ class MaxCheckService {
 
     async getNextId(profileId) {
         const localMax = (await OrdersModel.max("id", { paranoid: false })) || 0;
-        let serverMax = 0;
-
-        try {
-            serverMax = await this.fetchServerMaxId(profileId);
-        } catch (e) {
-            console.warn("[MAX_CHECK] Server fetch failed, using local only.");
-        }
-
-        const effectiveMax = Math.max(localMax, serverMax);
+        // Use cached server max — do NOT wait for network call
+        const effectiveMax = Math.max(localMax, this.cachedServerMaxId);
         const nextId = effectiveMax + 1;
 
+        // Sync in background (non-blocking)
         this.syncMaxIdToServer(profileId, nextId).catch(() => { });
+        // Refresh cache in background for next call
+        this.fetchServerMaxId(profileId).catch(() => { });
 
-        console.log(`[MAX_CHECK] Next ID: ${nextId} (local: ${localMax}, server: ${serverMax})`);
+        console.log(`[MAX_CHECK] Next ID: ${nextId} (local: ${localMax}, cached server: ${this.cachedServerMaxId})`);
         return nextId;
     }
 

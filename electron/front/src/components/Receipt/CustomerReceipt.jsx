@@ -265,11 +265,11 @@ const CustomerReceipt = ({
                         src={logoSrc}
                         alt="Logo"
                         style={{
-                            width: "40%",
-                            maxWidth: "80px",
+                            width: "65%",
+                            maxWidth: "140px",
                             objectFit: "contain",
                             display: "block",
-                            margin: "0 auto 2px auto",
+                            margin: "0 auto 4px auto",
                         }}
                         onError={(e) => (e.target.style.display = "none")}
                     />
@@ -373,7 +373,33 @@ const CustomerReceipt = ({
 
                 {(() => {
                     const filtered = itemsToRender.filter((item) => (Number(item.quantity) > 0 || Number(item.count) > 0));
-                    return filtered.map((item, i) => {
+
+                    // Group identical items (same name + price + modifiers + comment + is_gift)
+                    const groupedMap = new Map();
+                    filtered.forEach(item => {
+                        const name = item.product_name || item.name || item.product?.name || "Naməlum";
+                        const price = Number(item.price || 0);
+                        const isGift = Number(item.is_gift || 0) === 1;
+                        const comment = item.comment || '';
+                        let mods = item.modifiers;
+                        if (typeof mods === 'string') { try { mods = JSON.parse(mods); } catch (e) { mods = []; } }
+                        if (!Array.isArray(mods)) mods = [];
+                        const modsKey = mods.map(m => `${m.name}:${m.price}:${m.count}`).sort().join('|');
+                        const key = `${name}__${price}__${isGift}__${modsKey}__${comment}`;
+
+                        if (groupedMap.has(key)) {
+                            groupedMap.get(key)._qty += Number(item.quantity || item.count || 0);
+                        } else {
+                            groupedMap.set(key, { ...item, _qty: Number(item.quantity || item.count || 0), modifiers: mods });
+                        }
+                    });
+                    const grouped = Array.from(groupedMap.values()).map(item => ({
+                        ...item,
+                        quantity: item._qty,
+                        count: item._qty,
+                    }));
+
+                    return grouped.map((item, i) => {
                         const params = {
                             name: item.product_name || item.name || item.product?.name || "Naməlum",
                             quantity: Number(item.quantity || item.count || 0),
@@ -389,7 +415,7 @@ const CustomerReceipt = ({
                         return (
                             <div key={i} style={{
                                 ...styles.itemRow,
-                                borderBottom: i === filtered.length - 1 ? "1.5px solid #000" : styles.itemRow.borderBottom
+                                borderBottom: i === grouped.length - 1 ? "1.5px solid #000" : styles.itemRow.borderBottom
                             }}>
                                 <div style={styles.colName}>
                                     {params.name}

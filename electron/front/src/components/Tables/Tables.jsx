@@ -240,7 +240,7 @@ const Tables = () => {
           ).unwrap();
 
           toast.success("Masa uğurla dəyişdirildi");
-          await dispatch(getTableGroups(loginedProfileData.data.profile.id));
+          dispatch(getTableGroups(loginedProfileData.data.profile.id));
           navigate(`/check/${id}?tableId=${table?.id}`);
         } catch (error) {
           toast.error("Xəta baş verdi");

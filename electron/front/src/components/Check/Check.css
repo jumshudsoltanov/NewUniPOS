@@ -190,6 +190,10 @@
 }
 
 /* Home Tab Specifics */
+.breadcrumb-tab.active-breadcrumb {
+    cursor: default;
+}
+
 .breadcrumb-tab.home {
     width: 50px;
     /* Smaller home */
@@ -1184,7 +1188,6 @@
     display: flex;
     justify-content: space-between;
     padding: 15px 5px;
-    /* Comfortable padding */
     border-bottom: 1px dashed #e0e0e0;
     /* Dotted separator as in image */
     font-size: 0.95rem;
@@ -1333,7 +1336,6 @@
     display: flex;
     align-items: center;
     padding: 12px 10px;
-    /* Reduced side padding */
     border-bottom: 1px dashed #e2e8f0;
 }
 
@@ -1361,9 +1363,8 @@
 
 .new-order-highlight {
     background-color: #EBF2FE;
-    /* Surface Subtle - Light Blue */
+    box-shadow: -5px 0 0 #EBF2FE, 5px 0 0 #EBF2FE;
     border-left: 3px solid #053796;
-    /* Header Blue Accent */
 }
 
 /* Adjust mobile styles */

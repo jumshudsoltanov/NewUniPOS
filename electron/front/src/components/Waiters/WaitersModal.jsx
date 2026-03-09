@@ -53,8 +53,11 @@ const WaitersModal = ({ show, onClose, order }) => {
         waiterName
       })).unwrap()
       if (res.length !== 0) {
-        await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id))
-        await dispatch(getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }))
+        const profileId = loginedProfileData?.data?.profile?.id;
+        Promise.all([
+          dispatch(getTableGroups(profileId)),
+          dispatch(getActiveOrders({ profileId }))
+        ]);
       }
       setSelectedWaiterId(null)
     } catch (error) {

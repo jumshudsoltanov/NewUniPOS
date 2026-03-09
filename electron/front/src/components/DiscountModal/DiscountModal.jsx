@@ -78,16 +78,12 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
         }),
       ).unwrap();
 
-      // Refresh data
       if (loginedProfileData?.data?.profile?.id) {
         const profileId = loginedProfileData.data.profile.id;
-        await Promise.all([
+        Promise.all([
           dispatch(getTableGroups(profileId)),
           dispatch(getActiveOrders({ profileId }))
         ]);
-
-        // Small delay to ensure Redux state is fully committed before closing
-        await new Promise((resolve) => setTimeout(resolve, 100));
       }
     } catch (error) {
       console.error("Discount update failed:", error);

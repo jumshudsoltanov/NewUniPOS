@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:app.swaggerhub.com)",
-      "WebFetch(domain:api.swaggerhub.com)"
+      "WebFetch(domain:api.swaggerhub.com)",
+      "Bash(grep -E \"\\\\.\\(js|jsx|ts|tsx|css\\)$\")",
+      "Bash(xargs grep -l \"status.*===.*1\\\\|status.*===.*2\")",
+      "Bash(grep -l \"await.*dispatch\" \"c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components\"/**/*.jsx)"
     ]
   }
 }

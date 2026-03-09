@@ -26,10 +26,11 @@ const TagModal = ({ show, onClose, order }) => {
         updateTags({ orderId: order?.uuid, tags: tag }),
       ).unwrap();
 
-      // Update both table groups (for dine-in) and active orders (for delivery/takeaway)
-      await dispatch(getTableGroups(loginedProfileData.data.profile.id));
-      await dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
-
+      const profileId = loginedProfileData.data.profile.id;
+      Promise.all([
+        dispatch(getTableGroups(profileId)),
+        dispatch(getActiveOrders({ profileId }))
+      ]);
       onClose(true);
     } catch (error) {
       console.error("Failed to update tags:", error);

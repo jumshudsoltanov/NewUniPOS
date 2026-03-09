@@ -4,6 +4,7 @@ import { getSocket, initNetwork } from "../../utils/apiConfig";
 const NetworkOverlay = () => {
     const [isDisconnected, setIsDisconnected] = useState(false);
     const [masterIp, setMasterIp] = useState("Axtarılır...");
+    const [slaveIp, setSlaveIp] = useState(null);
 
     useEffect(() => {
         let pollingInterval;
@@ -52,6 +53,14 @@ const NetworkOverlay = () => {
 
         poll();
         pollingInterval = setInterval(poll, 3000);
+
+        // Get slave's own IP
+        if (window.electronAPI?.getLocalIp) {
+            window.electronAPI.getLocalIp().then(setSlaveIp).catch(() => {});
+        } else {
+            const h = window.location.hostname;
+            if (h && h !== 'localhost' && h !== '127.0.0.1') setSlaveIp(h);
+        }
 
         return () => {
             clearInterval(pollingInterval);
@@ -116,7 +125,7 @@ const NetworkOverlay = () => {
                 <div style={{ width: isMobile ? "100%" : "1px", height: isMobile ? "1px" : "auto", background: "#2D3748" }}></div>
                 <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: isMobile ? "0.7rem" : "0.85rem", color: "#718096", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "600" }}>Sizin İP ünvanınız (Slave)</div>
-                    <div style={{ fontSize: isMobile ? "1.1rem" : "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{window.location.hostname || "Bilinmir"}</div>
+                    <div style={{ fontSize: isMobile ? "1.1rem" : "1.6rem", fontWeight: "bold", color: "#4F85F4" }}>{slaveIp || "Bilinmir"}</div>
                 </div>
             </div>
 

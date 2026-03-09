@@ -107,7 +107,7 @@ const DevicesModal = ({ show, onHide }) => {
                 screenId: profile.kitchen_display_screen_id || ""
             });
 
-            if (isMaster && window.electronAPI?.getLocalIp) {
+            if (window.electronAPI?.getLocalIp) {
                 const ip = await window.electronAPI.getLocalIp();
                 setLocalIp(ip);
             }

@@ -90,10 +90,11 @@ const OtherChecks = ({
         newTotal: newCheckData.total,
         waiterName
       })).unwrap();
-      await dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
-      await dispatch(
-        getActiveOrders({ profileId: loginedProfileData?.data?.profile?.id }),
-      );
+      const profileId = loginedProfileData?.data?.profile?.id;
+      Promise.all([
+        dispatch(getTableGroups(profileId)),
+        dispatch(getActiveOrders({ profileId }))
+      ]);
       onClose(true);
     } catch (err) {
       console.error("Merge failed", err);

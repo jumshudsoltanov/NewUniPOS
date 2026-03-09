@@ -186,7 +186,7 @@ const startBroadcasting = () => {
                     if (err) console.error("[MASTER UDP] Send Error:", err.message);
                 });
             }
-        }, 3000);
+        }, 1000);
     });
 };
 

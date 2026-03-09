@@ -63,16 +63,12 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
         }),
       ).unwrap();
 
-      // Refresh table data to update totals in UI
       if (loginedProfileData?.data?.profile?.id) {
         const profileId = loginedProfileData.data.profile.id;
-        await Promise.all([
+        Promise.all([
           dispatch(getTableGroups(profileId)),
           dispatch(getActiveOrders({ profileId }))
         ]);
-
-        // Small delay to ensure Redux state is fully committed before closing
-        await new Promise((resolve) => setTimeout(resolve, 100));
       }
       onClose();
     } catch (error) {

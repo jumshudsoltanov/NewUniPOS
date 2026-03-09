@@ -9,10 +9,18 @@ const sequelize = new Sequelize(
   {
     host: "localhost",
     dialect: "mariadb",
-    pool: 5,
-    retry: 4,
+    pool: {
+      max: 20,
+      min: 5,
+      acquire: 10000,
+      idle: 5000,
+    },
+    retry: { max: 3 },
     timezone: "+04:00",
     logging: false,
+    dialectOptions: {
+      connectTimeout: 5000,
+    },
   },
 );
 
