@@ -116,30 +116,42 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                 )}
 
                 {/* Pending Deletions Section */}
-                {pendingDeletions && pendingDeletions.length > 0 && (
-                    <div className="new-items-dept-section mt-4">
-                        <div className="new-items-dept-header">
-                            <span className="dept-name">Silinəcək məhsullar</span>
-                        </div>
-                        <div className="new-items-list">
-                            {pendingDeletions.map((item, idx) => (
-                                <div key={`del-${idx}`} className="new-item-card">
-                                    <div className="new-item-row">
-                                        <div className="item-count-badge">
-                                            {item.type === 'partial' ? item.qty : item.originalQty}
-                                        </div>
-                                        <div className="item-info">
-                                            <span className="item-name text-decoration-line-through">{item.name}</span>
-                                            <span className="item-portion text-danger small">
-                                                {item.type === 'partial' ? '(Qismən silinir)' : '(Tam silinir)'}
-                                            </span>
+                {pendingDeletions && pendingDeletions.length > 0 && (() => {
+                    // Group by itemId, sum quantities
+                    const grouped = pendingDeletions.reduce((acc, item) => {
+                        const key = String(item.product_id || item.itemId || item.name);
+                        if (!acc[key]) {
+                            acc[key] = { ...item, totalQty: 0 };
+                        }
+                        acc[key].totalQty += item.type === 'partial' ? (item.qty || 1) : (item.originalQty || 1);
+                        return acc;
+                    }, {});
+                    const groupedList = Object.values(grouped);
+                    return (
+                        <div className="new-items-dept-section mt-4">
+                            <div className="new-items-dept-header">
+                                <span className="dept-name">Silinəcək məhsullar</span>
+                            </div>
+                            <div className="new-items-list">
+                                {groupedList.map((item, idx) => (
+                                    <div key={`del-${idx}`} className="new-item-card">
+                                        <div className="new-item-row">
+                                            <div className="item-count-badge">
+                                                {item.totalQty}
+                                            </div>
+                                            <div className="item-info">
+                                                <span className="item-name text-decoration-line-through">{item.name}</span>
+                                                <span className="item-portion text-danger small">
+                                                    {item.type === 'partial' ? '(Qismən silinir)' : '(Tam silinir)'}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </Modal.Body>
 
             <div className="new-items-footer">

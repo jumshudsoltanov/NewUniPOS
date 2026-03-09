@@ -3,7 +3,7 @@ import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal"; // Import
-import { addPendingDeletion } from "../../redux/Slices/OrdersSlice"; // Import action
+import { addPendingDeletion, removeAllProductsById } from "../../redux/Slices/OrdersSlice"; // Import action
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
@@ -44,6 +44,7 @@ const CheckMain = ({ orders }) => {
         if (existing) {
           existing.count += Number(orderItem.count);
           existing.savedQuantity = (existing.savedQuantity || 0) + Number(orderItem.count);
+          existing.allIds = [...(existing.allIds || [existing.firstId]), orderItem.id];
           existing.price = orderItem.price || orderItem.amount;
         } else {
           const menuItem = menu.find((item) => item.id === prodId);
@@ -56,8 +57,9 @@ const CheckMain = ({ orders }) => {
             localQuantity: 0,
             price: orderItem.price ?? orderItem.amount,
             isNew: false,
-            is_gift: isGift, // Ensure it's passed
-            firstId: orderItem.id, // Capture ID for sorting
+            is_gift: isGift,
+            firstId: orderItem.id,
+            allIds: [orderItem.id],
             printer_details: menuItem?.printer_details || [],
             modifiers: orderItem.modifiers,
             comment: orderItem.comment
@@ -112,7 +114,11 @@ const CheckMain = ({ orders }) => {
     const renderedItems = items.map(item => ({ ...item, displayDetails: null }));
 
     pendingDeletions.forEach(pd => {
-      const target = renderedItems.find(i => Number(i.firstId) === Number(pd.itemId) || Number(i.id) === Number(pd.itemId));
+      const target = renderedItems.find(i =>
+        Number(i.firstId) === Number(pd.itemId) ||
+        Number(i.id) === Number(pd.itemId) ||
+        (i.allIds && i.allIds.some(aid => Number(aid) === Number(pd.itemId)))
+      );
       if (target) {
         if (pd.type === 'full') {
           target.isDeleted = true;
@@ -322,39 +328,61 @@ const CheckMain = ({ orders }) => {
             : productInfo?.printer_details;
 
           if (deleteActionType === 'full') {
-            dispatch(addPendingDeletion({
-              orderId: orders.uuid,
-              itemId: product?.id || product?.firstId,
-              product_id: pId,
-              reasonId: data.reason,
-              reasonName: data.reasonName,
-              type: 'full',
-              name: product.name,
-              originalQty: product.count,
-              price: product.price,
-              category_id: finalCategoryId,
-              printer_details: finalPrinters,
-              modifiers: product.modifiers,
-              comment: product.comment
-            }));
+            // If item has local (unsaved) portion, remove those from local state too
+            if (product.isNew && product.localQuantity > 0) {
+              dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+            }
+
+            const idsToDelete = (product.allIds && product.allIds.length > 0)
+              ? product.allIds
+              : [product?.id || product?.firstId];
+            idsToDelete.filter(Boolean).forEach(itemId => {
+              dispatch(addPendingDeletion({
+                orderId: orders.uuid,
+                itemId,
+                product_id: pId,
+                reasonId: data.reason,
+                reasonName: data.reasonName,
+                type: 'full',
+                name: product.name,
+                originalQty: product.count,
+                price: product.price,
+                category_id: finalCategoryId,
+                printer_details: finalPrinters,
+                modifiers: product.modifiers,
+                comment: product.comment
+              }));
+            });
             toast.success("Məhsul silinmək üçün işarələndi!");
           } else if (deleteActionType === 'partial') {
-            dispatch(addPendingDeletion({
-              orderId: orders.uuid,
-              itemId: product?.id || product?.firstId,
-              product_id: pId,
-              reasonId: data.reason,
-              reasonName: data.reasonName,
-              qty: qtyToReduce,
-              type: 'partial',
-              name: product.name,
-              originalQty: product.count,
-              price: product.price,
-              category_id: finalCategoryId,
-              printer_details: finalPrinters,
-              modifiers: product.modifiers,
-              comment: product.comment
-            }));
+            // Find all DB rows for this product, sorted by id
+            const productRows = (orders.orders_items || [])
+              .filter(oi => product.allIds ? product.allIds.includes(oi.id) : oi.id === product.firstId)
+              .sort((a, b) => a.id - b.id);
+
+            let remaining = qtyToReduce;
+            for (const row of productRows) {
+              if (remaining <= 0) break;
+              const rowCount = Number(row.count);
+              const toDelete = Math.min(rowCount, remaining);
+              remaining -= toDelete;
+              dispatch(addPendingDeletion({
+                orderId: orders.uuid,
+                itemId: row.id,
+                product_id: pId,
+                reasonId: data.reason,
+                reasonName: data.reasonName,
+                qty: toDelete < rowCount ? toDelete : undefined,
+                type: toDelete >= rowCount ? 'full' : 'partial',
+                name: product.name,
+                originalQty: toDelete,
+                price: product.price,
+                category_id: finalCategoryId,
+                printer_details: finalPrinters,
+                modifiers: product.modifiers,
+                comment: product.comment
+              }));
+            }
             toast.success("Miqdar azalma üçün işarələndi!");
           }
         }}

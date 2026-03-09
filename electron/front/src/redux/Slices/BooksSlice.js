@@ -108,6 +108,78 @@ const BooksSlice = createSlice({
       state.archivedBooks = state.archivedBooks.filter(o => o.uuid !== reopenedOrderId);
     });
 
+    // Handle delete-item specifically: optimistically remove from orders_items
+    builder.addCase("orders/delete-item/fulfilled", (state, action) => {
+      const { orderId, itemId, qty } = action.meta.arg;
+      let ordersList = null;
+      if (Array.isArray(state.books)) ordersList = state.books;
+      else if (state.books?.data) ordersList = state.books.data;
+      if (!ordersList) return;
+
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx === -1) return;
+
+      const order = ordersList[idx];
+      if (!order.orders_items) return;
+
+      if (qty && qty > 0) {
+        // Partial delete — reduce count
+        const itemIdx = order.orders_items.findIndex(i => Number(i.id) === Number(itemId));
+        if (itemIdx !== -1) {
+          const newCount = Number(order.orders_items[itemIdx].count) - qty;
+          if (newCount <= 0) {
+            ordersList[idx] = { ...order, orders_items: order.orders_items.filter((_, i) => i !== itemIdx) };
+          } else {
+            const newItems = [...order.orders_items];
+            newItems[itemIdx] = { ...newItems[itemIdx], count: newCount };
+            ordersList[idx] = { ...order, orders_items: newItems };
+          }
+        }
+      } else {
+        // Full delete
+        ordersList[idx] = {
+          ...order,
+          orders_items: order.orders_items.filter(i => Number(i.id) !== Number(itemId))
+        };
+      }
+    });
+
+    // Handle batch delete: remove all deleted items from orders_items
+    builder.addCase("orders/batch-delete-items/fulfilled", (state, action) => {
+      const { orderId, items } = action.meta.arg;
+      if (!orderId || !items?.length) return;
+
+      let ordersList = null;
+      if (Array.isArray(state.books)) ordersList = state.books;
+      else if (state.books?.data) ordersList = state.books.data;
+      if (!ordersList) return;
+
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx === -1) return;
+
+      const order = ordersList[idx];
+      if (!order.orders_items) return;
+
+      let updatedItems = [...order.orders_items];
+      for (const { itemId, qty } of items) {
+        if (qty && qty > 0) {
+          const itemIdx = updatedItems.findIndex(i => Number(i.id) === Number(itemId));
+          if (itemIdx !== -1) {
+            const newCount = Number(updatedItems[itemIdx].count) - qty;
+            if (newCount <= 0) {
+              updatedItems = updatedItems.filter((_, i) => i !== itemIdx);
+            } else {
+              updatedItems = [...updatedItems];
+              updatedItems[itemIdx] = { ...updatedItems[itemIdx], count: newCount };
+            }
+          }
+        } else {
+          updatedItems = updatedItems.filter(i => Number(i.id) !== Number(itemId));
+        }
+      }
+      ordersList[idx] = { ...order, orders_items: updatedItems };
+    });
+
     // Handle deleteCheck OR closeOrder fulfilled to remove from books
     builder.addMatcher(
       (action) =>
@@ -117,7 +189,6 @@ const BooksSlice = createSlice({
         const orderId = action.meta.arg?.orderId;
         if (!orderId) return;
 
-        let ordersList = null;
         if (Array.isArray(state.books)) {
           state.books = state.books.filter(o => o.uuid !== orderId && o.id !== orderId && String(o.uuid) !== String(orderId));
         } else if (state.books && Array.isArray(state.books.data)) {
@@ -125,7 +196,7 @@ const BooksSlice = createSlice({
         }
       }
     );
-    // Listen for giftItem and discount (and sendOrdersItems if applicable)
+
     builder.addMatcher(
       (action) =>
         action.type === "orders/gift/fulfilled" ||
@@ -133,7 +204,6 @@ const BooksSlice = createSlice({
         action.type === "pos/orders/fulfilled" ||
         action.type === "orders/lockCheck/fulfilled" ||
         action.type === "orders/lock-check/fulfilled" ||
-        action.type === "orders/delete-item/fulfilled" ||
         action.type === "orders/updateItemPrice/fulfilled" ||
         action.type === "orders/updateItemCount/fulfilled" ||
         action.type === "orders/assign-customer/fulfilled" ||

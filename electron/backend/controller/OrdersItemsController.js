@@ -1551,34 +1551,13 @@ const onDeleteItemWithReason = async (req, res) => {
     );
     await transaction.commit();
 
-    // Sync trigger (AFTER commit so admin gets the updated data)
+    // Respond immediately — frontend will refresh via getActiveOrders after all deletions
+    res.status(200).json({ uuid: orderId, deletedItemId: itemId, success: true });
+
+    // Background tasks (non-blocking)
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    // Return updated order
-    const updatedOrder = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
-
-    res.status(200).json(updatedOrder);
 
   } catch (error) {
     if (transaction) {
@@ -1988,6 +1967,73 @@ module.exports = {
   onReturnCheck,
   onReopenOrder,
   onDeleteItemWithReason,
+  onBatchDeleteItems: async (req, res) => {
+    const { orderId } = req.params;
+    // items: [{ itemId, qty, reasonId }]
+    const { items } = req.body;
+
+    if (!orderId || !items || !items.length) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const transaction = await sequelize.transaction();
+    try {
+      for (const { itemId, qty, reasonId } of items) {
+        const item = await OrdersItemsModel.findOne({
+          where: { order_id: orderId, id: itemId },
+          transaction,
+        });
+        if (!item) continue; // already gone, skip
+
+        if (qty && qty > 0 && qty < item.count) {
+          item.count -= qty;
+          await item.save({ transaction });
+        } else {
+          item.is_delete_reason_id = reasonId || null;
+          await item.save({ transaction });
+          await item.destroy({ transaction });
+        }
+      }
+
+      // Recalculate totals once
+      const allItems = await OrdersItemsModel.findAll({
+        where: { order_id: orderId },
+        attributes: ["count", "price"],
+        transaction,
+      });
+      const total = allItems.reduce((sum, it) => {
+        return sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0);
+      }, 0);
+
+      const ord = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
+      let discount = 0, service = 0;
+      if (ord) {
+        const dVal = parseFloat(ord.discount_value) || 0;
+        const sVal = parseFloat(ord.service_value) || 0;
+        if (dVal > 0) discount = ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
+        if (sVal > 0) service = ord.service_type === "percent" ? (total * sVal) / 100 : sVal;
+      }
+      const netTotal = Math.max(total - discount + service, parseFloat(ord?.deposit || 0));
+
+      await OrdersModel.update(
+        { amount: total, total: netTotal, discount, service_charge: service, is_synced: 0 },
+        { where: { uuid: orderId }, transaction }
+      );
+
+      await transaction.commit();
+
+      res.status(200).json({ uuid: orderId, success: true, deletedItems: items.map(i => i.itemId) });
+
+      SyncService.triggerSync(orderId);
+      const { getIo } = require("../socket/MasterServer");
+      if (getIo()) getIo().emit("table_updated", { orderId });
+
+    } catch (error) {
+      try { await transaction.rollback(); } catch (e) {}
+      console.error("Batch Delete Error:", error);
+      res.status(500).json({ message: "Error deleting items", error: error.message });
+    }
+  },
   onUpdateItemCount,
   onAssignCustomer,
   incrementPrintCount,

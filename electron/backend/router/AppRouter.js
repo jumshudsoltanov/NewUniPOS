@@ -91,6 +91,11 @@ router.post(
   OrdersItemsController.onDeleteItemWithReason,
 );
 
+router.post(
+  "/orders-items/:orderId/batch-delete-items",
+  OrdersItemsController.onBatchDeleteItems,
+);
+
 router.patch(
   "/orders-items/:currentOrderId/merge-orders",
   OrdersItemsController.onMergeChecks,

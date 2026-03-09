@@ -174,6 +174,29 @@ export const deleteOrderItem = createAsyncThunk(
   },
 );
 
+export const batchDeleteOrderItems = createAsyncThunk(
+  "orders/batch-delete-items",
+  async ({ orderId, items, waiterName: passedWaiterName }, thunkAPI) => {
+    try {
+      const response = await axios.post(
+        `/orders-items/${orderId}/batch-delete-items`,
+        { items },
+      );
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Məhsullar silindi",
+        waiterName,
+        details: `${items.length} məhsul silindi`
+      }));
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  },
+);
+
 export const mergeChecks = createAsyncThunk(
   "orders/merge-check",
   async ({ currentOrderId, newOrderId, currentCheckId, newCheckId, currentTotal, newTotal, waiterName: passedWaiterName }, thunkAPI) => {
@@ -739,6 +762,27 @@ export const OrderSlice = createSlice({
     removeProduct: (state, action) => {
       state.products.splice(action.payload, 1);
     },
+    removeAllProductsById: (state, action) => {
+      // action.payload = productId (menu item id)
+      const productId = Number(action.payload);
+      state.products = state.products.filter(p => Number(p.id || p.product_id) !== productId);
+    },
+    replaceProductQuantity: (state, action) => {
+      // action.payload = { productId, newQty, price }
+      // Removes ALL entries for productId and adds back ONE entry with newQty
+      const { productId, newQty, price } = action.payload;
+      const pid = Number(productId);
+      const existing = state.products.find(p => Number(p.id || p.product_id) === pid);
+      state.products = state.products.filter(p => Number(p.id || p.product_id) !== pid);
+      if (newQty > 0 && existing) {
+        state.products.push({
+          ...existing,
+          quantity: newQty,
+          newOrder: newQty,
+          price: price !== undefined ? parseFloat(price) : parseFloat(existing.price || 0)
+        });
+      }
+    },
     addProducts: (state, action) => {
       const incomingProduct = action.payload;
 
@@ -844,6 +888,15 @@ export const OrderSlice = createSlice({
           state.pendingDeletions = state.pendingDeletions.filter(item => Number(item.itemId) !== Number(itemId));
         }
       })
+      .addCase(batchDeleteOrderItems.fulfilled, (state, action) => {
+        const deletedIds = action.payload?.deletedItems || [];
+        state.pendingDeletions = state.pendingDeletions.filter(
+          item => !deletedIds.includes(Number(item.itemId))
+        );
+      })
+      .addCase(batchDeleteOrderItems.rejected, (state) => {
+        // Keep pendingDeletions so user can retry
+      })
       .addCase(deleteOrderItems.fulfilled, (state, action) => {
         state.products = [];
       })
@@ -888,6 +941,8 @@ export const OrderSlice = createSlice({
 export const {
   addProducts,
   removeProduct,
+  removeAllProductsById,
+  replaceProductQuantity,
   sendOrders,
   clearOrders,
   updateCount,

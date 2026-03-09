@@ -28,7 +28,7 @@ import { getActiveOrders, removeOrderOptimistic } from "../../redux/Slices/Books
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems } from "../../redux/Slices/OrdersSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
@@ -251,19 +251,42 @@ const Check = () => {
       setIsSending(true);
 
       if (hasDeletions) {
-        await Promise.all(pendingDeletions.map(deletion =>
-          dispatch(deleteOrderItem({
-            orderId: deletion.orderId,
-            itemId: deletion.itemId,
-            reasonId: deletion.reasonId,
-            qty: deletion.type === 'partial' ? deletion.qty : undefined,
-            reasonName: deletion.reasonName,
-            productName: deletion.name,
-            waiterName
-          })).unwrap().catch(deleteError => {
-            console.error("Single Item Deletion Error:", deleteError);
-          })
-        ));
+        // Deduplicate by itemId: sum partial qtys, prefer full delete over partial
+        const deduplicatedDeletions = Object.values(
+          pendingDeletions.reduce((acc, deletion) => {
+            const key = String(deletion.itemId);
+            if (!acc[key]) {
+              acc[key] = { ...deletion };
+            } else {
+              if (deletion.type === 'full' || acc[key].type === 'full') {
+                acc[key].type = 'full';
+                acc[key].qty = undefined;
+              } else {
+                acc[key].qty = (acc[key].qty || 0) + (deletion.qty || 0);
+              }
+            }
+            return acc;
+          }, {})
+        );
+
+        // Single batch request — all items deleted in ONE backend transaction
+        await dispatch(batchDeleteOrderItems({
+          orderId: id,
+          items: deduplicatedDeletions.map(d => ({
+            itemId: d.itemId,
+            qty: d.type === 'partial' ? d.qty : undefined,
+            reasonId: d.reasonId,
+          })),
+          waiterName,
+        })).unwrap().catch(err => {
+          console.error("Batch Delete Error:", err);
+        });
+
+        // Refresh to get definitive server state
+        const profileId = loginedProfileData?.data?.profile?.id;
+        if (profileId) {
+          dispatch(getActiveOrders({ profileId }));
+        }
 
         const deletedItemsForPrint = pendingDeletions.map(d => {
           const { printers, categoryId } = getAllPrintersForItem(d);

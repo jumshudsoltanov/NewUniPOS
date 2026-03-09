@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
-import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, deleteOrderItem, addPendingDeletion, updateItemPrice, updateItemCount, saveLog } from "../../redux/Slices/OrdersSlice";
+import { splitOrder, giftItem, updateItemDiscount, updateCount, removeProduct, removeAllProductsById, replaceProductQuantity, deleteOrderItem, addPendingDeletion, updateItemPrice, updateItemCount, saveLog } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -246,13 +246,19 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 <button
                   className="sidebar-btn btn-delete"
                   onClick={() => {
-                    if (product.isNew) {
-                      const index = products.findIndex(p => p.id === (product.product_id || product.id));
-                      if (index !== -1) {
-                        dispatch(removeProduct(index));
+                    const productId = Number(product.product_id || product.id);
+                    if (product.isNew && product.localQuantity > 0) {
+                      // Remove the local (unsaved) portion immediately — no reason needed
+                      dispatch(removeAllProductsById(productId));
+                      if (!product.savedQuantity || product.savedQuantity <= 0) {
+                        // No DB items at all — just close
+                        onClose();
+                      } else {
+                        // DB items still remain — open reason modal for those
+                        onOpenDeleteModal('full', { ...product, localQuantity: 0, isNew: false, count: product.savedQuantity });
                       }
-                      onClose();
                     } else {
+                      // DB-only item — reason required
                       onOpenDeleteModal('full', product);
                     }
                   }}
@@ -350,12 +356,18 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     try {
                       // If qty is 0, trigger full delete
                       if (qty === 0) {
-                        if (product.isNew) {
-                          const index = products.findIndex(p => p.id === (product.product_id || product.id));
-                          if (index !== -1) {
-                            dispatch(removeProduct(index));
+                        const productId = Number(product.product_id || product.id);
+                        if (product.isNew && product.localQuantity > 0) {
+                          dispatch(removeAllProductsById(productId));
+                          if (!product.savedQuantity || product.savedQuantity <= 0) {
+                            onClose();
+                          } else {
+                            if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
+                              toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                              return;
+                            }
+                            onOpenDeleteModal('full', { ...product, localQuantity: 0, isNew: false, count: product.savedQuantity });
                           }
-                          onClose();
                         } else {
                           if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
                             toast.error("Sizin məhsul silmək icazəniz yoxdur!");
@@ -380,16 +392,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         return;
                       }
 
-                      if (product.isNew) {
-                        dispatch(
-                          updateCount({
-                            productId: product.product_id || product.id,
-                            orderItemId: product.isNew ? undefined : product.id,
-                            count: newLocalQty,
-                            price: inputValue,
-                            name: product.name,
-                          }),
-                        );
+                      if (product.isNew && !product.savedQuantity) {
+                        // Pure local item — replace all entries with correct qty atomically
+                        dispatch(replaceProductQuantity({
+                          productId: Number(product.product_id || product.id),
+                          newQty: newLocalQty,
+                          price: inputValue,
+                        }));
                         // Log quantity change for new items too
                         if (qty !== (product.count || 0)) {
                           const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
@@ -400,6 +409,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                             details: `${product.name || 'Məhsul'}: ${product.count || 0}-dən ${qty}-ə dəyişdi`
                           }));
                         }
+                        onClose(true);
+                        return;
                       } else {
                         // For existing items, handle price change immediately
                         const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
