@@ -110,7 +110,26 @@ const getLogin = async (req, res) => {
         console.error("[LOGIN] Database Update Error:", dbErr.message);
       }
     } else {
-      console.log(`[LOGIN] Slave/Mobile terminal (${terminalId}) logged in. Skipping local database overwrite.`);
+      console.log(`[LOGIN] Slave/Mobile terminal (${terminalId}) logged in. Ensuring local profile record exists for settings...`);
+      try {
+        const allowedFields = Object.keys(LoginModel.rawAttributes);
+        const filteredProfile = {};
+        Object.keys(profile).forEach(key => {
+          if (allowedFields.includes(key)) {
+            filteredProfile[key] = profile[key];
+          }
+        });
+
+        // Upsert profile record but keep is_master=0 to prevent slave from becoming master
+        await LoginModel.upsert({
+          ...filteredProfile,
+          id: profile.id,
+          is_master: 0,
+          is_master_slave_active: 0 // Slaves don't run master-slave logic
+        });
+      } catch (dbErr) {
+        console.error("[LOGIN] Local Profile Sync Error (Slave):", dbErr.message);
+      }
     }
 
     // Merge local metadata if it matches the current profile (to show correct logo etc)

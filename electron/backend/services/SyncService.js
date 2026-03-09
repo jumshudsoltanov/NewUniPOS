@@ -32,8 +32,7 @@ class SyncService {
         OrdersModel.count({ where: { is_synced: 1 } }),
         OrdersModel.count({
           where: {
-            [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }],
-            amount: { [Op.gt]: 0 }
+            [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }]
           },
         }),
       ]);
@@ -67,7 +66,10 @@ class SyncService {
         }
       }
 
-      const items = await OrdersItemsModel.findAll({ where: { order_id: orderId } });
+      const items = await OrdersItemsModel.findAll({ 
+        where: { order_id: orderId },
+        paranoid: false // Essential: Include soft-deleted items so the server knows they were deleted
+      });
       const logs = await OrderLogsModel.findAll({ where: { order_id: orderId } });
       const payments = await OrderPaymentsModel.findAll({ where: { order_id: orderId } });
       let table = order.table_id ? await TablesModel.findOne({ where: { id: order.table_id } }) : null;
@@ -108,7 +110,7 @@ class SyncService {
       }
 
       const pendingOrders = await OrdersModel.findAll({
-        where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }], amount: { [Op.gt]: 0 } },
+        where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }] },
         limit: 10, // Small batches
       });
 

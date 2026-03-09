@@ -407,12 +407,11 @@ const onDeleteOrderItems = async (req, res) => {
       where: { order_id: orderId },
     });
     const updateTotal = await OrdersModel.update(
-      { total: 0 },
+      { amount: 0, total: 0, is_synced: 0 },
       {
         where: { uuid: orderId },
       },
     );
-    await OrdersModel.update({ is_synced: 0 }, { where: { uuid: orderId } });
     SyncService.triggerSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });

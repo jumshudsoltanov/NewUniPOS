@@ -49,9 +49,7 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
             const baseURL = `http://${effectiveIp}:55667`;
             console.warn(`[CONNECTION] Mobile/Web Mode: Connecting to ${baseURL} (Source: ${urlMasterIp ? 'URL Param' : (savedMasterIp ? 'LocalStorage' : 'Fallback Hostname')})`);
             apiConfig.defaults.baseURL = `${baseURL}/api`;
-
-            // Web/Mobile always needs socket to delegate prints to master,
-            // regardless of is_master_slave_active or disableSocket flag
+            
             socket = io(baseURL, {
                 transports: ['websocket', 'polling'],
                 reconnection: true,

@@ -26,6 +26,7 @@ import Settings from "./components/Settings/Settings";
 import BlockPage from "./components/BlockPage/BlockPage";
 import { initNetwork, getSocket } from "./utils/apiConfig";
 import { addNotification } from "./utils/notificationService";
+import { toast } from "react-toastify";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -101,12 +102,12 @@ function AppContent() {
   useEffect(() => {
     const socket = getSocket();
     
-    // A more reliable check points out if the socket connected to itself (localhost) then it IS the master node
-    // or if the redudant flag isMasterTerminal is true.
     const isLocalhostMaster = socket?.io?.uri?.includes("localhost") || socket?.io?.uri?.includes("127.0.0.1");
     const shouldListenToDelegatedPrints = isMasterTerminal || isLocalhostMaster;
 
-    if (socket && shouldListenToDelegatedPrints) {
+    if (!socket) return;
+
+    if (shouldListenToDelegatedPrints) {
       console.warn("[MASTER] Attaching delegated print listener...");
 
       const handleDelegatedPrint = async (data) => {
@@ -120,10 +121,9 @@ function AppContent() {
         }
       };
 
-      socket.off("print_delegated"); // Avoid duplicates
+      socket.off("print_delegated");
       socket.on("print_delegated", handleDelegatedPrint);
 
-      // KDS Ready listener
       socket.on("kitchen_item_ready", (data) => {
         console.warn("🍳 Kitchen Item Ready:", data);
         addNotification(
@@ -133,7 +133,7 @@ function AppContent() {
         );
         toast.success(`${data.tableName}: ${data.productName} hazırdır!`, {
           icon: '🍳',
-          duration: 5000
+          autoClose: 5000
         });
       });
 
@@ -243,7 +243,6 @@ function AppContent() {
       }
     };
 
-    // Safety timeout: əgər initApp 10 saniyədən çox çəkərsə, məcburi loading-i bağla
     const safetyTimer = setTimeout(() => {
       setShowInitialLoading(false);
     }, 10000);

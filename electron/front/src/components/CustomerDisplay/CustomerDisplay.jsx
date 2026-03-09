@@ -70,8 +70,16 @@ const CustomerDisplay = () => {
         // Connect to the local backend on port 55667
         // On a tablet, this would connect to the POS's IP address (e.g. http://192.168.1.X:55667)
         // Since the tablet loads the frontend from the POS IP:5173, we can use window.location.hostname
+        const savedMasterIp = localStorage.getItem("master_ip");
         const hostname = window.location.hostname || "localhost";
-        const backendUrl = `http://${hostname}:55667`;
+        const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+        
+        // If we are on localhost but have a saved master_ip, we are likely a slave terminal
+        const effectiveHostname = (isLocalhost && savedMasterIp) ? savedMasterIp : hostname;
+        const backendUrl = `http://${effectiveHostname}:55667`;
+        
+        console.warn(`[CUSTOMER_DISPLAY] Connecting to socket at: ${backendUrl}`);
+        
         const newSocket = io(backendUrl, {
             transports: ['websocket', 'polling'],
             reconnection: true,
