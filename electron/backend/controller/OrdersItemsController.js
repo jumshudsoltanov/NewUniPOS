@@ -1247,18 +1247,27 @@ const onDeleteCheck = async (req, res) => {
   }
 
   try {
+    // Check if the order has any items
+    const itemCount = await OrdersItemsModel.count({ where: { order_id: orderId } });
+    const hasItems = itemCount > 0;
+
     await OrdersModel.update(
       {
         status: 3,
         end_date: new Date(),
         is_delete_reason_id: reason,
-        is_synced: 0
+        // Empty orders (no items) don't need to sync to admin
+        is_synced: hasItems ? 0 : 1
       },
       { where: { uuid: orderId } },
     );
-    SyncService.triggerSync(orderId);
+
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
+
+    if (hasItems) {
+      SyncService.triggerSync(orderId);
+    }
 
     return res.status(200).json({ message: "success" });
   } catch (error) {

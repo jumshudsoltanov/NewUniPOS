@@ -18,20 +18,41 @@ class SyncService {
     this.lastSyncTime = new Date();
     console.log("[SYNC_INIT] SyncService instance created.");
 
-    // Start interval
+    // Start interval — retry every 15s, also handles reconnect after internet drop
     setInterval(() => {
       if (global.isMasterNode && !this.isSyncing) {
         this.syncPendingOrders().catch(err => console.error("[SYNC_INTERVAL_ERR]", err));
       }
-    }, 15000); // 15 seconds
+    }, 15000);
+
+    // Extra reconnect check: if offline, poll every 5s until back online, then trigger sync
+    this._offlinePoller = null;
+    this._wasOffline = false;
+    setInterval(async () => {
+      if (!global.isMasterNode) return;
+      const online = await this.checkConnectivity().catch(() => false);
+      if (!online) {
+        this._wasOffline = true;
+      } else if (this._wasOffline) {
+        this._wasOffline = false;
+        console.log("[SYNC_RECONNECT] Internet restored — triggering sync...");
+        if (!this.isSyncing) {
+          this.syncPendingOrders().catch(err => console.error("[SYNC_RECONNECT_ERR]", err));
+        }
+      }
+    }, 5000);
   }
 
   async getSyncStatus() {
     try {
+      const currentProfileId = await this.getCurrentProfileId();
+      const profileFilter = currentProfileId ? { profile_id: currentProfileId } : {};
+
       const [totalSyncedCount, pendingCount] = await Promise.all([
-        OrdersModel.count({ where: { is_synced: 1 } }),
+        OrdersModel.count({ where: { ...profileFilter, is_synced: 1 } }),
         OrdersModel.count({
           where: {
+            ...profileFilter,
             [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }]
           },
         }),
@@ -50,16 +71,20 @@ class SyncService {
 
   async triggerSync(orderId) {
     try {
-      const order = await OrdersModel.findOne({ where: { uuid: orderId } });
+      const order = await OrdersModel.findOne({ 
+        where: { uuid: orderId },
+        paranoid: false,
+        attributes: { include: ["deleted_at"] }
+      });
       if (!order) return;
 
       // Ensure profile_id exists (critical for routing)
       let profileId = order.profile_id;
       if (!profileId) {
-        const profile = await LoginModel.findOne();
+        const profile = await LoginModel.findOne({ order: [['updated_at', 'DESC']] });
         profileId = profile?.id;
         if (profileId) {
-          await OrdersModel.update({ profile_id: profileId }, { where: { uuid: orderId } });
+          await OrdersModel.update({ profile_id: profileId }, { where: { uuid: orderId } }, { paranoid: false });
           console.log(`[SYNC] Recovered profile_id ${profileId} for order ${orderId}`);
         } else {
           throw new Error("Missing profile_id and could not recover from LoginModel");
@@ -67,19 +92,48 @@ class SyncService {
       }
 
       const items = await OrdersItemsModel.findAll({ 
-        where: { order_id: orderId },
-        paranoid: false // Essential: Include soft-deleted items so the server knows they were deleted
+        where: { order_id: order.uuid },
+        paranoid: false,
+        attributes: { include: ["deleted_at"] }
       });
-      const logs = await OrderLogsModel.findAll({ where: { order_id: orderId } });
-      const payments = await OrderPaymentsModel.findAll({ where: { order_id: orderId } });
+      const logs = await OrderLogsModel.findAll({ 
+        where: { order_id: order.uuid },
+        paranoid: false,
+        attributes: { include: ["deleted_at"] }
+      });
+      const payments = await OrderPaymentsModel.findAll({ 
+        where: { order_id: order.uuid },
+        paranoid: false,
+        attributes: { include: ["deleted_at"] }
+      });
       let table = order.table_id ? await TablesModel.findOne({ where: { id: order.table_id } }) : null;
 
       const payload = {
         profile_id: profileId,
-        orders: [order.get({ plain: true })],
-        items: items.map(item => item.get({ plain: true })),
+        orders: [(() => {
+          const plain = order.get({ plain: true });
+          if (plain.deleted_at) {
+            plain.status = 3; // Deleted status for Admin
+            plain.amount = 0;
+            plain.total = 0;
+          }
+          return plain;
+        })()],
+        items: items.map(item => {
+          const plain = item.get({ plain: true });
+          if (plain.deleted_at) {
+            plain.count = 0;
+          }
+          return plain;
+        }),
         logs: logs.map(log => log.get({ plain: true })),
-        payments: payments.map(payment => payment.get({ plain: true })),
+        payments: payments.map(payment => {
+          const plain = payment.get({ plain: true });
+          if (plain.deleted_at) {
+            plain.paid = 0;
+          }
+          return plain;
+        }),
         tables: table ? [table.get({ plain: true })] : [],
       };
 
@@ -98,6 +152,11 @@ class SyncService {
     }
   }
 
+  async getCurrentProfileId() {
+    const profile = await LoginModel.findOne({ order: [['updated_at', 'DESC']] });
+    return profile?.id || null;
+  }
+
   async syncPendingOrders() {
     if (this.isSyncing) return;
     this.isSyncing = true;
@@ -109,9 +168,24 @@ class SyncService {
         return;
       }
 
+      // Only sync orders belonging to the currently active profile
+      const currentProfileId = await this.getCurrentProfileId();
+      if (!currentProfileId) {
+        console.warn("[SYNC_LOOP] No active profile found, skipping sync.");
+        this.isSyncing = false;
+        return;
+      }
+
       const pendingOrders = await OrdersModel.findAll({
-        where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }] },
-        limit: 10, // Small batches
+        where: {
+          profile_id: currentProfileId,
+          // Skip empty deleted orders (status=3 with amount=0 and no items sent)
+          [Op.and]: [
+            { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }] },
+            { [Op.not]: { status: 3, amount: 0 } }
+          ]
+        },
+        limit: 10,
       });
 
       if (pendingOrders.length === 0) {
@@ -119,7 +193,7 @@ class SyncService {
         return;
       }
 
-      console.log(`[SYNC_LOOP] Found ${pendingOrders.length} orders. Processing...`);
+      console.log(`[SYNC_LOOP] Profile ${currentProfileId}: Found ${pendingOrders.length} orders. Processing...`);
       for (const order of pendingOrders) {
         try {
           await this.triggerSync(order.uuid);
