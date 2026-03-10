@@ -223,6 +223,14 @@ const CheckOver = () => {
             toast.error("Zəhmət olmasa ödənişsiz bağlanış səbəbini seçin");
             return;
         }
+        if (viewMode === "PAYMENT") {
+            const paid = Number(calcValue || totalPaidInMethods || 0);
+            const toPay = Number(calcTotal.sumTotal);
+            if (paid < toPay) {
+                toast.error(`Ödəniş çatışmır! ${(toPay - paid).toFixed(2)} ₼ əskikdir`);
+                return;
+            }
+        }
 
         const taxConfigs = loginedProfileData?.data?.taxes || [];
         if (viewMode === "PAYMENT" && taxPrint && taxConfigs.length > 1) {
@@ -519,6 +527,13 @@ const CheckOver = () => {
                                         onChange={(e) => setPrintCheck(e.target.checked)}
                                     />
                                 </div>
+
+                                {Number(remainingBalance) > 0 && (
+                                    <div className="change-display">
+                                        <span className="change-label">Qalıq:</span>
+                                        <span className="change-amount">{remainingBalance} ₼</span>
+                                    </div>
+                                )}
 
                                 <div className="action-buttons-section mt-auto">
                                     <button

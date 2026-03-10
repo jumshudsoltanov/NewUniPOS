@@ -565,6 +565,30 @@
     }
 }
 
+/* Change (Qalıq) Display */
+.change-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ECFDF5;
+    border: 1px solid #10B981;
+    border-radius: 6px;
+    padding: 8px 16px;
+    margin-bottom: 8px;
+}
+
+.change-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #065F46;
+}
+
+.change-amount {
+    font-size: 15px;
+    font-weight: 700;
+    color: #059669;
+}
+
 .checkover-tax-modal-wide {
     max-width: 640px !important;
 }

@@ -138,7 +138,6 @@ function createWindow() {
   }
 
   let customerDisplayInterval = null;
-  let isCustomerDisplayManuallyClosed = false; // Flag to prevent auto-revive if user toggled it off explicitly via IPC
 
   async function checkCustomerDisplayAutoStart() {
     try {

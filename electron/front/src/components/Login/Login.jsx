@@ -9,7 +9,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 
 
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { authPos } from "../../redux/Slices/LoginSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
@@ -85,6 +85,12 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+  // If already logged in, go directly to PIN without showing login screen
+  const storageProfile = (() => {
+    try { return JSON.parse(localStorage.getItem("profile")); } catch { return null; }
+  })();
+  if (storageProfile) return <Navigate to="/pin" replace />;
 
   let fallbackProfileData = null;
   try {

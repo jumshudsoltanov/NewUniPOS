@@ -954,9 +954,9 @@ const DevicesModal = ({ show, onHide }) => {
                                             <div className="qr-wrapper">
                                                 <QRCode
                                                     value={localIp}
-                                                    size={200}
+                                                    size={window.innerHeight < 700 ? 140 : 180}
                                                     level="H"
-                                                    style={{ height: "auto", maxWidth: "200px", margin: "0 auto" }}
+                                                    style={{ height: "auto", maxWidth: "100%", margin: "0 auto" }}
                                                 />
                                                 <div className="ip-badge">
                                                     IP: {localIp}

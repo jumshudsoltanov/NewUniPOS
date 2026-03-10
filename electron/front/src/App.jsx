@@ -177,7 +177,8 @@ function AppContent() {
         if (!storageData || (isMasterSlaveActive && !isMaster)) {
           await initNetwork(false, !isMasterSlaveActive);
         } else {
-          await initNetwork(true, !isMasterSlaveActive);
+          // Always enable socket for local master — needed for customer display broadcasts
+          await initNetwork(true, false);
         }
 
         if (window.electronAPI && window.electronAPI.reEvaluateRole) {
