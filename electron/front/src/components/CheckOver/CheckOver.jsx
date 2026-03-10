@@ -157,19 +157,20 @@ const CheckOver = () => {
             return;
         }
 
-        const canSplit = selectedMethods.some(m => Number(m.is_split) === 1) || Number(method.is_split) === 1;
+        const canSplit = selectedMethods.length === 1 && (
+            selectedMethods.some(m => Number(m.is_split) === 1) || Number(method.is_split) === 1
+        );
 
-        if (canSplit && selectedMethods.length < 2) {
-            const firstAmount = Number(selectedMethods[0]?.amount || (calcTotal.sumTotal / 2)).toFixed(2);
-            const secondAmount = (Number(calcTotal.sumTotal) - Number(firstAmount)).toFixed(2);
-
+        if (canSplit) {
+            const half = (Number(calcTotal.sumTotal) / 2).toFixed(2);
+            const secondAmount = (Number(calcTotal.sumTotal) - Number(half)).toFixed(2);
             const newMethods = [
-                { ...selectedMethods[0], amount: firstAmount },
+                { ...selectedMethods[0], amount: half },
                 { ...method, amount: secondAmount }
             ];
             setSelectedMethods(newMethods);
         } else {
-            setSelectedMethods([{ ...method, amount: "" }]);
+            setSelectedMethods([{ ...method, amount: calcTotal.sumTotal }]);
         }
     };
 
@@ -448,6 +449,7 @@ const CheckOver = () => {
                                 <div className="payment-methods gap-3 d-flex flex-column">
                                     {paymentMethods?.map((method) => {
                                         const isSelected = selectedMethods.find(m => m.id === method.id);
+                                        const idx = selectedMethods.findIndex(m => m.id === method.id);
                                         return (
                                             <div key={method.id}>
                                                 <div
@@ -469,11 +471,8 @@ const CheckOver = () => {
                                                                         type="number"
                                                                         className="split-amount-input"
                                                                         value={isSelected.amount}
-                                                                        onChange={(e) => {
-                                                                            const idx = selectedMethods.findIndex(m => m.id === method.id);
-                                                                            handleAmountChange(idx, e.target.value);
-                                                                        }}
-                                                                        autoFocus
+                                                                        onChange={(e) => handleAmountChange(idx, e.target.value)}
+                                                                        autoFocus={idx === 0}
                                                                     />
                                                                     <span className="currency-sym">₼</span>
                                                                 </div>
