@@ -82,21 +82,29 @@ const ReportModal = ({ show, onClose }) => {
 
         const html = `
             <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', monospace; font-size: 11px; color: #000; }
-                .report-data-header { border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 10px; }
-                .report-data-info p, .report-data-time span { font-size: 10px; }
-                .report-data-time { margin-top: 4px; }
-                .section-title { font-weight: bold; font-size: 11px; border-left: 3px solid #000; padding: 2px 6px; margin: 8px 0 4px; background: none; color: #000; }
-                .receipt-row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dotted #bbb; }
+                * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', 'Courier', monospace; color: #000 !important; }
+                .report-view { width: 100%; max-width: 80mm; padding: 0 5mm; }
+                .report-data-header { border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 20px; text-align: left; }
+                .report-data-info p { font-size: 15px; margin-bottom: 6px; font-weight: 900; }
+                .report-data-info p span { font-weight: bold; margin-right: 5px; }
+                .report-data-time { margin-top: 10px; }
+                .report-data-time span { font-size: 14px; font-weight: 900; }
+                .section-title { font-weight: 900; font-size: 18px; border-bottom: 2px solid #000; padding-bottom: 6px; margin: 25px 0 15px; text-transform: uppercase; text-align: center; }
+                .receipt-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #666; align-items: center; }
+                .receipt-row > span:first-child { font-size: 16px; font-weight: 900; }
                 .receipt-row .dots { display: none; }
-                .receipt-row .value { font-weight: bold; }
-                .total-line { border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; font-size: 13px; padding: 3px 0; margin-top: 4px; }
-                .report-details-section { margin-top: 10px; padding-top: 6px; border-top: 1px dashed #000; }
-                table { width: 100%; border-collapse: collapse; font-size: 10px; }
-                th, td { border-bottom: 1px dotted #999; padding: 2px 3px; }
+                .receipt-row .value { font-size: 17px; font-weight: 900; }
+                .total-line { border-top: 2px solid #000; border-bottom: 3px double #000; margin-top: 15px; padding: 12px 0; }
+                .total-line > span:first-child { font-size: 20px !important; font-weight: 900 !important; text-transform: uppercase; }
+                .total-line .value { font-size: 22px !important; font-weight: 900 !important; }
+                .report-details-section { margin-top: 25px; padding-top: 15px; border-top: 2px dashed #000; }
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 15px; }
+                th { border-bottom: 2px solid #000; padding: 8px 3px; font-size: 15px; font-weight: 900; text-align: left; text-transform: uppercase; }
+                td { border-bottom: 1px dashed #666; padding: 8px 3px; font-size: 15px; font-weight: 900; word-break: break-word; }
                 .text-end { text-align: right; }
                 .text-center { text-align: center; }
                 .alert { display: none; }
+                i, svg, button { display: none !important; }
             </style>
             ${reportEl.innerHTML}
         `;
