@@ -186,6 +186,7 @@ const Pin = () => {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pinSyncCounts, setPinSyncCounts] = useState(null);
   const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
   const [appVersion, setAppVersion] = useState(null);
 
@@ -245,26 +246,30 @@ const Pin = () => {
     }
 
     setIsRefreshing(true);
-    const toastId = toast.loading("Məlumatlar arxa planda yenilənir...");
+    setPinSyncCounts(null);
     try {
-      // 1. Force the backend to fetch fresh data from the remote API (api.unipos.tech)
       const profileId = activeProfileData.data.profile.id;
-      await axios.post(`http://localhost:55667/api/sync/refresh/${profileId}`);
-
-      // 2. Fetch the newly saved data from local SQLite into the Redux store
-      await Promise.all([
+      const [syncRes] = await Promise.all([
+        axios.post(`http://localhost:55667/api/sync/refresh/${profileId}`),
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
         dispatch(menuWithCategories(profileId)).unwrap(),
         dispatch(menuWithGeneralCategories(profileId)).unwrap(),
         new Promise(resolve => setTimeout(resolve, 2000))
       ]);
-      toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
+
+      if (syncRes?.data?.counts) {
+        setPinSyncCounts(syncRes.data.counts);
+        await new Promise(resolve => setTimeout(resolve, 1800));
+      } else {
+        toast.success("Məlumatlar uğurla yeniləndi!");
+      }
     } catch (error) {
       console.error("Yeniləmə xətası:", error);
-      toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
+      toast.error("Yeniləmə zamanı xəta baş verdi.");
     } finally {
       setIsRefreshing(false);
+      setPinSyncCounts(null);
     }
   };
 
@@ -582,9 +587,6 @@ const Pin = () => {
       <SupportModal
         isOpen={isSupportModalOpen}
         onClose={() => setIsSupportModalOpen(false)}
-        terminalId={terminalInfo?.name || "P3257"}
-        terminalName={terminalInfo?.terminal_id || "Terminal 1"}
-        branchName={profileInfo?.username || "Main"}
       />
 
       <SettingsMenu
@@ -597,7 +599,7 @@ const Pin = () => {
         onQuitApp={handleQuitApp}
       />
 
-      <RefreshLoader isOpen={isRefreshing} />
+      <RefreshLoader isOpen={isRefreshing} syncCounts={pinSyncCounts} />
 
       <BrandsModal
         show={isBrandsModalOpen}

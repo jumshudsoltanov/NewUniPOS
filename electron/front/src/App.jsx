@@ -254,23 +254,26 @@ function AppContent() {
 
   if (showInitialLoading) {
     return (
-      <div
-        className="loginLoadingState"
-        style={{
-          height: "100vh",
-          background: "#F3F4F6",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div className="premium-loader">
-          <div className="loader-ring"></div>
-          <div className="loader-dot"></div>
+      <>
+        <UpdateNotification />
+        <div
+          className="loginLoadingState"
+          style={{
+            height: "100vh",
+            background: "#F3F4F6",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div className="premium-loader">
+            <div className="loader-ring"></div>
+            <div className="loader-dot"></div>
+          </div>
+          <p className="loadingText">Sistem yüklənir...</p>
         </div>
-        <p className="loadingText">Sistem yüklənir...</p>
-      </div>
+      </>
     );
   }
 

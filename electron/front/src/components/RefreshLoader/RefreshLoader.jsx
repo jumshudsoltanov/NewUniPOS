@@ -2,49 +2,123 @@ import React, { useEffect, useState } from 'react';
 import DefaultLogo from "../../assets/images/unipos_logo.png";
 import "./RefreshLoader.css";
 
-const RefreshLoader = ({ isOpen, text = "Məlumatlar yenilənir...", duration = 5000 }) => {
+const SYNC_STEPS = [
+    { key: "products",          label: "Məhsullar",         icon: "bi-box-seam" },
+    { key: "categories",        label: "Alt kateqoriyalar",  icon: "bi-tag" },
+    { key: "generalCategories", label: "Kateqoriyalar",      icon: "bi-grid" },
+    { key: "tables",            label: "Masalar",            icon: "bi-table" },
+    { key: "tableGroups",       label: "Masa qrupları",      icon: "bi-diagram-3" },
+    { key: "waiters",           label: "Ofisiantlar",        icon: "bi-person-badge" },
+    { key: "paymentMethods",    label: "Ödəniş üsulları",   icon: "bi-credit-card" },
+    { key: "tags",              label: "Etiketlər",          icon: "bi-bookmark" },
+    { key: "printers",          label: "Printerlər",         icon: "bi-printer" },
+    { key: "salesTypes",        label: "Satış növləri",      icon: "bi-cart" },
+];
+
+const RefreshLoader = ({ isOpen, syncCounts }) => {
     const [progress, setProgress] = useState(0);
+    const [visibleSteps, setVisibleSteps] = useState(0);
+    const [isDone, setIsDone] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
             setProgress(0);
+            setVisibleSteps(0);
+            setIsDone(false);
             return;
         }
 
-        const intervalTime = 50; // update every 50ms
-        const steps = duration / intervalTime;
-        let currentStep = 0;
-
+        const duration = 4000;
+        const intervalTime = 40;
+        const totalSteps = duration / intervalTime;
+        let current = 0;
         const interval = setInterval(() => {
-            currentStep++;
-            const newProgress = Math.min((currentStep / steps) * 100, 100);
-            setProgress(newProgress);
-            if (currentStep >= steps) {
-                clearInterval(interval);
-            }
+            current++;
+            setProgress(Math.min((current / totalSteps) * 92, 92));
+            if (current >= totalSteps) clearInterval(interval);
         }, intervalTime);
 
-        return () => clearInterval(interval);
-    }, [isOpen, duration]);
+        let stepIndex = 0;
+        const stepInterval = setInterval(() => {
+            stepIndex++;
+            setVisibleSteps(stepIndex);
+            if (stepIndex >= SYNC_STEPS.length) clearInterval(stepInterval);
+        }, 350);
+
+        return () => {
+            clearInterval(interval);
+            clearInterval(stepInterval);
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (syncCounts) {
+            setProgress(100);
+            setVisibleSteps(SYNC_STEPS.length);
+            setTimeout(() => setIsDone(true), 300);
+        }
+    }, [syncCounts]);
 
     if (!isOpen) return null;
 
-    const currentItems = Math.floor((progress / 100) * 500);
+    const totalCount = syncCounts
+        ? Object.values(syncCounts).reduce((a, b) => a + b, 0)
+        : null;
 
     return (
-        <div className="refresh-loader-overlay">
-            <div className="refresh-loader-content">
-                <img src={DefaultLogo} alt="UniPOS" className="refresh-loader-logo" />
-
-                <div className="refresh-loader-status">{text}</div>
-                <div className="refresh-loader-count">{currentItems} / 500</div>
-
-                <div className="refresh-loader-progress-container">
-                    <div className="refresh-loader-progress-bar" style={{ width: `${progress}%` }}></div>
+        <div className="rl-overlay">
+            <div className="rl-card">
+                <div className="rl-logo-wrap">
+                    <img src={DefaultLogo} alt="UniPOS" className="rl-logo" />
                 </div>
 
-                <div className="refresh-loader-subtext">
-                    <span className="refresh-loader-message">*Məlumatlar yenilənir...</span>
+                <div className={`rl-status ${isDone ? "done" : ""}`}>
+                    {isDone ? (
+                        <>
+                            <span className="rl-check-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                    <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </span>
+                            Sinxronizasiya tamamlandı
+                            {totalCount !== null && (
+                                <span className="rl-total-badge">{totalCount} qeyd</span>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <span className="rl-spinner" />
+                            Məlumatlar yenilənir...
+                        </>
+                    )}
+                </div>
+
+                <div className="rl-progress-track">
+                    <div className="rl-progress-fill" style={{ width: `${progress}%` }} />
+                </div>
+
+                <div className="rl-steps">
+                    {SYNC_STEPS.slice(0, visibleSteps).map((step) => {
+                        const count = syncCounts?.[step.key];
+                        const done = count !== undefined;
+                        return (
+                            <div key={step.key} className={`rl-step ${done ? "done" : "loading"}`}>
+                                <span className="rl-step-icon">
+                                    {done ? (
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                            <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    ) : (
+                                        <i className={`bi ${step.icon}`} />
+                                    )}
+                                </span>
+                                <span className="rl-step-label">{step.label}</span>
+                                <span className="rl-step-count">
+                                    {done ? count : <span className="rl-dots" />}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>

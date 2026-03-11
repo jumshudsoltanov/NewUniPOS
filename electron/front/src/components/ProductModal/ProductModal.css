@@ -4,7 +4,6 @@
     border: none;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-    max-height: 85vh;
     display: flex;
     flex-direction: column;
 }
@@ -61,7 +60,6 @@
 .product-modal-body {
     padding: 20px;
     background: white;
-    overflow-y: auto;
     flex: 1;
 }
 
@@ -274,10 +272,12 @@
 @media (max-width: 767px) {
     .product-modal .modal-content {
         max-height: 95vh;
+        overflow: hidden;
     }
 
     .product-modal-body {
         padding: 15px;
+        overflow-y: auto;
     }
 
     .form-group-custom {

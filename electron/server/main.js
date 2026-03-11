@@ -803,11 +803,31 @@ app.whenReady().then(() => {
     autoUpdater.quitAndInstall(true, true);
   });
 
-  if (!isDev) {
-    autoUpdater.checkForUpdatesAndNotify().catch(err => {
-      console.error("[AUTO-UPDATE] Yenilənmə yoxlanışı zamanı xəta:", err ? (err.message || err.toString()) : "Naməlum xəta");
-    });
-  }
+  // Delay 4s so React has time to mount and register IPC listeners
+  setTimeout(() => {
+    if (isDev) {
+      // Dev mode: simulate update states for UI testing
+      if (mainWindow) mainWindow.webContents.send("checking-for-update");
+      setTimeout(() => {
+        if (mainWindow) mainWindow.webContents.send("update-available", { version: "99.9.9" });
+        let p = 0;
+        const interval = setInterval(() => {
+          p += 20;
+          if (mainWindow) mainWindow.webContents.send("update-download-progress", p);
+          if (p >= 100) {
+            clearInterval(interval);
+            setTimeout(() => {
+              if (mainWindow) mainWindow.webContents.send("update-downloaded", {});
+            }, 500);
+          }
+        }, 600);
+      }, 2000);
+    } else {
+      autoUpdater.checkForUpdatesAndNotify().catch(err => {
+        console.error("[AUTO-UPDATE] Yenilənmə yoxlanışı zamanı xəta:", err ? (err.message || err.toString()) : "Naməlum xəta");
+      });
+    }
+  }, 4000);
   // ----------------------------------
 
   app.on("activate", () => {

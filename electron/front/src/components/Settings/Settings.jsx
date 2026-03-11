@@ -25,6 +25,7 @@ const Settings = () => {
     const [showCustomersModal, setShowCustomersModal] = useState(false);
     const [showDevicesModal, setShowDevicesModal] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [syncCounts, setSyncCounts] = useState(null);
     const [anyDeskId, setAnyDeskId] = useState(null);
     const [showClock, setShowClock] = useState(() => {
         return localStorage.getItem("showHeaderClock") === "true";
@@ -85,15 +86,17 @@ const Settings = () => {
         }
 
         setIsRefreshing(true);
+        setSyncCounts(null);
         const toastId = toast.loading("Məlumatlar yenilənir...");
         try {
             const profileId = loginedProfileData.data.profile.id;
-            await Promise.all([
+            const [syncRes] = await Promise.all([
                 apiConfig.post(`/sync/refresh/${profileId}`),
                 dispatch(getTableGroups(profileId)).unwrap(),
                 dispatch(getActiveOrders({ profileId })).unwrap(),
                 new Promise(resolve => setTimeout(resolve, 3000))
             ]);
+            if (syncRes?.data?.counts) setSyncCounts(syncRes.data.counts);
 
             const storageData = JSON.parse(localStorage.getItem("profile"));
             if (storageData) {
@@ -302,7 +305,7 @@ const Settings = () => {
             />
 
             {/* Refreshing Overlay */}
-            <RefreshLoader isOpen={isRefreshing} />
+            <RefreshLoader isOpen={isRefreshing} syncCounts={syncCounts} />
         </>
     );
 };

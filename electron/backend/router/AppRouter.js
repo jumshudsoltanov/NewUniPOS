@@ -208,6 +208,17 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     const { getPaymentMethods } = require("../data/PaymentMethodsData");
     const { getTags } = require("../data/TagsData");
     const { getSalesTypes } = require("../data/SalesTypesData");
+    const ProductsModel = require("../model/ProductsModel");
+    const CategoriesModel = require("../model/CategoriesModel");
+    const GeneralCategoriesModel = require("../model/GeneralCategoriesModel");
+    const TablesModel = require("../model/TablesModel");
+    const TableGroupsModel = require("../model/TableGroupsModel");
+    const WaitersModel = require("../model/WaitersModel");
+    const TagsModel = require("../model/TagsModel");
+    const PaymentMethodsModel = require("../model/PaymentMethodsModel");
+    const PrintersModel = require("../model/PrintersModel");
+    const SalesTypesModal = require("../model/SalesTypesModal");
+
     const profileId = req.params.profileId;
     await Promise.all([
       getWaitersList(profileId),
@@ -221,7 +232,25 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
       getSalesTypes(profileId),
       getPrinters(profileId),
     ]);
-    res.json({ success: true, message: "Data synced" });
+
+    const w = { where: { profile_id: profileId } };
+    const [products, categories, generalCategories, tables, tableGroups, waiters, tags, paymentMethods, printers, salesTypes] = await Promise.all([
+      ProductsModel.count(w),
+      CategoriesModel.count(w),
+      GeneralCategoriesModel.count(w),
+      TablesModel.count(w),
+      TableGroupsModel.count(w),
+      WaitersModel.count(w),
+      TagsModel.count(w),
+      PaymentMethodsModel.count(w),
+      PrintersModel.count(w),
+      SalesTypesModal.count(w),
+    ]);
+
+    res.json({
+      success: true,
+      counts: { products, categories, generalCategories, tables, tableGroups, waiters, tags, paymentMethods, printers, salesTypes }
+    });
   } catch (e) {
     console.error("Sync refresh error:", e.message);
     res.status(500).json({ success: false, message: e.message });

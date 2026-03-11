@@ -1,13 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import "./SupportModal.css";
 
-const SupportModal = ({ isOpen, onClose, terminalId, terminalName, branchName }) => {
+const SupportModal = ({ isOpen, onClose }) => {
+    const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const [appVersion, setAppVersion] = useState(null);
+
+    useEffect(() => {
+        if (window.electronAPI?.getAppVersion) {
+            window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
+        }
+    }, []);
+
     if (!isOpen) return null;
+
+    const terminal = loginedProfileData?.data?.terminal || {};
+    const profile  = loginedProfileData?.data?.profile  || {};
+
+    const terminalId = terminal.terminal_id || terminal.id || "—";
+    const branchName = profile.username || profile.name || "—";
+    const brandName  = profile.name || "UniPOS";
+    const version      = appVersion ? `v${appVersion}` : "";
 
     const phoneNumber = "+994775012507";
 
-    // QR kod URL - WhatsApp link
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://wa.me/994775012507`;
+    // Pre-filled WhatsApp message
+    const waMessage = encodeURIComponent(
+        `Salam! Texniki dəstəyə ehtiyacım var.\n\nBrend: ${brandName}\nFilial: ${branchName}\nTerminal: ${terminalId}\nVersiya: ${version}`
+    );
+    const waUrl = `https://wa.me/994775012507?text=${waMessage}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(waUrl)}`;
 
     const handleCall = () => {
         window.location.href = `tel:${phoneNumber}`;
@@ -61,21 +83,21 @@ const SupportModal = ({ isOpen, onClose, terminalId, terminalName, branchName })
                             <path d="M16 18.5H17C18 18.5 18.5 18 18.5 17V16" stroke="#6c757d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                             <path d="M18.5 13.5H17" stroke="#6c757d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
-                        <span>QR kod</span>
+                        <span>WhatsApp QR</span>
                     </div>
                     <div className="support-qr-container">
                         <img src={qrCodeUrl} alt="QR Code" className="support-qr-image" />
                     </div>
-                    <p className="support-qr-text">Bizə yazmaq üçün skan edin</p>
+                    <p className="support-qr-text">Skan edin — məlumatlarınız hazır mesajla göndərilir</p>
                 </div>
 
                 {/* Terminal Info Footer */}
                 <div className="support-modal-footer">
-                    <span className="support-terminal-id">{terminalId || "P3257"}</span>
+                    {version && <span className="support-terminal-id">{version}</span>}
+                    {version && <span className="support-divider">|</span>}
+                    <span>Terminal: <strong>{terminalId}</strong></span>
                     <span className="support-divider">|</span>
-                    <span>Terminal: <strong>{terminalName || "Terminal 1"}</strong></span>
-                    <span className="support-divider">|</span>
-                    <span>Filial: <strong>{branchName || "Main"}</strong></span>
+                    <span>Filial: <strong>{branchName}</strong></span>
                 </div>
             </div>
         </div>

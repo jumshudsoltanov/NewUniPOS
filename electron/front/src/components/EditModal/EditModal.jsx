@@ -29,6 +29,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
+
 const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const [activeTab, setActiveTab] = useState("edit");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 576);
@@ -65,6 +66,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { isOnline, hasInternet } = useSelector((state) => state.SyncSlice);
+  const isOffline = !isOnline || !hasInternet;
   const navigate = useNavigate();
 
   // Lookup product info from menu to ensure we have flags
@@ -209,6 +212,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
         </div>
 
         <div className="edit-modal-layout">
+          {isOffline && (
+            <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: 8, padding: '8px 12px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#92400E' }}>
+              <i className="bi bi-wifi-off" />
+              İnternet bağlantısı yoxdur — redaktə əməliyyatları məhdudlaşdırılıb
+            </div>
+          )}
           {/* Sidebar Navigation */}
           <div className="edit-sidebar">
             <div className="edit-sidebar-nav">
@@ -263,7 +272,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
               {(product?.isNew || Number(loginedWaiter?.data?.can_delete_product) === 1) && (
                 <button
                   className="sidebar-btn btn-delete"
+                  disabled={isOffline && !product?.isNew}
+                  style={isOffline && !product?.isNew ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
                   onClick={() => {
+                    if (isOffline && !product?.isNew) return;
                     const productId = Number(product.product_id || product.id);
                     if (product.isNew && product.localQuantity > 0) {
                       // Remove the local (unsaved) portion immediately — no reason needed
@@ -366,10 +378,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 {/* Footer Action Button */}
                 <button
                   className={`save-action-btn ${qty === 0 ? 'red' : ''}`}
-                  disabled={isSubmitting}
-                  style={{ opacity: isSubmitting ? 0.7 : 1 }}
+                  disabled={isSubmitting || (isOffline && !product?.isNew)}
+                  style={{ opacity: (isSubmitting || (isOffline && !product?.isNew)) ? 0.4 : 1, cursor: (isOffline && !product?.isNew) ? 'not-allowed' : undefined }}
                   onClick={async () => {
-                    if (isSubmitting) return;
+                    if (isSubmitting || (isOffline && !product?.isNew)) return;
                     setIsSubmitting(true);
                     try {
                       // If qty is 0, trigger full delete
