@@ -29,6 +29,13 @@ const Settings = () => {
     const [showClock, setShowClock] = useState(() => {
         return localStorage.getItem("showHeaderClock") === "true";
     });
+    const [appVersion, setAppVersion] = useState(null);
+
+    useEffect(() => {
+        if (window.electronAPI?.getAppVersion) {
+            window.electronAPI.getAppVersion().then(v => setAppVersion(v)).catch(() => {});
+        }
+    }, []);
 
     // Fetch AnyDesk ID on mount
     useEffect(() => {
@@ -219,6 +226,9 @@ const Settings = () => {
                         <i className="bi bi-arrow-left"></i>
                     </button>
                     <h1 className="settings-page-title">Kontrol panel</h1>
+                    {appVersion && (
+                        <span className="settings-version-badge">v{appVersion}</span>
+                    )}
                 </div>
 
                 {/* Content */}

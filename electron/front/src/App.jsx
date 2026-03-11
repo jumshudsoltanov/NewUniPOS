@@ -27,6 +27,7 @@ import BlockPage from "./components/BlockPage/BlockPage";
 import { initNetwork, getSocket } from "./utils/apiConfig";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
+import UpdateNotification from "./components/UpdateNotification/UpdateNotification";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -277,6 +278,7 @@ function AppContent() {
     <>
       <Toastify />
       <NetworkOverlay />
+      <UpdateNotification />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/pin" element={<Pin />} />

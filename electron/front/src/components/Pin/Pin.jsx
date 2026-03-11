@@ -187,6 +187,13 @@ const Pin = () => {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
+  const [appVersion, setAppVersion] = useState(null);
+
+  useEffect(() => {
+    if (window.electronAPI?.getAppVersion) {
+      window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
+    }
+  }, []);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -557,7 +564,7 @@ const Pin = () => {
               </div>
 
               <div className="terminalInfo">
-                <span className="terminalId">{terminalInfo?.name || "P3257"}</span>
+                <span className="terminalId">{appVersion ? `T${appVersion}` : (terminalInfo?.name || "...")}</span>
                 <span className="terminalDivider">•</span>
                 <span className="terminalName">
                   Terminal: <strong>{terminalInfo?.terminal_id || "Terminal 1"}</strong>

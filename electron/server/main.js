@@ -595,6 +595,10 @@ ipcMain.handle("quit-app", () => {
   app.quit();
 });
 
+ipcMain.handle("get-app-version", () => {
+  return app.getVersion();
+});
+
 ipcMain.handle("scan-master", async () => {
   return new Promise((resolve) => {
     let resolved = false;
@@ -757,6 +761,9 @@ app.whenReady().then(() => {
 
   autoUpdater.on("checking-for-update", () => {
     console.log("[AUTO-UPDATE] Yenilənmə yoxlanılır...");
+    if (mainWindow) {
+      mainWindow.webContents.send("checking-for-update");
+    }
   });
 
   autoUpdater.on("update-available", (info) => {
@@ -783,12 +790,13 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on("update-downloaded", (info) => {
-    console.log("[AUTO-UPDATE] Yenilənmə yükləndi. Quraşdırılır...");
+    console.log("[AUTO-UPDATE] Yenilənmə yükləndi. 5 saniyə sonra quraşdırılır...");
     if (mainWindow) {
       mainWindow.webContents.send("update-downloaded", info);
     }
-    // Only install on explicit IPC call or when the user quits, to prevent 'ms error' (locking issues and Squirrel crash).
-    // autoUpdater.quitAndInstall(true, true); 
+    setTimeout(() => {
+      autoUpdater.quitAndInstall(true, true);
+    }, 5000);
   });
 
   ipcMain.handle("install-update", () => {

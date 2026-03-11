@@ -21,6 +21,7 @@ const StatusModal = ({ show, onHide }) => {
     });
     const [printers, setPrinters] = useState([]);
     const [registers, setRegisters] = useState([]);
+    const [appVersion, setAppVersion] = useState(null);
 
     const profile = loginedProfileData?.data?.profile || {};
     const terminal = loginedProfileData?.data?.terminal || {};
@@ -58,6 +59,11 @@ const StatusModal = ({ show, onHide }) => {
         // Fetch Local IP
         if (window.electronAPI && window.electronAPI.getLocalIp) {
             window.electronAPI.getLocalIp().then(setLocalIp).catch(console.error);
+        }
+
+        // Fetch App Version
+        if (window.electronAPI?.getAppVersion) {
+            window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
         }
 
         // Mock Memory Usage (Actually fetching this might require electron API, but for demo let's use static/randomized)
@@ -185,7 +191,7 @@ const StatusModal = ({ show, onHide }) => {
                                     </div>
                                     <div className="info-item">
                                         <span className="label">Tətbiq versiyası:</span>
-                                        <span className="value">2.0.1</span>
+                                        <span className="value">{appVersion ? `v${appVersion}` : "..."}</span>
                                     </div>
                                     <div className="info-item">
                                         <span className="label">Terminal:</span>
@@ -208,7 +214,7 @@ const StatusModal = ({ show, onHide }) => {
                                     </div>
                                     <div className="info-item">
                                         <span className="label">Terminal versiyası:</span>
-                                        <span className="value">{terminal.version || "p2795"}</span>
+                                        <span className="value">{appVersion ? `T${appVersion}` : (terminal.version || "...")}</span>
                                     </div>
                                 </div>
                             </div>
