@@ -223,6 +223,13 @@ function AppContent() {
             }
           } catch (err) {
             console.error("[AUTH] InitApp/Auto-login failed:", err);
+            
+            if (err?.data?.isBlocked) {
+                localStorage.setItem("authResult", JSON.stringify(err.data));
+                navigate("/blocked");
+                return;
+            }
+
             // Even if init fails, try to show the Login page instead of a white screen
             if (currentPath === "/" || currentPath === "/login") {
               console.log("[AUTH] Init failed, forcing navigation to login UI");

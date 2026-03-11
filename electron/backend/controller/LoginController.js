@@ -148,6 +148,34 @@ const getLogin = async (req, res) => {
     res.status(200).json(response.data);
   } catch (error) {
     const status = error.response?.status || 500;
+    
+    // Offline block check for Master-Slave
+    try {
+        if (global.isMasterNode || terminalId) {
+            const storedProfile = await LoginModel.findOne();
+            if (storedProfile) {
+                const p = storedProfile.toJSON();
+                let isExpired = false;
+                if (p.next_payment_date) {
+                    const now = new Date(); now.setHours(0, 0, 0, 0);
+                    const payDate = new Date(p.next_payment_date); payDate.setHours(0, 0, 0, 0);
+                    if (payDate < now) isExpired = true;
+                }
+                
+                if (p.is_pos_block == 1 || isExpired) {
+                    console.log(`[LOGIN] Master is locally blocked. Rejecting login for terminal ${terminalId}`);
+                    return res.status(403).json({
+                        message: "Müəssisə bloklanıb",
+                        isBlocked: true,
+                        data: { profile: { ...p, is_pos_block: 1 } }
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("[LOGIN] Offline block check error:", e.message);
+    }
+
     const message = status === 429
       ? "Server çox yüklənib. Bir neçə dəqiqə gözləyib yenidən cəhd edin."
       : "Login zamanı xəta baş verdi";

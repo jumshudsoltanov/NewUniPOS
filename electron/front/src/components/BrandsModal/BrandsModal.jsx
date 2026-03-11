@@ -27,7 +27,8 @@ const BrandsModal = ({ show, onHide }) => {
         localStorage.setItem("profile", JSON.stringify(selectedProfile.profile));
         localStorage.setItem("authResult", JSON.stringify(selectedProfile.authResult));
         // Force reload so Redux state and hooks fetch data for the newly selected brand
-        window.location.href = "/#/pin";
+        navigate("/pin");
+        window.location.reload();
     };
 
     const handleAddNewBrand = () => {
@@ -35,7 +36,7 @@ const BrandsModal = ({ show, onHide }) => {
         // Redirect to login page to allow adding a new brand, don't clear authProfiles
         localStorage.removeItem("authResult");
         localStorage.removeItem("profile");
-        window.location.href = "/#/";
+        navigate("/");
     };
 
     return (

@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { getSocket, initNetwork } from "../../utils/apiConfig";
+import { useNavigate } from "react-router-dom";
 
 const NetworkOverlay = () => {
+    const navigate = useNavigate();
     const [isDisconnected, setIsDisconnected] = useState(false);
     const [masterIp, setMasterIp] = useState("Axtarılır...");
     const [slaveIp, setSlaveIp] = useState(null);
@@ -145,7 +147,7 @@ const NetworkOverlay = () => {
                         if (window.electronAPI) {
                             window.close();
                         } else {
-                            window.location.href = '/#/';
+                            navigate('/');
                         }
                     }}
                     style={{

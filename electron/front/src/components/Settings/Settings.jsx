@@ -126,6 +126,14 @@ const Settings = () => {
             toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
         } catch (error) {
             console.error("Yeniləmə xətası:", error);
+            
+            if (error?.data?.isBlocked) {
+                toast.dismiss(toastId);
+                localStorage.setItem("authResult", JSON.stringify(error.data));
+                navigate("/blocked");
+                return;
+            }
+
             toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
         } finally {
             setIsRefreshing(false);

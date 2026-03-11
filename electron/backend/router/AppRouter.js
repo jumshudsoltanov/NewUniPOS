@@ -218,6 +218,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     const PaymentMethodsModel = require("../model/PaymentMethodsModel");
     const PrintersModel = require("../model/PrintersModel");
     const OrdersModel = require("../model/OrdersModel");
+    const SalesTypesModal = require("../model/SalesTypesModal");
 
     const profileId = req.params.profileId;
     await Promise.all([

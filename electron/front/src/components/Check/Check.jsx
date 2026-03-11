@@ -276,6 +276,8 @@ const Check = () => {
             itemId: d.itemId,
             qty: d.type === 'partial' ? d.qty : undefined,
             reasonId: d.reasonId,
+            name: d.name,
+            originalQty: d.originalQty
           })),
           waiterName,
         })).unwrap().catch(err => {

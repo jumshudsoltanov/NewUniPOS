@@ -467,10 +467,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
                         // Quantity change stays local - will be sent via "Göndər" button
                         if (newLocalQty > 0) {
-                          dispatch(replaceProductQuantity({
+                          dispatch(updateCount({
                             productId: Number(product.product_id || product.id),
-                            newQty: newLocalQty,
+                            count: newLocalQty,
                             price: inputValue,
+                            name: product.name,
                           }));
                         } else {
                           dispatch(removeAllProductsById(Number(product.product_id || product.id)));

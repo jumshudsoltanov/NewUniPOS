@@ -2,10 +2,9 @@ import "./SettingsMenu.css";
 import { useSelector } from "react-redux";
 
 const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData, onExit, onQuitApp }) => {
-    if (!isOpen) return null;
-
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-    const isMaster = loginedProfileData?.data?.terminal?.is_master === 1;
+
+    if (!isOpen) return null;
 
     const handleOverlayClick = (e) => {
         if (e.target.classList.contains("settings-menu-overlay")) {
@@ -24,8 +23,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
             ),
             onClick: onRefresh,
         },
-        // Only show Brand List for Master terminals
-        ...(isMaster ? [{
+        {
             id: "brandList",
             label: "Müəssisələr siyahısı",
             icon: (
@@ -37,7 +35,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
                 </svg>
             ),
             onClick: onBrandList,
-        }] : []),
+        },
         {
             id: "downloadData",
             label: "Məlumatları yüklə",

@@ -184,11 +184,20 @@ export const batchDeleteOrderItems = createAsyncThunk(
       );
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const namesWithQty = items.map(d => {
+        const qtyVal = d.qty || d.originalQty;
+        const qty = qtyVal ? String(qtyVal) + ' x ' : '';
+        return `${qty}${d.name || ''}`;
+      }).filter(Boolean);
+      
+      const detailsText = namesWithQty.length > 0
+        ? namesWithQty.join(", ")
+        : `${items.length} məhsul silindi`;
       thunkAPI.dispatch(saveLog({
         orderId,
         action: "Məhsullar silindi",
         waiterName,
-        details: `${items.length} məhsul silindi`
+        details: detailsText
       }));
       return response.data;
     } catch (error) {

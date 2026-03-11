@@ -284,7 +284,7 @@ const Pin = () => {
   const handleExit = () => {
     localStorage.removeItem("profile");
     localStorage.removeItem("authResult");
-    window.location.href = "/#/";
+    navigate("/");
   };
 
   const handleQuitApp = () => {

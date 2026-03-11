@@ -152,7 +152,7 @@ const Login = () => {
   const handleExit = () => {
     localStorage.removeItem("profile");
     localStorage.removeItem("authResult");
-    window.location.href = "/#/";
+    navigate("/");
   };
 
   const handleQuitApp = () => {
@@ -205,6 +205,13 @@ const Login = () => {
       navigate("/pin");
     } catch (err) {
       console.error("Manual login failed:", err);
+      
+      if (err?.data?.isBlocked) {
+        localStorage.setItem("authResult", JSON.stringify(err.data));
+        navigate("/blocked");
+        return;
+      }
+
       setIsError(true);
       setIsRefreshing(false);
       toast.error(err?.data?.message || err?.message || "Login zamanı xəta baş verdi");
