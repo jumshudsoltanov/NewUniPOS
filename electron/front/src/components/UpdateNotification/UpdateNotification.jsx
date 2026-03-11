@@ -6,7 +6,7 @@ export default function UpdateNotification() {
   const [version, setVersion] = useState(null);
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -15,7 +15,6 @@ export default function UpdateNotification() {
       window.electronAPI.onCheckingForUpdate(() => {
         setStatus("checking");
         setVisible(true);
-        setDismissed(false);
       });
     }
 
@@ -38,12 +37,13 @@ export default function UpdateNotification() {
     if (window.electronAPI.onUpdateDownloaded) {
       window.electronAPI.onUpdateDownloaded(() => {
         setStatus("ready");
+        setCountdown(5);
         setVisible(true);
       });
     }
   }, []);
 
-  // Auto-hide "checking" state after 10s if nothing else happens
+  // Auto-hide "checking" after 10s if nothing happens
   useEffect(() => {
     if (status === "checking") {
       const timer = setTimeout(() => {
@@ -54,20 +54,15 @@ export default function UpdateNotification() {
     }
   }, [status]);
 
-  if (!visible || dismissed) return null;
+  // Countdown when ready
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (countdown <= 0) return;
+    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [status, countdown]);
 
-  const handleInstall = () => {
-    if (window.electronAPI?.installUpdate) {
-      window.electronAPI.installUpdate();
-    }
-  };
-
-  const handleDismiss = () => {
-    if (status !== "downloading" && status !== "ready") {
-      setDismissed(true);
-      setVisible(false);
-    }
-  };
+  if (!visible) return null;
 
   const getContent = () => {
     switch (status) {
@@ -93,9 +88,8 @@ export default function UpdateNotification() {
       case "ready":
         return {
           icon: "bi-check-circle",
-          text: "Yenilənmə hazırdır!",
+          text: `Yenilənmə hazırdır! ${countdown > 0 ? `${countdown}s sonra quraşdırılır...` : "Quraşdırılır..."}`,
           color: "#10b981",
-          showInstall: true,
         };
       default:
         return null;
@@ -106,7 +100,7 @@ export default function UpdateNotification() {
   if (!content) return null;
 
   return (
-    <div className="update-notification">
+    <div className="update-notification" style={{ borderLeftColor: content.color }}>
       <i className={`bi ${content.icon}`} style={{ color: content.color }} />
       <span className="update-text">{content.text}</span>
 
@@ -116,14 +110,20 @@ export default function UpdateNotification() {
         </div>
       )}
 
-      {content.showInstall && (
-        <button className="update-install-btn" onClick={handleInstall}>
-          Quraşdır
-        </button>
+      {status === "ready" && (
+        <div className="update-countdown-bar">
+          <div
+            className="update-countdown-fill"
+            style={{
+              width: `${((5 - countdown) / 5) * 100}%`,
+              background: content.color,
+            }}
+          />
+        </div>
       )}
 
-      {status !== "downloading" && status !== "ready" && (
-        <button className="update-dismiss-btn" onClick={handleDismiss}>
+      {(status === "checking" || status === "found") && (
+        <button className="update-dismiss-btn" onClick={() => { setVisible(false); setStatus(null); }}>
           <i className="bi bi-x" />
         </button>
       )}
