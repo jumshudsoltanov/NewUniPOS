@@ -13,6 +13,7 @@ const SYNC_STEPS = [
     { key: "tags",              label: "Etiketlər",          icon: "bi-bookmark" },
     { key: "printers",          label: "Printerlər",         icon: "bi-printer" },
     { key: "salesTypes",        label: "Satış növləri",      icon: "bi-cart" },
+    { key: "activeChecks",      label: "Aktiv çeklər",       icon: "bi-receipt" },
 ];
 
 const RefreshLoader = ({ isOpen, syncCounts }) => {

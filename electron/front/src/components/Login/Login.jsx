@@ -515,14 +515,8 @@ const Login = () => {
 
               {/* Terminal Info Footer */}
               <div className="terminalInfo">
-                <span className="terminalId">{terminalInfo?.name || "P3257"}</span>
-                <span className="terminalDivider">•</span>
                 <span className="terminalName">
-                  Terminal: <strong>{terminalInfo?.terminal_id || "Terminal 1"}</strong>
-                </span>
-                <span className="terminalDivider">•</span>
-                <span className="terminalBranch">
-                  Filial: <strong>{profileInfo?.username || "Main"}</strong>
+                  Versiya: <strong>1.5.0</strong>
                 </span>
               </div>
             </div>

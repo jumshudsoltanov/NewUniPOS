@@ -14,14 +14,19 @@ const NetworkOverlay = () => {
         const onConnect = () => setIsDisconnected(false);
 
         const isSlave = () => {
-            if (!window.electronAPI && !!localStorage.getItem('master_ip')) return true;
-            const authResult = JSON.parse(localStorage.getItem("authResult") || "null");
-            if (!authResult) return false;
-            const profileData = authResult?.data?.profile || {};
-            const terminalData = authResult?.data?.terminal || {};
-            const isMaster = terminalData.is_master == 1 || profileData.is_master == 1;
-            const active = terminalData.is_master_slave_active == 1 || profileData.is_master_slave_active == 1;
-            return !isMaster && active;
+            try {
+                if (!window.electronAPI && !!localStorage.getItem('master_ip')) return true;
+                const authResultStr = localStorage.getItem("authResult");
+                if (!authResultStr) return false;
+                const authResult = JSON.parse(authResultStr);
+                const profileData = authResult?.data?.profile || {};
+                const terminalData = authResult?.data?.terminal || {};
+                const isMaster = parseInt(terminalData.is_master) === 1 || parseInt(profileData.is_master) === 1;
+                const active = parseInt(terminalData.is_master_slave_active) === 1 || parseInt(profileData.is_master_slave_active) === 1;
+                return !isMaster && active;
+            } catch (err) {
+                return false;
+            }
         };
 
         const poll = () => {
@@ -90,7 +95,7 @@ const NetworkOverlay = () => {
                 flexDirection: "column",
                 justifyContent: "center",
                 alignItems: "center",
-                zIndex: 9999999,
+                zIndex: 2147483647,
                 padding: isMobile ? "15px" : "20px",
                 textAlign: "center",
                 fontFamily: "'Inter', sans-serif"

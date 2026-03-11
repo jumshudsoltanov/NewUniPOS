@@ -217,7 +217,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     const TagsModel = require("../model/TagsModel");
     const PaymentMethodsModel = require("../model/PaymentMethodsModel");
     const PrintersModel = require("../model/PrintersModel");
-    const SalesTypesModal = require("../model/SalesTypesModal");
+    const OrdersModel = require("../model/OrdersModel");
 
     const profileId = req.params.profileId;
     await Promise.all([
@@ -234,7 +234,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     ]);
 
     const w = { where: { profile_id: profileId } };
-    const [products, categories, generalCategories, tables, tableGroups, waiters, tags, paymentMethods, printers, salesTypes] = await Promise.all([
+    const [products, categories, generalCategories, tables, tableGroups, waiters, tags, paymentMethods, printers, salesTypes, activeChecks] = await Promise.all([
       ProductsModel.count(w),
       CategoriesModel.count(w),
       GeneralCategoriesModel.count(w),
@@ -245,11 +245,12 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
       PaymentMethodsModel.count(w),
       PrintersModel.count(w),
       SalesTypesModal.count(w),
+      OrdersModel.count({ where: { profile_id: profileId, status: 1 } })
     ]);
 
     res.json({
       success: true,
-      counts: { products, categories, generalCategories, tables, tableGroups, waiters, tags, paymentMethods, printers, salesTypes }
+      counts: { products, categories, generalCategories, tables, tableGroups, waiters, tags, paymentMethods, printers, salesTypes, activeChecks }
     });
   } catch (e) {
     console.error("Sync refresh error:", e.message);

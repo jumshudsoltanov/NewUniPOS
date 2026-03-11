@@ -714,19 +714,19 @@ ipcMain.handle("scan-master", async () => {
           }
         }
 
-        // If we finished the sweep and no UDP came in, wait a bit longer or fail
+        // If we finished the sweep and no TCP found anything, don't wait long.
         setTimeout(() => {
           if (!resolved) finishScan(null);
-        }, 5000);
+        }, 500);
       };
 
       scanBatches();
     } else {
       console.log("[SLAVE TCP] Lokal IPv4 alt şəbəkəsi tapılmadı.");
-      // If no TCP sweep possible, wait for UDP or timeout
+      // If no TCP sweep possible, wait for UDP or timeout very quickly
       setTimeout(() => {
         if (!resolved) finishScan(null);
-      }, 10000);
+      }, 2000);
     }
   });
 });

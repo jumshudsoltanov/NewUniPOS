@@ -245,11 +245,7 @@ function AppContent() {
       }
     };
 
-    const safetyTimer = setTimeout(() => {
-      setShowInitialLoading(false);
-    }, 10000);
-
-    initApp().then(() => clearTimeout(safetyTimer));
+    initApp().then(() => setShowInitialLoading(false));
   }, [dispatch, navigate]);
 
   if (showInitialLoading) {
