@@ -79,6 +79,9 @@ const getReportData = async (req, res) => {
             case "inventory":
                 data = [];
                 break;
+            case "customers":
+                data = await getCustomersReport(closedWhere);
+                break;
             default:
                 data = [];
         }
@@ -152,6 +155,15 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
         paranoid: false // Include soft-deleted
     });
 
+    // 5. Fetch Open Orders
+    const openOrders = await OrdersModel.findAll({
+        where: {
+            ...baseWhere,
+            status: 1,
+            start_date: { [Op.between]: [start, end] }
+        }
+    });
+
     let summary = {
         total_amount: 0,
         total_discount: 0,
@@ -162,9 +174,16 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
         total_tax: 0,
         net_total: 0,
         guest_count: 0,
+        open_orders_count: 0,
+        open_orders_total: 0,
         payments: {},
         tags: {}
     };
+
+    openOrders.forEach(order => {
+        summary.open_orders_count += 1;
+        summary.open_orders_total += parseFloat(order.total || 0);
+    });
 
     // Process Closed Orders
     closedOrders.forEach(order => {
@@ -177,8 +196,12 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
         summary.guest_count += parseInt(order.guest_count || 0);
 
         // Tax calculation: inclusive VAT = total * taxPercent / (100 + taxPercent)
-        if (order.is_tax === 1 && taxPercent > 0) {
-            summary.total_tax += orderTotal * taxPercent / (100 + taxPercent);
+        let isTaxFlag = parseFloat(order.is_tax || 0);
+        if (isTaxFlag > 0) {
+            let currentTaxPercent = isTaxFlag > 1 ? isTaxFlag : taxPercent;
+            if (currentTaxPercent > 0) {
+                summary.total_tax += orderTotal * currentTaxPercent / (100 + currentTaxPercent);
+            }
         }
 
         // Calculate Gifts within these orders
@@ -228,7 +251,7 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
     returnedOrders.forEach(order => {
         const orderVal = parseFloat(order.total || order.amount || 0);
         summary.total_refund += orderVal;
-        
+
         let orderTags = [];
         if (order.tags) {
             orderTags = orderTags.concat(order.tags.split(',').map(t => t.trim()).filter(t => t));
@@ -581,6 +604,31 @@ const getGiftedProductsReport = async (whereClause) => {
     });
 
     return gifts;
+};
+
+const getCustomersReport = async (whereClause) => {
+    const orders = await OrdersModel.findAll({
+        where: whereClause
+    });
+
+    let customerMap = {};
+
+    orders.forEach(order => {
+        const cId = order.customer_id;
+        if (cId) {
+            if (!customerMap[cId]) {
+                customerMap[cId] = {
+                    customer_id: cId,
+                    checks_count: 0,
+                    total: 0
+                };
+            }
+            customerMap[cId].checks_count += 1;
+            customerMap[cId].total += parseFloat(order.total || 0);
+        }
+    });
+
+    return Object.values(customerMap).sort((a, b) => b.total - a.total);
 };
 
 const getTerminals = async (req, res) => {

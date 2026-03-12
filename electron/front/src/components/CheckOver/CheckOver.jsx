@@ -268,6 +268,17 @@ const CheckOver = () => {
             noteStr = `Ödənişsiz: ${unpaidReason}. ${comment}`;
         }
 
+        let taxPercentageToSave = 0;
+        if (viewMode === "PAYMENT" && taxPrint) {
+            const allTaxConfigs = loginedProfileData?.data?.taxes || [];
+            const taxConfigsToUse = selectedTaxForPrint ? [selectedTaxForPrint] : allTaxConfigs;
+            if (taxConfigsToUse.length > 0) {
+                taxPercentageToSave = Number(taxConfigsToUse[0].tax_percent || loginedProfileData?.data?.profile?.tax_percent || 1);
+            } else {
+                taxPercentageToSave = 1; /* Fallback to simple indicator if percent unknown */
+            }
+        }
+
         try {
             await dispatch(closeOrder({
                 orderId: id,
@@ -277,7 +288,7 @@ const CheckOver = () => {
                 waiterId,
                 note: noteStr,
                 waiterName,
-                is_tax: viewMode === "PAYMENT" && taxPrint ? 1 : 0
+                is_tax: taxPercentageToSave
             })).unwrap();
 
             // Persistent Log

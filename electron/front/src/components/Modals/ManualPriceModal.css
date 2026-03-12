@@ -16,6 +16,7 @@
     background-color: #fff;
     display: flex;
     flex-direction: column;
+    border-radius: 6px 6px 0 0;
 }
 
 /* Header */
@@ -27,6 +28,7 @@
     justify-content: space-between;
     height: 70px;
     border-bottom: none;
+    border-radius: 6px 6px 0 0;
 }
 
 .modal-title-custom {

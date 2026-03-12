@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Row, Col, Form, Table } from "react-bootstrap";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
 import axios from "../../utils/apiConfig";
 import "./ReportModal.css";
 
 const ReportModal = ({ show, onClose }) => {
     const profile = useSelector((state) => state.LoginSlice?.loginedProfileData?.data?.profile);
     const profileId = profile?.id;
+    const customers = useSelector((state) => state.CustomersSlice?.customers || []);
+    const dispatch = useDispatch();
 
     // Default dates (today and tomorrow)
     const today = new Date().toISOString().split('T')[0];
@@ -44,6 +47,7 @@ const ReportModal = ({ show, onClose }) => {
         { id: "refunds", name: "Geri qaytarılma" },
         { id: "gifted_products", name: "İkram olunmuş məhsul" },
         { id: "financial", name: "Maliyyə hesabatı" },
+        { id: "customers", name: "Müştərilər" },
     ];
 
     const [cashierPrinter, setCashierPrinter] = useState(null);
@@ -52,6 +56,7 @@ const ReportModal = ({ show, onClose }) => {
         if (show && profileId) {
             fetchTerminals();
             fetchCashierPrinter();
+            dispatch(fetchCustomersFromAdmin({ limit: 500 }));
         }
     }, [show, profileId]);
 
@@ -203,6 +208,8 @@ const ReportModal = ({ show, onClose }) => {
                 <div className="receipt-row total-line"><span>Yekun:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
 
                 <div className="section-title mt-4">Digər detallar</div>
+                <div className="receipt-row"><span>Açıq çeklərin sayı</span><div className="dots"></div><span className="value">{reportSummary.open_orders_count || 0}</span></div>
+                <div className="receipt-row"><span>Açıq çeklərin cəmi</span><div className="dots"></div><span className="value">{(reportSummary.open_orders_total || 0).toFixed(2)} ₼</span></div>
                 <div className="receipt-row"><span>Qonaq sayı</span><div className="dots"></div><span className="value">{reportSummary.guest_count || 0}</span></div>
 
                 {Object.keys(reportSummary.payments || {}).length > 0 && (
@@ -409,6 +416,27 @@ const ReportModal = ({ show, onClose }) => {
                             {data.map((item, i) => (
                                 <tr key={i}><td>{item.name}</td><td className="text-center">{item.count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
                             ))}
+                        </tbody>
+                    </Table>
+                );
+            case "customers":
+                return (
+                    <Table responsive className="custom-report-table">
+                        <thead>
+                            <tr><th>Müştəri</th><th className="text-center">Sifariş sayı</th><th className="text-end">Məbləğ</th></tr>
+                        </thead>
+                        <tbody>
+                            {data.map((item, i) => {
+                                const matchedCustomer = customers.find(c => c.id === item.customer_id);
+                                const displayName = matchedCustomer ? (matchedCustomer.name || matchedCustomer.phone_number) : 'Bilinməyən müştəri';
+                                return (
+                                    <tr key={i}>
+                                        <td>{displayName}</td>
+                                        <td className="text-center">{item.checks_count}</td>
+                                        <td className="text-end">{item.total?.toFixed(2)} AZN</td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </Table>
                 );

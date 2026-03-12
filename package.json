@@ -18,7 +18,7 @@
     "release": "npm run build-front && electron-builder --win"
   },
   "build": {
-    "appId": "com.pos.redesing",
+    "appId": "com.unipos.tech",
     "productName": "UniPOS Desktop Application",
     "publish": [
       {

@@ -785,7 +785,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     {customerHistory.map(order => (
                                         <tr key={order.uuid} onClick={() => { setSelectedCheck(order); setShowCheckDetail(true); }} className="clickable-row">
                                             <td><span className="order-id-link">#{order.id}</span></td>
-                                            <td>{order.end_date ? new Date(order.end_date).toLocaleString('az-AZ', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace('.', '') : '—'}</td>
+                                            <td>{order.end_date ? new Date(order.end_date).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(/\//g, '.') : '—'}</td>
                                             <td>{parseFloat(order.total || order.total_amount || 0).toFixed(2)}</td>
                                             <td>{parseFloat(order.discount || 0).toFixed(2)}</td>
                                             <td>

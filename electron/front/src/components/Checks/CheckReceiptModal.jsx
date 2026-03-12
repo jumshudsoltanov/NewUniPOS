@@ -102,22 +102,47 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {order.orders_items?.map((item, i) => {
-                                    const itemTotal = Number(item.count) * Number(item.price);
-                                    const isGift = item.is_gift === 1 || item.is_gift === true;
+                                {(() => {
+                                    const groupedItems = [];
+                                    order.orders_items?.forEach(item => {
+                                        const prodName = item.product?.name || item.product_name || "Məhsul";
+                                        const price = Number(item.price);
+                                        const isGift = item.is_gift === 1 || item.is_gift === true;
+                                        
+                                        // Find if this specific combination already exists
+                                        const existing = groupedItems.find(gi => 
+                                            gi.name === prodName && 
+                                            gi.price === price && 
+                                            gi.isGift === isGift
+                                        );
 
-                                    return (
-                                        <tr key={i} className={isGift ? 'gift-row' : ''}>
-                                            <td>
-                                                {item.product?.name || item.product_name || "Məhsul"}
-                                                {isGift && " 🎁"}
-                                            </td>
-                                            <td>{item.count}</td>
-                                            <td>{formatMoney(item.price)}</td>
-                                            <td>{formatMoney(itemTotal)}</td>
-                                        </tr>
-                                    );
-                                })}
+                                        if (existing) {
+                                            existing.count += Number(item.count);
+                                        } else {
+                                            groupedItems.push({
+                                                name: prodName,
+                                                count: Number(item.count),
+                                                price: price,
+                                                isGift: isGift
+                                            });
+                                        }
+                                    });
+
+                                    return groupedItems.map((item, i) => {
+                                        const itemTotal = item.count * item.price;
+                                        return (
+                                            <tr key={i} className={item.isGift ? 'gift-row' : ''}>
+                                                <td>
+                                                    {item.name}
+                                                    {item.isGift && " 🎁"}
+                                                </td>
+                                                <td>{item.count}</td>
+                                                <td>{formatMoney(item.price)}</td>
+                                                <td>{formatMoney(itemTotal)}</td>
+                                            </tr>
+                                        );
+                                    });
+                                })()}
                             </tbody>
                         </table>
                     </div>
