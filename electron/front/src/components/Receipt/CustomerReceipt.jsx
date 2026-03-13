@@ -365,7 +365,7 @@ const CustomerReceipt = ({
                 {checkData?.rate_per_minute &&
                     Number(checkData?.rate_per_minute) !== 0 ? (
                     <div style={styles.itemRow}>
-                        <span style={styles.colName}>Timer</span>
+                        <span style={styles.colName}>Timer {checkData?.is_timer_clock ? `(${checkData.is_timer_clock})` : ''}</span>
                         <span style={styles.colQty}></span>
                         <span style={styles.colPrice}></span>
                         <span style={styles.colTotal}>
@@ -453,6 +453,28 @@ const CustomerReceipt = ({
                         );
                     });
                 })()}
+
+                {/* TAYMER MƏLUMATI */}
+                {Number(checkData?.is_timer_status) === 1 && (
+                    <div style={{
+                        ...styles.itemRow,
+                        fontWeight: "bold",
+                        borderTop: "1px dashed #000",
+                        paddingTop: "2px",
+                        marginTop: "2px"
+                    }}>
+                        <div style={styles.colName}>
+                            Masa Taymeri ({checkData.is_timer_clock || "00:00:00"})
+                        </div>
+                        <span style={styles.colQty}>1</span>
+                        <span style={styles.colPrice}>
+                            {(Number(checkData.rate_per_minute) || 0).toFixed(2)}
+                        </span>
+                        <span style={styles.colTotal}>
+                            {(Number(checkData.rate_per_minute) || 0).toFixed(2)} ₼
+                        </span>
+                    </div>
+                )}
             </div>
 
 

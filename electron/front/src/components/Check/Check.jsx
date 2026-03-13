@@ -6,6 +6,7 @@ import Menu from "../Menu/Menu";
 import CheckHeader from "./CheckHeader";
 import CheckMain from "./CheckMain";
 import CheckBottom from "./CheckBottom";
+import TimerModal from "./TimerModal";
 import OperationsModal from "../Operations/OperationsModal";
 import {
   Link,
@@ -24,11 +25,11 @@ import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
 import DepositModal from "../DepositModal/DepositModal";
 import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups, removeOrderOptimisticFromTables } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders, removeOrderOptimistic } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, removeOrderOptimistic, tickTimer } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer } from "../../redux/Slices/OrdersSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { saleNewOrders } from "../../redux/Slices/SaleSlice";
@@ -79,6 +80,7 @@ const Check = () => {
   const [openChangeSaleType, setOpenChangeSaleType] = useState(false);
   const [openSplitModal, setOpenSplitModal] = useState(false)
   const [isPrintingCheck, setIsPrintingCheck] = useState(false);
+  const [showTimerModal, setShowTimerModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
@@ -105,23 +107,17 @@ const Check = () => {
       return { currentOrder: null, currentHall: null, currentTable: null };
 
     // ALL ORDERS LOGIC
+    let foundOrder = null;
+    let foundHall = null;
+    let foundTable = null;
+
     if (books?.data) {
-      // 1. Try to find the latest updated version of the order in Books (Redux)
-      const order = books.data.find((item) => item.uuid == id);
-      if (order) {
-        return {
-          currentOrder: order,
-          currentHall: order.table?.hall || null,
-          currentTable: order.table || null,
-        };
-      }
+      foundOrder = books.data.find((item) => item.uuid == id);
     }
 
-    // 2. Fallback to tableGroups if not found in Books (for initial load Edge Cases)
+    // Always try to resolve Hall and Table from tableGroups to ensure data consistency 
+    // (API might return partial order objects without hall/table info)
     if (tableId && tableId !== "null" && tableId !== "0" && tableGroups?.data) {
-      let foundHall = null;
-      let foundTable = null;
-
       for (const hall of tableGroups.data) {
         const table = hall.tables.find((t) => t.id == tableId);
         if (table) {
@@ -130,16 +126,26 @@ const Check = () => {
           break;
         }
       }
+    }
 
-      if (foundTable) {
-        const order = foundTable.orders.find((o) => o.uuid == id);
-        if (order) {
-          return {
-            currentOrder: order,
-            currentHall: foundHall,
-            currentTable: foundTable,
-          };
-        }
+    // If order was FOUND in books, use it
+    if (foundOrder) {
+      return {
+        currentOrder: foundOrder,
+        currentHall: foundHall || foundOrder.table?.hall || null,
+        currentTable: foundTable || foundOrder.table || null,
+      };
+    }
+
+    // FALLBACK: If order not in books, search in tableGroups
+    if (foundTable) {
+      const orderInTable = foundTable.orders.find((o) => o.uuid == id);
+      if (orderInTable) {
+        return {
+          currentOrder: orderInTable,
+          currentHall: foundHall,
+          currentTable: foundTable,
+        };
       }
     }
 
@@ -397,10 +403,14 @@ const Check = () => {
     }
   };
 
-  const handleAutoSaveAndExit = async (targetPath) => {
+  async function handleAutoSaveAndExit(targetPath) {
     const resultingItemCount = (currentOrder?.orders_items?.length || 0) - (pendingDeletions?.length || 0) + (products?.length || 0);
+    const isTimerActiveOrHasBalance = 
+      currentOrder?.is_timer_status === 1 || 
+      Number(currentOrder?.rate_per_minute || 0) > 0 || 
+      (currentOrder?.is_timer_clock && currentOrder?.is_timer_clock !== "00:00:00");
 
-    if (resultingItemCount === 0 && currentOrder?.uuid) {
+    if (resultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const profileId = loginedProfileData?.data?.profile?.id;
 
@@ -429,7 +439,7 @@ const Check = () => {
     } else {
       navigate(targetPath);
     }
-  };
+  }
 
   const handleShowOperationsTab = useCallback(() => {
     setShowOperationsModal(true);
@@ -760,6 +770,20 @@ const Check = () => {
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
     const profileId = loginedProfileData?.data?.profile?.id;
 
+    // Auto-stop timer if active when deleting check
+    if (currentOrder?.is_timer_status === 1) {
+      let seconds = 0;
+      if (currentOrder.is_timer_clock && String(currentOrder.is_timer_clock).includes(':')) {
+        const p = currentOrder.is_timer_clock.split(':').map(Number);
+        if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+      }
+      dispatch(stopTimer({ 
+        orderId: currentOrder.uuid,
+        elapsedSeconds: seconds,
+        clockStr: currentOrder.is_timer_clock 
+      }));
+    }
+
     // 1. Instant navigation + optimistic state removal (UI instantly shows table as empty)
     navigate("/tables", { replace: true });
     dispatch(removeOrderOptimisticFromTables(orderId));
@@ -962,6 +986,60 @@ const Check = () => {
                     {selectedCustomer && (
                       <span className="icon-badge" style={{ background: '#053796', fontSize: '7px', width: '14px', height: '14px' }}>✓</span>
                     )}
+                  </div>
+                )}
+
+                {(Number(currentTable?.hourly_price || currentOrder?.table?.hourly_price || 0) > 0) && (
+                  <div 
+                    className="sidebar-icon timer-button"
+                    onClick={() => setShowTimerModal(true)}
+                    style={{ background: '#053796' }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      {/* Alarm Clock (Budlink) SVG */}
+                      <circle 
+                        cx="12" cy="13" r="8" 
+                        stroke="#ffffff" 
+                        strokeWidth="1.5" 
+                      />
+                      <path 
+                        d="M12 10V13L14 15" 
+                        stroke="#ffffff" 
+                        strokeWidth="1.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                      <path 
+                        d="M5 3L8 6" 
+                        stroke="#ffffff" 
+                        strokeWidth="1.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                      <path 
+                        d="M19 3L16 6" 
+                        stroke="#ffffff" 
+                        strokeWidth="1.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                    </svg>
+                    <span 
+                      className="icon-badge" 
+                      style={{ 
+                        background: currentOrder?.is_active_timer ? '#10b981' : '#ef4444', 
+                        border: '2px solid #053796', 
+                        width: '10px', 
+                        height: '10px', 
+                        minWidth: '10px' 
+                      }}
+                    ></span>
                   </div>
                 )}
 
@@ -1182,6 +1260,20 @@ const Check = () => {
                         setIsPrintingCheck(true);
                         const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 
+                        // Auto-stop timer when printing customer receipt
+                        if (currentOrder?.is_timer_status === 1) {
+                          let seconds = 0;
+                          if (currentOrder.is_timer_clock && String(currentOrder.is_timer_clock).includes(':')) {
+                            const p = currentOrder.is_timer_clock.split(':').map(Number);
+                            if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+                          }
+                          dispatch(stopTimer({ 
+                            orderId: currentOrder.uuid,
+                            elapsedSeconds: seconds,
+                            clockStr: currentOrder.is_timer_clock 
+                          }));
+                        }
+
                         try {
                           const result = await printCustomerReceipt({
                             items: products,
@@ -1314,8 +1406,9 @@ const Check = () => {
                 hall={currentHall}
                 selectedCustomer={selectedCustomer}
               />
-              <CheckMain orders={currentOrder} />
+              <CheckMain orders={currentOrder} table={currentTable} />
               <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} />
+              <TimerModal show={showTimerModal} onHide={() => setShowTimerModal(false)} order={currentOrder} table={currentTable} />
             </div>
           </div>
         </Col>

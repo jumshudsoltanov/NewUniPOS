@@ -74,6 +74,46 @@ const BooksSlice = createSlice({
         state.books.data.unshift(newOrder);
       }
     },
+    tickTimer: (state) => {
+      const getUpdatedOrders = (list) => {
+        return list.map((order) => {
+          if (order.is_timer_status === 1 && Number(order.table?.hourly_price || 0) > 0) {
+            let totalSeconds = 0;
+            if (order.is_timer_clock && String(order.is_timer_clock).includes(':')) {
+              const parts = order.is_timer_clock.split(':').map(Number);
+              if (parts.length === 3) totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+            } else {
+              totalSeconds = parseInt(order.is_timer_clock || '0', 10);
+            }
+
+            totalSeconds += 1;
+
+            const hh = Math.floor(totalSeconds / 3600);
+            const mm = Math.floor((totalSeconds % 3600) / 60);
+            const ss = totalSeconds % 60;
+            const clockStr = [hh, mm, ss].map(v => v < 10 ? "0" + v : v).join(":");
+
+            const hPrice = parseFloat(order.table?.hourly_price || 0);
+            const charge = parseFloat(((hPrice / 3600) * totalSeconds).toFixed(2));
+
+            // Return NEW object to trigger React re-render
+            return {
+              ...order,
+              is_timer_clock: clockStr,
+              rate_per_minute: charge,
+              is_active_timer: 1
+            };
+          }
+          return order;
+        });
+      };
+
+      if (Array.isArray(state.books)) {
+        state.books = getUpdatedOrders(state.books);
+      } else if (state.books && Array.isArray(state.books.data)) {
+        state.books.data = getUpdatedOrders(state.books.data);
+      }
+    }
   },
   extraReducers: (builder) => {
     // getActiveOrders
@@ -214,8 +254,9 @@ const BooksSlice = createSlice({
         action.type === "pos/discount/fulfilled" ||
         action.type === "orders/change-saletype/fulfilled" ||
         action.type === "orders/waiters/fulfilled" ||
-        action.type === "orders/incrementPrintCount/fulfilled" ||
-        action.type === "orders/split/fulfilled" ||
+        action.type === "orders/startTimer/fulfilled" ||
+        action.type === "orders/stopTimer/fulfilled" ||
+        action.type === "orders/resetTimer/fulfilled" ||
         action.type === "pos/sales/fulfilled" ||
         action.type === "pos/otherorderS/fulfilled",
       (state, action) => {
@@ -263,7 +304,7 @@ const BooksSlice = createSlice({
   },
 });
 
-export const { removeOrderOptimistic, addOrderOptimistic } = BooksSlice.actions;
+export const { removeOrderOptimistic, addOrderOptimistic, tickTimer } = BooksSlice.actions;
 export default BooksSlice.reducer;
 
 

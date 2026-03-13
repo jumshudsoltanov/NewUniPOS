@@ -86,6 +86,56 @@ const TablesSlice = createSlice({
         }
       });
     },
+    tickTimer: (state) => {
+      if (!state.tableGroups?.data) return;
+      state.tableGroups.data = state.tableGroups.data.map((hall) => {
+        if (!hall.tables) return hall;
+        const newTables = hall.tables.map((table) => {
+          const hPrice = parseFloat(table.hourly_price || 0);
+          if (table.orders && table.orders.length > 0 && hPrice > 0) {
+            const newOrders = table.orders.map((order) => {
+              if (order.is_timer_status === 1) {
+                let totalSeconds = 0;
+                if (order.is_timer_clock && String(order.is_timer_clock).includes(':')) {
+                  const parts = order.is_timer_clock.split(':').map(Number);
+                  if (parts.length === 3) totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                } else {
+                  totalSeconds = parseInt(order.is_timer_clock || '0', 10);
+                }
+
+                totalSeconds += 1;
+
+                const hh = Math.floor(totalSeconds / 3600);
+                const mm = Math.floor((totalSeconds % 3600) / 60);
+                const ss = totalSeconds % 60;
+                const clockStr = [hh, mm, ss].map(v => v < 10 ? "0" + v : v).join(":");
+
+                return {
+                  ...order,
+                  is_timer_clock: clockStr,
+                  rate_per_minute: parseFloat(((hPrice / 3600) * totalSeconds).toFixed(2)),
+                  is_active_timer: 1
+                };
+              }
+              return order;
+            });
+
+            // Check if any order actually changed to avoid unnecessary table reference change
+            const anyChanged = newOrders.some((no, i) => no !== table.orders[i]);
+            if (anyChanged) {
+              return { ...table, orders: newOrders };
+            }
+          }
+          return table;
+        });
+
+        const anyTableChanged = newTables.some((nt, i) => nt !== hall.tables[i]);
+        if (anyTableChanged) {
+          return { ...hall, tables: newTables };
+        }
+        return hall;
+      });
+    }
   },
   extraReducers: (builder) => {
     builder.addCase(getTableGroups.pending, (state) => {
@@ -146,6 +196,9 @@ const TablesSlice = createSlice({
 
     builder.addMatcher(
       (action) =>
+        action.type === "orders/startTimer/fulfilled" ||
+        action.type === "orders/stopTimer/fulfilled" ||
+        action.type === "orders/resetTimer/fulfilled" ||
         action.type === "orders/lockCheck/fulfilled" ||
         action.type === "orders/lock-check/fulfilled" ||
         action.type === "orders/gift/fulfilled" ||
@@ -189,6 +242,7 @@ export const {
   setTempHallOrder,
   setTempTableOrder,
   setTempTableLayout,
+  tickTimer,
   removeOrderOptimistic: tablesRemoveOrderOptimistic
 } = TablesSlice.actions;
 export { tablesRemoveOrderOptimistic as removeOrderOptimisticFromTables };

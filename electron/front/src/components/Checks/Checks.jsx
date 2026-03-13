@@ -403,6 +403,23 @@ const Checks = () => {
                         </svg>
                         {check?.waiter?.name || "Naməlum"}
                       </span>
+                      {(check.is_timer_status === 1 || Number(check.rate_per_minute || 0) > 0) && (
+                        <span className="timer-pill ms-2" style={{ 
+                          fontSize: '11px', 
+                          background: check.is_timer_status === 1 ? '#053796' : '#e2e8f0', 
+                          color: check.is_timer_status === 1 ? '#fff' : '#053796',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontWeight: '600',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <i className={`bi bi-clock${check.is_timer_status === 1 ? '-fill' : ''}`}></i>
+                          {check.is_timer_clock || "00:00:00"}
+                          {Number(check.rate_per_minute || 0) > 0 && ` (${Number(check.rate_per_minute).toFixed(2)} ₼)`}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="checks-check-right">

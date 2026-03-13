@@ -431,6 +431,27 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             </div>
                                         </div>
 
+                                        {(order.is_timer_status === 1 || (order.is_timer_clock && order.is_timer_clock !== "00:00:00")) && (
+                                            <div className="meta-item-box">
+                                                <div className="meta-icon-col">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="2.5">
+                                                        <circle cx="12" cy="12" r="10"></circle>
+                                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                                    </svg>
+                                                </div>
+                                                <div className="meta-content-col">
+                                                    <div className="meta-label" style={{ color: '#053796' }}>TAYMER</div>
+                                                    <div className="meta-value" style={{ fontWeight: '700' }}>
+                                                        {order.is_timer_clock}
+                                                        {order.is_timer_status === 1 ? ' (Aktiv)' : ' (Dayandırılıb)'}
+                                                    </div>
+                                                    {Number(order.rate_per_minute || 0) > 0 && (
+                                                        <div className="meta-sub text-primary fw-bold">{Number(order.rate_per_minute).toFixed(2)} ₼</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="meta-item-box">
                                             <div className="meta-icon-col">
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">

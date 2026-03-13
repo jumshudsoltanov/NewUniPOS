@@ -84,7 +84,21 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
                 const deposit = Number(order.deposit || 0);
                 const service = Number(order.service_charge || 0);
 
-                const subtotalAfterDiscount = subtotal - discount;
+                let timerCharge = Number(order.rate_per_minute || 0);
+
+                // Auto-calculate timer charge if missing but clock exists (hall view fallback)
+                if (timerCharge === 0 && order.is_timer_clock && order.is_timer_clock !== "00:00:00") {
+                  const hPrice = Number(table?.hourly_price || 0);
+                  if (hPrice > 0) {
+                    const parts = order.is_timer_clock.split(':').map(Number);
+                    if (parts.length === 3) {
+                      const totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                      timerCharge = (hPrice / 3600) * totalSeconds;
+                    }
+                  }
+                }
+
+                const subtotalAfterDiscount = (subtotal + timerCharge) - discount;
                 const displayAmount = Math.max(subtotalAfterDiscount, deposit) + service;
                 const isDepositFloor = deposit > subtotalAfterDiscount;
 
@@ -107,6 +121,13 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
               <i className="bi bi-people"></i>
               <span>{orders?.[0]?.waiter?.name || "—"}</span>
             </div>
+
+            {(orders?.[0]?.is_timer_status == 1 || (orders?.[0]?.is_timer_clock && orders?.[0]?.is_timer_clock !== "00:00:00") || Number(orders?.[0]?.rate_per_minute || 0) > 0) && Number(table?.hourly_price || 0) > 0 && (
+              <div className="table-timer-info" style={{ color: '#053796', fontSize: '0.9rem', fontWeight: '700', marginTop: '6px', background: 'rgba(5, 55, 150, 0.05)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center' }}>
+                <i className={`bi bi-clock${orders?.[0]?.is_timer_status == 1 ? '-fill' : ''} me-1`} style={{ fontSize: '0.8rem', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.6 }}></i>
+                <span style={{ fontVariantNumeric: 'tabular-nums', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.8 }}>{orders?.[0]?.is_timer_clock || "00:00:00"}</span>
+              </div>
+            )}
           </div>
 
           <div className="print-action">

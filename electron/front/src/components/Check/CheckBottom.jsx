@@ -8,7 +8,8 @@ import {
   deleteOrderItem,
   clearPendingDeletions,
   addLog,
-  saveLog
+  saveLog,
+  stopTimer
 } from "../../redux/Slices/OrdersSlice";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -106,6 +107,21 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     if (products.length > 0 || pendingDeletions.length > 0) {
       await handleSendOrders()
     }
+
+    // Auto-stop timer when moving to payment screen
+    if (orders?.is_timer_status === 1) {
+      let seconds = 0;
+      if (orders.is_timer_clock && String(orders.is_timer_clock).includes(':')) {
+        const p = orders.is_timer_clock.split(':').map(Number);
+        if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+      }
+      dispatch(stopTimer({ 
+        orderId: orders.uuid,
+        elapsedSeconds: seconds,
+        clockStr: orders.is_timer_clock 
+      }));
+    }
+
     navigate(`/closecheck/${id}`)
   }
 
@@ -151,6 +167,13 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     addItems(orders?.orders_items);
     addItems(products);
     addItems(sentProducts);
+
+    // Add Timer Charge
+    if (orders?.rate_per_minute) {
+      total += Number(orders.rate_per_minute);
+      totalForDiscount += 0; // Usually timer isn't discounted? User didn't specify, keeping it 0 for now.
+      totalForService += 0; // Same for service.
+    }
 
     if (pendingDeletions && pendingDeletions.length > 0) {
       pendingDeletions.forEach((del) => {
@@ -271,6 +294,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     orders?.service_type,
     orders?.service_charge,
     orders?.deposit,
+    orders?.rate_per_minute,
     pendingDeletions,
     menu
   ]);
@@ -324,6 +348,22 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
             <div className="summary-row" style={{ color: '#fff', borderTop: '1px dashed rgba(255,255,255,0.1)', marginTop: '2px', paddingTop: '2px' }}>
               <span>Depozit:</span>
               <span>{calcTotal.depositAmount} ₼</span>
+            </div>
+          )}
+          {(orders?.is_timer_status == 1 || Number(table?.hourly_price || orders?.table?.hourly_price || 0) > 0) && (
+            <div className="timer-detailed-summary mt-2 pt-2" style={{ borderTop: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }}>
+              <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                <span>Saatlıq qiymət:</span>
+                <span>{Number(table?.hourly_price || orders?.table?.hourly_price || 0).toFixed(2)} ₼</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                <span>Keçən vaxt:</span>
+                <span className="fw-bold">{orders?.is_timer_clock || "00:00:00"}</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mt-1 total-row" style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+                <span>Taymer qazancı:</span>
+                <span>{Number(orders?.rate_per_minute || 0).toFixed(2)} ₼</span>
+              </div>
             </div>
           )}
         </div>
@@ -407,6 +447,21 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               toast.error(isSending ? "Əməliyyat davam edir..." : "Qəbz kilidlidir!");
               return;
             }
+
+            // Auto-stop timer when printing from mobile
+            if (orders?.is_timer_status === 1) {
+              let seconds = 0;
+              if (orders.is_timer_clock && String(orders.is_timer_clock).includes(':')) {
+                const p = orders.is_timer_clock.split(':').map(Number);
+                if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+              }
+              dispatch(stopTimer({ 
+                orderId: orders.uuid,
+                elapsedSeconds: seconds,
+                clockStr: orders.is_timer_clock 
+              }));
+            }
+
             const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || orders?.waiter?.name || "Naməlum";
             dispatch(saveLog({
               orderId: orders.uuid,

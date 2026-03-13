@@ -12,6 +12,8 @@ import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "./redux/Slices/CustomersSlice";
 import { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } from "./redux/Slices/SyncSlice";
+import { tickTimer as tickBooks } from "./redux/Slices/BooksSlice";
+import { tickTimer as tickTables } from "./redux/Slices/TablesSlice";
 import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./components/Login/Login";
 import Layout from "./components/Layout/Layout";
@@ -84,13 +86,18 @@ function AppContent() {
     const connInt = setInterval(handleConnectivity, 5000);
     const syncInt = setInterval(fetchSyncCount, 5000);
     const socketInt = setInterval(checkSocket, 5000);
-
+    const timerInt = setInterval(() => {
+      dispatch(tickBooks());
+      dispatch(tickTables());
+    }, 1000);
+ 
     return () => {
       window.removeEventListener("online", handleConnectivity);
       window.removeEventListener("offline", handleConnectivity);
       clearInterval(connInt);
       clearInterval(syncInt);
       clearInterval(socketInt);
+      clearInterval(timerInt);
     };
   }, [dispatch]);
 

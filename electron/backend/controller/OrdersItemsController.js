@@ -4,9 +4,42 @@ const OrdersModel = require("../model/OrdersModel");
 const WaitersModel = require("../model/WaitersModel");
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
-const OrderPaymentsModel = require("../model/OrderPaymentsModel");
+const TimerService = require("../services/TimerService");
 const SyncService = require("../services/SyncService");
 const MaxCheckService = require("../services/MaxCheckService");
+const OrderPaymentsModel = require("../model/OrderPaymentsModel");
+
+/**
+ * Helper to attach live timer status to an order object for responses.
+ */
+const attachLiveTimerToOrder = (order) => {
+  const hourlyPrice = parseFloat(order?.table?.hourly_price || 0);
+  if (order && order.is_timer_status === 1 && hourlyPrice > 0) {
+    const liveStatus = TimerService.calculateLiveStatus(order, hourlyPrice);
+    order.dataValues.rate_per_minute = liveStatus.charge;
+    order.dataValues.is_timer_clock = liveStatus.clockStr;
+
+    const itemsTotal = (order.orders_items || []).reduce((sum, it) => sum + (parseFloat(it.count) * parseFloat(it.price)), 0);
+    const newTotal = itemsTotal + liveStatus.charge;
+
+    let discount = parseFloat(order.discount || 0);
+    let service = parseFloat(order.service_charge || 0);
+
+    if (parseFloat(order.discount_value) > 0) {
+      discount = order.discount_type === "percent" ? (newTotal * parseFloat(order.discount_value)) / 100 : parseFloat(order.discount_value);
+    }
+    if (parseFloat(order.service_value) > 0) {
+      service = order.service_type === "percent" ? (newTotal * parseFloat(order.service_value)) / 100 : parseFloat(order.service_value);
+    }
+
+    order.dataValues.amount = newTotal;
+    order.dataValues.total = Math.max(0, newTotal - discount + service);
+    order.dataValues.discount = discount;
+    order.dataValues.service_charge = service;
+  }
+  return order;
+};
+const LoginModel = require("../model/LoginModel");
 
 const sendOrdersItemsToDb = async (req, res) => {
   const { orderId } = req.params;
@@ -48,16 +81,22 @@ const sendOrdersItemsToDb = async (req, res) => {
           "service_value",
           "service_type",
           "deposit",
+          "rate_per_minute",
         ],
       }),
     ]);
 
     // Calc total (Robust)
-    const total = listOfProducts.reduce((sum, item) => {
+    const TimerService = require("../services/TimerService");
+    const liveTimer = TimerService.calculateLiveStatus(currentOrder, currentOrder?.table?.hourly_price || 0);
+    
+    const itemsTotal = listOfProducts.reduce((sum, item) => {
       const qty = parseFloat(item.count) || 0;
       const prc = parseFloat(item.price) || 0;
       return sum + qty * prc;
     }, 0);
+
+    const total = itemsTotal + liveTimer.charge;
 
     let discount = 0;
     let service = 0;
@@ -124,13 +163,15 @@ const sendOrdersItemsToDb = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     return res.status(200).json(updatedOrder);
   } catch (error) {
@@ -176,7 +217,7 @@ const onUpdateDiscountOrder = async (req, res) => {
     // Fetch current service and deposit to keep them in total
     const currentOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
-      attributes: ["service_charge", "deposit"],
+      attributes: ["service_charge", "deposit", "rate_per_minute"],
     });
     const serviceCharge = parseFloat(currentOrder?.service_charge || 0);
     const deposit = parseFloat(currentOrder?.deposit || 0);
@@ -189,29 +230,36 @@ const onUpdateDiscountOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid discount type" });
     }
 
-    newTotal = Math.max(total - discount + serviceCharge, deposit);
+    const timerCharge = parseFloat(currentOrder?.rate_per_minute || 0);
+    newTotal = Math.max(total + timerCharge - discount + serviceCharge, deposit);
 
     newTotal = Math.max(newTotal, 0);
 
-    await OrdersModel.update(
-      {
-        discount: discount,
-        total: newTotal,
-        discount_type: discountType,
-        discount_value: discountValue,
-        is_synced: 0
-      },
-      { where: { uuid: orderId } },
-    );
-
-    SyncService.triggerSync(orderId);
-    const { getIo } = require("../socket/MasterServer");
-    if (getIo()) getIo().emit("table_updated", { orderId });
-
-    return res.status(200).json({
-      message: "Discount updated successfully!",
-      data: { total, discount, newTotal, discountType, discountValue },
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name", "hourly_price"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+          ],
+        },
+      ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
+
+    return res.status(200).json(updatedOrder);
   } catch (error) {
     console.error("Discount update error:", error);
     return res.status(500).json({ message: "Internal Server Error", error });
@@ -253,7 +301,7 @@ const onUpdateServiceFeeOrder = async (req, res) => {
     // Fetch current discount and deposit to keep them in total
     const currentOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
-      attributes: ["discount", "deposit"],
+      attributes: ["discount", "deposit", "rate_per_minute"],
     });
     const discountAmount = parseFloat(currentOrder?.discount || 0);
     const deposit = parseFloat(currentOrder?.deposit || 0);
@@ -266,29 +314,36 @@ const onUpdateServiceFeeOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid service type" });
     }
 
-    newTotal = Math.max(total + service - discountAmount, deposit);
+    const timerCharge = parseFloat(currentOrder?.rate_per_minute || 0);
+    newTotal = Math.max(total + timerCharge + service - discountAmount, deposit);
 
     newTotal = Math.max(newTotal, 0);
 
-    await OrdersModel.update(
-      {
-        service_charge: service,
-        total: newTotal,
-        service_type: feeType,
-        service_value: serviceValue,
-        is_synced: 0
-      },
-      { where: { uuid: orderId } },
-    );
-
-    SyncService.triggerSync(orderId);
-    const { getIo } = require("../socket/MasterServer");
-    if (getIo()) getIo().emit("table_updated", { orderId });
-
-    return res.status(200).json({
-      message: "service updated successfully!",
-      data: { total, service, newTotal, feeType, serviceValue },
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name", "hourly_price"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+          ],
+        },
+      ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
+
+    return res.status(200).json(updatedOrder);
   } catch (error) {
     console.error("service update error:", error);
     return res.status(500).json({ message: "Internal Server Error", error });
@@ -430,13 +485,15 @@ const onDeleteOrderItems = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     res.status(200).json({ message: "delete all items", data: updatedOrder });
   } catch (error) {
@@ -592,13 +649,15 @@ const onMergeChecks = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     return res.status(200).json({
       message: "Merge success",
@@ -642,13 +701,15 @@ const onChangeSaleType = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     res.status(200).json({ message: "sale-type  update", data: updatedOrder });
   } catch (error) {
@@ -867,7 +928,7 @@ const onSplitOrder = async (req, res) => {
       {
         model: TablesModel,
         as: "table",
-        attributes: ["id", "name"],
+        attributes: ["id", "name", "hourly_price"],
         include: [{ model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }],
       },
     ];
@@ -876,6 +937,9 @@ const onSplitOrder = async (req, res) => {
       OrdersModel.findOne({ where: { uuid: data.orderId }, include: includeSpec }),
       OrdersModel.findOne({ where: { uuid: targetOrder.uuid }, include: includeSpec }),
     ]);
+
+    attachLiveTimerToOrder(updatedOriginalOrder);
+    attachLiveTimerToOrder(updatedTargetOrder);
 
     res.status(200).json({
       message: "success",
@@ -1074,13 +1138,15 @@ const onGiftItem = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     res.status(200).json(updatedOrder);
   } catch (error) {
@@ -1216,13 +1282,15 @@ const onUpdateItemDiscount = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     res.status(200).json(updatedOrder);
   } catch (error) {
@@ -1287,11 +1355,65 @@ const onCloseOrder = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    // 1. Update Order Status, Note, and End Date
+    // 1. Calculate final timer charge if active
+    const order = await OrdersModel.findOne({
+        where: { uuid: orderId },
+        include: [{ model: TablesModel, as: "table", attributes: ["hourly_price"] }],
+        transaction
+    });
+    
+    let timerUpdate = {};
+    if (order && order.is_active_timer) {
+        const live = TimerService.calculateLiveStatus(order, order.table?.hourly_price || 0);
+        timerUpdate = {
+            is_active_timer: 0,
+            is_timer_status: 1, // Keep status as 1 to show it was a timer order
+            is_timer_clock: live.clockStr,
+            rate_per_minute: live.charge,
+            is_synced: 0
+        };
+    }
+
+    // Update Order Status, Note, and End Date (and Timer if needed)
     await OrdersModel.update(
-      { status: status, note: note || "", end_date: new Date(), is_synced: 0, is_tax: is_tax !== undefined ? is_tax : 0 },
+      { 
+        status: status, 
+        note: note || "", 
+        end_date: new Date(), 
+        is_synced: 0, 
+        is_tax: is_tax !== undefined ? is_tax : 0,
+        ...timerUpdate
+      },
       { where: { uuid: orderId }, transaction },
     );
+
+    // Re-fetch items to calculate final total correctly including items + timer
+    const items = await OrdersItemsModel.findAll({ where: { order_id: orderId }, transaction });
+    const subtotal = items.reduce((sum, it) => sum + (Number(it.count) * Number(it.price)), 0);
+    const finalTimerCharge = timerUpdate.rate_per_minute !== undefined ? timerUpdate.rate_per_minute : (order?.rate_per_minute || 0);
+    
+    // Simple Total Recalculation (should ideally consider discounts/service but keeping it basic for now consistent with other parts)
+    const orderToUpdate = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
+    let total = subtotal + Number(finalTimerCharge);
+    
+    // Apply global discounts/service if any
+    let disc = 0;
+    if (orderToUpdate.discount_value > 0) {
+        disc = orderToUpdate.discount_type === 'percent' ? (subtotal * orderToUpdate.discount_value / 100) : orderToUpdate.discount_value;
+    }
+    let serv = 0;
+    if (orderToUpdate.service_value > 0) {
+        serv = orderToUpdate.service_type === 'percent' ? (subtotal * orderToUpdate.service_value / 100) : orderToUpdate.service_value;
+    }
+    
+    const finalTotal = Math.max(total - disc + serv, parseFloat(orderToUpdate.deposit || 0));
+    
+    await OrdersModel.update({
+        amount: subtotal,
+        discount: disc,
+        service_charge: serv,
+        total: finalTotal
+    }, { where: { uuid: orderId }, transaction });
 
     // 2. Insert Payments if provided
     if (payments && payments.length > 0) {
@@ -1389,13 +1511,15 @@ const onUpdateDepositOrder = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     return res.status(200).json({
       message: "Deposit updated successfully!",
@@ -1683,13 +1807,15 @@ const onUpdateItemPrice = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     res.status(200).json({
       message: "success",
@@ -1809,13 +1935,15 @@ const onUpdateItemCount = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+
+    attachLiveTimerToOrder(updatedOrder);
 
     res.status(200).json({
       message: "success",
@@ -1855,13 +1983,14 @@ const onAssignCustomer = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
         },
       ],
     });
+    attachLiveTimerToOrder(updated);
     return res.json({ message: "success", data: updated });
   } catch (error) {
     console.error("Assign customer error:", error);
@@ -1938,7 +2067,7 @@ const incrementPrintCount = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
           ],
@@ -1946,10 +2075,195 @@ const incrementPrintCount = async (req, res) => {
       ],
     });
 
+    attachLiveTimerToOrder(updatedOrder);
+
     return res.status(200).json({ message: "Print count updated", data: updatedOrder });
   } catch (error) {
     console.error("Error incrementing print count:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const onStartTimer = async (req, res) => {
+  const { orderId } = req.params;
+  try {
+    const order = await OrdersModel.findOne({ where: { uuid: orderId } });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    await OrdersModel.update(
+      { is_timer_status: 1, is_active_timer: 1, timer_last_started_at: new Date(), is_synced: 0 },
+      { where: { uuid: orderId } }
+    );
+
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name", "hourly_price"],
+        },
+      ],
+    });
+
+    attachLiveTimerToOrder(updatedOrder);
+    SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
+
+    res.json({ success: true, message: "Timer started", data: updatedOrder });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+const onStopTimer = async (req, res) => {
+  const { orderId } = req.params;
+  const { elapsedSeconds, clockStr } = req.body;
+  try {
+    const order = await OrdersModel.findOne({ where: { uuid: orderId } });
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    const table = await TablesModel.findOne({ where: { id: order.table_id } });
+    const hourlyPrice = table?.hourly_price || 0;
+
+    const timerCharge = TimerService.calculateCharge(hourlyPrice, elapsedSeconds);
+
+    await OrdersModel.update(
+      { 
+        is_timer_status: 0, 
+        is_active_timer: 0,
+        is_timer_clock: clockStr, 
+        rate_per_minute: timerCharge,
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } }
+    );
+
+    // Recalculate total
+    const [listOfProducts, currentOrder] = await Promise.all([
+      OrdersItemsModel.findAll({
+        where: { order_id: orderId },
+        attributes: ["count", "price"],
+      }),
+      OrdersModel.findOne({
+        where: { uuid: orderId },
+        attributes: ["discount_value", "discount_type", "service_value", "service_type", "deposit", "rate_per_minute"],
+      }),
+    ]);
+
+    const total = listOfProducts.reduce((sum, item) => {
+      const qty = parseFloat(item.count) || 0;
+      const prc = parseFloat(item.price) || 0;
+      return sum + qty * prc;
+    }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
+
+    let discount = 0;
+    let service = 0;
+    if (currentOrder) {
+      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      if (parseFloat(discount_value) > 0) {
+        discount = discount_type === "percent" ? (total * parseFloat(discount_value)) / 100 : parseFloat(discount_value);
+      }
+      if (parseFloat(service_value) > 0) {
+        service = service_type === "percent" ? (total * parseFloat(service_value)) / 100 : parseFloat(service_value);
+      }
+    }
+    const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0));
+
+    await OrdersModel.update(
+      { amount: total, total: netTotal, discount: discount, service_charge: service, is_synced: 0 },
+      { where: { uuid: orderId } }
+    );
+
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        { model: OrdersItemsModel, as: "orders_items", separate: true },
+        { model: TablesModel, as: "table", attributes: ["id", "name", "hourly_price"] },
+      ],
+    });
+
+    attachLiveTimerToOrder(updatedOrder);
+    SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
+
+    res.json({ success: true, message: "Timer stopped", charge: timerCharge, data: updatedOrder });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+const onResetTimer = async (req, res) => {
+  const { orderId } = req.params;
+  try {
+    await OrdersModel.update(
+      { is_timer_status: 0, is_timer_clock: "00:00:00", is_active_timer: 0, rate_per_minute: 0, is_synced: 0 },
+      { where: { uuid: orderId } }
+    );
+
+    // Recalculate total after reset
+    const [listOfProducts, currentOrder] = await Promise.all([
+      OrdersItemsModel.findAll({
+        where: { order_id: orderId },
+        attributes: ["count", "price"],
+      }),
+      OrdersModel.findOne({
+        where: { uuid: orderId },
+        attributes: ["discount_value", "discount_type", "service_value", "service_type", "deposit", "rate_per_minute"],
+      }),
+    ]);
+
+    const total = listOfProducts.reduce((sum, item) => {
+      const qty = parseFloat(item.count) || 0;
+      const prc = parseFloat(item.price) || 0;
+      return sum + qty * prc;
+    }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
+
+    let discount = 0;
+    let service = 0;
+    if (currentOrder) {
+      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      if (parseFloat(discount_value) > 0) {
+        discount = discount_type === "percent" ? (total * parseFloat(discount_value)) / 100 : parseFloat(discount_value);
+      }
+      if (parseFloat(service_value) > 0) {
+        service = service_type === "percent" ? (total * parseFloat(service_value)) / 100 : parseFloat(service_value);
+      }
+    }
+    const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0));
+
+    await OrdersModel.update(
+      { amount: total, total: netTotal, discount: discount, service_charge: service, is_synced: 0 },
+      { where: { uuid: orderId } }
+    );
+
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        { model: OrdersItemsModel, as: "orders_items", separate: true },
+        { model: TablesModel, as: "table", attributes: ["id", "name", "hourly_price"] },
+      ],
+    });
+
+    attachLiveTimerToOrder(updatedOrder);
+    SyncService.triggerSync(orderId);
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
+
+    res.json({ success: true, message: "Timer reset", data: updatedOrder });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
   }
 };
 
@@ -2009,11 +2323,14 @@ module.exports = {
         attributes: ["count", "price"],
         transaction,
       });
-      const total = allItems.reduce((sum, it) => {
-        return sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0);
-      }, 0);
 
       const ord = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
+      const timerCharge = parseFloat(ord?.rate_per_minute || 0);
+
+      const total = allItems.reduce((sum, it) => {
+        return sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0);
+      }, 0) + timerCharge;
+
       let discount = 0, service = 0;
       if (ord) {
         const dVal = parseFloat(ord.discount_value) || 0;
@@ -2046,4 +2363,7 @@ module.exports = {
   onAssignCustomer,
   incrementPrintCount,
   onUpdateGuestCount,
+  onStartTimer,
+  onStopTimer,
+  onResetTimer,
 };

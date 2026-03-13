@@ -3,14 +3,14 @@ import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal"; // Import
-import { addPendingDeletion, removeAllProductsById } from "../../redux/Slices/OrdersSlice"; // Import action
+import { addPendingDeletion, removeAllProductsById, startTimer, stopTimer, resetTimer } from "../../redux/Slices/OrdersSlice"; // Import action
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault.jpg";
 
-const CheckMain = ({ orders }) => {
+const CheckMain = ({ orders, table }) => {
   const dispatch = useDispatch(); // Add dispatch
   const [editItemModal, setEditItemModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -151,6 +151,29 @@ const CheckMain = ({ orders }) => {
     setEditItemModal(true);
   };
 
+  const handleStartTimer = () => {
+    dispatch(startTimer({ orderId: orders.uuid }));
+  };
+
+  const handleStopTimer = () => {
+    let seconds = 0;
+    if (orders.is_timer_clock && String(orders.is_timer_clock).includes(':')) {
+      const p = orders.is_timer_clock.split(':').map(Number);
+      if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+    }
+    dispatch(stopTimer({ 
+      orderId: orders.uuid,
+      elapsedSeconds: seconds,
+      clockStr: orders.is_timer_clock 
+    }));
+  };
+
+  const handleResetTimer = () => {
+    if (window.confirm("Taymeri sıfırlamaq istədiyinizə əminsiniz?")) {
+      dispatch(resetTimer({ orderId: orders.uuid }));
+    }
+  };
+
   let fallbackProfileData = null;
   try {
     const authResultStr = localStorage.getItem("authResult");
@@ -191,6 +214,7 @@ const CheckMain = ({ orders }) => {
           backgroundRepeat: "no-repeat"
         }}
       >
+
         <div className="order-table-header">
           <div className="header-col col-name-header">Məhsul</div>
           <div className="header-col col-qty-header">Say</div>

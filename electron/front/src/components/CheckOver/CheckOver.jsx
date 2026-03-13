@@ -97,6 +97,11 @@ const CheckOver = () => {
             total += count * price;
         });
 
+        // Add Timer Charge
+        if (currentOrder.rate_per_minute) {
+            total += Number(currentOrder.rate_per_minute);
+        }
+
         const discountValue = Number(currentOrder.discount_value || 0);
         const discountType = currentOrder.discount_type || "percent";
         let discountAmount = 0;

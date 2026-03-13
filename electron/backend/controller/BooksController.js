@@ -40,7 +40,7 @@ const getAllActiveOrders = async (req, res) => {
       {
         model: TablesModel,
         as: "table",
-        attributes: ["id", "name", "hall_id"],
+        attributes: ["id", "name", "hall_id", "hourly_price"],
         include: [
           { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
         ]
@@ -60,7 +60,35 @@ const getAllActiveOrders = async (req, res) => {
       include: includeOptions,
     });
 
-    res.status(200).json({ message: "success", data: orders });
+    const TimerService = require("../services/TimerService");
+    const updatedOrders = orders.map(order => {
+      if (order.is_timer_status === 1) {
+        const liveStatus = TimerService.calculateLiveStatus(order, order.table?.hourly_price || 0);
+        order.dataValues.rate_per_minute = liveStatus.charge;
+        order.dataValues.is_timer_clock = liveStatus.clockStr;
+        
+        const itemsTotal = (order.orders_items || []).reduce((sum, it) => sum + (parseFloat(it.count) * parseFloat(it.price)), 0);
+        const newTotal = itemsTotal + liveStatus.charge;
+        
+        let discount = parseFloat(order.discount || 0);
+        let service = parseFloat(order.service_charge || 0);
+        
+        if (parseFloat(order.discount_value) > 0) {
+          discount = order.discount_type === "percent" ? (newTotal * parseFloat(order.discount_value)) / 100 : parseFloat(order.discount_value);
+        }
+        if (parseFloat(order.service_value) > 0) {
+          service = order.service_type === "percent" ? (newTotal * parseFloat(order.service_value)) / 100 : parseFloat(order.service_value);
+        }
+        
+        order.dataValues.amount = newTotal;
+        order.dataValues.total = Math.max(0, newTotal - discount + service);
+        order.dataValues.discount = discount;
+        order.dataValues.service_charge = service;
+      }
+      return order;
+    });
+
+    res.status(200).json({ message: "success", data: updatedOrders });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error", data: {} });
@@ -212,7 +240,7 @@ const getOrderById = async (req, res) => {
         {
           model: TablesModel,
           as: "table",
-          attributes: ["id", "name", "hall_id"],
+          attributes: ["id", "name", "hall_id", "hourly_price"],
           include: [
             { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }
           ]
@@ -220,8 +248,35 @@ const getOrderById = async (req, res) => {
       ]
     });
 
-    if (!order) {
-      return res.status(404).json({ message: "Order not found", data: null });
+    if (order) {
+      // Automatic timer calculation for active timers
+      if (order.is_timer_status === 1) {
+        const TimerService = require("../services/TimerService");
+        const liveStatus = TimerService.calculateLiveStatus(order, order.table?.hourly_price || 0);
+        
+        order.dataValues.rate_per_minute = liveStatus.charge;
+        order.dataValues.is_timer_clock = liveStatus.clockStr;
+        
+        // Also update total in response
+        const itemsTotal = (order.orders_items || []).reduce((sum, it) => sum + (parseFloat(it.count) * parseFloat(it.price)), 0);
+        const newTotal = itemsTotal + liveStatus.charge;
+        
+        // Handle discounts/service fees if needed
+        let discount = parseFloat(order.discount || 0);
+        let service = parseFloat(order.service_charge || 0);
+        
+        if (parseFloat(order.discount_value) > 0) {
+          discount = order.discount_type === "percent" ? (newTotal * parseFloat(order.discount_value)) / 100 : parseFloat(order.discount_value);
+        }
+        if (parseFloat(order.service_value) > 0) {
+          service = order.service_type === "percent" ? (newTotal * parseFloat(order.service_value)) / 100 : parseFloat(order.service_value);
+        }
+        
+        order.dataValues.amount = newTotal;
+        order.dataValues.total = Math.max(0, newTotal - discount + service);
+        order.dataValues.discount = discount;
+        order.dataValues.service_charge = service;
+      }
     }
 
     res.status(200).json({ message: "success", data: order });

@@ -2073,3 +2073,214 @@
         padding: 0 10px;
     }
 }
+/* =========================================
+   PREMIUM TIMER GLASSMORPHISM STYLES
+   ========================================= */
+
+.timer-panel-glass {
+    background: rgba(15, 23, 42, 0.85); /* Slate 900 */
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 4px solid #10b981; /* Emerald 500 */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    color: #f8fafc;
+    transition: all 0.3s ease;
+}
+
+.timer-info-premium {
+    flex: 1;
+}
+
+.status-label {
+    margin-bottom: 4px;
+}
+
+.pulse-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.pulse-dot.active {
+    background-color: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse-green 2s infinite;
+}
+
+.pulse-dot.idle {
+    background-color: #94a3b8;
+}
+
+@keyframes pulse-green {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+.label-text {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+}
+
+.timer-clock-display {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 4px 0;
+    background: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.timer-price-details {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+}
+
+.rate-badge {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.current-charge {
+    color: #94a3b8;
+}
+
+.current-charge strong {
+    color: #f8fafc;
+    font-size: 1rem;
+}
+
+/* Premium Buttons */
+.timer-controls-premium button {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #fff;
+}
+
+.timer-btn-play {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.timer-btn-play:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+    filter: brightness(1.1);
+}
+
+.timer-btn-pause {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.timer-btn-pause:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+    filter: brightness(1.1);
+}
+
+.timer-btn-reset {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.timer-btn-reset:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: rotate(-30deg);
+}
+
+.active-timer-btn {
+    background: #053796 !important;
+    box-shadow: 0 4px 12px rgba(5, 55, 150, 0.3) !important;
+}
+
+.timer-button {
+    transition: all 0.2s ease;
+}
+
+.timer-button:hover {
+    background: rgba(5, 55, 150, 0.1);
+}
+
+/* Timer Modal Customizations */
+.premium-timer-modal .modal-content {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.premium-timer-modal .modal-body {
+    padding: 0 !important;
+    background-color: transparent !important;
+}
+
+.timer-panel-glass {
+    border-radius: 20px !important;
+    overflow: hidden;
+}
+
+.timer-modal-width {
+    max-width: 480px !important;
+}
+
+.timer-modal-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    border: 1px solid #edf2f7;
+    padding: 24px;
+    width: 100%;
+}
+
+.timer-big-clock {
+    font-size: 4.5rem;
+    font-weight: 800;
+    color: #053796;
+    letter-spacing: -2px;
+    margin: 10px 0;
+    font-family: 'Inter', sans-serif;
+}
+
+.timer-info-label {
+    font-size: 13px;
+    color: #718096;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.timer-info-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3748;
+}

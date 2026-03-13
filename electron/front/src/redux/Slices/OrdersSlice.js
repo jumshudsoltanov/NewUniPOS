@@ -739,6 +739,78 @@ export const incrementPrintCount = createAsyncThunk(
 );
 
 
+export const startTimer = createAsyncThunk(
+  "orders/startTimer",
+  async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
+    try {
+      const response = await axios.patch(`/orders-items/${orderId}/timer-start`);
+      
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Taymer başladıldı",
+        waiterName,
+        details: "Taymer saymağa başladı"
+      }));
+
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  }
+);
+
+export const stopTimer = createAsyncThunk(
+  "orders/stopTimer",
+  async ({ orderId, elapsedSeconds, clockStr, waiterName: passedWaiterName }, thunkAPI) => {
+    try {
+      const response = await axios.patch(`/orders-items/${orderId}/timer-stop`, {
+        elapsedSeconds,
+        clockStr,
+      });
+
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Taymer dayandırıldı",
+        waiterName,
+        details: `Vaxt: ${clockStr || "00:00:00"}`
+      }));
+
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  }
+);
+
+export const resetTimer = createAsyncThunk(
+  "orders/resetTimer",
+  async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
+    try {
+      const response = await axios.patch(`/orders-items/${orderId}/timer-reset`);
+
+      const state = thunkAPI.getState();
+      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      
+      thunkAPI.dispatch(saveLog({
+        orderId,
+        action: "Taymer sıfırlandı",
+        waiterName,
+        details: "Taymer vaxtı 00:00:00 edildi"
+      }));
+
+      return response.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(error.response?.data);
+    }
+  }
+);
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {

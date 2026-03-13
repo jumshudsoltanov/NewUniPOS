@@ -147,12 +147,27 @@ const OtherChecks = ({
                   <div className="fw-bold text-truncate text-dark" style={{ fontSize: '1rem' }} title={resolveNames(item)}>
                     {resolveNames(item)}
                   </div>
-                  <div className="text-muted small text-truncate mt-1">
+                  <div className="text-muted small text-truncate mt-1 d-flex align-items-center flex-wrap">
                     <span className="me-2">Çek #{item.id}</span>
                     <span className="me-2">•</span>
                     <span className="me-2">Qonaq: {item.guest_count || 1}</span>
                     <span className="me-2">•</span>
-                    <span>{item.waiter?.name || "terminal_user"}</span>
+                    <span className="me-2">{item.waiter?.name || "terminal_user"}</span>
+                    {(item.is_timer_status === 1 || (item.is_timer_clock && item.is_timer_clock !== "00:00:00")) && (
+                      <>
+                        <span className="me-2">•</span>
+                        <span style={{ 
+                          color: item.is_timer_status === 1 ? '#053796' : '#666', 
+                          fontWeight: '600',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px'
+                        }}>
+                          <i className={`bi bi-clock${item.is_timer_status === 1 ? '-fill' : ''}`}></i>
+                          {item.is_timer_clock || "00:00:00"}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="fw-bold text-nowrap text-primary fs-5">

@@ -34,6 +34,11 @@ const CreateNewOrders = async (req, res) => {
       where: { id: tableId },
     });
 
+    const profile = await require("../model/LoginModel").findOne({
+      where: { id: profileId },
+    });
+    const isTimerActive = (profile?.is_timer || (parseFloat(table?.hourly_price) > 0)) ? 1 : 0;
+
     let newSale = await OrdersModel.create({
       id: newId,
       table_id: tableId ?? 0,
@@ -49,6 +54,10 @@ const CreateNewOrders = async (req, res) => {
       service_value: serviceValue,
       deposit: table?.deposit || 0,
       is_synced: 0,
+      is_timer_status: isTimerActive ? 1 : 0,
+      timer_last_started_at: isTimerActive ? new Date() : null,
+      is_active_timer: isTimerActive ? 1 : 0,
+      is_timer_clock: "00:00:00",
       uuid: uuid || undefined,
     });
 
@@ -59,7 +68,15 @@ const CreateNewOrders = async (req, res) => {
       if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
     }
 
-    res.status(200).json({ message: "success", data: newSale, count: newId });
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: newSale.uuid },
+      include: [
+        { model: require("../model/TablesModel"), as: "table" },
+        { model: require("../model/WaitersModel"), as: "waiter", attributes: ["id", "name"] },
+      ],
+    });
+
+    res.status(200).json({ message: "success", data: updatedOrder, count: newId });
   } catch (error) {
     res.status(500).json({ message: "false", data: error.message });
   }
@@ -99,7 +116,14 @@ const CreateNewOtherOrders = async (req, res) => {
       if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
     }
 
-    res.status(200).json({ message: "success", data: newSale, count: newId });
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: newSale.uuid },
+      include: [
+        { model: require("../model/WaitersModel"), as: "waiter", attributes: ["id", "name"] },
+      ],
+    });
+
+    res.status(200).json({ message: "success", data: updatedOrder, count: newId });
   } catch (error) {
     res.status(500).json({ message: "false", data: error.message });
   }

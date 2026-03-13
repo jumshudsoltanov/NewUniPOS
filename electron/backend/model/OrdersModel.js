@@ -44,6 +44,7 @@ const OrdersModel = db.sequelize.define(
     is_active_timer: { type: DataTypes.INTEGER, allowNull: true },
     is_timer_status: { type: DataTypes.INTEGER, allowNull: true },
     is_timer_clock: { type: DataTypes.TEXT, allowNull: true },
+    timer_last_started_at: { type: DataTypes.DATE, allowNull: true },
 
     total: { type: DataTypes.FLOAT, allowNull: true },
     status: { type: DataTypes.INTEGER, allowNull: true },

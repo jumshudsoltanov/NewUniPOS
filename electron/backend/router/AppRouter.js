@@ -431,6 +431,11 @@ router.post("/tax/operation-history", async (req, res) => {
 
 const OrdersModel = require("../model/OrdersModel");
 
+// Timer Control Routes
+router.patch("/orders-items/:orderId/timer-start", OrdersItemsController.onStartTimer);
+router.patch("/orders-items/:orderId/timer-stop", OrdersItemsController.onStopTimer);
+router.patch("/orders-items/:orderId/timer-reset", OrdersItemsController.onResetTimer);
+
 router.patch("/tax/save-fiscal/:orderId", async (req, res) => {
   try {
     const { orderId } = req.params;

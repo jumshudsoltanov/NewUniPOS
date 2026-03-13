@@ -123,9 +123,10 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
           </div>
         </div>
 
-        {/* Center Section: Time */}
         <div className="header-center-section" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", zIndex: 5 }}>
-          <span className="header-time">{`${getTimeDifference(orders?.start_date).hours ?? 0}:${getTimeDifference(orders?.start_date).minutes ?? 0}`}</span>
+          <span className="header-time">
+            {`${getTimeDifference(orders?.start_date).hours ?? "00"}:${getTimeDifference(orders?.start_date).minutes ?? "00"}`}
+          </span>
         </div>
 
         {/* Right Section: Order IDs + Toggle */}
