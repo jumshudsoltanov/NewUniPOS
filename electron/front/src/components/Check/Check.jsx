@@ -116,6 +116,7 @@ const Check = () => {
               ao.service_charge !== bo.service_charge ||
               ao.service_value !== bo.service_value ||
               ao.total !== bo.total ||
+              ao.amount !== bo.amount ||
               ao.status !== bo.status ||
               ao.is_locked !== bo.is_locked ||
               ao.orders_items?.length !== bo.orders_items?.length
@@ -128,7 +129,7 @@ const Check = () => {
   );
   const { books } = useSelector((state) => state.BooksSlice,
     (a, b) => {
-      // Skip re-render if only timer fields changed in books
+      // Skip re-render only if timer-only fields changed (is_timer_clock, rate_per_minute)
       const ab = Array.isArray(a.books) ? a.books : a.books?.data;
       const bb = Array.isArray(b.books) ? b.books : b.books?.data;
       if (!ab && !bb) return true;
@@ -142,8 +143,10 @@ const Check = () => {
           ao.service_charge !== bo.service_charge ||
           ao.service_value !== bo.service_value ||
           ao.total !== bo.total ||
+          ao.amount !== bo.amount ||
           ao.status !== bo.status ||
-          ao.is_locked !== bo.is_locked
+          ao.is_locked !== bo.is_locked ||
+          ao.orders_items?.length !== bo.orders_items?.length
         ) return false;
       }
       return true;
@@ -399,6 +402,15 @@ const Check = () => {
           waiterId: loginedWaiter?.data?.id,
           waiterName
         })).unwrap();
+
+        // Refresh state so CheckBottom updates immediately
+        const profileId = loginedProfileData?.data?.profile?.id;
+        if (profileId) {
+          await Promise.all([
+            dispatch(getTableGroups(profileId)),
+            dispatch(getActiveOrders({ profileId }))
+          ]);
+        }
 
         const combinedForPrinting = [...productsWithComments];
 

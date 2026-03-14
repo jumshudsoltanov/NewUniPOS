@@ -117,21 +117,16 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
       ).unwrap();
 
       if (result?.data?.newOrder?.uuid) {
-        // Redux state will be updated by matcher and navigation will occur
+        const profileId = loginedProfileData?.data?.profile?.id;
+        await Promise.all([
+          dispatch(getTableGroups(profileId)),
+          dispatch(getActiveOrders({ profileId }))
+        ]);
 
-        if (result.data.status === 'merged') {
-
-          if (result.data.newOrder.sale_type === 'dine_in') {
-            navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
-          } else {
-            navigate(`/check/${result.data.newOrder.uuid}`);
-          }
+        if (result.data.newOrder.sale_type === 'dine_in') {
+          navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
         } else {
-          if (result.data.newOrder.sale_type === 'dine_in') {
-            navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
-          } else {
-            navigate(`/check/${result.data.newOrder.uuid}`);
-          }
+          navigate(`/check/${result.data.newOrder.uuid}`);
         }
         onClose();
       }
