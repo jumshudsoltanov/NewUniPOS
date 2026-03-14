@@ -235,6 +235,21 @@ const onUpdateDiscountOrder = async (req, res) => {
 
     newTotal = Math.max(newTotal, 0);
 
+    await OrdersModel.update(
+      {
+        discount: discount,
+        discount_value: discountValue,
+        discount_type: discountType,
+        total: newTotal,
+        amount: total,
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } }
+    );
+
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
+
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
       include: [
@@ -318,6 +333,21 @@ const onUpdateServiceFeeOrder = async (req, res) => {
     newTotal = Math.max(total + timerCharge + service - discountAmount, deposit);
 
     newTotal = Math.max(newTotal, 0);
+
+    await OrdersModel.update(
+      {
+        service_charge: service,
+        service_type: feeType,
+        service_value: serviceValue,
+        total: newTotal,
+        amount: total,
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } }
+    );
+
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },

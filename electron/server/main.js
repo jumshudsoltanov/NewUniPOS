@@ -638,48 +638,44 @@ ipcMain.handle("scan-master", async () => {
       console.log("[SLAVE UDP] Bind error:", e.message);
     }
 
-    // --- 2. TCP Sweep (Super fast HTTP Check) ---
+    // --- 2. TCP Sweep — scan ALL active subnets simultaneously ---
     const os = require("os");
     const http = require("http");
+    const net = require("net");
     const interfaces = os.networkInterfaces();
-    let localSubnet = null;
 
+    // Collect every non-virtual, non-link-local IPv4 subnet
+    const subnets = [];
     for (const name of Object.keys(interfaces)) {
       const isVirtual = name.toLowerCase().match(/(vmware|virtual|vbox|wsl|vethernet|loopback)/);
       if (isVirtual) continue;
       for (const iface of interfaces[name]) {
         if (iface.family === "IPv4" && !iface.internal && !iface.address.startsWith("169.254.")) {
-          localSubnet = iface.address.split('.').slice(0, 3).join('.');
-          break;
+          const subnet = iface.address.split('.').slice(0, 3).join('.');
+          if (!subnets.includes(subnet)) subnets.push(subnet);
         }
       }
-      if (localSubnet) break;
     }
 
-    if (localSubnet) {
-      console.log(`[SLAVE TCP] IP Axtarışı başladı. Subnet: ${localSubnet}.*`);
+    if (subnets.length > 0) {
+      console.log(`[SLAVE TCP] IP Axtarışı başladı. Subnet-lər: ${subnets.join(', ')}`);
 
-      const net = require("net");
       const checkIp = (ip) => {
         return new Promise((res) => {
           if (resolved) return res(null);
-
           const socket = new net.Socket();
-          socket.setTimeout(1000); // Shorter timeout for faster sweep
-
+          socket.setTimeout(800);
           socket.on('connect', () => {
             socket.destroy();
             if (resolved) return res(null);
-
-            const startTime = Date.now();
-            const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 1500 }, (response) => {
+            const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 1200 }, (response) => {
               let body = '';
               response.on('data', chunk => body += chunk);
               response.on('end', () => {
                 try {
                   const result = JSON.parse(body);
                   if (result.master === true) {
-                    console.log(`[SLAVE TCP] Uğurlu cavab: ${ip} | Müddət: ${Date.now() - startTime}ms`);
+                    console.log(`[SLAVE TCP] MASTER tapıldı: ${ip} (${subnets.find(s => ip.startsWith(s))})`);
                     res(ip);
                   } else res(null);
                 } catch (e) { res(null); }
@@ -688,45 +684,43 @@ ipcMain.handle("scan-master", async () => {
             req.on('error', () => res(null));
             req.on('timeout', () => { req.destroy(); res(null); });
           });
-
           socket.on('timeout', () => { socket.destroy(); res(null); });
           socket.on('error', () => { socket.destroy(); res(null); });
-
           socket.connect(55667, ip);
         });
       };
 
+      // Build IP list from ALL subnets
       const ips = [];
-      for (let i = 1; i <= 254; i++) ips.push(`${localSubnet}.${i}`);
+      for (const subnet of subnets) {
+        for (let i = 1; i <= 254; i++) ips.push(`${subnet}.${i}`);
+      }
+
+      // Shuffle so both subnets get scanned interleaved (not sequentially)
+      for (let i = ips.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [ips[i], ips[j]] = [ips[j], ips[i]];
+      }
 
       const scanBatches = async () => {
-        const batchSize = 50; // Increased batch size for speed
+        const batchSize = 60;
         for (let i = 0; i < ips.length; i += batchSize) {
           if (resolved) return;
           const batch = ips.slice(i, i + batchSize);
           const results = await Promise.all(batch.map(checkIp));
-          const foundIp = results.find(res => res !== null);
-
+          const foundIp = results.find(r => r !== null);
           if (foundIp && !resolved) {
-            console.log(`[SLAVE TCP] MASTER IP TƏSDİQLƏNDİ: ${foundIp}`);
             finishScan(foundIp);
             return;
           }
         }
-
-        // If we finished the sweep and no TCP found anything, don't wait long.
-        setTimeout(() => {
-          if (!resolved) finishScan(null);
-        }, 500);
+        setTimeout(() => { if (!resolved) finishScan(null); }, 500);
       };
 
       scanBatches();
     } else {
       console.log("[SLAVE TCP] Lokal IPv4 alt şəbəkəsi tapılmadı.");
-      // If no TCP sweep possible, wait for UDP or timeout very quickly
-      setTimeout(() => {
-        if (!resolved) finishScan(null);
-      }, 2000);
+      setTimeout(() => { if (!resolved) finishScan(null); }, 2000);
     }
   });
 });
@@ -746,7 +740,26 @@ try {
   console.error("Failed to start backend:", err ? (err.message || err.toString()) : "Naməlum xəta");
 }
 
+// Open Windows Firewall port 55667 for LAN connections (slave terminals need this)
+function ensureFirewallRule() {
+  if (process.platform !== "win32") return;
+  const ruleName = "UniPOS-Server-55667";
+  const check = `netsh advfirewall firewall show rule name="${ruleName}"`;
+  exec(check, (err, stdout) => {
+    if (stdout && stdout.includes(ruleName)) return; // rule already exists
+    const add = `netsh advfirewall firewall add rule name="${ruleName}" dir=in action=allow protocol=tcp localport=55667 profile=private,domain`;
+    exec(add, (addErr) => {
+      if (addErr) {
+        log.warn("[FIREWALL] Could not add rule automatically (not admin?):", addErr.message);
+      } else {
+        log.info("[FIREWALL] Rule added: port 55667 now open for LAN connections");
+      }
+    });
+  });
+}
+
 app.whenReady().then(() => {
+  ensureFirewallRule();
   createWindow();
 
   // Konsolu acmaq ucun qisa yol (Ctrl+Shift+C ve Ctrl+Shift+N)

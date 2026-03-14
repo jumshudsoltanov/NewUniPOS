@@ -1,0 +1,246 @@
+/* ═══════════════════════════════════════
+   Network Overlay — UniPOS
+   ═══════════════════════════════════════ */
+.net-overlay {
+    position: fixed;
+    inset: 0;
+    background: #f5f7fb;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2147483647;
+    padding: 32px 24px;
+    font-family: 'Inter', 'Poppins', system-ui, sans-serif;
+}
+
+/* ── Top brand strip ── */
+.net-overlay__topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #053796 0%, #2563eb 60%, #053796 100%);
+}
+
+/* ── Card container ── */
+.net-overlay__card {
+    background: #fff;
+    border: 1px solid #e2e8f4;
+    border-radius: 20px;
+    padding: 40px 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 4px 24px rgba(5, 55, 150, 0.07);
+}
+
+/* ── Logo ── */
+.net-overlay__logo {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(140deg, #053796 0%, #2563eb 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(5, 55, 150, 0.22);
+}
+
+.net-overlay__logo i {
+    font-size: 25px;
+    color: #fff;
+}
+
+/* ── Alert block ── */
+.net-overlay__alert {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+    width: 100%;
+}
+
+.net-overlay__alert-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: #fff0f0;
+    border: 1px solid #fecaca;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.net-overlay__alert-icon i {
+    font-size: 20px;
+    color: #ef4444;
+}
+
+.net-overlay__alert-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.net-overlay__alert-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f1f45;
+    letter-spacing: -0.2px;
+    line-height: 1.25;
+}
+
+.net-overlay__alert-sub {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+/* ── Separator ── */
+.net-overlay__sep {
+    width: 100%;
+    height: 1px;
+    background: #edf0f7;
+    margin-bottom: 24px;
+}
+
+/* ── IP grid ── */
+.net-overlay__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 24px;
+}
+
+.net-overlay__cell {
+    background: #f8faff;
+    border: 1px solid #dde5f5;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.net-overlay__cell-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.67rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.net-overlay__cell-label i {
+    font-size: 10px;
+    color: #053796;
+}
+
+.net-overlay__cell-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #053796;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+}
+
+.net-overlay__cell-value.muted {
+    color: #cbd5e1;
+    font-style: italic;
+    font-weight: 500;
+}
+
+/* ── Status bar ── */
+.net-overlay__status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    background: #eef4ff;
+    border: 1px solid #c7d9fa;
+    border-radius: 8px;
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.net-overlay__spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #c7d9fa;
+    border-top-color: #053796;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: net-spin 0.9s linear infinite;
+}
+
+@keyframes net-spin {
+    to { transform: rotate(360deg); }
+}
+
+.net-overlay__status span {
+    font-size: 0.82rem;
+    color: #3b60b8;
+    font-weight: 600;
+}
+
+/* ── Exit button ── */
+.net-overlay__exit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 20px;
+    background: #f1f5f9;
+    border: 1px solid #dde3ee;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 0.2px;
+}
+
+.net-overlay__exit i {
+    font-size: 14px;
+}
+
+/* ── Mobile ── */
+@media (max-width: 600px) {
+    .net-overlay {
+        padding: 20px 16px;
+        background: #fff;
+        justify-content: flex-start;
+        padding-top: 0;
+    }
+
+    .net-overlay__card {
+        padding: 32px 20px;
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+        max-width: 100%;
+        margin-top: 40px;
+    }
+
+    .net-overlay__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .net-overlay__exit {
+        display: none;
+    }
+}

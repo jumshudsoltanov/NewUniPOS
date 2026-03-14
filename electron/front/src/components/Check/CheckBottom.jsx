@@ -28,6 +28,29 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   const { id } = useParams();
   const navigate = useNavigate();
 
+  // Live timer — updates every second without re-rendering parent
+  const liveTimerData = useSelector((state) => {
+    const tg = state.TablesSlice.tableGroups?.data;
+    if (!tg || !id) return null;
+    for (const hall of tg) {
+      for (const t of (hall.tables || [])) {
+        const order = t.orders?.find(o => o.uuid == id);
+        if (order && order.is_timer_status === 1) {
+          return {
+            is_timer_status: order.is_timer_status,
+            is_timer_clock: order.is_timer_clock,
+            rate_per_minute: order.rate_per_minute,
+          };
+        }
+      }
+    }
+    return null;
+  });
+
+  const timerClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
+  const timerCharge = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
+  const isTimerActive = (liveTimerData?.is_timer_status === 1) || (orders?.is_timer_status == 1);
+
   const [showNewItemsModal, setShowNewItemsModal] = useState(false);
   const [showSalesTypeModal, setShowSalesTypeModal] = useState(false);
 
@@ -222,36 +245,44 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       } else {
         discountAmount = discountValue;
       }
-    } else if (orders?.discount) {
+    }
+    // Fallback: use saved discount field directly if discount_value not set
+    if (discountAmount === 0 && Number(orders?.discount) > 0) {
       discountAmount = Number(orders.discount);
     }
 
     const depositAmount = Number(orders?.deposit || 0);
     const subtotalAfterDiscount = total - discountAmount;
 
-    let serviceValue = 0;
-    let serviceType = orders?.service_type || "percent";
-
-    if (orders?.service_value !== undefined && orders?.service_value !== null) {
-      serviceValue = Number(orders.service_value);
-    } else if (hall?.service_fee) {
-      serviceValue = Number(hall.service_fee);
-      serviceType = "percent";
-    }
-
+    const serviceValue = Number(orders?.service_value || 0);
+    const serviceType = orders?.service_type || "percent";
     let serviceAmount = 0;
+
     if (serviceValue > 0) {
       if (serviceType === "percent") {
         serviceAmount = (totalForService * serviceValue) / 100;
       } else {
         serviceAmount = serviceValue;
       }
-    } else if (orders?.service_charge) {
+    }
+    // Fallback: use saved service_charge field directly if service_value not set
+    if (serviceAmount === 0 && Number(orders?.service_charge) > 0) {
       serviceAmount = Number(orders.service_charge);
     }
+    // Fallback: hall default service fee
+    if (serviceAmount === 0 && Number(hall?.service_fee) > 0) {
+      serviceAmount = (totalForService * Number(hall.service_fee)) / 100;
+    }
 
-    let sumTotal = Math.max(subtotalAfterDiscount, depositAmount) + serviceAmount;
-    if (sumTotal < 0) sumTotal = 0;
+    // If order is saved (no pending local changes) and has a DB total, use it directly
+    const hasPendingChanges = (products?.length > 0) || (pendingDeletions?.length > 0);
+    let sumTotal;
+    if (!hasPendingChanges && Number(orders?.total) > 0) {
+      sumTotal = Number(orders.total);
+    } else {
+      sumTotal = Math.max(subtotalAfterDiscount, depositAmount) + serviceAmount;
+      if (sumTotal < 0) sumTotal = 0;
+    }
 
     let effectivePercentage = 0;
     if (total > 0 && discountAmount > 0) {
@@ -294,9 +325,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     orders?.service_type,
     orders?.service_charge,
     orders?.deposit,
+    orders?.total,
     orders?.rate_per_minute,
     pendingDeletions,
-    menu
+    menu,
+    hall?.service_fee
   ]);
 
   const totalChanges = products.length + (pendingDeletions?.length || 0);
@@ -314,43 +347,39 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               </span>
             </div>
           )}
-          <div className="summary-row">
-            <span>{calcTotal.isDepositFloor ? 'Minimal məbləğ:' : 'Cəm:'}</span>
-            <span>{calcTotal.sumTotal} ₼</span>
-          </div>
           {selectedCustomer?.group && (
             <div className="summary-row">
               <span>Qrup:</span>
               <span>{selectedCustomer.group.name} {selectedCustomer.group.discount > 0 ? `(${selectedCustomer.group.discount}%)` : ''}</span>
             </div>
           )}
+          <div className="summary-row">
+            <span>Ara cəm:</span>
+            <span>{calcTotal.total} ₼</span>
+          </div>
           {Number(calcTotal.discountAmount) > 0 && (
             <div className="summary-row">
               <span>Endirim:</span>
-              <span>
-                {calcTotal.discountAmount} ₼
-                {Number(calcTotal.discountAmount) > 0 &&
-                  ` (~${calcTotal.effectivePercentage}%)`}
-              </span>
+              <span>-{calcTotal.discountAmount} ₼ (~{calcTotal.effectivePercentage}%)</span>
             </div>
           )}
-          {orders?.service_type !== null && (
+          {Number(calcTotal.serviceAmount) > 0 && (
             <div className="summary-row">
               <span>Servis haqqı:</span>
-              <span>
-                {calcTotal.serviceAmount} ₼
-                {Number(calcTotal.serviceAmount) > 0 &&
-                  ` (~${calcTotal.effectiveServicePercentage}%)`}
-              </span>
+              <span>+{calcTotal.serviceAmount} ₼ (~{calcTotal.effectiveServicePercentage}%)</span>
             </div>
           )}
+          <div className="summary-row" style={{fontWeight: 700}}>
+            <span>{calcTotal.isDepositFloor ? 'Minimal məbləğ:' : 'Cəm:'}</span>
+            <span>{calcTotal.sumTotal} ₼</span>
+          </div>
           {Number(calcTotal.depositAmount) > 0 && (
             <div className="summary-row" style={{ color: '#fff', borderTop: '1px dashed rgba(255,255,255,0.1)', marginTop: '2px', paddingTop: '2px' }}>
               <span>Depozit:</span>
               <span>{calcTotal.depositAmount} ₼</span>
             </div>
           )}
-          {(orders?.is_timer_status == 1 || Number(table?.hourly_price || orders?.table?.hourly_price || 0) > 0) && (
+          {(isTimerActive || Number(table?.hourly_price || orders?.table?.hourly_price || 0) > 0) && (
             <div className="timer-detailed-summary mt-2 pt-2" style={{ borderTop: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }}>
               <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
                 <span>Saatlıq qiymət:</span>
@@ -358,11 +387,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               </div>
               <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
                 <span>Keçən vaxt:</span>
-                <span className="fw-bold">{orders?.is_timer_clock || "00:00:00"}</span>
+                <span className="fw-bold">{timerClock}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mt-1 total-row" style={{ fontSize: '0.9rem', fontWeight: 700 }}>
                 <span>Taymer qazancı:</span>
-                <span>{Number(orders?.rate_per_minute || 0).toFixed(2)} ₼</span>
+                <span>{Number(timerCharge).toFixed(2)} ₼</span>
               </div>
             </div>
           )}
@@ -533,5 +562,27 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   );
 };
 
-const CheckBottomWithMemo = React.memo(CheckBottom);
+const CheckBottomWithMemo = React.memo(CheckBottom, (prev, next) => {
+  // Only re-render if financially relevant fields change
+  const p = prev.orders;
+  const n = next.orders;
+  if (!p && !n) return true;
+  if (!p || !n) return false;
+  return (
+    p.discount === n.discount &&
+    p.discount_value === n.discount_value &&
+    p.discount_type === n.discount_type &&
+    p.service_charge === n.service_charge &&
+    p.service_value === n.service_value &&
+    p.service_type === n.service_type &&
+    p.total === n.total &&
+    p.deposit === n.deposit &&
+    p.is_locked === n.is_locked &&
+    p.is_timer_status === n.is_timer_status &&
+    p.orders_items?.length === n.orders_items?.length &&
+    prev.hall === next.hall &&
+    prev.isSending === next.isSending &&
+    prev.selectedCustomer === next.selectedCustomer
+  );
+});
 export default CheckBottomWithMemo;

@@ -5,6 +5,7 @@ import { clearOrders, deleteOrderItems, saveLog } from "../../redux/Slices/Order
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { processAndPrintOrders } from "../../utils/printerHelpers";
+import { getSocket } from "../../utils/apiConfig";
 import "./ClearCheck.css";
 
 const ClearCheck = ({ show, onClose, order }) => {
@@ -77,6 +78,11 @@ const ClearCheck = ({ show, onClose, order }) => {
         deleteOrderItems({ orderId: order.uuid, waiterName }),
       ).unwrap();
 
+      // Notify other terminals that this order was cleared (treated as deleted)
+      const socket = getSocket();
+      if (socket?.connected) {
+        socket.emit("order_deleted", { orderId: order.uuid });
+      }
       if (profileId) {
         Promise.all([
           dispatch(getTableGroups(profileId)),

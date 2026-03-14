@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 import OrderLogsModal from "./OrderLogsModal"; // Import Modal
+import { getSocket } from "../../utils/apiConfig";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
@@ -89,37 +90,87 @@ const Check = () => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { tableGroups, currentHallId } = useSelector(
     (state) => state.TablesSlice,
+    (a, b) => {
+      // Skip re-render if only timer fields changed in tableGroups
+      if (a.currentHallId !== b.currentHallId) return false;
+      if (a.tableGroups === b.tableGroups) return true;
+      const ad = a.tableGroups?.data;
+      const bd = b.tableGroups?.data;
+      if (!ad && !bd) return true;
+      if (!ad || !bd || ad.length !== bd.length) return false;
+      // Only re-render if non-timer fields changed
+      for (let i = 0; i < ad.length; i++) {
+        const ah = ad[i], bh = bd[i];
+        if (ah.id !== bh.id || ah.tables?.length !== bh.tables?.length) return false;
+        if (ah.tables) {
+          for (let j = 0; j < ah.tables.length; j++) {
+            const at = ah.tables[j], bt = bh.tables[j];
+            if (at.id !== bt.id) return false;
+            const ao = at.orders?.[0], bo = bt.orders?.[0];
+            if (!ao && !bo) continue;
+            if (!ao || !bo) return false;
+            if (
+              ao.uuid !== bo.uuid ||
+              ao.discount !== bo.discount ||
+              ao.discount_value !== bo.discount_value ||
+              ao.service_charge !== bo.service_charge ||
+              ao.service_value !== bo.service_value ||
+              ao.total !== bo.total ||
+              ao.status !== bo.status ||
+              ao.is_locked !== bo.is_locked ||
+              ao.orders_items?.length !== bo.orders_items?.length
+            ) return false;
+          }
+        }
+      }
+      return true;
+    }
   );
-  const { books } = useSelector((state) => state.BooksSlice);
+  const { books } = useSelector((state) => state.BooksSlice,
+    (a, b) => {
+      // Skip re-render if only timer fields changed in books
+      const ab = Array.isArray(a.books) ? a.books : a.books?.data;
+      const bb = Array.isArray(b.books) ? b.books : b.books?.data;
+      if (!ab && !bb) return true;
+      if (!ab || !bb || ab.length !== bb.length) return false;
+      for (let i = 0; i < ab.length; i++) {
+        const ao = ab[i], bo = bb[i];
+        if (
+          ao.uuid !== bo.uuid ||
+          ao.discount !== bo.discount ||
+          ao.discount_value !== bo.discount_value ||
+          ao.service_charge !== bo.service_charge ||
+          ao.service_value !== bo.service_value ||
+          ao.total !== bo.total ||
+          ao.status !== bo.status ||
+          ao.is_locked !== bo.is_locked
+        ) return false;
+      }
+      return true;
+    }
+  );
   const { customers } = useSelector((state) => state.CustomersSlice);
   const { menuDataWithCategories } = useSelector((state) => state.MenuSlice);
-
-  const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
-  const newOrderBtnRef = useRef(null);
 
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get("tableId");
 
+  const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
+  const newOrderBtnRef = useRef(null);
 
   const { currentOrder, currentHall, currentTable } = useMemo(() => {
     if (!id)
       return { currentOrder: null, currentHall: null, currentTable: null };
 
-    // ALL ORDERS LOGIC
     let foundOrder = null;
     let foundHall = null;
     let foundTable = null;
 
-    if (books?.data) {
-      foundOrder = books.data.find((item) => item.uuid == id);
-    }
-
-    // Always try to resolve Hall and Table from tableGroups to ensure data consistency 
-    // (API might return partial order objects without hall/table info)
+    // Resolve hall/table from tableGroups (for hall/table metadata only)
     if (tableId && tableId !== "null" && tableId !== "0" && tableGroups?.data) {
       for (const hall of tableGroups.data) {
-        const table = hall.tables.find((t) => t.id == tableId);
+        const table = hall.tables?.find((t) => t.id == tableId);
         if (table) {
           foundHall = hall;
           foundTable = table;
@@ -128,7 +179,10 @@ const Check = () => {
       }
     }
 
-    // If order was FOUND in books, use it
+    // Priority 1: books (full order data, not updated by timer)
+    const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
+    foundOrder = booksList.find((item) => item.uuid == id) || null;
+
     if (foundOrder) {
       return {
         currentOrder: foundOrder,
@@ -137,9 +191,9 @@ const Check = () => {
       };
     }
 
-    // FALLBACK: If order not in books, search in tableGroups
+    // Priority 2: tableGroups fallback (may be updated by timer)
     if (foundTable) {
-      const orderInTable = foundTable.orders.find((o) => o.uuid == id);
+      const orderInTable = foundTable.orders?.find((o) => o.uuid == id);
       if (orderInTable) {
         return {
           currentOrder: orderInTable,
@@ -587,6 +641,43 @@ const Check = () => {
 
 
 
+  // Listen for order_deleted / order_closed / table_updated from other terminals
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleOrderDeleted = ({ orderId }) => {
+      if (orderId && orderId === id) {
+        toast.warning("Bu çek başqa terminal tərəfindən silindi.");
+        navigate("/tables", { replace: true });
+      }
+    };
+
+    const handleOrderClosed = ({ orderId }) => {
+      if (orderId && orderId === id) {
+        toast.info("Bu çek başqa terminal tərəfindən bağlandı.");
+        navigate("/tables", { replace: true });
+      }
+    };
+
+    const handleTableUpdated = () => {
+      const profileId = loginedProfileData?.data?.profile?.id;
+      if (profileId) {
+        dispatch(getActiveOrders({ profileId }));
+      }
+    };
+
+    socket.on("order_deleted", handleOrderDeleted);
+    socket.on("order_closed", handleOrderClosed);
+    socket.on("table_updated", handleTableUpdated);
+
+    return () => {
+      socket.off("order_deleted", handleOrderDeleted);
+      socket.off("order_closed", handleOrderClosed);
+      socket.off("table_updated", handleTableUpdated);
+    };
+  }, [id, navigate, loginedProfileData, dispatch]);
+
   useEffect(() => {
     if (
       (!tableId || tableId === "null" || tableId === "0") &&
@@ -840,6 +931,11 @@ const Check = () => {
       const deletePromise = (async () => {
         try {
           await dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName })).unwrap();
+          // Notify all other terminals to redirect if they have this order open
+          const socket = getSocket();
+          if (socket?.connected) {
+            socket.emit("order_deleted", { orderId });
+          }
           if (profileId) {
             dispatch(getTableGroups(profileId));
             dispatch(getActiveOrders({ profileId }));

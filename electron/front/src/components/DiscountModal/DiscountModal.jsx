@@ -80,7 +80,7 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
 
       if (loginedProfileData?.data?.profile?.id) {
         const profileId = loginedProfileData.data.profile.id;
-        Promise.all([
+        await Promise.all([
           dispatch(getTableGroups(profileId)),
           dispatch(getActiveOrders({ profileId }))
         ]);

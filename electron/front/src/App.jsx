@@ -26,7 +26,7 @@ import KitchenDisplay from './components/Kitchen/KitchenDisplay';
 import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
 import BlockPage from "./components/BlockPage/BlockPage";
-import { initNetwork, getSocket } from "./utils/apiConfig";
+import { initNetwork, getSocket, onSocketStatusChange } from "./utils/apiConfig";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
 import UpdateNotification from "./components/UpdateNotification/UpdateNotification";
@@ -76,6 +76,11 @@ function AppContent() {
       dispatch(updateSocketStatus(socket?.connected || false));
     };
 
+    // Real-time socket status via events (instant, no polling delay)
+    onSocketStatusChange((connected) => {
+      dispatch(updateSocketStatus(connected));
+    });
+
     window.addEventListener("online", handleConnectivity);
     window.addEventListener("offline", handleConnectivity);
 
@@ -85,7 +90,8 @@ function AppContent() {
 
     const connInt = setInterval(handleConnectivity, 5000);
     const syncInt = setInterval(fetchSyncCount, 5000);
-    const socketInt = setInterval(checkSocket, 5000);
+    // Keep polling as fallback (every 3s instead of 5s)
+    const socketInt = setInterval(checkSocket, 3000);
     const timerInt = setInterval(() => {
       dispatch(tickBooks());
       dispatch(tickTables());
@@ -201,6 +207,22 @@ function AppContent() {
           try {
             const data = await dispatch(authPos(storageData)).unwrap();
             localStorage.setItem("authResult", JSON.stringify(data));
+
+            // Re-init network only if role changed vs what we started with
+            const freshTerminal = data?.data?.terminal || {};
+            const freshProfile = data?.data?.profile || {};
+            const freshIsMaster = freshTerminal.is_master === 1 || freshProfile.is_master === 1;
+            const freshIsActive = freshTerminal.is_master_slave_active === 1 || freshProfile.is_master_slave_active === 1;
+            const currentSocket = getSocket();
+            const alreadyConnectedLocally = currentSocket?.io?.uri?.includes("localhost") || currentSocket?.io?.uri?.includes("127.0.0.1");
+            const configChanged = freshIsActive !== isMasterSlaveActive || freshIsMaster !== isMaster;
+            if (configChanged) {
+              if (freshIsActive && !freshIsMaster) {
+                initNetwork(false, false); // Slave → scan for master
+              } else if (freshIsMaster && !alreadyConnectedLocally) {
+                initNetwork(true, false); // Master → local socket (only if not already local)
+              }
+            }
 
             dispatch(fetchCustomersFromAdmin());
             dispatch(fetchCustomerGroupsFromAdmin());

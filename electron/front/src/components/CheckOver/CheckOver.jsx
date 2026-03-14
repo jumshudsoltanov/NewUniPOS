@@ -11,7 +11,7 @@ import { closeOrder, saveLog } from '../../redux/Slices/OrdersSlice';
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import axios from "axios";
-import apiConfig from "../../utils/apiConfig";
+import apiConfig, { getSocket } from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 
 const CheckOver = () => {
@@ -144,7 +144,7 @@ const CheckOver = () => {
     }, [currentOrder]);
 
     useEffect(() => {
-        if (currentOrder && Number(currentOrder.is_tax) === 1) {
+        if (currentOrder && Number(currentOrder.is_tax) > 0) {
             setTaxPrint(true);
         }
     }, [currentOrder?.is_tax]);
@@ -260,6 +260,7 @@ const CheckOver = () => {
             payments = selectedMethods.map(m => ({
                 payment_method_id: m.id,
                 name: m.name,
+                type: m.type,
                 amount: m.amount || (selectedMethods.length === 1 ? calcTotal.sumTotal : 0)
             }));
         } else {
@@ -395,6 +396,11 @@ const CheckOver = () => {
                 }
             }
 
+            // Notify all other terminals that this order is closed
+            const socket = getSocket();
+            if (socket?.connected) {
+                socket.emit("order_closed", { orderId: currentOrder?.uuid || id });
+            }
             navigate("/tables");
         } catch (err) {
             console.error("Close order failed:", err);

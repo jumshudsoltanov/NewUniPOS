@@ -6,44 +6,41 @@ let io = null;
 let broadcaster = null;
 let isBroadcasting = false;
 
-const getLocalNetworkInfo = () => {
+// Returns ALL active non-virtual IPv4 interfaces (LAN + WiFi, etc.)
+const getAllNetworkInterfaces = () => {
     const interfaces = os.networkInterfaces();
-    let best = null; // 192.168.*
-    let alt1 = null; // 10.* or 172.*
-    let fallback = null;
+    const results = [];
 
     for (const name of Object.keys(interfaces)) {
         const isVirtual = name.toLowerCase().match(/(vmware|virtual|vbox|wsl|vethernet|loopback)/);
         if (isVirtual) continue;
-
         for (const iface of interfaces[name]) {
-            if (iface.family === "IPv4" && !iface.internal) {
-                const ip = iface.address;
-                const info = { ip: ip, netmask: iface.netmask, name };
-
-                if (ip.startsWith('192.168.')) {
-                    best = info;
-                } else if (ip.startsWith('10.') || ip.startsWith('172.')) {
-                    if (!alt1) alt1 = info;
-                } else if (!ip.startsWith('169.254.')) {
-                    if (!fallback) fallback = info;
-                }
+            if (iface.family === "IPv4" && !iface.internal && !iface.address.startsWith("169.254.")) {
+                results.push({ ip: iface.address, netmask: iface.netmask, name });
             }
         }
     }
 
-    // As a last-last resort, pick any APIPA if no real IPs are found
-    if (!best && !alt1 && !fallback) {
+    // Fallback: use APIPA if nothing real found
+    if (results.length === 0) {
         for (const name of Object.keys(interfaces)) {
             for (const iface of interfaces[name]) {
-                if (iface.family === "IPv4" && !iface.internal && iface.address.startsWith("169.254.")) {
-                    return { ip: iface.address, netmask: iface.netmask, name };
+                if (iface.family === "IPv4" && !iface.internal) {
+                    results.push({ ip: iface.address, netmask: iface.netmask, name });
                 }
             }
         }
     }
 
-    return best || alt1 || fallback || { ip: "127.0.0.1", netmask: "255.0.0.0", name: "loopback" };
+    return results;
+};
+
+// Keep for backward compat (used elsewhere)
+const getLocalNetworkInfo = () => {
+    const all = getAllNetworkInterfaces();
+    return all.find(i => i.ip.startsWith('192.168.')) ||
+           all.find(i => i.ip.startsWith('10.') || i.ip.startsWith('172.')) ||
+           all[0] || { ip: "127.0.0.1", netmask: "255.0.0.0", name: "loopback" };
 };
 
 const getBroadcastIp = (ip, netmask) => {
@@ -123,14 +120,28 @@ const initMasterServer = (server, isBroadcastingActive = true) => {
             io.emit("print_delegated", data);
         });
 
+        // When any terminal deletes or closes a check, broadcast to all others
+        socket.on("order_deleted", (data) => {
+            console.log(`🗑️ Çek silindi, bütün terminallara bildiriş: orderId=${data?.orderId}`);
+            socket.broadcast.emit("order_deleted", data);
+        });
+
+        socket.on("order_closed", (data) => {
+            console.log(`✅ Çek bağlandı, bütün terminallara bildiriş: orderId=${data?.orderId}`);
+            socket.broadcast.emit("order_closed", data);
+        });
+
         socket.on("disconnect", (reason) => {
             console.log(`❌ Terminal bağlantısı kəsildi (${reason}): ${socket.id}`);
         });
     });
 
+    // Always open firewall ports — master needs port 55667 accessible for slaves
+    // regardless of whether master-slave broadcasting is active
+    openFirewallPorts();
+
     if (isBroadcastingActive) {
         startBroadcasting();
-        openFirewallPorts();
     } else {
         console.log("ℹ️ Local Socket Server started (Master/Slave broadcasting is disabled)");
     }
@@ -165,27 +176,33 @@ const startBroadcasting = () => {
         if (broadcastInterval) clearInterval(broadcastInterval);
 
         broadcastInterval = setInterval(() => {
-            const netInfo = getLocalNetworkInfo();
-            const broadcastAddress = getBroadcastIp(netInfo.ip, netInfo.netmask);
+            const allInterfaces = getAllNetworkInterfaces();
+            if (allInterfaces.length === 0) return;
 
-            const message = Buffer.from(JSON.stringify({
-                type: "master_pos",
-                ip: netInfo.ip,
-                port: 55667
-            }));
+            // Use the primary IP as the advertised IP (best interface)
+            const primary = allInterfaces.find(i => i.ip.startsWith('192.168.')) ||
+                            allInterfaces.find(i => i.ip.startsWith('10.') || i.ip.startsWith('172.')) ||
+                            allInterfaces[0];
 
             if (logCounter === 0) {
-                console.log(`[MASTER UDP] IP Seçildi: ${netInfo.ip} | Netmask: ${netInfo.netmask} | Adapter: ${netInfo.name}`);
-                console.log(`[MASTER UDP] Yayım IP'si (Broadcast Address): ${broadcastAddress}`);
+                console.log(`[MASTER UDP] Broadcast göndərilir: ${allInterfaces.map(i => i.ip).join(', ')}`);
             }
             logCounter = (logCounter + 1) % 10;
 
-            // Direct the broadcast to the specific subnet
-            if (isBroadcasting && broadcaster) {
-                broadcaster.send(message, 0, message.length, 44444, broadcastAddress, (err) => {
-                    if (err) console.error("[MASTER UDP] Send Error:", err.message);
-                });
-            }
+            // Send broadcast on EVERY active interface so LAN + WiFi slaves all hear it
+            allInterfaces.forEach(netInfo => {
+                const broadcastAddress = getBroadcastIp(netInfo.ip, netInfo.netmask);
+                const message = Buffer.from(JSON.stringify({
+                    type: "master_pos",
+                    ip: primary.ip,   // Always advertise the primary IP
+                    port: 55667
+                }));
+                if (isBroadcasting && broadcaster) {
+                    broadcaster.send(message, 0, message.length, 44444, broadcastAddress, (err) => {
+                        if (err && logCounter === 0) console.error(`[MASTER UDP] Send Error (${netInfo.name}):`, err.message);
+                    });
+                }
+            });
         }, 1000);
     });
 };

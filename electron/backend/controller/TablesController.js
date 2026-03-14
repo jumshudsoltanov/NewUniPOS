@@ -14,7 +14,7 @@ const getTables = async (req, res) => {
           model: OrdersModel,
           where: { status: 1 },
           required: false,
-          attributes: ["id", "uuid", "amount", "discount", "deposit", "service_charge", "print_count", "waiter_id", "status", "guest_count", "is_timer_status", "is_active_timer", "is_timer_clock", "timer_last_started_at"],
+          attributes: ["id", "uuid", "amount", "discount", "discount_value", "discount_type", "deposit", "service_charge", "service_value", "service_type", "print_count", "waiter_id", "status", "guest_count", "is_timer_status", "is_active_timer", "is_timer_clock", "timer_last_started_at"],
           include: [
             {
               model: WaitersModel,

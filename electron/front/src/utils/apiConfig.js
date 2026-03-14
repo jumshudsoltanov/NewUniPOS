@@ -12,6 +12,19 @@ export const localApi = axios.create({
 });
 
 let socket = null;
+let _socketStatusCallback = null;
+
+// Called by App.jsx to get real-time connect/disconnect events
+export const onSocketStatusChange = (cb) => {
+    _socketStatusCallback = cb;
+};
+
+const attachSocketStatusListeners = (s) => {
+    if (!s || !_socketStatusCallback) return;
+    s.on("connect",    () => _socketStatusCallback(true));
+    s.on("disconnect", () => _socketStatusCallback(false));
+    s.on("connect_error", () => _socketStatusCallback(false));
+};
 
 export const initNetwork = async (forceLocal = false, disableSocket = false) => {
     // 1. Clean up existing socket if it exists to prevent leaks
@@ -20,6 +33,7 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
         socket.removeAllListeners();
         socket.disconnect();
         socket = null;
+        if (_socketStatusCallback) _socketStatusCallback(false);
     }
 
     if (!window.electronAPI) {
@@ -60,7 +74,7 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
                 autoConnect: true,
                 forceNew: true
             });
-
+            attachSocketStatusListeners(socket);
             socket.on("connect_error", (err) => {
                 console.error("[CONNECTION] Mobile Socket Connect Error:", err.message);
             });
@@ -83,13 +97,14 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
                         transports: ['websocket', 'polling'],
                         reconnection: true,
                         reconnectionAttempts: Infinity,
-                        reconnectionDelay: 1000
+                        reconnectionDelay: 1000,
+                        reconnectionDelayMax: 5000,
+                        timeout: 10000,
                     });
-
+                    attachSocketStatusListeners(socket);
                     socket.on("connect", () => {
                         console.warn(`[CONNECTION] Connected as SLAVE to Master Terminal at ${baseURL}`);
                     });
-
                     socket.on("connect_error", (err) => {
                         console.error("[CONNECTION] Socket Connect Error:", err.message);
                     });
@@ -104,8 +119,12 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
     // Fallback to local (only if forceLocal is true or it's genuinely the Electron Master)
     if (!disableSocket && (forceLocal || (window.electronAPI && !window.electronAPI.scanMaster))) {
         socket = io("http://localhost:55667", {
-            transports: ['websocket', 'polling']
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
         });
+        attachSocketStatusListeners(socket);
         socket.on("connect", () => {
             console.warn("[CONNECTION] Connected as MASTER (Local Database)");
         });

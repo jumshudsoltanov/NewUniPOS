@@ -143,11 +143,16 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         }
     };
 
-    const hasTax = Number(order?.is_tax) === 1;
+    const hasTax = Number(order?.is_tax) > 0;
     const taxConfigs = loginedProfileData?.data?.taxes || [];
 
     const handleTaxMoneyBack = async () => {
         if (taxLoading || !order || taxConfigs.length === 0) return;
+
+        if (!order.fiscal_id) {
+            toast.error('Bu çekin fiskal ID-si yoxdur. Geri qaytarma mümkün deyil.');
+            return;
+        }
 
         // Find the specific device that originally printed this order
         const targetConfig = taxConfigs.find(c => c.id === order.tax_cash_id);
@@ -164,6 +169,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             }));
             const payments = (order.order_payments || []).map(p => ({
                 name: p.payment_method?.name || 'Nağd',
+                type: p.payment_method?.type || 'cash',
                 amount: p.paid
             }));
             const result = await apiConfig.post('/tax/money-back', {

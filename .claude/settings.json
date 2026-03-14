@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"is_return\\\\|onReturn\\\\|return.*route\\\\|router.*return\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/backend/router/*.js c:/Users/Jumshud/Desktop/POS-ReDesing/electron/backend/controller/OrdersItemsController.js)",
+      "Bash(grep -rn \"fiscal_id\\\\|long_id\\\\|parentDocument\\\\|tax_fiscal\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/backend/ --include=*.js -l)",
+      "Bash(find c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src -name *CheckDetail* -o -name *check*detail* -o -name *Close*Check*)",
+      "Bash(find c:/Users/Jumshud/Desktop/POS-ReDesing/electron/mobile/src -name *.css -o -name *.jsx)",
+      "Bash(find c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src -name Slave* -o -name *Slave*)"
+    ]
+  }
+}
