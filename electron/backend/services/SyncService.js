@@ -154,6 +154,13 @@ class SyncService {
             plain.count = 0;
           }
           plain.order_id = order.uuid;
+          // Ensure profile_id is present (required by admin)
+          plain.profile_id = plain.profile_id || profileId;
+          // Remove POS-only fields admin doesn't know about
+          delete plain.kds_status;
+          delete plain.modifiers;
+          delete plain.comment;
+          delete plain.is_delete_reason_id;
           return plain;
         }),
         logs: logs.map(log => {
@@ -167,13 +174,14 @@ class SyncService {
             plain.paid = 0;
           }
           plain.order_id = order.uuid;
+          plain.profile_id = plain.profile_id || profileId;
           return plain;
         }),
         tables: table ? [table.get({ plain: true })] : [],
       };
 
       await this.sendToAdmin(payload);
-      await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId } });
+      await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false });
       this.lastSyncTime = new Date();
       console.log(`[SYNC] Success: ${orderId}`);
     } catch (error) {
@@ -181,7 +189,7 @@ class SyncService {
       // Head-of-Line Blocking Fix: If validation failed, skip order.
       if (error.isValidationError) {
         console.warn(`[SYNC_SKIP] Skipping order ${orderId} due to validation error.`);
-        await OrdersModel.update({ is_synced: 2 }, { where: { uuid: orderId } });
+        await OrdersModel.update({ is_synced: 2 }, { where: { uuid: orderId }, paranoid: false });
       }
       throw error;
     }
@@ -213,11 +221,9 @@ class SyncService {
         where: {
           profile_id: currentProfileId,
           // is_synced: 2 = validation error (skip forever), only retry 0 and null
-          [Op.and]: [
-            { [Op.or]: [{ is_synced: 0 }, { is_synced: null }] },
-            { [Op.not]: { status: 3, amount: 0 } }
-          ]
+          [Op.or]: [{ is_synced: 0 }, { is_synced: null }]
         },
+        paranoid: false,
         limit: 10,
       });
 
