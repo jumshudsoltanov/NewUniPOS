@@ -16,6 +16,8 @@ class SyncService {
   constructor() {
     this.isSyncing = false;
     this.lastSyncTime = new Date();
+    this._pendingQueue = new Set(); // UUIDs waiting to be synced
+    this._processingQueue = false;
     console.log("[SYNC_INIT] SyncService instance created.");
 
     // Start interval — retry every 15s, also handles reconnect after internet drop
@@ -53,7 +55,7 @@ class SyncService {
         OrdersModel.count({
           where: {
             ...profileFilter,
-            [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }]
+            [Op.or]: [{ is_synced: 0 }, { is_synced: null }]
           },
         }),
       ]);
@@ -69,9 +71,36 @@ class SyncService {
     }
   }
 
+  // Called from controllers — adds to queue and processes serially
+  queueSync(orderId) {
+    if (!orderId) return;
+    this._pendingQueue.add(orderId);
+    if (!this._processingQueue) {
+      this._drainQueue().catch(err => console.error("[SYNC_QUEUE_ERR]", err));
+    }
+  }
+
+  async _drainQueue() {
+    if (this._processingQueue) return;
+    this._processingQueue = true;
+    try {
+      while (this._pendingQueue.size > 0) {
+        const orderId = this._pendingQueue.values().next().value;
+        this._pendingQueue.delete(orderId);
+        try {
+          await this.triggerSync(orderId);
+        } catch (e) {
+          // already logged inside triggerSync
+        }
+      }
+    } finally {
+      this._processingQueue = false;
+    }
+  }
+
   async triggerSync(orderId) {
     try {
-      const order = await OrdersModel.findOne({ 
+      const order = await OrdersModel.findOne({
         where: { uuid: orderId },
         paranoid: false,
         attributes: { include: ["deleted_at"] }
@@ -164,7 +193,6 @@ class SyncService {
     try {
       const isOnline = await this.checkConnectivity();
       if (!isOnline) {
-        this.isSyncing = false;
         return;
       }
 
@@ -172,16 +200,15 @@ class SyncService {
       const currentProfileId = await this.getCurrentProfileId();
       if (!currentProfileId) {
         console.warn("[SYNC_LOOP] No active profile found, skipping sync.");
-        this.isSyncing = false;
         return;
       }
 
       const pendingOrders = await OrdersModel.findAll({
         where: {
           profile_id: currentProfileId,
-          // Skip empty deleted orders (status=3 with amount=0 and no items sent)
+          // is_synced: 2 = validation error (skip forever), only retry 0 and null
           [Op.and]: [
-            { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }] },
+            { [Op.or]: [{ is_synced: 0 }, { is_synced: null }] },
             { [Op.not]: { status: 3, amount: 0 } }
           ]
         },
@@ -189,7 +216,6 @@ class SyncService {
       });
 
       if (pendingOrders.length === 0) {
-        this.isSyncing = false;
         return;
       }
 
@@ -244,18 +270,19 @@ class SyncService {
 
     for (const url of urls) {
       try {
-        const response = await axios.post(url, payload, { timeout: 5000 });
+        const response = await axios.post(url, payload, { timeout: 8000 });
         if (response.status >= 200 && response.status < 300) return true;
       } catch (error) {
         lastError = error;
-        
+
         // If Admin API explicitly rejects with 4xx validation error, fail fast and don't retry other urls
         if (error.response && error.response.status >= 400 && error.response.status < 500) {
-           const validationErr = new Error(`Admin API Validation Error: ${error.response.status}`);
+           const validationErr = new Error(`Admin API Validation Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
            validationErr.isValidationError = true;
            validationErr.originalError = error;
            throw validationErr;
         }
+        console.warn(`[SYNC_URL_FAIL] ${url}: ${error.message}`);
       }
     }
     throw lastError || new Error("All endpoints failed");

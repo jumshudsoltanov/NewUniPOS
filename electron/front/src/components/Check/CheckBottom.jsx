@@ -562,27 +562,4 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   );
 };
 
-const CheckBottomWithMemo = React.memo(CheckBottom, (prev, next) => {
-  // Only re-render if financially relevant fields change
-  const p = prev.orders;
-  const n = next.orders;
-  if (!p && !n) return true;
-  if (!p || !n) return false;
-  return (
-    p.discount === n.discount &&
-    p.discount_value === n.discount_value &&
-    p.discount_type === n.discount_type &&
-    p.service_charge === n.service_charge &&
-    p.service_value === n.service_value &&
-    p.service_type === n.service_type &&
-    p.total === n.total &&
-    p.deposit === n.deposit &&
-    p.is_locked === n.is_locked &&
-    p.is_timer_status === n.is_timer_status &&
-    p.orders_items?.length === n.orders_items?.length &&
-    prev.hall === next.hall &&
-    prev.isSending === next.isSending &&
-    prev.selectedCustomer === next.selectedCustomer
-  );
-});
-export default CheckBottomWithMemo;
+export default CheckBottom;

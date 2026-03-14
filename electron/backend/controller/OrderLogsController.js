@@ -22,7 +22,7 @@ const addLog = async (req, res) => {
         });
 
         // Trigger sync for this order to include the new log
-        SyncService.triggerSync(orderId);
+        SyncService.queueSync(orderId);
 
         return res.status(201).json(newLog);
     } catch (error) {

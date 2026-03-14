@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.0.35",
+  "version": "2.0.36",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -13,9 +13,11 @@
     "dev-react": "npm run dev --prefix electron/front",
     "start-electron": "wait-on http://localhost:5173 && electron .",
     "build-front": "npm run build --prefix electron/front",
-    "dist": "npm run build-front && electron-builder --win publish=always",
+    "dist": "npm run build-front && electron-builder --win --x64 --ia32 publish=always",
+    "dist-ia32": "npm run build-front && electron-builder --win --ia32 publish=always",
     "pack": "npm run build-front && electron-builder --win --dir",
-    "release": "npm run build-front && electron-builder --win"
+    "release": "npm run build-front && electron-builder --win --x64 --ia32",
+    "release-ia32": "npm run build-front && electron-builder --win --ia32"
   },
   "build": {
     "appId": "com.unipos.tech",
@@ -50,7 +52,15 @@
       "node_modules/electron-updater/**/*"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ],
       "icon": "electron/static/images/logo.png",
       "requestedExecutionLevel": "asInvoker",
       "verifyUpdateCodeSignature": false,
@@ -67,7 +77,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "electron": "^33.0.0",
+    "electron": "^22.3.27",
     "electron-builder": "^24.13.3",
     "wait-on": "^9.0.3"
   },

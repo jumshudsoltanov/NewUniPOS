@@ -140,7 +140,7 @@ const sendOrdersItemsToDb = async (req, res) => {
     );
 
     // Sync trigger
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     const io = getIo();
     if (io) {
@@ -394,7 +394,7 @@ const onUpdateTableOrder = async (req, res) => {
       { where: { uuid: orderId } },
     );
 
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -420,7 +420,7 @@ const onLockCheck = async (req, res) => {
       { where: { uuid: orderId } },
     );
 
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -448,7 +448,7 @@ const onUpdateCheckTags = async (req, res) => {
     res.status(200).json({ message: "tags update" });
 
     // Background tasks (non-blocking after response)
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
   } catch (error) {
@@ -472,7 +472,7 @@ const onUpdateCheckComments = async (req, res) => {
     res.status(200).json({ message: "comment update" });
 
     // Background tasks (non-blocking after response)
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
   } catch (error) {
@@ -497,7 +497,7 @@ const onDeleteOrderItems = async (req, res) => {
         where: { uuid: orderId },
       },
     );
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -658,7 +658,7 @@ const onMergeChecks = async (req, res) => {
     // Commit
     await transaction.commit();
 
-    SyncService.triggerSync(currentOrderId);
+    SyncService.queueSync(currentOrderId);
     // newOrderId is deleted, but we might want to sync that deletion too? 
     // Usually handled by sending the deleted order as status=0/deleted. 
     // Here we physically destroy the record. Admin sync might need to know about deletion.
@@ -713,7 +713,7 @@ const onChangeSaleType = async (req, res) => {
       { sale_type: saleType, table_id: tableId, hall_id: hallId, is_synced: 0 },
       { where: { uuid: orderId } },
     );
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -763,7 +763,7 @@ const onUpdateWaiter = async (req, res) => {
     res.status(200).json({ message: "waiter update" });
 
     // Background tasks (non-blocking after response)
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
   } catch (error) {
@@ -943,8 +943,8 @@ const onSplitOrder = async (req, res) => {
 
     await transaction.commit();
 
-    SyncService.triggerSync(data.orderId);
-    SyncService.triggerSync(targetOrder.uuid);
+    SyncService.queueSync(data.orderId);
+    SyncService.queueSync(targetOrder.uuid);
 
     const includeSpec = [
       { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
@@ -1149,7 +1149,7 @@ const onGiftItem = async (req, res) => {
     await transaction.commit();
 
     // Sync trigger (AFTER commit so admin gets the updated data)
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1294,7 +1294,7 @@ const onUpdateItemDiscount = async (req, res) => {
     await transaction.commit();
 
     // Sync trigger (AFTER commit so admin gets the updated data)
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1364,7 +1364,7 @@ const onDeleteCheck = async (req, res) => {
     if (getIo()) getIo().emit("table_updated", { orderId });
 
     if (hasItems) {
-      SyncService.triggerSync(orderId);
+      SyncService.queueSync(orderId);
     }
 
     return res.status(200).json({ message: "success" });
@@ -1466,7 +1466,7 @@ const onCloseOrder = async (req, res) => {
     res.status(200).json({ message: "success" });
 
     // Trigger sync in background (non-blocking)
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
   } catch (error) {
@@ -1523,7 +1523,7 @@ const onUpdateDepositOrder = async (req, res) => {
       { where: { uuid: orderId } },
     );
 
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1580,7 +1580,7 @@ const onReopenOrder = async (req, res) => {
       },
       { where: { uuid: orderId } }
     );
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1614,7 +1614,7 @@ const onReturnCheck = async (req, res) => {
       },
       { where: { uuid: orderId } }
     );
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1717,7 +1717,7 @@ const onDeleteItemWithReason = async (req, res) => {
     res.status(200).json({ uuid: orderId, deletedItemId: itemId, success: true });
 
     // Background tasks (non-blocking)
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1818,7 +1818,7 @@ const onUpdateItemPrice = async (req, res) => {
       },
       { where: { uuid: orderId } },
     );
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1943,7 +1943,7 @@ const onUpdateItemCount = async (req, res) => {
       },
       { where: { uuid: orderId } },
     );
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) {
       getIo().emit("table_updated", { orderId });
@@ -1995,7 +1995,7 @@ const onAssignCustomer = async (req, res) => {
       { customer_id: customer_id || null, is_synced: 0 },
       { where: { uuid: orderId } }
     );
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -2049,7 +2049,7 @@ const onUpdateGuestCount = async (req, res) => {
     res.status(200).json({ message: "success" });
 
     // Background tasks (non-blocking after response)
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId: orderId });
   } catch (error) {
@@ -2079,7 +2079,7 @@ const incrementPrintCount = async (req, res) => {
       { where: { uuid: orderId } }
     );
 
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -2144,7 +2144,7 @@ const onStartTimer = async (req, res) => {
     });
 
     attachLiveTimerToOrder(updatedOrder);
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -2223,7 +2223,7 @@ const onStopTimer = async (req, res) => {
     });
 
     attachLiveTimerToOrder(updatedOrder);
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -2287,7 +2287,7 @@ const onResetTimer = async (req, res) => {
     });
 
     attachLiveTimerToOrder(updatedOrder);
-    SyncService.triggerSync(orderId);
+    SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -2379,7 +2379,7 @@ module.exports = {
 
       res.status(200).json({ uuid: orderId, success: true, deletedItems: items.map(i => i.itemId) });
 
-      SyncService.triggerSync(orderId);
+      SyncService.queueSync(orderId);
       const { getIo } = require("../socket/MasterServer");
       if (getIo()) getIo().emit("table_updated", { orderId });
 

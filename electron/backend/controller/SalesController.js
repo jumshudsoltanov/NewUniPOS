@@ -63,7 +63,7 @@ const CreateNewOrders = async (req, res) => {
 
     // Trigger sync
     if (newSale.uuid) {
-      SyncService.triggerSync(newSale.uuid);
+      SyncService.queueSync(newSale.uuid);
       const { getIo } = require("../socket/MasterServer");
       if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
     }
@@ -111,7 +111,7 @@ const CreateNewOtherOrders = async (req, res) => {
 
     // Trigger sync
     if (newSale.uuid) {
-      SyncService.triggerSync(newSale.uuid);
+      SyncService.queueSync(newSale.uuid);
       const { getIo } = require("../socket/MasterServer");
       if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
     }
