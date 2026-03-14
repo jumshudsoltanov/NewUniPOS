@@ -120,17 +120,17 @@ class SyncService {
         }
       }
 
-      const items = await OrdersItemsModel.findAll({ 
+      const items = await OrdersItemsModel.findAll({
         where: { order_id: order.uuid },
         paranoid: false,
         attributes: { include: ["deleted_at"] }
       });
-      const logs = await OrderLogsModel.findAll({ 
+      const logs = await OrderLogsModel.findAll({
         where: { order_id: order.uuid },
         paranoid: false,
         attributes: { include: ["deleted_at"] }
       });
-      const payments = await OrderPaymentsModel.findAll({ 
+      const payments = await OrderPaymentsModel.findAll({
         where: { order_id: order.uuid },
         paranoid: false,
         attributes: { include: ["deleted_at"] }
@@ -153,14 +153,20 @@ class SyncService {
           if (plain.deleted_at) {
             plain.count = 0;
           }
+          plain.order_id = order.uuid;
           return plain;
         }),
-        logs: logs.map(log => log.get({ plain: true })),
+        logs: logs.map(log => {
+          const plain = log.get({ plain: true });
+          plain.order_id = order.uuid;
+          return plain;
+        }),
         payments: payments.map(payment => {
           const plain = payment.get({ plain: true });
           if (plain.deleted_at) {
             plain.paid = 0;
           }
+          plain.order_id = order.uuid;
           return plain;
         }),
         tables: table ? [table.get({ plain: true })] : [],
@@ -246,14 +252,14 @@ class SyncService {
       await Promise.any(
         endpoints.map((url) =>
           axios.get(url, { timeout: 3000 }).then((res) => {
-             console.log(`[SYNC_CONN] Online via ${url}`);
-             return true;
+            console.log(`[SYNC_CONN] Online via ${url}`);
+            return true;
           }).catch((e) => {
-             if (e.response) {
-               console.log(`[SYNC_CONN] Online (Response received from ${url})`);
-               return true;
-             }
-             throw e;
+            if (e.response) {
+              console.log(`[SYNC_CONN] Online (Response received from ${url})`);
+              return true;
+            }
+            throw e;
           })
         )
       );
@@ -277,10 +283,10 @@ class SyncService {
 
         // If Admin API explicitly rejects with 4xx validation error, fail fast and don't retry other urls
         if (error.response && error.response.status >= 400 && error.response.status < 500) {
-           const validationErr = new Error(`Admin API Validation Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
-           validationErr.isValidationError = true;
-           validationErr.originalError = error;
-           throw validationErr;
+          const validationErr = new Error(`Admin API Validation Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+          validationErr.isValidationError = true;
+          validationErr.originalError = error;
+          throw validationErr;
         }
         console.warn(`[SYNC_URL_FAIL] ${url}: ${error.message}`);
       }
