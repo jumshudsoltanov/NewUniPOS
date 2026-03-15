@@ -30,6 +30,11 @@ const GeneralCategoriesModel = db.sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+
+    color: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "general_categories",

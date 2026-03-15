@@ -469,7 +469,8 @@ const onUpdateCheckComments = async (req, res) => {
       { note: comments, is_synced: 0 },
       { where: { uuid: orderId } },
     );
-    res.status(200).json({ message: "comment update" });
+    const updatedOrder = await OrdersModel.findOne({ where: { uuid: orderId }, raw: true });
+    res.status(200).json({ data: updatedOrder });
 
     // Background tasks (non-blocking after response)
     SyncService.queueSync(orderId);

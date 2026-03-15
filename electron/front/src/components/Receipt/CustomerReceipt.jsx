@@ -144,7 +144,7 @@ const CustomerReceipt = ({
         },
         thankText: { marginBottom: "2px", fontSize: fs(11), fontWeight: "900" },
         link: { fontSize: fs(10), wordBreak: "break-word", fontWeight: "900" },
-        note: { fontSize: fs(10), fontStyle: "italic", marginTop: "3px" },
+        note: { fontSize: fs(11), fontStyle: "italic", fontWeight: "700", marginTop: "3px" },
         modifier: {
             fontSize: fs(9),
             fontStyle: "italic",

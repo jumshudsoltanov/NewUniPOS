@@ -103,6 +103,11 @@ const ProductsModel = db.sequelize.define(
       type: DataTypes.JSON,
       allowNull: true,
     },
+
+    color: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "products",

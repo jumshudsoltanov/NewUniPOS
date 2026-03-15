@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.0.43",
+  "version": "2.0.47",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -9,7 +9,7 @@
     "url": "https://github.com/jumshudsoltanov/NewUniPOS.git"
   },
   "scripts": {
-    "start": "concurrently \"npm run dev-react\" \"npm run start-electron\"",
+    "start": "concurrently --kill-others \"npm run dev-react\" \"npm run start-electron\"",
     "dev-react": "npm run dev --prefix electron/front",
     "start-electron": "wait-on http://localhost:5173 && electron .",
     "build-front": "npm run build --prefix electron/front",

@@ -146,6 +146,7 @@ const Check = () => {
           ao.amount !== bo.amount ||
           ao.status !== bo.status ||
           ao.is_locked !== bo.is_locked ||
+          ao.note !== bo.note ||
           ao.orders_items?.length !== bo.orders_items?.length
         ) return false;
       }

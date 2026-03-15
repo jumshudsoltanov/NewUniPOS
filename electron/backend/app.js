@@ -188,12 +188,35 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
-    await db.sequelize.sync({ alter: true });
+    // sync xəta ata bilər — ayrı try-catch ilə tutub davam edirik
+    try {
+      await db.sequelize.sync({ alter: true });
+    } catch (syncErr) {
+      console.warn("[Sync] sync({ alter: true }) xətası (davam edirik):", syncErr.message);
+    }
 
     console.log("Created Table Success!");
   } catch (error) {
     console.error("Table Created Error:", error ? (error.message || error.toString()) : "Naməlum xəta");
   }
+
+  // Migration həmişə işləsin — sync xəta atsın, atmasın
+  // Sequelize-in öz model registry-si ilə bazada olmayan sütunları əlavə edirik
+  try {
+    const qi = db.sequelize.getQueryInterface();
+    for (const model of Object.values(db.sequelize.models)) {
+      try {
+        const tableDesc = await qi.describeTable(model.getTableName());
+        for (const [key, attr] of Object.entries(model.rawAttributes)) {
+          const colName = attr.field || key;
+          if (!tableDesc[colName]) {
+            await qi.addColumn(model.getTableName(), colName, attr);
+            console.log(`[Schema] ${model.getTableName()}.${colName} əlavə edildi`);
+          }
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

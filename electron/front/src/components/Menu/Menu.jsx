@@ -391,7 +391,7 @@ const Menu = ({
                   className={`menu-card ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
                   style={{
                     backgroundImage: imageSrc,
-                    backgroundColor: item.img ? "transparent" : "#555",
+                    backgroundColor: item.color || (item.img ? "transparent" : "#555"),
                     cursor: isDragMode ? "grab" : "pointer",
                   }}
                   draggable={isDragMode}
