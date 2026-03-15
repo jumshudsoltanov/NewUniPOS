@@ -173,13 +173,9 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         const itemTotal = count * (price + modifiersTotal);
 
         total += itemTotal;
+        totalForDiscount += itemTotal;
 
         const productInfo = menu?.find(m => m.id === (item.product_id || item.id));
-        const isNoDiscount = (item.no_discount === 1 || productInfo?.no_discount === 1);
-        if (!isNoDiscount) {
-          totalForDiscount += itemTotal;
-        }
-
         const isNoService = (item.no_service_fee === 1 || productInfo?.no_service_fee === 1);
         if (!isNoService) {
           totalForService += itemTotal;
@@ -216,13 +212,9 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         const delTotal = delQty * (delPrice + modifiersTotal);
 
         total -= delTotal;
+        totalForDiscount -= delTotal;
 
         const productInfo = menu?.find(m => m.id === (del.product_id || del.itemId || del.id));
-
-        const isNoDiscount = (del.no_discount === 1 || productInfo?.no_discount === 1);
-        if (!isNoDiscount) {
-          totalForDiscount -= delTotal;
-        }
 
         const isNoService = (del.no_service_fee === 1 || productInfo?.no_service_fee === 1);
         if (!isNoService) {
@@ -360,7 +352,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
           {Number(calcTotal.discountAmount) > 0 && (
             <div className="summary-row">
               <span>Endirim:</span>
-              <span>-{calcTotal.discountAmount} ₼ (~{calcTotal.effectivePercentage}%)</span>
+              <span>-{calcTotal.discountAmount} ₼ ({calcTotal.discountType === 'percent' ? `${calcTotal.discountValue}%` : `~${calcTotal.effectivePercentage}%`})</span>
             </div>
           )}
           {Number(calcTotal.serviceAmount) > 0 && (

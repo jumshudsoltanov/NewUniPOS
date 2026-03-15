@@ -160,7 +160,6 @@ const DevicesModal = ({ show, onHide }) => {
                 status: nextStatus,
                 type: type
             });
-            console.log("Toggle response:", res.data);
             setMasterModes(prev => ({ ...prev, [type]: nextStatus }));
             const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
             const field = type === 'cashier' ? 'is_master_cashier_printing' : 'is_master_product_printing';

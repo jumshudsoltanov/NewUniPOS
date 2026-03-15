@@ -109,7 +109,6 @@ const Login = () => {
   } = useSelector((state) => state.SyncSlice);
 
   useEffect(() => {
-    console.log("Login Mounted", loginedProfileData);
   }, []);
 
   const activeProfileData = loginedProfileData || fallbackProfileData;
@@ -200,7 +199,6 @@ const Login = () => {
         }
       }
 
-      console.log("[AUTH] Login Thunk Success. Hiding loader and navigating...");
       setIsRefreshing(false);
       navigate("/pin");
     } catch (err) {

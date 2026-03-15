@@ -46,7 +46,7 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
         ]);
       }
     } catch (error) {
-      console.log("Sale Type Change Error", error);
+      console.error("Sale Type Change Error", error);
     }
   };
 

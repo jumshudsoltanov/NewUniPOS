@@ -642,7 +642,6 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
         target={newOrderBtnRef.current}
         onClose={() => setOnShowSalesTypeModal(false)}
         onSelect={(type) => {
-          console.log("Seçilən satış tipi:", type);
         }}
       />
 

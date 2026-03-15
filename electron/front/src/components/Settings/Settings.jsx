@@ -106,7 +106,7 @@ const Settings = () => {
 
                 if (Number(profile?.is_pos_block) === 1) {
                     toast.dismiss(toastId);
-                    navigate("/block");
+                    navigate("/blocked");
                     return;
                 }
 
@@ -117,7 +117,7 @@ const Settings = () => {
                     paymentDate.setHours(0, 0, 0, 0);
                     if (paymentDate < now) {
                         toast.dismiss(toastId);
-                        navigate("/block");
+                        navigate("/blocked");
                         return;
                     }
                 }

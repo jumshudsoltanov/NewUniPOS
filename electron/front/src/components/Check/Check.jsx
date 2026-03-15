@@ -147,6 +147,7 @@ const Check = () => {
           ao.status !== bo.status ||
           ao.is_locked !== bo.is_locked ||
           ao.note !== bo.note ||
+          ao.customer_id !== bo.customer_id ||
           ao.orders_items?.length !== bo.orders_items?.length
         ) return false;
       }
@@ -527,9 +528,6 @@ const Check = () => {
   }, []);
 
 
-  console.log(loginedProfileData);
-
-
   const clearCheck = useCallback(() => {
     if (currentOrder?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
@@ -847,7 +845,6 @@ const Check = () => {
         })
       ).unwrap();
 
-      console.log("Split result:", result);
       setOpenSplitModal(false);
 
       if (result?.data?.newOrder?.uuid) {
@@ -2243,7 +2240,6 @@ const Check = () => {
         target={newOrderBtnRef.current}
         onClose={() => setOnShowSalesTypeModal(false)}
         onSelect={(type) => {
-          console.log("Seçilən satış tipi:", type);
         }}
       />
       <OrderLogsModal
@@ -2310,9 +2306,9 @@ const Check = () => {
               waiterName,
             }));
 
-            // 3. Apply customer group discount if automated
-            const groupDiscount = customer?.group?.discount;
-            if (groupDiscount && (!currentOrder.discount_value || currentOrder.discount_value == 0)) {
+            // 3. Apply customer discount (direct or group)
+            const groupDiscount = customer?.discount || customer?.group?.discount;
+            if (groupDiscount && groupDiscount > 0) {
               dispatch(updateDiscountOnOrders({
                 orderId: currentOrder.uuid,
                 discountValue: groupDiscount,

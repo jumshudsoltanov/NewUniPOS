@@ -24,7 +24,7 @@ const WaitersModal = ({ show, onClose, order }) => {
       try {
         await dispatch(getWaitersList(loginedProfileData.data.profile.id));
       } catch (error) {
-        console.log("Error waiters list", error);
+        console.error("Error waiters list", error);
       }
     };
 

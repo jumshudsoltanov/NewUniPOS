@@ -26,8 +26,6 @@ const CommentModal = React.memo(({ show, onClose, order }) => {
       updateComments({ orderId: order?.uuid, comments: comment, waiterName }),
     ).unwrap();
 
-    console.log(result);
-
     if (loginedProfileData?.data?.profile?.id) {
       const profileId = loginedProfileData.data.profile.id;
       await Promise.all([

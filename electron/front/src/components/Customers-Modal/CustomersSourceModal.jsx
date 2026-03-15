@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Modal } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import './CustomersSourceModal.css';
@@ -189,6 +189,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
         code: '',
         phone: '',
         group_id: '',
+        discount: '',
         description: '',
         gender: '',
         birth_date: '',
@@ -271,7 +272,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
 
     const resetForm = () => {
         setFormData({
-            name: '', code: '', phone: '', group_id: '', description: '',
+            name: '', code: '', phone: '', group_id: '', discount: '', description: '',
             gender: '', birth_date: '', email: '', address: ''
         });
         setSelectedCountry(COUNTRIES[0]);
@@ -310,6 +311,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
             code: selectedCustomer.code || '',
             phone: phone,
             group_id: selectedCustomer.group_id || '',
+            discount: selectedCustomer.discount || getCustomerDiscount(selectedCustomer) || '',
             description: selectedCustomer.description || '',
             gender: selectedCustomer.gender || '',
             birth_date: formatDateForDisplay(selectedCustomer.birth_date || ''),
@@ -341,6 +343,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
             phone: fullPhone,
             birth_date: formatDateForAPI(formData.birth_date),
             group_id: formData.group_id || null,
+            discount: formData.discount ? parseFloat(formData.discount) : 0,
         };
 
         try {
@@ -376,6 +379,25 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
             console.error("Customer save error:", err);
         }
     };
+
+    const getCustomerDiscount = useCallback((customer) => {
+        if (customer?.discount > 0) return customer.discount;
+        if (customer?.group?.discount > 0) return customer.group.discount;
+        if (customer?.group_id) {
+            const group = customerGroups.find(g => g.id === customer.group_id || g.id === Number(customer.group_id));
+            if (group?.discount > 0) return group.discount;
+        }
+        return 0;
+    }, [customerGroups]);
+
+    const getCustomerGroupName = useCallback((customer) => {
+        if (customer?.group?.name) return customer.group.name;
+        if (customer?.group_id) {
+            const group = customerGroups.find(g => g.id === customer.group_id || g.id === Number(customer.group_id));
+            if (group?.name) return group.name;
+        }
+        return '';
+    }, [customerGroups]);
 
     const filteredCustomers = useMemo(() => {
         if (!show) return [];
@@ -527,6 +549,24 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                         </div>
 
                         <div className="form-group">
+                            <label>Endirim (%)</label>
+                            <div className="input-with-icon">
+                                <input
+                                    type="number"
+                                    name="discount"
+                                    placeholder="0"
+                                    className="form-control-custom"
+                                    value={formData.discount}
+                                    onChange={handleInputChange}
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                />
+                                <i className="bi bi-percent"></i>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
                             <label>Cins</label>
                             <div className="custom-select-wrapper">
                                 <select
@@ -635,8 +675,8 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
         }
 
         if (viewMode === 'details' && selectedCustomer) {
-            const groupName = selectedCustomer.group?.name || '';
-            const groupDiscount = selectedCustomer.group?.discount || 0;
+            const groupName = getCustomerGroupName(selectedCustomer);
+            const groupDiscount = getCustomerDiscount(selectedCustomer);
 
             return (
                 <div className="customer-details-container">
@@ -650,7 +690,21 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                             {propSelectedCustomer && (
                                 <button className="remove-btn-styled" onClick={() => onApply && onApply(null)}>Müştərini çıxar</button>
                             )}
-                            <button className="apply-btn-styled" onClick={() => onApply && onApply(selectedCustomer)}>Tətbiq et</button>
+                            <button className="apply-btn-styled" onClick={() => {
+                                if (onApply) {
+                                    const discount = getCustomerDiscount(selectedCustomer);
+                                    const gName = getCustomerGroupName(selectedCustomer);
+                                    const enriched = {
+                                        ...selectedCustomer,
+                                        group: {
+                                            ...(selectedCustomer.group || {}),
+                                            name: gName || selectedCustomer.group?.name,
+                                            discount: discount || selectedCustomer.group?.discount || 0,
+                                        },
+                                    };
+                                    onApply(enriched);
+                                }
+                            }}>Tətbiq et</button>
                             <div className="dots-menu-wrapper" ref={dotsMenuRef}>
                                 <button
                                     className="dots-menu-btn"
@@ -716,12 +770,12 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                         </div>
                     </div>
 
-                    {/* Group info */}
-                    {groupName && (
+                    {/* Group info & discount */}
+                    {(groupName || groupDiscount > 0) && (
                         <div className="details-group-row">
-                            <span className="group-label">{groupName}</span>
-                            <span className="group-badge">QRUP</span>
-                            <span className="group-discount">{groupDiscount}%</span>
+                            {groupName && <span className="group-label">{groupName}</span>}
+                            {groupName && <span className="group-badge">QRUP</span>}
+                            {groupDiscount > 0 && <span className="group-discount">Endirim: {groupDiscount}%</span>}
                         </div>
                     )}
 
@@ -886,6 +940,11 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     <span className="customer-id">İD: {customer.id}</span>
                                     <span className="customer-phone">{customer.phone || '—'}</span>
                                 </div>
+                                {getCustomerDiscount(customer) > 0 && (
+                                    <span className="customer-discount-badge">
+                                        {getCustomerDiscount(customer)}%
+                                    </span>
+                                )}
                             </div>
                         ))}
                         {!loading && isOnline && filteredCustomers.length === 0 && (

@@ -142,6 +142,36 @@ const BooksSlice = createSlice({
       state.error = action.payload;
     });
 
+    // Optimistic discount update — discount dərhal hesablansın
+    builder.addCase("pos/discount/pending", (state, action) => {
+      const { orderId, discountValue, discountType } = action.meta.arg;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        ordersList[idx] = {
+          ...ordersList[idx],
+          discount_value: discountValue,
+          discount_type: discountType,
+        };
+      }
+    });
+
+    // Optimistic customer assign — müştəri dərhal görsənsin
+    builder.addCase("orders/assign-customer/pending", (state, action) => {
+      const { orderId, customerId, customerName } = action.meta.arg;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        ordersList[idx] = {
+          ...ordersList[idx],
+          customer_id: customerId || null,
+          customer_name: customerName || null,
+        };
+      }
+    });
+
     // Remove from archive when reopened
     builder.addCase("orders/reopen/fulfilled", (state, action) => {
       const reopenedOrderId = action.meta.arg.orderId;
