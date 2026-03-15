@@ -50,6 +50,21 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         return (order?.orders_items || []).reduce((acc, item) => acc + (Number(item.count || 0) * Number(item.price || 0)), 0);
     }, [order?.orders_items]);
 
+    const groupedItems = useMemo(() => {
+        const map = {};
+        (order?.orders_items || []).forEach(item => {
+            const name = item.product?.name || item.name || "Məhsul";
+            const price = Number(item.price || 0);
+            const key = `${name}__${price}`;
+            if (map[key]) {
+                map[key].count += Number(item.count || 0);
+            } else {
+                map[key] = { ...item, name, count: Number(item.count || 0), price };
+            }
+        });
+        return Object.values(map);
+    }, [order?.orders_items]);
+
     const discountPercentage = useMemo(() => {
         if (order?.discount_percentage) return order.discount_percentage;
         if (!subtotal || !order?.discount) return 0;
@@ -586,9 +601,9 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {order.orders_items?.map((item, i) => (
+                                            {groupedItems.map((item, i) => (
                                                 <tr key={i}>
-                                                    <td>{item.product?.name || "Məhsul"}</td>
+                                                    <td>{item.name}</td>
                                                     <td>{item.count}</td>
                                                     <td>{Number(item.price).toFixed(2)}</td>
                                                     <td className="text-end">{(item.count * item.price).toFixed(2)}</td>

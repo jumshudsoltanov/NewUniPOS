@@ -243,6 +243,7 @@ const Check = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const [isSending, setIsSending] = useState(false);
+  const [hadOrderItems, setHadOrderItems] = useState(false);
   const {
     pendingCount: syncCount,
     lastSyncedDelta: syncedCount,
@@ -255,6 +256,12 @@ const Check = () => {
     return localStorage.getItem("showHeaderClock") === "true";
   });
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    if (currentOrder?.orders_items?.length > 0 || pendingDeletions?.length > 0) {
+      setHadOrderItems(true);
+    }
+  }, [currentOrder?.orders_items?.length, pendingDeletions?.length]);
 
   const goTables = () => {
     if (location.state?.from === "/checks") {
@@ -471,10 +478,14 @@ const Check = () => {
 
   async function handleAutoSaveAndExit(targetPath) {
     const resultingItemCount = (currentOrder?.orders_items?.length || 0) - (pendingDeletions?.length || 0) + (products?.length || 0);
-    const isTimerActiveOrHasBalance = 
-      currentOrder?.is_timer_status === 1 || 
-      Number(currentOrder?.rate_per_minute || 0) > 0 || 
+    const isTimerActiveOrHasBalance =
+      currentOrder?.is_timer_status === 1 ||
+      Number(currentOrder?.rate_per_minute || 0) > 0 ||
       (currentOrder?.is_timer_clock && currentOrder?.is_timer_clock !== "00:00:00");
+
+    if (products.length > 0 || pendingDeletions.length > 0) {
+      await handleSendOrders();
+    }
 
     if (resultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
@@ -485,7 +496,8 @@ const Check = () => {
           orderId: currentOrder.uuid,
           reason: 0,
           reasonText: "Masa boş olduğu üçün silindi",
-          waiterName
+          waiterName,
+          forceDestroy: !hadOrderItems,
         })).unwrap();
 
         if (profileId) {
@@ -496,8 +508,6 @@ const Check = () => {
       } catch (error) {
         console.error("Auto-delete error:", error);
       }
-    } else if (products.length > 0 || pendingDeletions.length > 0) {
-      await handleSendOrders();
     }
 
     if (targetPath === -1) {

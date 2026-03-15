@@ -199,7 +199,7 @@ const Tables = () => {
       const isMyTable = hasOrders && loginedWaiter?.data?.id && waiterId == loginedWaiter.data.id;
       const isOtherTable = hasOrders && !isMyTable;
 
-      if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 1 && isOtherTable) {
+      if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 0 && isOtherTable) {
         toast.error("İcazəniz yoxdur: Bu masa başqa ofisianta aiddir.");
         return;
       }

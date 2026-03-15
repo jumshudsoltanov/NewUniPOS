@@ -1338,34 +1338,35 @@ const onUpdateItemDiscount = async (req, res) => {
 
 const onDeleteCheck = async (req, res) => {
   const { orderId } = req.params;
-  const { reason } = req.body;
+  const { reason, forceDestroy } = req.body;
 
   if (!orderId) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
   try {
-    // Check if the order has any items
-    const itemCount = await OrdersItemsModel.count({ where: { order_id: orderId } });
-    const hasItems = itemCount > 0;
-
-    await OrdersModel.update(
-      {
-        status: 3,
-        end_date: new Date(),
-        is_delete_reason_id: reason,
-        // Empty orders (no items) don't need to sync to admin
-        is_synced: hasItems ? 0 : 1
-      },
-      { where: { uuid: orderId } },
-    );
-
     const { getIo } = require("../socket/MasterServer");
-    if (getIo()) getIo().emit("table_updated", { orderId });
 
-    if (hasItems) {
+    if (forceDestroy) {
+      // Auto-delete: table was never touched → remove completely from DB, no sync
+      await OrdersItemsModel.destroy({ where: { order_id: orderId }, force: true });
+      await OrderPaymentsModel.destroy({ where: { order_id: orderId }, force: true });
+      await OrdersModel.destroy({ where: { uuid: orderId }, force: true });
+    } else {
+      // Manual delete or had items → status=3 update + sync to admin
+      await OrdersModel.update(
+        {
+          status: 3,
+          end_date: new Date(),
+          is_delete_reason_id: reason,
+          is_synced: 0,
+        },
+        { where: { uuid: orderId } },
+      );
       SyncService.queueSync(orderId);
     }
+
+    if (getIo()) getIo().emit("table_updated", { orderId });
 
     return res.status(200).json({ message: "success" });
   } catch (error) {

@@ -447,11 +447,11 @@ export const updateItemDiscount = createAsyncThunk(
 
 export const deleteCheck = createAsyncThunk(
   "orders/deleteCheck",
-  async ({ orderId, reason, reasonText, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, reason, reasonText, waiterName: passedWaiterName, forceDestroy = false }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/delete-check`,
-        { reason },
+        { reason, forceDestroy },
       );
 
       // Persistent Log
