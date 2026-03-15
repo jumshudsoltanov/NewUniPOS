@@ -210,16 +210,8 @@ class SyncService {
         return;
       }
 
-      // Only sync orders belonging to the currently active profile
-      const currentProfileId = await this.getCurrentProfileId();
-      if (!currentProfileId) {
-        console.warn("[SYNC_LOOP] No active profile found, skipping sync.");
-        return;
-      }
-
       const pendingOrders = await OrdersModel.findAll({
         where: {
-          profile_id: currentProfileId,
           // is_synced: 2 = validation error (skip forever), only retry 0 and null
           [Op.or]: [{ is_synced: 0 }, { is_synced: null }]
         },
@@ -231,7 +223,7 @@ class SyncService {
         return;
       }
 
-      console.log(`[SYNC_LOOP] Profile ${currentProfileId}: Found ${pendingOrders.length} orders. Processing...`);
+      console.log(`[SYNC_LOOP] Found ${pendingOrders.length} pending orders. Processing...`);
       for (const order of pendingOrders) {
         try {
           await this.triggerSync(order.uuid);

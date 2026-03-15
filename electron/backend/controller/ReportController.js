@@ -107,9 +107,10 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
             {
                 model: OrderPaymentsModel,
                 as: 'order_payments',
+                required: false,
                 include: [
-                    { model: PaymentMethodsModel, as: 'payment_method' },
-                    { model: require("../model/TagsModel"), as: 'tag' }
+                    { model: PaymentMethodsModel, as: 'payment_method', required: false },
+                    { model: require("../model/TagsModel"), as: 'tag', required: false }
                 ]
             },
             {
@@ -176,7 +177,10 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
         guest_count: 0,
         open_orders_count: 0,
         open_orders_total: 0,
-        payments: {},
+        total_paid: 0,       // ödənişli bağlamaların cəmi
+        total_unpaid: 0,     // ödənişsiz bağlamaların cəmi
+        payments: {},        // normal ödənişlər (Nağd, Nağdsız bank kartı və s.)
+        unpaid_payments: {}, // ödənişsiz bağlamalar (without_payment_method_id > 0)
         tags: {}
     };
 
@@ -213,11 +217,21 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
             });
         }
 
-        // Payments summary
+        // Payments summary — normal vs ödənişsiz ayrı
         if (order.order_payments) {
             order.order_payments.forEach(p => {
-                const methodName = p.payment_method?.name || (p.without_payment_method_id ? 'Ödənişsiz' : 'Digər');
-                summary.payments[methodName] = (summary.payments[methodName] || 0) + parseFloat(p.paid || 0);
+                const amount = parseFloat(p.paid || 0);
+                if (p.without_payment_method_id && p.without_payment_method_id > 0) {
+                    // Ödənişsiz bağlama — ayrı bölmə
+                    const methodName = p.name || p.tag?.name || 'Ödənişsiz';
+                    summary.unpaid_payments[methodName] = (summary.unpaid_payments[methodName] || 0) + amount;
+                    summary.total_unpaid += amount;
+                } else {
+                    // Normal ödəniş
+                    const methodName = p.name || p.payment_method?.name || 'Nağd';
+                    summary.payments[methodName] = (summary.payments[methodName] || 0) + amount;
+                    summary.total_paid += amount;
+                }
             });
         }
 
@@ -410,9 +424,10 @@ const getChecksReport = async (whereClause, showTransactions) => {
         include.push({
             model: OrderPaymentsModel,
             as: 'order_payments',
+            required: false,
             include: [
-                { model: PaymentMethodsModel, as: 'payment_method' },
-                { model: require("../model/TagsModel"), as: 'tag' }
+                { model: PaymentMethodsModel, as: 'payment_method', required: false },
+                { model: require("../model/TagsModel"), as: 'tag', required: false }
             ]
         });
     }
@@ -553,7 +568,11 @@ const getFinancialReport = async (baseWhere, start, end) => {
         include: [{
             model: OrderPaymentsModel,
             as: 'order_payments',
-            include: [{ model: PaymentMethodsModel, as: 'payment_method' }]
+            required: false,
+            include: [
+                { model: PaymentMethodsModel, as: 'payment_method', required: false },
+                { model: require("../model/TagsModel"), as: 'tag', required: false }
+            ]
         }]
     });
 
@@ -563,7 +582,12 @@ const getFinancialReport = async (baseWhere, start, end) => {
     orders.forEach(order => {
         if (order.order_payments) {
             order.order_payments.forEach(p => {
-                const name = p.payment_method?.name || 'Digər';
+                let name;
+                if (p.without_payment_method_id && p.without_payment_method_id > 0) {
+                    name = p.name || p.tag?.name || 'Ödənişsiz';
+                } else {
+                    name = p.name || p.payment_method?.name || 'Nağd';
+                }
                 const amount = parseFloat(p.paid || 0);
                 if (!paymentMap[name]) {
                     paymentMap[name] = { name, count: 0, total: 0 };

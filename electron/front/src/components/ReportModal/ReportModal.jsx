@@ -205,6 +205,16 @@ const ReportModal = ({ show, onClose }) => {
                 <div className="receipt-row"><span>Çatdırılma haqqı</span><div className="dots"></div><span className="value">0.00</span></div>
                 <div className="receipt-row"><span>Geri qaytarılma</span><div className="dots"></div><span className="value">{(reportSummary.total_refund || 0).toFixed(2)}</span></div>
                 <div className="receipt-row"><span>Silinmələr</span><div className="dots"></div><span className="value">{(reportSummary.total_deleted || 0).toFixed(2)}</span></div>
+                {(reportSummary.total_paid > 0 || reportSummary.total_unpaid > 0) && (
+                    <>
+                        <div className="receipt-row" style={{borderTop: '1px dashed #ccc', marginTop: 4, paddingTop: 4}}>
+                            <span>Ödənişli bağlamalar</span><div className="dots"></div><span className="value">{(reportSummary.total_paid || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="receipt-row">
+                            <span>Ödənişsiz bağlamalar</span><div className="dots"></div><span className="value">{(reportSummary.total_unpaid || 0).toFixed(2)}</span>
+                        </div>
+                    </>
+                )}
                 <div className="receipt-row total-line"><span>Yekun:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
 
                 <div className="section-title mt-4">Digər detallar</div>
@@ -217,7 +227,18 @@ const ReportModal = ({ show, onClose }) => {
                         <div className="section-title mt-4">Ödəniş üsulları</div>
                         {Object.entries(reportSummary.payments).map(([method, amount]) => (
                             <div className="receipt-row" key={method}>
-                                <span>{method}</span><div className="dots"></div><span className="value">{amount.toFixed(2)}</span>
+                                <span>{method}</span><div className="dots"></div><span className="value">{Number(amount).toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </>
+                )}
+
+                {Object.keys(reportSummary.unpaid_payments || {}).length > 0 && (
+                    <>
+                        <div className="section-title mt-4">Ödənişsiz bağlamalar</div>
+                        {Object.entries(reportSummary.unpaid_payments).map(([method, amount]) => (
+                            <div className="receipt-row" key={method}>
+                                <span>{method}</span><div className="dots"></div><span className="value">{Number(amount).toFixed(2)}</span>
                             </div>
                         ))}
                     </>

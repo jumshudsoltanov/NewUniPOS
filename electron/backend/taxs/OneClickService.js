@@ -149,8 +149,11 @@ class OneClickService {
         if (payments && payments.length > 0) {
             payments.forEach(p => {
                 const name = (p.name || '').toLowerCase();
+                const type = (p.type || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-                if (name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('nəğdsiz') || name.includes('bank')) {
+                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
+                    name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('bank');
+                if (isCashless) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;
@@ -210,8 +213,11 @@ class OneClickService {
         if (payments && payments.length > 0) {
             payments.forEach(p => {
                 const name = (p.name || '').toLowerCase();
+                const type = (p.type || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-                if (name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nəğdsiz')) {
+                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
+                    name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('bank');
+                if (isCashless) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;

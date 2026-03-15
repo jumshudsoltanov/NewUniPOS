@@ -54,6 +54,11 @@ const OrderPaymentsModel = db.sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
+
+    name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     tableName: "order_payments",

@@ -1456,6 +1456,7 @@ const onCloseOrder = async (req, res) => {
         without_payment_method_id: p.without_payment_method_id || 0,
         paid: parseFloat(p.amount) || 0,
         note: note || "",
+        name: p.name || null,
       }));
 
       await OrderPaymentsModel.bulkCreate(paymentRecords, { transaction });

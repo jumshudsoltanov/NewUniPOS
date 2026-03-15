@@ -255,10 +255,11 @@ class OmnitechService {
                 const type = (p.type || '').toLowerCase();
                 const amount = Number(p.amount || 0);
 
-                // Prioritize 'type' field, fallback to name heuristics
-                if (type === 'card' || type === 'cashless' || type === 'bank' ||
+                // type: "Nağd" = cash, "Nağdsız" = cashless
+                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
                     name.includes('kart') || name.includes('card') || name.includes('cashless') ||
-                    name.includes('nağdsız') || name.includes('nəğdsiz') || name.includes('bank')) {
+                    name.includes('nağdsız') || name.includes('bank');
+                if (isCashless) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;
@@ -356,9 +357,9 @@ class OmnitechService {
                 const type = (p.type || '').toLowerCase();
                 const amount = Number(p.amount || 0);
                 
-                if (type === 'card' || type === 'cashless' || type === 'bank' || 
-                    name.includes('kart') || name.includes('card') || name.includes('cashless') || 
-                    name.includes('nağdsız') || name.includes('nəğdsiz') || name.includes('bank')) {
+                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
+                    name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('bank');
+                if (isCashless) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;
