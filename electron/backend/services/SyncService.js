@@ -177,6 +177,12 @@ class SyncService {
         }),
       ]);
 
+      if (items.length === 0 && order.status !== 2 && order.status !== 3) {
+        await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false });
+        this._retryCounts.delete(orderId);
+        return;
+      }
+
       const table = order.table_id
         ? await TablesModel.findOne({ where: { id: order.table_id } })
         : null;

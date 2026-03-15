@@ -53,7 +53,7 @@ const CreateNewOrders = async (req, res) => {
       service_type: serviceType,
       service_value: serviceValue,
       deposit: table?.deposit || 0,
-      is_synced: 0,
+      is_synced: 1,
       is_timer_status: isTimerActive ? 1 : 0,
       timer_last_started_at: isTimerActive ? new Date() : null,
       is_active_timer: isTimerActive ? 1 : 0,
@@ -61,9 +61,7 @@ const CreateNewOrders = async (req, res) => {
       uuid: uuid || undefined,
     });
 
-    // Trigger sync
     if (newSale.uuid) {
-      SyncService.queueSync(newSale.uuid);
       const { getIo } = require("../socket/MasterServer");
       if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
     }
@@ -105,13 +103,11 @@ const CreateNewOtherOrders = async (req, res) => {
       status: status ?? 1,
       status: status ?? 1,
       is_selected: is_selected ?? 1,
-      is_synced: 0,
+      is_synced: 1,
       uuid: uuid || undefined,
     });
 
-    // Trigger sync
     if (newSale.uuid) {
-      SyncService.queueSync(newSale.uuid);
       const { getIo } = require("../socket/MasterServer");
       if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
     }
