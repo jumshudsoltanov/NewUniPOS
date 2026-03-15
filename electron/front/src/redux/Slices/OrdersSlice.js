@@ -379,11 +379,11 @@ export const assignCustomerToOrder = createAsyncThunk(
 
 export const giftItem = createAsyncThunk(
   "orders/gift",
-  async ({ orderId, itemId, qty, isGift, productName, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, itemId, allIds, qty, isGift, productName, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
         `/orders-items/${orderId}/gift-item`,
-        { itemId, qty, isGift },
+        { itemId, allIds, qty, isGift },
       );
 
       // Persistent Log

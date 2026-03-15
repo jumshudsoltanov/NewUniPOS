@@ -11,6 +11,8 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
     const dispatch = useDispatch();
     const { menuDataWithCategories } = useSelector(state => state.MenuSlice);
     const { loginedProfileData } = useSelector(state => state.LoginSlice);
+    const { isOnline, hasInternet } = useSelector(state => state.SyncSlice);
+    const isOffline = !isOnline || !hasInternet;
 
     // Initial State
     const initialState = {
@@ -129,6 +131,13 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                     <i className="bi bi-x-lg"></i>
                 </button>
             </div>
+
+            {isOffline && (
+                <div className="product-offline-banner">
+                    <i className="bi bi-wifi-off" />
+                    İnternet bağlantısı yoxdur — əməliyyatlar məhdudlaşdırılıb
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="product-modal-form">
                 <div className="product-modal-body">
@@ -272,7 +281,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
 
                 <div className="modal-footer-custom">
                     <button type="button" className="btn-cancel" onClick={onHide}>Ləğv Et</button>
-                    <button type="submit" className="btn-save" disabled={isLoading}>
+                    <button type="submit" className="btn-save" disabled={isLoading || isOffline} title={isOffline ? "İnternet bağlantısı yoxdur" : ""}>
                         {isLoading ? (
                             <>
                                 <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>

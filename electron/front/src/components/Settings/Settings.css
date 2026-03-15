@@ -1,9 +1,10 @@
 /* Settings Page Styles */
 .settings-page {
-    min-height: 100vh;
+    height: 100vh;
     background: #f5f6f8;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Header - Brand Blue */
@@ -57,27 +58,33 @@
 /* Content */
 .settings-page-content {
     flex: 1;
+    min-height: 0;
     padding: 20px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    gap: 12px;
+    overflow-y: auto;
 }
 
 /* Grid Layouts */
 .settings-grid {
     display: grid;
     gap: 12px;
+    flex-shrink: 0;
 }
 
+/* Top grid — original fixed 200px columns */
 .settings-grid-top {
     grid-template-columns: repeat(3, 200px);
 }
 
+/* Bottom grid — fixed 160px columns, pushed to bottom */
 .settings-grid-bottom {
-    grid-template-columns: repeat(6, 200px);
+    grid-template-columns: repeat(auto-fill, 160px);
+    margin-top: auto;
 }
 
-/* Card Buttons - Exact Specs */
+/* Top cards — original size */
 .settings-card {
     display: flex;
     height: 80px;
@@ -135,85 +142,48 @@
     letter-spacing: 0.03em;
 }
 
-/* Mid-size screens: 769px – 1300px */
-@media (min-width: 769px) and (max-width: 1300px) {
-    .settings-page-content {
-        padding: 16px;
-    }
-
-    .settings-grid-top {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-    }
-
-    .settings-grid-bottom {
-        grid-template-columns: repeat(6, 1fr);
-        gap: 10px;
-    }
-
-    .settings-card {
-        width: 100%;
-        height: 72px;
-        padding: 16px 12px;
-        gap: 10px;
-    }
-
-    .settings-card-icon {
-        width: 36px;
-        height: 36px;
-        font-size: 17px;
-    }
-
-    .settings-card-label {
-        font-size: 12px;
-    }
+/* Bottom cards — compact */
+.settings-grid-bottom .settings-card {
+    height: 85px;
+    width: 160px;
+    padding: 14px;
 }
 
-/* Narrow desktop: 769px – 1100px — collapse bottom to 4 per row */
-@media (min-width: 769px) and (max-width: 1100px) {
-    .settings-grid-bottom {
-        grid-template-columns: repeat(4, 1fr);
-    }
-
-    .settings-grid-top {
-        grid-template-columns: repeat(3, 1fr);
-    }
+.settings-grid-bottom .settings-card-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
 }
 
-/* Responsive */
+.settings-grid-bottom .settings-card-label {
+    font-size: 12px;
+}
+
+/* Responsive — small screens */
 @media (max-width: 768px) {
     .settings-page-content {
         padding: 12px;
+        gap: 10px;
     }
 
     .settings-grid-top {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .settings-grid-top .settings-card {
+        width: 100%;
+        height: 70px;
+        padding: 12px;
     }
 
     .settings-grid-bottom {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, 120px);
     }
 
-    .settings-card {
-        width: 100% !important;
-        height: auto !important;
-        min-height: 64px !important;
-        padding: 12px 10px !important;
-        gap: 8px !important;
-    }
-
-    .settings-card-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        font-size: 16px;
-    }
-
-    .settings-card-label {
-        font-size: 13px !important;
-        word-break: break-word;
+    .settings-grid-bottom .settings-card {
+        width: 120px;
+        height: 60px;
+        padding: 10px;
     }
 }
 

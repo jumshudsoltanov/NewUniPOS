@@ -450,4 +450,91 @@ router.patch("/tax/save-fiscal/:orderId", async (req, res) => {
   }
 });
 
+// ─── Sync Diagnostics ────────────────────────────────────────────────────────
+
+// GET /sync/pending-details — returns details of all stuck pending orders
+router.get("/sync/pending-details", async (req, res) => {
+  try {
+    const { Op } = require("sequelize");
+    const OrdersItemsModel = require("../model/OrdersItemsModel");
+
+    const pending = await OrdersModel.findAll({
+      where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }] },
+      paranoid: false,
+      attributes: ["uuid", "status", "is_synced", "profile_id", "table_id", "created_at", "updated_at", "deleted_at"],
+      order: [["updated_at", "ASC"]],
+    });
+
+    const details = await Promise.all(pending.map(async (o) => {
+      const itemCount = await OrdersItemsModel.count({ where: { order_id: o.uuid }, paranoid: false });
+      return {
+        uuid: o.uuid,
+        status: o.status,
+        is_synced: o.is_synced,
+        profile_id: o.profile_id,
+        table_name: o.table_id ? `Masa #${o.table_id}` : 'Masa yoxdur',
+        item_count: itemCount,
+        created_at: o.created_at,
+        updated_at: o.updated_at,
+        is_deleted: !!o.deleted_at,
+      };
+    }));
+
+    res.json({ count: details.length, orders: details });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// POST /sync/force-now — retry ALL unsynced orders including is_synced=2 skipped ones
+router.post("/sync/force-now", async (req, res) => {
+  try {
+    const { Op } = require("sequelize");
+    const SyncService = require("../services/SyncService");
+
+    // Reset is_synced=2 → 0 so they get retried
+    await OrdersModel.update(
+      { is_synced: 0 },
+      {
+        where: { is_synced: 2 },
+        paranoid: false,
+      }
+    );
+
+    // Reset retry counters so nothing is blocked
+    SyncService._retryCounts.clear();
+
+    // Trigger immediate sync
+    SyncService.syncPendingOrders().catch(() => {});
+
+    res.json({ message: "Force sync triggered (including previously skipped orders)" });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// POST /sync/clear-stuck — mark old stuck orders as skipped (is_synced=2)
+router.post("/sync/clear-stuck", async (req, res) => {
+  try {
+    const { Op } = require("sequelize");
+    const { olderThanMinutes = 60 } = req.body;
+    const cutoff = new Date(Date.now() - olderThanMinutes * 60 * 1000);
+
+    const [updated] = await OrdersModel.update(
+      { is_synced: 2 },
+      {
+        where: {
+          [Op.or]: [{ is_synced: 0 }, { is_synced: null }],
+          updated_at: { [Op.lt]: cutoff },
+        },
+        paranoid: false,
+      }
+    );
+
+    res.json({ message: `Cleared ${updated} stuck orders older than ${olderThanMinutes} minutes` });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 module.exports = router;

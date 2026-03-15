@@ -16,9 +16,10 @@ class SyncService {
   constructor() {
     this.isSyncing = false;
     this.lastSyncTime = new Date();
-    this._pendingQueue = new Set();   // UUIDs waiting to be synced
+    this._pendingQueue = new Set();     // UUIDs waiting to be synced
     this._processingQueue = false;
     this._currentlySyncing = new Set(); // Track in-progress syncs to prevent duplicates
+    this._retryCounts = new Map();      // orderId → failure count
     this._wasOffline = false;
     console.log("[SYNC_INIT] SyncService instance created.");
 
@@ -37,12 +38,35 @@ class SyncService {
         this._wasOffline = true;
       } else if (this._wasOffline) {
         this._wasOffline = false;
+        // Reset retry counts so all pending orders get fresh attempts after reconnect
+        this._retryCounts.clear();
         console.log("[SYNC_RECONNECT] Internet restored — triggering sync...");
         if (!this.isSyncing) {
           this.syncPendingOrders().catch(err => console.error("[SYNC_RECONNECT_ERR]", err));
         }
       }
     }, 5000);
+
+    // Every 30 minutes: reset skipped (is_synced=2) orders and retry them
+    setInterval(async () => {
+      if (!global.isMasterNode) return;
+      try {
+        const { Op } = require("sequelize");
+        const [count] = await OrdersModel.update(
+          { is_synced: 0 },
+          { where: { is_synced: 2 }, paranoid: false }
+        );
+        if (count > 0) {
+          this._retryCounts.clear();
+          console.log(`[SYNC_RETRY_SKIPPED] Reset ${count} skipped orders for retry.`);
+          if (!this.isSyncing) {
+            this.syncPendingOrders().catch(err => console.error("[SYNC_RETRY_SKIPPED_ERR]", err));
+          }
+        }
+      } catch (err) {
+        console.error("[SYNC_RETRY_SKIPPED_ERR]", err);
+      }
+    }, 30 * 60 * 1000); // 30 dəqiqə
   }
 
   async getSyncStatus() {
@@ -195,16 +219,53 @@ class SyncService {
       };
 
       await this.sendToAdmin(payload);
-      await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false });
+
+      // Retry DB update up to 3 times to ensure is_synced=1 is saved even under DB load
+      let marked = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false });
+          marked = true;
+          break;
+        } catch (dbErr) {
+          console.warn(`[SYNC_DB_RETRY] Attempt ${attempt} failed for ${orderId}: ${dbErr.message}`);
+          if (attempt < 3) await new Promise(r => setTimeout(r, 500 * attempt));
+        }
+      }
+      if (!marked) {
+        console.error(`[SYNC_DB_FAIL] Could not mark ${orderId} as synced after 3 attempts`);
+      }
+
+      this._retryCounts.delete(orderId);
       this.lastSyncTime = new Date();
       console.log(`[SYNC] Success: ${orderId}`);
     } catch (error) {
       console.error(`[SYNC_FAIL] ${orderId}: ${error.message}`);
-      if (error.isValidationError) {
-        console.warn(`[SYNC_SKIP] Skipping order ${orderId} due to validation error.`);
-        await OrdersModel.update({ is_synced: 2 }, { where: { uuid: orderId }, paranoid: false });
+      if (error.isAlreadySynced) {
+        // Admin already has this data (409 Conflict) — mark as synced locally
+        console.log(`[SYNC_ALREADY] Order ${orderId} already on admin, marking synced.`);
+        await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false }).catch(() => {});
+        this._retryCounts.delete(orderId);
+        return;
       }
-      // For non-validation errors: order stays is_synced=0, retry interval will pick it up
+      if (error.isValidationError) {
+        // 400/422 — permanent data issue, skip this order forever
+        console.warn(`[SYNC_SKIP] Permanently skipping order ${orderId} (400/422 from admin).`);
+        await OrdersModel.update({ is_synced: 2 }, { where: { uuid: orderId }, paranoid: false }).catch(() => {});
+        this._retryCounts.delete(orderId);
+        throw error;
+      }
+
+      // Track retry count — after 5 failures, mark as skipped to prevent endless pending
+      const retries = (this._retryCounts.get(orderId) || 0) + 1;
+      this._retryCounts.set(orderId, retries);
+      if (retries >= 5) {
+        console.warn(`[SYNC_GIVEUP] Order ${orderId} failed ${retries} times, marking as skipped.`);
+        await OrdersModel.update({ is_synced: 2 }, { where: { uuid: orderId }, paranoid: false }).catch(() => {});
+        this._retryCounts.delete(orderId);
+      }
+
+      // 404, 5xx, network errors → stays is_synced=0 until retry limit hit
       throw error;
     }
   }
@@ -289,30 +350,47 @@ class SyncService {
       await Promise.any(
         urls.map(url =>
           axios.post(url, payload, { timeout: 6000 }).then(res => {
+            // 2xx = success
             if (res.status >= 200 && res.status < 300) return true;
             throw new Error(`Unexpected status ${res.status}`);
           }).catch(error => {
-            if (error.response && error.response.status >= 400 && error.response.status < 500) {
-              // Validation error — wrap and re-throw immediately
+            const status = error.response?.status;
+
+            // 409 Conflict = data already exists on admin → treat as success
+            if (status === 409) {
+              const alreadyErr = new Error(`Admin already has this order (409)`);
+              alreadyErr.isAlreadySynced = true;
+              throw alreadyErr;
+            }
+
+            // 400/422 = permanent data error, don't retry
+            if (status === 400 || status === 422) {
               const validationErr = new Error(
-                `Admin API Validation Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+                `Admin API Validation Error: ${status} - ${JSON.stringify(error.response?.data)}`
               );
               validationErr.isValidationError = true;
-              validationErr.originalError = error;
               throw validationErr;
             }
+
+            // Everything else (404, 5xx, network) = retryable
             lastError = error;
-            console.warn(`[SYNC_URL_FAIL] ${url}: ${error.message}`);
+            console.warn(`[SYNC_URL_FAIL] ${url} (${status || error.code}): ${error.message}`);
             throw error;
           })
         )
       );
       return true;
     } catch (aggregateError) {
-      // Check if any of the errors was a validation error
-      const errors = aggregateError.errors || [];
-      const validationErr = errors.find(e => e.isValidationError);
+      const errors = aggregateError?.errors || [];
+
+      // If any URL said "already synced" → treat as success
+      const alreadySynced = errors.find(e => e?.isAlreadySynced);
+      if (alreadySynced) throw alreadySynced;
+
+      // If any URL returned a permanent validation error → skip forever
+      const validationErr = errors.find(e => e?.isValidationError);
       if (validationErr) throw validationErr;
+
       throw lastError || new Error("All sync endpoints failed");
     }
   }

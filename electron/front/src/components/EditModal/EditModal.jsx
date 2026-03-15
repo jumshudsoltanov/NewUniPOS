@@ -66,8 +66,6 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const { tableGroups } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-  const { isOnline, hasInternet } = useSelector((state) => state.SyncSlice);
-  const isOffline = !isOnline || !hasInternet;
   const navigate = useNavigate();
 
   // Lookup product info from menu to ensure we have flags
@@ -207,18 +205,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
         </div>
 
         <div className="edit-modal-layout">
-          {isOffline && (
-            <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', borderRadius: 8, padding: '8px 12px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#92400E' }}>
-              <i className="bi bi-wifi-off" />
-              İnternet bağlantısı yoxdur — redaktə əməliyyatları məhdudlaşdırılıb
-            </div>
-          )}
           {/* Sidebar Navigation */}
           <div className="edit-sidebar">
             <div className="edit-sidebar-nav">
               <button
                 className={`sidebar-btn ${activeTab === "edit" ? "active" : ""}`}
-                onClick={() => setActiveTab("edit")}
+                onClick={() => { setActiveTab("edit"); setTransferQty(1); }}
               >
                 <i className="bi bi-pencil-fill"></i>
                 <span>Dəyişmək</span>
@@ -227,7 +219,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
               {Number(loginedWaiter?.data?.can_transfer_product) === 1 && (
                 <button
                   className={`sidebar-btn ${activeTab === "transfer" ? "active" : ""}`}
-                  onClick={() => setActiveTab("transfer")}
+                  onClick={() => { setActiveTab("transfer"); setTransferQty(1); }}
                 >
                   <i className="bi bi-arrow-left-right"></i>
                   <span>Köçürmə</span>
@@ -237,7 +229,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
               {Number(loginedWaiter?.data?.can_give_treats) === 1 && (
                 <button
                   className={`sidebar-btn ${activeTab === "gift" ? "active" : ""}`}
-                  onClick={() => setActiveTab("gift")}
+                  onClick={() => { setActiveTab("gift"); setTransferQty(1); }}
                 >
                   <i className="bi bi-gift-fill"></i>
                   <span>İkram</span>
@@ -247,7 +239,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
               {Number(loginedWaiter?.data?.can_give_product_discount) === 1 && (
                 <button
                   className={`sidebar-btn ${activeTab === "discount" ? "active" : ""}`}
-                  onClick={() => setActiveTab("discount")}
+                  onClick={() => { setActiveTab("discount"); setTransferQty(1); }}
                 >
                   <i className="bi bi-percent"></i>
                   <span>Endirim</span>
@@ -267,10 +259,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
               {(product?.isNew || Number(loginedWaiter?.data?.can_delete_product) === 1) && (
                 <button
                   className="sidebar-btn btn-delete"
-                  disabled={isOffline && !product?.isNew}
-                  style={isOffline && !product?.isNew ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
                   onClick={() => {
-                    if (isOffline && !product?.isNew) return;
                     const productId = Number(product.product_id || product.id);
                     if (product.isNew && product.localQuantity > 0) {
                       // Remove the local (unsaved) portion immediately — no reason needed
@@ -373,10 +362,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 {/* Footer Action Button */}
                 <button
                   className={`save-action-btn ${qty === 0 ? 'red' : ''}`}
-                  disabled={isSubmitting || (isOffline && !product?.isNew)}
-                  style={{ opacity: (isSubmitting || (isOffline && !product?.isNew)) ? 0.4 : 1, cursor: (isOffline && !product?.isNew) ? 'not-allowed' : undefined }}
+                  disabled={isSubmitting}
+                  style={{ opacity: isSubmitting ? 0.4 : 1 }}
                   onClick={async () => {
-                    if (isSubmitting || (isOffline && !product?.isNew)) return;
+                    if (isSubmitting) return;
                     setIsSubmitting(true);
                     try {
                       // If qty is 0, trigger full delete
@@ -599,7 +588,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     </div>
                     <button
                       className="stepper-btn btn-plus"
-                      onClick={() => setTransferQty(Math.min(product?.count || 1, transferQty + 1))}
+                      onClick={() => {
+                        const maxGift = product?.savedQuantity || product?.count || 1;
+                        setTransferQty(prev => Math.min(maxGift, prev + 1));
+                      }}
                     >
                       <i className="bi bi-plus"></i>
                     </button>
@@ -629,8 +621,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       dispatch(giftItem({
                         orderId: orders.uuid,
                         itemId: product?.id || product?.firstId,
+                        allIds: product?.allIds,
                         qty: transferQty,
-                        isGift: false, // Remove gift status
+                        isGift: false,
                         productName: product.name || product.product?.name,
                         waiterName
                       })).then((res) => {
@@ -672,8 +665,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       dispatch(giftItem({
                         orderId: orders.uuid,
                         itemId: product?.id || product?.firstId,
+                        allIds: product?.allIds,
                         qty: transferQty,
-                        isGift: true, // Add gift status
+                        isGift: true,
                         productName: product.name || product.product?.name,
                         waiterName
                       })).then((res) => {

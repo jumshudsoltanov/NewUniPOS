@@ -992,7 +992,7 @@ const onSplitOrder = async (req, res) => {
 
 const onGiftItem = async (req, res) => {
   const { orderId } = req.params;
-  const { itemId, qty, isGift } = req.body;
+  const { itemId, allIds, qty, isGift } = req.body;
 
   if (!orderId || !itemId || !qty) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -1001,27 +1001,44 @@ const onGiftItem = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const originalItem = await OrdersItemsModel.findOne({
-      where: { order_id: orderId, id: itemId },
-      transaction,
-    });
+    // Use allIds if provided (multiple rows for same product), otherwise single itemId
+    const idsToProcess = (Array.isArray(allIds) && allIds.length > 0) ? allIds : [itemId];
+    let remainingQty = Number(qty);
+    let firstOriginalItem = null;
 
-    if (!originalItem) {
+    // 1. Reduce count across all rows, distributing qty
+    for (const currentId of idsToProcess) {
+      if (remainingQty <= 0) break;
+
+      const item = await OrdersItemsModel.findOne({
+        where: { order_id: orderId, id: currentId },
+        transaction,
+      });
+
+      if (!item) continue;
+      if (!firstOriginalItem) firstOriginalItem = item;
+
+      const takeQty = Math.min(remainingQty, Number(item.count));
+      remainingQty -= takeQty;
+
+      if (Number(item.count) === takeQty) {
+        await item.destroy({ transaction });
+      } else {
+        item.count = Number(item.count) - takeQty;
+        await item.save({ transaction });
+      }
+    }
+
+    if (!firstOriginalItem) {
       throw new Error("Item not found or quantity invalid");
     }
 
-    const moveQty = Number(qty);
-    if (originalItem.count < moveQty) {
-      throw new Error("Invalid quantity");
+    if (remainingQty > 0) {
+      throw new Error("Invalid quantity - not enough items");
     }
 
-    // 1. Reduce count from original item or destroy if fully moved
-    if (Number(originalItem.count) === moveQty) {
-      await originalItem.destroy({ transaction });
-    } else {
-      originalItem.count = Number(originalItem.count) - moveQty;
-      await originalItem.save({ transaction });
-    }
+    const originalItem = firstOriginalItem;
+    const moveQty = Number(qty);
 
     // 2. Add to Target Item (Gift or Normal)
     const targetIsGift = isGift ? 1 : 0;

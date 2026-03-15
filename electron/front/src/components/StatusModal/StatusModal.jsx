@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Modal, ProgressBar } from "react-bootstrap";
 import { useSelector } from "react-redux";
-import axios from "../../utils/apiConfig";
+import axios, { localApi } from "../../utils/apiConfig";
 import './StatusModal.css';
 import { toast } from 'sonner';
 
@@ -22,9 +22,15 @@ const StatusModal = ({ show, onHide }) => {
     const [printers, setPrinters] = useState([]);
     const [registers, setRegisters] = useState([]);
     const [appVersion, setAppVersion] = useState(null);
+    const [pendingDetails, setPendingDetails] = useState(null);
+    const [showPendingDetails, setShowPendingDetails] = useState(false);
+    const [isClearing, setIsClearing] = useState(false);
 
     const profile = loginedProfileData?.data?.profile || {};
     const terminal = loginedProfileData?.data?.terminal || {};
+
+    const isMasterSlaveActive = terminal.is_master_slave_active === 1 || profile.is_master_slave_active === 1;
+    const isMaster = terminal.is_master === 1 || profile.is_master === 1;
 
     // Fetch Printers
     const fetchPrinters = async () => {
@@ -122,15 +128,46 @@ const StatusModal = ({ show, onHide }) => {
     const handleSync = async () => {
         setSyncStatus(prev => ({ ...prev, isSyncing: true }));
         try {
-            const profileId = loginedProfileData?.data?.profile?.id;
-            await axios.post("/sync", { profileId });
-            await fetchPrinters();
-            toast.success("Məlumatlar buludla sinxronizasiya olundu");
+            await localApi.post("/sync/force-now");
+            setTimeout(() => {
+                if (window.electronAPI?.getSyncStatus) {
+                    window.electronAPI.getSyncStatus().then(setSyncStatus).catch(() => {});
+                }
+            }, 3000);
+            toast.success("Sinxronizasiya başladıldı");
         } catch (error) {
             console.error("Manual sync error:", error);
             toast.error("Sinxronizasiya xətası");
         } finally {
             setSyncStatus(prev => ({ ...prev, isSyncing: false }));
+        }
+    };
+
+    const fetchPendingDetails = async () => {
+        try {
+            const res = await localApi.get("/sync/pending-details");
+            setPendingDetails(res.data);
+            setShowPendingDetails(true);
+        } catch (e) {
+            const msg = e?.response?.data?.message || e?.message || "Bilinməyən xəta";
+            toast.error(`Pending məlumatları alınmadı: ${msg}`);
+        }
+    };
+
+    const handleClearStuck = async () => {
+        setIsClearing(true);
+        try {
+            const res = await localApi.post("/sync/clear-stuck", { olderThanMinutes: 30 });
+            toast.success(res.data.message);
+            setShowPendingDetails(false);
+            setPendingDetails(null);
+            if (window.electronAPI?.getSyncStatus) {
+                window.electronAPI.getSyncStatus().then(setSyncStatus).catch(() => {});
+            }
+        } catch (e) {
+            toast.error("Təmizləmə xətası");
+        } finally {
+            setIsClearing(false);
         }
     };
 
@@ -149,8 +186,9 @@ const StatusModal = ({ show, onHide }) => {
     };
 
     return (
+        <>
         <Modal
-            show={show}
+            show={show && !showPendingDetails}
             onHide={onHide}
             centered
             scrollable
@@ -200,12 +238,12 @@ const StatusModal = ({ show, onHide }) => {
                                     <div className="info-item">
                                         <span className="label">Rol:</span>
                                         <span className="value">
-                                            {terminal.is_master === 1 ? "MASTER (Ana Terminal)" : "SLAVE (Köməkçi Terminal)"}
-                                            {terminal.is_master === 1 && (
-                                                <div style={{ fontSize: '0.8rem', color: '#718096', fontWeight: 'normal' }}>
-                                                    {terminal.is_master_slave_active === 1 ? "Master-Slave: Aktiv" : "Master-Slave: Deaktiv"}
-                                                </div>
-                                            )}
+                                            {!isMasterSlaveActive
+                                                ? "Tək Terminal"
+                                                : isMaster
+                                                    ? "MASTER (Ana Terminal)"
+                                                    : "SLAVE (Köməkçi Terminal)"
+                                            }
                                         </span>
                                     </div>
                                     <div className="info-item">
@@ -245,13 +283,20 @@ const StatusModal = ({ show, onHide }) => {
                                         <span>İnternet</span>
                                     </div>
                                     <div className="status-row">
-                                        <span className={`sys-status-dot ${isSocketConnected ? 'green' : 'red'}`}></span>
-                                        <span>WS</span>
+                                        <span className={`sys-status-dot ${!isMasterSlaveActive || isSocketConnected ? 'green' : 'red'}`}></span>
+                                        <span>WS{!isMasterSlaveActive ? " (Tək)" : ""}</span>
                                     </div>
                                     <div className="status-row">
                                         <span className={`sys-status-dot ${syncStatus.isSyncing ? 'orange' : (syncStatus.pendingCount > 0 ? 'red' : 'green')}`}></span>
                                         <span>Syncer - {syncStatus.pendingCount > 0 ? `${syncStatus.pendingCount} pending` : 'Synced'}</span>
+                                        {syncStatus.pendingCount > 0 && (
+                                            <button className="pending-view-btn" onClick={fetchPendingDetails}>
+                                                <i className="bi bi-eye-fill" />
+                                                Bax
+                                            </button>
+                                        )}
                                     </div>
+
                                     <div className="status-row">
                                         <span className={`sys-status-dot ${hasInternet ? 'green' : 'red'}`}></span>
                                         <span>POS</span>
@@ -301,7 +346,96 @@ const StatusModal = ({ show, onHide }) => {
                     </div>
                 </div>
             </div>
+
         </Modal>
+
+        {/* Pending Orders — ayrıca modal, status modal bağlanır */}
+        <Modal
+            show={showPendingDetails}
+            onHide={() => setShowPendingDetails(false)}
+            centered
+            className="pending-orders-modal"
+            backdrop="static"
+            animation={false}
+        >
+            <div className="pom-content">
+                {/* Header */}
+                <div className="pom-header">
+                    <div className="pom-header-left">
+                        <div className="pom-icon">
+                            <i className="bi bi-clock-history" />
+                        </div>
+                        <span className="pom-title">Gözləyən sifarişlər</span>
+                        <span className="pom-badge-count">{pendingDetails?.count || 0}</span>
+                    </div>
+                    <button className="pom-close" onClick={() => setShowPendingDetails(false)}>
+                        <i className="bi bi-x-lg" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="pom-body">
+                    {!pendingDetails || pendingDetails.orders.length === 0 ? (
+                        <div className="pom-empty">
+                            <i className="bi bi-check-circle-fill" />
+                            <span>Gözləyən sifariş yoxdur</span>
+                        </div>
+                    ) : (
+                        pendingDetails.orders.map((o, i) => {
+                            const rawDate = o.updated_at || o.created_at;
+                            let timeStr = '—';
+                            if (rawDate) {
+                                const d = new Date(rawDate);
+                                if (!isNaN(d.getTime())) {
+                                    timeStr = d.toLocaleString('az-AZ', {
+                                        hour: '2-digit', minute: '2-digit',
+                                        day: '2-digit', month: '2-digit'
+                                    });
+                                }
+                            }
+                            return (
+                                <div key={i} className={`pom-row ${o.is_deleted ? 'deleted' : ''}`}>
+                                    <div className="pom-row-main">
+                                        <div className="pom-uuid">
+                                            <i className="bi bi-receipt" />
+                                            {o.uuid?.slice(0, 8)}…
+                                        </div>
+                                        <div className="pom-info">
+                                            <span className="pom-table">{o.table_name || 'Masa yoxdur'}</span>
+                                            <span className="pom-items">{o.item_count} məhsul</span>
+                                        </div>
+                                    </div>
+                                    <div className="pom-row-side">
+                                        {o.is_deleted && <span className="pom-tag red"><i className="bi bi-trash3" /> Silinib</span>}
+                                        {o.is_synced === 2 && <span className="pom-tag orange"><i className="bi bi-exclamation-circle" /> Buraxılıb</span>}
+                                        {!o.is_deleted && o.is_synced !== 2 && <span className="pom-tag blue"><i className="bi bi-hourglass-split" /> Gözləyir</span>}
+                                        <span className="pom-time">{timeStr}</span>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="pom-footer">
+                    <button className="pom-btn cancel" onClick={() => setShowPendingDetails(false)}>
+                        Bağla
+                    </button>
+                    <div className="pom-footer-right">
+                        <button className="pom-btn danger" onClick={handleClearStuck} disabled={isClearing}>
+                            <i className="bi bi-trash3" />
+                            {isClearing ? 'Silinir...' : 'Köhnəni Sil'}
+                        </button>
+                        <button className="pom-btn primary" onClick={handleSync} disabled={syncStatus.isSyncing}>
+                            <i className={`bi bi-arrow-repeat ${syncStatus.isSyncing ? 'spin' : ''}`} />
+                            {syncStatus.isSyncing ? 'Sinxronizasiya...' : 'Sinxronizasiya et'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Modal>
+        </>
     );
 };
 

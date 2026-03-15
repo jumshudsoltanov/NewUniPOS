@@ -42,13 +42,22 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
   }, [order]);
 
   const handleNumClick = (num) => {
+    // Prevent multiple decimal points
+    if (num === "." && value.includes(".")) return;
+
     let newVal;
     if (String(value) === "0" && num !== ".") {
       newVal = num.toString();
     } else {
       newVal = value + num.toString();
     }
-    setValue(clampValue(newVal, discountType));
+
+    // If ending with ".", preserve it — user is still typing (e.g. "25.")
+    if (String(newVal).endsWith(".")) {
+      setValue(newVal);
+    } else {
+      setValue(clampValue(newVal, discountType));
+    }
   };
 
   const handleBackspace = () => {
@@ -171,13 +180,13 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
             <div className="toggle-group">
               <button
                 className={`toggle-btn ${discountType === "percent" ? "active" : ""}`}
-                onClick={() => { setDiscountType("percent"); setValue(v => clampValue(v, "percent")); }}
+                onClick={() => { setDiscountType("percent"); setValue(v => clampValue(v.replace(/\.$/, ""), "percent")); }}
               >
                 %
               </button>
               <button
                 className={`toggle-btn ${discountType === "cash" ? "active" : ""}`}
-                onClick={() => { setDiscountType("cash"); setValue(v => clampValue(v, "cash")); }}
+                onClick={() => { setDiscountType("cash"); setValue(v => clampValue(v.replace(/\.$/, ""), "cash")); }}
               >
                 ₼
               </button>
