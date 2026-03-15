@@ -88,18 +88,15 @@ const CustomerDisplay = () => {
         });
 
         newSocket.on("connect", () => {
-            console.log("Customer Display connected to POS");
             setIsConnected(true);
         });
 
         newSocket.on("disconnect", () => {
-            console.log("Customer Display disconnected from POS");
             setIsConnected(false);
-            setOrderData({ items: [], total: 0, received: 0, change: 0 }); // Clear data if disconnected
+            setOrderData({ items: [], total: 0, received: 0, change: 0 });
         });
 
         newSocket.on("customer_display_update", (data) => {
-            console.log("Received customer display update:", data);
             setOrderData(data);
         });
 

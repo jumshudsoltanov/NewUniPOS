@@ -38,7 +38,6 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
         // Support multi-copy: Instead of deduplicating, we assign to different batches
         // items with repeated printers will go to separate print jobs
         const itemPrinters = printers.map(p => typeof p === 'object' ? (p.local_name || p.name) : p).filter(Boolean);
-        console.log(`[PRINTER DEBUG] Processing item '${item.name}' with assigned printers:`, itemPrinters);
 
         const printerOccurrence = {};
         itemPrinters.forEach(pName => {
@@ -59,11 +58,9 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
     for (let i = 0; i < printerBatches.length; i++) {
         const batch = printerBatches[i];
         if (!batch) continue;
-        console.log(`[PRINTER] Processing batch ${i + 1}/${printerBatches.length}`);
 
         for (const printerName of Object.keys(batch)) {
             try {
-                console.log(`[PRINTER] Starting print job for: ${printerName} (Batch ${i + 1})`);
                 const groupItems = batch[printerName];
                 if (!groupItems || groupItems.length === 0) continue;
 
@@ -120,7 +117,6 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 const targetPrinter = batch[printerName][0]?.usb_name || printerName;
 
                 if (window.electronAPI && window.electronAPI.printReceipt) {
-                    console.log(`[PRINTER] Sending to Electron API: ${targetPrinter}`);
                     const printPromise = window.electronAPI.printReceipt({ html, printerName: targetPrinter });
                     const timeoutPromise = new Promise((_, reject) =>
                         setTimeout(() => reject(new Error("Çap vaxtı bitdi (Timeout)")), 15000)
@@ -134,8 +130,6 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                         console.error(`[PRINTER] Print failed for ${printerName}:`, errMsg);
                         addNotification("Çap Xətası", `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: displayId, printerName, category: "system", type: "error" });
                         await logError(errMsg);
-                    } else {
-                        console.log(`[PRINTER] Print succeeded for: ${printerName}`);
                     }
                 } else {
                     const errMsg = "Electron API tapılmadı";

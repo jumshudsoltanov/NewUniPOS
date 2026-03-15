@@ -41,9 +41,7 @@ function AppContent() {
 
   useEffect(() => {
     if (window.electronAPI && window.electronAPI.onBackendLog) {
-      window.electronAPI.onBackendLog((...args) => {
-        console.log("%cBackend Log:", "background: #222; color: #bada55; padding: 2px;", ...args);
-      });
+      window.electronAPI.onBackendLog(() => {});
     }
 
     // Connectivity and Sync Polling
@@ -244,10 +242,8 @@ function AppContent() {
             }
 
             const cleanPath = currentPath.split("?")[0];
-            console.log(`[AUTH] Path check: Clean='${cleanPath}', Raw='${currentPath}'`);
 
             if (cleanPath === "/" || cleanPath === "/login" || cleanPath === "") {
-              console.log("[AUTH] Auto-login SUCCESS. Redirecting to /pin...");
               navigate("/pin");
             }
           } catch (err) {
@@ -260,9 +256,7 @@ function AppContent() {
             }
 
             // Even if init fails, try to show the Login page instead of a white screen
-            if (currentPath === "/" || currentPath === "/login") {
-              console.log("[AUTH] Init failed, forcing navigation to login UI");
-            }
+           
             if (authResult) {
               dispatch(fetchCustomersFromAdmin());
               dispatch(fetchCustomerGroupsFromAdmin());
