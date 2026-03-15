@@ -16,15 +16,20 @@ class MaxCheckService {
             try {
                 const response = await axios.get(url, { timeout: 5000 });
                 if (response.status === 200 && response.data != null) {
-                    const serverMax = Number(response.data.maxId || response.data.max_id || response.data) || 0;
+                    const d = response.data;
+                    const serverMax = Number(
+                        d?.data?.[0]?.max_id ||
+                        d?.data?.max_id ||
+                        d?.maxId ||
+                        d?.max_id ||
+                        0
+                    ) || 0;
                     this.cachedServerMaxId = serverMax;
                     console.log(`[MAX_CHECK] Server max ID: ${serverMax} (profile: ${profileId})`);
                     return serverMax;
                 }
             } catch (e) {
-                if (e.response) {
-                    console.warn(`[MAX_CHECK] Server responded with ${e.response.status} from ${url}`);
-                }
+                // silent — fallback URL will be tried next
             }
         }
         console.warn(`[MAX_CHECK] Could not reach server. Using cached: ${this.cachedServerMaxId}`);
@@ -35,7 +40,7 @@ class MaxCheckService {
         const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
         for (const url of urls) {
             try {
-                await axios.post(url, { profileId, maxId }, { timeout: 5000 });
+                await axios.post(url, { profile_id: profileId, max_id: maxId }, { timeout: 5000 });
                 this.cachedServerMaxId = maxId;
                 console.log(`[MAX_CHECK] Synced maxId=${maxId} to server (profile: ${profileId})`);
                 return true;
@@ -49,16 +54,25 @@ class MaxCheckService {
 
     async getNextId(profileId) {
         const localMax = (await OrdersModel.max("id", { paranoid: false })) || 0;
-        // Use cached server max — do NOT wait for network call
-        const effectiveMax = Math.max(localMax, this.cachedServerMaxId);
+
+        let serverMax = this.cachedServerMaxId;
+        if (localMax === 0 || serverMax === 0) {
+            try {
+                serverMax = await this.fetchServerMaxId(profileId);
+            } catch (e) {
+                console.warn("[MAX_CHECK] Server fetch failed, using cache:", serverMax);
+            }
+        }
+
+        const effectiveMax = Math.max(localMax, serverMax);
         const nextId = effectiveMax + 1;
 
-        // Sync in background (non-blocking)
         this.syncMaxIdToServer(profileId, nextId).catch(() => { });
-        // Refresh cache in background for next call
-        this.fetchServerMaxId(profileId).catch(() => { });
+        if (localMax > 0 && serverMax > 0) {
+            this.fetchServerMaxId(profileId).catch(() => { });
+        }
 
-        console.log(`[MAX_CHECK] Next ID: ${nextId} (local: ${localMax}, cached server: ${this.cachedServerMaxId})`);
+        console.log(`[MAX_CHECK] Next ID: ${nextId} (local: ${localMax}, server: ${serverMax})`);
         return nextId;
     }
 

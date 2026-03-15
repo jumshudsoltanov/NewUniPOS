@@ -1464,7 +1464,10 @@ const onCloseOrder = async (req, res) => {
         total: finalTotal
     }, { where: { uuid: orderId }, transaction });
 
-    // 2. Insert Payments if provided
+    // 2. Remove old payments (prevents duplicates on re-close after return)
+    await OrderPaymentsModel.destroy({ where: { order_id: orderId }, force: true, transaction });
+
+    // 3. Insert Payments if provided
     if (payments && payments.length > 0) {
       const paymentRecords = payments.map((p) => ({
         profile_id: profileId,
