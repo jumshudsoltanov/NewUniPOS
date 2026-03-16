@@ -21,6 +21,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const {
     tableGroups,
+    currentHallId,
     isTableEditMode,
     hallOrder,
     tempHallOrder
@@ -157,10 +158,12 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
   }, []);
 
   useEffect(() => {
-    if (tableGroups?.data?.length && !activeHall) {
-      setActiveHall(tableGroups.data[0].id);
-    }
-  }, [tableGroups, activeHall]);
+    if (!tableGroups?.data?.length) return;
+    if (activeHall) return;
+    const hallIds = tableGroups.data.map(h => h.id);
+    const savedHall = currentHallId && hallIds.includes(currentHallId) ? currentHallId : null;
+    setActiveHall(savedHall || tableGroups.data[0].id);
+  }, [tableGroups, activeHall, currentHallId]);
 
   useEffect(() => {
     if (activeHall) {

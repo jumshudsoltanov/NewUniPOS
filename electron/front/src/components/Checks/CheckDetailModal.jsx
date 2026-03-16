@@ -642,12 +642,19 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                         </div>
                                     )}
 
+                                    {Number(order.delivery_fee || 0) > 0 && (
+                                        <div className="summary-row d-flex justify-content-between mb-2">
+                                            <span className="summary-label text-muted">Çatdırılma:</span>
+                                            <span className="summary-value fw-bold">{Number(order.delivery_fee).toFixed(2)} ₼</span>
+                                        </div>
+                                    )}
+
                                     <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top mt-2">
                                         <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>
                                             {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
                                         </span>
                                         <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
-                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0)).toFixed(2)} ₼
+                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0)).toFixed(2)} ₼
                                         </span>
                                     </div>
                                 </div>

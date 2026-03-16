@@ -83,6 +83,7 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
                 const discount = Number(order.discount || 0);
                 const deposit = Number(order.deposit || 0);
                 const service = Number(order.service_charge || 0);
+                const deliveryFee = Number(order.delivery_fee || 0);
 
                 let timerCharge = Number(order.rate_per_minute || 0);
 
@@ -99,7 +100,7 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
                 }
 
                 const subtotalAfterDiscount = (subtotal + timerCharge) - discount;
-                const displayAmount = Math.max(subtotalAfterDiscount, deposit) + service;
+                const displayAmount = Math.max(subtotalAfterDiscount, deposit) + service + deliveryFee;
                 const isDepositFloor = deposit > subtotalAfterDiscount;
 
                 return (

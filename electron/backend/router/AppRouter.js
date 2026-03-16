@@ -194,6 +194,12 @@ router.patch(
   OrdersItemsController.onAssignCustomer,
 );
 
+// Assign Courier to Order
+router.patch(
+  "/orders-items/:orderId/assign-courier",
+  OrdersItemsController.onAssignCourier,
+);
+
 router.post(
   "/orders-items/:orderId/increment-print-count",
   OrdersItemsController.incrementPrintCount,

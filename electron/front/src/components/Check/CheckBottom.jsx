@@ -28,22 +28,42 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Live timer — updates every second without re-rendering parent
+  // Live timer — reads from both TablesSlice and BooksSlice for real-time updates
   const liveTimerData = useSelector((state) => {
+    if (!id) return null;
+
+    // Try TablesSlice first (has per-second tick updates)
     const tg = state.TablesSlice.tableGroups?.data;
-    if (!tg || !id) return null;
-    for (const hall of tg) {
-      for (const t of (hall.tables || [])) {
-        const order = t.orders?.find(o => o.uuid == id);
-        if (order && order.is_timer_status === 1) {
-          return {
-            is_timer_status: order.is_timer_status,
-            is_timer_clock: order.is_timer_clock,
-            rate_per_minute: order.rate_per_minute,
-          };
+    if (tg) {
+      for (const hall of tg) {
+        for (const t of (hall.tables || [])) {
+          const order = t.orders?.find(o => o.uuid == id);
+          if (order) {
+            return {
+              is_timer_status: order.is_timer_status,
+              is_timer_clock: order.is_timer_clock,
+              rate_per_minute: order.rate_per_minute,
+              is_active_timer: order.is_active_timer,
+            };
+          }
         }
       }
     }
+
+    // Fallback to BooksSlice
+    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
+    if (booksData) {
+      const order = booksData.find(o => o.uuid == id);
+      if (order) {
+        return {
+          is_timer_status: order.is_timer_status,
+          is_timer_clock: order.is_timer_clock,
+          rate_per_minute: order.rate_per_minute,
+          is_active_timer: order.is_active_timer,
+        };
+      }
+    }
+
     return null;
   });
 
@@ -132,16 +152,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     }
 
     // Auto-stop timer when moving to payment screen
-    if (orders?.is_timer_status === 1) {
-      let seconds = 0;
-      if (orders.is_timer_clock && String(orders.is_timer_clock).includes(':')) {
-        const p = orders.is_timer_clock.split(':').map(Number);
-        if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
-      }
+    if (isTimerActive) {
       dispatch(stopTimer({ 
         orderId: orders.uuid,
-        elapsedSeconds: seconds,
-        clockStr: orders.is_timer_clock 
+        elapsedSeconds: 0,
+        clockStr: timerClock
       }));
     }
 
@@ -187,11 +202,9 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     addItems(products);
     addItems(sentProducts);
 
-    // Add Timer Charge
-    if (orders?.rate_per_minute) {
-      total += Number(orders.rate_per_minute);
-      totalForDiscount += 0; // Usually timer isn't discounted? User didn't specify, keeping it 0 for now.
-      totalForService += 0; // Same for service.
+    // Add Timer Charge (use live timerCharge from Redux, not stale orders prop)
+    if (timerCharge > 0) {
+      total += Number(timerCharge);
     }
 
     if (pendingDeletions && pendingDeletions.length > 0) {
@@ -266,15 +279,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       serviceAmount = (totalForService * Number(hall.service_fee)) / 100;
     }
 
-    // If order is saved (no pending local changes) and has a DB total, use it directly
+    const deliveryFee = Number(orders?.delivery_fee || 0);
+
     const hasPendingChanges = (products?.length > 0) || (pendingDeletions?.length > 0);
-    let sumTotal;
-    if (!hasPendingChanges && Number(orders?.total) > 0) {
-      sumTotal = Number(orders.total);
-    } else {
-      sumTotal = Math.max(subtotalAfterDiscount, depositAmount) + serviceAmount;
-      if (sumTotal < 0) sumTotal = 0;
-    }
+    let sumTotal = Math.max(subtotalAfterDiscount, depositAmount) + serviceAmount + deliveryFee;
+    if (sumTotal < 0) sumTotal = 0;
 
     let effectivePercentage = 0;
     if (total > 0 && discountAmount > 0) {
@@ -304,7 +313,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       serviceAmount: serviceAmount.toFixed(2),
       effectiveServicePercentage,
       depositAmount: depositAmount.toFixed(2),
-      isDepositFloor
+      isDepositFloor,
+      deliveryFee: deliveryFee.toFixed(2),
     };
   }, [
     orders?.orders_items,
@@ -318,7 +328,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     orders?.service_charge,
     orders?.deposit,
     orders?.total,
-    orders?.rate_per_minute,
+    timerCharge,
+    orders?.delivery_fee,
     pendingDeletions,
     menu,
     hall?.service_fee
@@ -359,6 +370,12 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
             <div className="summary-row">
               <span>Servis haqqı:</span>
               <span>+{calcTotal.serviceAmount} ₼ (~{calcTotal.effectiveServicePercentage}%)</span>
+            </div>
+          )}
+          {Number(calcTotal.deliveryFee) > 0 && (
+            <div className="summary-row">
+              <span>Çatdırılma:</span>
+              <span>+{calcTotal.deliveryFee} ₼</span>
             </div>
           )}
           <div className="summary-row" style={{fontWeight: 700}}>
@@ -470,16 +487,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
             }
 
             // Auto-stop timer when printing from mobile
-            if (orders?.is_timer_status === 1) {
-              let seconds = 0;
-              if (orders.is_timer_clock && String(orders.is_timer_clock).includes(':')) {
-                const p = orders.is_timer_clock.split(':').map(Number);
-                if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
-              }
-              dispatch(stopTimer({ 
+            if (isTimerActive) {
+              dispatch(stopTimer({
                 orderId: orders.uuid,
-                elapsedSeconds: seconds,
-                clockStr: orders.is_timer_clock 
+                elapsedSeconds: 0,
+                clockStr: timerClock
               }));
             }
 

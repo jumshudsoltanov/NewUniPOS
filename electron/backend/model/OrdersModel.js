@@ -67,6 +67,8 @@ const OrdersModel = db.sequelize.define(
     is_locked: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
     is_synced: { type: DataTypes.INTEGER, allowNull: true },
     customer_id: { type: DataTypes.INTEGER, allowNull: true },
+    courier_id: { type: DataTypes.INTEGER, allowNull: true },
+    delivery_fee: { type: DataTypes.FLOAT, allowNull: true },
     print_count: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
   },
   {

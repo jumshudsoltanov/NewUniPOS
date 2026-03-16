@@ -170,6 +170,65 @@ const TablesSlice = createSlice({
       state.isTablesLoading = false;
     });
 
+    // Optimistic timer start in tables
+    builder.addCase("orders/startTimer/pending", (state, action) => {
+      const { orderId } = action.meta.arg;
+      if (!state.tableGroups?.data) return;
+      state.tableGroups.data.forEach((hall) => {
+        if (!hall.tables) return;
+        hall.tables.forEach((table) => {
+          if (!table.orders) return;
+          const idx = table.orders.findIndex(o => String(o.uuid) === String(orderId));
+          if (idx !== -1) {
+            table.orders[idx] = { ...table.orders[idx], is_timer_status: 1, is_active_timer: 1 };
+          }
+        });
+      });
+    });
+
+    // Optimistic timer stop in tables
+    builder.addCase("orders/stopTimer/pending", (state, action) => {
+      const { orderId, clockStr } = action.meta.arg;
+      if (!state.tableGroups?.data) return;
+      state.tableGroups.data.forEach((hall) => {
+        if (!hall.tables) return;
+        hall.tables.forEach((table) => {
+          if (!table.orders) return;
+          const idx = table.orders.findIndex(o => String(o.uuid) === String(orderId));
+          if (idx !== -1) {
+            table.orders[idx] = {
+              ...table.orders[idx],
+              is_timer_status: 0,
+              is_active_timer: 0,
+              is_timer_clock: clockStr || table.orders[idx].is_timer_clock,
+            };
+          }
+        });
+      });
+    });
+
+    // Optimistic timer reset in tables
+    builder.addCase("orders/resetTimer/pending", (state, action) => {
+      const { orderId } = action.meta.arg;
+      if (!state.tableGroups?.data) return;
+      state.tableGroups.data.forEach((hall) => {
+        if (!hall.tables) return;
+        hall.tables.forEach((table) => {
+          if (!table.orders) return;
+          const idx = table.orders.findIndex(o => String(o.uuid) === String(orderId));
+          if (idx !== -1) {
+            table.orders[idx] = {
+              ...table.orders[idx],
+              is_timer_status: 0,
+              is_active_timer: 0,
+              is_timer_clock: "00:00:00",
+              rate_per_minute: 0,
+            };
+          }
+        });
+      });
+    });
+
     builder.addMatcher(
       (action) =>
         action.type === "orders/deleteCheck/fulfilled" ||

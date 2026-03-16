@@ -146,15 +146,17 @@ const CustomerDisplay = () => {
 
         let serviceCharge = Number(orderData.service_charge || 0);
         let deposit = Number(orderData.deposit || 0);
+        let deliveryFee = Number(orderData.delivery_fee || 0);
 
         let subtotalAfterDiscount = subtotal - totalDiscount;
-        let grandTotal = Math.max(subtotalAfterDiscount + serviceCharge, deposit);
+        let grandTotal = Math.max(subtotalAfterDiscount + serviceCharge, deposit) + deliveryFee;
 
         return {
             subtotal,
             totalDiscount,
             serviceCharge,
             deposit,
+            deliveryFee,
             grandTotal,
             isDepositFloor: deposit > (subtotalAfterDiscount + serviceCharge)
         };

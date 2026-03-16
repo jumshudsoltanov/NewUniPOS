@@ -9,6 +9,7 @@ import MenuSlice from "../Slices/MenuSlice";
 import PaymentMethodsSlice from "../Slices/PaymentMethodsSlice";
 import SalesTypesSlice from "../Slices/SalesTypesSlice";
 import CustomersSlice from "../Slices/CustomersSlice";
+import CouriersSlice from "../Slices/CouriersSlice";
 import ProductSlice from "../Slices/ProductSlice";
 import SyncSlice from "../Slices/SyncSlice";
 
@@ -24,6 +25,7 @@ export default configureStore({
     PaymentMethodsSlice: PaymentMethodsSlice,
     SalesTypesSlice: SalesTypesSlice,
     CustomersSlice: CustomersSlice,
+    CouriersSlice: CouriersSlice,
     ProductSlice: ProductSlice,
     SyncSlice: SyncSlice,
   },

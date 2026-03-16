@@ -131,7 +131,8 @@ const CheckOver = () => {
         }
 
         const depositAmount = Number(currentOrder.deposit || 0);
-        let sumTotal = total - discountAmount + serviceAmount + depositAmount;
+        const deliveryFee = Number(currentOrder.delivery_fee || 0);
+        let sumTotal = total - discountAmount + serviceAmount + depositAmount + deliveryFee;
         if (sumTotal < 0) sumTotal = 0;
 
         return {

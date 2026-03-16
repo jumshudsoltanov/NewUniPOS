@@ -1,0 +1,360 @@
+.courier-modal-content {
+    border-radius: 6px !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.courier-modal-width {
+    max-width: 480px !important;
+    margin: 1.75rem auto;
+}
+
+.courier-modal-container {
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header — same as DiscountModal */
+.courier-modal-header {
+    background-color: #5D99FF;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+}
+
+.courier-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.courier-header-icon {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.courier-header-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+}
+
+.courier-close-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* Body */
+.courier-modal-body {
+    padding: 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Delivery fee section */
+.courier-fee-section {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: #f0f4ff;
+    border-radius: 8px;
+    border: 1px solid #d6e0f5;
+}
+
+.courier-fee-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(5, 55, 150, 0.1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.courier-fee-input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.courier-fee-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+}
+
+.courier-fee-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.courier-fee-input {
+    width: 100%;
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    border: none;
+    outline: none;
+    padding: 0;
+    background: transparent;
+}
+
+.courier-fee-input::placeholder {
+    color: #bbb;
+}
+
+.courier-fee-currency {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+    flex-shrink: 0;
+}
+
+/* Customer info */
+.courier-customer-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.courier-customer-icon {
+    color: #053796;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.courier-customer-text {
+    font-size: 13px;
+    color: #333;
+    flex: 1;
+}
+
+.courier-customer-text .name {
+    font-weight: 600;
+}
+
+.courier-customer-text .address {
+    color: #666;
+    font-size: 12px;
+}
+
+/* Section title */
+.courier-section-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+    margin: 4px 0 0;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Search */
+.courier-search-wrapper {
+    position: relative;
+}
+
+.courier-search-wrapper i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #adb5bd;
+    font-size: 13px;
+}
+
+.courier-search-field {
+    width: 100%;
+    height: 42px;
+    padding: 0 12px 0 35px;
+    border: 1px solid #C0C0C0;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+}
+
+.courier-search-field:focus {
+    border-color: #053796;
+}
+
+/* Courier list */
+.courier-list-scroll {
+    max-height: 240px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.courier-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+}
+
+.courier-item:hover {
+    background: #f8f9fa;
+}
+
+.courier-item.selected {
+    background: #edf0f9;
+    border-color: #c0cde8;
+}
+
+.courier-item-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #053796;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.courier-item-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.courier-item-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.courier-item-phone {
+    font-size: 12px;
+    color: #999;
+}
+
+.courier-item-status {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.courier-item-status.online {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.courier-item-status.offline {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.courier-item-status.busy,
+.courier-item-status.on_delivery {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.courier-list-empty {
+    text-align: center;
+    color: #999;
+    padding: 30px 0;
+    font-size: 14px;
+}
+
+/* Footer — same style as DiscountModal */
+.courier-action-row {
+    display: flex;
+    gap: 12px;
+    padding: 0 20px 20px;
+}
+
+.courier-reject-btn {
+    flex: 1;
+    height: 56px;
+    background-color: #fff;
+    border: 1px solid #C0C0C0;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #d32f2f;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.courier-reject-btn:hover {
+    background-color: #fee2e2;
+    border-color: #fecaca;
+}
+
+.courier-apply-btn {
+    flex: 2;
+    height: 56px;
+    background-color: #053796;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.2);
+    transition: all 0.2s;
+}
+
+.courier-apply-btn:hover {
+    background-color: #042d7a;
+}
+
+.courier-apply-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Offline banner */
+.courier-offline-banner {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 10px 16px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}

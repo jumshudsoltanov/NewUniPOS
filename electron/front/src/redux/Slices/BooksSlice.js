@@ -172,6 +172,69 @@ const BooksSlice = createSlice({
       }
     });
 
+    // Optimistic courier assign
+    builder.addCase("orders/assign-courier/pending", (state, action) => {
+      const { orderId, courierId, deliveryFee } = action.meta.arg;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        ordersList[idx] = {
+          ...ordersList[idx],
+          courier_id: courierId || null,
+          delivery_fee: deliveryFee || 0,
+        };
+      }
+    });
+
+    // Optimistic timer start
+    builder.addCase("orders/startTimer/pending", (state, action) => {
+      const { orderId } = action.meta.arg;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        ordersList[idx] = {
+          ...ordersList[idx],
+          is_timer_status: 1,
+          is_active_timer: 1,
+        };
+      }
+    });
+
+    // Optimistic timer stop
+    builder.addCase("orders/stopTimer/pending", (state, action) => {
+      const { orderId, elapsedSeconds, clockStr } = action.meta.arg;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        ordersList[idx] = {
+          ...ordersList[idx],
+          is_timer_status: 0,
+          is_active_timer: 0,
+          is_timer_clock: clockStr || ordersList[idx].is_timer_clock,
+        };
+      }
+    });
+
+    // Optimistic timer reset
+    builder.addCase("orders/resetTimer/pending", (state, action) => {
+      const { orderId } = action.meta.arg;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        ordersList[idx] = {
+          ...ordersList[idx],
+          is_timer_status: 0,
+          is_active_timer: 0,
+          is_timer_clock: "00:00:00",
+          rate_per_minute: 0,
+        };
+      }
+    });
+
     // Remove from archive when reopened
     builder.addCase("orders/reopen/fulfilled", (state, action) => {
       const reopenedOrderId = action.meta.arg.orderId;
@@ -277,6 +340,7 @@ const BooksSlice = createSlice({
         action.type === "orders/updateItemPrice/fulfilled" ||
         action.type === "orders/updateItemCount/fulfilled" ||
         action.type === "orders/assign-customer/fulfilled" ||
+        action.type === "orders/assign-courier/fulfilled" ||
         action.type === "orders/updateDeposit/fulfilled" ||
         action.type === "orders/updateComments/fulfilled" ||
         action.type === "orders/updateTags/fulfilled" ||

@@ -125,7 +125,8 @@ const sendOrdersItemsToDb = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, deposit);
+    const deliveryFee = Number(currentOrder?.delivery_fee || 0);
+    const netTotal = Math.max(total - discount + service, deposit) + deliveryFee;
 
     // Order update
     await OrdersModel.update(
@@ -637,7 +638,8 @@ const onMergeChecks = async (req, res) => {
     }
 
     // Final total
-    const total = Math.max(subtotal - discountAmount + serviceCharge, parseFloat(currentOrder.deposit || 0));
+    const mergeDeliveryFee = Number(currentOrder.delivery_fee || 0);
+    const total = Math.max(subtotal - discountAmount + serviceCharge, parseFloat(currentOrder.deposit || 0)) + mergeDeliveryFee;
 
     // Update the order
     await OrdersModel.update(
@@ -924,7 +926,7 @@ const onSplitOrder = async (req, res) => {
         }
       }
 
-      const netTotal = Math.max(totalAmount - discount + service, parseFloat(ord.deposit || 0));
+      const netTotal = Math.max(totalAmount - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
 
       await OrdersModel.update(
         {
@@ -1151,7 +1153,7 @@ const onGiftItem = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0));
+    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
 
     await OrdersModel.update(
       {
@@ -1297,7 +1299,7 @@ const onUpdateItemDiscount = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0));
+    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
 
     await OrdersModel.update(
       {
@@ -1455,7 +1457,8 @@ const onCloseOrder = async (req, res) => {
         serv = orderToUpdate.service_type === 'percent' ? (subtotal * orderToUpdate.service_value / 100) : orderToUpdate.service_value;
     }
     
-    const finalTotal = Math.max(total - disc + serv, parseFloat(orderToUpdate.deposit || 0));
+    const deliveryFee = Number(orderToUpdate.delivery_fee || 0);
+    const finalTotal = Math.max(total - disc + serv, parseFloat(orderToUpdate.deposit || 0)) + deliveryFee;
     
     await OrdersModel.update({
         amount: subtotal,
@@ -1722,7 +1725,7 @@ const onDeleteItemWithReason = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0));
+    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
 
     await OrdersModel.update(
       {
@@ -1797,6 +1800,7 @@ const onUpdateItemPrice = async (req, res) => {
         "service_value",
         "service_type",
         "deposit",
+        "delivery_fee",
       ],
     });
 
@@ -1828,7 +1832,7 @@ const onUpdateItemPrice = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, deposit);
+    const netTotal = Math.max(total - discount + service, deposit) + Number(currentOrder?.delivery_fee || 0);
 
     // 4. Update OrdersModel
     await OrdersModel.update(
@@ -1925,6 +1929,7 @@ const onUpdateItemCount = async (req, res) => {
         "service_value",
         "service_type",
         "deposit",
+        "delivery_fee",
       ],
     });
 
@@ -1954,7 +1959,7 @@ const onUpdateItemCount = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, deposit);
+    const netTotal = Math.max(total - discount + service, deposit) + Number(currentOrder?.delivery_fee || 0);
 
     await OrdersModel.update(
       {
@@ -2047,6 +2052,79 @@ const onAssignCustomer = async (req, res) => {
     return res.json({ message: "success", data: updated });
   } catch (error) {
     console.error("Assign customer error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+const onAssignCourier = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { courier_id, delivery_fee } = req.body;
+    const newDeliveryFee = Number(delivery_fee || 0);
+
+    await OrdersModel.update(
+      {
+        courier_id: courier_id || null,
+        delivery_fee: newDeliveryFee,
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } }
+    );
+
+    // Recalculate total with new delivery_fee
+    const ord = await OrdersModel.findOne({ where: { uuid: orderId } });
+    if (ord) {
+      const items = await OrdersItemsModel.findAll({
+        where: { order_id: orderId },
+        attributes: ["count", "price"],
+      });
+
+      const subtotal = items.reduce((sum, it) => {
+        return sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0);
+      }, 0) + Number(ord.rate_per_minute || 0);
+
+      let discount = 0, service = 0;
+      const dVal = parseFloat(ord.discount_value || 0);
+      const sVal = parseFloat(ord.service_value || 0);
+      if (dVal > 0) discount = ord.discount_type === "percent" ? (subtotal * dVal) / 100 : dVal;
+      if (sVal > 0) service = ord.service_type === "percent" ? (subtotal * sVal) / 100 : sVal;
+
+      const netTotal = Math.max(subtotal - discount + service, parseFloat(ord.deposit || 0)) + newDeliveryFee;
+
+      await OrdersModel.update(
+        { amount: subtotal, total: netTotal, discount, service_charge: service },
+        { where: { uuid: orderId } }
+      );
+    }
+
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { orderId });
+
+    const updated = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+        },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name", "hourly_price"],
+          include: [
+            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+          ],
+        },
+      ],
+    });
+    attachLiveTimerToOrder(updated);
+    return res.json({ message: "success", data: updated });
+  } catch (error) {
+    console.error("Assign courier error:", error);
     return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -2179,7 +2257,6 @@ const onStartTimer = async (req, res) => {
 
 const onStopTimer = async (req, res) => {
   const { orderId } = req.params;
-  const { elapsedSeconds, clockStr } = req.body;
   try {
     const order = await OrdersModel.findOne({ where: { uuid: orderId } });
     if (!order) return res.status(404).json({ message: "Order not found" });
@@ -2187,13 +2264,16 @@ const onStopTimer = async (req, res) => {
     const table = await TablesModel.findOne({ where: { id: order.table_id } });
     const hourlyPrice = table?.hourly_price || 0;
 
-    const timerCharge = TimerService.calculateCharge(hourlyPrice, elapsedSeconds);
+    // Always calculate server-side using timer_last_started_at for accuracy
+    const liveStatus = TimerService.calculateLiveStatus(order, hourlyPrice);
+    const timerCharge = liveStatus.charge;
+    const finalClockStr = liveStatus.clockStr;
 
     await OrdersModel.update(
       { 
         is_timer_status: 0, 
         is_active_timer: 0,
-        is_timer_clock: clockStr, 
+        is_timer_clock: finalClockStr, 
         rate_per_minute: timerCharge,
         is_synced: 0,
       },
@@ -2208,7 +2288,7 @@ const onStopTimer = async (req, res) => {
       }),
       OrdersModel.findOne({
         where: { uuid: orderId },
-        attributes: ["discount_value", "discount_type", "service_value", "service_type", "deposit", "rate_per_minute"],
+        attributes: ["discount_value", "discount_type", "service_value", "service_type", "deposit", "rate_per_minute", "delivery_fee"],
       }),
     ]);
 
@@ -2229,7 +2309,7 @@ const onStopTimer = async (req, res) => {
         service = service_type === "percent" ? (total * parseFloat(service_value)) / 100 : parseFloat(service_value);
       }
     }
-    const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0));
+    const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0)) + Number(currentOrder?.delivery_fee || 0);
 
     await OrdersModel.update(
       { amount: total, total: netTotal, discount: discount, service_charge: service, is_synced: 0 },
@@ -2272,7 +2352,7 @@ const onResetTimer = async (req, res) => {
       }),
       OrdersModel.findOne({
         where: { uuid: orderId },
-        attributes: ["discount_value", "discount_type", "service_value", "service_type", "deposit", "rate_per_minute"],
+        attributes: ["discount_value", "discount_type", "service_value", "service_type", "deposit", "rate_per_minute", "delivery_fee"],
       }),
     ]);
 
@@ -2293,7 +2373,7 @@ const onResetTimer = async (req, res) => {
         service = service_type === "percent" ? (total * parseFloat(service_value)) / 100 : parseFloat(service_value);
       }
     }
-    const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0));
+    const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0)) + Number(currentOrder?.delivery_fee || 0);
 
     await OrdersModel.update(
       { amount: total, total: netTotal, discount: discount, service_charge: service, is_synced: 0 },
@@ -2391,7 +2471,7 @@ module.exports = {
         if (dVal > 0) discount = ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
         if (sVal > 0) service = ord.service_type === "percent" ? (total * sVal) / 100 : sVal;
       }
-      const netTotal = Math.max(total - discount + service, parseFloat(ord?.deposit || 0));
+      const netTotal = Math.max(total - discount + service, parseFloat(ord?.deposit || 0)) + Number(ord?.delivery_fee || 0);
 
       await OrdersModel.update(
         { amount: total, total: netTotal, discount, service_charge: service, is_synced: 0 },
@@ -2414,6 +2494,7 @@ module.exports = {
   },
   onUpdateItemCount,
   onAssignCustomer,
+  onAssignCourier,
   incrementPrintCount,
   onUpdateGuestCount,
   onStartTimer,

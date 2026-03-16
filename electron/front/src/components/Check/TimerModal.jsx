@@ -1,26 +1,46 @@
 import React from 'react';
 import { Modal } from 'react-bootstrap';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { startTimer, stopTimer, resetTimer } from '../../redux/Slices/OrdersSlice';
 import { toast } from 'sonner';
 
 const TimerModal = ({ show, onHide, order, table }) => {
   const dispatch = useDispatch();
 
+  const liveOrder = useSelector((state) => {
+    if (!order?.uuid) return null;
+    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
+    if (booksData) {
+      const found = booksData.find(o => String(o.uuid) === String(order.uuid));
+      if (found) return found;
+    }
+    const tg = state.TablesSlice.tableGroups?.data;
+    if (tg) {
+      for (const hall of tg) {
+        for (const t of (hall.tables || [])) {
+          const o = t.orders?.find(o => String(o.uuid) === String(order.uuid));
+          if (o) return o;
+        }
+      }
+    }
+    return null;
+  });
+
+  const displayOrder = liveOrder || order;
+  const timerClock = displayOrder?.is_timer_clock || "00:00:00";
+  const timerCharge = Number(displayOrder?.rate_per_minute || 0);
+  const isActive = displayOrder?.is_timer_status === 1 || displayOrder?.is_active_timer === 1;
+
   const handleStartTimer = () => {
     dispatch(startTimer({ orderId: order.uuid }));
   };
 
   const handleStopTimer = () => {
-    let seconds = 0;
-    if (order.is_timer_clock && String(order.is_timer_clock).includes(':')) {
-      const p = order.is_timer_clock.split(':').map(Number);
-      if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
-    }
+    // Backend now calculates elapsed time server-side, no need for accurate client values
     dispatch(stopTimer({ 
       orderId: order.uuid,
-      elapsedSeconds: seconds,
-      clockStr: order.is_timer_clock 
+      elapsedSeconds: 0,
+      clockStr: timerClock
     }));
   };
 
@@ -41,7 +61,6 @@ const TimerModal = ({ show, onHide, order, table }) => {
       contentClassName="custom-modal-content"
     >
       <div className="discount-modal-container" style={{ borderRadius: '8px', overflow: 'hidden' }}>
-        {/* Header - Simple and aligned with app theme */}
         <div className="discount-header" style={{ backgroundColor: '#5D99FF', padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
           <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div className="header-icon" style={{ width: '32px', height: '32px', background: 'rgba(255,255,255,0.5)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -60,11 +79,13 @@ const TimerModal = ({ show, onHide, order, table }) => {
           </button>
         </div>
 
-        {/* Body - Clean and direct */}
         <div className="discount-body" style={{ padding: '20px', background: '#fff', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' }}>
           
-          <div className="display-value" style={{ fontSize: '3rem', fontWeight: '700', color: '#053796', margin: '10px 0' }}>
-            {order?.is_timer_clock || "00:00:00"}
+          <div className="display-value" style={{ 
+            fontSize: '3rem', fontWeight: '700', color: '#053796', margin: '10px 0',
+            fontVariantNumeric: 'tabular-nums'
+          }}>
+            {timerClock}
           </div>
 
           <div className="timer-info-simplified w-100" style={{ padding: '15px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
@@ -74,12 +95,12 @@ const TimerModal = ({ show, onHide, order, table }) => {
              </div>
              <div className="d-flex justify-content-between pt-2" style={{ borderTop: '1px solid #eee' }}>
                 <span style={{ fontSize: '14px', color: '#555' }}>Cəmi məbləğ:</span>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: '#053796' }}>{Number(order?.rate_per_minute || 0).toFixed(2)} ₼</span>
+                <span style={{ fontSize: '16px', fontWeight: '700', color: '#053796', fontVariantNumeric: 'tabular-nums' }}>{timerCharge.toFixed(2)} ₼</span>
              </div>
           </div>
 
           <div className="d-flex gap-2 w-100" style={{ marginTop: '5px' }}>
-             {order?.is_active_timer ? (
+             {isActive ? (
                <button 
                  className="apply-btn" 
                  onClick={handleStopTimer}

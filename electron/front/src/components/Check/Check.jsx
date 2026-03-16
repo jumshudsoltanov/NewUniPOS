@@ -40,6 +40,8 @@ import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import OrderLogsModal from "./OrderLogsModal"; // Import Modal
 import { getSocket } from "../../utils/apiConfig";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
+import CourierModal from "../CourierModal/CourierModal";
+import { assignCourierToOrder } from "../../redux/Slices/CouriersSlice";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
 import UpdateGuestCountModal from "../Customers-Modal/UpdateGuestCountModal";
@@ -148,6 +150,8 @@ const Check = () => {
           ao.is_locked !== bo.is_locked ||
           ao.note !== bo.note ||
           ao.customer_id !== bo.customer_id ||
+          ao.courier_id !== bo.courier_id ||
+          ao.delivery_fee !== bo.delivery_fee ||
           ao.orders_items?.length !== bo.orders_items?.length
         ) return false;
       }
@@ -160,6 +164,17 @@ const Check = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get("tableId");
+
+  // Live timer status for sidebar badge (reads directly from Redux, bypasses Check equality filter)
+  const liveTimerStatus = useSelector((state) => {
+    if (!id) return null;
+    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
+    if (booksData) {
+      const o = booksData.find(o => o.uuid == id);
+      if (o) return { active: o.is_timer_status === 1 || o.is_active_timer === 1 };
+    }
+    return null;
+  });
 
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const newOrderBtnRef = useRef(null);
@@ -233,6 +248,7 @@ const Check = () => {
   const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showCourierModal, setShowCourierModal] = useState(false);
   const [showGuestCountModal, setShowGuestCountModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
@@ -1105,8 +1121,25 @@ const Check = () => {
                   </div>
                 )}
 
+                {import.meta.env.DEV && (
+                  <div className="sidebar-icon"
+                    onClick={() => setShowCourierModal(true)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={currentOrder?.courier_id ? "#053796" : "#343434"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 3H1v13h15V3z"/>
+                      <path d="M16 8h4l3 3v5h-7V8z"/>
+                      <circle cx="5.5" cy="18.5" r="2.5"/>
+                      <circle cx="18.5" cy="18.5" r="2.5"/>
+                    </svg>
+                    {currentOrder?.courier_id && (
+                      <span className="icon-badge" style={{ background: '#053796', fontSize: '7px', width: '14px', height: '14px' }}>✓</span>
+                    )}
+                  </div>
+                )}
+
                 {(Number(currentTable?.hourly_price || currentOrder?.table?.hourly_price || 0) > 0) && (
-                  <div 
+                  <div
                     className="sidebar-icon timer-button"
                     onClick={() => setShowTimerModal(true)}
                     style={{ background: '#053796' }}
@@ -1149,7 +1182,7 @@ const Check = () => {
                     <span 
                       className="icon-badge" 
                       style={{ 
-                        background: currentOrder?.is_active_timer ? '#10b981' : '#ef4444', 
+                        background: (liveTimerStatus?.active || currentOrder?.is_active_timer) ? '#10b981' : '#ef4444', 
                         border: '2px solid #053796', 
                         width: '10px', 
                         height: '10px', 
@@ -2322,6 +2355,25 @@ const Check = () => {
         }}
         selectedCustomer={selectedCustomer}
       />
+      {import.meta.env.DEV && (
+        <CourierModal
+          show={showCourierModal}
+          onHide={() => setShowCourierModal(false)}
+          onApply={({ courier, deliveryFee }) => {
+            setShowCourierModal(false);
+            if (currentOrder?.uuid) {
+              dispatch(assignCourierToOrder({
+                orderId: currentOrder.uuid,
+                courierId: courier?.id || null,
+                courierName: courier?.name || null,
+                deliveryFee: deliveryFee || 0,
+              }));
+            }
+          }}
+        currentOrder={currentOrder}
+        selectedCustomer={selectedCustomer}
+      />
+      )}
       <NotificationSidebar
         show={showNotifications}
         onClose={() => setShowNotifications(false)}
