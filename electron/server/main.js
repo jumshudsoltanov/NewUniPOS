@@ -438,6 +438,8 @@ ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
     webPreferences: { nodeIntegration: true, contextIsolation: false, webSecurity: false }
   });
 
+  const cutBufferMm = 30;
+
   const htmlContent = `<!DOCTYPE html><html><head>
     <meta charset="utf-8">
     <style>
@@ -449,13 +451,13 @@ ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
         text-rendering: optimizeLegibility;
       }
       body > div { width: 100% !important; max-width: 100% !important; }
+      .receipt-cut-buffer { min-height: 25mm; }
     </style>
-  </head><body>${html}</body></html>`;
+  </head><body><div class="receipt-content">${html}</div><div class="receipt-cut-buffer"></div></body></html>`;
 
   await printWindow.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(htmlContent));
 
   try {
-    // Wait for all images to load (logos, QR etc)
     await printWindow.webContents.executeJavaScript(`
       new Promise(resolve => {
         const imgs = document.querySelectorAll('img');
@@ -470,10 +472,9 @@ ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
       });
     `);
 
-    // Measure content height and inject exact @page size
     const contentHeight = await printWindow.webContents.executeJavaScript(`
       const h = document.body.scrollHeight;
-      const hmm = Math.ceil(h * 25.4 / 96) + 10;
+      const hmm = Math.ceil(h * 25.4 / 96) + ${cutBufferMm};
       const s = document.createElement('style');
       s.textContent = '@page { size: 72mm ' + hmm + 'mm; margin: 0; }';
       document.head.appendChild(s);

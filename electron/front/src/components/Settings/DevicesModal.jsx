@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setLoginData } from "../../redux/Slices/LoginSlice";
 import { toast } from "sonner";
 import QRCode from "react-qr-code";
 import apiConfig, { localApi } from "../../utils/apiConfig";
@@ -9,6 +10,7 @@ import { addNotification } from "../../utils/notificationService";
 import "./DevicesModal.css";
 
 const DevicesModal = ({ show, onHide }) => {
+    const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
     const profileId = loginedProfileData?.data?.profile?.id;
@@ -18,6 +20,7 @@ const DevicesModal = ({ show, onHide }) => {
     const [activeTab, setActiveTab] = useState("printers");
     const isMobile = window.innerWidth < 992;
     const isMaster = loginedProfileData?.data?.terminal?.is_master === 1 || loginedProfileData?.data?.profile?.is_master === 1;
+    const isSlave = !isMaster && (loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1);
     const [localIp, setLocalIp] = useState("");
     const [printers, setPrinters] = useState([]);
     const [systemPrinters, setSystemPrinters] = useState([]);
@@ -77,10 +80,13 @@ const DevicesModal = ({ show, onHide }) => {
             }));
             setPrinters(normalizedPrinters);
 
+            const authStr = localStorage.getItem("authResult");
+            const authProfile = authStr ? (JSON.parse(authStr)?.data?.profile || {}) : {};
             const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+            const merged = { ...authProfile, ...storedProfile };
             setMasterModes({
-                cashier: storedProfile.is_master_cashier_printing === 1,
-                product: storedProfile.is_master_product_printing === 1
+                cashier: merged.is_master_cashier_printing === 1,
+                product: merged.is_master_product_printing === 1
             });
 
             try {
@@ -148,27 +154,49 @@ const DevicesModal = ({ show, onHide }) => {
         }
     };
 
+    const persistMasterPrintingToStorage = (field, value) => {
+        const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+        storedProfile[field] = value;
+        localStorage.setItem("profile", JSON.stringify(storedProfile));
+        try {
+            const authStr = localStorage.getItem("authResult");
+            if (authStr) {
+                const auth = JSON.parse(authStr);
+                if (auth?.data?.profile) {
+                    auth.data.profile = { ...auth.data.profile, [field]: value };
+                    localStorage.setItem("authResult", JSON.stringify(auth));
+                    dispatch(setLoginData(auth));
+                }
+            }
+        } catch (e) { console.warn("authResult update:", e); }
+    };
+
     const handleToggleMasterPrinting = async (type) => {
         const nextStatus = !masterModes[type];
         if (!profileId) {
             toast.error("Profil tapılmadı. Əvvəlcə giriş edin.");
             return;
         }
+        const field = type === 'cashier' ? 'is_master_cashier_printing' : 'is_master_product_printing';
+        const value = nextStatus ? 1 : 0;
         try {
-            const res = await apiConfig.patch("/profiles/master-printing", {
+            await apiConfig.patch("/profiles/master-printing", {
                 profileId,
                 status: nextStatus,
                 type: type
             });
             setMasterModes(prev => ({ ...prev, [type]: nextStatus }));
-            const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
-            const field = type === 'cashier' ? 'is_master_cashier_printing' : 'is_master_product_printing';
-            storedProfile[field] = nextStatus ? 1 : 0;
-            localStorage.setItem("profile", JSON.stringify(storedProfile));
+            persistMasterPrintingToStorage(field, value);
             toast.success(nextStatus ? "Mərkəzi çap AKTİV" : "Mərkəzi çap DEAKTİV");
         } catch (error) {
-            console.error("Toggle Error:", error?.response?.data || error.message);
-            toast.error("Xəta: " + (error?.response?.data?.message || error.message));
+            if (isSlave) {
+                setMasterModes(prev => ({ ...prev, [type]: nextStatus }));
+                persistMasterPrintingToStorage(field, value);
+                toast.success(nextStatus ? "Mərkəzi çap AKTİV (lokal)" : "Mərkəzi çap DEAKTİV (lokal)");
+            } else {
+                console.error("Toggle Error:", error?.response?.data || error.message);
+                toast.error("Xəta: " + (error?.response?.data?.message || error.message));
+            }
         }
     };
 
@@ -527,7 +555,7 @@ const DevicesModal = ({ show, onHide }) => {
                                             <div className="master-printing-card">
                                                 <div className="master-printing-info">
                                                     <h4>Mərkəzi Kassa Çapı</h4>
-                                                    <p>Kassa çekləri Masterə yönləndirilsin?</p>
+                                                    <p>Mərkəzi printer Master-dadır. Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir.</p>
                                                 </div>
                                                 <div
                                                     className={`premium-switch ${masterModes.cashier ? "active" : ""}`}
@@ -539,7 +567,7 @@ const DevicesModal = ({ show, onHide }) => {
                                             <div className="master-printing-card">
                                                 <div className="master-printing-info">
                                                     <h4>Mərkəzi Mətbəx Çapı</h4>
-                                                    <p>Məhsul çekləri Masterə yönləndirilsin?</p>
+                                                    <p>Mərkəzi printer Master-dadır. Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir.</p>
                                                 </div>
                                                 <div
                                                     className={`premium-switch ${masterModes.product ? "active" : ""}`}

@@ -5,6 +5,26 @@ import { addNotification } from "./notificationService";
 import axios, { getSocket } from "./apiConfig";
 import CustomerReceipt from "../components/Receipt/CustomerReceipt";
 
+const getProfileForPrinting = (profileData, orderProfile) => {
+    try {
+        const authStr = localStorage.getItem("authResult");
+        const auth = authStr ? JSON.parse(authStr) : null;
+        const authProfile = auth?.data?.profile || {};
+        const authTerminal = auth?.data?.terminal || {};
+        const fromProfile = profileData?.data?.profile || orderProfile || {};
+        return {
+            ...authProfile,
+            ...fromProfile,
+            is_master: fromProfile.is_master ?? authTerminal.is_master ?? authProfile.is_master,
+            is_master_slave_active: fromProfile.is_master_slave_active ?? authTerminal.is_master_slave_active ?? authProfile.is_master_slave_active,
+            is_master_product_printing: fromProfile.is_master_product_printing ?? authProfile.is_master_product_printing,
+            is_master_cashier_printing: fromProfile.is_master_cashier_printing ?? authProfile.is_master_cashier_printing,
+        };
+    } catch {
+        return orderProfile || profileData?.data?.profile || {};
+    }
+};
+
 export const processAndPrintOrders = async (items, orderData, menuDataWithCategories) => {
     const printerBatches = []; // Array of { printerName: [items] } pools
 
@@ -92,18 +112,19 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 root.unmount();
                 document.body.removeChild(container);
 
-                const profile = orderData.profileData?.data?.profile || JSON.parse(localStorage.getItem("profile") || "{}");
+                const profile = getProfileForPrinting(orderData.profileData, orderData.profileData?.data?.profile);
                 const isMasterProductPrinting = profile.is_master_product_printing === 1;
                 const isMaster = profile.is_master === 1;
                 const isMasterSlaveActive = profile.is_master_slave_active === 1;
 
-                // Delegation Logic: Product/Kitchen Prints
+                // Mərkəzi printer Master-dadır: Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir
                 const socket = getSocket();
                 const canDelegate = socket && socket.connected;
                 const forceDelegate = !window.electronAPI;
+                const isSlave = !isMaster && isMasterSlaveActive;
 
-                if (canDelegate && (forceDelegate || (isMasterProductPrinting && isMasterSlaveActive && !isMaster))) {
-                    console.warn(`[PRINTER] Delegating Product print to Master: ${printerName}`);
+                if (canDelegate && (forceDelegate || (isMasterProductPrinting && isSlave))) {
+                    console.warn(`[PRINTER] Mərkəzi mətbəx çapı Slave-dən Master-a göndərilir: ${printerName}`);
                     socket.emit("delegate_print", { html, printerName });
                     continue;
                 } else if (forceDelegate && !canDelegate) {
@@ -214,7 +235,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
     try {
         const html = container.innerHTML;
 
-        const profile = profileData?.data?.profile || JSON.parse(localStorage.getItem("profile") || "{}");
+        const profile = getProfileForPrinting(profileData, profileData?.data?.profile);
         const isMasterCashierPrinting = profile.is_master_cashier_printing === 1;
         const isMaster = profile.is_master === 1;
         const isMasterSlaveActive = profile.is_master_slave_active === 1;
@@ -222,9 +243,10 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         const socket = getSocket();
         const canDelegate = socket && socket.connected;
         const forceDelegate = !window.electronAPI;
+        const isSlave = !isMaster && isMasterSlaveActive;
 
-        if (canDelegate && (forceDelegate || (isMasterCashierPrinting && isMasterSlaveActive && !isMaster))) {
-            console.warn(`[PRINTER] Delegating Customer Receipt to Master: ${printerName}`);
+        if (canDelegate && (forceDelegate || (isMasterCashierPrinting && isSlave))) {
+            console.warn(`[PRINTER] Mərkəzi kassa çapı Slave-dən Master-a göndərilir: ${printerName}`);
             socket.emit("delegate_print", { html, printerName });
             return { success: true, delegated: true };
         } else if (forceDelegate && !canDelegate) {

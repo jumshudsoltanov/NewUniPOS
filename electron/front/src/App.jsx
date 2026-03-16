@@ -105,7 +105,7 @@ function AppContent() {
     };
   }, [dispatch]);
 
-  // Master terminal listener for delegated prints
+  // Mərkəzi printer Master-dadır: Master print_delegated dinləyib özündə çap edir (Slave göndərir)
   const authResultRedux = useSelector((state) => state.LoginSlice.loginedProfileData);
   const isMasterTerminal = authResultRedux?.data?.terminal?.is_master === 1 || authResultRedux?.data?.profile?.is_master === 1;
 
@@ -113,23 +113,19 @@ function AppContent() {
 
   useEffect(() => {
     const socket = getSocket();
-    
-    const isLocalhostMaster = socket?.io?.uri?.includes("localhost") || socket?.io?.uri?.includes("127.0.0.1");
-    const shouldListenToDelegatedPrints = isMasterTerminal || isLocalhostMaster;
+    const shouldListenToDelegatedPrints = isMasterTerminal;
 
     if (!socket) return;
 
-    if (shouldListenToDelegatedPrints) {
-      console.warn("[MASTER] Attaching delegated print listener...");
+    if (shouldListenToDelegatedPrints && window.electronAPI?.printReceipt) {
+      console.warn("[MASTER] Mərkəzi çap dinləyicisi aktiv (Slave-dən gələn çap)");
 
       const handleDelegatedPrint = async (data) => {
-        console.warn("🖨️ Delegated print received for:", data.printerName);
-        if (window.electronAPI?.printReceipt) {
-          try {
-            await window.electronAPI.printReceipt(data);
-          } catch (e) {
-            console.error("Delegated print execution failed:", e);
-          }
+        console.warn("🖨️ Mərkəzi çap qəbul edildi:", data.printerName);
+        try {
+          await window.electronAPI.printReceipt(data);
+        } catch (e) {
+          console.error("Delegated print execution failed:", e);
         }
       };
 
