@@ -123,26 +123,6 @@ const NetworkOverlay = () => {
         }
     };
 
-    const handleAutoScan = async () => {
-        if (!window.electronAPI?.scanMaster || isScanning) return;
-        setIsScanning(true);
-        try {
-            const foundIp = await window.electronAPI.scanMaster();
-            if (foundIp) {
-                setStaticIpInput(foundIp);
-                if (window.electronAPI?.setStaticMasterIp) {
-                    await window.electronAPI.setStaticMasterIp(foundIp);
-                }
-                await initNetwork(false, false);
-                window.location.reload();
-            }
-        } catch (e) {
-            console.error("Scan error:", e);
-        } finally {
-            setIsScanning(false);
-        }
-    };
-
     useEffect(() => {
         if (!isVisible) {
             hasAutoScanned.current = false;
