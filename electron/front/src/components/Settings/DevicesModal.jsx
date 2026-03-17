@@ -49,6 +49,15 @@ const DevicesModal = ({ show, onHide }) => {
 
     // Local Naming
     const [taxLocalNames, setTaxLocalNames] = useState({});
+    const [staticMasterIp, setStaticMasterIp] = useState("");
+    const [staticIpSaving, setStaticIpSaving] = useState(false);
+    const [staticIpScanning, setStaticIpScanning] = useState(false);
+
+    useEffect(() => {
+        if (window.electronAPI?.getStaticMasterIp) {
+            window.electronAPI.getStaticMasterIp().then(ip => setStaticMasterIp(ip || "")).catch(() => {});
+        }
+    }, [show]);
 
     useEffect(() => {
         const stored = localStorage.getItem("tax_local_names");
@@ -477,6 +486,14 @@ const DevicesModal = ({ show, onHide }) => {
                                 Mobil Qoşulma
                             </div>
                         )}
+                        {isSlave && (
+                            <div
+                                className={`devices-mobile-tab ${activeTab === "network" ? "active" : ""}`}
+                                onClick={() => setActiveTab("network")}
+                            >
+                                Master IP
+                            </div>
+                        )}
                     </div>
                 )
             }
@@ -539,6 +556,15 @@ const DevicesModal = ({ show, onHide }) => {
                                 >
                                     <i className="bi bi-phone"></i>
                                     <span>Mobil Qoşulma</span>
+                                </div>
+                            )}
+                            {isSlave && (
+                                <div
+                                    className={`devices-menu-item ${activeTab === "network" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("network")}
+                                >
+                                    <i className="bi bi-hdd-network"></i>
+                                    <span>Statik Master IP</span>
                                 </div>
                             )}
                         </div>
@@ -685,32 +711,51 @@ const DevicesModal = ({ show, onHide }) => {
                                                             </select>
                                                         </div>
                                                     ) : (
-                                                        <div style={{ display: 'flex', gap: '10px' }}>
-                                                            <div className="printer-form-group" style={{ flex: 2 }}>
-                                                                <label>IP Address</label>
-                                                                <input
-                                                                    className="printer-input"
-                                                                    placeholder="192.168.1.100"
-                                                                    value={printer.ip || ""}
+                                                        <>
+                                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                                                <div className="printer-form-group" style={{ flex: 2 }}>
+                                                                    <label>IP Address</label>
+                                                                    <input
+                                                                        className="printer-input"
+                                                                        placeholder="192.168.1.100"
+                                                                        value={printer.ip || ""}
+                                                                        onChange={(e) => {
+                                                                            const newArr = printers.map(p => p.id === printer.id ? { ...p, ip: e.target.value } : p);
+                                                                            setPrinters(newArr);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <div className="printer-form-group" style={{ flex: 1 }}>
+                                                                    <label>Port</label>
+                                                                    <input
+                                                                        className="printer-input"
+                                                                        placeholder="9100"
+                                                                        value={printer.port || ""}
+                                                                        onChange={(e) => {
+                                                                            const newArr = printers.map(p => p.id === printer.id ? { ...p, port: e.target.value } : p);
+                                                                            setPrinters(newArr);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            <div className="printer-form-group">
+                                                                <label>Sistem printeri (Windows-da qeydiyyatlı ad)</label>
+                                                                <select
+                                                                    className="printer-select"
+                                                                    value={printer.usb_name || ""}
                                                                     onChange={(e) => {
-                                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, ip: e.target.value } : p);
+                                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, usb_name: e.target.value } : p);
                                                                         setPrinters(newArr);
                                                                     }}
-                                                                />
+                                                                >
+                                                                    <option value="">Seçilməyib</option>
+                                                                    {systemPrinters.map(sp => (
+                                                                        <option key={sp.name} value={sp.name}>{sp.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                                <small style={{ color: '#64748b', fontSize: '11px', marginTop: '4px', display: 'block' }}>IP printeri Windows-a əlavə edib buradan seçin</small>
                                                             </div>
-                                                            <div className="printer-form-group" style={{ flex: 1 }}>
-                                                                <label>Port</label>
-                                                                <input
-                                                                    className="printer-input"
-                                                                    placeholder="9100"
-                                                                    value={printer.port || ""}
-                                                                    onChange={(e) => {
-                                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, port: e.target.value } : p);
-                                                                        setPrinters(newArr);
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                        </>
                                                     )}
 
                                                     <div className="printer-actions" style={{ marginTop: '24px' }}>
@@ -967,6 +1012,88 @@ const DevicesModal = ({ show, onHide }) => {
                                         );
                                     })()
                                 )}
+                            </div>
+                        ) : activeTab === "network" && isSlave ? (
+                            <div className="display-settings">
+                                <div className="master-ip-card">
+                                    <div className="master-ip-card__header">
+                                        <span className="master-ip-card__icon"><i className="bi bi-hdd-network-fill" /></span>
+                                        <div>
+                                            <h4 className="master-ip-card__title">Master IP ünvanı</h4>
+                                            <p className="master-ip-card__desc">Master kompüterin IP-ni daxil edin. Avtomatik tapılmazsa buradan əllə qeyd edin.</p>
+                                        </div>
+                                    </div>
+                                    <div className="master-ip-card__body">
+                                        <div className="master-ip-card__row">
+                                            <input
+                                                type="text"
+                                                className="master-ip-card__input"
+                                                placeholder="192.168.1.10"
+                                                value={staticMasterIp}
+                                                onChange={(e) => setStaticMasterIp(e.target.value)}
+                                            />
+                                            <button
+                                                type="button"
+                                                className="master-ip-card__btn master-ip-card__btn--outline"
+                                                disabled={staticIpScanning}
+                                                onClick={async () => {
+                                                    if (!window.electronAPI?.scanMaster) return;
+                                                    setStaticIpScanning(true);
+                                                    try {
+                                                        const found = await window.electronAPI.scanMaster();
+                                                        if (found) {
+                                                            setStaticMasterIp(found);
+                                                            toast.success("Master tapıldı: " + found);
+                                                        } else {
+                                                            toast.error("Master tapılmadı");
+                                                        }
+                                                    } catch (e) {
+                                                        toast.error("Axtarış xətası");
+                                                    } finally {
+                                                        setStaticIpScanning(false);
+                                                    }
+                                                }}
+                                            >
+                                                {staticIpScanning ? <span className="master-ip-card__spinner" /> : <i className="bi bi-search" />}
+                                                {staticIpScanning ? "Axtarılır..." : "Axtar"}
+                                            </button>
+                                            <button
+                                                className="master-ip-card__btn"
+                                                disabled={staticIpSaving}
+                                                onClick={async () => {
+                                                    setStaticIpSaving(true);
+                                                    try {
+                                                        const ok = await window.electronAPI?.setStaticMasterIp?.(staticMasterIp.trim() || null);
+                                                        if (ok !== false) {
+                                                            toast.success(staticMasterIp.trim() ? "Master IP yadda saxlanıldı" : "Statik IP silindi");
+                                                        } else {
+                                                            toast.error("Yadda saxlanılmadı");
+                                                        }
+                                                    } catch (e) {
+                                                        toast.error("Xəta: " + (e?.message || "Naməlum"));
+                                                    } finally {
+                                                        setStaticIpSaving(false);
+                                                    }
+                                                }}
+                                            >
+                                                {staticIpSaving ? <span className="master-ip-card__spinner" /> : "Yadda saxla"}
+                                            </button>
+                                            {staticMasterIp && (
+                                                <button
+                                                    type="button"
+                                                    className="master-ip-card__btn master-ip-card__btn--ghost"
+                                                    onClick={() => setStaticMasterIp("")}
+                                                >
+                                                    Təmizlə
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="master-ip-card__hint">
+                                            <i className="bi bi-info-circle" />
+                                            <span>Sizin IP: <strong>{localIp || "—"}</strong>. Statik IP təyin etsəniz, Slave əvvəlcə bu ünvana qoşulacaq.</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         ) : activeTab === "mobile" && isMaster ? (
                             <div className="mobile-qr-section">

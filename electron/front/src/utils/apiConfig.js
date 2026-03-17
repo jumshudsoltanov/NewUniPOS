@@ -26,7 +26,7 @@ const attachSocketStatusListeners = (s) => {
     s.on("connect_error", () => _socketStatusCallback(false));
 };
 
-export const initNetwork = async (forceLocal = false, disableSocket = false) => {
+export const initNetwork = async (forceLocal = false, disableSocket = false, directMasterIp = null) => {
     // 1. Clean up existing socket if it exists to prevent leaks
     if (socket) {
         console.warn("[CONNECTION] Cleaning up existing socket before re-init...");
@@ -34,6 +34,34 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
         socket.disconnect();
         socket = null;
         if (_socketStatusCallback) _socketStatusCallback(false);
+    }
+
+    // Birbaşa Master IP — skan etmədən, statik IP ilə qoşul (ping işləyirsə bu da işləməlidir)
+    if (directMasterIp && directMasterIp.trim()) {
+        const ip = directMasterIp.trim();
+        if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
+            const baseURL = `http://${ip}:55667`;
+            console.warn(`[CONNECTION] Birbaşa qoşulma: ${baseURL} (skan yox)`);
+            apiConfig.defaults.baseURL = `${baseURL}/api`;
+            if (!disableSocket) {
+                socket = io(baseURL, {
+                    transports: ['websocket', 'polling'],
+                    reconnection: true,
+                    reconnectionAttempts: Infinity,
+                    reconnectionDelay: 1000,
+                    reconnectionDelayMax: 5000,
+                    timeout: 15000,
+                });
+                attachSocketStatusListeners(socket);
+                socket.on("connect", () => {
+                    console.warn(`[CONNECTION] Slave qoşuldu: ${baseURL}`);
+                });
+                socket.on("connect_error", (err) => {
+                    console.error("[CONNECTION] Birbaşa qoşulma xətası:", err.message);
+                });
+            }
+            return { masterIp: ip, socket };
+        }
     }
 
     if (!window.electronAPI) {
@@ -86,7 +114,16 @@ export const initNetwork = async (forceLocal = false, disableSocket = false) => 
     if (!forceLocal && window.electronAPI && window.electronAPI.scanMaster) {
         try {
             console.warn("[CONNECTION] Scanning for Master Terminal...");
-            const masterIp = await window.electronAPI.scanMaster();
+            let masterIp = null;
+            const maxAttempts = 3;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                masterIp = await window.electronAPI.scanMaster();
+                if (masterIp) break;
+                if (attempt < maxAttempts) {
+                    console.warn(`[CONNECTION] Master tapılmadı, ${attempt}/${maxAttempts} cəhd. 1.5 saniyə sonra yenidən...`);
+                    await new Promise((r) => setTimeout(r, 1500));
+                }
+            }
 
             if (masterIp) {
                 const baseURL = `http://${masterIp}:55667`;

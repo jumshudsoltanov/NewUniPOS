@@ -123,9 +123,14 @@ function AppContent() {
       const handleDelegatedPrint = async (data) => {
         console.warn("🖨️ Mərkəzi çap qəbul edildi:", data.printerName);
         try {
-          await window.electronAPI.printReceipt(data);
+          const result = await window.electronAPI.printReceipt(data);
+          if (!result?.success) {
+            console.error("Delegated print failed:", result?.error);
+            toast.error(`Çap xətası: ${result?.error || "Naməlum"}`);
+          }
         } catch (e) {
           console.error("Delegated print execution failed:", e);
+          toast.error("Slave-dən gələn çap uğursuz oldu");
         }
       };
 
@@ -183,7 +188,14 @@ function AppContent() {
         const isMasterSlaveActive = terminalData.is_master_slave_active === 1 || profileData.is_master_slave_active === 1;
 
         if (!storageData || (isMasterSlaveActive && !isMaster)) {
-          await initNetwork(false, !isMasterSlaveActive);
+          // Slave: statik IP varsa birbaşa qoşul (skan firewall-da uğursuz ola bilər)
+          let directIp = null;
+          if (isMasterSlaveActive && !isMaster && window.electronAPI?.getStaticMasterIp) {
+            try {
+              directIp = await window.electronAPI.getStaticMasterIp();
+            } catch (e) {}
+          }
+          await initNetwork(false, !isMasterSlaveActive, directIp || undefined);
         } else {
           // Always enable socket for local master — needed for customer display broadcasts
           await initNetwork(true, false);
@@ -212,7 +224,9 @@ function AppContent() {
             const configChanged = freshIsActive !== isMasterSlaveActive || freshIsMaster !== isMaster;
             if (configChanged) {
               if (freshIsActive && !freshIsMaster) {
-                initNetwork(false, false); // Slave → scan for master
+                window.electronAPI?.getStaticMasterIp?.().then(ip => {
+                  initNetwork(false, false, ip || undefined); // Slave → statik IP varsa birbaşa, yoxsa skan
+                }).catch(() => initNetwork(false, false));
               } else if (freshIsMaster && !alreadyConnectedLocally) {
                 initNetwork(true, false); // Master → local socket (only if not already local)
               }

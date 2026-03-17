@@ -285,6 +285,9 @@ const checkTerminalRole = async (targetServer) => {
 
       // Sərfəli (Master) terminal üçün ilkin məlumatları çək və sinxronizasiyanı təmin et
       InsertData(profile.id);
+      // Açıq çekləri dərhal admin-ə sync et
+      const SyncService = require("./services/SyncService");
+      SyncService.syncPendingOrders().catch(err => console.warn("[SYNC_STARTUP]", err?.message));
     } else {
       global.isMasterNode = false;
       console.log(`DEBUG: Terminal role is SLAVE or NOT MASTER. profile exist: ${!!profile}, is_master: ${profile?.is_master}. global.isMasterNode set to FALSE.`);
@@ -303,7 +306,12 @@ const checkTerminalRole = async (targetServer) => {
 const ipcMain = require("electron").ipcMain;
 ipcMain.handle("re-evaluate-role", async () => {
   console.log("IPC: Re-evaluating terminal role requested...");
-  return await checkTerminalRole(server);
+  await checkTerminalRole(server);
+  if (global.isMasterNode) {
+    const SyncService = require("./services/SyncService");
+    SyncService.syncPendingOrders().catch(err => console.warn("[SYNC_RE_EVAL]", err?.message));
+  }
+  return true;
 });
 
 // Initialize and start

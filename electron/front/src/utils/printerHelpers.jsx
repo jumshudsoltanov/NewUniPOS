@@ -12,13 +12,23 @@ const getProfileForPrinting = (profileData, orderProfile) => {
         const authProfile = auth?.data?.profile || {};
         const authTerminal = auth?.data?.terminal || {};
         const fromProfile = profileData?.data?.profile || orderProfile || {};
+        const storedProfile = (() => {
+            try {
+                return JSON.parse(localStorage.getItem("profile") || "{}");
+            } catch {
+                return {};
+            }
+        })();
+        // Mərkəzi çap: DevicesModal-da dəyişiklik dərhal tətbiq olunsun – auth/stored üstünlük ver
+        const isMasterProductPrinting = authProfile.is_master_product_printing ?? storedProfile.is_master_product_printing ?? fromProfile.is_master_product_printing;
+        const isMasterCashierPrinting = authProfile.is_master_cashier_printing ?? storedProfile.is_master_cashier_printing ?? fromProfile.is_master_cashier_printing;
         return {
             ...authProfile,
             ...fromProfile,
             is_master: fromProfile.is_master ?? authTerminal.is_master ?? authProfile.is_master,
             is_master_slave_active: fromProfile.is_master_slave_active ?? authTerminal.is_master_slave_active ?? authProfile.is_master_slave_active,
-            is_master_product_printing: fromProfile.is_master_product_printing ?? authProfile.is_master_product_printing,
-            is_master_cashier_printing: fromProfile.is_master_cashier_printing ?? authProfile.is_master_cashier_printing,
+            is_master_product_printing: isMasterProductPrinting,
+            is_master_cashier_printing: isMasterCashierPrinting,
         };
     } catch {
         return orderProfile || profileData?.data?.profile || {};
@@ -124,8 +134,18 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 const isSlave = !isMaster && isMasterSlaveActive;
 
                 if (canDelegate && (forceDelegate || (isMasterProductPrinting && isSlave))) {
-                    console.warn(`[PRINTER] Mərkəzi mətbəx çapı Slave-dən Master-a göndərilir: ${printerName}`);
-                    socket.emit("delegate_print", { html, printerName });
+                    let printerObj = groupItems[0]?.printer_details?.find(p => (p.local_name || p.name) === printerName) || groupItems[0]?.printer_details?.[0];
+                    if (!printerObj?.ip && !printerObj?.usb_name) {
+                        const profilePrinters = orderData.profileData?.data?.printers || [];
+                        printerObj = profilePrinters.find(p => (p.local_name || p.name) === printerName) || printerObj;
+                    }
+                    const isNet = printerObj?.connection_type === "network" || !!printerObj?.ip;
+                    const hasUsb = !!(printerObj?.usb_name && printerObj.usb_name.trim());
+                    const delegatePayload = isNet && printerObj?.ip && !hasUsb
+                        ? { html, printerName: "", printerIp: printerObj.ip, printerPort: printerObj.port || 9100 }
+                        : { html, printerName: printerObj?.usb_name || printerName };
+                    console.warn(`[PRINTER] Mərkəzi mətbəx çapı Slave-dən Master-a göndərilir`);
+                    socket.emit("delegate_print", delegatePayload);
                     continue;
                 } else if (forceDelegate && !canDelegate) {
                     const displayId = orderData.checkData?.id || orderData.orderId;
@@ -134,11 +154,21 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                     continue; // Skip local print since it's mobile
                 }
 
-                // Local Print Logic (fetch actual printer target)
-                const targetPrinter = batch[printerName][0]?.usb_name || printerName;
+                // Local Print Logic — printer_details və ya profile printers-dan tam printer obyektini al
+                let printerObj = groupItems[0]?.printer_details?.find(p => (p.local_name || p.name) === printerName) || groupItems[0]?.printer_details?.[0];
+                if (!printerObj?.ip && !printerObj?.usb_name) {
+                    const profilePrinters = orderData.profileData?.data?.printers || [];
+                    printerObj = profilePrinters.find(p => (p.local_name || p.name) === printerName) || printerObj;
+                }
+                const isNetwork = printerObj?.connection_type === "network" || !!printerObj?.ip;
+                const hasUsbName = !!(printerObj?.usb_name && printerObj.usb_name.trim());
+                const targetPrinter = printerObj?.usb_name || printerName;
+                const printPayload = isNetwork && printerObj?.ip && !hasUsbName
+                    ? { html, printerName: "", printerIp: printerObj.ip, printerPort: printerObj.port || 9100 }
+                    : { html, printerName: targetPrinter };
 
                 if (window.electronAPI && window.electronAPI.printReceipt) {
-                    const printPromise = window.electronAPI.printReceipt({ html, printerName: targetPrinter });
+                    const printPromise = window.electronAPI.printReceipt(printPayload);
                     const timeoutPromise = new Promise((_, reject) =>
                         setTimeout(() => reject(new Error("Çap vaxtı bitdi (Timeout)")), 15000)
                     );
@@ -246,8 +276,12 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         const isSlave = !isMaster && isMasterSlaveActive;
 
         if (canDelegate && (forceDelegate || (isMasterCashierPrinting && isSlave))) {
-            console.warn(`[PRINTER] Mərkəzi kassa çapı Slave-dən Master-a göndərilir: ${printerName}`);
-            socket.emit("delegate_print", { html, printerName });
+            const isNetworkPrinter = printer?.connection_type === "network" || !!printer?.ip;
+            const delegatePayload = isNetworkPrinter && printer?.ip && !printer?.usb_name
+                ? { html, printerName: "", printerIp: printer.ip, printerPort: printer.port || 9100 }
+                : { html, printerName: printer?.usb_name || printerName };
+            console.warn(`[PRINTER] Mərkəzi kassa çapı Slave-dən Master-a göndərilir`);
+            socket.emit("delegate_print", delegatePayload);
             return { success: true, delegated: true };
         } else if (forceDelegate && !canDelegate) {
             console.error(`[PRINTER] Customer Receipt Delegation failed. Not connected to Master.`);
@@ -255,14 +289,15 @@ export const printCustomerReceipt = async (orderData, profileData) => {
             return { success: false, error: "Master POS qoşulması yoxdur" };
         }
 
-        // Local target printer (USB or IP)
-        const targetPrinter = printer?.usb_name || printerName;
+        // Local target — USB (usb_name) və ya IP (raw socket)
+        const isNetworkPrinter = printer?.connection_type === "network" || !!printer?.ip;
+        const hasUsbName = !!(printer?.usb_name && printer.usb_name.trim());
+        const printPayload = isNetworkPrinter && printer?.ip && !hasUsbName
+            ? { html, printerName: "", printerIp: printer.ip, printerPort: printer.port || 9100 }
+            : { html, printerName: printer?.usb_name || printerName };
 
         if (window.electronAPI && window.electronAPI.printReceipt) {
-            const result = await window.electronAPI.printReceipt({
-                html,
-                printerName: targetPrinter
-            });
+            const result = await window.electronAPI.printReceipt(printPayload);
 
             if (!result || !result.success) {
                 const errMsg = result?.error || 'Bilinməyən xəta';

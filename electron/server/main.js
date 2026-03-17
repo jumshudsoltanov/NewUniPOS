@@ -431,7 +431,50 @@ function createKitchenWindow(screenId) {
   });
 }
 
-ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
+ipcMain.handle("print-receipt", async (event, { html, printerName, printerIp, printerPort } = {}) => {
+  // Network printer (IP) — raw socket ilə birbaşa çap
+  if (printerIp && printerPort && (!printerName || printerName === "")) {
+    try {
+      const net = require("net");
+      let text = (html || "")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/div>/gi, "\n")
+        .replace(/<\/tr>/gi, "\n")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/\n\s*\n/g, "\n")
+        .replace(/[ \t]+/g, " ")
+        .trim();
+      const escInit = Buffer.from([0x1b, 0x40]);
+      const escCut = Buffer.from([0x1d, 0x56, 0x00]);
+      const content = Buffer.from(text + "\n\n\n", "utf8");
+      const data = Buffer.concat([escInit, content, escCut]);
+      return new Promise((res) => {
+        const socket = net.connect(Number(printerPort) || 9100, printerIp, () => {
+          socket.write(data, () => {
+            socket.end();
+            res({ success: true });
+          });
+        });
+        socket.setTimeout(5000);
+        socket.on("error", (e) => {
+          console.error("[PRINT] Raw socket error:", e.message);
+          res({ success: false, error: e.message });
+        });
+        socket.on("timeout", () => {
+          socket.destroy();
+          res({ success: false, error: "Timeout" });
+        });
+      });
+    } catch (e) {
+      console.error("[PRINT] Raw print error:", e);
+      return { success: false, error: e?.message || "Raw print failed" };
+    }
+  }
+
   let printWindow = new BrowserWindow({
     show: false,
     icon: path.join(__dirname, "..", "static", "images", "logo.png"),
@@ -451,6 +494,7 @@ ipcMain.handle("print-receipt", async (event, { html, printerName }) => {
         text-rendering: optimizeLegibility;
       }
       body > div { width: 100% !important; max-width: 100% !important; }
+      .receipt-content { padding: 0 1mm; box-sizing: border-box; }
       .receipt-cut-buffer { min-height: 25mm; }
     </style>
   </head><body><div class="receipt-content">${html}</div><div class="receipt-cut-buffer"></div></body></html>`;
@@ -598,6 +642,35 @@ ipcMain.handle("quit-app", () => {
 
 ipcMain.handle("get-app-version", () => {
   return app.getVersion();
+});
+
+const STATIC_MASTER_IP_PATH = path.join(app.getPath("userData"), "unipos_master_ip.txt");
+
+ipcMain.handle("get-static-master-ip", async () => {
+  try {
+    if (fs.existsSync(STATIC_MASTER_IP_PATH)) {
+      const ip = fs.readFileSync(STATIC_MASTER_IP_PATH, "utf8").trim();
+      return ip || null;
+    }
+  } catch (e) {
+    console.warn("[MASTER-IP] Oxuma xətası:", e?.message);
+  }
+  return null;
+});
+
+ipcMain.handle("set-static-master-ip", async (event, ip) => {
+  try {
+    if (ip && ip.trim()) {
+      fs.writeFileSync(STATIC_MASTER_IP_PATH, ip.trim(), "utf8");
+      return true;
+    } else {
+      if (fs.existsSync(STATIC_MASTER_IP_PATH)) fs.unlinkSync(STATIC_MASTER_IP_PATH);
+      return true;
+    }
+  } catch (e) {
+    console.warn("[MASTER-IP] Yazma xətası:", e?.message);
+    return false;
+  }
 });
 
 ipcMain.handle("scan-master", async () => {

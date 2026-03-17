@@ -4,6 +4,7 @@ const os = require("os");
 
 let io = null;
 let broadcaster = null;
+let probeListener = null;
 let isBroadcasting = false;
 
 // Returns ALL active non-virtual IPv4 interfaces (LAN + WiFi, etc.)
@@ -74,12 +75,13 @@ echo ===================================================
 echo UniPOS Sebeke Icareleri (Firewall)
 echo ===================================================
 echo Xahis edirik bu fayli "Run as Administrator" kimi acin!
-echo Master qurguya TCP:55667 ve Slave qurguya UDP:44444 icazesi verilir...
-netsh advfirewall firewall add rule name="UniPOS_Master_TCP" dir=in action=allow protocol=TCP localport=55667 profile=any
-netsh advfirewall firewall add rule name="UniPOS_Master_UDP" dir=in action=allow protocol=UDP localport=44444 profile=any
-netsh advfirewall firewall add rule name="UniPOS_Master_TCP_Out" dir=out action=allow protocol=TCP localport=55667 profile=any
+echo Master: TCP 55667, Slave: UDP 44444
+netsh advfirewall firewall delete rule name="UniPOS-Server-55667" 2>nul
+netsh advfirewall firewall delete rule name="UniPOS-UDP-44444" 2>nul
+netsh advfirewall firewall add rule name="UniPOS-Server-55667" dir=in action=allow protocol=TCP localport=55667 profile=any
+netsh advfirewall firewall add rule name="UniPOS-UDP-44444" dir=in action=allow protocol=UDP localport=44444 profile=any
 echo ===================================================
-echo TAMAMLANDI! Indi Slave ekranlar Master-i gore bilecek.
+echo TAMAMLANDI! Indi Slave Master-i tapa biler.
 pause`;
         fs.writeFileSync(desktopPath, batContent, 'utf-8');
     } catch (e) {
@@ -116,8 +118,8 @@ const initMasterServer = (server, isBroadcastingActive = true) => {
 
         socket.on("delegate_print", (data) => {
             console.log("🖨️ Çap delegasiyası qəbul edildi:", data.printerName);
-            // Broadcast to all (Master's frontend will pick this up)
-            io.emit("print_delegated", data);
+            // Göndərənə (Slave) yox, digərlərə (Master) göndər
+            socket.broadcast.emit("print_delegated", data);
         });
 
         // When any terminal deletes or closes a check, broadcast to all others
@@ -171,6 +173,31 @@ const startBroadcasting = () => {
         try { broadcaster.close(); } catch (e) { }
     });
 
+    // Slave "kim var?" sorğusuna cavab üçün listener (44444)
+    probeListener = dgram.createSocket("udp4");
+    probeListener.on("message", (msg, rinfo) => {
+        try {
+            const data = JSON.parse(msg.toString());
+            if (data.type === "slave_probe") {
+                const primary = getAllNetworkInterfaces().find(i => i.ip.startsWith('192.168.')) ||
+                    getAllNetworkInterfaces().find(i => i.ip.startsWith('10.') || i.ip.startsWith('172.')) ||
+                    getAllNetworkInterfaces()[0];
+                if (primary) {
+                    const reply = Buffer.from(JSON.stringify({ type: "master_pos", ip: primary.ip, port: 55667 }));
+                    probeListener.send(reply, 0, reply.length, rinfo.port, rinfo.address, (err) => {
+                        if (!err) console.log(`[MASTER UDP] Slave sorğusuna cavab: ${rinfo.address} -> ${primary.ip}`);
+                    });
+                }
+            }
+        } catch (e) {}
+    });
+    probeListener.on("error", () => {});
+    try {
+        probeListener.bind(44444, "0.0.0.0");
+    } catch (e) {
+        console.warn("[MASTER UDP] Probe listener bind xətası:", e.message);
+    }
+
     broadcaster.bind(() => {
         let logCounter = 0;
         if (broadcastInterval) clearInterval(broadcastInterval);
@@ -190,20 +217,39 @@ const startBroadcasting = () => {
             logCounter = (logCounter + 1) % 10;
 
             // Send broadcast on EVERY active interface so LAN + WiFi slaves all hear it
+            const message = Buffer.from(JSON.stringify({
+                type: "master_pos",
+                ip: primary.ip,
+                port: 55667
+            }));
+
             allInterfaces.forEach(netInfo => {
-                const broadcastAddress = getBroadcastIp(netInfo.ip, netInfo.netmask);
-                const message = Buffer.from(JSON.stringify({
-                    type: "master_pos",
-                    ip: primary.ip,   // Always advertise the primary IP
-                    port: 55667
-                }));
+                const netmask = netInfo.netmask || "255.255.255.0";
+                const broadcastAddress = getBroadcastIp(netInfo.ip, netmask);
                 if (isBroadcasting && broadcaster) {
                     broadcaster.send(message, 0, message.length, 44444, broadcastAddress, (err) => {
                         if (err && logCounter === 0) console.error(`[MASTER UDP] Send Error (${netInfo.name}):`, err.message);
                     });
                 }
             });
-        }, 1000);
+
+            // Ümumi broadcast (bəzi şəbəkələrdə subnet broadcast işləməyə bilər)
+            if (isBroadcasting && broadcaster) {
+                broadcaster.send(message, 0, message.length, 44444, "255.255.255.255", (err) => {
+                    if (err && logCounter === 0) console.error(`[MASTER UDP] 255.255.255.255 Error:`, err.message);
+                });
+            }
+
+            // Multicast (SSDP-style) — bəzi şəbəkələrdə broadcast bloklanır, multicast işləyir
+            if (isBroadcasting && broadcaster) {
+                try {
+                    broadcaster.setMulticastTTL(1);
+                    broadcaster.send(message, 0, message.length, 44444, "239.255.255.250", (err) => {
+                        if (err && logCounter === 0) console.error(`[MASTER UDP] Multicast Error:`, err.message);
+                    });
+                } catch (e) { /* ignore */ }
+            }
+        }, 500);
     });
 };
 

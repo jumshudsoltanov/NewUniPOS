@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getAnyDeskId: () => ipcRenderer.invoke("get-anydesk-id"),
     printReceipt: (data) => ipcRenderer.invoke("print-receipt", data),
     scanMaster: () => ipcRenderer.invoke("scan-master"),
+    getStaticMasterIp: () => ipcRenderer.invoke("get-static-master-ip"),
+    setStaticMasterIp: (ip) => ipcRenderer.invoke("set-static-master-ip", ip),
     getMemoryInfo: () => ipcRenderer.invoke("get-memory-info"),
     getDiskInfo: () => ipcRenderer.invoke("get-disk-info"),
     getSyncStatus: () => ipcRenderer.invoke("get-sync-status"),

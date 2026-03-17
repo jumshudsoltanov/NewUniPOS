@@ -1,13 +1,18 @@
-import React, { useEffect, useState } from "react";
-import { getSocket } from "../../utils/apiConfig";
+import React, { useEffect, useState, useRef } from "react";
+import { getSocket, initNetwork } from "../../utils/apiConfig";
 import { useNavigate } from "react-router-dom";
 import "./NetworkOverlay.css";
 
 const NetworkOverlay = () => {
     const navigate = useNavigate();
     const [isDisconnected, setIsDisconnected] = useState(false);
+    const [showFromSettings, setShowFromSettings] = useState(false);
     const [masterIp, setMasterIp] = useState(null);
     const [slaveIp, setSlaveIp] = useState(null);
+    const [staticIpInput, setStaticIpInput] = useState("");
+    const [isReconnecting, setIsReconnecting] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
+    const hasAutoScanned = useRef(false);
 
     useEffect(() => {
         let pollingInterval;
@@ -16,7 +21,7 @@ const NetworkOverlay = () => {
         const onDisconnect = () => setIsDisconnected(true);
         const onConnect = () => setIsDisconnected(false);
 
-        const isSlave = () => {
+        const isSlaveMode = () => {
             try {
                 if (!window.electronAPI && !!localStorage.getItem('master_ip')) return true;
                 const authResultStr = localStorage.getItem("authResult");
@@ -27,13 +32,11 @@ const NetworkOverlay = () => {
                 const isMaster = parseInt(terminalData.is_master) === 1 || parseInt(profileData.is_master) === 1;
                 const active = parseInt(terminalData.is_master_slave_active) === 1 || parseInt(profileData.is_master_slave_active) === 1;
                 return !isMaster && active;
-            } catch {
-                return false;
-            }
+            } catch { return false; }
         };
 
         const poll = () => {
-            if (!isSlave()) { setIsDisconnected(false); return; }
+            if (!isSlaveMode()) { setIsDisconnected(false); return; }
             const socket = getSocket();
             if (socket !== registeredSocket) {
                 if (registeredSocket) {
@@ -70,62 +73,209 @@ const NetworkOverlay = () => {
         };
     }, []);
 
-    if (!isDisconnected) return null;
+    useEffect(() => {
+        if ((isDisconnected || showFromSettings) && window.electronAPI?.getStaticMasterIp) {
+            window.electronAPI.getStaticMasterIp().then(ip => setStaticIpInput(ip || "")).catch(() => {});
+        }
+    }, [isDisconnected, showFromSettings]);
+
+    useEffect(() => {
+        const handler = () => setShowFromSettings(true);
+        window.addEventListener("openMasterSlaveSettings", handler);
+        return () => window.removeEventListener("openMasterSlaveSettings", handler);
+    }, []);
+
+    const isVisible = isDisconnected || showFromSettings;
+
+    const handleAutoScan = async () => {
+        if (!window.electronAPI?.scanMaster || isScanning) return;
+        setIsScanning(true);
+        try {
+            const foundIp = await window.electronAPI.scanMaster();
+            if (foundIp) {
+                setStaticIpInput(foundIp);
+                if (window.electronAPI?.setStaticMasterIp) {
+                    await window.electronAPI.setStaticMasterIp(foundIp);
+                }
+                await initNetwork(false, false);
+                window.location.reload();
+            }
+        } catch (e) {
+            console.error("Scan error:", e);
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    const checkIsSlave = () => {
+        try {
+            if (!window.electronAPI && !!localStorage.getItem('master_ip')) return true;
+            const authResultStr = localStorage.getItem("authResult");
+            if (!authResultStr) return false;
+            const authResult = JSON.parse(authResultStr);
+            const profileData = authResult?.data?.profile || {};
+            const terminalData = authResult?.data?.terminal || {};
+            const isMaster = parseInt(terminalData.is_master) === 1 || parseInt(profileData.is_master) === 1;
+            const active = parseInt(terminalData.is_master_slave_active) === 1 || parseInt(profileData.is_master_slave_active) === 1;
+            return !isMaster && active;
+        } catch {
+            return false;
+        }
+    };
+
+    const handleAutoScan = async () => {
+        if (!window.electronAPI?.scanMaster || isScanning) return;
+        setIsScanning(true);
+        try {
+            const foundIp = await window.electronAPI.scanMaster();
+            if (foundIp) {
+                setStaticIpInput(foundIp);
+                if (window.electronAPI?.setStaticMasterIp) {
+                    await window.electronAPI.setStaticMasterIp(foundIp);
+                }
+                await initNetwork(false, false);
+                window.location.reload();
+            }
+        } catch (e) {
+            console.error("Scan error:", e);
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!isVisible) {
+            hasAutoScanned.current = false;
+            return;
+        }
+        if (!checkIsSlave() || !window.electronAPI?.scanMaster || hasAutoScanned.current) return;
+        hasAutoScanned.current = true;
+        const runScan = async () => {
+            setIsScanning(true);
+            try {
+                const foundIp = await window.electronAPI.scanMaster();
+                if (foundIp) {
+                    setStaticIpInput(foundIp);
+                    if (window.electronAPI?.setStaticMasterIp) {
+                        await window.electronAPI.setStaticMasterIp(foundIp);
+                    }
+                    await initNetwork(false, false);
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.error("Scan error:", e);
+            } finally {
+                setIsScanning(false);
+            }
+        };
+        runScan();
+    }, [isVisible]);
+
+    const handleConnect = async () => {
+        const ip = staticIpInput.trim();
+        if (!ip || !/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) return;
+        setIsReconnecting(true);
+        try {
+            if (window.electronAPI?.setStaticMasterIp) {
+                await window.electronAPI.setStaticMasterIp(ip);
+            }
+            // Birbaşa qoşul — skan etmədən (ping işləyirsə bu da işləyir)
+            await initNetwork(false, false, ip);
+            window.location.reload();
+        } catch (e) {
+            console.error("Reconnect error:", e);
+        } finally {
+            setIsReconnecting(false);
+        }
+    };
+
+    if (!isVisible) return null;
 
     return (
         <div className="net-overlay">
-            <div className="net-overlay__topbar" />
-
             <div className="net-overlay__card">
-                <div className="net-overlay__logo">
-                    <i className="bi bi-hdd-network" />
-                </div>
-
-                <div className="net-overlay__alert">
-                    <div className="net-overlay__alert-icon">
+                <div className="net-overlay__header">
+                    <div className="net-overlay__icon">
                         <i className="bi bi-wifi-off" />
                     </div>
-                    <div className="net-overlay__alert-text">
-                        <div className="net-overlay__alert-title">Master ilə əlaqə kəsildi</div>
-                        <div className="net-overlay__alert-sub">Şəbəkə bağlantısını yoxlayın</div>
+                    <div className="net-overlay__header-text">
+                        <h2 className="net-overlay__title">{showFromSettings ? "Master IP ayarları" : "Master ilə əlaqə kəsildi"}</h2>
+                        <p className="net-overlay__desc">
+                            {showFromSettings ? "Master serverə qoşulmaq üçün Statik IP, Axtar və ya Avto qoşul istifadə edin." : "Master server tapılmadı. Ayarlardan Statik IP, Axtar və ya Qoşul istifadə edin."}
+                        </p>
+                    </div>
+                    {showFromSettings && (
+                        <button className="net-overlay__close-btn" onClick={() => setShowFromSettings(false)} title="Bağla">
+                            <i className="bi bi-x-lg" />
+                        </button>
+                    )}
+                </div>
+
+                <div className="net-overlay__settings">
+                    <div className="net-overlay__settings-title">
+                        <i className="bi bi-gear" /> Ayarlar
+                    </div>
+
+                    <div className="net-overlay__settings-body">
+                        <div className="net-overlay__setting-row">
+                            <label className="net-overlay__label">Statik Master IP</label>
+                            <input
+                                type="text"
+                                className="net-overlay__input"
+                                placeholder="192.168.1.10"
+                                value={staticIpInput}
+                                onChange={(e) => setStaticIpInput(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleConnect()}
+                            />
+                        </div>
+
+                        <div className="net-overlay__btn-row">
+                            <button
+                                className="net-overlay__btn net-overlay__btn-scan"
+                                onClick={handleAutoScan}
+                                disabled={isScanning}
+                                title="Avtomatik axtar"
+                            >
+                                {isScanning ? <span className="net-overlay__spinner" /> : <i className="bi bi-search" />}
+                                {isScanning ? "Axtarılır..." : "Axtar"}
+                            </button>
+                            <button
+                                className="net-overlay__btn net-overlay__btn-connect"
+                                onClick={handleConnect}
+                                disabled={isReconnecting || !staticIpInput.trim()}
+                                title="Statik IP ilə qoşul"
+                            >
+                                {isReconnecting ? <span className="net-overlay__spinner" /> : <i className="bi bi-plug" />}
+                                {isReconnecting ? "Qoşulur..." : "Qoşul"}
+                            </button>
+                        </div>
+
+                        <button
+                            className="net-overlay__btn net-overlay__btn-primary"
+                            onClick={handleAutoScan}
+                            disabled={isScanning}
+                            title="Avtomatik axtar və qoşul"
+                        >
+                            {isScanning ? <span className="net-overlay__spinner" /> : <i className="bi bi-wifi" />}
+                            {isScanning ? "Axtarılır..." : "Avto qoşul"}
+                        </button>
                     </div>
                 </div>
 
-                <div className="net-overlay__sep" />
-
-                <div className="net-overlay__grid">
-                    <div className="net-overlay__cell">
-                        <span className="net-overlay__cell-label">
-                            <i className="bi bi-server" /> Master İP
-                        </span>
-                        <span className={`net-overlay__cell-value${masterIp ? "" : " muted"}`}>
-                            {masterIp || "Axtarılır..."}
-                        </span>
+                <div className="net-overlay__footer">
+                    <div className="net-overlay__ips">
+                        <span>Master: <strong>{masterIp || "—"}</strong></span>
+                        <span>Sizin IP: <strong>{slaveIp || "—"}</strong></span>
                     </div>
-                    <div className="net-overlay__cell">
-                        <span className="net-overlay__cell-label">
-                            <i className="bi bi-pc-display" /> Sizin İP
-                        </span>
-                        <span className={`net-overlay__cell-value${slaveIp ? "" : " muted"}`}>
-                            {slaveIp || "—"}
-                        </span>
-                    </div>
+                    <p className="net-overlay__hint">Ping işləyirsə, Statik IP yazıb Qoşul basın</p>
                 </div>
 
-                <div className="net-overlay__status">
-                    <div className="net-overlay__spinner" />
-                    <span>Yenidən bağlanmağa cəhd edilir...</span>
-                </div>
-
-                <button
-                    className="net-overlay__exit"
-                    onClick={() => {
-                        if (window.electronAPI) window.close();
-                        else navigate('/');
-                    }}
-                >
-                    <i className="bi bi-box-arrow-left" />
-                    Sistemdən çıx
+                <button className="net-overlay__exit" onClick={() => {
+                    if (window.electronAPI?.quitApp) window.electronAPI.quitApp();
+                    else if (window.electronAPI) window.close();
+                    else navigate('/');
+                }}>
+                    <i className="bi bi-box-arrow-right" /> Sistemdən çıx
                 </button>
             </div>
         </div>

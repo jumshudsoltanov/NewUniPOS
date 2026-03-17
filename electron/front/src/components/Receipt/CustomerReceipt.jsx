@@ -56,7 +56,7 @@ const CustomerReceipt = ({
         receipt: {
             width: "100%",
             boxSizing: "border-box",
-            padding: "0 4px",
+            padding: "0 2px",
             margin: "0",
             background: "#fff",
             fontFamily: "'Consolas', 'Courier New', 'Lucida Console', monospace",

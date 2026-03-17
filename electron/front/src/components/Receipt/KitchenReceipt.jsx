@@ -87,8 +87,9 @@ const KitchenReceipt = ({
         receipt: {
             width: "100%",
             boxSizing: "border-box",
-            padding: "0 2px",
-            margin: "0",
+            padding: "0 12px",
+            margin: "0 auto",
+            maxWidth: "100%",
             background: "#fff",
             fontFamily: "'Consolas', 'Courier New', 'Lucida Console', monospace",
             fontSize: fs(12),
@@ -105,14 +106,13 @@ const KitchenReceipt = ({
             borderBottom: "1px dashed #000",
             margin: "3px 0",
         },
-        infoSection: { fontSize: fs(11) },
+        infoSection: { fontSize: fs(11), textAlign: "center" },
         infoRow: {
-            display: "flex",
-            justifyContent: "space-between",
+            textAlign: "center",
             marginBottom: "1px",
         },
         label: { fontWeight: "900" },
-        value: { textAlign: "right", flex: "1 1 auto", marginLeft: "4px", wordBreak: "break-word" },
+        value: { wordBreak: "break-word" },
         items: { fontSize: fs(12) },
         itemsHeader: {
             display: "flex",
@@ -172,21 +172,21 @@ const KitchenReceipt = ({
 
             <div style={styles.line}></div>
 
-            {/* ORDER INFO */}
+            {/* ORDER INFO - mərkəzdə */}
             <div style={styles.infoSection}>
                 <div style={styles.infoRow}>
-                    <span style={styles.label}>Ofisiant</span>
+                    <span style={styles.label}>Ofisiant: </span>
                     <span style={styles.value}>{cleanWaiter}</span>
                 </div>
 
                 <div style={styles.infoRow}>
-                    <span style={styles.label}>Çek №</span>
+                    <span style={styles.label}>Çek №: </span>
                     <span style={styles.value}>#{checkData?.id || orderId?.toString().slice(0, 8)}</span>
                 </div>
 
                 {hallName && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Satış yeri</span>
+                        <span style={styles.label}>Satış yeri: </span>
                         <span style={styles.value}>
                             {hallName}
                             {cleanTable ? `-${cleanTable}` : ""}
@@ -195,13 +195,13 @@ const KitchenReceipt = ({
                 )}
 
                 <div style={styles.infoRow}>
-                    <span style={styles.label}>Satış tipi</span>
+                    <span style={styles.label}>Satış tipi: </span>
                     <span style={styles.value}>{typeName || "Restoranda"}</span>
                 </div>
 
                 {(selectedCustomer || checkData?.customerName) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Müştəri</span>
+                        <span style={styles.label}>Müştəri: </span>
                         <span style={styles.value}>
                             {selectedCustomer?.name || checkData?.customerName}
                         </span>

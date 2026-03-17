@@ -1,246 +1,351 @@
-/* ═══════════════════════════════════════
-   Network Overlay — UniPOS
-   ═══════════════════════════════════════ */
 .net-overlay {
     position: fixed;
     inset: 0;
-    background: #f5f7fb;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 2147483647;
-    padding: 32px 24px;
-    font-family: 'Inter', 'Poppins', system-ui, sans-serif;
+    padding: 40px;
 }
 
-/* ── Top brand strip ── */
-.net-overlay__topbar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #053796 0%, #2563eb 60%, #053796 100%);
-}
-
-/* ── Card container ── */
 .net-overlay__card {
     background: #fff;
-    border: 1px solid #e2e8f4;
-    border-radius: 20px;
-    padding: 40px 44px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    border-radius: 16px;
+    padding: 40px 48px;
     width: 100%;
-    max-width: 460px;
-    box-shadow: 0 4px 24px rgba(5, 55, 150, 0.07);
+    max-width: 560px;
+    min-width: 340px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
 }
 
-/* ── Logo ── */
-.net-overlay__logo {
+.net-overlay__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 32px;
+    position: relative;
+}
+
+.net-overlay__close-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f1f5f9;
+    border-radius: 8px;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.net-overlay__close-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.net-overlay__icon {
     width: 56px;
     height: 56px;
-    background: linear-gradient(140deg, #053796 0%, #2563eb 100%);
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 16px rgba(5, 55, 150, 0.22);
-}
-
-.net-overlay__logo i {
-    font-size: 25px;
-    color: #fff;
-}
-
-/* ── Alert block ── */
-.net-overlay__alert {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 28px;
-    width: 100%;
-}
-
-.net-overlay__alert-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
-    background: #fff0f0;
-    border: 1px solid #fecaca;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
-}
-
-.net-overlay__alert-icon i {
-    font-size: 20px;
-    color: #ef4444;
-}
-
-.net-overlay__alert-text {
+    background: #fef2f2;
+    border-radius: 14px;
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    align-items: center;
+    justify-content: center;
 }
 
-.net-overlay__alert-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #0f1f45;
-    letter-spacing: -0.2px;
-    line-height: 1.25;
+.net-overlay__icon i {
+    font-size: 28px;
+    color: #dc2626;
 }
 
-.net-overlay__alert-sub {
-    font-size: 0.78rem;
-    color: #94a3b8;
-    font-weight: 500;
-}
-
-/* ── Separator ── */
-.net-overlay__sep {
-    width: 100%;
-    height: 1px;
-    background: #edf0f7;
-    margin-bottom: 24px;
-}
-
-/* ── IP grid ── */
-.net-overlay__grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    width: 100%;
-    margin-bottom: 24px;
-}
-
-.net-overlay__cell {
-    background: #f8faff;
-    border: 1px solid #dde5f5;
-    border-radius: 10px;
-    padding: 12px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+.net-overlay__header-text {
+    flex: 1;
     min-width: 0;
 }
 
-.net-overlay__cell-label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.67rem;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: #94a3b8;
+.net-overlay__title {
+    font-size: 20px;
     font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px 0;
 }
 
-.net-overlay__cell-label i {
-    font-size: 10px;
-    color: #053796;
+.net-overlay__desc {
+    font-size: 15px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
 }
 
-.net-overlay__cell-value {
-    font-size: 0.95rem;
+.net-overlay__settings {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.net-overlay__settings-title {
+    font-size: 14px;
     font-weight: 700;
-    color: #053796;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.3px;
-}
-
-.net-overlay__cell-value.muted {
-    color: #cbd5e1;
-    font-style: italic;
-    font-weight: 500;
-}
-
-/* ── Status bar ── */
-.net-overlay__status {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 11px 16px;
-    background: #eef4ff;
-    border: 1px solid #c7d9fa;
-    border-radius: 8px;
-    width: 100%;
+    color: #0f172a;
     margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.net-overlay__settings-title i {
+    font-size: 18px;
+    color: #053796;
+}
+
+.net-overlay__settings-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.net-overlay__setting-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.net-overlay__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.net-overlay__btn-row {
+    display: flex;
+    gap: 12px;
+}
+
+.net-overlay__btn-scan {
+    flex: 1;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.net-overlay__btn-scan:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #053796;
+}
+
+.net-overlay__btn-scan:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.net-overlay__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.net-overlay__btn-primary {
+    width: 100%;
+    padding: 16px 24px;
+    background: #053796;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.net-overlay__btn-primary:hover:not(:disabled) {
+    background: #042d75;
+}
+
+.net-overlay__btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.net-overlay__divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.net-overlay__divider::before,
+.net-overlay__divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+}
+
+.net-overlay__divider span {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+.net-overlay__input-row {
+    display: flex;
+    gap: 12px;
+}
+
+.net-overlay__input {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: ui-monospace, monospace;
+    color: #0f172a;
+    background: #f8fafc;
+    outline: none;
+}
+
+.net-overlay__input:focus {
+    border-color: #053796;
+    background: #fff;
+}
+
+.net-overlay__input::placeholder {
+    color: #94a3b8;
+}
+
+.net-overlay__btn-connect {
+    padding: 14px 28px;
+    background: #053796;
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.net-overlay__btn-connect:hover:not(:disabled) {
+    background: #042d75;
+}
+
+.net-overlay__btn-connect:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .net-overlay__spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid #c7d9fa;
-    border-top-color: #053796;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
     border-radius: 50%;
-    flex-shrink: 0;
-    animation: net-spin 0.9s linear infinite;
+    animation: net-spin 0.8s linear infinite;
 }
 
 @keyframes net-spin {
     to { transform: rotate(360deg); }
 }
 
-.net-overlay__status span {
-    font-size: 0.82rem;
-    color: #3b60b8;
+.net-overlay__footer {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.net-overlay__ips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.net-overlay__ips strong {
+    color: #0f172a;
     font-weight: 600;
 }
 
-/* ── Exit button ── */
+.net-overlay__hint {
+    font-size: 12px;
+    color: #94a3b8;
+    margin: 0;
+}
+
 .net-overlay__exit {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 11px 20px;
-    background: #f1f5f9;
-    border: 1px solid #dde3ee;
-    border-radius: 8px;
-    color: #64748b;
-    font-size: 0.84rem;
-    font-weight: 600;
-    cursor: pointer;
+    display: block;
     width: 100%;
-    letter-spacing: 0.2px;
+    margin-top: 20px;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.net-overlay__exit:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
 }
 
 .net-overlay__exit i {
-    font-size: 14px;
+    margin-right: 6px;
 }
 
-/* ── Mobile ── */
 @media (max-width: 600px) {
     .net-overlay {
-        padding: 20px 16px;
-        background: #fff;
-        justify-content: flex-start;
-        padding-top: 0;
+        padding: 20px;
     }
 
     .net-overlay__card {
-        padding: 32px 20px;
-        border: none;
-        box-shadow: none;
-        border-radius: 0;
-        max-width: 100%;
-        margin-top: 40px;
+        padding: 28px 24px;
     }
 
-    .net-overlay__grid {
-        grid-template-columns: 1fr;
+    .net-overlay__header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .net-overlay__input-row {
+        flex-direction: column;
+    }
+
+    .net-overlay__btn-connect {
+        width: 100%;
+    }
+
+    .net-overlay__btn-row {
+        flex-direction: column;
     }
 
     .net-overlay__exit {
-        display: none;
+        margin-top: 16px;
     }
 }

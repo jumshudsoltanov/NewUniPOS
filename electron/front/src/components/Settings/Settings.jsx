@@ -24,6 +24,7 @@ const Settings = () => {
     const [showReportModal, setShowReportModal] = useState(false);
     const [showCustomersModal, setShowCustomersModal] = useState(false);
     const [showDevicesModal, setShowDevicesModal] = useState(false);
+    const [showMasterSlaveSettings, setShowMasterSlaveSettings] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [syncCounts, setSyncCounts] = useState(null);
     const [anyDeskId, setAnyDeskId] = useState(null);
@@ -31,6 +32,9 @@ const Settings = () => {
         return localStorage.getItem("showHeaderClock") === "true";
     });
     const [appVersion, setAppVersion] = useState(null);
+
+    const isMaster = loginedProfileData?.data?.terminal?.is_master === 1 || loginedProfileData?.data?.profile?.is_master === 1;
+    const isSlave = !isMaster && (loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1);
 
     useEffect(() => {
         if (window.electronAPI?.getAppVersion) {
@@ -183,6 +187,14 @@ const Settings = () => {
             highlight: true,
             onClick: () => setShowDevicesModal(true),
             permission: Number(loginedWaiter?.data?.can_access_settings) === 1 && Number(loginedWaiter?.data?.can_see_device) === 1,
+        },
+        {
+            id: "masterip",
+            label: "Master IP",
+            icon: <i className="bi bi-wifi"></i>,
+            highlight: true,
+            onClick: () => window.dispatchEvent(new CustomEvent("openMasterSlaveSettings")),
+            permission: isSlave && Number(loginedWaiter?.data?.can_access_settings) === 1,
         },
     ];
 

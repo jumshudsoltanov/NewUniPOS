@@ -255,23 +255,16 @@ class SyncService {
         return;
       }
       if (error.isValidationError) {
-        // 400/422 — permanent data issue, skip this order forever
-        console.warn(`[SYNC_SKIP] Permanently skipping order ${orderId} (400/422 from admin).`);
-        await OrdersModel.update({ is_synced: 2 }, { where: { uuid: orderId }, paranoid: false }).catch(() => {});
-        this._retryCounts.delete(orderId);
-        throw error;
+        // 400/422 — itki olmasın, yenidən cəhd edəcək (heç vaxt skip yoxdur)
+        console.warn(`[SYNC_VALIDATION] Order ${orderId} validation error (400/422), yenidən cəhd ediləcək...`);
       }
 
-      // Track retry count — after 5 failures, mark as skipped to prevent endless pending
+      // Bütün xətalar (network, 5xx, 400/422) → stays is_synced=0, davam edəcək
       const retries = (this._retryCounts.get(orderId) || 0) + 1;
       this._retryCounts.set(orderId, retries);
-      if (retries >= 5) {
-        console.warn(`[SYNC_GIVEUP] Order ${orderId} failed ${retries} times, marking as skipped.`);
-        await OrdersModel.update({ is_synced: 2 }, { where: { uuid: orderId }, paranoid: false }).catch(() => {});
-        this._retryCounts.delete(orderId);
+      if (retries % 10 === 0) {
+        console.warn(`[SYNC_RETRY] Order ${orderId} failed ${retries} times, yenidən cəhd ediləcək...`);
       }
-
-      // 404, 5xx, network errors → stays is_synced=0 until retry limit hit
       throw error;
     }
   }
@@ -355,7 +348,7 @@ class SyncService {
     try {
       await Promise.any(
         urls.map(url =>
-          axios.post(url, payload, { timeout: 6000 }).then(res => {
+          axios.post(url, payload, { timeout: 15000 }).then(res => {
             // 2xx = success
             if (res.status >= 200 && res.status < 300) return true;
             throw new Error(`Unexpected status ${res.status}`);

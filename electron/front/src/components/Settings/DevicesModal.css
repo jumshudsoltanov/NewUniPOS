@@ -302,6 +302,165 @@
     padding: 10px 0;
 }
 
+/* Master IP Card — Slave üçün (Settings kartları kimi) */
+.master-ip-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.06);
+}
+
+.master-ip-card__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.master-ip-card__icon {
+    width: 44px;
+    height: 44px;
+    background: #eef2ff;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #053796;
+    flex-shrink: 0;
+}
+
+.master-ip-card__icon i {
+    font-size: 22px;
+}
+
+.master-ip-card__title {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f1f45;
+}
+
+.master-ip-card__desc {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.master-ip-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.master-ip-card__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.master-ip-card__input {
+    flex: 1;
+    min-width: 160px;
+    padding: 12px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #0f1f45;
+    font-family: ui-monospace, monospace;
+    outline: none;
+}
+
+.master-ip-card__input:focus {
+    border-color: #053796;
+}
+
+.master-ip-card__btn {
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    background: #053796;
+    color: #fff;
+}
+
+.master-ip-card__btn:hover:not(:disabled) {
+    background: #042d75;
+}
+
+.master-ip-card__btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.master-ip-card__btn--outline {
+    background: #fff;
+    color: #053796;
+    border: 1px solid #053796;
+}
+
+.master-ip-card__btn--outline:hover:not(:disabled) {
+    background: #f0f7ff;
+}
+
+.master-ip-card__btn--ghost {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.master-ip-card__btn--ghost:hover {
+    background: #f1f5f9;
+}
+
+.master-ip-card__spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: master-ip-spin 0.7s linear infinite;
+}
+
+.master-ip-card__btn--outline .master-ip-card__spinner {
+    border-color: rgba(5, 55, 150, 0.3);
+    border-top-color: #053796;
+}
+
+@keyframes master-ip-spin {
+    to { transform: rotate(360deg); }
+}
+
+.master-ip-card__hint {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #f0f7ff;
+    border-radius: 10px;
+    color: #053796;
+    font-size: 13px;
+}
+
+.master-ip-card__hint i {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.master-ip-card__hint strong {
+    color: #0f1f45;
+}
+
 .display-config-card {
     background: #fff;
     border: 2px solid #f0f2f5;

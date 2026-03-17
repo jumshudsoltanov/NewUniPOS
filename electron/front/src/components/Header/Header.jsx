@@ -348,6 +348,15 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
               {isChecksPage ? "Çeklər" : (!showBack && !hideWaiterName && loginedWaiter?.data?.name)}
             </div>
             <div className="d-flex align-items-center gap-2">
+              {window.electronAPI?.quitApp && (
+                <button
+                  className="header-icon-btn"
+                  onClick={() => window.electronAPI.quitApp()}
+                  title="Sistemdən çıx"
+                >
+                  <i className="bi bi-box-arrow-right" />
+                </button>
+              )}
               <Link className="header-icon-btn" to="/pin">
                 <svg
                   width="24"
@@ -484,6 +493,19 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                 </>
               )}
 
+              {window.electronAPI?.quitApp && (
+                <>
+                  <div className="tools-divider"></div>
+                  <button
+                    className="header-icon-btn small-icon-btn"
+                    onClick={() => window.electronAPI.quitApp()}
+                    title="Sistemdən çıx"
+                  >
+                    <i className="bi bi-box-arrow-right" />
+                    <span className="d-none d-xl-inline">Çıxış</span>
+                  </button>
+                </>
+              )}
               <div className="tools-divider"></div>
               {/* Waiter/Exit Icon */}
               <Link
