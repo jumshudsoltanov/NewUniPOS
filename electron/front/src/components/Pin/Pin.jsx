@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getWaiter } from "../../redux/Slices/WaitersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
 import { toast } from "sonner";
@@ -195,6 +196,7 @@ const Pin = () => {
       window.electronAPI.getAppVersion().then(setAppVersion).catch(() => {});
     }
   }, []);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -220,6 +222,13 @@ const Pin = () => {
   const activeProfileData = loginedProfileData || fallbackProfileData;
   const terminalInfo = activeProfileData?.data?.terminal || {};
   const profileInfo = activeProfileData?.data?.profile || {};
+
+  useEffect(() => {
+    if (!profileInfo) return;
+    if (isPosBlocked(profileInfo?.is_pos_block) || (profileInfo?.next_payment_date && isPaymentExpired(profileInfo.next_payment_date))) {
+      navigate("/blocked", { replace: true });
+    }
+  }, [profileInfo, navigate]);
 
   const validImg = (img) => {
     if (!img) return false;

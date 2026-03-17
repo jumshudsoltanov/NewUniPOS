@@ -11,6 +11,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Navigate } from "react-router-dom";
 import { authPos, setLoginData } from "../../redux/Slices/LoginSlice";
+import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
@@ -86,10 +87,16 @@ const Login = () => {
   const navigate = useNavigate();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
-  // If already logged in, go directly to PIN without showing login screen
+  // If already logged in, blok yoxla — blokdursa /blocked, yoxdursa /pin
   const storageProfile = (() => {
     try { return JSON.parse(localStorage.getItem("profile")); } catch { return null; }
   })();
+  const authResultForBlock = (() => {
+    try { return JSON.parse(localStorage.getItem("authResult")); } catch { return null; }
+  })();
+  const profileForBlock = authResultForBlock?.data?.profile;
+  const isBlocked = profileForBlock && (isPosBlocked(profileForBlock?.is_pos_block) || (profileForBlock?.next_payment_date && isPaymentExpired(profileForBlock.next_payment_date)));
+  if (storageProfile && isBlocked) return <Navigate to="/blocked" replace />;
   if (storageProfile) return <Navigate to="/pin" replace />;
 
   let fallbackProfileData = null;
@@ -187,15 +194,23 @@ const Login = () => {
         console.warn("Storage save failed (non-fatal):", storageErr);
       }
 
-      if (data?.data?.profile?.id) {
-        // Fire data preloading in background, don't await blocking the UI
-        try {
-          dispatch(getTableGroups(data.data.profile.id));
-          dispatch(getActiveOrders({ profileId: data.data.profile.id }));
-          dispatch(menuWithCategories(data.data.profile.id));
-          dispatch(menuWithGeneralCategories(data.data.profile.id));
-        } catch (preloadErr) {
-          console.warn("Background pre-load triggered:", preloadErr);
+      if (data?.data?.profile) {
+        const p = data.data.profile;
+        if (isPosBlocked(p?.is_pos_block) || (p?.next_payment_date && isPaymentExpired(p.next_payment_date))) {
+          localStorage.setItem("authResult", JSON.stringify(data));
+          dispatch(setLoginData(data));
+          navigate("/blocked");
+          return;
+        }
+        if (p?.id) {
+          try {
+            dispatch(getTableGroups(p.id));
+            dispatch(getActiveOrders({ profileId: p.id }));
+            dispatch(menuWithCategories(p.id));
+            dispatch(menuWithGeneralCategories(p.id));
+          } catch (preloadErr) {
+            console.warn("Background pre-load triggered:", preloadErr);
+          }
         }
       }
 

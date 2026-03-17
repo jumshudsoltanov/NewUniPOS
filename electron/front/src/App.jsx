@@ -14,7 +14,7 @@ import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "./redux/S
 import { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } from "./redux/Slices/SyncSlice";
 import { tickTimer as tickBooks } from "./redux/Slices/BooksSlice";
 import { tickTimer as tickTables } from "./redux/Slices/TablesSlice";
-import { HashRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { HashRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Login from "./components/Login/Login";
 import Layout from "./components/Layout/Layout";
 import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
@@ -35,10 +35,30 @@ import UpdateNotification from "./components/UpdateNotification/UpdateNotificati
 function AppContent() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const authResultRedux = useSelector((state) => state.LoginSlice.loginedProfileData);
 
   // Refs - re-render olmadan state saxlamaq üçün
   const initStarted = useRef(false);
   const [showInitialLoading, setShowInitialLoading] = useState(true);
+
+  // Blok yoxlaması — bütün səhifələrdə (Check, Tables, modallar açıq olanda da) işləsin
+  useEffect(() => {
+    if (showInitialLoading) return;
+    const path = (location.pathname || "").replace(/^#/, "");
+    if (path === "/blocked") return;
+
+    const authResult = authResultRedux?.data ? authResultRedux : (() => {
+      try { return JSON.parse(localStorage.getItem("authResult")); } catch { return null; }
+    })();
+    const profile = authResult?.data?.profile;
+    if (!profile) return;
+
+    if (isPosBlocked(profile?.is_pos_block) || (profile?.next_payment_date && isPaymentExpired(profile.next_payment_date))) {
+      navigate("/blocked", { replace: true });
+    }
+  }, [location.pathname, authResultRedux, showInitialLoading, navigate]);
 
   useEffect(() => {
     if (window.electronAPI && window.electronAPI.onBackendLog) {
@@ -107,7 +127,6 @@ function AppContent() {
   }, [dispatch]);
 
   // Mərkəzi printer Master-dadır: Master print_delegated dinləyib özündə çap edir (Slave göndərir)
-  const authResultRedux = useSelector((state) => state.LoginSlice.loginedProfileData);
   const isMasterTerminal = authResultRedux?.data?.terminal?.is_master === 1 || authResultRedux?.data?.profile?.is_master === 1;
 
   const isSocketConnected = useSelector((state) => state.SyncSlice.isSocketConnected);
@@ -272,12 +291,20 @@ function AppContent() {
                 return;
             }
 
+            // Stored authResult blokludursa, /blocked göstər — Pin/Login-ə getmə
+            const storedProfile = authResult?.data?.profile;
+            if (storedProfile && (isPosBlocked(storedProfile?.is_pos_block) || (storedProfile?.next_payment_date && isPaymentExpired(storedProfile.next_payment_date)))) {
+              localStorage.setItem("authResult", JSON.stringify(authResult));
+              dispatch(setLoginData(authResult));
+              navigate("/blocked");
+              return;
+            }
+
             // Even if init fails, try to show the Login page instead of a white screen
-           
             if (authResult) {
               dispatch(fetchCustomersFromAdmin());
               dispatch(fetchCustomerGroupsFromAdmin());
-              if (currentPath === "/") navigate("/pin");
+              if (currentPath === "/" || currentPath === "/login" || currentPath === "") navigate("/pin");
             } else {
               if (currentPath !== "/" && currentPath !== "") navigate("/");
             }
