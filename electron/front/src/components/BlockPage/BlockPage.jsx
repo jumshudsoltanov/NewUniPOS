@@ -7,7 +7,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
 import { toast } from "sonner";
 import DefaultLogo from "../../assets/images/unipos_logo.png";
-import { isPaymentExpired } from "../../utils/dateHelpers";
+import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import "./BlockPage.css";
 
 const formatDate = (dateStr) => {
@@ -75,7 +75,7 @@ const BlockPage = () => {
 
             const profile = data?.data?.profile;
 
-            if (Number(profile?.is_pos_block) === 1) {
+            if (isPosBlocked(profile?.is_pos_block)) {
                 toast.error("POS hələ də bloklanmış vəziyyətdədir.");
                 return;
             }

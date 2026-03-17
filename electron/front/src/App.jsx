@@ -27,7 +27,7 @@ import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
 import BlockPage from "./components/BlockPage/BlockPage";
 import { initNetwork, getSocket, onSocketStatusChange } from "./utils/apiConfig";
-import { isPaymentExpired } from "./utils/dateHelpers";
+import { isPaymentExpired, isPosBlocked } from "./utils/dateHelpers";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
 import UpdateNotification from "./components/UpdateNotification/UpdateNotification";
@@ -127,11 +127,11 @@ function AppContent() {
           const result = await window.electronAPI.printReceipt(data);
           if (!result?.success) {
             console.error("Delegated print failed:", result?.error);
-            toast.error(`Çap xətası: ${result?.error || "Naməlum"}`);
+            setTimeout(() => toast.error(`Çap xətası: ${result?.error || "Naməlum"}`), 0);
           }
         } catch (e) {
           console.error("Delegated print execution failed:", e);
-          toast.error("Slave-dən gələn çap uğursuz oldu");
+          setTimeout(() => toast.error("Slave-dən gələn çap uğursuz oldu"), 0);
         }
       };
 
@@ -140,15 +140,17 @@ function AppContent() {
 
       socket.on("kitchen_item_ready", (data) => {
         console.warn("🍳 Kitchen Item Ready:", data);
-        addNotification(
-          `${data.tableName} - ${data.productName} HAZIRDIR!`,
-          "Məhsul mətbəxdə tamamlandı və servis üçün hazırdır.",
-          { type: "success", category: "order", orderId: data.orderId, displayId: `#${data.orderId}` }
-        );
-        toast.success(`${data.tableName}: ${data.productName} hazırdır!`, {
-          icon: '🍳',
-          autoClose: 5000
-        });
+        setTimeout(() => {
+          addNotification(
+            `${data.tableName} - ${data.productName} HAZIRDIR!`,
+            "Məhsul mətbəxdə tamamlandı və servis üçün hazırdır.",
+            { type: "success", category: "order", orderId: data.orderId, displayId: `#${data.orderId}` }
+          );
+          toast.success(`${data.tableName}: ${data.productName} hazırdır!`, {
+            icon: '🍳',
+            autoClose: 5000
+          });
+        }, 0);
       });
 
       return () => {
@@ -156,7 +158,7 @@ function AppContent() {
         socket.off("kitchen_item_ready");
       };
     }
-  }, [isMasterTerminal, authResultRedux, isSocketConnected]);
+  }, [isMasterTerminal, isSocketConnected]);
 
   // Handle Synced Badge Timeout
   const showSyncedBadge = useSelector((state) => state.SyncSlice.showSyncedBadge);
@@ -215,6 +217,11 @@ function AppContent() {
             const data = await dispatch(authPos(storageData)).unwrap();
             localStorage.setItem("authResult", JSON.stringify(data));
 
+            // authPos LoginModel-i yenilədi — backend rolunu yenidən yoxlasın (Master/Slave)
+            if (window.electronAPI?.reEvaluateRole) {
+              window.electronAPI.reEvaluateRole().catch(console.error);
+            }
+
             // Re-init network only if role changed vs what we started with
             const freshTerminal = data?.data?.terminal || {};
             const freshProfile = data?.data?.profile || {};
@@ -237,7 +244,7 @@ function AppContent() {
             dispatch(fetchCustomerGroupsFromAdmin());
 
             const profile = data?.data?.profile;
-            if (Number(profile?.is_pos_block) === 1) {
+            if (isPosBlocked(profile?.is_pos_block)) {
               navigate("/blocked");
               return;
             }

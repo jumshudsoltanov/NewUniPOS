@@ -16,6 +16,10 @@ export const parseDateOnly = (dateStr) => {
     }
 };
 
+/** is_pos_block aktivdir? (1, "1", true) */
+export const isPosBlocked = (val) =>
+  val === 1 || val === "1" || val === true || Number(val) === 1;
+
 /** Abunəlik bitibmi? (next_payment_date bu gündən əvvəldirsə) */
 export const isPaymentExpired = (nextPaymentDate) => {
     if (!nextPaymentDate) return false;

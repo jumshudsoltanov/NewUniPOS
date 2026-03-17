@@ -46,10 +46,10 @@
     justify-content: center;
 }
 
-.net-overlay__close-btn:hover {
-    background: #e2e8f0;
-    color: #0f172a;
+.net-overlay__close-btn:active {
+    opacity: 0.8;
 }
+
 
 .net-overlay__icon {
     width: 56px;
@@ -147,9 +147,8 @@
     gap: 8px;
 }
 
-.net-overlay__btn-scan:hover:not(:disabled) {
+.net-overlay__btn-scan:active:not(:disabled) {
     background: #f1f5f9;
-    border-color: #053796;
 }
 
 .net-overlay__btn-scan:disabled {
@@ -179,8 +178,8 @@
     gap: 10px;
 }
 
-.net-overlay__btn-primary:hover:not(:disabled) {
-    background: #042d75;
+.net-overlay__btn-primary:active:not(:disabled) {
+    opacity: 0.9;
 }
 
 .net-overlay__btn-primary:disabled {
@@ -246,8 +245,8 @@
     flex-shrink: 0;
 }
 
-.net-overlay__btn-connect:hover:not(:disabled) {
-    background: #042d75;
+.net-overlay__btn-connect:active:not(:disabled) {
+    opacity: 0.9;
 }
 
 .net-overlay__btn-connect:disabled {
@@ -288,10 +287,6 @@
     display: flex;
     align-items: center;
     gap: 6px;
-}
-
-.net-overlay__tab:hover {
-    color: #053796;
 }
 
 .net-overlay__tab.active {
@@ -345,14 +340,8 @@
     transition: all 0.2s ease;
 }
 
-.net-overlay__exit:hover {
-    background: linear-gradient(135deg, #042d75 0%, #032055 100%);
-    box-shadow: 0 4px 12px rgba(5, 55, 150, 0.4);
-    transform: translateY(-1px);
-}
-
 .net-overlay__exit:active {
-    transform: translateY(0);
+    opacity: 0.9;
 }
 
 .net-overlay__exit i {

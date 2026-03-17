@@ -256,6 +256,7 @@ const CheckMain = ({ orders, table }) => {
                   <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="d-flex align-items-center flex-wrap gap-2">
                       <span className="fw-bold">{item.name}</span>
+                      {item.isNew && <span className="check-item-new-badge">Yeni</span>}
                       {modifiers.length > 0 && (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title="Modifikatorlar">
                           <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>

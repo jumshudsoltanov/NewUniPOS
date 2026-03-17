@@ -6,7 +6,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { authPos, setLoginData } from "../../redux/Slices/LoginSlice";
 import { toast } from "sonner";
 import apiConfig from "../../utils/apiConfig";
-import { isPaymentExpired } from "../../utils/dateHelpers";
+import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
@@ -109,7 +109,7 @@ const Settings = () => {
                 localStorage.setItem("authResult", JSON.stringify(data));
                 const profile = data?.data?.profile;
 
-                if (Number(profile?.is_pos_block) === 1) {
+                if (isPosBlocked(profile?.is_pos_block)) {
                     toast.dismiss(toastId);
                     navigate("/blocked");
                     return;

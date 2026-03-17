@@ -1,0 +1,11 @@
+---
+description: Yeni kod əlavə edərkən mövcud kodu silmə
+alwaysApply: true
+---
+
+# Mövcud kodu silmə
+
+- **Heç vaxt** istifadəçinin mövcud kodunu silmə və ya silərək əvəz etmə
+- Yeni funksionallıq əlavə edərkən yalnız əlavə et və ya dəyişdir — mövcud kodu saxlamaq üçün refaktor et
+- Refaktor zamanı funksionallığı saxla, yalnız struktur dəyişsin
+- Əgər bir şeyi "düzəltmək" üçün silmək lazımdırsa, əvvəl istifadəçidən təsdiq al

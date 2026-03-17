@@ -23,6 +23,9 @@ const isPaymentExpired = (nextPaymentDate) => {
   now.setHours(0, 0, 0, 0);
   return payDate < now;
 };
+
+const isPosBlocked = (val) =>
+  val === 1 || val === "1" || val === true || Number(val) === 1;
 const { getWaitersList } = require("../data/WaitersData");
 const { getTableGroups, getTables } = require("../data/TablesData");
 const {
@@ -155,17 +158,50 @@ const getLogin = async (req, res) => {
       }
     }
 
-    // Merge local metadata if it matches the current profile (to show correct logo etc)
+    // Merge local metadata (logo və s.) — is_pos_block və next_payment_date üçün ən məhdudiyyətli dəyər (Master və Slave eyni blok qaydalarına tabe)
     try {
       const storedProfile = await LoginModel.findOne({ where: { id: profile.id } });
       if (storedProfile && response.data && response.data.data && response.data.data.profile) {
+        const cloudProfile = response.data.data.profile;
+        const stored = storedProfile.toJSON();
+        const { is_pos_block: _sb, next_payment_date: _npd, ...storedRest } = stored;
+        const blockFromCloud = isPosBlocked(cloudProfile.is_pos_block);
+        const blockFromStored = isPosBlocked(stored.is_pos_block);
+        const cloudDate = parseDateOnly(cloudProfile.next_payment_date);
+        const storedDate = parseDateOnly(stored.next_payment_date);
+        const earlierDate = cloudDate && storedDate && cloudDate < storedDate
+          ? cloudProfile.next_payment_date
+          : (stored.next_payment_date ?? cloudProfile.next_payment_date);
         response.data.data.profile = {
-          ...response.data.data.profile,
-          ...storedProfile.toJSON()
+          ...cloudProfile,
+          ...storedRest,
+          is_pos_block: blockFromCloud || blockFromStored ? 1 : (cloudProfile.is_pos_block ?? stored.is_pos_block),
+          next_payment_date: earlierDate ?? cloudProfile.next_payment_date ?? stored.next_payment_date,
         };
       }
     } catch (dbError) {
       // Non-fatal
+    }
+
+    const finalProfile = response.data?.data?.profile;
+    const shouldBlock = isPosBlocked(finalProfile?.is_pos_block) || isPaymentExpired(finalProfile?.next_payment_date);
+    if (shouldBlock) {
+      const blockedProfile = { ...finalProfile, is_pos_block: 1 };
+      try {
+        const allowedFields = Object.keys(LoginModel.rawAttributes);
+        const toSave = {};
+        Object.keys(blockedProfile).forEach(key => {
+          if (allowedFields.includes(key)) toSave[key] = blockedProfile[key];
+        });
+        await LoginModel.upsert({ ...toSave, id: blockedProfile.id });
+      } catch (e) {
+        console.error("[LOGIN] Block state save error:", e.message);
+      }
+      return res.status(403).json({
+        message: "Müəssisə bloklanıb",
+        isBlocked: true,
+        data: { profile: blockedProfile },
+      });
     }
 
     res.status(200).json(response.data);
@@ -183,7 +219,7 @@ const getLogin = async (req, res) => {
                     isExpired = isPaymentExpired(p.next_payment_date);
                 }
                 
-                if (p.is_pos_block == 1 || isExpired) {
+                if (isPosBlocked(p.is_pos_block) || isExpired) {
                     console.log(`[LOGIN] Master is locally blocked. Rejecting login for terminal ${terminalId}`);
                     return res.status(403).json({
                         message: "Müəssisə bloklanıb",
