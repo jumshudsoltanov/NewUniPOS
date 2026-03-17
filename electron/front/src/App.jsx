@@ -27,6 +27,7 @@ import CheckOver from "./components/CheckOver/CheckOver";
 import Settings from "./components/Settings/Settings";
 import BlockPage from "./components/BlockPage/BlockPage";
 import { initNetwork, getSocket, onSocketStatusChange } from "./utils/apiConfig";
+import { isPaymentExpired } from "./utils/dateHelpers";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
 import UpdateNotification from "./components/UpdateNotification/UpdateNotification";
@@ -243,9 +244,7 @@ function AppContent() {
 
             const npd = profile?.next_payment_date;
             if (npd) {
-              const now = new Date(); now.setHours(0, 0, 0, 0);
-              const payDate = new Date(npd); payDate.setHours(0, 0, 0, 0);
-              if (payDate < now) {
+              if (isPaymentExpired(npd)) {
                 navigate("/blocked");
                 return;
               }
@@ -261,6 +260,7 @@ function AppContent() {
             
             if (err?.data?.isBlocked) {
                 localStorage.setItem("authResult", JSON.stringify(err.data));
+                dispatch(setLoginData(err.data));
                 navigate("/blocked");
                 return;
             }

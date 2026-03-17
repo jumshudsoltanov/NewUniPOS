@@ -508,24 +508,48 @@ const Check = () => {
     if (resultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const profileId = loginedProfileData?.data?.profile?.id;
+      const isMasterSlaveActive = loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1;
 
-      try {
-        await dispatch(deleteCheck({
-          orderId: currentOrder.uuid,
-          reason: 0,
-          reasonText: "Masa boş olduğu üçün silindi",
-          waiterName,
-          forceDestroy: !hadOrderItems,
-        })).unwrap();
+      const tryDelete = async () => {
+        try {
+          await dispatch(deleteCheck({
+            orderId: currentOrder.uuid,
+            reason: 0,
+            reasonText: "Masa boş olduğu üçün silindi",
+            waiterName,
+            forceDestroy: !hadOrderItems,
+          })).unwrap();
 
-        if (profileId) {
-          dispatch(getTableGroups(profileId));
-          dispatch(getActiveOrders({ profileId }));
+          if (profileId) {
+            dispatch(getTableGroups(profileId));
+            dispatch(getActiveOrders({ profileId }));
+          }
+          toast.info("Masa boş olduğu üçün silindi");
+        } catch (error) {
+          console.error("Auto-delete error:", error);
         }
-        toast.info("Masa boş olduğu üçün silindi");
-      } catch (error) {
-        console.error("Auto-delete error:", error);
+      };
+
+      if (isMasterSlaveActive) {
+        const socket = getSocket();
+        if (socket) {
+          socket.emit("check_can_delete", { orderId: currentOrder.uuid }, (canDelete) => {
+            if (canDelete) {
+              tryDelete().then(() => {
+                if (targetPath === -1) goTables();
+                else navigate(targetPath);
+              });
+            } else {
+              toast.info("Masa başqa terminalda açıq olduğu üçün silinmədi.");
+              if (targetPath === -1) goTables();
+              else navigate(targetPath);
+            }
+          });
+          return;
+        }
       }
+
+      await tryDelete();
     }
 
     if (targetPath === -1) {
@@ -677,6 +701,21 @@ const Check = () => {
 
 
 
+
+  // Master-Slave: çekə giriş qeyd et — hər iki terminal girə bilər, məhsullar table_updated ilə dinamik yenilənir
+  useEffect(() => {
+    const isMasterSlaveActive = loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1;
+    if (!isMasterSlaveActive || !id) return;
+
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.emit("check_opened", { orderId: id });
+
+    return () => {
+      socket.emit("check_closed", { orderId: id });
+    };
+  }, [id, loginedProfileData]);
 
   // Listen for order_deleted / order_closed / table_updated from other terminals
   useEffect(() => {

@@ -268,6 +268,41 @@
     to { transform: rotate(360deg); }
 }
 
+.net-overlay__tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.net-overlay__tab {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.net-overlay__tab:hover {
+    color: #053796;
+}
+
+.net-overlay__tab.active {
+    color: #053796;
+    border-bottom-color: #053796;
+}
+
+.net-overlay__status-content {
+    margin-bottom: 20px;
+}
+
 .net-overlay__footer {
     margin-top: 28px;
     padding-top: 24px;
@@ -297,25 +332,31 @@
 .net-overlay__exit {
     display: block;
     width: 100%;
-    margin-top: 20px;
-    padding: 12px;
-    background: transparent;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    color: #64748b;
-    font-size: 14px;
-    font-weight: 500;
+    margin-top: 24px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #053796 0%, #042d75 100%);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.3);
+    transition: all 0.2s ease;
 }
 
 .net-overlay__exit:hover {
-    background: #fef2f2;
-    color: #dc2626;
-    border-color: #fecaca;
+    background: linear-gradient(135deg, #042d75 0%, #032055 100%);
+    box-shadow: 0 4px 12px rgba(5, 55, 150, 0.4);
+    transform: translateY(-1px);
+}
+
+.net-overlay__exit:active {
+    transform: translateY(0);
 }
 
 .net-overlay__exit i {
-    margin-right: 6px;
+    margin-right: 8px;
 }
 
 @media (max-width: 600px) {

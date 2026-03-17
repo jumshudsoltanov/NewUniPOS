@@ -12,6 +12,7 @@ const NetworkOverlay = () => {
     const [staticIpInput, setStaticIpInput] = useState("");
     const [isReconnecting, setIsReconnecting] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
+    const [activeTab, setActiveTab] = useState("status");
     const hasAutoScanned = useRef(false);
 
     useEffect(() => {
@@ -80,7 +81,10 @@ const NetworkOverlay = () => {
     }, [isDisconnected, showFromSettings]);
 
     useEffect(() => {
-        const handler = () => setShowFromSettings(true);
+        const handler = () => {
+            setShowFromSettings(true);
+            setActiveTab("ayarlar");
+        };
         window.addEventListener("openMasterSlaveSettings", handler);
         return () => window.removeEventListener("openMasterSlaveSettings", handler);
     }, []);
@@ -191,11 +195,23 @@ const NetworkOverlay = () => {
                     )}
                 </div>
 
-                <div className="net-overlay__settings">
-                    <div className="net-overlay__settings-title">
+                <div className="net-overlay__tabs">
+                    <button className={`net-overlay__tab ${activeTab === "status" ? "active" : ""}`} onClick={() => setActiveTab("status")}>
+                        <i className="bi bi-wifi" /> Status
+                    </button>
+                    <button className={`net-overlay__tab ${activeTab === "ayarlar" ? "active" : ""}`} onClick={() => setActiveTab("ayarlar")}>
                         <i className="bi bi-gear" /> Ayarlar
-                    </div>
+                    </button>
+                </div>
 
+                {activeTab === "status" && (
+                <div className="net-overlay__status-content">
+                    <p className="net-overlay__hint">Ayarlar tabına keçərək Master IP qeyd edə və ya Avto qoşul istifadə edə bilərsiniz.</p>
+                </div>
+                )}
+
+                {activeTab === "ayarlar" && (
+                <div className="net-overlay__settings">
                     <div className="net-overlay__settings-body">
                         <div className="net-overlay__setting-row">
                             <label className="net-overlay__label">Statik Master IP</label>
@@ -241,6 +257,7 @@ const NetworkOverlay = () => {
                         </button>
                     </div>
                 </div>
+                )}
 
                 <div className="net-overlay__footer">
                     <div className="net-overlay__ips">

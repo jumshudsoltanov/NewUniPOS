@@ -7,6 +7,9 @@ let broadcaster = null;
 let probeListener = null;
 let isBroadcasting = false;
 
+// orderId -> Set<socketId>: hansı terminallar çekə açıqdır (Master-Slave: dinamik göstərmə + avtomatik silmə üçün)
+const openChecksMap = new Map();
+
 // Returns ALL active non-virtual IPv4 interfaces (LAN + WiFi, etc.)
 const getAllNetworkInterfaces = () => {
     const interfaces = os.networkInterfaces();
@@ -133,8 +136,44 @@ const initMasterServer = (server, isBroadcastingActive = true) => {
             socket.broadcast.emit("order_closed", data);
         });
 
+        // Master-Slave: çekə giriş — hər iki terminal girə bilər, məhsullar table_updated ilə dinamik yenilənir
+        socket.on("check_opened", (data) => {
+            const orderId = data?.orderId;
+            if (!orderId) return;
+            let set = openChecksMap.get(orderId);
+            if (!set) {
+                set = new Set();
+                openChecksMap.set(orderId, set);
+            }
+            set.add(socket.id);
+        });
+
+        socket.on("check_closed", (data) => {
+            const orderId = data?.orderId;
+            if (!orderId) return;
+            const set = openChecksMap.get(orderId);
+            if (set) {
+                set.delete(socket.id);
+                if (set.size === 0) openChecksMap.delete(orderId);
+            }
+        });
+
+        // Avtomatik silmə: yalnız başqa terminal bu çekə açıq deyilsə silinə bilər
+        socket.on("check_can_delete", (data, cb) => {
+            const orderId = data?.orderId;
+            if (!orderId || typeof cb !== "function") return cb?.(false);
+            const set = openChecksMap.get(orderId);
+            if (!set || set.size === 0) return cb(true);
+            if (set.size === 1 && set.has(socket.id)) return cb(true);
+            cb(false);
+        });
+
         socket.on("disconnect", (reason) => {
             console.log(`❌ Terminal bağlantısı kəsildi (${reason}): ${socket.id}`);
+            for (const [oid, set] of openChecksMap.entries()) {
+                set.delete(socket.id);
+                if (set.size === 0) openChecksMap.delete(oid);
+            }
         });
     });
 

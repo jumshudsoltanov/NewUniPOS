@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
-import { authPos } from "../../redux/Slices/LoginSlice";
+import { authPos, setLoginData } from "../../redux/Slices/LoginSlice";
 import { toast } from "sonner";
 import apiConfig from "../../utils/apiConfig";
+import { isPaymentExpired } from "../../utils/dateHelpers";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
@@ -115,11 +116,7 @@ const Settings = () => {
                 }
 
                 if (profile?.next_payment_date) {
-                    const now = new Date();
-                    now.setHours(0, 0, 0, 0);
-                    const paymentDate = new Date(profile.next_payment_date);
-                    paymentDate.setHours(0, 0, 0, 0);
-                    if (paymentDate < now) {
+                    if (isPaymentExpired(profile.next_payment_date)) {
                         toast.dismiss(toastId);
                         navigate("/blocked");
                         return;
@@ -134,6 +131,7 @@ const Settings = () => {
             if (error?.data?.isBlocked) {
                 toast.dismiss(toastId);
                 localStorage.setItem("authResult", JSON.stringify(error.data));
+                dispatch(setLoginData(error.data));
                 navigate("/blocked");
                 return;
             }

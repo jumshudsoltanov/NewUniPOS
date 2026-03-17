@@ -10,7 +10,7 @@ import React, { useState, useCallback, useEffect, useRef } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Navigate } from "react-router-dom";
-import { authPos } from "../../redux/Slices/LoginSlice";
+import { authPos, setLoginData } from "../../redux/Slices/LoginSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
@@ -206,6 +206,7 @@ const Login = () => {
       
       if (err?.data?.isBlocked) {
         localStorage.setItem("authResult", JSON.stringify(err.data));
+        dispatch(setLoginData(err.data));
         navigate("/blocked");
         return;
       }

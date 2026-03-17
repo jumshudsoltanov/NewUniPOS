@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { authPos } from "../../redux/Slices/LoginSlice";
+import { authPos, setLoginData } from "../../redux/Slices/LoginSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
 import { toast } from "sonner";
 import DefaultLogo from "../../assets/images/unipos_logo.png";
+import { isPaymentExpired } from "../../utils/dateHelpers";
 import "./BlockPage.css";
 
 const formatDate = (dateStr) => {
@@ -28,8 +29,16 @@ const BlockPage = () => {
     const navigate = useNavigate();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
-    const profileInfo = loginedProfileData?.data?.profile || {};
-    const terminalInfo = loginedProfileData?.data?.terminal || {};
+    const authResultFallback = (() => {
+        try {
+            const s = localStorage.getItem("authResult");
+            return s ? JSON.parse(s) : null;
+        } catch { return null; }
+    })();
+    const activeProfileData = loginedProfileData?.data ? loginedProfileData : authResultFallback;
+
+    const profileInfo = activeProfileData?.data?.profile || {};
+    const terminalInfo = activeProfileData?.data?.terminal || {};
     const nextPaymentDate = profileInfo?.next_payment_date;
     const isPosBlock = Number(profileInfo?.is_pos_block) === 1;
     const restaurantName = profileInfo?.restaurant_name || profileInfo?.username || "";
@@ -72,12 +81,7 @@ const BlockPage = () => {
             }
 
             if (profile?.next_payment_date) {
-                const now = new Date();
-                now.setHours(0, 0, 0, 0);
-                const paymentDate = new Date(profile.next_payment_date);
-                paymentDate.setHours(0, 0, 0, 0);
-
-                if (paymentDate < now) {
+                if (isPaymentExpired(profile.next_payment_date)) {
                     toast.error("Abunəlik hələ yenilənməyib.");
                     return;
                 }
@@ -95,7 +99,13 @@ const BlockPage = () => {
             navigate("/pin");
         } catch (error) {
             console.error("Refresh error:", error);
-            toast.error("Yeniləmə zamanı xəta baş verdi");
+            if (error?.data?.isBlocked) {
+                localStorage.setItem("authResult", JSON.stringify(error.data));
+                dispatch(setLoginData(error.data));
+                toast.error("POS hələ də bloklanmış vəziyyətdədir.");
+            } else {
+                toast.error(error?.data?.message || "Yeniləmə zamanı xəta baş verdi");
+            }
         } finally {
             setIsRefreshing(false);
         }

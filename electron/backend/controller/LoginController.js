@@ -1,5 +1,28 @@
 const axios = require("axios");
 const LoginModel = require("../model/LoginModel");
+
+const parseDateOnly = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    const str = String(dateStr).split("T")[0].trim();
+    const parts = str.split(/[-/.]/).map((p) => parseInt(p, 10));
+    if (parts.length >= 3 && !parts.some(isNaN)) {
+      return new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+    }
+    return new Date(dateStr);
+  } catch {
+    return null;
+  }
+};
+
+const isPaymentExpired = (nextPaymentDate) => {
+  if (!nextPaymentDate) return false;
+  const payDate = parseDateOnly(nextPaymentDate);
+  if (!payDate || isNaN(payDate.getTime())) return false;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return payDate < now;
+};
 const { getWaitersList } = require("../data/WaitersData");
 const { getTableGroups, getTables } = require("../data/TablesData");
 const {
@@ -157,9 +180,7 @@ const getLogin = async (req, res) => {
                 const p = storedProfile.toJSON();
                 let isExpired = false;
                 if (p.next_payment_date) {
-                    const now = new Date(); now.setHours(0, 0, 0, 0);
-                    const payDate = new Date(p.next_payment_date); payDate.setHours(0, 0, 0, 0);
-                    if (payDate < now) isExpired = true;
+                    isExpired = isPaymentExpired(p.next_payment_date);
                 }
                 
                 if (p.is_pos_block == 1 || isExpired) {
