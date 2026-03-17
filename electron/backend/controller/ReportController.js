@@ -115,7 +115,8 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
             },
             {
                 model: OrdersItemsModel,
-                as: 'orders_items'
+                as: 'orders_items',
+                include: [{ model: ProductsModel, as: 'product', required: false }]
             }
         ]
     });
@@ -208,11 +209,25 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
             }
         }
 
-        // Calculate Gifts within these orders
+        // Calculate Gifts within these orders (is_gift: 1, "1", true)
+        // İkram üçün qiymət 0 ola bilər — nominal dəyər: original_price, product.price və ya item.price
         if (order.orders_items) {
             order.orders_items.forEach(item => {
-                if (item.is_gift === 1) {
-                    summary.total_gift += parseFloat(item.count || 0) * parseFloat(item.price || 0);
+                const isGift = Number(item.is_gift) === 1 || item.is_gift === true;
+                if (isGift) {
+                    const itemCount = parseFloat(item.count || 0);
+                    const itemPrice = parseFloat(item.price || 0);
+                    const origPrice = parseFloat(item.original_price || 0);
+                    const productPrice = parseFloat(item.product?.price || 0);
+                    const nominalPrice = itemPrice > 0 ? itemPrice : (origPrice > 0 ? origPrice : productPrice);
+
+                    let modifiersTotal = 0;
+                    try {
+                        const mods = Array.isArray(item.modifiers) ? item.modifiers : (typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : []);
+                        modifiersTotal = mods.reduce((s, m) => s + (parseFloat(m.price || 0) * parseFloat(m.count || 1)), 0);
+                    } catch (_) {}
+
+                    summary.total_gift += itemCount * (nominalPrice + modifiersTotal);
                 }
             });
         }
@@ -338,20 +353,39 @@ const getProductsReport = async (whereClause) => {
         if (order.orders_items) {
             order.orders_items.forEach(item => {
                 const productId = item.product_id;
+                const isGift = Number(item.is_gift) === 1 || item.is_gift === true;
+                const itemCount = parseFloat(item.count || 0);
+                const itemPrice = parseFloat(item.price || 0);
+                const nominalPrice = itemPrice > 0 ? itemPrice : parseFloat(item.original_price || 0);
+
                 if (!productsMap[productId]) {
                     productsMap[productId] = {
                         name: item.product?.name || 'Naməlum',
                         quantity: 0,
-                        total: 0
+                        quantity_gift: 0,
+                        total: 0,
+                        total_gift: 0
                     };
                 }
-                productsMap[productId].quantity += parseFloat(item.count || 0);
-                productsMap[productId].total += parseFloat(item.count || 0) * parseFloat(item.price || 0);
+                productsMap[productId].quantity += itemCount;
+                if (isGift) {
+                    productsMap[productId].quantity_gift += itemCount;
+                    productsMap[productId].total_gift += itemCount * nominalPrice;
+                } else {
+                    productsMap[productId].total += itemCount * itemPrice;
+                }
             });
         }
     });
 
-    return Object.values(productsMap).sort((a, b) => b.total - a.total);
+    return Object.values(productsMap).map(p => ({
+        name: p.name,
+        quantity: p.quantity,
+        quantity_gift: p.quantity_gift || 0,
+        total: (p.total || 0) + (p.total_gift || 0),
+        total_sold: p.total || 0,
+        total_gift: p.total_gift || 0
+    })).sort((a, b) => b.total - a.total);
 };
 
 const getEmployeeReport = async (whereClause) => {

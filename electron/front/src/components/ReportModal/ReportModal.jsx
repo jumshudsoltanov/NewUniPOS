@@ -260,10 +260,8 @@ const ReportModal = ({ show, onClose }) => {
         return (
             <div className="report-view premium-receipt">
                 <ReportHeader />
-
-                {type === "simple" ? (
-                    <SalesSummary />
-                ) : (
+                <SalesSummary />
+                {type !== "simple" && (
                     <div className="report-details-section">
                         <div className="section-title mb-4">
                             {reportTypes.find(t => t.id === type)?.name}
@@ -281,11 +279,21 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table">
                         <thead>
-                            <tr><th>Məhsul</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                            <tr>
+                                <th>Məhsul</th>
+                                <th className="text-center">Sayı</th>
+                                <th className="text-center">İkram</th>
+                                <th className="text-end">Məbləğ</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.quantity}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                                <tr key={i}>
+                                    <td>{item.name}</td>
+                                    <td className="text-center">{item.quantity}</td>
+                                    <td className="text-center">{item.quantity_gift || 0}</td>
+                                    <td className="text-end">{Number(item.total || 0).toFixed(2)} ₼</td>
+                                </tr>
                             ))}
                         </tbody>
                     </Table>

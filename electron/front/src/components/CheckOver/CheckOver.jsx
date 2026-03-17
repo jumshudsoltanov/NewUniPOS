@@ -43,12 +43,7 @@ const CheckOver = () => {
     const { books } = useSelector((state) => state.BooksSlice);
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
-    // Default taxPrint to true if taxes are configured
-    useEffect(() => {
-        if ((loginedProfileData?.data?.taxes?.length || 0) > 0) {
-            setTaxPrint(true);
-        }
-    }, [loginedProfileData?.data?.taxes?.length]);
+    // taxPrint default false (sonulu) - yalnız ödəniş metodu seçəndə is_tax varsa yansın
     const { paymentMethods } = useSelector((state) => state.PaymentMethodsSlice);
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
     const { customers } = useSelector((state) => state.CustomersSlice);
@@ -144,11 +139,19 @@ const CheckOver = () => {
         };
     }, [currentOrder]);
 
+    // Əgər əvvəlcədən çekdə vergi qeyd olunubsa, taxPrint yansın
     useEffect(() => {
         if (currentOrder && Number(currentOrder.is_tax) > 0) {
             setTaxPrint(true);
         }
     }, [currentOrder?.is_tax]);
+
+    // Ödəniş metodu seçəndə: əgər seçilənlər arasında is_tax olan varsa, vergi checkbox yansın
+    useEffect(() => {
+        if (viewMode === "PAYMENT" && selectedMethods.some(m => Number(m.is_tax) === 1)) {
+            setTaxPrint(true);
+        }
+    }, [viewMode, selectedMethods]);
 
     const handleMethodSelect = (method) => {
         const isAlreadySelected = selectedMethods.find(m => m.id === method.id);
@@ -638,21 +641,6 @@ const CheckOver = () => {
                                         onChange={(e) => setPrintCheck(e.target.checked)}
                                     />
                                 </div>
-                                {loginedProfileData?.data?.taxes?.length > 0 && (
-                                    <div
-                                        className="print-toggle-section mt-3 pt-3 d-flex justify-content-between align-items-center clickable-row"
-                                        onClick={() => setTaxPrint(!taxPrint)}
-                                    >
-                                        <span className="toggle-label">Vergi ilə çap</span>
-                                        <Form.Check
-                                            type="switch"
-                                            id="tax-print-switch-unpaid"
-                                            className="large-switch"
-                                            checked={taxPrint}
-                                            onChange={(e) => setTaxPrint(e.target.checked)}
-                                        />
-                                    </div>
-                                )}
 
                                 <div className="action-buttons-section mt-auto">
                                     <button className="back-to-payment-btn" onClick={() => setViewMode("PAYMENT")}>
