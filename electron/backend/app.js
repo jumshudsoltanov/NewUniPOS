@@ -112,7 +112,7 @@ let creaedtToTabel = async () => {
       as: "product",
       constraints: false,
     });
-    
+
     OrdersItemsModel.belongsTo(TagsModel, {
       foreignKey: "is_delete_reason_id",
       as: "delete_reason",
@@ -192,12 +192,18 @@ let creaedtToTabel = async () => {
     try {
       await db.sequelize.sync({ alter: true });
     } catch (syncErr) {
-      console.warn("[Sync] sync({ alter: true }) xətası (davam edirik):", syncErr.message);
+      console.warn(
+        "[Sync] sync({ alter: true }) xətası (davam edirik):",
+        syncErr.message,
+      );
     }
 
     console.log("Created Table Success!");
   } catch (error) {
-    console.error("Table Created Error:", error ? (error.message || error.toString()) : "Naməlum xəta");
+    console.error(
+      "Table Created Error:",
+      error ? error.message || error.toString() : "Naməlum xəta",
+    );
   }
 
   // Migration həmişə işləsin — sync xəta atsın, atmasın
@@ -211,7 +217,9 @@ let creaedtToTabel = async () => {
           const colName = attr.field || key;
           if (!tableDesc[colName]) {
             await qi.addColumn(model.getTableName(), colName, attr);
-            console.log(`[Schema] ${model.getTableName()}.${colName} əlavə edildi`);
+            console.log(
+              `[Schema] ${model.getTableName()}.${colName} əlavə edildi`,
+            );
           }
         }
       } catch (_) {}
@@ -243,8 +251,8 @@ const InsertData = async (profileId) => {
       console.warn(`InsertData ${task.name} failed:`, error.message);
     }
   }
-  MaxCheckService.fetchAndSyncOnStartup(profileId).catch(e =>
-    console.warn("[MAX_CHECK] Startup sync error:", e.message)
+  MaxCheckService.fetchAndSyncOnStartup(profileId).catch((e) =>
+    console.warn("[MAX_CHECK] Startup sync error:", e.message),
   );
 };
 
@@ -254,9 +262,14 @@ const server = app.listen(55667, "0.0.0.0", () => {
 
 server.on("error", (e) => {
   if (e.code === "EADDRINUSE") {
-    console.log("Port 55667 is already in use. Running as a Slave instance on the same machine without a local API port.");
+    console.log(
+      "Port 55667 is already in use. Running as a Slave instance on the same machine without a local API port.",
+    );
   } else {
-    console.error("Express server error:", e ? (e.message || e.toString()) : "Naməlum xəta");
+    console.error(
+      "Express server error:",
+      e ? e.message || e.toString() : "Naməlum xəta",
+    );
   }
 });
 
@@ -266,20 +279,32 @@ global.isMasterNode = false;
 const checkTerminalRole = async (targetServer) => {
   try {
     const profile = await LoginModel.findOne();
-    console.log("DEBUG: Checking Terminal Role. is_master:", profile ? profile.is_master : "NULL");
+    console.log(
+      "DEBUG: Checking Terminal Role. is_master:",
+      profile ? profile.is_master : "NULL",
+    );
 
     // ALWAYS start the local Socket.io server so the Customer Display can connect locally
     const { initMasterServer } = require("./socket/MasterServer");
 
-    if (profile && (Number(profile.is_master) === 1 || profile.is_master === true)) {
+    if (
+      profile &&
+      (Number(profile.is_master) === 1 || profile.is_master === true)
+    ) {
       global.isMasterNode = true;
-      console.log("DEBUG: Terminal role CONFIRMED as MASTER. global.isMasterNode set to TRUE.");
+      console.log(
+        "DEBUG: Terminal role CONFIRMED as MASTER. global.isMasterNode set to TRUE.",
+      );
 
       if (profile.is_master_slave_active === 1) {
-        console.log("Master-Slave mode is active. Starting MasterServer with UDP Broadcasting...");
+        console.log(
+          "Master-Slave mode is active. Starting MasterServer with UDP Broadcasting...",
+        );
         initMasterServer(targetServer || server, true);
       } else {
-        console.log("Standalone Master mode. Starting local Socket Server only.");
+        console.log(
+          "Standalone Master mode. Starting local Socket Server only.",
+        );
         initMasterServer(targetServer || server, false);
       }
 
@@ -287,11 +312,17 @@ const checkTerminalRole = async (targetServer) => {
       InsertData(profile.id);
       // Açıq çekləri dərhal admin-ə sync et
       const SyncService = require("./services/SyncService");
-      SyncService.syncPendingOrders().catch(err => console.warn("[SYNC_STARTUP]", err?.message));
+      SyncService.syncPendingOrders().catch((err) =>
+        console.warn("[SYNC_STARTUP]", err?.message),
+      );
     } else {
       global.isMasterNode = false;
-      console.log(`DEBUG: Terminal role is SLAVE or NOT MASTER. profile exist: ${!!profile}, is_master: ${profile?.is_master}. global.isMasterNode set to FALSE.`);
-      console.log("Terminal is NOT Master. Running as Slave. Starting local Socket Server only.");
+      console.log(
+        `DEBUG: Terminal role is SLAVE or NOT MASTER. profile exist: ${!!profile}, is_master: ${profile?.is_master}. global.isMasterNode set to FALSE.`,
+      );
+      console.log(
+        "Terminal is NOT Master. Running as Slave. Starting local Socket Server only.",
+      );
       initMasterServer(targetServer || server, false);
 
       if (profile?.id) {
@@ -299,7 +330,10 @@ const checkTerminalRole = async (targetServer) => {
       }
     }
   } catch (err) {
-    console.error("Error in checkTerminalRole:", err ? (err.message || err.toString()) : "Naməlum xəta");
+    console.error(
+      "Error in checkTerminalRole:",
+      err ? err.message || err.toString() : "Naməlum xəta",
+    );
   }
 };
 
@@ -309,7 +343,9 @@ ipcMain.handle("re-evaluate-role", async () => {
   await checkTerminalRole(server);
   if (global.isMasterNode) {
     const SyncService = require("./services/SyncService");
-    SyncService.syncPendingOrders().catch(err => console.warn("[SYNC_RE_EVAL]", err?.message));
+    SyncService.syncPendingOrders().catch((err) =>
+      console.warn("[SYNC_RE_EVAL]", err?.message),
+    );
   }
   return true;
 });
@@ -337,12 +373,18 @@ app.get("/api/discover", (req, res) => {
 app.post("/api/sync", async (req, res) => {
   try {
     const { profileId } = req.body;
-    console.log("Manual sync triggered...", profileId ? `for profile ${profileId}` : "(no profileId provided)");
+    console.log(
+      "Manual sync triggered...",
+      profileId ? `for profile ${profileId}` : "(no profileId provided)",
+    );
     await InsertData(profileId);
     console.log("Manual sync completed.");
     res.status(200).json({ message: "Sync completed" });
   } catch (error) {
-    console.error("Sync error:", error ? (error.message || error.toString()) : "Naməlum xəta");
+    console.error(
+      "Sync error:",
+      error ? error.message || error.toString() : "Naməlum xəta",
+    );
     res.status(500).json({ message: "Sync failed", error: error.message });
   }
 });

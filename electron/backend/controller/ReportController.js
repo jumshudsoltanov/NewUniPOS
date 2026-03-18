@@ -543,14 +543,21 @@ const getTablesReport = async (whereClause) => {
             tableMap[tableName] = {
                 name: tableName,
                 checks_count: 0,
-                total: 0
+                total: 0,
+                timer_total: 0
             };
         }
         tableMap[tableName].checks_count += 1;
         tableMap[tableName].total += parseFloat(order.total || 0);
+        const timerCharge = parseFloat(order.rate_per_minute || 0);
+        if (timerCharge > 0) {
+            tableMap[tableName].timer_total += timerCharge;
+        }
     });
 
-    return Object.values(tableMap).sort((a, b) => b.total - a.total);
+    const rows = Object.values(tableMap).sort((a, b) => b.total - a.total);
+    const totalTimer = rows.reduce((sum, r) => sum + (r.timer_total || 0), 0);
+    return { rows, totalTimer };
 };
 
 const getSaleMethodReport = async (whereClause) => {

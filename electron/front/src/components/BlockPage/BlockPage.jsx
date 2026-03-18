@@ -64,9 +64,18 @@ const BlockPage = () => {
     const handleRefresh = async () => {
         setIsRefreshing(true);
         try {
-            const storageData = JSON.parse(localStorage.getItem("profile"));
+            let storageData = JSON.parse(localStorage.getItem("profile"));
+            if (!storageData) {
+                const authProfiles = JSON.parse(localStorage.getItem("authProfiles") || "[]");
+                const currentProfileId = activeProfileData?.data?.profile?.id;
+                const matched = authProfiles.find(
+                    (p) => p.authResult?.data?.profile?.id === currentProfileId
+                );
+                storageData = matched?.profile;
+            }
             if (!storageData) {
                 toast.error("Profil məlumatı tapılmadı");
+                setIsRefreshing(false);
                 return;
             }
 

@@ -220,6 +220,7 @@ const Login = () => {
       console.error("Manual login failed:", err);
       
       if (err?.data?.isBlocked) {
+        localStorage.setItem("profile", JSON.stringify(profileData));
         localStorage.setItem("authResult", JSON.stringify(err.data));
         dispatch(setLoginData(err.data));
         navigate("/blocked");

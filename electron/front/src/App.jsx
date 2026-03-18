@@ -209,17 +209,18 @@ function AppContent() {
         const isMaster = terminalData.is_master === 1 || profileData.is_master === 1;
         const isMasterSlaveActive = terminalData.is_master_slave_active === 1 || profileData.is_master_slave_active === 1;
 
-        if (!storageData || (isMasterSlaveActive && !isMaster)) {
-          // Slave: statik IP varsa birbaşa qoşul (skan firewall-da uğursuz ola bilər)
+        // Master-slave 0 olanda heç vaxt skan etmə — birbaşa lokal (tez açılış)
+        if (isMasterSlaveActive && !isMaster) {
+          // Slave rejimi: statik IP varsa birbaşa qoşul, yoxsa skan
           let directIp = null;
-          if (isMasterSlaveActive && !isMaster && window.electronAPI?.getStaticMasterIp) {
+          if (window.electronAPI?.getStaticMasterIp) {
             try {
               directIp = await window.electronAPI.getStaticMasterIp();
             } catch (e) {}
           }
-          await initNetwork(false, !isMasterSlaveActive, directIp || undefined);
+          await initNetwork(false, false, directIp || undefined);
         } else {
-          // Always enable socket for local master — needed for customer display broadcasts
+          // Master və ya standalone (master-slave sönülü) — lokal, skan yox
           await initNetwork(true, false);
         }
 

@@ -312,17 +312,37 @@ const ReportModal = ({ show, onClose }) => {
                     </Table>
                 );
             case "tables":
+                const tablesRows = Array.isArray(data) ? data : (data?.rows || []);
+                const tablesTotalTimer = data?.totalTimer ?? 0;
                 return (
-                    <Table responsive className="custom-report-table">
-                        <thead>
-                            <tr><th>Masa</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
-                        </thead>
-                        <tbody>
-                            {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
-                            ))}
-                        </tbody>
-                    </Table>
+                    <>
+                        <Table responsive className="custom-report-table">
+                            <thead>
+                                <tr>
+                                    <th>Masa</th>
+                                    <th className="text-center">Sayı</th>
+                                    <th className="text-end">Məbləğ</th>
+                                    <th className="text-end">Timer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {tablesRows.map((item, i) => (
+                                    <tr key={i}>
+                                        <td>{item.name}</td>
+                                        <td className="text-center">{item.checks_count}</td>
+                                        <td className="text-end">{Number(item.total || 0).toFixed(2)} ₼</td>
+                                        <td className="text-end">{(item.timer_total || 0) > 0 ? `${Number(item.timer_total).toFixed(2)} ₼` : '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </Table>
+                        {tablesTotalTimer > 0 && (
+                            <div className="receipt-row total-line mt-3">
+                                <span>Timer cəmi</span>
+                                <span className="value">{Number(tablesTotalTimer).toFixed(2)} ₼</span>
+                            </div>
+                        )}
+                    </>
                 );
             case "employee":
                 return (

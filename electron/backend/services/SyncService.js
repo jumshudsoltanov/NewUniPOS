@@ -204,9 +204,9 @@ class SyncService {
           plain.order_id = order.uuid;
           plain.profile_id = plain.profile_id || profileId;
           delete plain.kds_status;
-          delete plain.modifiers;
           delete plain.comment;
           delete plain.is_delete_reason_id;
+          // modifiers saxlanılır — admin panel modifier hesabatı üçün sync olunur
           return plain;
         }),
         logs: logs.map(log => {
