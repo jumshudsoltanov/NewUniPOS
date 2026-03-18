@@ -493,8 +493,9 @@ const onDeleteOrderItems = async (req, res) => {
     const deleteItems = await OrdersItemsModel.destroy({
       where: { order_id: orderId },
     });
+    // Boş çek = avtomatik silindi (status 3) — admin panelə sync olunsun
     const updateTotal = await OrdersModel.update(
-      { amount: 0, total: 0, is_synced: 0 },
+      { amount: 0, total: 0, status: 3, end_date: new Date(), is_synced: 0 },
       {
         where: { uuid: orderId },
       },
@@ -1727,13 +1728,16 @@ const onDeleteItemWithReason = async (req, res) => {
 
     const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
 
+    // Son məhsul silinəndə (boş çek) — avtomatik status=3, admin panelə sync olunsun
+    const isEmptyCheck = allItems.length === 0;
     await OrdersModel.update(
       {
         amount: total,
         total: netTotal,
         discount,
         service_charge: service,
-        is_synced: 0
+        is_synced: 0,
+        ...(isEmptyCheck ? { status: 3, end_date: new Date() } : {}),
       },
       { where: { uuid: orderId }, transaction }
     );
@@ -2473,8 +2477,17 @@ module.exports = {
       }
       const netTotal = Math.max(total - discount + service, parseFloat(ord?.deposit || 0)) + Number(ord?.delivery_fee || 0);
 
+      // Batch silmədən sonra boş çek qalarsa — avtomatik status=3
+      const isEmptyCheck = allItems.length === 0;
       await OrdersModel.update(
-        { amount: total, total: netTotal, discount, service_charge: service, is_synced: 0 },
+        {
+          amount: total,
+          total: netTotal,
+          discount,
+          service_charge: service,
+          is_synced: 0,
+          ...(isEmptyCheck ? { status: 3, end_date: new Date() } : {}),
+        },
         { where: { uuid: orderId }, transaction }
       );
 

@@ -199,7 +199,7 @@ const Check = () => {
       }
     }
 
-    // Priority 1: books (full order data, not updated by timer)
+    // Priority 1: books (full order data with orders_items)
     const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
     foundOrder = booksList.find((item) => item.uuid == id) || null;
 
@@ -211,7 +211,7 @@ const Check = () => {
       };
     }
 
-    // Priority 2: tableGroups fallback (may be updated by timer)
+    // Priority 2: tableGroups fallback (no orders_items — minimal data)
     if (foundTable) {
       const orderInTable = foundTable.orders?.find((o) => o.uuid == id);
       if (orderInTable) {
@@ -496,10 +496,14 @@ const Check = () => {
 
   async function handleAutoSaveAndExit(targetPath) {
     const resultingItemCount = (currentOrder?.orders_items?.length || 0) - (pendingDeletions?.length || 0) + (products?.length || 0);
+    const hourlyPrice = Number(currentTable?.hourly_price || currentOrder?.table?.hourly_price || 0);
+    const profileHasTimer = Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1;
+    const hasTimerOnTable = hourlyPrice > 0 && profileHasTimer;
     const isTimerActiveOrHasBalance =
-      currentOrder?.is_timer_status === 1 ||
-      Number(currentOrder?.rate_per_minute || 0) > 0 ||
-      (currentOrder?.is_timer_clock && currentOrder?.is_timer_clock !== "00:00:00");
+      hasTimerOnTable &&
+      (currentOrder?.is_timer_status === 1 ||
+        Number(currentOrder?.rate_per_minute || 0) > 0 ||
+        (currentOrder?.is_timer_clock && currentOrder?.is_timer_clock !== "00:00:00"));
 
     if (products.length > 0 || pendingDeletions.length > 0) {
       await handleSendOrders();
@@ -718,6 +722,11 @@ const Check = () => {
   }, [id, loginedProfileData]);
 
   // Listen for order_deleted / order_closed / table_updated from other terminals
+  const mountTimeRef = useRef(Date.now());
+  useEffect(() => {
+    mountTimeRef.current = Date.now();
+  }, [id]);
+
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
@@ -738,9 +747,10 @@ const Check = () => {
 
     const handleTableUpdated = () => {
       const profileId = loginedProfileData?.data?.profile?.id;
-      if (profileId) {
-        dispatch(getActiveOrders({ profileId }));
-      }
+      if (!profileId) return;
+      const elapsed = Date.now() - mountTimeRef.current;
+      if (elapsed < 400) return;
+      dispatch(getActiveOrders({ profileId }));
     };
 
     socket.on("order_deleted", handleOrderDeleted);
@@ -1177,7 +1187,7 @@ const Check = () => {
                   </div>
                 )}
 
-                {(Number(currentTable?.hourly_price || currentOrder?.table?.hourly_price || 0) > 0) && (
+                {(Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 && Number(currentTable?.hourly_price || currentOrder?.table?.hourly_price || 0) > 0) && (
                   <div
                     className="sidebar-icon timer-button"
                     onClick={() => setShowTimerModal(true)}

@@ -388,7 +388,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               <span>{calcTotal.depositAmount} ₼</span>
             </div>
           )}
-          {(isTimerActive || Number(table?.hourly_price || orders?.table?.hourly_price || 0) > 0) && (
+          {(Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 && Number(table?.hourly_price || orders?.table?.hourly_price || 0) > 0) && (
             <div className="timer-detailed-summary mt-2 pt-2" style={{ borderTop: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }}>
               <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
                 <span>Saatlıq qiymət:</span>
