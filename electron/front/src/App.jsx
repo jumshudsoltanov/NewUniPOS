@@ -5,7 +5,6 @@ import Pin from "./components/Pin/Pin";
 import Header from "./components/Header/Header";
 import Tables from "./components/Tables/Tables";
 import CustomerModal from "./components/Customers-Modal/CustomersModal";
-import Check from "./components/Check/Check";
 import Checks from "./components/Checks/Checks";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useRef, useState } from "react";
@@ -19,14 +18,20 @@ import Login from "./components/Login/Login";
 import Layout from "./components/Layout/Layout";
 import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 import Toastify from "./components/Toastify/Toastify";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { lazy, Suspense } from "react";
 import NetworkOverlay from "./components/NetworkOverlay/NetworkOverlay";
-import CustomerDisplay from './components/CustomerDisplay/CustomerDisplay';
-import KitchenDisplay from './components/Kitchen/KitchenDisplay';
-import CheckOver from "./components/CheckOver/CheckOver";
-import Settings from "./components/Settings/Settings";
 import BlockPage from "./components/BlockPage/BlockPage";
+
+import Check from "./components/Check/Check";
+import CheckOver from "./components/CheckOver/CheckOver";
+
+const CustomerDisplay = lazy(() => import('./components/CustomerDisplay/CustomerDisplay'));
+const KitchenDisplay = lazy(() => import('./components/Kitchen/KitchenDisplay'));
+import Settings from "./components/Settings/Settings";
 import { initNetwork, getSocket, onSocketStatusChange } from "./utils/apiConfig";
+import { preloadCheck } from "./utils/preloadCheck";
 import { isPaymentExpired, isPosBlocked } from "./utils/dateHelpers";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
@@ -107,10 +112,9 @@ function AppContent() {
     fetchSyncCount();
     checkSocket();
 
-    const connInt = setInterval(handleConnectivity, 5000);
-    const syncInt = setInterval(fetchSyncCount, 5000);
-    // Keep polling as fallback (every 3s instead of 5s)
-    const socketInt = setInterval(checkSocket, 3000);
+    const connInt = setInterval(handleConnectivity, 10000);
+    const syncInt = setInterval(fetchSyncCount, 8000);
+    const socketInt = setInterval(checkSocket, 5000);
     const timerInt = setInterval(() => {
       dispatch(tickBooks());
       dispatch(tickTables());
@@ -260,8 +264,10 @@ function AppContent() {
               }
             }
 
-            dispatch(fetchCustomersFromAdmin());
-            dispatch(fetchCustomerGroupsFromAdmin());
+            requestAnimationFrame(() => {
+              dispatch(fetchCustomersFromAdmin());
+              dispatch(fetchCustomerGroupsFromAdmin());
+            });
 
             const profile = data?.data?.profile;
             if (isPosBlocked(profile?.is_pos_block)) {
@@ -323,6 +329,13 @@ function AppContent() {
     initApp().then(() => setShowInitialLoading(false));
   }, [dispatch, navigate]);
 
+  // Preload Check komponenti — Pin/Tables/Checks açılanda arxa planda yüklə (yeni sifariş tez açılsın)
+  useEffect(() => {
+    if (showInitialLoading) return;
+    const t = setTimeout(preloadCheck, 800);
+    return () => clearTimeout(t);
+  }, [showInitialLoading]);
+
   if (showInitialLoading) {
     return (
       <>
@@ -351,14 +364,15 @@ function AppContent() {
   return (
     <>
       <Toastify />
+      <ToastContainer position="bottom-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick theme="light" style={{ zIndex: 99998 }} />
       <NetworkOverlay />
       <UpdateNotification />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/pin" element={<Pin />} />
         <Route path="/blocked" element={<BlockPage />} />
-        <Route path="/customer" element={<CustomerDisplay />} />
-        <Route path="/kitchen-display" element={<KitchenDisplay />} />
+        <Route path="/customer" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><CustomerDisplay /></Suspense>} />
+        <Route path="/kitchen-display" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><KitchenDisplay /></Suspense>} />
         <Route path="/kds" element={<KitchenDisplay />} />
         <Route path="/kitchen" element={<KitchenDisplay />} />
 

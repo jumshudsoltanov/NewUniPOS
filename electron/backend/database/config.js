@@ -12,8 +12,8 @@ const sequelize = new Sequelize(
     pool: {
       max: 20,
       min: 5,
-      acquire: 10000,
-      idle: 5000,
+      acquire: 30000,
+      idle: 10000,
     },
     retry: { max: 3 },
     timezone: "+04:00",

@@ -26,6 +26,7 @@ router.put("/printers/:id", PrintersController.updatePrinter);
 router.post("/printers/test-print", PrintersController.testPrint);
 router.patch("/profiles/master-printing", PrintersController.toggleMasterPrinting);
 router.patch("/profiles/customer-display", PrintersController.updateCustomerDisplaySettings);
+router.patch("/profiles/customer-receipt-auto", PrintersController.updateCustomerReceiptAutoPrint);
 router.patch("/profiles/kitchen-display", KitchenController.updateKitchenDisplaySettings);
 router.get("/kitchen/:profileId/orders", KitchenController.getKitchenOrders);
 router.patch("/kitchen/item/:itemId/status", KitchenController.updateKdsStatus);

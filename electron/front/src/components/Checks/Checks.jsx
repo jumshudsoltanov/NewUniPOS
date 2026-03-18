@@ -1,6 +1,6 @@
 import { Container, Modal, Form, Row, Col, Spinner } from "react-bootstrap";
 import "./Checks.css";
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getActiveOrders, getArchivedOrders } from "../../redux/Slices/BooksSlice";
 import { getWaitersList } from "../../redux/Slices/WaitersSlice";
@@ -8,6 +8,88 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useNavigate } from "react-router-dom";
 import CheckDetailModal from "./CheckDetailModal";
 import { toast } from "sonner";
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case 1: return "#053796";
+    case 2: return "#28a745";
+    case 3: return "#9E9E9E";
+    default: return "#9E9E9E";
+  }
+};
+
+const formatTime = (startDate) => {
+  if (!startDate) return "";
+  const diffMins = Math.floor((new Date() - new Date(startDate)) / 60000);
+  return diffMins < 60 ? `${diffMins} dəq` : `${Math.floor(diffMins / 60)} Saat`;
+};
+
+const CheckListItem = React.memo(({ check, onClick }) => (
+  <div className="checks-check-item" onClick={() => onClick(check)}>
+    <div className="checks-check-left">
+      <div className="checks-check-id-row">
+        <span className="checks-status-dot" style={{ backgroundColor: getStatusColor(check.status) }}></span>
+        <span className="checks-check-id">#{check.id}</span>
+        {check.status === 1 ? (
+          <span className="checks-check-badge checks-badge-open">Açıq</span>
+        ) : (
+          <span className={`checks-check-badge ${check.status === 3 ? "warning" : ""}`}>
+            {check.status === 2 ? "Bağlanmış" : "Silinib"}
+          </span>
+        )}
+        {check.sale_type && (
+          <span className={`checks-check-badge checks-badge-${check.sale_type}`}>
+            {check.sale_type === "dine_in"
+              ? "Restoranda"
+              : check.sale_type === "takeaway"
+                ? "Gəl götür"
+                : check.sale_type === "delivery"
+                  ? "Çatdırılma"
+                  : (check.sale_type?.charAt(0).toUpperCase() + check.sale_type?.slice(1))}
+          </span>
+        )}
+      </div>
+      <div className="checks-check-info">
+        <span className="checks-check-time">{formatTime(check.start_date)}</span>
+        <span className="checks-check-user">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z" />
+          </svg>
+          {check?.waiter?.name || "Naməlum"}
+        </span>
+        {(check.is_timer_status === 1 || Number(check.rate_per_minute || 0) > 0) && (
+          <span className="timer-pill ms-2" style={{
+            fontSize: '11px',
+            background: check.is_timer_status === 1 ? '#053796' : '#e2e8f0',
+            color: check.is_timer_status === 1 ? '#fff' : '#053796',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            fontWeight: '600',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            <i className={`bi bi-clock${check.is_timer_status === 1 ? '-fill' : ''}`}></i>
+            {check.is_timer_clock || "00:00:00"}
+            {Number(check.rate_per_minute || 0) > 0 && ` (${Number(check.rate_per_minute).toFixed(2)} ₼)`}
+          </span>
+        )}
+      </div>
+    </div>
+    <div className="checks-check-right">
+      <span className="checks-check-amount">{Number(check.total || 0).toFixed(2)} ₼</span>
+      {check.status !== 1 && check.order_payments?.length > 0 && (
+        <div className="mt-1 d-flex flex-wrap justify-content-end">
+          {check.order_payments.map((p, idx) => (
+            <span key={idx} className="payment-method-tag">
+              {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Naməlum")}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+));
 
 const Checks = () => {
   const [activeTab, setActiveTab] = useState("open");
@@ -31,7 +113,7 @@ const Checks = () => {
   const [filterWaiter, setFilterWaiter] = useState("");
   const [filterHall, setFilterHall] = useState("");
   const [filterTable, setFilterTable] = useState("");
-  const [filterCourier, setFilterCourier] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
 
   const profileId = loginedProfileData?.data?.profile?.id;
 
@@ -73,8 +155,7 @@ const Checks = () => {
           sale_type: filterSaleType,
           waiter_id: filterWaiter,
           hall_id: filterHall,
-          table_id: filterTable,
-          courier_id: filterCourier
+          table_id: filterTable
         };
 
         if (activeTab === "open") {
@@ -106,16 +187,29 @@ const Checks = () => {
 
     fetchData();
 
-  }, [activeTab, profileId, dispatch, selectedDate, debouncedSearchId, filterSaleType, filterWaiter, filterHall, filterTable, filterCourier]);
+  }, [activeTab, profileId, dispatch, selectedDate, debouncedSearchId, filterSaleType, filterWaiter, filterHall, filterTable]);
 
   const currentDisplayOrders = useMemo(() => {
-    if (activeTab === "open") return openOrders;
-    return archivedBooks;
+    let orders = activeTab === "open" ? openOrders : archivedBooks;
+    return orders;
   }, [activeTab, openOrders, archivedBooks]);
 
+  const filteredDisplayOrders = useMemo(() => {
+    let orders = currentDisplayOrders;
+    if (Number(loginedWaiter?.data?.can_manage_packs) === 1) {
+      orders = orders.filter((o) => o.sale_type !== "dine_in");
+    }
+    // Status filter (yalnız arxiv/offline tab üçün)
+    if ((activeTab === "archive" || activeTab === "offline") && filterStatus) {
+      const statusNum = Number(filterStatus);
+      orders = orders.filter((o) => Number(o.status) === statusNum);
+    }
+    return orders;
+  }, [currentDisplayOrders, loginedWaiter?.data?.can_manage_packs, activeTab, filterStatus]);
+
   const totalAmount = useMemo(
-    () => currentDisplayOrders.reduce((sum, order) => sum + Number(order?.total || 0), 0),
-    [currentDisplayOrders],
+    () => filteredDisplayOrders.reduce((sum, order) => sum + Number(order?.total || 0), 0),
+    [filteredDisplayOrders],
   );
 
   const formatDisplayDate = (date) => {
@@ -128,22 +222,7 @@ const Checks = () => {
 
   const formatDateKey = (date) => (date ? new Date(date).toISOString().split("T")[0] : "");
 
-  const formatTime = (startDate) => {
-    if (!startDate) return "";
-    const diffMins = Math.floor((new Date() - new Date(startDate)) / 60000);
-    return diffMins < 60 ? `${diffMins} dəq` : `${Math.floor(diffMins / 60)} Saat`;
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 1: return "#053796";
-      case 2: return "#28a745";
-      case 3: return "#9E9E9E";
-      default: return "#9E9E9E";
-    }
-  };
-
-  const handleOrderClick = (order) => {
+  const handleOrderClick = useCallback((order) => {
     // Permission check for accessing other waiter's checks
     if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 1) {
       if (order?.waiter_id !== loginedWaiter?.data?.id && order?.waiter?.id !== loginedWaiter?.data?.id) {
@@ -158,7 +237,7 @@ const Checks = () => {
       setSelectedOrder(order);
       setShowModal(true);
     }
-  };
+  }, [activeTab, loginedWaiter?.data?.id, navigate]);
 
   const changeDay = (delta) => {
     const newDate = new Date(selectedDate);
@@ -310,14 +389,13 @@ const Checks = () => {
             </Form.Select>
 
             <Form.Select
-              value={filterCourier}
-              onChange={(e) => setFilterCourier(e.target.value)}
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
               className="filter-select"
             >
-              <option value="">Kuryer</option>
-              {waiters.map(w => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
+              <option value="">Status</option>
+              <option value="2">Bağlanmış</option>
+              <option value="3">Silinib</option>
             </Form.Select>
           </div>
 
@@ -341,7 +419,7 @@ const Checks = () => {
       <div className="checks-summary-bar">
         <div className="checks-summary-left">
           <span className="checks-summary-label">Çek sayı:</span>
-          <span className="checks-summary-value">{currentDisplayOrders.length}</span>
+          <span className="checks-summary-value">{filteredDisplayOrders.length}</span>
         </div>
         <div className="checks-summary-right">
           <span className="checks-summary-label">Cəm:</span>
@@ -360,81 +438,15 @@ const Checks = () => {
           </div>
         )}
 
-        {currentDisplayOrders.length === 0 ? (
+        {filteredDisplayOrders.length === 0 ? (
           <div className="checks-empty-state"><p>Heç bir çek tapılmadı</p></div>
         ) : (
-          currentDisplayOrders.map((check, index) => {
-            const showDateHeader = index === 0 || formatDateKey(currentDisplayOrders[index - 1]?.start_date) !== formatDateKey(check?.start_date);
-
+          filteredDisplayOrders.map((check, index) => {
+            const showDateHeader = index === 0 || formatDateKey(filteredDisplayOrders[index - 1]?.start_date) !== formatDateKey(check?.start_date);
             return (
               <div key={check.id}>
                 {showDateHeader && <div className="checks-date-header">{formatDisplayDate(check?.start_date)}</div>}
-                <div className="checks-check-item" onClick={() => handleOrderClick(check)}>
-                  <div className="checks-check-left">
-                    <div className="checks-check-id-row">
-                      <span className="checks-status-dot" style={{ backgroundColor: getStatusColor(check.status) }}></span>
-                      <span className="checks-check-id">#{check.id}</span>
-
-                      {check.status === 1 ? (
-                        <span className="checks-check-badge checks-badge-open">Açıq</span>
-                      ) : (
-                        <span className={`checks-check-badge ${check.status === 3 ? "warning" : ""}`}>
-                          {check.status === 2 ? "Bağlanmış" : "Silinib"}
-                        </span>
-                      )}
-
-                      {check.sale_type && (
-                        <span className={`checks-check-badge checks-badge-${check.sale_type}`}>
-                          {check.sale_type === "dine_in"
-                            ? "Restoranda"
-                            : check.sale_type === "takeaway"
-                              ? "Gəl götür"
-                              : check.sale_type === "delivery"
-                                ? "Çatdırılma"
-                                : (check.sale_type?.charAt(0).toUpperCase() + check.sale_type?.slice(1))}
-                        </span>
-                      )}
-                    </div>
-                    <div className="checks-check-info">
-                      <span className="checks-check-time">{formatTime(check.start_date)}</span>
-                      <span className="checks-check-user">
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                          <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z" />
-                        </svg>
-                        {check?.waiter?.name || "Naməlum"}
-                      </span>
-                      {(check.is_timer_status === 1 || Number(check.rate_per_minute || 0) > 0) && (
-                        <span className="timer-pill ms-2" style={{ 
-                          fontSize: '11px', 
-                          background: check.is_timer_status === 1 ? '#053796' : '#e2e8f0', 
-                          color: check.is_timer_status === 1 ? '#fff' : '#053796',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          fontWeight: '600',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}>
-                          <i className={`bi bi-clock${check.is_timer_status === 1 ? '-fill' : ''}`}></i>
-                          {check.is_timer_clock || "00:00:00"}
-                          {Number(check.rate_per_minute || 0) > 0 && ` (${Number(check.rate_per_minute).toFixed(2)} ₼)`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="checks-check-right">
-                    <span className="checks-check-amount">{Number(check.total || 0).toFixed(2)} ₼</span>
-                    {check.status !== 1 && check.order_payments?.length > 0 && (
-                      <div className="mt-1 d-flex flex-wrap justify-content-end">
-                        {check.order_payments.map((p, idx) => (
-                          <span key={idx} className="payment-method-tag">
-                            {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Naməlum")}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <CheckListItem check={check} onClick={handleOrderClick} />
               </div>
             );
           })

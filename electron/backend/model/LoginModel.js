@@ -108,6 +108,10 @@ const LoginModel = db.sequelize.define(
       type: DataTypes.TINYINT,
       defaultValue: 0,
     },
+    is_customer_receipt_auto_print: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
     is_customer_display_active: {
       type: DataTypes.TINYINT,
       defaultValue: 0,

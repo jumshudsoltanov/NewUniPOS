@@ -115,13 +115,13 @@ export const initNetwork = async (forceLocal = false, disableSocket = false, dir
         try {
             console.warn("[CONNECTION] Scanning for Master Terminal...");
             let masterIp = null;
-            const maxAttempts = 3;
+            const maxAttempts = 2;
             for (let attempt = 1; attempt <= maxAttempts; attempt++) {
                 masterIp = await window.electronAPI.scanMaster();
                 if (masterIp) break;
                 if (attempt < maxAttempts) {
-                    console.warn(`[CONNECTION] Master tapılmadı, ${attempt}/${maxAttempts} cəhd. 1.5 saniyə sonra yenidən...`);
-                    await new Promise((r) => setTimeout(r, 1500));
+                    console.warn(`[CONNECTION] Master tapılmadı, ${attempt}/${maxAttempts} cəhd. 0.8 saniyə sonra yenidən...`);
+                    await new Promise((r) => setTimeout(r, 800));
                 }
             }
 

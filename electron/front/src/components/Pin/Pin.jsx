@@ -304,21 +304,29 @@ const Pin = () => {
     }
   };
 
+  useEffect(() => {
+    const profileId = loginedProfileData?.data?.profile?.id;
+    if (profileId) {
+      dispatch(menuWithCategories(profileId));
+      dispatch(menuWithGeneralCategories(profileId));
+      dispatch(getTableGroups(profileId));
+      dispatch(getActiveOrders({ profileId }));
+    }
+  }, [loginedProfileData?.data?.profile?.id, dispatch]);
+
   const handlePinSubmit = async (submittedPin) => {
     try {
       const profileId = loginedProfileData?.data?.profile?.id;
 
-      // Start table/menu fetches in parallel with waiter check so data is ready when we navigate
-      if (profileId) {
-        dispatch(getTableGroups(profileId));
-        dispatch(menuWithCategories(profileId));
-        dispatch(menuWithGeneralCategories(profileId));
-      }
-
       const waiterResult = await dispatch(getWaiter(submittedPin)).unwrap();
 
       if (waiterResult.message === "success") {
-        navigate("/tables");
+        const isPacksOnly = Number(waiterResult.data?.can_manage_packs) === 1;
+        if (profileId) {
+          dispatch(getTableGroups(profileId));
+          dispatch(getActiveOrders({ profileId }));
+        }
+        navigate(isPacksOnly ? "/checks" : "/tables");
       } else {
         setIsError(true);
         setTimeout(() => {

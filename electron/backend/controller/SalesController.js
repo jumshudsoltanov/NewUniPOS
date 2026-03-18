@@ -29,14 +29,11 @@ const CreateNewOrders = async (req, res) => {
 
     const newId = await MaxCheckService.getNextId(profileId);
 
-    // Check if the table has a deposit
-    const table = await require("../model/TablesModel").findOne({
-      where: { id: tableId },
-    });
+    const [table, profile] = await Promise.all([
+      require("../model/TablesModel").findOne({ where: { id: tableId } }),
+      require("../model/LoginModel").findOne({ where: { id: profileId } }),
+    ]);
 
-    const profile = await require("../model/LoginModel").findOne({
-      where: { id: profileId },
-    });
     const isTimerActive = (profile?.is_timer || (parseFloat(table?.hourly_price) > 0)) ? 1 : 0;
 
     let newSale = await OrdersModel.create({

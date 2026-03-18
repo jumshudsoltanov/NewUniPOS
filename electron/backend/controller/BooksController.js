@@ -33,11 +33,6 @@ const getAllActiveOrders = async (req, res) => {
         include: [{ model: require("../model/ProductsModel"), as: "product" }]
       },
       {
-        model: OrderPaymentsModel,
-        as: "order_payments",
-        include: [{ model: require("../model/PaymentMethodsModel"), as: "payment_method" }]
-      },
-      {
         model: TablesModel,
         as: "table",
         attributes: ["id", "name", "hall_id", "hourly_price"],

@@ -62,4 +62,16 @@ const updateCustomerDisplaySettings = async (req, res) => {
     }
 };
 
-module.exports = { getPrinters, updatePrinter, toggleMasterPrinting, testPrint, updateCustomerDisplaySettings };
+const updateCustomerReceiptAutoPrint = async (req, res) => {
+    const { profileId, isActive } = req.body;
+    try {
+        await LoginModel.update({
+            is_customer_receipt_auto_print: isActive ? 1 : 0
+        }, { where: { id: profileId } });
+        res.status(200).json({ message: "success" });
+    } catch (error) {
+        res.status(500).json({ message: "Update failed", error: error.message });
+    }
+};
+
+module.exports = { getPrinters, updatePrinter, toggleMasterPrinting, testPrint, updateCustomerDisplaySettings, updateCustomerReceiptAutoPrint };

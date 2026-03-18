@@ -53,6 +53,14 @@ const Tables = () => {
     return () => clearTimeout(timer);
   }, [currentHallId]);
 
+  // can_manage_packs: zalları və masaları görməsin — Checks-ə yönləndir (dərhal, UI göstərmədən)
+  const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+  useEffect(() => {
+    if (isPacksOnly) {
+      navigate("/checks", { replace: true });
+    }
+  }, [isPacksOnly, navigate]);
+
 
   const [interactionState, setInteractionState] = useState({
     type: null, // 'drag' | 'resize'
@@ -171,9 +179,8 @@ const Tables = () => {
     if (!socket) return;
 
     const handleTableUpdated = (data) => {
-      // Throttle getTableGroups to once every 500ms to allow faster updates
       const now = Date.now();
-      if (now - lastSyncRef.current < 500) return;
+      if (now - lastSyncRef.current < 300) return;
 
       if (loginedProfileData?.data?.profile?.id) {
         lastSyncRef.current = now;
@@ -458,6 +465,8 @@ const Tables = () => {
       </Container>
     );
   }
+
+  if (isPacksOnly) return null;
 
   return (
     <>

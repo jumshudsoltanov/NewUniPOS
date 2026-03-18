@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
+import { preloadCheck } from "../../utils/preloadCheck";
 import { Modal } from "react-bootstrap";
 import "./SalesTypesModal.css";
 import { useDispatch, useSelector } from "react-redux";
@@ -7,11 +8,10 @@ import {
 } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders, addOrderOptimistic } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { useNavigate } from "react-router-dom";
 
 import { getSalesTypes } from "../../redux/Slices/SalesTypesSlice";
-import { useEffect } from "react";
 
 export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
   const dispatch = useDispatch();
@@ -29,18 +29,12 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
     }
   }, [dispatch, loginedProfileData]);
 
-  // Construct sales types list. Always include Dine In.
+  useEffect(() => {
+    if (show) preloadCheck();
+  }, [show]);
+
+  // Construct sales types list.
   const salesTypes = [
-    {
-      id: "dine_in",
-      label: "Yerində",
-      // You can keep the icon here or dynamically assign icons
-      icon: (
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
-        </svg>
-      ),
-    },
     {
       id: "delivery",
       label: "Çatdırılma",
@@ -127,7 +121,12 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
         dispatch(addOrderOptimistic(optimisticOrder));
 
         // Background APIs (Don't Await)
-        dispatch(saleNewOtherOrders(payload));
+        dispatch(saleNewOtherOrders(payload)).unwrap().then((res) => {
+          const finalId = res?.data?.id || res?.count;
+          if (finalId) {
+            dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+          }
+        }).catch(err => console.error("API Create Error:", err));
         
         dispatch(saveLog({
           orderId: generatedUuid,
@@ -137,7 +136,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
         }));
 
         // Instant redirect
-        navigate(`/check/${generatedUuid}`);
+        navigate(`/check/${generatedUuid}?sale_type=${saleTypeId}`);
         onClose(false);
       } catch (err) {
         console.error("Check created error:", err);
@@ -159,12 +158,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
 
   const handleSelect = (type) => {
     setSaleType(type.id);
-    if (type.id !== "dine_in") {
-      createOrder(type.id);
-    } else {
-      navigate("/tables");
-      onClose(false);
-    }
+    createOrder(type.id);
   };
 
   return (

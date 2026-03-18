@@ -20,6 +20,7 @@ async function fixSchema() {
     // profiles table
     await addCol('profiles', 'is_master_cashier_printing', 'TINYINT', 0);
     await addCol('profiles', 'is_master_product_printing', 'TINYINT', 0);
+    await addCol('profiles', 'is_customer_receipt_auto_print', 'TINYINT', 0);
 
     // printers table
     await addCol('printers', 'connection_type', 'TEXT', 'network');

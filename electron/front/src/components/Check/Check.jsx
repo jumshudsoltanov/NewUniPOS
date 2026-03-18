@@ -113,6 +113,7 @@ const Check = () => {
             if (!ao || !bo) return false;
             if (
               ao.uuid !== bo.uuid ||
+              ao.id !== bo.id ||
               ao.discount !== bo.discount ||
               ao.discount_value !== bo.discount_value ||
               ao.service_charge !== bo.service_charge ||
@@ -140,6 +141,7 @@ const Check = () => {
         const ao = ab[i], bo = bb[i];
         if (
           ao.uuid !== bo.uuid ||
+          ao.id !== bo.id ||
           ao.discount !== bo.discount ||
           ao.discount_value !== bo.discount_value ||
           ao.service_charge !== bo.service_charge ||
@@ -223,9 +225,19 @@ const Check = () => {
       }
     }
 
+    // Default optimistic fallback to prevent UI breaking or flashing 'Yeni Sifariş' when data is slightly delayed
+    if (id && (tableId || searchParams.get("sale_type"))) {
+       const initialSaleType = searchParams.get("sale_type") || (tableId ? "dine_in" : null);
+       return {
+         currentOrder: { uuid: id, sale_type: initialSaleType, is_active_timer: 1, table_id: tableId },
+         currentHall: foundHall,
+         currentTable: foundTable
+       };
+    }
+
     return { currentOrder: null, currentHall: null, currentTable: null };
 
-  }, [id, tableId, tableGroups, books]);
+  }, [id, tableId, tableGroups, books, searchParams]);
 
   const selectedCustomer = useMemo(() => {
     if (currentOrder?.customer_id) {
@@ -281,15 +293,17 @@ const Check = () => {
     }
   }, [currentOrder?.orders_items?.length, pendingDeletions?.length]);
 
-  const goTables = () => {
-    if (location.state?.from === "/checks") {
-      navigate("/checks");
+  const goTables = (skipRefresh = false, replace = false) => {
+    const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+    const opts = replace ? { replace: true } : undefined;
+    if (isPacksOnly || location.state?.from === "/checks") {
+      navigate("/checks", opts);
     } else {
-      const profileId = loginedProfileData?.data?.profile?.id;
-      if (profileId) {
-        dispatch(getTableGroups(profileId));
+      if (!skipRefresh) {
+        const profileId = loginedProfileData?.data?.profile?.id;
+        if (profileId) dispatch(getTableGroups(profileId));
       }
-      navigate("/tables");
+      navigate("/tables", opts);
     }
   };
 
@@ -428,13 +442,9 @@ const Check = () => {
           waiterName
         })).unwrap();
 
-        // Refresh state so CheckBottom updates immediately
         const profileId = loginedProfileData?.data?.profile?.id;
         if (profileId) {
-          await Promise.all([
-            dispatch(getTableGroups(profileId)),
-            dispatch(getActiveOrders({ profileId }))
-          ]);
+          dispatch(getActiveOrders({ profileId }));
         }
 
         const combinedForPrinting = [...productsWithComments];
@@ -513,47 +523,52 @@ const Check = () => {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const profileId = loginedProfileData?.data?.profile?.id;
       const isMasterSlaveActive = loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1;
+      const orderId = currentOrder.uuid;
 
       const tryDelete = async () => {
         try {
           await dispatch(deleteCheck({
-            orderId: currentOrder.uuid,
+            orderId,
             reason: 0,
             reasonText: "Masa boş olduğu üçün silindi",
             waiterName,
             forceDestroy: !hadOrderItems,
           })).unwrap();
 
+          const socket = getSocket();
+          if (socket?.connected) socket.emit("order_deleted", { orderId });
           if (profileId) {
             dispatch(getTableGroups(profileId));
             dispatch(getActiveOrders({ profileId }));
           }
-          toast.info("Masa boş olduğu üçün silindi");
         } catch (error) {
           console.error("Auto-delete error:", error);
         }
       };
 
+      const doNavigate = (showDeletedToast = true) => {
+        dispatch(removeOrderOptimisticFromTables(orderId));
+        dispatch(removeOrderOptimistic(orderId));
+        if (targetPath === -1) goTables(true, true);
+        else navigate(targetPath, { replace: true });
+        if (showDeletedToast) setTimeout(() => toast.info("Masa boş olduğu üçün silindi"), 0);
+      };
+
       if (isMasterSlaveActive) {
         const socket = getSocket();
         if (socket) {
-          socket.emit("check_can_delete", { orderId: currentOrder.uuid }, (canDelete) => {
-            if (canDelete) {
-              tryDelete().then(() => {
-                if (targetPath === -1) goTables();
-                else navigate(targetPath);
-              });
-            } else {
-              toast.info("Masa başqa terminalda açıq olduğu üçün silinmədi.");
-              if (targetPath === -1) goTables();
-              else navigate(targetPath);
-            }
+          doNavigate(true);
+          socket.emit("check_can_delete", { orderId }, (canDelete) => {
+            if (canDelete) tryDelete();
+            else toast.info("Masa başqa terminalda açıq olduğu üçün silinmədi.");
           });
           return;
         }
       }
 
-      await tryDelete();
+      doNavigate();
+      tryDelete();
+      return;
     }
 
     if (targetPath === -1) {
@@ -731,17 +746,20 @@ const Check = () => {
     const socket = getSocket();
     if (!socket) return;
 
+    const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+    const postOrderTarget = isPacksOnly ? "/checks" : "/tables";
+
     const handleOrderDeleted = ({ orderId }) => {
       if (orderId && orderId === id) {
         toast.warning("Bu çek başqa terminal tərəfindən silindi.");
-        navigate("/tables", { replace: true });
+        navigate(postOrderTarget, { replace: true });
       }
     };
 
     const handleOrderClosed = ({ orderId }) => {
       if (orderId && orderId === id) {
         toast.info("Bu çek başqa terminal tərəfindən bağlandı.");
-        navigate("/tables", { replace: true });
+        navigate(postOrderTarget, { replace: true });
       }
     };
 
@@ -762,7 +780,7 @@ const Check = () => {
       socket.off("order_closed", handleOrderClosed);
       socket.off("table_updated", handleTableUpdated);
     };
-  }, [id, navigate, loginedProfileData, dispatch]);
+  }, [id, navigate, loginedProfileData, loginedWaiter?.data?.can_manage_packs, dispatch]);
 
   useEffect(() => {
     if (
@@ -790,7 +808,7 @@ const Check = () => {
     updateCount();
     window.addEventListener("newNotification", updateCount);
 
-    const clockInt = setInterval(() => setCurrentTime(new Date()), 1000);
+    const clockInt = setInterval(() => setCurrentTime(new Date()), 2000);
 
     return () => {
       window.removeEventListener("newNotification", updateCount);
@@ -961,10 +979,11 @@ const Check = () => {
     }
 
     // 1. Instant navigation + optimistic state removal (UI instantly shows table as empty)
-    navigate("/tables", { replace: true });
+    const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+    navigate(isPacksOnly ? "/checks" : "/tables", { replace: true });
     dispatch(removeOrderOptimisticFromTables(orderId));
     dispatch(removeOrderOptimistic(orderId));
-    const toastId = toast.loading("Çek silinir...");
+    toast.success("Çek silindi");
 
     // 2. Background execution block
     const performBackgroundDeletion = async () => {
@@ -1025,10 +1044,9 @@ const Check = () => {
             dispatch(getTableGroups(profileId));
             dispatch(getActiveOrders({ profileId }));
           }
-          toast.success("Çek uğurla silindi", { id: toastId });
         } catch (error) {
           console.error("Delayed Delete Error:", error);
-          toast.error("Silinmə zamanı xəta baş verdi", { id: toastId });
+          toast.error("Silinmə zamanı xəta baş verdi");
         }
       })();
 

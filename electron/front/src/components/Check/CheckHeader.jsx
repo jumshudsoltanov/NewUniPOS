@@ -100,15 +100,15 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
             <i className="bi bi-pencil-fill"></i>
           </div>
           <div className="header-info-text" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 0, minWidth: 0, overflow: "hidden" }}>
-            {orders?.sale_type == "dine_in" ? (
+            {(orders?.sale_type === "dine_in" || table || hall || orders?.table_id) ? (
               <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
-                {hall?.name} / {table?.name}
+                {hall?.name || orders?.hall_name || "Zal"} / {table?.name || orders?.table_name || orders?.table?.name || "Masa"}
               </span>
             ) : (
               <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
                 {(() => {
                   const type = orders?.sale_type;
-                  if (!type) return "";
+                  if (!type) return "Yeni Sifariş";
                   if (type === "delivery") return "Çatdırılma";
                   if (type === "takeaway") return "Takeaway";
                   return type.charAt(0).toUpperCase() + type.slice(1);
@@ -132,7 +132,7 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
         {/* Right Section: Order IDs + Toggle */}
         <div className="header-right-section" style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
           <span className="header-order-id">
-            #{orders?.id} / #{orders?.id}
+            {orders?.id ? `#${orders.id} / #${orders.id}` : "Yüklənir..."}
           </span>
           <div
             className="header-toggle-btn"

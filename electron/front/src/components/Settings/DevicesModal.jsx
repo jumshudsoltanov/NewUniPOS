@@ -28,6 +28,7 @@ const DevicesModal = ({ show, onHide }) => {
         cashier: false,
         product: false
     });
+    const [customerReceiptAutoPrint, setCustomerReceiptAutoPrint] = useState(false);
     const [screens, setScreens] = useState([]);
     const [customerDisplay, setCustomerDisplay] = useState({
         active: false,
@@ -97,6 +98,7 @@ const DevicesModal = ({ show, onHide }) => {
                 cashier: merged.is_master_cashier_printing === 1,
                 product: merged.is_master_product_printing === 1
             });
+            setCustomerReceiptAutoPrint(merged.is_customer_receipt_auto_print === 1);
 
             try {
                 if (window.electronAPI?.getSystemPrinters) {
@@ -178,6 +180,40 @@ const DevicesModal = ({ show, onHide }) => {
                 }
             }
         } catch (e) { console.warn("authResult update:", e); }
+    };
+
+    const handleToggleCustomerReceiptAutoPrint = async () => {
+        const nextStatus = !customerReceiptAutoPrint;
+        if (!profileId) {
+            toast.error("Profil tapılmadı. Əvvəlcə giriş edin.");
+            return;
+        }
+        setCustomerReceiptAutoPrint(nextStatus);
+        try {
+            await localApi.patch("/profiles/customer-receipt-auto", {
+                profileId,
+                isActive: nextStatus
+            });
+            const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+            storedProfile.is_customer_receipt_auto_print = nextStatus ? 1 : 0;
+            localStorage.setItem("profile", JSON.stringify(storedProfile));
+            try {
+                const authStr = localStorage.getItem("authResult");
+                if (authStr) {
+                    const auth = JSON.parse(authStr);
+                    if (auth?.data?.profile) {
+                        auth.data.profile = { ...auth.data.profile, is_customer_receipt_auto_print: nextStatus ? 1 : 0 };
+                        localStorage.setItem("authResult", JSON.stringify(auth));
+                        dispatch(setLoginData(auth));
+                    }
+                }
+            } catch (e) { console.warn("authResult update:", e); }
+            toast.success(nextStatus ? "Müştəri çeki avto çap AKTİV" : "Müştəri çeki avto çap DEAKTİV");
+        } catch (error) {
+            setCustomerReceiptAutoPrint(!nextStatus);
+            console.error("Customer receipt auto print toggle error:", error);
+            toast.error("Xəta: " + (error?.response?.data?.message || error.message));
+        }
     };
 
     const handleToggleMasterPrinting = async (type) => {
@@ -598,6 +634,18 @@ const DevicesModal = ({ show, onHide }) => {
                                                 <div
                                                     className={`premium-switch ${masterModes.product ? "active" : ""}`}
                                                     onClick={() => handleToggleMasterPrinting('product')}
+                                                >
+                                                    <div className="switch-handle"></div>
+                                                </div>
+                                            </div>
+                                            <div className="master-printing-card">
+                                                <div className="master-printing-info">
+                                                    <h4>Müştəri çeki avto çap</h4>
+                                                    <p>CheckOver səhifəsində "Çeki çap et" toggle avtomatik açıq olsun.</p>
+                                                </div>
+                                                <div
+                                                    className={`premium-switch ${customerReceiptAutoPrint ? "active" : ""}`}
+                                                    onClick={handleToggleCustomerReceiptAutoPrint}
                                                 >
                                                     <div className="switch-handle"></div>
                                                 </div>

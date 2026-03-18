@@ -23,7 +23,13 @@ const CheckOver = () => {
     const [selectedMethods, setSelectedMethods] = useState([]); // [{id, name, amount, is_split}]
 
     const [viewMode, setViewMode] = useState("PAYMENT"); // 'PAYMENT' or 'UNPAID'
-    const [printCheck, setPrintCheck] = useState(false);
+    const [printCheck, setPrintCheck] = useState(() => {
+        const authStr = localStorage.getItem("authResult");
+        const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+        const authProfile = authStr ? (JSON.parse(authStr)?.data?.profile || {}) : {};
+        const merged = { ...authProfile, ...storedProfile };
+        return Number(merged.is_customer_receipt_auto_print) === 1;
+    });
     const [taxPrint, setTaxPrint] = useState(false);
     const [unpaidReason, setUnpaidReason] = useState("");
     const [comment, setComment] = useState("");
@@ -139,19 +145,19 @@ const CheckOver = () => {
         };
     }, [currentOrder]);
 
-    // Əgər əvvəlcədən çekdə vergi qeyd olunubsa, taxPrint yansın
+    // Əgər əvvəlcədən çekdə vergi qeyd olunubsa, taxPrint yansın (yalnız can_see_tax=1 olan garson üçün)
     useEffect(() => {
-        if (currentOrder && Number(currentOrder.is_tax) > 0) {
+        if (Number(loginedWaiter?.data?.can_see_tax) === 1 && currentOrder && Number(currentOrder.is_tax) > 0) {
             setTaxPrint(true);
         }
-    }, [currentOrder?.is_tax]);
+    }, [currentOrder?.is_tax, loginedWaiter?.data?.can_see_tax]);
 
-    // Ödəniş metodu seçəndə: əgər seçilənlər arasında is_tax olan varsa, vergi checkbox yansın
+    // Ödəniş metodu seçəndə: əgər seçilənlər arasında is_tax olan varsa, vergi checkbox yansın (yalnız can_see_tax=1 olan garson üçün)
     useEffect(() => {
-        if (viewMode === "PAYMENT" && selectedMethods.some(m => Number(m.is_tax) === 1)) {
+        if (Number(loginedWaiter?.data?.can_see_tax) === 1 && viewMode === "PAYMENT" && selectedMethods.some(m => Number(m.is_tax) === 1)) {
             setTaxPrint(true);
         }
-    }, [viewMode, selectedMethods]);
+    }, [viewMode, selectedMethods, loginedWaiter?.data?.can_see_tax]);
 
     const handleMethodSelect = (method) => {
         const isAlreadySelected = selectedMethods.find(m => m.id === method.id);
@@ -242,7 +248,7 @@ const CheckOver = () => {
         }
 
         const taxConfigs = loginedProfileData?.data?.taxes || [];
-        if (viewMode === "PAYMENT" && taxPrint && taxConfigs.length > 1) {
+        if (viewMode === "PAYMENT" && taxPrint && Number(loginedWaiter?.data?.can_see_tax) === 1 && taxConfigs.length > 1) {
             setShowTaxSelectionModal(true);
         } else {
             handleConfirmClose(null);
@@ -279,7 +285,7 @@ const CheckOver = () => {
         }
 
         let taxPercentageToSave = 0;
-        if (viewMode === "PAYMENT" && taxPrint) {
+        if (viewMode === "PAYMENT" && taxPrint && Number(loginedWaiter?.data?.can_see_tax) === 1) {
             const allTaxConfigs = loginedProfileData?.data?.taxes || [];
             const taxConfigsToUse = selectedTaxForPrint ? [selectedTaxForPrint] : allTaxConfigs;
             if (taxConfigsToUse.length > 0) {
@@ -290,38 +296,9 @@ const CheckOver = () => {
         }
 
         try {
-            await dispatch(closeOrder({
-                orderId: id,
-                payments,
-                status,
-                profileId,
-                waiterId,
-                note: noteStr,
-                waiterName,
-                is_tax: taxPercentageToSave
-            })).unwrap();
-
-            // Persistent Log
-            dispatch(saveLog({
-                orderId: id,
-                action: "Çek bağlandı",
-                waiterName,
-                details: noteStr ? `Bağlandı. Qeyd: ${noteStr}` : "Sifariş müvəffəqiyyətlə bağlandı"
-            }));
-
-            // Log Print if checked
             if (printCheck) {
-                dispatch(saveLog({
-                    orderId: id,
-                    action: "Çek çap edildi",
-                    waiterName,
-                    details: "Bağlanış çeki"
-                }));
-
-                // Trigger actual print
                 const paidValue = Number(calcValue) || totalPaidInMethods || 0;
                 const changeValue = Number(remainingBalance) || 0;
-
                 printCustomerReceipt({
                     items: currentOrder?.orders_items || [],
                     checkData: {
@@ -340,7 +317,34 @@ const CheckOver = () => {
                 }, loginedProfileData);
             }
 
-            if (taxPrint) {
+            await dispatch(closeOrder({
+                orderId: id,
+                payments,
+                status,
+                profileId,
+                waiterId,
+                note: noteStr,
+                waiterName,
+                is_tax: taxPercentageToSave
+            })).unwrap();
+
+            dispatch(saveLog({
+                orderId: id,
+                action: "Çek bağlandı",
+                waiterName,
+                details: noteStr ? `Bağlandı. Qeyd: ${noteStr}` : "Sifariş müvəffəqiyyətlə bağlandı"
+            }));
+
+            if (printCheck) {
+                dispatch(saveLog({
+                    orderId: id,
+                    action: "Çek çap edildi",
+                    waiterName,
+                    details: "Bağlanış çeki"
+                }));
+            }
+
+            if (taxPrint && Number(loginedWaiter?.data?.can_see_tax) === 1) {
                 const allTaxConfigs = loginedProfileData?.data?.taxes || [];
                 const taxConfigsToUse = selectedTaxForPrint ? [selectedTaxForPrint] : allTaxConfigs;
 
@@ -405,7 +409,8 @@ const CheckOver = () => {
             if (socket?.connected) {
                 socket.emit("order_closed", { orderId: currentOrder?.uuid || id });
             }
-            navigate("/tables");
+            const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+            navigate(isPacksOnly ? "/checks" : "/tables");
         } catch (err) {
             console.error("Close order failed:", err);
         }
@@ -524,7 +529,7 @@ const CheckOver = () => {
                                     })}
                                 </div>
 
-                                {loginedProfileData?.data?.taxes?.length > 0 && (
+                                {loginedProfileData?.data?.taxes?.length > 0 && Number(loginedWaiter?.data?.can_see_tax) === 1 && (
                                     <div
                                         className="print-toggle-section mt-3 pt-3 d-flex justify-content-between align-items-center clickable-row"
                                         onClick={() => setTaxPrint(!taxPrint)}

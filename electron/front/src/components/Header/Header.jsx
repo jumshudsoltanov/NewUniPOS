@@ -184,7 +184,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
     if (!showClock) return;
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 1000);
+    }, 2000);
     return () => clearInterval(timer);
   }, [showClock]);
 
@@ -254,7 +254,8 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                     } else if (backPath) {
                       navigate(backPath);
                     } else if (isChecksPage) {
-                      navigate("/tables");
+                      const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+                      navigate(isPacksOnly ? "/pin" : "/tables");
                     } else {
                       navigate(-1);
                     }
@@ -323,7 +324,8 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                     } else if (backPath) {
                       navigate(backPath);
                     } else if (isChecksPage) {
-                      navigate("/tables");
+                      const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+                      navigate(isPacksOnly ? "/pin" : "/tables");
                     } else {
                       navigate(-1);
                     }

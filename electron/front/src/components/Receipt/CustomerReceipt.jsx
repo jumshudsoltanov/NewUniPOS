@@ -427,11 +427,6 @@ const CustomerReceipt = ({
                                             ({params.modifiers.map((m) => m.count > 0 ? `${m.name} (x${m.count})` : m.name).join(", ")})
                                         </div>
                                     )}
-                                    {item.comment && (
-                                        <div style={{ ...styles.modifier, fontStyle: 'italic' }}>
-                                            - {item.comment}
-                                        </div>
-                                    )}
                                 </div>
 
                                 <span style={styles.colQty}>{params.quantity}</span>

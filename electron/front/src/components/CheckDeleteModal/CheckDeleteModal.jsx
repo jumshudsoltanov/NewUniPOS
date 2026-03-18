@@ -39,12 +39,12 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
     const handleConfirm = () => {
         if (selectedReason) {
             const reasonObj = reasons.find(r => r.id === selectedReason);
+            onClose(false);
             onConfirm({
                 reason: selectedReason,
                 reasonName: reasonObj?.name,
                 orderId: order.uuid
             });
-            onClose(false);
         }
     };
 

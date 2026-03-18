@@ -512,7 +512,7 @@ ipcMain.handle("print-receipt", async (event, { html, printerName, printerIp, pr
           if (img.complete) check();
           else { img.onload = check; img.onerror = check; }
         });
-        setTimeout(resolve, 3000);
+        setTimeout(resolve, 800);
       });
     `);
 
@@ -738,11 +738,11 @@ ipcMain.handle("scan-master", async () => {
         return new Promise((res) => {
           if (resolved) return res(null);
           const socket = new net.Socket();
-          socket.setTimeout(800);
+          socket.setTimeout(450);
           socket.on('connect', () => {
             socket.destroy();
             if (resolved) return res(null);
-            const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 1200 }, (response) => {
+            const req = http.get(`http://${ip}:55667/api/discover`, { timeout: 700 }, (response) => {
               let body = '';
               response.on('data', chunk => body += chunk);
               response.on('end', () => {
@@ -788,13 +788,13 @@ ipcMain.handle("scan-master", async () => {
             return;
           }
         }
-        setTimeout(() => { if (!resolved) finishScan(null); }, 500);
+        setTimeout(() => { if (!resolved) finishScan(null); }, 300);
       };
 
       scanBatches();
     } else {
       console.log("[SLAVE TCP] Lokal IPv4 alt şəbəkəsi tapılmadı.");
-      setTimeout(() => { if (!resolved) finishScan(null); }, 2000);
+      setTimeout(() => { if (!resolved) finishScan(null); }, 1200);
     }
   });
 });

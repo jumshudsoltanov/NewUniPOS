@@ -5,6 +5,9 @@ import { addNotification } from "./notificationService";
 import axios, { getSocket } from "./apiConfig";
 import CustomerReceipt from "../components/Receipt/CustomerReceipt";
 
+let _printersCache = { profileId: null, printers: null };
+export const clearPrintersCache = () => { _printersCache = { profileId: null, printers: null }; };
+
 const getProfileForPrinting = (profileData, orderProfile) => {
     try {
         const authStr = localStorage.getItem("authResult");
@@ -202,19 +205,26 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
 
 export const printCustomerReceipt = async (orderData, profileData) => {
     let printers = profileData?.data?.printers;
+    const profileId = profileData?.data?.profile?.id;
 
     if (!printers || !Array.isArray(printers) || printers.length === 0) {
-        try {
-            const profileId = profileData?.data?.profile?.id;
-            if (profileId) {
-                const response = await axios.get(`/pos/printers/${profileId}`);
-                if (response.data && Array.isArray(response.data.data)) {
-                    printers = response.data.data;
+        if (_printersCache.profileId === profileId && _printersCache.printers?.length) {
+            printers = _printersCache.printers;
+        } else {
+            try {
+                if (profileId) {
+                    const response = await axios.get(`/pos/printers/${profileId}`);
+                    if (response.data && Array.isArray(response.data.data)) {
+                        printers = response.data.data;
+                        _printersCache = { profileId, printers };
+                    }
                 }
+            } catch (error) {
+                console.error("Error fetching printers:", error);
             }
-        } catch (error) {
-            console.error("Error fetching printers:", error);
         }
+    } else if (profileId) {
+        _printersCache = { profileId, printers };
     }
 
     const printer = printers?.find(p => p.is_cashier === 1);
@@ -237,7 +247,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
 
     if (!printerName) {
         addNotification("Çap Xətası", "Kassa printeri təyin edilməyib", { orderId: orderData?.checkData?.id || orderData?.orderId, category: "system", type: "error" });
-        await logError("Müştəri Çapı Xətası", "Kassa printeri təyin edilməyib");
+        logError("Müştəri Çapı Xətası", "Kassa printeri təyin edilməyib").catch(() => {});
         return { success: false, error: "Kassa printeri tapılmadı" };
     }
 
@@ -302,20 +312,20 @@ export const printCustomerReceipt = async (orderData, profileData) => {
             if (!result || !result.success) {
                 const errMsg = result?.error || 'Bilinməyən xəta';
                 addNotification("Çap Xətası", `kassa printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: orderData.checkData?.id, category: "system", type: "error" });
-                await logError("Müştəri Çapı Xətası", `Kassa çapı xətası: ${errMsg}`);
+                logError("Müştəri Çapı Xətası", `Kassa çapı xətası: ${errMsg}`).catch(() => {});
                 return { success: false, error: errMsg };
             }
             return { success: true };
         } else {
             const errMsg = "Electron API mövcud deyil";
             addNotification("Sistem Xətası", errMsg, { orderId: orderData.checkData?.id, category: "system", type: "error" });
-            await logError("Sistem Xətası", errMsg);
+            logError("Sistem Xətası", errMsg).catch(() => {});
             return { success: false, error: errMsg };
         }
     } catch (error) {
         console.error("Print generation error:", error);
         addNotification("Çap Xətası", "Çek yaradılarkən xəta baş verdi", { orderId: orderData.checkData?.id, category: "system", type: "error" });
-        await logError("Müştəri Çapı Xətası", `Çek yaradılarkən xəta: ${error.message}`);
+        logError("Müştəri Çapı Xətası", `Çek yaradılarkən xəta: ${error.message}`).catch(() => {});
         return { success: false, error: error.message };
     } finally {
         root.unmount();

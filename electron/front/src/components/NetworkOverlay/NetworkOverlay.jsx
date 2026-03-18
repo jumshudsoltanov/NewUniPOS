@@ -56,7 +56,7 @@ const NetworkOverlay = () => {
         };
 
         poll();
-        pollingInterval = setInterval(poll, 3000);
+        pollingInterval = setInterval(poll, 5000);
 
         if (window.electronAPI?.getLocalIp) {
             window.electronAPI.getLocalIp().then(setSlaveIp).catch(() => {});

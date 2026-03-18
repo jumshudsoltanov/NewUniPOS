@@ -8,9 +8,11 @@ import { saleNewOrders } from "../../redux/Slices/SaleSlice";
 import {
   getTableGroups,
   currentTableList,
+  addOrderToTableOptimistic,
 } from "../../redux/Slices/TablesSlice";
 import { saveLog, deleteCheck, updateGuestCountOrder } from "../../redux/Slices/OrdersSlice";
-import { addOrderOptimistic } from "../../redux/Slices/BooksSlice";
+import { addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
+import { preloadCheck } from "../../utils/preloadCheck";
 
 const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   const [guestCount, setGuestCount] = useState("0");
@@ -20,6 +22,10 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [serviceValue, setServiceValue] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (show) preloadCheck();
+  }, [show]);
 
   useEffect(() => {
     const hallFee = selectedHall?.service_fee;
@@ -107,21 +113,21 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
         status: 1,
         is_selected: 1,
         orders_items: [],
-        table: { id: table.id, name: table.name },
+        table: { id: table.id, name: table.name, hall: { name: selectedHall?.name } },
         table_name: table.name,
+        hall_name: selectedHall?.name,
         amount: 0,
         total: 0,
+        start_date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
         discount: 0,
         service_value: sv || 0,
         service_type: sv ? "percent" : null,
         waiter: { id: waiterId, name: waiterName }
       };
 
-      // Optimistic Table & Book Injection
       dispatch(addOrderOptimistic(optimisticOrder));
-
-      // Fire API in background
-      dispatch(saleNewOrders(payload));
+      dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
 
       dispatch(saveLog({
         orderId: payload.uuid,
@@ -131,6 +137,14 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
       }));
 
       navigate(`/check/${payload.uuid}?tableId=${table.id}`);
+
+      dispatch(saleNewOrders(payload)).unwrap().then((res) => {
+        const serverOrder = res?.data;
+        const finalId = serverOrder?.id ?? res?.count;
+        if (finalId) {
+          dispatch(updateOrderOptimisticId({ uuid: payload.uuid, newOrderData: { id: finalId } }));
+        }
+      }).catch(err => console.error("API Create Error:", err));
     } catch (err) {
       console.error("Check created error:", err);
     } finally {

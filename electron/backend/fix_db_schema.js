@@ -35,6 +35,7 @@ const fixSchema = async () => {
     const profileColumns = [
         { name: "is_master_cashier_printing", type: DataTypes.TINYINT, defaultValue: 0 },
         { name: "is_master_product_printing", type: DataTypes.TINYINT, defaultValue: 0 },
+        { name: "is_customer_receipt_auto_print", type: DataTypes.TINYINT, defaultValue: 0 },
         { name: "is_kitchen_display_active", type: DataTypes.TINYINT, defaultValue: 0 },
         { name: "kitchen_display_screen_id", type: DataTypes.TEXT }
     ];

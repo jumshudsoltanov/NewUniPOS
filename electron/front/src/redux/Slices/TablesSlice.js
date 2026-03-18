@@ -86,6 +86,18 @@ const TablesSlice = createSlice({
         }
       });
     },
+    addOrderToTableOptimistic: (state, action) => {
+      const { order, tableId } = action.payload;
+      if (!order || !tableId || !state.tableGroups?.data) return;
+      for (const hall of state.tableGroups.data) {
+        const table = hall.tables?.find((t) => t.id == tableId);
+        if (table) {
+          if (!table.orders) table.orders = [];
+          table.orders.unshift(order);
+          break;
+        }
+      }
+    },
     tickTimer: (state) => {
       if (!state.tableGroups?.data) return;
       state.tableGroups.data = state.tableGroups.data.map((hall) => {
@@ -302,7 +314,8 @@ export const {
   setTempTableOrder,
   setTempTableLayout,
   tickTimer,
-  removeOrderOptimistic: tablesRemoveOrderOptimistic
+  removeOrderOptimistic: tablesRemoveOrderOptimistic,
+  addOrderToTableOptimistic
 } = TablesSlice.actions;
 export { tablesRemoveOrderOptimistic as removeOrderOptimisticFromTables };
 export default TablesSlice.reducer;

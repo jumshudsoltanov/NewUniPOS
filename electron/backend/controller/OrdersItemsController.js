@@ -490,45 +490,19 @@ const onDeleteOrderItems = async (req, res) => {
   }
 
   try {
-    const deleteItems = await OrdersItemsModel.destroy({
+    await OrdersItemsModel.destroy({
       where: { order_id: orderId },
     });
-    // Boş çek = avtomatik silindi (status 3) — admin panelə sync olunsun
-    const updateTotal = await OrdersModel.update(
+    await OrdersModel.update(
       { amount: 0, total: 0, status: 3, end_date: new Date(), is_synced: 0 },
-      {
-        where: { uuid: orderId },
-      },
+      { where: { uuid: orderId } },
     );
+
+    res.status(200).json({ message: "delete all items", data: { uuid: orderId, status: 3, orders_items: [] } });
+
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
-    const updatedOrder = await OrdersModel.findOne({
-      where: { uuid: orderId },
-      include: [
-        { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        {
-          model: OrdersItemsModel,
-          as: "orders_items",
-          separate: true,
-          order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
-        },
-        {
-          model: TablesModel,
-          as: "table",
-          attributes: ["id", "name", "hourly_price"],
-          include: [
-            { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
-          ],
-        },
-      ],
-    });
-
-    attachLiveTimerToOrder(updatedOrder);
-
-    res.status(200).json({ message: "delete all items", data: updatedOrder });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error" });
   }

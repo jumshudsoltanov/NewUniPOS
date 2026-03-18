@@ -51,6 +51,27 @@ let connectToDatabase = async () => {
   }
 };
 
+const ensureSchemaColumns = async () => {
+  try {
+    const qi = db.sequelize.getQueryInterface();
+    const tableDesc = await qi.describeTable("profiles");
+    if (!tableDesc.is_customer_receipt_auto_print) {
+      await qi.addColumn("profiles", "is_customer_receipt_auto_print", {
+        type: db.Sequelize.DataTypes.TINYINT,
+        defaultValue: 0,
+        allowNull: true,
+      });
+      console.log("[SCHEMA] Added profiles.is_customer_receipt_auto_print");
+    }
+  } catch (e) {
+    if (e.message?.includes("Duplicate") || e.message?.includes("already exists")) {
+      console.log("[SCHEMA] profiles.is_customer_receipt_auto_print already exists");
+    } else {
+      console.warn("[SCHEMA] ensureSchemaColumns:", e?.message);
+    }
+  }
+};
+
 // Created Table
 
 let creaedtToTabel = async () => {
@@ -354,6 +375,7 @@ ipcMain.handle("re-evaluate-role", async () => {
 (async () => {
   await connectToDatabase();
   await creaedtToTabel();
+  await ensureSchemaColumns();
 
   // Initial check
   await checkTerminalRole(server);

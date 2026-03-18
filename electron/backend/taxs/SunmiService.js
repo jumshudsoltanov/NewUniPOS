@@ -140,8 +140,13 @@ class SunmiService {
         if (payments && payments.length > 0) {
             payments.forEach(p => {
                 const name = (p.name || '').toLowerCase();
+                const type = (p.type || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-                if (name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('nəğdsiz') || name.includes('bank')) {
+                // type: "Nağd" = cash, "Nağdsız" = cashless (Omnitech ilə uyğun)
+                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
+                    name.includes('kart') || name.includes('card') || name.includes('cashless') ||
+                    name.includes('nağdsız') || name.includes('nəğdsiz') || name.includes('bank');
+                if (isCashless) {
                     cardPayment += amount;
                 } else {
                     cashPayment += amount;
@@ -197,8 +202,13 @@ class SunmiService {
 
         payments.forEach(p => {
             const pName = String(p.name || '').toLowerCase();
+            const pType = String(p.type || '').toLowerCase();
             const pAmount = Number(p.amount || 0);
-            if (pName.includes('kart') || pName.includes('card') || pName.includes('cashless') || pName.includes('nağdsız') || pName.includes('nəğdsiz') || pName.includes('bank')) {
+            // type: "Nağd" = cash, "Nağdsız" = cashless (Omnitech ilə uyğun)
+            const isCashless = pType === 'nağdsız' || pType === 'cashless' || pType === 'card' || pType === 'bank' ||
+                pName.includes('kart') || pName.includes('card') || pName.includes('cashless') ||
+                pName.includes('nağdsız') || pName.includes('nəğdsiz') || pName.includes('bank');
+            if (isCashless) {
                 cardPayment += pAmount;
             } else {
                 cashPayment += pAmount;

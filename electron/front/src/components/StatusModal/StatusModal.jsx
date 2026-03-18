@@ -104,7 +104,7 @@ const StatusModal = ({ show, onHide }) => {
         window.addEventListener('online', updateConnectivity);
         window.addEventListener('offline', updateConnectivity);
         updateConnectivity();
-        const connInterval = setInterval(updateConnectivity, 5000);
+        const connInterval = setInterval(updateConnectivity, 6000);
 
         // Fetch Sync Status
         const fetchSyncStatus = () => {
@@ -113,7 +113,7 @@ const StatusModal = ({ show, onHide }) => {
             }
         };
         fetchSyncStatus();
-        const syncInterval = setInterval(fetchSyncStatus, 5000); // Check every 5s when open
+        const syncInterval = setInterval(fetchSyncStatus, 6000); // Check every 5s when open
 
         fetchPrinters();
 

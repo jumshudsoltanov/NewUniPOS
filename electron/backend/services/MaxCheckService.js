@@ -8,13 +8,14 @@ const ADMIN_API_FALLBACK_URL = "http://46.224.8.157:35627/api/pos/max-checks";
 class MaxCheckService {
     constructor() {
         this.cachedServerMaxId = 0;
+        this.cachedLocalMaxId = 0;
     }
 
     async fetchServerMaxId(profileId) {
         const urls = [`${ADMIN_API_URL}/${profileId}`, `${ADMIN_API_FALLBACK_URL}/${profileId}`];
         for (const url of urls) {
             try {
-                const response = await axios.get(url, { timeout: 5000 });
+                const response = await axios.get(url, { timeout: 3000 });
                 if (response.status === 200 && response.data != null) {
                     const d = response.data;
                     const serverMax = Number(
@@ -40,7 +41,7 @@ class MaxCheckService {
         const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
         for (const url of urls) {
             try {
-                await axios.post(url, { profile_id: profileId, max_id: maxId }, { timeout: 5000 });
+                await axios.post(url, { profile_id: profileId, max_id: maxId }, { timeout: 3000 });
                 this.cachedServerMaxId = maxId;
                 console.log(`[MAX_CHECK] Synced maxId=${maxId} to server (profile: ${profileId})`);
                 return true;
@@ -53,7 +54,12 @@ class MaxCheckService {
     }
 
     async getNextId(profileId) {
-        const localMax = (await OrdersModel.max("id", { paranoid: false })) || 0;
+        let localMax = this.cachedLocalMaxId;
+
+        if (localMax === 0) {
+            localMax = (await OrdersModel.max("id", { paranoid: false })) || 0;
+            this.cachedLocalMaxId = localMax;
+        }
 
         let serverMax = this.cachedServerMaxId;
         if (localMax === 0 || serverMax === 0) {
@@ -67,6 +73,8 @@ class MaxCheckService {
         const effectiveMax = Math.max(localMax, serverMax);
         const nextId = effectiveMax + 1;
 
+        this.cachedLocalMaxId = nextId;
+
         this.syncMaxIdToServer(profileId, nextId).catch(() => { });
         if (localMax > 0 && serverMax > 0) {
             this.fetchServerMaxId(profileId).catch(() => { });
@@ -79,6 +87,7 @@ class MaxCheckService {
     async fetchAndSyncOnStartup(profileId) {
         try {
             const localMax = (await OrdersModel.max("id", { paranoid: false })) || 0;
+            this.cachedLocalMaxId = localMax;
             const serverMax = await this.fetchServerMaxId(profileId);
             const effectiveMax = Math.max(localMax, serverMax);
 

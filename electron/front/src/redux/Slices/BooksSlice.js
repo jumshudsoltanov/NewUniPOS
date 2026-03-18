@@ -72,7 +72,21 @@ const BooksSlice = createSlice({
         state.books.unshift(newOrder);
       } else if (state.books && Array.isArray(state.books.data)) {
         state.books.data.unshift(newOrder);
+      } else {
+        state.books = { data: [newOrder] };
       }
+    },
+    updateOrderOptimisticId: (state, action) => {
+      const { uuid, newOrderData } = action.payload;
+      if (!uuid || !newOrderData) return;
+      const updateList = (list) => {
+        const index = list.findIndex(o => String(o.uuid) === String(uuid));
+        if (index !== -1) {
+          list[index] = { ...list[index], ...newOrderData };
+        }
+      };
+      if (Array.isArray(state.books)) updateList(state.books);
+      else if (state.books && Array.isArray(state.books.data)) updateList(state.books.data);
     },
     tickTimer: (state) => {
       const getUpdatedOrders = (list) => {
@@ -398,7 +412,7 @@ const BooksSlice = createSlice({
   },
 });
 
-export const { removeOrderOptimistic, addOrderOptimistic, tickTimer } = BooksSlice.actions;
+export const { removeOrderOptimistic, addOrderOptimistic, updateOrderOptimisticId, tickTimer } = BooksSlice.actions;
 export default BooksSlice.reducer;
 
 
