@@ -188,6 +188,7 @@ const Tables = () => {
     };
   }, [dispatch, loginedProfileData]);
 
+  
   const handleTableClick = React.useCallback(
     async (table) => {
       if (isTableEditMode) return;
@@ -199,8 +200,8 @@ const Tables = () => {
       const isMyTable = hasOrders && loginedWaiter?.data?.id && waiterId == loginedWaiter.data.id;
       const isOtherTable = hasOrders && !isMyTable;
 
-      if (Number(loginedWaiter?.data?.can_manage_package) === 1 && hasOrders) {
-        toast.error("İcazəniz yoxdur: Yalnız yeni sifariş yarada bilərsiniz, masadan sifariş götürə bilməzsiniz.");
+      if (Number(loginedWaiter?.data?.can_manage_packs) === 1) {
+        toast.error("İcazəniz yoxdur: Masada sifariş yarada və ya aça bilməzsiniz.");
         return;
       }
 

@@ -185,7 +185,7 @@ const WaitersModel = db.sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
-    can_manage_package: {
+    can_manage_packs: {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: 0,
