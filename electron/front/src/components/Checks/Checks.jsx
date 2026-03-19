@@ -223,8 +223,8 @@ const Checks = () => {
   const formatDateKey = (date) => (date ? new Date(date).toISOString().split("T")[0] : "");
 
   const handleOrderClick = useCallback((order) => {
-    // Permission check for accessing other waiter's checks
-    if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 1) {
+    // can_access_own_checks_only=0: yalnız öz çeklərinə; =1: bütün çeklərə giriş
+    if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 0) {
       if (order?.waiter_id !== loginedWaiter?.data?.id && order?.waiter?.id !== loginedWaiter?.data?.id) {
         toast.error("İcazəniz yoxdur: Bu çek başqa ofisianta aiddir.");
         return;
@@ -237,7 +237,7 @@ const Checks = () => {
       setSelectedOrder(order);
       setShowModal(true);
     }
-  }, [activeTab, loginedWaiter?.data?.id, navigate]);
+  }, [activeTab, loginedWaiter?.data?.id, loginedWaiter?.data?.can_access_own_checks_only, navigate]);
 
   const changeDay = (delta) => {
     const newDate = new Date(selectedDate);

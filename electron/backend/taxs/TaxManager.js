@@ -6,7 +6,8 @@ const serviceInstances = {};
 
 function getTaxService(taxConfig) {
     const type = (taxConfig.tax_cash_type || '').toLowerCase();
-    const key = `${type}_${taxConfig.ip_addr}_${taxConfig.port_addr}`;
+    const taxType = taxConfig.tax_type != null ? String(taxConfig.tax_type) : '';
+    const key = `${type}_${taxConfig.ip_addr}_${taxConfig.port_addr}_${taxType}`;
 
     if (serviceInstances[key]) {
         return serviceInstances[key];
@@ -15,7 +16,7 @@ function getTaxService(taxConfig) {
     let service;
     if (type.includes('omnitech')) {
         service = new OmnitechService(taxConfig);
-    } else if (type.includes('sunmi')) {
+    } else if (type.includes('sunmi') || type.includes('caspos')) {
         service = new SunmiService(taxConfig);
     } else if (type.includes('oneclick') || type.includes('vizar')) {
         service = new OneClickService(taxConfig);

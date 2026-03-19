@@ -439,7 +439,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
             {(products.length > 0 || pendingDeletions.length > 0) && (
               <button
-                className="btn-menu-dots"
+                className="btn-menu-dots has-items"
                 onClick={() => setShowNewItemsModal(true)}
               >
                 <i className="bi bi-three-dots"></i>

@@ -2,6 +2,20 @@ const OrdersModel = require("../model/OrdersModel");
 const SyncService = require("../services/SyncService");
 const MaxCheckService = require("../services/MaxCheckService");
 
+const getNextOrderId = async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    if (!profileId) {
+      res.status(400).json({ message: "false", data: "profileId required" });
+      return;
+    }
+    const nextId = await MaxCheckService.getNextId(profileId);
+    res.status(200).json({ message: "success", data: { nextId } });
+  } catch (error) {
+    res.status(500).json({ message: "false", data: error.message });
+  }
+};
+
 const CreateNewOrders = async (req, res) => {
   try {
     const {
@@ -17,6 +31,7 @@ const CreateNewOrders = async (req, res) => {
       serviceValue,
       serviceType,
       uuid,
+      id: clientId,
     } = req.body;
 
     if (!tableId || !waiterId || !terminalId || !profileId) {
@@ -27,7 +42,7 @@ const CreateNewOrders = async (req, res) => {
       return;
     }
 
-    const newId = await MaxCheckService.getNextId(profileId);
+    const newId = clientId && Number(clientId) > 0 ? Number(clientId) : await MaxCheckService.getNextId(profileId);
 
     const [table, profile] = await Promise.all([
       require("../model/TablesModel").findOne({ where: { id: tableId } }),
@@ -79,7 +94,7 @@ const CreateNewOrders = async (req, res) => {
 
 const CreateNewOtherOrders = async (req, res) => {
   try {
-    const { waiterId, terminalId, profileId, sale_type, status, is_selected, uuid } =
+    const { waiterId, terminalId, profileId, sale_type, status, is_selected, uuid, id: clientId } =
       req.body;
 
     if (!profileId || !sale_type || !waiterId || !terminalId) {
@@ -89,7 +104,7 @@ const CreateNewOtherOrders = async (req, res) => {
       return;
     }
 
-    const newId = await MaxCheckService.getNextId(profileId);
+    const newId = clientId && Number(clientId) > 0 ? Number(clientId) : await MaxCheckService.getNextId(profileId);
 
     let newSale = await OrdersModel.create({
       id: newId,
@@ -122,4 +137,4 @@ const CreateNewOtherOrders = async (req, res) => {
   }
 };
 
-module.exports = { CreateNewOrders, CreateNewOtherOrders };
+module.exports = { getNextOrderId, CreateNewOrders, CreateNewOtherOrders };

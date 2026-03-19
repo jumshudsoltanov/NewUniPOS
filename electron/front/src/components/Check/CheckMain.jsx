@@ -28,17 +28,16 @@ const CheckMain = ({ orders, table }) => {
   const allItems = useMemo(() => {
     const groupedMap = new Map();
 
-    // 1. Process Saved items
+    // 1. Process Saved items (check-də birləşdir - şərh fərqi sayı bölməsin, yalnız mətbəxə göndərərkən ayrılsın)
     if (orders?.orders_items) {
       orders.orders_items.forEach((orderItem) => {
         const prodId = Number(orderItem.product_id);
         const isGift = orderItem.is_gift ? 1 : 0;
         const price = parseFloat(orderItem.price || orderItem.amount || 0).toFixed(2);
         const modifiersStr = typeof orderItem.modifiers === 'string' ? orderItem.modifiers : JSON.stringify(orderItem.modifiers || []);
-        const commentStr = orderItem.comment || '';
         const modObj = typeof orderItem.modifiers === 'string' ? JSON.parse(orderItem.modifiers || '[]') : (orderItem.modifiers || []);
         const uniqueKeyPart = modObj.length > 0 ? `-${orderItem.id}` : '';
-        const key = `${prodId}-${isGift}-${price}-${modifiersStr}-${commentStr}${uniqueKeyPart}`;
+        const key = `${prodId}-${isGift}-${price}-${modifiersStr}${uniqueKeyPart}`;
         const existing = groupedMap.get(key);
 
         if (existing) {
@@ -46,8 +45,14 @@ const CheckMain = ({ orders, table }) => {
           existing.savedQuantity = (existing.savedQuantity || 0) + Number(orderItem.count);
           existing.allIds = [...(existing.allIds || [existing.firstId]), orderItem.id];
           existing.price = orderItem.price || orderItem.amount;
+          if (orderItem.comment) {
+            existing.commentsList = existing.commentsList || (existing.comment ? [existing.comment] : []);
+            existing.commentsList.push(orderItem.comment);
+            existing.comment = [...new Set(existing.commentsList.filter(Boolean))].join(", ");
+          }
         } else {
           const menuItem = menu.find((item) => item.id === prodId);
+          const comment = orderItem.comment || '';
           groupedMap.set(key, {
             ...orderItem,
             product_id: prodId,
@@ -62,13 +67,14 @@ const CheckMain = ({ orders, table }) => {
             allIds: [orderItem.id],
             printer_details: menuItem?.printer_details || [],
             modifiers: orderItem.modifiers,
-            comment: orderItem.comment
+            comment,
+            commentsList: comment ? [comment] : []
           });
         }
       });
     }
 
-    // 2. Process New (Local) & Just Sent items
+    // 2. Process New (Local) & Just Sent items (check-də birləşdir - şərh fərqi sayı bölməsin)
     const combinedLocal = [...products, ...(sentProducts || [])];
 
     combinedLocal.forEach((item, idx) => {
@@ -76,13 +82,9 @@ const CheckMain = ({ orders, table }) => {
       const isGift = item.is_gift ? 1 : 0;
       const price = parseFloat(item.price || 0).toFixed(2);
       const modifiersStr = typeof item.modifiers === 'string' ? item.modifiers : JSON.stringify(item.modifiers || []);
-      const commentStr = item.comment || '';
-
-      // If has modifiers, make key unique using index to ALWAYS separate them
       const hasModifiers = (item.modifiers && item.modifiers.length > 0);
       const uniqueKeyPart = hasModifiers ? `-local-idx-${idx}` : '';
-
-      const key = `${prodId}-${isGift}-${price}-${modifiersStr}-${commentStr}${uniqueKeyPart}`;
+      const key = `${prodId}-${isGift}-${price}-${modifiersStr}${uniqueKeyPart}`;
       const existing = groupedMap.get(key);
 
       const qtyToAdd = Number(item.quantity || item.count || 1);
@@ -90,8 +92,14 @@ const CheckMain = ({ orders, table }) => {
       if (existing) {
         existing.count += qtyToAdd;
         existing.localQuantity = (existing.localQuantity || 0) + qtyToAdd;
-        existing.isNew = true; // Mark as partially new so it highlights
+        existing.isNew = true;
+        if (item.comment) {
+          existing.commentsList = existing.commentsList || (existing.comment ? [existing.comment] : []);
+          existing.commentsList.push(item.comment);
+          existing.comment = [...new Set(existing.commentsList.filter(Boolean))].join(", ");
+        }
       } else {
+        const comment = item.comment || '';
         groupedMap.set(key, {
           product_id: prodId,
           name: item.name,
@@ -104,7 +112,8 @@ const CheckMain = ({ orders, table }) => {
           firstId: 999999999 + idx,
           printer_details: item.printer_details || [],
           modifiers: item.modifiers,
-          comment: item.comment
+          comment,
+          commentsList: comment ? [comment] : []
         });
       }
     });
@@ -280,7 +289,7 @@ const CheckMain = ({ orders, table }) => {
                         </div>
                       )}
 
-                      {item.comment && (
+                      {item.comment && item.isNew && (
                         <div style={{ fontSize: "0.75rem", color: "#856404", fontStyle: "italic", lineHeight: "1.2" }}>
                           <i className="fa-solid fa-comment-dots me-1"></i>
                           {item.comment}

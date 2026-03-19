@@ -767,7 +767,7 @@
     margin-left: 8px;
 }
 
-/* 3-dot Menu Button */
+/* 3-dot Menu Button - modal açan */
 .btn-menu-dots {
     width: 44px;
     height: 52px;
@@ -784,6 +784,18 @@
     cursor: pointer;
     flex-shrink: 0;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.btn-menu-dots.has-items {
+    background-color: #053796;
+    color: #fff;
+    border-color: #053796;
+}
+
+.btn-menu-dots.has-items:hover {
+    background-color: #042d7a;
+    border-color: #042d7a;
+    color: #fff;
 }
 
 .btn-menu-dots:hover {

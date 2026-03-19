@@ -189,11 +189,7 @@ const DevicesModal = ({ show, onHide }) => {
             return;
         }
         setCustomerReceiptAutoPrint(nextStatus);
-        try {
-            await localApi.patch("/profiles/customer-receipt-auto", {
-                profileId,
-                isActive: nextStatus
-            });
+        const saveToLocalStorage = () => {
             const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
             storedProfile.is_customer_receipt_auto_print = nextStatus ? 1 : 0;
             localStorage.setItem("profile", JSON.stringify(storedProfile));
@@ -208,6 +204,18 @@ const DevicesModal = ({ show, onHide }) => {
                     }
                 }
             } catch (e) { console.warn("authResult update:", e); }
+        };
+        if (isSlave) {
+            saveToLocalStorage();
+            toast.success(nextStatus ? "Müştəri çeki avto çap AKTİV (lokal)" : "Müştəri çeki avto çap DEAKTİV (lokal)");
+            return;
+        }
+        try {
+            await localApi.patch("/profiles/customer-receipt-auto", {
+                profileId,
+                isActive: nextStatus
+            });
+            saveToLocalStorage();
             toast.success(nextStatus ? "Müştəri çeki avto çap AKTİV" : "Müştəri çeki avto çap DEAKTİV");
         } catch (error) {
             setCustomerReceiptAutoPrint(!nextStatus);

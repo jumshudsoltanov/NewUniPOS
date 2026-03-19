@@ -119,7 +119,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
 
     const salesTypes = [
         { id: "dine_in", label: "Yerində" },
-        { id: "takeaway", label: "Takeaway" },
+        { id: "takeaway", label: "Gəl götür" },
         { id: "delivery", label: "Çatdırılma" }
     ];
 

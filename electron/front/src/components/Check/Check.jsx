@@ -24,15 +24,15 @@ import DiscountModal from "../DiscountModal/DiscountModal";
 import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
 import DepositModal from "../DepositModal/DepositModal";
 import WaitersModal from "../Waiters/WaitersModal";
-import { getTableGroups, removeOrderOptimisticFromTables } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders, removeOrderOptimistic, tickTimer } from "../../redux/Slices/BooksSlice";
+import { getTableGroups, removeOrderOptimisticFromTables, addOrderToTableOptimistic } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders, removeOrderOptimistic, tickTimer, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer, clearOrders } from "../../redux/Slices/OrdersSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
-import { saleNewOrders } from "../../redux/Slices/SaleSlice";
+import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { printCustomerReceipt, processAndPrintOrders } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
@@ -45,13 +45,11 @@ import { assignCourierToOrder } from "../../redux/Slices/CouriersSlice";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
 import UpdateGuestCountModal from "../Customers-Modal/UpdateGuestCountModal";
-import axios from "axios";
 import apiConfig from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 import StatusModal from "../StatusModal/StatusModal";
 
 // Cloud API Base URL (Same as Admin)
-const CLOUD_API_URL = "https://api.unipos.tech/api";
 // Local Backend Sync URL
 const LOCAL_SYNC_URL = "/sync";
 
@@ -201,6 +199,9 @@ const Check = () => {
       }
     }
 
+
+    console.log(loginedProfileData);
+
     // Priority 1: books (full order data with orders_items)
     const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
     foundOrder = booksList.find((item) => item.uuid == id) || null;
@@ -293,6 +294,10 @@ const Check = () => {
     }
   }, [currentOrder?.orders_items?.length, pendingDeletions?.length]);
 
+  useEffect(() => {
+    if (id) dispatch(clearOrders());
+  }, [id, dispatch]);
+
   const goTables = (skipRefresh = false, replace = false) => {
     const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
     const opts = replace ? { replace: true } : undefined;
@@ -313,7 +318,7 @@ const Check = () => {
 
       const getSaleTypeName = (type, typeName) => {
         if (typeName) return typeName;
-        if (type == 1 || type === "takeaway") return "Al-götür";
+        if (type == 1 || type === "takeaway") return "Gəl götür";
         if (type == 2 || type === "delivery") return "Çatdırılma";
         return "Restoranda";
       };
@@ -424,14 +429,27 @@ const Check = () => {
       }
 
       if (hasNewProducts) {
-        const productsWithComments = products.map((p, idx) => {
+        const productsWithComments = products.flatMap((p, idx) => {
           const { printers, categoryId } = getAllPrintersForItem(p);
-          return {
+          const commentVal = itemComments[idx] !== undefined ? itemComments[idx] : p.comment;
+          const qty = p.count || p.quantity || 1;
+          if (Array.isArray(commentVal) && commentVal.length > 1) {
+            return commentVal.map((c, i) => ({
+              ...p,
+              printer_details: printers,
+              category_id: categoryId,
+              count: 1,
+              quantity: 1,
+              comment: c || null
+            }));
+          }
+          const singleComment = Array.isArray(commentVal) ? (commentVal[0] ?? p.comment) : commentVal;
+          return [{
             ...p,
             printer_details: printers,
             category_id: categoryId,
-            comment: itemComments[idx] !== undefined ? itemComments[idx] : p.comment
-          };
+            comment: singleComment
+          }];
         });
 
         await dispatch(sendOrdersItems({
@@ -1006,7 +1024,7 @@ const Check = () => {
 
           const getSaleTypeNameTemp = (type, typeName) => {
             if (typeName) return typeName;
-            if (type == 1 || type === "takeaway") return "Al-götür";
+            if (type == 1 || type === "takeaway") return "Gəl götür";
             if (type == 2 || type === "delivery") return "Çatdırılma";
             return "Restoranda";
           };
@@ -2071,20 +2089,23 @@ const Check = () => {
                               if (menuViewMode === "ROOT") {
                                 const items = customOrders["ROOT"] || [];
                                 orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
-                                endpoint = `${CLOUD_API_URL}/general-categories/ordering`;
+                                endpoint = "/general-categories/ordering";
                               } else if (menuViewMode === "CATEGORIES" && selectedGenCat) {
                                 const items = customOrders[`GEN_${selectedGenCat.id}`] || [];
                                 orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
-                                endpoint = `${CLOUD_API_URL}/categories/ordering`;
+                                endpoint = "/categories/ordering";
                               } else if (menuViewMode === "PRODUCTS" && selectedCat) {
                                 const items = customOrders[`CAT_${selectedCat.id}`] || [];
                                 orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
-                                endpoint = `${CLOUD_API_URL}/products/ordering`;
+                                endpoint = "/products/ordering";
                               }
 
                               if (orderedItems.length > 0 && endpoint) {
-                                // 1. Save to Cloud
-                                await apiConfig.put(endpoint, { orderedItems });
+                                // 1. Save to API (local API forwards to cloud + updates local DB)
+                                await apiConfig.put(endpoint, {
+                                  orderedItems,
+                                  profile_id: loginedProfileData?.data?.profile?.id
+                                });
 
                                 // 2. Reset Drag Mode Immediately
                                 setIsDragMode(false);
@@ -2093,14 +2114,17 @@ const Check = () => {
                                 addNotification("Sıralama Dəyişdirildi", "Menyu sıralaması yeniləndi.");
                                 toast.success("Sıralama uğurla yadda saxlanıldı!");
 
-                                // 3. Sync and Refresh in Background
-                                axios.post(`/sync/refresh/${loginedProfileData?.data?.profile?.id}`).then(() => {
-                                  const profileId = loginedProfileData?.data?.profile?.id;
-                                  if (profileId) {
-                                    dispatch(menuWithGeneralCategories(profileId));
-                                    dispatch(menuWithCategories(profileId));
+                                // 3. Sync from admin (sıralama admin DB-də saxlanıb, local-ə çək)
+                                const profileId = loginedProfileData?.data?.profile?.id;
+                                if (profileId) {
+                                  try {
+                                    await apiConfig.post(`/sync/refresh/${profileId}`);
+                                  } catch (syncErr) {
+                                    console.warn("Sync refresh xətası (menyu yenilənir):", syncErr?.message);
                                   }
-                                }).catch(err => console.error("Background sync error:", err));
+                                  dispatch(menuWithGeneralCategories(profileId));
+                                  dispatch(menuWithCategories(profileId));
+                                }
 
                                 // We don't clear customOrders here anymore. 
                                 // It acts as a local cache so the UI stays in the new order 
@@ -2283,9 +2307,19 @@ const Check = () => {
             return;
           }
 
+          let nextId = null;
+          try {
+            const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
+            nextId = nextIdRes?.data?.nextId;
+          } catch (e) {
+            console.warn("getNextOrderId failed, using backend-generated id", e);
+          }
+
+          const generatedUuid = crypto.randomUUID();
+          const sv = currentHall?.service_fee || 0;
           const payload = {
-            guestCount: 0, // No guest count prompt
-            tableId: currentTable?.id, // Keep same table
+            guestCount: 0,
+            tableId: currentTable?.id,
             waiterId,
             terminalId,
             profileId,
@@ -2293,29 +2327,66 @@ const Check = () => {
             hallId: currentHall?.id,
             status: 1,
             serviceType: currentHall?.service_fee ? "percent" : null,
-            serviceValue: currentHall?.service_fee || 0,
+            serviceValue: sv,
             is_selected: 1,
+            uuid: generatedUuid,
+            ...(nextId && { id: nextId }),
           };
 
-          try {
-            const result = await dispatch(saleNewOrders(payload)).unwrap();
-            if (result?.message === "success") {
-              const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-              dispatch(saveLog({
-                orderId: result.data.uuid,
-                action: "Yeni sifariş yaradıldı (Check View)",
-                waiterName,
-                details: `Masa: ${currentTable?.name || "Naməlum"}`
-              }));
-              navigate(`/check/${result?.data?.uuid}?tableId=${currentTable?.id}`);
-              toast.success("Yeni çek yaradıldı");
+          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+          const optimisticOrder = {
+            uuid: generatedUuid,
+            id: nextId ?? null,
+            waiter_id: waiterId,
+            profile_id: profileId,
+            terminal_id: terminalId,
+            sale_type: "dine_in",
+            sale_type_name: "Restoranda",
+            table_id: currentTable?.id,
+            guest_count: 0,
+            status: 1,
+            is_selected: 1,
+            orders_items: [],
+            table: currentTable ? { id: currentTable.id, name: currentTable.name, hall: { name: currentHall?.name } } : null,
+            table_name: currentTable?.name,
+            hall_name: currentHall?.name,
+            amount: 0,
+            total: 0,
+            start_date: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            discount: 0,
+            service_value: sv || 0,
+            service_type: sv ? "percent" : null,
+            waiter: { id: waiterId, name: waiterName },
+          };
+
+          dispatch(addOrderOptimistic(optimisticOrder));
+          if (currentTable?.id) {
+            dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: currentTable.id }));
+          }
+          dispatch(saveLog({
+            orderId: generatedUuid,
+            action: "Yeni sifariş yaradıldı (Check View)",
+            waiterName,
+            details: `Masa: ${currentTable?.name || "Naməlum"}`
+          }));
+          navigate(`/check/${generatedUuid}?tableId=${currentTable?.id}`);
+          toast.success("Yeni çek yaradıldı");
+
+          dispatch(saleNewOrders(payload)).unwrap()
+            .then((res) => {
+              const serverOrder = res?.data;
+              const finalId = serverOrder?.id ?? res?.count;
+              if (finalId && finalId !== nextId) {
+                dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+              }
               dispatch(getTableGroups(profileId));
               dispatch(getActiveOrders({ profileId }));
-            }
-          } catch (error) {
-            console.error(error);
-            toast.error("Xəta baş verdi");
-          }
+            })
+            .catch((err) => {
+              console.error(err);
+              toast.error("Xəta baş verdi");
+            });
         }}
       />
 

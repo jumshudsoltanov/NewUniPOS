@@ -509,7 +509,7 @@ const getHallReport = async (whereClause) => {
 
     const saleTypeNames = {
         delivery: 'Çatdırılma',
-        takeaway: 'Takeaway',
+        takeaway: 'Gəl götür',
         dine_in: 'Naməlum'
     };
 
@@ -567,7 +567,7 @@ const getSaleMethodReport = async (whereClause) => {
 
     let methodMap = {
         'dine_in': { name: 'Zalda', count: 0, total: 0 },
-        'takeaway': { name: 'Götür', count: 0, total: 0 },
+        'takeaway': { name: 'Gəl götür', count: 0, total: 0 },
         'delivery': { name: 'Çatdırılma', count: 0, total: 0 }
     };
 

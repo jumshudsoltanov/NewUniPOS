@@ -1,6 +1,19 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../utils/apiConfig";
 
+export const getNextOrderId = createAsyncThunk(
+  "pos/next-order-id",
+  async (profileId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/orders/${profileId}/next-id`);
+      return response.data;
+    } catch (error) {
+      console.error("NextOrderId Error", error);
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  },
+);
+
 export const saleNewOrders = createAsyncThunk(
   "pos/sales",
   async (data, { rejectWithValue }) => {

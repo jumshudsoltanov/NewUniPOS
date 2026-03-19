@@ -18,7 +18,7 @@ const ClearCheck = ({ show, onClose, order }) => {
 
   const getSaleTypeName = (type, typeName) => {
     if (typeName) return typeName;
-    if (type == 1 || type === "takeaway") return "Al-götür";
+    if (type == 1 || type === "takeaway") return "Gəl götür";
     if (type == 2 || type === "delivery") return "Çatdırılma";
     return "Restoranda";
   };

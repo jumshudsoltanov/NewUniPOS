@@ -317,7 +317,7 @@ export const splitOrder = createAsyncThunk(
       const itemNames = items.map(i => `${i.qty} ədəd (${i.name || 'ID:' + i.id})`).join(', ');
       const destTable = data?.table?.name || data?.table?.number || '';
       const destHall = data?.table?.hall_name || '';
-      const salesType = data?.salesType === 'dine_in' ? 'Yerində' : data?.salesType === 'takeaway' ? 'Takeaway' : data?.salesType === 'delivery' ? 'Çatdırılma' : data?.salesType;
+      const salesType = data?.salesType === 'dine_in' ? 'Yerində' : data?.salesType === 'takeaway' ? 'Gəl götür' : data?.salesType === 'delivery' ? 'Çatdırılma' : data?.salesType;
 
       let details = `Köçürüldü: ${itemNames}`;
       if (destTable) {
@@ -927,6 +927,7 @@ export const OrderSlice = createSlice({
     clearOrders: (state, action) => {
       state.products = [];
       state.sentProducts = [];
+      state.pendingDeletions = [];
     },
 
     updateCount: (state, action) => {

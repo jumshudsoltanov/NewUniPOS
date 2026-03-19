@@ -4,6 +4,7 @@ import { Modal } from "react-bootstrap";
 import "./SalesTypesModal.css";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  getNextOrderId,
   saleNewOtherOrders,
 } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
@@ -46,7 +47,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
     },
     {
       id: "takeaway",
-      label: "Takeaway",
+      label: "Gəl götür",
       icon: (
         <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
           <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12z" />
@@ -81,6 +82,14 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
       setIsCreating(true);
       setCreatingType(saleTypeId);
 
+      let nextId = null;
+      try {
+        const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
+        nextId = nextIdRes?.data?.nextId;
+      } catch (e) {
+        console.warn("getNextOrderId failed, using backend-generated id", e);
+      }
+
       const generatedUuid = crypto.randomUUID();
 
       const payload = {
@@ -91,6 +100,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
         status: 1,
         is_selected: 1,
         uuid: generatedUuid,
+        ...(nextId && { id: nextId }),
       };
 
       try {
@@ -100,7 +110,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
 
         const optimisticOrder = {
           uuid: generatedUuid,
-          id: null,
+          id: nextId ?? null,
           waiter_id: waiterId,
           profile_id: profileId,
           terminal_id: terminalId,
@@ -123,7 +133,7 @@ export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
         // Background APIs (Don't Await)
         dispatch(saleNewOtherOrders(payload)).unwrap().then((res) => {
           const finalId = res?.data?.id || res?.count;
-          if (finalId) {
+          if (finalId && finalId !== nextId) {
             dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
           }
         }).catch(err => console.error("API Create Error:", err));

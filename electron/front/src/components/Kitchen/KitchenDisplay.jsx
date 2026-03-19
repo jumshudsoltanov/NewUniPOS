@@ -155,7 +155,7 @@ const KitchenDisplay = () => {
         if (!type) return null;
         const labels = {
             dine_in: "Məkanda",
-            takeaway: "Paket",
+            takeaway: "Gəl götür",
             delivery: "Çatdırılma",
             bolt_food: "Bolt Food",
             uber_eats: "Uber Eats",
@@ -253,7 +253,7 @@ const KitchenDisplay = () => {
                                                             <span className="kds-item-qty">{item.count}x</span>
                                                             <div className="kds-item-info">
                                                                 <span className="kds-item-name">{item.product?.name}</span>
-                                                                {item.note && <span className="kds-item-note">{item.note}</span>}
+                                                                {(item.comment || item.note) && <span className="kds-item-note">{item.comment || item.note}</span>}
                                                             </div>
                                                         </div>
                                                         <div className="kds-item-right">

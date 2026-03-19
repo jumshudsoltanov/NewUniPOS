@@ -3,9 +3,9 @@ import "./Check.css";
 import TagModal from "../Modals/TagModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import { useDispatch, useSelector } from "react-redux";
-import { getTableGroups } from "../../redux/Slices/TablesSlice";
-import { saleNewOrders } from "../../redux/Slices/SaleSlice";
-import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getTableGroups, addOrderToTableOptimistic } from "../../redux/Slices/TablesSlice";
+import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
+import { getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { useNavigate } from "react-router-dom";
 
@@ -35,6 +35,16 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
       return;
     }
 
+    let nextId = null;
+    try {
+      const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
+      nextId = nextIdRes?.data?.nextId;
+    } catch (e) {
+      console.warn("getNextOrderId failed, using backend-generated id", e);
+    }
+
+    const generatedUuid = crypto.randomUUID();
+    const sv = hall?.service_fee || 0;
     const payload = {
       guestCount: 0,
       tableId: table?.id,
@@ -45,27 +55,62 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
       hallId: hall?.id,
       status: 1,
       serviceType: hall?.service_fee ? "percent" : null,
-      serviceValue: hall?.service_fee || 0,
+      serviceValue: sv,
       is_selected: 1,
+      uuid: generatedUuid,
+      ...(nextId && { id: nextId }),
     };
 
-    try {
-      const result = await dispatch(saleNewOrders(payload)).unwrap();
-      if (result?.message === "success") {
-        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-        dispatch(saveLog({
-          orderId: result.data.uuid,
-          action: "Yeni sifariş yaradıldı (Header)",
-          waiterName,
-          details: `Masa: ${table?.name || "Naməlum"}`
-        }));
-        navigate(`/check/${result?.data?.uuid}?tableId=${table?.id}`);
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    const optimisticOrder = {
+      uuid: generatedUuid,
+      id: nextId ?? null,
+      waiter_id: waiterId,
+      profile_id: profileId,
+      terminal_id: terminalId,
+      sale_type: "dine_in",
+      sale_type_name: "Restoranda",
+      table_id: table?.id,
+      guest_count: 0,
+      status: 1,
+      is_selected: 1,
+      orders_items: [],
+      table: table ? { id: table.id, name: table.name, hall: { name: hall?.name } } : null,
+      table_name: table?.name,
+      hall_name: hall?.name,
+      amount: 0,
+      total: 0,
+      start_date: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      discount: 0,
+      service_value: sv || 0,
+      service_type: sv ? "percent" : null,
+      waiter: { id: waiterId, name: waiterName },
+    };
+
+    dispatch(addOrderOptimistic(optimisticOrder));
+    if (table?.id) {
+      dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
+    }
+    dispatch(saveLog({
+      orderId: generatedUuid,
+      action: "Yeni sifariş yaradıldı (Header)",
+      waiterName,
+      details: `Masa: ${table?.name || "Naməlum"}`
+    }));
+    navigate(`/check/${generatedUuid}?tableId=${table?.id}`);
+
+    dispatch(saleNewOrders(payload)).unwrap()
+      .then((res) => {
+        const serverOrder = res?.data;
+        const finalId = serverOrder?.id ?? res?.count;
+        if (finalId && finalId !== nextId) {
+          dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+        }
         dispatch(getTableGroups(profileId));
         dispatch(getActiveOrders({ profileId }));
-      }
-    } catch (error) {
-      console.error(error);
-    }
+      })
+      .catch((err) => console.error("Create order error:", err));
   };
 
   const getTimeDifference = (startDate) => {
@@ -110,7 +155,7 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
                   const type = orders?.sale_type;
                   if (!type) return "Yeni Sifariş";
                   if (type === "delivery") return "Çatdırılma";
-                  if (type === "takeaway") return "Takeaway";
+                  if (type === "takeaway") return "Gəl götür";
                   return type.charAt(0).toUpperCase() + type.slice(1);
                 })()}
               </span>
@@ -132,7 +177,7 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
         {/* Right Section: Order IDs + Toggle */}
         <div className="header-right-section" style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
           <span className="header-order-id">
-            {orders?.id ? `#${orders.id} / #${orders.id}` : "Yüklənir..."}
+            {orders?.id ? `#${orders.id} / #${orders.id}` : (orders?.uuid ? "Yeni sifariş" : "Yüklənir...")}
           </span>
           <div
             className="header-toggle-btn"

@@ -13,10 +13,12 @@ const SaleTypesController = require("../controller/SaleTypesContoller");
 const PrintersController = require("../controller/PrintersController");
 const ProductsController = require("../controller/ProductsController");
 const KitchenController = require("../controller/KitchenController");
+const OrderingController = require("../controller/OrderingController");
 
 // Routers lists
 router.get("/ping", (req, res) => res.json({ success: true }));
 router.post("/login", LoginController.getLogin);
+router.get("/orders/:profileId/next-id", SalesController.getNextOrderId);
 router.post("/sale", SalesController.CreateNewOrders);
 router.post("/other-sale", SalesController.CreateNewOtherOrders);
 router.get("/waiters/:pin", WaitersController.getWaiterInfo);
@@ -40,6 +42,9 @@ router.get("/sale-types/:profileId", SaleTypesController.getSaleTypes);
 router.post("/products", ProductsController.createProduct);
 router.put("/products/:id", ProductsController.updateProduct);
 router.delete("/products/:id", ProductsController.deleteProduct);
+router.put("/general-categories/ordering", OrderingController.generalCategoriesOrdering);
+router.put("/categories/ordering", OrderingController.categoriesOrdering);
+router.put("/products/ordering", OrderingController.productsOrdering);
 
 // Ordered Items Routers
 router.post(

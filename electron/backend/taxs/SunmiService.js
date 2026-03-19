@@ -9,21 +9,39 @@ class SunmiService {
         this.username = config.username || 'CashierUserName';
         this.password = config.password || 'password';
         this.taxPercent = config.tax_percent || 18;
+        const raw = config.tax_type;
+        const n = Number(raw);
+        const validVatTypes = [1, 2, 3, 5, 6, 7];
+        this.taxType = (raw != null && raw !== '' && !isNaN(n) && validVatTypes.includes(n)) ? n : null;
     }
 
-    _vatType(percent) {
-        switch (Number(percent)) {
-            case 18: return 1;
-            case 0:  return 5;
-            default: return 3; // VatFree
-        }
+    // Caspos VAT: 1=Vat18%, 2=TradeSupplement, 3=VatFree, 5=Vat0%, 6=SV2%, 7=SV8%
+    _getVatType() {
+        if (this.taxType !== null) return this.taxType;
+        const p = Number(this.taxPercent);
+        if (p === 18) return 1;
+        if (p === 0) return 5;
+        if (p === 2) return 6;
+        if (p === 8) return 7;
+        return 3;
+    }
+
+    // Nağd = cash, Nağdsız/Kart = cashless (card). Caspos: cashPayment + cardPayment = total
+    _isCashless(name, type) {
+        const n = String(name || '').toLowerCase().replace(/\s/g, '');
+        const t = String(type || '').toLowerCase().replace(/\s/g, '');
+        return t === 'nağdsız' || t === 'nagdsiz' || t === 'nəğdsiz' || t === 'cashless' || t === 'card' || t === 'bank' ||
+            t === 'pos' || t === 'terminal' || t === 'kredit' || t === 'credit' ||
+            n.includes('kart') || n.includes('card') || n.includes('cashless') || n.includes('nağdsız') ||
+            n.includes('nagdsiz') || n.includes('nəğdsiz') || n.includes('bank') || n.includes('pos') ||
+            n.includes('terminal');
     }
 
     async _request(body) {
         try {
             console.log(`[SUNMI REQUEST] ${body.operation}:`, JSON.stringify(body.data || {}));
             const response = await axios.post(this.baseUrl, body, {
-                headers: { 'Content-Type': 'application/json; charset=utf8' },
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
                 timeout: 30000
             });
             const data = response.data;
@@ -76,9 +94,10 @@ class SunmiService {
 
     async getShiftStatus() {
         const result = await this._request(this._base('getShiftStatus'));
-        // Normalize: Sunmi may return shiftStatus at root or nested in data
-        if (result.shiftStatus === undefined && result.data !== undefined) {
-            result.shiftStatus = result.data.shiftStatus;
+        // Caspos API: data.shift_open (boolean). TaxManager expects shiftStatus.
+        const d = result.data || {};
+        if (result.shiftStatus === undefined) {
+            result.shiftStatus = d.shift_open !== undefined ? d.shift_open : d.shiftStatus;
         }
         return result;
     }
@@ -91,9 +110,10 @@ class SunmiService {
     }
 
     async closeShift(cashierName = 'Cashier') {
+        // Caspos: data must contain documentUUID and cashierName
         return this._request(this._base('closeShift', {
             documentUUID: uuidv4(),
-            cashierName
+            cashierName: (cashierName || 'Cashier').substring(0, 64)
         }));
     }
 
@@ -116,7 +136,7 @@ class SunmiService {
     }
 
     async createSale({ items, payments, cashierName, orderId }) {
-        const vatType = this._vatType(this.taxPercent);
+        const vatType = this._getVatType();
 
         const saleItems = items.map(item => {
             const quantity = Number(item.count || item.quantity || 1);
@@ -139,14 +159,8 @@ class SunmiService {
 
         if (payments && payments.length > 0) {
             payments.forEach(p => {
-                const name = (p.name || '').toLowerCase();
-                const type = (p.type || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-                // type: "Nağd" = cash, "Nağdsız" = cashless (Omnitech ilə uyğun)
-                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
-                    name.includes('kart') || name.includes('card') || name.includes('cashless') ||
-                    name.includes('nağdsız') || name.includes('nəğdsiz') || name.includes('bank');
-                if (isCashless) {
+                if (this._isCashless(p.name, p.type)) {
                     cardPayment += amount;
                 } else {
                     cashPayment += amount;
@@ -154,13 +168,26 @@ class SunmiService {
             });
         } else {
             const total = saleItems.reduce((acc, i) => acc + i.salePrice * i.quantity, 0);
-            cashPayment = total;
+            cashPayment = Number(total.toFixed(2));
+        }
+
+        const itemsTotal = saleItems.reduce((acc, i) => acc + i.salePrice * i.quantity, 0);
+        const itemsTotalRounded = Number(itemsTotal.toFixed(2));
+        let cashRounded = Number(cashPayment.toFixed(2));
+        let cardRounded = Number(cardPayment.toFixed(2));
+        const paidTotal = cashRounded + cardRounded;
+        if (Math.abs(paidTotal - itemsTotalRounded) > 0.01) {
+            cashRounded = itemsTotalRounded - cardRounded;
+            if (cashRounded < 0) {
+                cardRounded = itemsTotalRounded;
+                cashRounded = 0;
+            }
         }
 
         const data = {
             documentUUID: String(orderId || uuidv4()),
-            cashPayment: Number(cashPayment.toFixed(2)),
-            cardPayment: Number(cardPayment.toFixed(2)),
+            cashPayment: cashRounded,
+            cardPayment: cardRounded,
             creditPayment: 0.0,
             depositPayment: 0.0,
             bonusPayment: 0.0,
@@ -179,7 +206,7 @@ class SunmiService {
     }
 
     async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId, orderId }) {
-        const vatType = this._vatType(this.taxPercent);
+        const vatType = this._getVatType();
         
         let returnItems = items.map(item => {
             const qty = Number(item.count || item.quantity || 1);
@@ -200,15 +227,9 @@ class SunmiService {
         let cashPayment = 0;
         let cardPayment = 0;
 
-        payments.forEach(p => {
-            const pName = String(p.name || '').toLowerCase();
-            const pType = String(p.type || '').toLowerCase();
+        (payments || []).forEach(p => {
             const pAmount = Number(p.amount || 0);
-            // type: "Nağd" = cash, "Nağdsız" = cashless (Omnitech ilə uyğun)
-            const isCashless = pType === 'nağdsız' || pType === 'cashless' || pType === 'card' || pType === 'bank' ||
-                pName.includes('kart') || pName.includes('card') || pName.includes('cashless') ||
-                pName.includes('nağdsız') || pName.includes('nəğdsiz') || pName.includes('bank');
-            if (isCashless) {
+            if (this._isCashless(p.name, p.type)) {
                 cardPayment += pAmount;
             } else {
                 cashPayment += pAmount;
@@ -223,11 +244,21 @@ class SunmiService {
             : '';
         const isManual = !parentDocumentId;
 
+        const returnTotal = returnItems.reduce((acc, i) => acc + i.salePrice * i.quantity, 0);
+        let cashRounded = Number(cashPayment.toFixed(2));
+        let cardRounded = Number(cardPayment.toFixed(2));
+        const paidTotal = cashRounded + cardRounded;
+        const returnTotalRounded = Number(returnTotal.toFixed(2));
+        if (Math.abs(paidTotal - returnTotalRounded) > 0.01) {
+            cashRounded = Math.max(0, returnTotalRounded - cardRounded);
+            cardRounded = returnTotalRounded - cashRounded;
+        }
+
         const data = {
             parentDocumentId: parentDocumentId,
             documentUUID: String(orderId || uuidv4()),
-            cashPayment: Number(cashPayment.toFixed(2)),
-            cardPayment: Number(cardPayment.toFixed(2)),
+            cashPayment: cashRounded,
+            cardPayment: cardRounded,
             creditPayment: 0.0,
             depositPayment: 0.0,
             bonusPayment: 0.0,
@@ -242,7 +273,7 @@ class SunmiService {
     }
 
     async rollback(parentDocumentId, totalSum, cashierName = 'Cashier') {
-        const vatType = this._vatType(this.taxPercent);
+        const vatType = this._getVatType();
         const sum = Number(Number(totalSum).toFixed(2));
 
         return this._request({

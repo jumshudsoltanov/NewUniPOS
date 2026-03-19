@@ -10,7 +10,7 @@ import TableGroupsModal from "../TableGroupsModal/TableGroupsModal";
 const saleTypes = [
   { id: "dine_in",   name: "Yerində",    icon: "bi bi-house-door" },
   { id: "delivery",  name: "Çatdırılma", icon: "bi bi-bicycle" },
-  { id: "takeaway",  name: "Takeaway",   icon: "bi bi-bag" },
+  { id: "takeaway",  name: "Gəl götür",   icon: "bi bi-bag" },
 ];
 
 const ChangeSaleTypeModal = ({ show, onClose, order }) => {

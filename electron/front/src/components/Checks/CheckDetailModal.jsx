@@ -12,6 +12,10 @@ import apiConfig from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 
+const getTaxConfigId = (c) => c?.id ?? (c?.ip_addr && c?.port_addr
+    ? Math.abs((c.ip_addr + ':' + c.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
+    : null);
+
 const CheckDetailModal = ({ show, onClose, order }) => {
     const dispatch = useDispatch();
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -169,9 +173,13 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             return;
         }
 
-        // Find the specific device that originally printed this order
-        const targetConfig = taxConfigs.find(c => c.id === order.tax_cash_id);
-        const configsToSend = targetConfig ? [targetConfig] : taxConfigs;
+        // Yalnız orijinal satışın edildiyi cihaza göndər – digər kassalar müstəqil qalır
+        const targetConfig = taxConfigs.find(c => getTaxConfigId(c) === order.tax_cash_id);
+        if (!targetConfig) {
+            toast.error('Bu çekin vergi kassası tapılmadı. Geri qaytarma yalnız orijinal kassaya göndərilə bilər.');
+            return;
+        }
+        const configsToSend = [targetConfig];
 
         setTaxLoading(true);
         try {
@@ -195,7 +203,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     cashierName: waiterName,
                     parentFiscalId: order.fiscal_id || '',
                     documentNumber: String(order.fiscal_doc_number || order.id || ''),
-                    shortDocId: order.fiscal_short_id || ''
+                    shortDocId: order.fiscal_short_id || '',
+                    orderId: order.uuid || order.id
                 }
             });
             if (result.data?.success) {
@@ -229,9 +238,12 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const handleTaxReceiptCopy = async () => {
         if (taxLoading || !order || taxConfigs.length === 0) return;
 
-        // Find the specific device that originally printed this order
-        const targetConfig = taxConfigs.find(c => c.id === order.tax_cash_id);
-        const configsToSend = targetConfig ? [targetConfig] : taxConfigs;
+        const targetConfig = taxConfigs.find(c => getTaxConfigId(c) === order.tax_cash_id);
+        if (!targetConfig) {
+            toast.error('Bu çekin vergi kassası tapılmadı. Təkrar çap yalnız orijinal kassadan edilə bilər.');
+            return;
+        }
+        const configsToSend = [targetConfig];
 
         setTaxLoading(true);
         try {

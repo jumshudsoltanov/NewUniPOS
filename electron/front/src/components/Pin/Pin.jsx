@@ -114,6 +114,8 @@ const ImageSection = React.memo(({ backgroundImg }) => {
   const [loaded, setLoaded] = useState(false);
   const [currentSrc, setCurrentSrc] = useState(RightBoxContainerImg2);
 
+
+
   useEffect(() => {
     const setBackground = () => {
       const validImage = (img) => {

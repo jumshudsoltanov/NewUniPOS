@@ -371,11 +371,15 @@ const CheckOver = () => {
                                 const firstSuccess = taxResult.data.results?.find(r => r.success && r.data);
                                 if (firstSuccess?.data) {
                                     const fd = firstSuccess.data;
+                                    const cfg = firstSuccess.config;
+                                    const taxId = cfg?.id ?? (cfg?.ip_addr && cfg?.port_addr
+                                        ? Math.abs((cfg.ip_addr + ':' + cfg.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
+                                        : null);
                                     apiConfig.patch(`/tax/save-fiscal/${id}`, {
                                         fiscal_id: fd.long_id || '',
                                         fiscal_doc_number: String(fd.document_number || ''),
                                         fiscal_short_id: fd.short_id || '',
-                                        tax_cash_id: firstSuccess.config?.id || null
+                                        tax_cash_id: taxId
                                     }).catch(err => console.error('Save fiscal data error:', err));
                                 }
                             } else {

@@ -4,7 +4,7 @@ import { Container, Row, Col, Button } from "react-bootstrap";
 import "./CustomersModal.css";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { saleNewOrders } from "../../redux/Slices/SaleSlice";
+import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
 import {
   getTableGroups,
   currentTableList,
@@ -79,6 +79,14 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
     setIsCreating(true);
 
     try {
+      let nextId = null;
+      try {
+        const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
+        nextId = nextIdRes?.data?.nextId;
+      } catch (e) {
+        console.warn("getNextOrderId failed, using backend-generated id", e);
+      }
+
       const sv = selectedHall?.service_fee !== 0
         ? Number(selectedHall?.service_fee)
         : Number(loginedProfileData?.data?.profile?.service_fee);
@@ -96,13 +104,14 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
         serviceType: sv ? "percent" : null,
         serviceValue: sv,
         is_selected: 1,
-        uuid: generatedUuid
+        uuid: generatedUuid,
+        ...(nextId && { id: nextId }),
       };
       
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const optimisticOrder = {
         uuid: payload.uuid,
-        id: null,
+        id: nextId ?? null,
         waiter_id: waiterId,
         profile_id: profileId,
         terminal_id: terminalId,
@@ -141,7 +150,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
       dispatch(saleNewOrders(payload)).unwrap().then((res) => {
         const serverOrder = res?.data;
         const finalId = serverOrder?.id ?? res?.count;
-        if (finalId) {
+        if (finalId && finalId !== nextId) {
           dispatch(updateOrderOptimisticId({ uuid: payload.uuid, newOrderData: { id: finalId } }));
         }
       }).catch(err => console.error("API Create Error:", err));

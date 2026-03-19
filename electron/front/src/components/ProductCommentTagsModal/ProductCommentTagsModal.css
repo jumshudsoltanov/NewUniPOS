@@ -1,0 +1,239 @@
+.product-comment-tags-modal .modal-content {
+    border-radius: 6px !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.product-comment-tags-modal .modal-dialog {
+    max-width: 480px !important;
+    margin: 1.75rem auto;
+}
+
+.product-comment-tags-modal-header {
+    background-color: #5D99FF;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+    border-bottom: none;
+}
+
+.product-comment-tags-header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.product-comment-tags-icon-circle {
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-comment-tags-icon-circle i {
+    font-size: 1.2rem;
+    color: #053796;
+}
+
+.product-comment-tags-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.product-comment-tags-modal-body {
+    padding: 20px;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.product-comment-tags-item-preview {
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.product-comment-tags-item-preview .preview-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.product-comment-tags-item-preview .preview-portion {
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.product-comment-tags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.product-comment-tags-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.product-comment-tags-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.product-comment-tags-list::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 6px;
+}
+
+.product-comment-tag-item {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.product-comment-tag-item:hover {
+    border-color: #cbd5e1;
+}
+
+.product-comment-tag-item.selected {
+    border-color: #5D99FF;
+    background-color: #ffffff;
+}
+
+.product-comment-tag-item .tag-text {
+    font-size: 15px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.tag-check-container {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.product-comment-tag-item.selected .tag-check-container {
+    background-color: #5D99FF;
+    border-color: #5D99FF;
+}
+
+.tag-check-container i {
+    color: #fff;
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.product-comment-tag-item.selected .tag-check-container i {
+    opacity: 1;
+}
+
+.product-comment-tags-empty {
+    padding: 24px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.product-comment-tags-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #f1f5f9;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.product-comment-tags-save-btn {
+    width: 100%;
+    height: 52px;
+    background-color: #053796;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.product-comment-tags-save-btn:hover:not(:disabled) {
+    background-color: #042d7a;
+}
+
+.product-comment-tags-save-btn:disabled {
+    background-color: #f8fafc;
+    color: #94a3b8;
+    border: 1px solid #e2e8f0;
+    cursor: not-allowed;
+}
+
+.btn-close-custom {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 767px) {
+    .product-comment-tags-modal .modal-dialog {
+        max-width: 92% !important;
+        margin: 1rem auto !important;
+    }
+
+    .product-comment-tags-modal-header {
+        height: 55px;
+        padding: 10px 15px;
+    }
+
+    .product-comment-tags-modal-title {
+        font-size: 16px;
+    }
+
+    .product-comment-tags-icon-circle {
+        width: 32px;
+        height: 32px;
+    }
+
+    .product-comment-tags-modal-body {
+        padding: 15px;
+    }
+
+    .product-comment-tags-list {
+        max-height: 250px;
+    }
+
+    .product-comment-tags-save-btn {
+        height: 48px;
+        font-size: 14px;
+    }
+}
