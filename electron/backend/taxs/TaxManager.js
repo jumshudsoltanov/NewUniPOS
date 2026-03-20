@@ -7,7 +7,14 @@ const serviceInstances = {};
 function getTaxService(taxConfig) {
     const type = (taxConfig.tax_cash_type || '').toLowerCase();
     const taxType = taxConfig.tax_type != null ? String(taxConfig.tax_type) : '';
-    const key = `${type}_${taxConfig.ip_addr}_${taxConfig.port_addr}_${taxType}`;
+    // Eyni IP/port-da 2 fərqli kassa qeydi olanda id olmadan bir Sunmi instance bölüşürdü
+    const unique =
+        taxConfig.id != null && taxConfig.id !== ''
+            ? `id_${taxConfig.id}`
+            : taxConfig.tax_cash_id != null && taxConfig.tax_cash_id !== ''
+              ? `tcid_${taxConfig.tax_cash_id}`
+              : '';
+    const key = `${type}_${taxConfig.ip_addr}_${taxConfig.port_addr}_${taxType}_${unique}`;
 
     if (serviceInstances[key]) {
         return serviceInstances[key];
@@ -33,6 +40,8 @@ function clearInstances() {
     Object.keys(serviceInstances).forEach(key => delete serviceInstances[key]);
 }
 
+const TAX_OP_TIMEOUT = 180000; // 3 dəqiqə — vergi kassası çapı uzun çəkə bilər, timeout verməsin
+
 const withTimeout = (promise, ms, name = 'Operation') => {
     let timeoutId;
     const timeoutPromise = new Promise((_, reject) => {
@@ -47,11 +56,11 @@ const withTimeout = (promise, ms, name = 'Operation') => {
 };
 
 // Tries to ensure shift is open. statusTimeout controls how long we wait for getShiftStatus.
-async function ensureShiftOpen(service, label, statusTimeout = 5000) {
+async function ensureShiftOpen(service, label, statusTimeout = 45000) {
     try {
         const shiftStatus = await withTimeout(service.getShiftStatus(), statusTimeout, `getShiftStatus(${label})`);
         if (shiftStatus.shiftStatus === false) {
-            await withTimeout(service.openShift(), 8000, `openShift(${label})`);
+            await withTimeout(service.openShift(), 120000, `openShift(${label})`);
             console.log(`[TAX] Shift auto-opened for ${label}`);
         }
     } catch (err) {
@@ -59,8 +68,26 @@ async function ensureShiftOpen(service, label, statusTimeout = 5000) {
     }
 }
 
+function filterSaleItemsForTax(items) {
+    return (items || []).filter((i) => {
+        const q = Number(i.count ?? i.quantity ?? 0);
+        return !Number.isNaN(q) && q > 0;
+    });
+}
+
 async function processSale(taxConfigs, saleData) {
     console.log('[TAX] ProcessSale Payments:', JSON.stringify(saleData.payments));
+
+    const validItems = filterSaleItemsForTax(saleData?.items);
+    if (validItems.length === 0) {
+        console.warn('[TAX] processSale: məhsul siyahısı boşdur — fiskal göndərilmir');
+        return taxConfigs.map((config) => ({
+            success: false,
+            config,
+            error: 'Fiskal satış üçün məhsul yoxdur (boş çek və ya bütün miqdarlar 0).',
+        }));
+    }
+    const saleDataPatched = { ...saleData, items: validItems };
 
     const promises = taxConfigs.map(async (config) => {
         const service = getTaxService(config);
@@ -69,8 +96,9 @@ async function processSale(taxConfigs, saleData) {
         try {
             await ensureShiftOpen(service, config.tax_cash_type);
 
-            const result = await service.createSale(saleData);
-            console.log(`[TAX] Sale sent to ${config.tax_cash_type} (${config.ip_addr}):`, result.message);
+            const timeoutMs = service.timeoutMs || TAX_OP_TIMEOUT;
+            const result = await withTimeout(service.createSale(saleDataPatched), timeoutMs, `createSale(${config.tax_cash_type})`);
+            console.log(`[TAX] Sale sent to ${config.tax_cash_type} (${config.ip_addr}):`, result?.message || 'OK');
             return { success: true, config, data: result };
         } catch (error) {
             console.error(`[TAX] Sale failed for ${config.tax_cash_type} (${config.ip_addr}):`, error.message);
@@ -79,11 +107,22 @@ async function processSale(taxConfigs, saleData) {
     });
 
     const settled = await Promise.allSettled(promises);
-    return settled.map(res => res.value || { success: false, error: res.reason });
+    return settled.map(res => res.value || { success: false, error: res.reason?.message || res.reason });
 }
 
 async function processMoneyBack(taxConfigs, moneyBackData) {
     console.log('[TAX] ProcessMoneyBack Payments:', JSON.stringify(moneyBackData.payments));
+
+    const validMbItems = filterSaleItemsForTax(moneyBackData?.items);
+    if (validMbItems.length === 0) {
+        console.warn('[TAX] processMoneyBack: məhsul siyahısı boşdur');
+        return taxConfigs.map((config) => ({
+            success: false,
+            config,
+            error: 'Geri qaytarma üçün məhsul siyahısı boşdur.',
+        }));
+    }
+    const moneyBackPatched = { ...moneyBackData, items: validMbItems };
 
     const promises = taxConfigs.map(async (config) => {
         const service = getTaxService(config);
@@ -92,7 +131,8 @@ async function processMoneyBack(taxConfigs, moneyBackData) {
         try {
             await ensureShiftOpen(service, config.tax_cash_type);
 
-            const result = await withTimeout(service.moneyBack(moneyBackData), 15000, `MoneyBack on ${config.tax_cash_type}`);
+            const timeoutMs = service.timeoutMs || TAX_OP_TIMEOUT;
+            const result = await withTimeout(service.moneyBack(moneyBackPatched), timeoutMs, `MoneyBack on ${config.tax_cash_type}`);
             console.log(`[TAX] MoneyBack sent to ${config.tax_cash_type}`);
             return { success: true, config, data: result };
         } catch (error) {
@@ -113,7 +153,8 @@ async function processReceiptCopy(taxConfigs, fiscalId) {
         try {
             await ensureShiftOpen(service, config.tax_cash_type, 3000);
 
-            const result = await withTimeout(service.receiptCopy(fiscalId), 20000, `ReceiptCopy on ${config.tax_cash_type}`);
+            const timeoutMs = service.timeoutMs || TAX_OP_TIMEOUT;
+            const result = await withTimeout(service.receiptCopy(fiscalId), timeoutMs, `ReceiptCopy on ${config.tax_cash_type}`);
             console.log(`[TAX] ReceiptCopy sent to ${config.tax_cash_type}`);
             return { success: true, config, data: result };
         } catch (error) {

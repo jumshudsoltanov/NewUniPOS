@@ -102,8 +102,8 @@ const OtherChecks = ({
   };
 
   const onMultiFunctionOtherChecs = async (type, orderId, tableId, orderData) => {
-    // Check permission - "can_access_own_checks_only"
-    if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 1) {
+    // can_access_own_checks_only=0: yalnız öz çeklərinə; =1: bütün çeklərə giriş
+    if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 0) {
       if (orderData?.waiter_id !== loginedWaiter?.data?.id && orderData?.waiter?.id !== loginedWaiter?.data?.id) {
         toast.error("İcazəniz yoxdur: Bu çek başqa ofisianta aiddir.");
         return;

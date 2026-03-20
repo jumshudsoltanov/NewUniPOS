@@ -39,6 +39,7 @@ import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 import OrderLogsModal from "./OrderLogsModal"; // Import Modal
 import { getSocket } from "../../utils/apiConfig";
+import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import CourierModal from "../CourierModal/CourierModal";
 import { assignCourierToOrder } from "../../redux/Slices/CouriersSlice";
@@ -120,7 +121,9 @@ const Check = () => {
               ao.amount !== bo.amount ||
               ao.status !== bo.status ||
               ao.is_locked !== bo.is_locked ||
-              ao.orders_items?.length !== bo.orders_items?.length
+              ao.tags !== bo.tags ||
+              ao.orders_items?.length !== bo.orders_items?.length ||
+              (ao.print_count || 0) !== (bo.print_count || 0)
             ) return false;
           }
         }
@@ -149,17 +152,19 @@ const Check = () => {
           ao.status !== bo.status ||
           ao.is_locked !== bo.is_locked ||
           ao.note !== bo.note ||
+          ao.tags !== bo.tags ||
           ao.customer_id !== bo.customer_id ||
           ao.courier_id !== bo.courier_id ||
           ao.delivery_fee !== bo.delivery_fee ||
-          ao.orders_items?.length !== bo.orders_items?.length
+          ao.orders_items?.length !== bo.orders_items?.length ||
+          (ao.print_count || 0) !== (bo.print_count || 0)
         ) return false;
       }
       return true;
     }
   );
   const { customers } = useSelector((state) => state.CustomersSlice);
-  const { menuDataWithCategories } = useSelector((state) => state.MenuSlice);
+  const { menuDataWithGeneralCategories, menuDataWithCategories } = useSelector((state) => state.MenuSlice);
 
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -258,6 +263,12 @@ const Check = () => {
     return null;
   }, [currentOrder?.customer_id, currentOrder?.customer_name, currentOrder?.customerName, currentOrder?.customer?.name, customers]);
 
+  /* Cari masadakı çeklərin sayı (yalnız bu masada neçə çek var) */
+  const activeTableCount = useMemo(() => {
+    if (!currentTable?.orders) return 0;
+    return currentTable.orders.length;
+  }, [currentTable]);
+
   const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -299,7 +310,7 @@ const Check = () => {
   }, [id, dispatch]);
 
   const goTables = (skipRefresh = false, replace = false) => {
-    const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+    const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
     const opts = replace ? { replace: true } : undefined;
     if (isPacksOnly || location.state?.from === "/checks") {
       navigate("/checks", opts);
@@ -333,7 +344,7 @@ const Check = () => {
           : (item.printer_details || []);
 
         let categoryPrinters = [];
-        if (categoryId && menuDataWithCategories?.data) {
+        if (productPrinters.length === 0 && categoryId && menuDataWithCategories?.data) {
           for (const genCat of menuDataWithCategories.data) {
             if (genCat.is_general && genCat.categories) {
               const subCat = genCat.categories.find(c => c.id === categoryId);
@@ -344,8 +355,8 @@ const Check = () => {
           }
         }
 
-        const combined = [...productPrinters, ...categoryPrinters];
-        return { printers: combined, categoryId };
+        const printers = productPrinters.length > 0 ? productPrinters : categoryPrinters;
+        return { printers, categoryId };
       };
 
       const hasDeletions = pendingDeletions && pendingDeletions.length > 0;
@@ -409,11 +420,12 @@ const Check = () => {
         });
 
         try {
+          const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
           processAndPrintOrders(
             deletedItemsForPrint,
             {
               table: currentTable?.name || currentOrder?.table_name || "Masa",
-              waiter: waiterName,
+              waiter: orderWaiter,
               hallName: currentHall?.name || "",
               orderId: currentOrder?.uuid || id,
               terminalInfo: loginedProfileData?.data?.terminal || {},
@@ -486,9 +498,10 @@ const Check = () => {
           }
         });
 
+        const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
         const printContext = {
           table: currentTable?.name || currentOrder?.table_name || "Masa",
-          waiter: waiterName,
+          waiter: orderWaiter,
           hallName: currentHall?.name || "",
           orderId: currentOrder?.uuid || id,
           terminalInfo: loginedProfileData?.data?.terminal || {},
@@ -764,7 +777,7 @@ const Check = () => {
     const socket = getSocket();
     if (!socket) return;
 
-    const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+    const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
     const postOrderTarget = isPacksOnly ? "/checks" : "/tables";
 
     const handleOrderDeleted = ({ orderId }) => {
@@ -798,7 +811,7 @@ const Check = () => {
       socket.off("order_closed", handleOrderClosed);
       socket.off("table_updated", handleTableUpdated);
     };
-  }, [id, navigate, loginedProfileData, loginedWaiter?.data?.can_manage_packs, dispatch]);
+  }, [id, navigate, loginedProfileData, loginedWaiter?.data, dispatch]);
 
   useEffect(() => {
     if (
@@ -997,7 +1010,7 @@ const Check = () => {
     }
 
     // 1. Instant navigation + optimistic state removal (UI instantly shows table as empty)
-    const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+    const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
     navigate(isPacksOnly ? "/checks" : "/tables", { replace: true });
     dispatch(removeOrderOptimisticFromTables(orderId));
     dispatch(removeOrderOptimistic(orderId));
@@ -1030,11 +1043,12 @@ const Check = () => {
           };
 
           try {
+            const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
             await processAndPrintOrders(
               itemsToPrint,
               {
                 table: currentOrder?.table_name || currentTable?.name || "Masa",
-                waiter: waiterName,
+                waiter: orderWaiter,
                 hallName: currentHall?.name || "",
                 orderId: currentOrder?.uuid,
                 terminalInfo: loginedProfileData?.data?.terminal || {},
@@ -1509,9 +1523,15 @@ const Check = () => {
                         }
 
                         try {
+                          const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
                           const result = await printCustomerReceipt({
                             items: products,
-                            checkData: { ...currentOrder, customer_name: selectedCustomer?.name || currentOrder?.customer_name || "" },
+                            checkData: {
+                              ...currentOrder,
+                              customer_name: selectedCustomer?.name || currentOrder?.customer_name || "",
+                              waiter_name: orderWaiter,
+                              waiter: orderWaiter ? { name: orderWaiter } : currentOrder?.waiter
+                            },
                             tableName: currentTable?.name,
                             hallName: currentHall?.name,
                             waiterName
@@ -1639,6 +1659,7 @@ const Check = () => {
                 table={currentTable}
                 hall={currentHall}
                 selectedCustomer={selectedCustomer}
+                activeTableCount={activeTableCount}
               />
               <CheckMain orders={currentOrder} table={currentTable} />
               <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} />
@@ -2082,14 +2103,41 @@ const Check = () => {
                             const loadingToast = toast.loading("Dəyişikliklər yadda saxlanılır...");
 
                             try {
+                              const profileId = loginedProfileData?.data?.profile?.id;
+                              if (!profileId) {
+                                toast.dismiss(loadingToast);
+                                toast.error("Profil ID tapılmadı");
+                                return;
+                              }
+
                               // Determine which order to save based on current view
                               let orderedItems = [];
                               let endpoint = "";
+                              let isRootSaved = false;
 
                               if (menuViewMode === "ROOT") {
                                 const items = customOrders["ROOT"] || [];
-                                orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
-                                endpoint = "/general-categories/ordering";
+                                const genCats = menuDataWithGeneralCategories?.data || [];
+                                const rootCats = (menuDataWithCategories?.data || []).filter(
+                                  (c) => !c.general_categorie_id || c.general_categorie_id === 0
+                                );
+                                const genCatIds = new Set(genCats.map((g) => g.id));
+                                const rootCatIds = new Set(rootCats.map((c) => c.id));
+                                const genCatOrdered = items.filter((id) => genCatIds.has(id)).map((id, i) => ({ id, ordering: i + 1 }));
+                                const catOrdered = items.filter((id) => rootCatIds.has(id)).map((id, i) => ({ id, ordering: i + 1 }));
+                                if (genCatOrdered.length > 0) {
+                                  await apiConfig.put("/general-categories/ordering", {
+                                    orderedItems: genCatOrdered,
+                                    profile_id: profileId
+                                  });
+                                }
+                                if (catOrdered.length > 0) {
+                                  await apiConfig.put("/categories/ordering", {
+                                    orderedItems: catOrdered,
+                                    profile_id: profileId
+                                  });
+                                }
+                                isRootSaved = items.length > 0;
                               } else if (menuViewMode === "CATEGORIES" && selectedGenCat) {
                                 const items = customOrders[`GEN_${selectedGenCat.id}`] || [];
                                 orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
@@ -2100,35 +2148,21 @@ const Check = () => {
                                 endpoint = "/products/ordering";
                               }
 
-                              if (orderedItems.length > 0 && endpoint) {
-                                // 1. Save to API (local API forwards to cloud + updates local DB)
-                                await apiConfig.put(endpoint, {
-                                  orderedItems,
-                                  profile_id: loginedProfileData?.data?.profile?.id
-                                });
-
-                                // 2. Reset Drag Mode Immediately
+                              if (isRootSaved || (orderedItems.length > 0 && endpoint)) {
+                                if (!isRootSaved) {
+                                  const putPayload = { orderedItems, profile_id: profileId };
+                                  if (menuViewMode === "PRODUCTS" && selectedCat) {
+                                    putPayload.category_id = selectedCat.id;
+                                  }
+                                  await apiConfig.put(endpoint, putPayload);
+                                }
                                 setIsDragMode(false);
                                 setTempCustomOrders(null);
                                 toast.dismiss(loadingToast);
                                 addNotification("Sıralama Dəyişdirildi", "Menyu sıralaması yeniləndi.");
                                 toast.success("Sıralama uğurla yadda saxlanıldı!");
-
-                                // 3. Sync from admin (sıralama admin DB-də saxlanıb, local-ə çək)
-                                const profileId = loginedProfileData?.data?.profile?.id;
-                                if (profileId) {
-                                  try {
-                                    await apiConfig.post(`/sync/refresh/${profileId}`);
-                                  } catch (syncErr) {
-                                    console.warn("Sync refresh xətası (menyu yenilənir):", syncErr?.message);
-                                  }
-                                  dispatch(menuWithGeneralCategories(profileId));
-                                  dispatch(menuWithCategories(profileId));
-                                }
-
-                                // We don't clear customOrders here anymore. 
-                                // It acts as a local cache so the UI stays in the new order 
-                                // even if the background refresh takes a few seconds.
+                                dispatch(menuWithGeneralCategories(profileId));
+                                dispatch(menuWithCategories(profileId));
                               } else {
                                 toast.dismiss(loadingToast);
                                 setIsDragMode(false);

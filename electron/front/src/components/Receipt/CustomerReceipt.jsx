@@ -315,6 +315,13 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
+                {checkData?.tags && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Qəbz etiketi</span>
+                        <span style={styles.value}>{checkData.tags}</span>
+                    </div>
+                )}
+
                 {(hallName || tableName) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Satış yeri</span>

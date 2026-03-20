@@ -1,12 +1,55 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import { Modal, Row, Col, Form, Table } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
 import axios from "../../utils/apiConfig";
+import { toast } from "sonner";
 import "./ReportModal.css";
+
+/** API uğursuz olanda da cədvəllər sıfır ilə göstərilsin */
+/** Müştəri / ofisant üçün — sətirlərin üzərinə gəldikdə izah (tooltip) */
+const REPORT_HINTS = {
+    sumTotal: "Bağlanmış çeklərdə məhsul + timer məbləği cəmi (ərazi üzrə).",
+    tax: "Seçilmiş hesabat dövründə bağlanmış çeklərdə hesablanmış vergi məbləği.",
+    gift: "İkram olunmuş məhsulların nominal dəyəri (məhsul qiyməti üzrə).",
+    service: "Xidmət haqqı cəmi.",
+    discount: "Endirimlər üzrə çıxılan məbləğ cəmi.",
+    delivery: "Çatdırılma haqqı (əgər sifarişlərdə varsa).",
+    refund: "Geri qaytarılmış sifarişlərin məbləği.",
+    deleted: "Silinmiş və ya ləğv səbəbi ilə bağlanmış əməliyyatların məbləğ göstəricisi (dövr üzrə).",
+    paidClose: "Ödəniş üsulu ilə bağlanmış çeklərdə ödənilmiş məbləğ cəmi.",
+    unpaidClose: "Ödənişsiz bağlama ilə bağlanmış çeklərin məbləği.",
+    net: "Bağlanmış çeklərin yekun məbləği (sistemdəki net cəm).",
+    openCount: "Hələ açıq (bağlanmamış) sifariş sayı.",
+    openSum: "Açıq sifarişlərin məbləğ cəmi.",
+    guests: "Qərara alınmış qonaq sayısı.",
+    paymentMethod: "Bu ödəniş üsulu ilə bağlanmış çeklərdə ödənilən məbləğ.",
+    unpaidTag: "Ödənişsiz bağlama ilə bağlanmış çeklərin məbləği.",
+    tagRow: "Bu etiketlə bağlanmış çeklərin məbləği.",
+};
+
+const DEFAULT_REPORT_SUMMARY = {
+    total_amount: 0,
+    total_discount: 0,
+    total_service: 0,
+    total_gift: 0,
+    total_refund: 0,
+    total_deleted: 0,
+    total_tax: 0,
+    net_total: 0,
+    guest_count: 0,
+    open_orders_count: 0,
+    open_orders_total: 0,
+    total_paid: 0,
+    total_unpaid: 0,
+    payments: {},
+    unpaid_payments: {},
+    tags: {}
+};
 
 const ReportModal = ({ show, onClose }) => {
     const profile = useSelector((state) => state.LoginSlice?.loginedProfileData?.data?.profile);
+    const terminalInfo = useSelector((state) => state.LoginSlice?.loginedProfileData?.data?.terminal) || {};
     const profileId = profile?.id;
     const customers = useSelector((state) => state.CustomersSlice?.customers || []);
     const dispatch = useDispatch();
@@ -32,6 +75,8 @@ const ReportModal = ({ show, onClose }) => {
     const [reportResults, setReportResults] = useState(null);
     const [reportSummary, setReportSummary] = useState(null);
     const [loading, setLoading] = useState(false);
+    /** Kateqoriya hesabatı: hansı kateqoriyalar printerə getsin (indeks → true/false, default true) */
+    const [categoryPrintInclude, setCategoryPrintInclude] = useState({});
 
     const reportTypes = [
         { id: "simple", name: "Sadə" },
@@ -60,6 +105,16 @@ const ReportModal = ({ show, onClose }) => {
         }
     }, [show, profileId]);
 
+    useEffect(() => {
+        if (reportResults?.type === "category" && Array.isArray(reportResults.data)) {
+            const next = {};
+            reportResults.data.forEach((_, i) => {
+                next[i] = true;
+            });
+            setCategoryPrintInclude(next);
+        }
+    }, [reportResults]);
+
     const fetchTerminals = async () => {
         try {
             const response = await axios.get(`/reports/${profileId}/terminals`);
@@ -85,33 +140,41 @@ const ReportModal = ({ show, onClose }) => {
         const reportEl = document.querySelector('.report-view');
         if (!reportEl) return;
 
+        const clone = reportEl.cloneNode(true);
+        clone.querySelectorAll('.report-print-exclude').forEach((el) => el.remove());
+        clone.querySelectorAll('.report-category-print-col').forEach((el) => el.remove());
+
+        // Müştəri çeki (CustomerReceipt) ilə eyni ölçü: customer_receipt ofseti + termal üçün kiçik px
+        const baseFont = Number(terminalInfo?.customer_receipt || profile?.customer_receipt || 0);
+        const fs = (baseSize) => `${baseSize + baseFont * 2}px`;
+
         const html = `
             <style>
                 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', 'Courier', monospace; color: #000 !important; }
-                .report-view { width: 100%; max-width: 80mm; padding: 0 5mm; }
-                .report-data-header { border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 20px; text-align: left; }
-                .report-data-info p { font-size: 15px; margin-bottom: 6px; font-weight: 900; }
+                .report-view { width: 100%; max-width: 80mm; padding: 0 3mm; font-size: ${fs(12)}; }
+                .report-data-header { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; text-align: left; }
+                .report-data-info p { font-size: ${fs(11)}; margin-bottom: 4px; font-weight: 700; }
                 .report-data-info p span { font-weight: bold; margin-right: 5px; }
-                .report-data-time { margin-top: 10px; }
-                .report-data-time span { font-size: 14px; font-weight: 900; }
-                .section-title { font-weight: 900; font-size: 18px; border-bottom: 2px solid #000; padding-bottom: 6px; margin: 25px 0 15px; text-transform: uppercase; text-align: center; }
-                .receipt-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #666; align-items: center; }
-                .receipt-row > span:first-child { font-size: 16px; font-weight: 900; }
+                .report-data-time { margin-top: 6px; }
+                .report-data-time span { font-size: ${fs(11)}; font-weight: 700; }
+                .section-title { font-weight: 900; font-size: ${fs(12)}; border-bottom: 1px solid #000; padding-bottom: 4px; margin: 12px 0 8px; text-transform: uppercase; text-align: center; }
+                .receipt-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #666; align-items: center; }
+                .receipt-row > span:first-child { font-size: ${fs(11)}; font-weight: 700; }
                 .receipt-row .dots { display: none; }
-                .receipt-row .value { font-size: 17px; font-weight: 900; }
-                .total-line { border-top: 2px solid #000; border-bottom: 3px double #000; margin-top: 15px; padding: 12px 0; }
-                .total-line > span:first-child { font-size: 20px !important; font-weight: 900 !important; text-transform: uppercase; }
-                .total-line .value { font-size: 22px !important; font-weight: 900 !important; }
-                .report-details-section { margin-top: 25px; padding-top: 15px; border-top: 2px dashed #000; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 15px; }
-                th { border-bottom: 2px solid #000; padding: 8px 3px; font-size: 15px; font-weight: 900; text-align: left; text-transform: uppercase; }
-                td { border-bottom: 1px dashed #666; padding: 8px 3px; font-size: 15px; font-weight: 900; word-break: break-word; }
+                .receipt-row .value { font-size: ${fs(11)}; font-weight: 700; }
+                .total-line { border-top: 2px solid #000; border-bottom: 2px double #000; margin-top: 8px; padding: 6px 0; }
+                .total-line > span:first-child { font-size: ${fs(12)} !important; font-weight: 900 !important; text-transform: uppercase; }
+                .total-line .value { font-size: ${fs(13)} !important; font-weight: 900 !important; }
+                .report-details-section { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #000; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: ${fs(11)}; }
+                th { border-bottom: 1px solid #000; padding: 4px 2px; font-size: ${fs(11)}; font-weight: 700; text-align: left; text-transform: uppercase; }
+                td { border-bottom: 1px dashed #666; padding: 4px 2px; font-size: ${fs(11)}; font-weight: 700; word-break: break-word; }
                 .text-end { text-align: right; }
                 .text-center { text-align: center; }
                 .alert { display: none; }
-                i, svg, button { display: none !important; }
+                i, svg, button, input { display: none !important; }
             </style>
-            ${reportEl.innerHTML}
+            ${clone.innerHTML}
         `;
 
         if (window.electronAPI?.printReceipt && cashierPrinter) {
@@ -133,8 +196,13 @@ const ReportModal = ({ show, onClose }) => {
                 params: { startDate, startTime, endDate, endTime, terminal, reportType: 'simple', showTransactions }
             });
 
-            if (summaryRes.data.status === "success") {
-                setReportSummary(summaryRes.data.data);
+            const rawSummary =
+                summaryRes.data?.status === "success" && summaryRes.data.data != null
+                    ? summaryRes.data.data
+                    : null;
+            setReportSummary(rawSummary != null ? rawSummary : { ...DEFAULT_REPORT_SUMMARY });
+            if (summaryRes.data?.status !== "success") {
+                toast.warning("Ümumi satış xülasəsi alınmadı — sıfırlar göstərilir.");
             }
 
             if (reportType !== "simple") {
@@ -142,15 +210,28 @@ const ReportModal = ({ show, onClose }) => {
                     params: { startDate, startTime, endDate, endTime, terminal, reportType, showTransactions }
                 });
 
-                if (response.data.status === "success") {
-                    setReportResults({ type: reportType, data: response.data.data });
+                if (response.data?.status === "success") {
+                    const detailData = response.data.data;
+                    setReportResults({
+                        type: reportType,
+                        data: detailData != null ? detailData : []
+                    });
+                } else {
+                    toast.error("Detallı hesabat yüklənmədi.");
+                    setReportResults({ type: reportType, data: [] });
                 }
             } else {
-                setReportResults({ type: "simple", data: summaryRes.data.data });
+                setReportResults({
+                    type: "simple",
+                    data: rawSummary != null ? rawSummary : { ...DEFAULT_REPORT_SUMMARY }
+                });
             }
             if (isMobile) setActiveMobileTab("result");
         } catch (error) {
             console.error("Error generating report:", error);
+            toast.error(error.response?.data?.message || error.message || "Hesabat yaradıla bilmədi");
+            setReportSummary({ ...DEFAULT_REPORT_SUMMARY });
+            setReportResults(null);
         } finally {
             setLoading(false);
         }
@@ -174,6 +255,8 @@ const ReportModal = ({ show, onClose }) => {
         );
 
         const { type, data } = reportResults;
+        const terminalLabel = terminals.find((t) => String(t.id) === String(terminal))?.name || "Hamısı";
+        const activeReportLabel = reportTypes.find((t) => t.id === type)?.name || type;
 
         const formatDate = (dateStr) => {
             if (!dateStr) return "";
@@ -183,13 +266,34 @@ const ReportModal = ({ show, onClose }) => {
 
         const ReportHeader = () => (
             <div className="report-data-header mb-4">
-                <div className="report-data-info">
-                    <p><span>Bu tarixdən:</span> {formatDate(startDate)} {startTime}</p>
-                    <p><span>Bu tarixə qədər:</span> {formatDate(endDate)} {endTime}</p>
+                <div className="report-data-header-row report-data-header-row--top">
+                    <div className="report-data-info">
+                        <p className="report-data-line">
+                            <span className="report-data-label">Bu tarixdən</span>
+                            <span className="report-data-value">{formatDate(startDate)} {startTime}</span>
+                        </p>
+                        <p className="report-data-line">
+                            <span className="report-data-label">Bu tarixə qədər</span>
+                            <span className="report-data-value">{formatDate(endDate)} {endTime}</span>
+                        </p>
+                    </div>
+                    <div className="report-data-time" title="Hesabatın çıxarılma vaxtı">
+                        <i className="bi bi-clock-fill" aria-hidden="true"></i>
+                        <span>
+                            Çıxarılma: {new Date().toLocaleDateString("az-AZ")}{" "}
+                            {new Date().toLocaleTimeString("az-AZ", { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                    </div>
                 </div>
-                <div className="report-data-time">
-                    <i className="bi bi-clock-fill"></i>
-                    <span>Çıxarılma vaxtı: {new Date().toLocaleDateString('az-AZ')} {new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}</span>
+                <div className="report-data-header-row report-data-header-row--meta">
+                    <span className="report-meta-chip">
+                        <span className="report-meta-chip-label">Terminal</span>
+                        <span className="report-meta-chip-value">{terminalLabel}</span>
+                    </span>
+                    <span className="report-meta-chip">
+                        <span className="report-meta-chip-label">Növ</span>
+                        <span className="report-meta-chip-value">{activeReportLabel}</span>
+                    </span>
                 </div>
             </div>
         );
@@ -197,36 +301,36 @@ const ReportModal = ({ show, onClose }) => {
         const SalesSummary = () => (
             <div className="report-section mb-5">
                 <div className="section-title">Satış hesabatı</div>
-                <div className="receipt-row"><span>Cəm</span><div className="dots"></div><span className="value">{(reportSummary.total_amount || 0).toFixed(2)}</span></div>
-                <div className="receipt-row"><span>Vergi</span><div className="dots"></div><span className="value">{(reportSummary.total_tax || 0).toFixed(2)}</span></div>
-                <div className="receipt-row"><span>İkram</span><div className="dots"></div><span className="value">{(reportSummary.total_gift || 0).toFixed(2)}</span></div>
-                <div className="receipt-row"><span>Xidmət</span><div className="dots"></div><span className="value">{(reportSummary.total_service || 0).toFixed(2)}</span></div>
-                <div className="receipt-row"><span>Endirim</span><div className="dots"></div><span className="value">{(reportSummary.total_discount || 0).toFixed(2)}</span></div>
-                <div className="receipt-row"><span>Çatdırılma haqqı</span><div className="dots"></div><span className="value">0.00</span></div>
-                <div className="receipt-row"><span>Geri qaytarılma</span><div className="dots"></div><span className="value">{(reportSummary.total_refund || 0).toFixed(2)}</span></div>
-                <div className="receipt-row"><span>Silinmələr</span><div className="dots"></div><span className="value">{(reportSummary.total_deleted || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.sumTotal}><span>Cəm</span><div className="dots"></div><span className="value">{(reportSummary.total_amount || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.tax}><span>Vergi</span><div className="dots"></div><span className="value">{(reportSummary.total_tax || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.gift}><span>İkram</span><div className="dots"></div><span className="value">{(reportSummary.total_gift || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.service}><span>Xidmət</span><div className="dots"></div><span className="value">{(reportSummary.total_service || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.discount}><span>Endirim</span><div className="dots"></div><span className="value">{(reportSummary.total_discount || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.delivery}><span>Çatdırılma haqqı</span><div className="dots"></div><span className="value">0.00</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.refund}><span>Geri qaytarılma</span><div className="dots"></div><span className="value">{(reportSummary.total_refund || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.deleted}><span>Silinmələr</span><div className="dots"></div><span className="value">{(reportSummary.total_deleted || 0).toFixed(2)}</span></div>
                 {(reportSummary.total_paid > 0 || reportSummary.total_unpaid > 0) && (
                     <>
-                        <div className="receipt-row" style={{borderTop: '1px dashed #ccc', marginTop: 4, paddingTop: 4}}>
+                        <div className="receipt-row report-row-with-hint" style={{borderTop: '1px dashed #ccc', marginTop: 4, paddingTop: 4}} title={REPORT_HINTS.paidClose}>
                             <span>Ödənişli bağlamalar</span><div className="dots"></div><span className="value">{(reportSummary.total_paid || 0).toFixed(2)}</span>
                         </div>
-                        <div className="receipt-row">
+                        <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.unpaidClose}>
                             <span>Ödənişsiz bağlamalar</span><div className="dots"></div><span className="value">{(reportSummary.total_unpaid || 0).toFixed(2)}</span>
                         </div>
                     </>
                 )}
-                <div className="receipt-row total-line"><span>Yekun:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
+                <div className="receipt-row total-line report-row-with-hint" title={REPORT_HINTS.net}><span>Yekun:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
 
                 <div className="section-title mt-4">Digər detallar</div>
-                <div className="receipt-row"><span>Açıq çeklərin sayı</span><div className="dots"></div><span className="value">{reportSummary.open_orders_count || 0}</span></div>
-                <div className="receipt-row"><span>Açıq çeklərin cəmi</span><div className="dots"></div><span className="value">{(reportSummary.open_orders_total || 0).toFixed(2)} ₼</span></div>
-                <div className="receipt-row"><span>Qonaq sayı</span><div className="dots"></div><span className="value">{reportSummary.guest_count || 0}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openCount}><span>Açıq çeklərin sayı</span><div className="dots"></div><span className="value">{reportSummary.open_orders_count || 0}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openSum}><span>Açıq çeklərin cəmi</span><div className="dots"></div><span className="value">{(reportSummary.open_orders_total || 0).toFixed(2)} ₼</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.guests}><span>Qonaq sayı</span><div className="dots"></div><span className="value">{reportSummary.guest_count || 0}</span></div>
 
                 {Object.keys(reportSummary.payments || {}).length > 0 && (
                     <>
                         <div className="section-title mt-4">Ödəniş üsulları</div>
                         {Object.entries(reportSummary.payments).map(([method, amount]) => (
-                            <div className="receipt-row" key={method}>
+                            <div className="receipt-row report-row-with-hint" key={method} title={`${REPORT_HINTS.paymentMethod} (${method})`}>
                                 <span>{method}</span><div className="dots"></div><span className="value">{Number(amount).toFixed(2)}</span>
                             </div>
                         ))}
@@ -237,7 +341,7 @@ const ReportModal = ({ show, onClose }) => {
                     <>
                         <div className="section-title mt-4">Ödənişsiz bağlamalar</div>
                         {Object.entries(reportSummary.unpaid_payments).map(([method, amount]) => (
-                            <div className="receipt-row" key={method}>
+                            <div className="receipt-row report-row-with-hint" key={method} title={`${REPORT_HINTS.unpaidTag} (${method})`}>
                                 <span>{method}</span><div className="dots"></div><span className="value">{Number(amount).toFixed(2)}</span>
                             </div>
                         ))}
@@ -248,7 +352,7 @@ const ReportModal = ({ show, onClose }) => {
                     <>
                         <div className="section-title mt-4">Etiketlər</div>
                         {Object.entries(reportSummary.tags).map(([tag, details]) => (
-                            <div className="receipt-row" key={tag}>
+                            <div className="receipt-row report-row-with-hint" key={tag} title={`${REPORT_HINTS.tagRow} (${tag})`}>
                                 <span>{tag} ({details.count})</span><div className="dots"></div><span className="value">{details.total.toFixed(2)}</span>
                             </div>
                         ))}
@@ -274,6 +378,33 @@ const ReportModal = ({ show, onClose }) => {
     };
 
     const renderSpecificData = (type, data) => {
+        if (type === "inventory") {
+            return (
+                <div className="report-empty-detail" role="status">
+                    <p className="mb-0">
+                        Ehtiyat hesabatı üçün məlumat mənbəsi hazırlanır.
+                    </p>
+                </div>
+            );
+        }
+
+        const isDetailEmpty =
+            data == null ||
+            (Array.isArray(data) && data.length === 0) ||
+            (typeof data === "object" &&
+                !Array.isArray(data) &&
+                Array.isArray(data.rows) &&
+                data.rows.length === 0);
+        if (isDetailEmpty) {
+            return (
+                <div className="report-empty-detail" role="status">
+                    <p className="mb-0">
+                        Bu tarix aralığında və seçilmiş filtrə uyğun detallı sətir yoxdur.
+                    </p>
+                </div>
+            );
+        }
+
         switch (type) {
             case "products":
                 return (
@@ -306,7 +437,7 @@ const ReportModal = ({ show, onClose }) => {
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} ₼</td></tr>
                             ))}
                         </tbody>
                     </Table>
@@ -352,24 +483,95 @@ const ReportModal = ({ show, onClose }) => {
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} ₼</td></tr>
                             ))}
                         </tbody>
                     </Table>
                 );
-            case "category":
+            case "category": {
+                const allIncluded =
+                    Array.isArray(data) &&
+                    data.length > 0 &&
+                    data.every((_, idx) => categoryPrintInclude[idx] !== false);
                 return (
-                    <Table responsive className="custom-report-table">
+                    <Table responsive className="custom-report-table report-category-table">
                         <thead>
-                            <tr><th>Kateqoriya</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                            <tr>
+                                <th className="text-center report-category-print-col" style={{ width: 34 }}>
+                                    <Form.Check
+                                        className="report-category-print-check"
+                                        type="checkbox"
+                                        checked={allIncluded}
+                                        onChange={(e) => {
+                                            const v = e.target.checked;
+                                            const next = {};
+                                            data.forEach((_, idx) => {
+                                                next[idx] = v;
+                                            });
+                                            setCategoryPrintInclude(next);
+                                        }}
+                                        title="Hamısı"
+                                        aria-label="Bütün kateqoriyaları çap üçün seç"
+                                    />
+                                </th>
+                                <th>Kateqoriya / Məhsul</th>
+                                <th className="text-center">Sayı</th>
+                                <th className="text-end">Məbləğ</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.quantity}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                                <Fragment key={i}>
+                                    <tr
+                                        className={`report-category-total-row ${
+                                            categoryPrintInclude[i] === false ? "report-print-exclude" : ""
+                                        }`}
+                                    >
+                                        <td className="text-center align-middle report-category-print-col">
+                                            <Form.Check
+                                                className="report-category-print-check"
+                                                type="checkbox"
+                                                checked={categoryPrintInclude[i] !== false}
+                                                onChange={() => {
+                                                    setCategoryPrintInclude((prev) => {
+                                                        const cur = prev[i] !== false;
+                                                        return { ...prev, [i]: !cur };
+                                                    });
+                                                }}
+                                                aria-label={`Çap: ${item.name}`}
+                                            />
+                                        </td>
+                                        <td>
+                                            <strong>{item.name}</strong>
+                                        </td>
+                                        <td className="text-center">
+                                            <strong>{Number(item.quantity || 0).toFixed(2)}</strong>
+                                        </td>
+                                        <td className="text-end">
+                                            <strong>{Number(item.total || 0).toFixed(2)} ₼</strong>
+                                        </td>
+                                    </tr>
+                                    {item.products && item.products.length > 0
+                                        ? item.products.map((p, pi) => (
+                                              <tr
+                                                  key={`${i}-p-${pi}`}
+                                                  className={`report-category-product-row ${
+                                                      categoryPrintInclude[i] === false ? "report-print-exclude" : ""
+                                                  }`}
+                                              >
+                                                  <td className="report-category-print-col"></td>
+                                                  <td className="report-category-product-name">↳ {p.name}</td>
+                                                  <td className="text-center">{Number(p.quantity || 0).toFixed(2)}</td>
+                                                  <td className="text-end">{Number(p.total || 0).toFixed(2)} ₼</td>
+                                              </tr>
+                                          ))
+                                        : null}
+                                </Fragment>
                             ))}
                         </tbody>
                     </Table>
                 );
+            }
             case "checks":
                 return (
                     <Table responsive className="custom-report-table list-table">
@@ -389,7 +591,7 @@ const ReportModal = ({ show, onClose }) => {
                                     <td>{item.table?.name || "-"}</td>
                                     <td>{item.waiter?.name || "-"}</td>
                                     {showTransactions && <td>{item.tags || "-"}</td>}
-                                    <td className="text-end">{item.total?.toFixed(2)} AZN</td>
+                                    <td className="text-end">{item.total?.toFixed(2)} ₼</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -406,7 +608,7 @@ const ReportModal = ({ show, onClose }) => {
                                 <tr key={i} className="table-danger">
                                     <td>#{item.id}</td>
                                     <td>{item.waiter?.name || "-"}</td>
-                                    <td className="text-end">{item.total?.toFixed(2)} AZN</td>
+                                    <td className="text-end">{item.total?.toFixed(2)} ₼</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -436,7 +638,7 @@ const ReportModal = ({ show, onClose }) => {
                                 <tr key={i}>
                                     <td>{item.name}</td>
                                     <td className="text-center">{item.count}</td>
-                                    <td className="text-end">{item.total?.toFixed(2)} AZN</td>
+                                    <td className="text-end">{item.total?.toFixed(2)} ₼</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -450,7 +652,7 @@ const ReportModal = ({ show, onClose }) => {
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} ₼</td></tr>
                             ))}
                         </tbody>
                     </Table>
@@ -463,7 +665,7 @@ const ReportModal = ({ show, onClose }) => {
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.count}</td><td className="text-end">{item.total?.toFixed(2)} AZN</td></tr>
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.count}</td><td className="text-end">{item.total?.toFixed(2)} ₼</td></tr>
                             ))}
                         </tbody>
                     </Table>
@@ -482,7 +684,7 @@ const ReportModal = ({ show, onClose }) => {
                                     <tr key={i}>
                                         <td>{displayName}</td>
                                         <td className="text-center">{item.checks_count}</td>
-                                        <td className="text-end">{item.total?.toFixed(2)} AZN</td>
+                                        <td className="text-end">{item.total?.toFixed(2)} ₼</td>
                                     </tr>
                                 )
                             })}
@@ -505,18 +707,19 @@ const ReportModal = ({ show, onClose }) => {
             className="report-modal"
             dialogClassName="report-modal-dialog"
             backdrop="static"
+            aria-labelledby="report-modal-title"
         >
             <div className="report-modal-header">
-                <span className="report-modal-title">Hesabat</span>
+                <h2 className="report-modal-title" id="report-modal-title">Hesabat</h2>
                 <div className="report-header-actions">
                     {reportResults && !loading && (
-                        <button className="report-print-btn" onClick={handlePrint} title="Çap et">
-                            <i className="bi bi-printer-fill"></i>
+                        <button type="button" className="report-print-btn" onClick={handlePrint} title="Çap et">
+                            <i className="bi bi-printer-fill" aria-hidden="true"></i>
                             <span>Çap et</span>
                         </button>
                     )}
-                    <button className="report-modal-close-btn" onClick={onClose}>
-                        <i className="bi bi-x-lg"></i>
+                    <button type="button" className="report-modal-close-btn" onClick={onClose} aria-label="Bağla">
+                        <i className="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>

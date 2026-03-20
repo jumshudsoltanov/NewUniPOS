@@ -16,7 +16,9 @@ import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slice
 import { toast } from "sonner";
 import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import BrandsModal from "../BrandsModal/BrandsModal";
-import axios from "axios";
+import apiConfig from "../../utils/apiConfig";
+import { getSocket } from "../../utils/apiConfig";
+import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 
 const PIN_LENGTH = 4;
 
@@ -261,7 +263,8 @@ const Pin = () => {
     try {
       const profileId = activeProfileData.data.profile.id;
       const [syncRes] = await Promise.all([
-        axios.post(`http://localhost:55667/api/sync/refresh/${profileId}`),
+        apiConfig.post(`/sync/refresh/${profileId}`),
+        apiConfig.post(`/sync/force-now`).catch(() => ({})), // Gözləyən sifarişləri admin-ə göndər
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
         dispatch(menuWithCategories(profileId)).unwrap(),
@@ -274,6 +277,11 @@ const Pin = () => {
         await new Promise(resolve => setTimeout(resolve, 1800));
       } else {
         toast.success("Məlumatlar uğurla yeniləndi!");
+      }
+
+      const socket = getSocket();
+      if (socket?.connected) {
+        socket.emit("pin_refresh", { profileId });
       }
     } catch (error) {
       console.error("Yeniləmə xətası:", error);
@@ -323,7 +331,7 @@ const Pin = () => {
       const waiterResult = await dispatch(getWaiter(submittedPin)).unwrap();
 
       if (waiterResult.message === "success") {
-        const isPacksOnly = Number(waiterResult.data?.can_manage_packs) === 1;
+        const isPacksOnly = isPacksOnlyWaiter(waiterResult.data);
         if (profileId) {
           dispatch(getTableGroups(profileId));
           dispatch(getActiveOrders({ profileId }));

@@ -12,13 +12,14 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 
 const TagModal = ({ show, onClose, order }) => {
-  const [tag, setTag] = useState(null);
+  const [tag, setTag] = useState("");
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
   useEffect(() => {
-    setTag(order?.tags ?? null);
-  }, [order?.tags]);
+    if (!show) return;
+    setTag(order?.tags ?? "");
+  }, [show, order?.tags]);
 
   const handleUpdateTags = async () => {
     try {
@@ -51,7 +52,7 @@ const TagModal = ({ show, onClose, order }) => {
           <Form.Control
             aria-label="Dollar amount (with dot and two decimal places)"
             onChange={(e) => setTag(e.target.value)}
-            value={tag}
+            value={tag ?? ""}
             style={{ border: "1px solid #4F85F4", height: "35px" }}
           />
         </InputGroup>

@@ -11,6 +11,9 @@ import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "./redux/Slices/CustomersSlice";
 import { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } from "./redux/Slices/SyncSlice";
+import { getTableGroups } from "./redux/Slices/TablesSlice";
+import { getActiveOrders } from "./redux/Slices/BooksSlice";
+import { menuWithCategories, menuWithGeneralCategories } from "./redux/Slices/MenuSlice";
 import { tickTimer as tickBooks } from "./redux/Slices/BooksSlice";
 import { tickTimer as tickTables } from "./redux/Slices/TablesSlice";
 import { HashRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
@@ -182,6 +185,27 @@ function AppContent() {
       };
     }
   }, [isMasterTerminal, isSocketConnected]);
+
+  // Pin yeniləmə: digər terminal (Master/Slave) yeniləyəndə bu terminal da məlumatı yeniləsin
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const authResult = authResultRedux?.data ? authResultRedux : (() => {
+      try { return JSON.parse(localStorage.getItem("authResult")); } catch { return null; }
+    })();
+    const myProfileId = authResult?.data?.profile?.id;
+    const handlePinRefresh = (data) => {
+      const profileId = data?.profileId;
+      if (profileId && profileId === myProfileId) {
+        dispatch(getTableGroups(profileId));
+        dispatch(getActiveOrders({ profileId }));
+        dispatch(menuWithCategories(profileId));
+        dispatch(menuWithGeneralCategories(profileId));
+      }
+    };
+    socket.on("pin_refresh", handlePinRefresh);
+    return () => socket.off("pin_refresh", handlePinRefresh);
+  }, [dispatch, authResultRedux]);
 
   // Handle Synced Badge Timeout
   const showSyncedBadge = useSelector((state) => state.SyncSlice.showSyncedBadge);

@@ -1,8 +1,18 @@
-.other-checks-modal .modal-header {
+.other-checks-modal .modal-content {
+  overflow: hidden;
+  border-radius: 8px;
+  border: none;
+}
 
-  background-color: #3b3464;
+.other-checks-modal .modal-header {
+  background-color: #4F85F4;
   color: white;
   border-bottom: none;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  padding: 1rem 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .other-checks-modal .modal-header .btn-close {

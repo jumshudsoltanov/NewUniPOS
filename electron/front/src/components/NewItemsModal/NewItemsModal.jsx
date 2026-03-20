@@ -236,6 +236,10 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
         if (onSend) {
             onSend(buildCommentsForSend());
         }
+        setComments({});
+        setOpenComments({});
+        setSeparatedItems({});
+        setTagsModalItem(null);
         onClose();
     };
 

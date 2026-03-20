@@ -1,5 +1,8 @@
 const axios = require('axios');
+const net = require('net');
 const { v4: uuidv4 } = require('uuid');
+
+const DEFAULT_TIMEOUT_MS = 180000; // 3 dəqiqə — vergi kassası çapı yavaş ola bilər, timeout verməsin
 
 class SunmiService {
     constructor(config) {
@@ -9,10 +12,66 @@ class SunmiService {
         this.username = config.username || 'CashierUserName';
         this.password = config.password || 'password';
         this.taxPercent = config.tax_percent || 18;
+        this.timeoutMs = Number(config.timeout_ms) || DEFAULT_TIMEOUT_MS;
         const raw = config.tax_type;
         const n = Number(raw);
         const validVatTypes = [1, 2, 3, 5, 6, 7];
         this.taxType = (raw != null && raw !== '' && !isNaN(n) && validVatTypes.includes(n)) ? n : null;
+        /** Eyni cihaza paralel HTTP sorğuları 999 (Http Queue is not empty) verir — ardıcıllıq */
+        this._requestChain = Promise.resolve();
+    }
+
+    /** Cihaza tək-tək sorğu — növbəni pozmur */
+    _enqueueRequest(fn) {
+        const p = this._requestChain.then(() => fn());
+        this._requestChain = p.catch(() => {});
+        return p;
+    }
+
+    /** 999: cihaz daxili HTTP növbəsi dolu; gözləyib təkrar cəhd */
+    _isHttpQueueBusyError(code, message) {
+        const c = String(code ?? '');
+        const m = String(message || '').toLowerCase();
+        return c === '999' || m.includes('http queue') && m.includes('not empty') || m.includes('queue is not empty');
+    }
+
+    /**
+     * ICMP ping əvəzinə eyni IP:port-a TCP yoxlaması (E-Kassa həqiqətən dinləyirmi).
+     * İstəyə bağlı — UI və ya əməliyyatdan əvvəl çağırıla bilər.
+     */
+    probeTcpPort(timeoutMs = 4000) {
+        return new Promise((resolve) => {
+            const socket = new net.Socket();
+            let settled = false;
+            const finish = (ok) => {
+                if (settled) return;
+                settled = true;
+                try {
+                    socket.destroy();
+                } catch (e) { /* ignore */ }
+                resolve(ok);
+            };
+            socket.setTimeout(timeoutMs);
+            socket.once('connect', () => finish(true));
+            socket.once('timeout', () => finish(false));
+            socket.once('error', () => finish(false));
+            try {
+                socket.connect(this.port, this.ip);
+            } catch (e) {
+                finish(false);
+            }
+        });
+    }
+
+    /** ECONNREFUSED və s. — ara-sıra şəbəkə/servis üçün təkrar cəhd */
+    _isTransientNetworkError(error) {
+        if (!error || error.response) return false;
+        const code = String(error.code || '');
+        const msg = String(error.message || '').toLowerCase();
+        const transientCodes = ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EHOSTUNREACH', 'ENETUNREACH', 'EAI_AGAIN'];
+        if (transientCodes.includes(code)) return true;
+        if (msg.includes('econnrefused') || msg.includes('econnreset') || msg.includes('network error')) return true;
+        return false;
     }
 
     // Caspos VAT: 1=Vat18%, 2=TradeSupplement, 3=VatFree, 5=Vat0%, 6=SV2%, 7=SV8%
@@ -37,25 +96,52 @@ class SunmiService {
             n.includes('terminal');
     }
 
-    async _request(body) {
-        try {
-            console.log(`[SUNMI REQUEST] ${body.operation}:`, JSON.stringify(body.data || {}));
-            const response = await axios.post(this.baseUrl, body, {
-                headers: { 'Content-Type': 'application/json; charset=utf-8' },
-                timeout: 30000
-            });
-            const data = response.data;
-            console.log(`[SUNMI RESPONSE] ${body.operation}:`, JSON.stringify(data));
-            if (String(data.code) !== '0') {
-                throw new Error(`[SUNMI] API error ${data.code}: ${data.message}`);
+    async _request(body, maxAttempts = 12) {
+        return this._enqueueRequest(() => this._requestSequential(body, maxAttempts));
+    }
+
+    async _requestSequential(body, maxAttempts) {
+        const timeout = this.timeoutMs;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                console.log(`[SUNMI REQUEST] ${body.operation} (attempt ${attempt}/${maxAttempts}):`, JSON.stringify(body.data || {}));
+                const response = await axios.post(this.baseUrl, body, {
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    timeout
+                });
+                const data = response.data;
+                if (String(data.code) === '0') {
+                    console.log(`[SUNMI RESPONSE] ${body.operation}:`, JSON.stringify(data));
+                    return data;
+                }
+                const msg = data.message || '';
+                if (this._isHttpQueueBusyError(data.code, msg) && attempt < maxAttempts) {
+                    const delayMs = Math.min(15000, 1800 + attempt * 600);
+                    console.warn(`[SUNMI] Cihaz növbəsi dolu (${data.code}: ${msg}). ${delayMs}ms sonra yenidən cəhd...`);
+                    await new Promise((r) => setTimeout(r, delayMs));
+                    continue;
+                }
+                console.log(`[SUNMI RESPONSE] ${body.operation}:`, JSON.stringify(data));
+                throw new Error(`[SUNMI] API error ${data.code}: ${msg}`);
+            } catch (error) {
+                const isTimeout = error.code === 'ECONNABORTED' || (error.message && error.message.includes('timeout'));
+                const isTransientNet = this._isTransientNetworkError(error);
+                if ((isTimeout || isTransientNet) && attempt < maxAttempts) {
+                    const delayMs = isTransientNet && !isTimeout
+                        ? Math.min(10000, 1500 + attempt * 800)
+                        : 2500;
+                    const label = isTransientNet && !isTimeout ? `Şəbəkə (${error.code || 'retry'})` : 'Timeout';
+                    console.warn(`[SUNMI] ${label}, ${delayMs}ms sonra yenidən cəhd ${attempt}/${maxAttempts}...`);
+                    await new Promise((r) => setTimeout(r, delayMs));
+                    continue;
+                }
+                if (error.response) {
+                    throw new Error(`[SUNMI] HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+                }
+                throw error;
             }
-            return data;
-        } catch (error) {
-            if (error.response) {
-                throw new Error(`[SUNMI] HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`);
-            }
-            throw error;
         }
+        throw new Error(`[SUNMI] ${body.operation}: cəhd limiti (${maxAttempts}) — cihaz cavab vermədi və ya növbə boşalmadı`);
     }
 
     _base(operation, data = {}) {
@@ -135,11 +221,24 @@ class SunmiService {
         }));
     }
 
+    /** Sunmi/Caspos boş items ilə API error 999 (Invalid index 0, size is 0) verir */
+    _filterPositiveQtyItems(items) {
+        return (items || []).filter((item) => {
+            const q = Number(item.count ?? item.quantity ?? 0);
+            return !Number.isNaN(q) && q > 0;
+        });
+    }
+
     async createSale({ items, payments, cashierName, orderId }) {
         const vatType = this._getVatType();
 
-        const saleItems = items.map(item => {
-            const quantity = Number(item.count || item.quantity || 1);
+        const sourceItems = this._filterPositiveQtyItems(items);
+        if (sourceItems.length === 0) {
+            throw new Error('[SUNMI] Fiskal satış üçün ən azı bir məhsul lazımdır (siyahı boş və ya miqdar 0).');
+        }
+
+        const saleItems = sourceItems.map(item => {
+            const quantity = Number(item.count ?? item.quantity ?? 1);
             const salePrice = Number(item.price || 0);
             return {
                 name: (item.product?.name || item.name || 'Məhsul').substring(0, 64),
@@ -207,9 +306,14 @@ class SunmiService {
 
     async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId, orderId }) {
         const vatType = this._getVatType();
-        
-        let returnItems = items.map(item => {
-            const qty = Number(item.count || item.quantity || 1);
+
+        const sourceItems = this._filterPositiveQtyItems(items);
+        if (sourceItems.length === 0) {
+            throw new Error('[SUNMI] Geri qaytarma üçün ən azı bir məhsul lazımdır (siyahı boş və ya miqdar 0).');
+        }
+
+        let returnItems = sourceItems.map(item => {
+            const qty = Number(item.count ?? item.quantity ?? 1);
             const price = Number(item.price || 0);
             return {
                 name: (item.product?.name || item.name || 'Məhsul').substring(0, 64),
@@ -275,6 +379,12 @@ class SunmiService {
     async rollback(parentDocumentId, totalSum, cashierName = 'Cashier') {
         const vatType = this._getVatType();
         const sum = Number(Number(totalSum).toFixed(2));
+        if (!parentDocumentId || String(parentDocumentId).length < 5) {
+            throw new Error('[SUNMI] Rollback üçün parentDocumentId lazımdır.');
+        }
+        if (!sum || sum <= 0) {
+            throw new Error('[SUNMI] Rollback məbləği 0-dan böyük olmalıdır.');
+        }
 
         return this._request({
             ...this._base('rollBack', {

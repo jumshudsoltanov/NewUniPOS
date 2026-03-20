@@ -8,6 +8,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useNavigate } from "react-router-dom";
 import CheckDetailModal from "./CheckDetailModal";
 import { toast } from "sonner";
+import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -196,7 +197,7 @@ const Checks = () => {
 
   const filteredDisplayOrders = useMemo(() => {
     let orders = currentDisplayOrders;
-    if (Number(loginedWaiter?.data?.can_manage_packs) === 1) {
+    if (isPacksOnlyWaiter(loginedWaiter?.data)) {
       orders = orders.filter((o) => o.sale_type !== "dine_in");
     }
     // Status filter (yalnız arxiv/offline tab üçün)
@@ -205,7 +206,7 @@ const Checks = () => {
       orders = orders.filter((o) => Number(o.status) === statusNum);
     }
     return orders;
-  }, [currentDisplayOrders, loginedWaiter?.data?.can_manage_packs, activeTab, filterStatus]);
+  }, [currentDisplayOrders, loginedWaiter?.data, activeTab, filterStatus]);
 
   const totalAmount = useMemo(
     () => filteredDisplayOrders.reduce((sum, order) => sum + Number(order?.total || 0), 0),
@@ -354,16 +355,18 @@ const Checks = () => {
               <option value="delivery">Çatdırılma</option>
             </Form.Select>
 
-            <Form.Select
-              value={filterWaiter}
-              onChange={(e) => setFilterWaiter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Əməkdaş</option>
-              {waiters.map(w => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-            </Form.Select>
+            {Number(loginedWaiter?.data?.can_edit_all_checks) !== 1 && (
+              <Form.Select
+                value={filterWaiter}
+                onChange={(e) => setFilterWaiter(e.target.value)}
+                className="filter-select"
+              >
+                <option value="">Əməkdaş</option>
+                {waiters.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </Form.Select>
+            )}
 
             <Form.Select
               value={filterHall}

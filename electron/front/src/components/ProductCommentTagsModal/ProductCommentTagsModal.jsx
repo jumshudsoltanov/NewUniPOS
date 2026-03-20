@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getTagsList } from "../../redux/Slices/TagsSlice";
 
 const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave }) => {
-    const [selectedTag, setSelectedTag] = useState(null);
+    const [selectedTags, setSelectedTags] = useState([]);
     const [tagsListData, setTagsListData] = useState([]);
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -26,18 +26,27 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
     }, [loginedProfileData, dispatch]);
 
     useEffect(() => {
-        if (!show) setSelectedTag(null);
+        if (!show) setSelectedTags([]);
     }, [show]);
 
     const tags = tagsListData?.filter((t) => Number(t.type) === 2) ?? [];
 
+    const toggleTag = (tagId) => {
+        setSelectedTags(prev =>
+            prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+        );
+    };
+
     const handleSave = () => {
-        if (selectedTag) {
-            const tagObj = tags.find((t) => t.id === selectedTag);
-            const tagName = tagObj?.name || tagObj?.text || "";
-            onSave?.(item, tagName, portionIndex);
-            onClose?.();
-        }
+        const tagNames = selectedTags
+            .map((id) => {
+                const tagObj = tags.find((t) => t.id === id);
+                return tagObj?.name || tagObj?.text || "";
+            })
+            .filter(Boolean);
+        const tagNameStr = tagNames.join(", ");
+        onSave?.(item, tagNameStr, portionIndex);
+        onClose?.();
     };
 
     return (
@@ -79,8 +88,8 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
                         {tags.map((tag) => (
                             <div
                                 key={tag.id}
-                                className={`product-comment-tag-item ${selectedTag === tag.id ? "selected" : ""}`}
-                                onClick={() => setSelectedTag(tag.id)}
+                                className={`product-comment-tag-item ${selectedTags.includes(tag.id) ? "selected" : ""}`}
+                                onClick={() => toggleTag(tag.id)}
                             >
                                 <span className="tag-text">{tag.name || tag.text}</span>
                                 <div className="tag-check-container">
@@ -99,7 +108,6 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
                 <div className="product-comment-tags-modal-footer">
                     <button
                         className="product-comment-tags-save-btn"
-                        disabled={!selectedTag}
                         onClick={handleSave}
                     >
                         <i className="bi bi-check2 me-2" style={{ fontSize: "1.5rem" }}></i>

@@ -446,7 +446,8 @@ const onUpdateCheckTags = async (req, res) => {
       { tags: tags, is_synced: 0 },
       { where: { uuid: orderId } },
     );
-    res.status(200).json({ message: "tags update" });
+    // Frontend BooksSlice matcher və UI üçün: uuid + tags qaytarılmalıdır
+    res.status(200).json({ message: "tags update", data: { uuid: orderId, tags } });
 
     // Background tasks (non-blocking after response)
     SyncService.queueSync(orderId);

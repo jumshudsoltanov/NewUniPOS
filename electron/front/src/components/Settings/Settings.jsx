@@ -175,7 +175,9 @@ const Settings = () => {
             id: "archive",
             label: "Çek arxivi",
             icon: <i className="bi bi-archive"></i>,
-            permission: Number(loginedWaiter?.data?.can_edit_all_checks) === 1,
+            permission:
+                Number(loginedWaiter?.data?.can_view_archived_checks) === 1 ||
+                Number(loginedWaiter?.data?.can_edit_all_checks) === 1,
             onClick: () => navigate("/checks"),
         },
         {

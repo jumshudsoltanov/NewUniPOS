@@ -168,6 +168,15 @@ const initMasterServer = (server, isBroadcastingActive = true) => {
             cb(false);
         });
 
+        // Pin yeniləmə: bir terminal yeniləyəndə digər terminallara (Slave) bildir
+        socket.on("pin_refresh", (data) => {
+            const profileId = data?.profileId;
+            if (profileId) {
+                console.log(`🔄 Pin yeniləmə broadcast: profileId=${profileId}`);
+                socket.broadcast.emit("pin_refresh", { profileId });
+            }
+        });
+
         socket.on("disconnect", (reason) => {
             console.log(`❌ Terminal bağlantısı kəsildi (${reason}): ${socket.id}`);
             for (const [oid, set] of openChecksMap.entries()) {

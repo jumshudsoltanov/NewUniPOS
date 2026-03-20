@@ -5,11 +5,16 @@ export const getActiveOrders = createAsyncThunk(
   "pos/active-orders",
   async ({ profileId, id, sale_type, waiter_id, hall_id, table_id, courier_id }, thunkAPI) => {
     try {
+      let effectiveWaiterId = waiter_id;
+      const loginedWaiter = thunkAPI.getState()?.WaitersSlice?.loginedWaiter;
+      if (Number(loginedWaiter?.data?.can_edit_all_checks) === 1 && loginedWaiter?.data?.id) {
+        effectiveWaiterId = loginedWaiter.data.id;
+      }
       let url = `/orders/${profileId}/all-checks`;
       const params = new URLSearchParams();
       if (id) params.append("id", id);
       if (sale_type) params.append("sale_type", sale_type);
-      if (waiter_id) params.append("waiter_id", waiter_id);
+      if (effectiveWaiterId) params.append("waiter_id", effectiveWaiterId);
       if (hall_id) params.append("hall_id", hall_id);
       if (table_id) params.append("table_id", table_id);
       if (courier_id) params.append("courier_id", courier_id);
@@ -27,11 +32,16 @@ export const getArchivedOrders = createAsyncThunk(
   "pos/archived-orders",
   async ({ profileId, type, date, id, sale_type, waiter_id, hall_id, table_id, courier_id }, thunkAPI) => {
     try {
+      let effectiveWaiterId = waiter_id;
+      const loginedWaiter = thunkAPI.getState()?.WaitersSlice?.loginedWaiter;
+      if (Number(loginedWaiter?.data?.can_edit_all_checks) === 1 && loginedWaiter?.data?.id) {
+        effectiveWaiterId = loginedWaiter.data.id;
+      }
       let url = `/orders/${profileId}/archived-checks?type=${type}`;
       if (date) url += `&date=${date}`;
       if (id) url += `&id=${id}`;
       if (sale_type) url += `&sale_type=${sale_type}`;
-      if (waiter_id) url += `&waiter_id=${waiter_id}`;
+      if (effectiveWaiterId) url += `&waiter_id=${effectiveWaiterId}`;
       if (hall_id) url += `&hall_id=${hall_id}`;
       if (table_id) url += `&table_id=${table_id}`;
       if (courier_id) url += `&courier_id=${courier_id}`;
@@ -249,6 +259,39 @@ const BooksSlice = createSlice({
       }
     });
 
+    // Müştəri çeki çap edəndə print_count dərhal yenilənsin (optimistic + fulfilled)
+    builder.addCase("orders/incrementPrintCount/pending", (state, action) => {
+      const orderId = action.meta?.arg?.orderId;
+      if (!orderId) return;
+
+      let ordersList = null;
+      if (Array.isArray(state.books)) ordersList = state.books;
+      else if (state.books?.data) ordersList = state.books.data;
+      if (!ordersList) return;
+
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        const current = ordersList[idx].print_count || 0;
+        ordersList[idx] = { ...ordersList[idx], print_count: current + 1 };
+      }
+    });
+    builder.addCase("orders/incrementPrintCount/fulfilled", (state, action) => {
+      const orderId = action.meta?.arg?.orderId;
+      const updatedOrder = action.payload?.data;
+      const newPrintCount = updatedOrder?.print_count;
+      if (!orderId) return;
+
+      let ordersList = null;
+      if (Array.isArray(state.books)) ordersList = state.books;
+      else if (state.books?.data) ordersList = state.books.data;
+      if (!ordersList) return;
+
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1 && newPrintCount !== undefined) {
+        ordersList[idx] = { ...ordersList[idx], print_count: newPrintCount };
+      }
+    });
+
     // Remove from archive when reopened
     builder.addCase("orders/reopen/fulfilled", (state, action) => {
       const reopenedOrderId = action.meta.arg.orderId;
@@ -325,6 +368,25 @@ const BooksSlice = createSlice({
         }
       }
       ordersList[idx] = { ...order, orders_items: updatedItems };
+    });
+
+    // Qəbz etiketi: köhnə API yalnız { message } qaytarırdı — books-da order yenilənmirdi; meta.arg ilə sinxron
+    builder.addCase("orders/updateTags/fulfilled", (state, action) => {
+      const orderId = action.meta?.arg?.orderId;
+      const tags = action.meta?.arg?.tags;
+      if (orderId === undefined || orderId === null) return;
+
+      let ordersList = null;
+      if (Array.isArray(state.books)) ordersList = state.books;
+      else if (state.books?.data) ordersList = state.books.data;
+      if (!ordersList) return;
+
+      const idx = ordersList.findIndex(
+        (o) => o.uuid === orderId || String(o.uuid) === String(orderId)
+      );
+      if (idx !== -1) {
+        ordersList[idx] = { ...ordersList[idx], tags };
+      }
     });
 
     // Handle deleteCheck OR closeOrder fulfilled to remove from books

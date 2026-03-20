@@ -5,9 +5,12 @@ export const getTableGroups = createAsyncThunk(
   "tables/getTableGroups",
   async (profileId, thunkAPI) => {
     try {
-      const response = await axios.get(
-        `/tables/${profileId}`,
-      );
+      let url = `/tables/${profileId}`;
+      const loginedWaiter = thunkAPI.getState()?.WaitersSlice?.loginedWaiter;
+      if (Number(loginedWaiter?.data?.can_edit_all_checks) === 1 && loginedWaiter?.data?.id) {
+        url += `?waiter_id=${loginedWaiter.data.id}`;
+      }
+      const response = await axios.get(url);
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data);
@@ -275,7 +278,8 @@ const TablesSlice = createSlice({
         action.type === "orders/gift/fulfilled" ||
         action.type === "orders/itemDiscount/fulfilled" ||
         action.type === "orders/delete-item/fulfilled" ||
-        action.type === "orders/updateItemPrice/fulfilled",
+        action.type === "orders/updateItemPrice/fulfilled" ||
+        action.type === "orders/incrementPrintCount/fulfilled",
       (state, action) => {
         const updatedOrder = action.payload?.data || action.payload;
         if (!updatedOrder || (!updatedOrder.uuid && !updatedOrder.id)) return;

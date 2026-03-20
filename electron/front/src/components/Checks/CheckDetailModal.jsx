@@ -1,5 +1,7 @@
 import { Modal, Button, Row, Col, Form } from "react-bootstrap";
 import "./CheckDetailModal.css";
+import "./TaxCashPickerModal.css";
+import "../Customers-Modal/CustomersModal.css";
 import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchLogs, reopenOrder, saveLog } from "../../redux/Slices/OrdersSlice";
@@ -8,7 +10,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
-import apiConfig from "../../utils/apiConfig";
+import apiConfig, { TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 
@@ -25,12 +27,26 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const [showReasonModal, setShowReasonModal] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
     const [taxLoading, setTaxLoading] = useState(false);
+    const [showTaxResendModal, setShowTaxResendModal] = useState(false);
+    const [taxLocalNames, setTaxLocalNames] = useState({});
     const { orderLogs = [] } = useSelector((state) => state.OrderSlice);
+
+    useEffect(() => {
+        const stored = localStorage.getItem("tax_local_names");
+        if (stored) {
+            try {
+                setTaxLocalNames(JSON.parse(stored));
+            } catch (e) {
+                /* ignore */
+            }
+        }
+    }, []);
 
     useEffect(() => {
         if (!show) {
             setCurrentView("details");
             setLogFilter("all");
+            setShowTaxResendModal(false);
         }
     }, [show]);
 
@@ -133,7 +149,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 ...order,
                 orderId: order.id, // Display ID
                 startDate: order.start_date,
-                waiter_name: order.waiter?.name,
+                waiter_name: order.waiter?.name || order.waiter_name,
                 payments: mappedPayments
             },
             tableName: order.table?.name || "Masa",
@@ -184,12 +200,14 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         setTaxLoading(true);
         try {
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-            const items = (order.orders_items || []).map(item => ({
-                ...item,
-                name: item.product?.name || 'Məhsul',
-                count: item.count || 1,
-                price: item.price || 0
-            }));
+            const items = (order.orders_items || [])
+                .filter((item) => Number(item.count ?? item.quantity ?? 0) > 0)
+                .map(item => ({
+                    ...item,
+                    name: item.product?.name || 'Məhsul',
+                    count: Number(item.count ?? item.quantity ?? 1),
+                    price: item.price || 0
+                }));
             const payments = (order.order_payments || []).map(p => ({
                 name: p.payment_method?.name || 'Nağd',
                 type: p.payment_method?.type || 'cash',
@@ -206,7 +224,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     shortDocId: order.fiscal_short_id || '',
                     orderId: order.uuid || order.id
                 }
-            });
+            }, { timeout: TAX_HTTP_TIMEOUT_MS });
             if (result.data?.success) {
                 toast.success('Vergi geri qaytarma uğurlu');
                 dispatch(saveLog({
@@ -251,7 +269,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             const result = await apiConfig.post('/tax/receipt-copy', {
                 taxConfigs: configsToSend,
                 fiscalId: order.fiscal_id || ''
-            });
+            }, { timeout: TAX_HTTP_TIMEOUT_MS });
             if (result.data?.success) {
                 toast.success('Vergi çeki təkrar çap edildi');
                 dispatch(saveLog({
@@ -275,6 +293,137 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 waiterName,
                 details: errMsg
             }));
+        } finally {
+            setTaxLoading(false);
+        }
+    };
+
+    /** Təkrar satış üçün məhsul/ödəniş siyahısı */
+    const getResendSaleItemsAndPayments = () => {
+        const items = (order.orders_items || [])
+            .filter((item) => Number(item.count ?? item.quantity ?? 0) > 0)
+            .map((item) => ({
+                ...item,
+                name: item.product?.name || item.name || "Məhsul",
+                count: Number(item.count ?? item.quantity ?? 1),
+                price: item.price || 0,
+            }));
+        if (items.length === 0) {
+            toast.error("Fiskal satış üçün məhsul siyahısı boşdur.");
+            return null;
+        }
+        const payments = (order.order_payments || []).map((p) => ({
+            payment_method_id: p.payment_method_id,
+            without_payment_method_id: p.without_payment_method_id,
+            name: p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Nağd"),
+            type: p.payment_method?.type || "cash",
+            amount: p.paid,
+        }));
+        if (payments.length === 0) {
+            toast.error("Ödəniş məlumatı yoxdur — fiskal satış göndərilmədi.");
+            return null;
+        }
+        return { items, payments };
+    };
+
+    /** Birdən çox vergi kassası: modal; tək kassa: birbaşa göndəriş */
+    const handleTaxResendSaleClick = () => {
+        if (taxLoading || !order || taxConfigs.length === 0) return;
+        const data = getResendSaleItemsAndPayments();
+        if (!data) return;
+
+        if (taxConfigs.length > 1) {
+            setShowTaxResendModal(true);
+            return;
+        }
+        executeTaxResendSale(taxConfigs[0]);
+    };
+
+    /** Bağlanmış çek üçün fiskal satışı təkrar göndər (/tax/sale) — CheckOver ilə eyni payload */
+    const executeTaxResendSale = async (targetConfig) => {
+        if (taxLoading || !order || !targetConfig) return;
+
+        const data = getResendSaleItemsAndPayments();
+        if (!data) return;
+        const { items, payments } = data;
+
+        if (order.fiscal_id) {
+            const ok = window.confirm(
+                "Bu çekdə artıq fiskal qeydiyyatı var. Təkrar göndərsəniz, cihazda yeni satış əməliyyatı və yeni fiskal məlumat yaradılacaq. Davam edilsin?"
+            );
+            if (!ok) return;
+        }
+
+        setTaxLoading(true);
+        try {
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const result = await apiConfig.post(
+                "/tax/sale",
+                {
+                    taxConfigs: [targetConfig],
+                    saleData: {
+                        items,
+                        payments,
+                        cashierName: waiterName,
+                        orderId: order.id,
+                    },
+                },
+                { timeout: TAX_HTTP_TIMEOUT_MS }
+            );
+
+            const results = result.data?.results || [];
+            const successCount = results.filter((r) => r.success).length;
+            if (successCount > 0) {
+                toast.success("Vergi satışı təkrar göndərildi");
+                const firstSuccess = results.find((r) => r.success && r.data);
+                if (firstSuccess?.data) {
+                    const fd = firstSuccess.data;
+                    const cfg = firstSuccess.config;
+                    const taxId =
+                        cfg?.id ??
+                        (cfg?.ip_addr && cfg?.port_addr
+                            ? Math.abs(
+                                  (cfg.ip_addr + ":" + cfg.port_addr)
+                                      .split("")
+                                      .reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7fffffff
+                              )
+                            : null);
+                    await apiConfig
+                        .patch(`/tax/save-fiscal/${order.uuid}`, {
+                            fiscal_id: fd.long_id || "",
+                            fiscal_doc_number: String(fd.document_number || ""),
+                            fiscal_short_id: fd.short_id || "",
+                            tax_cash_id: taxId,
+                        })
+                        .catch((err) => console.error("Save fiscal data error:", err));
+                }
+                dispatch(
+                    saveLog({
+                        orderId: order.uuid,
+                        action: "Vergi təkrar satış",
+                        waiterName,
+                        details: "Təkrar vergiyə göndərildi (fiskal satış)",
+                    })
+                );
+            } else {
+                const errDetails = results.map((r) => r.error).filter(Boolean).join("; ") || "Vergi satışı uğursuz";
+                toast.error(errDetails);
+                addNotification("Fiskal Satış Xətası", errDetails, { category: "system", type: "error" });
+            }
+        } catch (error) {
+            console.error("Tax resend sale error:", error);
+            const errMsg = error.response?.data?.message || error.message;
+            toast.error("Vergi təkrar satış xətası: " + errMsg);
+            addNotification("Fiskal Satış Xətası", errMsg, { category: "system", type: "error" });
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            dispatch(
+                saveLog({
+                    orderId: order.uuid,
+                    action: "Vergi təkrar satış xətası",
+                    waiterName,
+                    details: errMsg,
+                })
+            );
         } finally {
             setTaxLoading(false);
         }
@@ -343,6 +492,27 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                             }}
                         >
                             <i className="bi bi-receipt"></i> Vergi Çap
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleTaxResendSaleClick}
+                            disabled={taxLoading}
+                            style={{
+                                padding: '6px 14px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                border: 'none',
+                                borderRadius: '4px',
+                                background: '#2563eb',
+                                color: '#fff',
+                                cursor: taxLoading ? 'not-allowed' : 'pointer',
+                                opacity: taxLoading ? 0.6 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            <i className="bi bi-arrow-repeat"></i> Təkrar vergiyə göndər
                         </button>
                         <button
                             onClick={handleTaxMoneyBack}
@@ -661,12 +831,19 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                         </div>
                                     )}
 
+                                    {Number(order.rate_per_minute || 0) > 0 && (
+                                        <div className="summary-row d-flex justify-content-between mb-2">
+                                            <span className="summary-label text-muted">Taymer:</span>
+                                            <span className="summary-value fw-bold">{Number(order.rate_per_minute).toFixed(2)} ₼</span>
+                                        </div>
+                                    )}
+
                                     <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top mt-2">
                                         <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>
                                             {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
                                         </span>
                                         <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
-                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0)).toFixed(2)} ₼
+                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0) + Number(order.rate_per_minute || 0)).toFixed(2)} ₼
                                         </span>
                                     </div>
                                 </div>
@@ -723,6 +900,108 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                         </div>
                     </div>
                 </Modal.Body>
+            </Modal>
+
+            <Modal
+                show={showTaxResendModal}
+                onHide={() => !taxLoading && setShowTaxResendModal(false)}
+                centered
+                className="customers-modal tax-kassa-picker-modal"
+                dialogClassName="checkover-tax-modal-wide tax-kassa-picker-dialog"
+                backdrop="static"
+                keyboard={!taxLoading}
+                animation={false}
+            >
+                <div className="modal-content-wrapper" style={{ borderRadius: "8px", overflow: "hidden" }}>
+                    <div className="customers-modal-header" style={{ background: "#5D99FF", borderTopLeftRadius: "8px", borderTopRightRadius: "8px" }}>
+                        <div className="customers-header-content">
+                            <div className="customers-icon-circle" style={{ borderRadius: "8px" }}>
+                                <i className="bi bi-receipt"></i>
+                            </div>
+                            <div>
+                                <div className="customers-modal-title">Kassa seçimi</div>
+                                <div style={{ fontSize: "12px", fontWeight: 500, opacity: 0.92, marginTop: "2px" }}>Təkrar vergi satışı</div>
+                            </div>
+                        </div>
+                        <button type="button" className="btn-close-custom" disabled={taxLoading} onClick={() => setShowTaxResendModal(false)} aria-label="Bağla">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div className="tax-kassa-modal-body-inner">
+                        <div className="tax-kassa-modal-intro">
+                            <p className="tax-kassa-modal-intro-title">Hansı vergi kassasına göndərmək istəyirsiniz?</p>
+                            <p className="tax-kassa-modal-intro-sub">
+                                Seçdiyiniz cihazda yeni fiskal satış əməliyyatı başlayacaq. Əvvəl bu çekdə istifadə olunan kassa xüsusi işarələnib.
+                            </p>
+                        </div>
+                        <div className="tax-kassa-modal-list-wrap">
+                            <div className="d-flex flex-column gap-3">
+                                {(loginedProfileData?.data?.taxes || []).map((tax, idx) => {
+                                    const taxKey = tax.id || `${tax.ip_addr}:${tax.port_addr}`;
+                                    const localName = taxLocalNames[taxKey] || tax.tax_cash_type || "E-kassa";
+                                    const isOriginal = order && getTaxConfigId(tax) === order.tax_cash_id;
+                                    const rowClass =
+                                        "tax-kassa-row" +
+                                        (isOriginal ? " tax-kassa-row--original" : "") +
+                                        (taxLoading ? " tax-kassa-row--disabled" : "");
+                                    return (
+                                        <div
+                                            key={idx}
+                                            role="button"
+                                            tabIndex={taxLoading ? -1 : 0}
+                                            className={rowClass}
+                                            aria-label={`${localName}, ${tax.ip_addr}:${tax.port_addr}`}
+                                            aria-disabled={taxLoading}
+                                            onKeyDown={(e) => {
+                                                if (taxLoading) return;
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    setShowTaxResendModal(false);
+                                                    executeTaxResendSale(tax);
+                                                }
+                                            }}
+                                            onClick={() => {
+                                                if (taxLoading) return;
+                                                setShowTaxResendModal(false);
+                                                executeTaxResendSale(tax);
+                                            }}
+                                        >
+                                            <div className="tax-kassa-row-icon">
+                                                <i className="bi bi-receipt"></i>
+                                            </div>
+                                            <div className="tax-kassa-row-text">
+                                                <h5 className="tax-kassa-row-name">{localName}</h5>
+                                                <span className="tax-kassa-row-ip">
+                                                    {tax.ip_addr}:{tax.port_addr}
+                                                </span>
+                                                {isOriginal && (
+                                                    <span className="tax-kassa-row-badge">Bu çekdə fiskal bu kassada</span>
+                                                )}
+                                            </div>
+                                            <div className="tax-kassa-row-chevron">
+                                                <i className="bi bi-chevron-right"></i>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="tax-kassa-modal-footer">
+                            <button
+                                type="button"
+                                className="btn-imtina"
+                                disabled={taxLoading}
+                                onClick={() => setShowTaxResendModal(false)}
+                            >
+                                İmtina
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </Modal>
 
             <CheckDeleteModal

@@ -16,6 +16,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import StatusModal from "../StatusModal/StatusModal";
 import { useLocation, useNavigate } from "react-router-dom"; // Moved here
+import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 
 const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -173,6 +174,8 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
 
   const { books } = useSelector((state) => state.BooksSlice);
 
+  const isTablesPage = location.pathname === "/tables" || location.pathname.startsWith("/tables/");
+
   useEffect(() => {
     if (loginedProfileData?.data?.profile?.id) {
       dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
@@ -254,7 +257,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                     } else if (backPath) {
                       navigate(backPath);
                     } else if (isChecksPage) {
-                      const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+                      const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
                       navigate(isPacksOnly ? "/pin" : "/tables");
                     } else {
                       navigate(-1);
@@ -281,7 +284,8 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                 </span>
               </div>
             ) : (
-              <ul className="hallsTab">
+              <div className="d-flex align-items-center gap-2">
+                <ul className="hallsTab">
                 {orderedHalls.map((hall, index) => (
                   <li
                     key={hall.id}
@@ -305,6 +309,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                   </li>
                 ))}
               </ul>
+              </div>
             )}
           </Col>
 
@@ -324,7 +329,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                     } else if (backPath) {
                       navigate(backPath);
                     } else if (isChecksPage) {
-                      const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+                      const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
                       navigate(isPacksOnly ? "/pin" : "/tables");
                     } else {
                       navigate(-1);

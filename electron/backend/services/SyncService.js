@@ -12,10 +12,18 @@ const LoginModel = require("../model/LoginModel");
 const ADMIN_API_URL = "https://api.unipos.tech/api/sync";
 const ADMIN_API_FALLBACK_URL = "http://46.224.8.157:35627/api/sync";
 
+/** Bir sifariş üçün maks. gözləmə — donmuş HTTP/socket üçün */
+const SYNC_ORDER_TIMEOUT_MS = 75000;
+/** Hər dövrdə maks. sifariş sayı — uzun bloklamanın qarşısını alır */
+const SYNC_BATCH_LIMIT = 15;
+/** finally çağrılmırsa (nadir) — dövrün maks. müddətindən böyük olmalıdır */
+const SYNC_WATCHDOG_MS = SYNC_BATCH_LIMIT * SYNC_ORDER_TIMEOUT_MS + 90000;
+
 class SyncService {
   constructor() {
     this.isSyncing = false;
     this.lastSyncTime = new Date();
+    this._syncCycleStartedAt = 0;
     this._pendingQueue = new Set();     // UUIDs waiting to be synced
     this._processingQueue = false;
     this._currentlySyncing = new Set(); // Track in-progress syncs to prevent duplicates
@@ -23,12 +31,12 @@ class SyncService {
     this._wasOffline = false;
     console.log("[SYNC_INIT] SyncService instance created.");
 
-    // Retry interval — every 5s (was 15s)
+    // Retry interval — hər 2s (ən son vəziyyət tez göndərilsin)
     setInterval(() => {
       if (global.isMasterNode && !this.isSyncing) {
         this.syncPendingOrders().catch(err => console.error("[SYNC_INTERVAL_ERR]", err));
       }
-    }, 5000);
+    }, 2000);
 
     // Reconnect poller: when internet comes back, immediately trigger sync
     setInterval(async () => {
@@ -47,7 +55,7 @@ class SyncService {
       }
     }, 5000);
 
-    // Every 30 minutes: reset skipped (is_synced=2) orders and retry them
+    // Hər 5 dəqiqə: skip olunmuş (is_synced=2) sifarişləri sıfırla və yenidən göndər — ən son halda qalmaq üçün
     setInterval(async () => {
       if (!global.isMasterNode) return;
       try {
@@ -66,7 +74,27 @@ class SyncService {
       } catch (err) {
         console.error("[SYNC_RETRY_SKIPPED_ERR]", err);
       }
-    }, 30 * 60 * 1000); // 30 dəqiqə
+    }, 5 * 60 * 1000); // 5 dəqiqə
+
+    // Watchdog: avto sync donanda isSyncing və ya şəbəkə səbəbindən dövr bitməyəndə sıfırla
+    setInterval(() => {
+      if (!global.isMasterNode) return;
+      if (!this.isSyncing || !this._syncCycleStartedAt) return;
+      if (Date.now() - this._syncCycleStartedAt < SYNC_WATCHDOG_MS) return;
+      console.error("[SYNC_WATCHDOG] Dövr çox uzun sürdü — isSyncing sıfırlanır, növbəti interval işləyəcək");
+      this.isSyncing = false;
+      this._syncCycleStartedAt = 0;
+      this._currentlySyncing.clear();
+    }, 15000);
+  }
+
+  _withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} (${ms}ms)`)), ms)
+      ),
+    ]);
   }
 
   async getSyncStatus() {
@@ -224,7 +252,28 @@ class SyncService {
         tables: table ? [table.get({ plain: true })] : [],
       };
 
-      await this.sendToAdmin(payload);
+      try {
+        await this.sendToAdmin(payload);
+      } catch (firstErr) {
+        // 409 = admin-da artıq var. Bir də force_overwrite ilə cəhd et — ən son halda qalmaq üçün
+        if (firstErr.isAlreadySynced) {
+          console.log(`[SYNC_409] Order ${orderId} admin-da var. Force overwrite ilə yenidən cəhd...`);
+          try {
+            await this.sendToAdmin({ ...payload, force_overwrite: true });
+          } catch (retryErr) {
+            if (retryErr.isAlreadySynced) {
+              console.log(`[SYNC_409_OK] Order ${orderId} admin-da, synced qeyd olundu.`);
+              await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false }).catch(() => {});
+              this._retryCounts.delete(orderId);
+              this.lastSyncTime = new Date();
+              return;
+            }
+            throw retryErr;
+          }
+        } else {
+          throw firstErr;
+        }
+      }
 
       // Retry DB update up to 3 times to ensure is_synced=1 is saved even under DB load
       let marked = false;
@@ -277,9 +326,14 @@ class SyncService {
   async syncPendingOrders() {
     if (this.isSyncing) return;
     this.isSyncing = true;
+    this._syncCycleStartedAt = Date.now();
 
     try {
-      const isOnline = await this.checkConnectivity();
+      const isOnline = await this._withTimeout(
+        this.checkConnectivity(),
+        12000,
+        "checkConnectivity"
+      ).catch(() => false);
       if (!isOnline) return;
 
       const pendingOrders = await OrdersModel.findAll({
@@ -287,8 +341,8 @@ class SyncService {
           [Op.or]: [{ is_synced: 0 }, { is_synced: null }],
         },
         paranoid: false,
-        limit: 50, // was 10
-        order: [["updated_at", "ASC"]], // oldest first
+        limit: SYNC_BATCH_LIMIT,
+        order: [["updated_at", "DESC"]], // ən son dəyişənlər əvvəl — ən son halda qalmaq üçün
       });
 
       if (pendingOrders.length === 0) return;
@@ -296,14 +350,17 @@ class SyncService {
       console.log(`[SYNC_LOOP] Found ${pendingOrders.length} pending orders. Processing...`);
 
       for (const order of pendingOrders) {
-        // Skip if already being synced by the queue drain
         if (this._currentlySyncing.has(order.uuid)) continue;
 
         try {
           this._currentlySyncing.add(order.uuid);
-          await this.triggerSync(order.uuid);
+          await this._withTimeout(
+            this.triggerSync(order.uuid),
+            SYNC_ORDER_TIMEOUT_MS,
+            `triggerSync(${order.uuid?.slice?.(0, 8) || order.uuid})`
+          );
         } catch (e) {
-          // Individual failure doesn't stop the loop; order stays is_synced=0 for next cycle
+          console.warn(`[SYNC_LOOP_SKIP] ${order.uuid}: ${e.message}`);
         } finally {
           this._currentlySyncing.delete(order.uuid);
         }
@@ -314,6 +371,7 @@ class SyncService {
       console.error("[SYNC_LOOP_CRITICAL]", error);
     } finally {
       this.isSyncing = false;
+      this._syncCycleStartedAt = 0;
     }
   }
 
@@ -348,7 +406,7 @@ class SyncService {
     try {
       await Promise.any(
         urls.map(url =>
-          axios.post(url, payload, { timeout: 15000 }).then(res => {
+          axios.post(url, payload, { timeout: 20000 }).then(res => {
             // 2xx = success
             if (res.status >= 200 && res.status < 300) return true;
             throw new Error(`Unexpected status ${res.status}`);

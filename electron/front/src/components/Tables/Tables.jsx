@@ -17,6 +17,7 @@ import {
 } from "../../redux/Slices/TablesSlice";
 import { toast } from "sonner";
 import { getSocket } from "../../utils/apiConfig";
+import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 
 const Tables = () => {
   const {
@@ -54,7 +55,7 @@ const Tables = () => {
   }, [currentHallId]);
 
   // can_manage_packs: zalları və masaları görməsin — Checks-ə yönləndir (dərhal, UI göstərmədən)
-  const isPacksOnly = Number(loginedWaiter?.data?.can_manage_packs) === 1;
+  const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
   useEffect(() => {
     if (isPacksOnly) {
       navigate("/checks", { replace: true });
@@ -207,7 +208,7 @@ const Tables = () => {
       const isMyTable = hasOrders && loginedWaiter?.data?.id && waiterId == loginedWaiter.data.id;
       const isOtherTable = hasOrders && !isMyTable;
 
-      if (Number(loginedWaiter?.data?.can_manage_packs) === 1) {
+      if (isPacksOnlyWaiter(loginedWaiter?.data)) {
         toast.error("İcazəniz yoxdur: Masada sifariş yarada və ya aça bilməzsiniz.");
         return;
       }

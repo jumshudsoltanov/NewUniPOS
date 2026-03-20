@@ -1,0 +1,214 @@
+/*
+ * Vergi kassa seçimi — CheckOver (bağlanış) və CheckDetailModal (təkrar satış) üçün ümumi dizayn.
+ * CustomersModal.css `.customers-modal .modal-dialog { 340px }` üstünə çıxmaq üçün spesifik seçici.
+ */
+.customers-modal.tax-kassa-picker-modal .modal-dialog.tax-kassa-picker-dialog {
+    max-width: min(94vw, 700px) !important;
+    width: min(94vw, 700px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+.tax-kassa-picker-modal .customers-modal-header {
+    height: auto;
+    min-height: 66px;
+    align-items: flex-start;
+    padding-top: 16px;
+    padding-bottom: 16px;
+}
+
+.tax-kassa-picker-modal .customers-header-content {
+    align-items: flex-start;
+}
+
+.tax-kassa-picker-modal .customers-icon-circle {
+    margin-top: 2px;
+    background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.tax-kassa-picker-modal .customers-icon-circle i {
+    color: #ffffff !important;
+}
+
+.tax-kassa-picker-modal .btn-close-custom svg {
+    stroke: #ffffff !important;
+}
+
+.tax-kassa-picker-modal .modal-content {
+    border: none;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-body-inner {
+    background: #f1f5f9;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-intro {
+    padding: 22px 28px 18px;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-intro-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 10px 0;
+    line-height: 1.4;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-intro-sub {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.55;
+    max-width: 52em;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-list-wrap {
+    max-height: min(420px, 55vh);
+    overflow-y: auto;
+    padding: 20px 24px 22px;
+    scrollbar-width: thin;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-list-wrap::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-list-wrap::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 16px 20px;
+    min-height: 72px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    outline: none;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row:hover:not(.tax-kassa-row--disabled) {
+    border-color: #5d99ff;
+    box-shadow: 0 4px 14px rgba(93, 153, 255, 0.18);
+}
+
+.tax-kassa-picker-modal .tax-kassa-row:focus-visible:not(.tax-kassa-row--disabled) {
+    border-color: #5d99ff;
+    box-shadow: 0 0 0 3px rgba(93, 153, 255, 0.25);
+}
+
+.tax-kassa-picker-modal .tax-kassa-row--original {
+    border-color: rgba(93, 153, 255, 0.5);
+    background: linear-gradient(90deg, rgba(93, 153, 255, 0.08) 0%, #fff 55%);
+}
+
+.tax-kassa-picker-modal .tax-kassa-row--disabled {
+    opacity: 0.55;
+    cursor: not-allowed !important;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 8px;
+    background: #5d99ff;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row-icon i {
+    color: #ffffff !important;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row-name {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 6px 0;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row-ip {
+    font-size: 13px;
+    color: #64748b;
+    font-family: ui-monospace, "Consolas", monospace;
+    word-break: break-all;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #2563eb;
+    background: rgba(37, 99, 235, 0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+    display: inline-block;
+    align-self: flex-start;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row-chevron {
+    margin-left: auto;
+    background: #5d99ff;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row-chevron i {
+    color: #ffffff !important;
+    font-size: 16px;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row:hover:not(.tax-kassa-row--disabled) .tax-kassa-row-icon,
+.tax-kassa-picker-modal .tax-kassa-row:hover:not(.tax-kassa-row--disabled) .tax-kassa-row-chevron {
+    background: #4a7fd9;
+}
+
+.tax-kassa-picker-modal .tax-kassa-row:hover:not(.tax-kassa-row--disabled) .tax-kassa-row-icon i,
+.tax-kassa-picker-modal .tax-kassa-row:hover:not(.tax-kassa-row--disabled) .tax-kassa-row-chevron i {
+    color: #ffffff !important;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-footer {
+    padding: 0 24px 22px;
+    background: #f1f5f9;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-footer .btn-imtina {
+    width: 100%;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 12px 18px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    color: #475569;
+    border-radius: 10px;
+}
+
+.tax-kassa-picker-modal .tax-kassa-modal-footer .btn-imtina:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #334155;
+}

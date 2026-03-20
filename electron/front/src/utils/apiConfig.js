@@ -1,6 +1,9 @@
 import axios from "axios";
 import { io } from "socket.io-client";
 
+/** Fiskal (Sunmi və s.) əməliyyatları uzun çəkə bilər — 30s kifayət etmir */
+export const TAX_HTTP_TIMEOUT_MS = 240000;
+
 const apiConfig = axios.create({
     baseURL: "http://localhost:55667/api",
     timeout: 30000,

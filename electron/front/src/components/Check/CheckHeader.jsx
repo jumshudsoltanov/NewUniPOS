@@ -9,7 +9,7 @@ import { getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "..
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { useNavigate } from "react-router-dom";
 
-const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
+const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount = 0 }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -135,9 +135,9 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
 
   return (
     <>
-      <div className="check-header-bar" style={{ position: "relative" }}>
+      <div className="check-header-bar check-header-bar-no-overlap" style={{ position: "relative" }}>
         {/* Left Section: Edit + Info */}
-        <div className="header-left-section" style={{ flex: 1, maxWidth: "42%", display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+        <div className="header-left-section" style={{ flex: "1 1 0", minWidth: 0, maxWidth: "35%", display: "flex", alignItems: "center", gap: "10px" }}>
           <div
             className="header-edit-btn"
             onClick={() => setOpenTagModal(true)}
@@ -165,17 +165,23 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer }) => {
                 <span className="header-subtitle" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{orders.tags}</span>
               )}
             </div>
+            {activeTableCount > 0 && (
+              <span className="header-meta-line">
+                <span className="header-active-tables-full d-none d-sm-inline">{activeTableCount} aktiv masa</span>
+                <span className="header-active-tables-short d-sm-none">{activeTableCount} masa</span>
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="header-center-section" style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", zIndex: 5 }}>
+        <div className="header-center-section" style={{ flexShrink: 0, flexGrow: 0 }}>
           <span className="header-time">
             {`${getTimeDifference(orders?.start_date).hours ?? "00"}:${getTimeDifference(orders?.start_date).minutes ?? "00"}`}
           </span>
         </div>
 
-        {/* Right Section: Order IDs + Toggle */}
-        <div className="header-right-section" style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "10px", marginLeft: "auto" }}>
+        {/* Right Section: Çek ID + Toggle */}
+        <div className="header-right-section" style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
           <span className="header-order-id">
             {orders?.id ? `#${orders.id} / #${orders.id}` : (orders?.uuid ? "Yeni sifariş" : "Yüklənir...")}
           </span>

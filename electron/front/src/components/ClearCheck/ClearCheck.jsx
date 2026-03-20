@@ -54,11 +54,12 @@ const ClearCheck = ({ show, onClose, order }) => {
         const hall = tableGroups?.data?.find(h => h.id == order.hall_id);
 
         try {
+          const orderWaiter = order?.waiter?.name || order?.waiter_name || waiterName;
           await processAndPrintOrders(
             itemsToPrint,
             {
               table: order?.table_name || "Masa",
-              waiter: waiterName,
+              waiter: orderWaiter,
               hallName: hall?.name || "",
               orderId: order?.uuid,
               terminalInfo: loginedProfileData?.data?.terminal || {},

@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setLoginData } from "../../redux/Slices/LoginSlice";
 import { toast } from "sonner";
 import QRCode from "react-qr-code";
-import apiConfig, { localApi } from "../../utils/apiConfig";
+import apiConfig, { localApi, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 import "./DevicesModal.css";
@@ -320,7 +320,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleTaxLogin = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await localApi.post('/tax/login', { taxConfig: tax });
+            const result = await localApi.post('/tax/login', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
             if (result.data?.access_token || result.data?.data?.access_token) {
                 toast.success(`${tax.tax_cash_type} — Login uğurlu`);
                 handleShiftStatus(tax, index);
@@ -339,7 +339,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleShiftStatus = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await localApi.post('/tax/shift-status', { taxConfig: tax });
+            const result = await localApi.post('/tax/shift-status', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
             setShiftStates(prev => ({ ...prev, [index]: result.data }));
             const isOpen = result.data?.shiftStatus === true;
             toast.info(`N\u00F6vb\u0259: ${isOpen ? 'A\u00e7\u0131qd\u0131r' : 'Ba\u011Fl\u0131d\u0131r'}`);
@@ -355,7 +355,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleOpenShift = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            await localApi.post('/tax/open-shift', { taxConfig: tax });
+            await localApi.post('/tax/open-shift', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
             toast.success('N\u00F6vb\u0259 a\u00E7\u0131ld\u0131');
             handleShiftStatus(tax, index);
         } catch (err) {
@@ -370,7 +370,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleCloseShift = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await localApi.post('/tax/close-shift', { taxConfig: tax });
+            const result = await localApi.post('/tax/close-shift', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
             toast.success('N\u00F6vb\u0259 ba\u011Fland\u0131 (Z-Report)');
             setShiftStates(prev => ({ ...prev, [index]: { shiftStatus: false } }));
         } catch (err) {
@@ -385,7 +385,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleXReport = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            await localApi.post('/tax/x-report', { taxConfig: tax });
+            await localApi.post('/tax/x-report', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
             toast.success('X-Report \u00E7ap edildi');
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -406,7 +406,7 @@ const DevicesModal = ({ show, onHide }) => {
                 taxConfig: tax,
                 beginDate: bDate,
                 endDate: eDate
-            });
+            }, { timeout: TAX_HTTP_TIMEOUT_MS });
             const errCode = Number(result.data?.error_code || 0);
             if (errCode !== 0) {
                 toast.error('Hesabat x\u0259tas\u0131: ' + (result.data?.error_message || `code ${errCode}`));
@@ -432,7 +432,7 @@ const DevicesModal = ({ show, onHide }) => {
                 taxConfig: tax,
                 beginDate: bDate,
                 endDate: eDate
-            });
+            }, { timeout: TAX_HTTP_TIMEOUT_MS });
             const errCode = Number(result.data?.error_code || 0);
             if (errCode !== 0) {
                 toast.error('Tarix\u00e7\u0259 x\u0259tas\u0131: ' + (result.data?.error_message || `code ${errCode}`));
@@ -451,7 +451,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleReprintAfterError = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            await localApi.post('/tax/reprint-error', { taxConfig: tax });
+            await localApi.post('/tax/reprint-error', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
             toast.success('Yenid\u0259n \u00E7ap sor\u011Fusu g\u00F6nd\u0259rildi');
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -465,7 +465,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleTaxInfo = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await localApi.post('/tax/info', { taxConfig: tax });
+            const result = await localApi.post('/tax/info', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
             if (result.data?.data) {
                 const d = result.data.data;
                 toast.success(`${d.company_name || tax.tax_cash_type} \u2014 S/N: ${d.cashbox_factory_number || '?'}, Son s\u0259n\u0259d: #${d.last_doc_number || '?'}`);

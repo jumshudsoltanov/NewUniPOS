@@ -5,14 +5,17 @@ const WaitersModel = require("../model/WaitersModel");
 
 const getTables = async (req, res) => {
   const { profileId } = req.params;
+  const { waiter_id } = req.query;
   try {
+    const orderWhere = { status: 1 };
+    if (waiter_id) orderWhere.waiter_id = waiter_id;
     const tables = await TableGroupsModel.findAll({
       where: { profile_id: profileId },
       include: {
         model: TablesModel,
         include: {
           model: OrdersModel,
-          where: { status: 1 },
+          where: orderWhere,
           required: false,
           attributes: ["id", "uuid", "amount", "discount", "discount_value", "discount_type", "deposit", "service_charge", "service_value", "service_type", "print_count", "waiter_id", "status", "guest_count", "is_timer_status", "is_active_timer", "is_timer_clock", "timer_last_started_at"],
           include: [

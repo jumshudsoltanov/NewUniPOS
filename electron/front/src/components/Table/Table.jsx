@@ -15,6 +15,14 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
 
   const isOtherTable = React.useMemo(() => hasOrders && !isMyTable, [hasOrders, isMyTable]);
 
+  const hasMultipleChecks = React.useMemo(() => orders && orders.length > 1, [orders]);
+
+  const totalPrintCount = React.useMemo(
+    () => orders?.reduce((sum, o) => sum + (o.print_count || 0), 0) || 0,
+    [orders]
+  );
+  const hasPrintCount = totalPrintCount > 0;
+
   const renderSeats = () => {
     if (shape_type === "rectangle") {
       return (
@@ -57,7 +65,7 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
         {renderSeats()}
 
         <div
-          className={`table-surface table-${shape_type || "square"} ${status} ${hasOrders ? "has-orders" : ""} ${isMyTable ? "my-table" : ""} ${isOtherTable ? "other-waiter-table" : ""}`}
+          className={`table-surface table-${shape_type || "square"} ${status} ${hasOrders ? "has-orders" : ""} ${isMyTable ? "my-table" : ""} ${isOtherTable ? "other-waiter-table" : ""} ${hasPrintCount ? "multi-checks" : ""}`}
         >
           {/* Status Dot */}
           <div
@@ -122,6 +130,12 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
               <i className="bi bi-people"></i>
               <span>{orders?.[0]?.waiter?.name || "—"}</span>
             </div>
+
+            {hasMultipleChecks && (
+              <div className="table-multi-checks-badge">
+                {orders?.length} çek
+              </div>
+            )}
 
             {(orders?.[0]?.is_timer_status == 1 || (orders?.[0]?.is_timer_clock && orders?.[0]?.is_timer_clock !== "00:00:00") || Number(orders?.[0]?.rate_per_minute || 0) > 0) && Number(table?.hourly_price || 0) > 0 && (
               <div className="table-timer-info" style={{ color: '#053796', fontSize: '0.9rem', fontWeight: '700', marginTop: '6px', background: 'rgba(5, 55, 150, 0.05)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center' }}>

@@ -191,7 +191,7 @@ const getProducts = async (passedProfileId) => {
 
       if (products.length > 0) {
         const updateKeys = Object.keys(products[0]).filter(
-          (key) => ProductsModel.rawAttributes[key],
+          (key) => ProductsModel.rawAttributes[key] && key !== "ordering",
         );
         await ProductsModel.bulkCreate(products, {
           updateOnDuplicate: updateKeys,

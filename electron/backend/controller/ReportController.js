@@ -192,8 +192,10 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
 
     // Process Closed Orders
     closedOrders.forEach(order => {
-        // order.amount is subtotal
-        summary.total_amount += parseFloat(order.amount || 0);
+        // order.amount — bağlananda məhsul cəmi; timer məbləği rate_per_minute-da (onCloseOrder amount-a daxil edilmir)
+        const itemsSub = parseFloat(order.amount || 0) || 0;
+        const timerSub = parseFloat(order.rate_per_minute || 0) || 0;
+        summary.total_amount += itemsSub + timerSub;
         summary.total_discount += parseFloat(order.discount || 0);
         summary.total_service += parseFloat(order.service_charge || 0);
         const orderTotal = parseFloat(order.total || 0);
@@ -337,6 +339,24 @@ const getSimpleReport = async (profileId, baseWhere, start, end, showTransaction
     return summary;
 };
 
+/** Sətir məbləği: say × (qiymət + modifierlər) — kateqoriya/məhsul cəmləri ilə uyğun */
+const lineItemTotalForReport = (item) => {
+    const qty = parseFloat(item.count || 0);
+    const price = parseFloat(item.price || 0);
+    let modifiersTotal = 0;
+    try {
+        let mods = item.modifiers;
+        if (typeof mods === "string") mods = JSON.parse(mods || "[]");
+        if (Array.isArray(mods)) {
+            modifiersTotal = mods.reduce(
+                (s, m) => s + parseFloat(m.price || 0) * parseFloat(m.count || 1),
+                0
+            );
+        }
+    } catch (_) { /* ignore */ }
+    return qty * (price + modifiersTotal);
+};
+
 const getProductsReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
         where: whereClause,
@@ -372,7 +392,7 @@ const getProductsReport = async (whereClause) => {
                     productsMap[productId].quantity_gift += itemCount;
                     productsMap[productId].total_gift += itemCount * nominalPrice;
                 } else {
-                    productsMap[productId].total += itemCount * itemPrice;
+                    productsMap[productId].total += lineItemTotalForReport(item);
                 }
             });
         }
@@ -432,20 +452,44 @@ const getCategoryReport = async (whereClause) => {
         if (order.orders_items) {
             order.orders_items.forEach(item => {
                 const categoryName = item.product?.category?.name || 'Kategoriyasız';
+                const productLabel = item.product?.name || item.name || 'Naməlum';
+                const productKey = item.product_id || item.product?.id || productLabel;
+                const lineTotal = lineItemTotalForReport(item);
+                const qty = parseFloat(item.count || 0);
+
                 if (!categoryMap[categoryName]) {
                     categoryMap[categoryName] = {
                         name: categoryName,
                         quantity: 0,
+                        total: 0,
+                        products: {}
+                    };
+                }
+                const cat = categoryMap[categoryName];
+                cat.quantity += qty;
+                cat.total += lineTotal;
+
+                if (!cat.products[productKey]) {
+                    cat.products[productKey] = {
+                        name: productLabel,
+                        quantity: 0,
                         total: 0
                     };
                 }
-                categoryMap[categoryName].quantity += parseFloat(item.count || 0);
-                categoryMap[categoryName].total += parseFloat(item.count || 0) * parseFloat(item.price || 0);
+                cat.products[productKey].quantity += qty;
+                cat.products[productKey].total += lineTotal;
             });
         }
     });
 
-    return Object.values(categoryMap).sort((a, b) => b.total - a.total);
+    return Object.values(categoryMap)
+        .map((cat) => ({
+            name: cat.name,
+            quantity: cat.quantity,
+            total: cat.total,
+            products: Object.values(cat.products || {}).sort((a, b) => b.total - a.total)
+        }))
+        .sort((a, b) => b.total - a.total);
 };
 
 const getChecksReport = async (whereClause, showTransactions) => {

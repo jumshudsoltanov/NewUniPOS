@@ -22,6 +22,7 @@ const getMenuWithGeneralCategories = async (req, res) => {
           as: "products",
           where: { is_hidden_pos: { [Op.or]: [0, null] } },
           required: false,
+          order: [['ordering', 'ASC']],
         },
       },
     });

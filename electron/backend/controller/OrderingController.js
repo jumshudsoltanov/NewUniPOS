@@ -18,27 +18,41 @@ const updateLocalOrdering = async (Model, orderedItems, profile_id) => {
 
 const forwardOrdering = (adminPath, cloudPath, Model) => async (req, res) => {
     try {
-        const { orderedItems, profile_id } = req.body;
+        const { orderedItems, profile_id, category_id } = req.body;
         if (!orderedItems || !Array.isArray(orderedItems)) {
             return res.status(400).json({ message: "orderedItems tələb olunur" });
         }
+        // 1. Əvvəlcə local DB-ni yenilə (admin uğursuz olsa belə sıralama saxlanılsın)
+        if (Model) {
+            await updateLocalOrdering(Model, orderedItems, profile_id);
+        }
         const payload = { orderedItems, profile_id };
-        let adminSaved = false;
-        for (const [base, path] of [[ADMIN_API, adminPath], [CLOUD_API, cloudPath]]) {
+        if (category_id != null) payload.category_id = category_id;
+        let pathsToTry = [
+            [ADMIN_API, "/pos" + adminPath],
+            [ADMIN_API, adminPath],
+            [CLOUD_API, cloudPath],
+        ];
+        if (adminPath === "/products/ordering" && category_id != null) {
+            pathsToTry = [
+                [ADMIN_API, `/pos/categories/${category_id}/products/ordering`],
+                [ADMIN_API, `/categories/${category_id}/products/ordering`],
+                ...pathsToTry,
+            ];
+        }
+        for (const [base, path] of pathsToTry) {
             try {
                 const response = await axios.put(`${base}${path}`, payload, { timeout: 10000 });
                 if (response.status >= 200 && response.status < 300) {
-                    adminSaved = true;
-                    if (base === ADMIN_API) console.log("[Ordering] Admin API uğurlu:", base + path);
+                    console.log("[Ordering] API uğurlu:", base + path);
                     break;
                 }
             } catch (e) {
-                if (e?.response?.status === 404 || e?.code === "ECONNREFUSED" || e?.code === "ENOTFOUND") continue;
-                console.warn("[Ordering] API cəhdi:", base + path, e?.message);
+                if (e?.response?.status === 404 || e?.code === "ECONNREFUSED" || e?.code === "ENOTFOUND") {
+                    continue;
+                }
+                console.warn("[Ordering] API cəhdi:", base + path, e?.response?.status, e?.message);
             }
-        }
-        if (Model) {
-            await updateLocalOrdering(Model, orderedItems, profile_id);
         }
         return res.status(200).json({ success: true, message: "Sıralama yadda saxlanıldı" });
     } catch (error) {

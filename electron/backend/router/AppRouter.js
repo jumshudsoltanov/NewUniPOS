@@ -45,6 +45,18 @@ router.delete("/products/:id", ProductsController.deleteProduct);
 router.put("/general-categories/ordering", OrderingController.generalCategoriesOrdering);
 router.put("/categories/ordering", OrderingController.categoriesOrdering);
 router.put("/products/ordering", OrderingController.productsOrdering);
+router.put("/categories/:categoryId/products/ordering", (req, res, next) => {
+  req.body.category_id = req.body.category_id || req.params.categoryId;
+  next();
+}, OrderingController.productsOrdering);
+// /pos/ prefikslı ordering routes (admin və xarici çağrılar üçün)
+router.put("/pos/general-categories/ordering", OrderingController.generalCategoriesOrdering);
+router.put("/pos/categories/ordering", OrderingController.categoriesOrdering);
+router.put("/pos/products/ordering", OrderingController.productsOrdering);
+router.put("/pos/categories/:categoryId/products/ordering", (req, res, next) => {
+  req.body.category_id = req.body.category_id || req.params.categoryId;
+  next();
+}, OrderingController.productsOrdering);
 
 // Ordered Items Routers
 router.post(
@@ -359,7 +371,11 @@ router.post("/tax/info", async (req, res) => {
 router.post("/tax/sale", async (req, res) => {
   try {
     const { taxConfigs, saleData } = req.body;
-    const results = await TaxManager.processSale(taxConfigs, saleData);
+    const configs = Array.isArray(taxConfigs) ? taxConfigs : [];
+    if (configs.length === 0) {
+      return res.json({ success: false, results: [], message: 'Vergi konfiqurasiyası tapılmadı' });
+    }
+    const results = await TaxManager.processSale(configs, saleData);
     const anySuccess = results.some(r => r.success);
     res.json({ success: anySuccess, results });
   } catch (e) {
