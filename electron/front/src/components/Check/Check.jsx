@@ -43,6 +43,11 @@ import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import CourierModal from "../CourierModal/CourierModal";
 import { assignCourierToOrder } from "../../redux/Slices/CouriersSlice";
+import {
+  getEffectiveHourlyPrice,
+  getTableHourlyPrice,
+  getProductHourlySum,
+} from "../../utils/orderHourlyPrice";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
 import UpdateGuestCountModal from "../Customers-Modal/UpdateGuestCountModal";
@@ -244,6 +249,32 @@ const Check = () => {
     return { currentOrder: null, currentHall: null, currentTable: null };
 
   }, [id, tableId, tableGroups, books, searchParams]);
+
+  /** Taymer tarifi: məhsul saatlığı varsa yalnız o, yoxsa masa (cəmlənmir). */
+  const effectiveHourlyPrice = useMemo(() => {
+    if (!currentOrder) return Number(currentTable?.hourly_price || 0);
+    return getEffectiveHourlyPrice({
+      ...currentOrder,
+      table: {
+        ...(currentOrder.table || {}),
+        hourly_price: currentOrder?.table?.hourly_price ?? currentTable?.hourly_price,
+      },
+    });
+  }, [currentOrder, currentTable]);
+
+  /** Sidebar taymer ikonu: yalnız masa saatlığı (məhsul saatlığı olanda gizlənir). */
+  const showSidebarTableTimerOnly = useMemo(() => {
+    if (!currentOrder) return false;
+    if (Number(loginedProfileData?.data?.profile?.is_timer || 0) !== 1) return false;
+    const merged = {
+      ...currentOrder,
+      table: {
+        ...(currentOrder.table || {}),
+        hourly_price: currentOrder?.table?.hourly_price ?? currentTable?.hourly_price,
+      },
+    };
+    return getTableHourlyPrice(merged) > 0 && getProductHourlySum(merged) === 0;
+  }, [currentOrder, currentTable, loginedProfileData]);
 
   const selectedCustomer = useMemo(() => {
     if (currentOrder?.customer_id) {
@@ -537,9 +568,8 @@ const Check = () => {
 
   async function handleAutoSaveAndExit(targetPath) {
     const resultingItemCount = (currentOrder?.orders_items?.length || 0) - (pendingDeletions?.length || 0) + (products?.length || 0);
-    const hourlyPrice = Number(currentTable?.hourly_price || currentOrder?.table?.hourly_price || 0);
     const profileHasTimer = Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1;
-    const hasTimerOnTable = hourlyPrice > 0 && profileHasTimer;
+    const hasTimerOnTable = effectiveHourlyPrice > 0 && profileHasTimer;
     const isTimerActiveOrHasBalance =
       hasTimerOnTable &&
       (currentOrder?.is_timer_status === 1 ||
@@ -1237,7 +1267,7 @@ const Check = () => {
                   </div>
                 )}
 
-                {(Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 && Number(currentTable?.hourly_price || currentOrder?.table?.hourly_price || 0) > 0) && (
+                {showSidebarTableTimerOnly && (
                   <div
                     className="sidebar-icon timer-button"
                     onClick={() => setShowTimerModal(true)}

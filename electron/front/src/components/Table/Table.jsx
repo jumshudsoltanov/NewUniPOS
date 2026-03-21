@@ -1,6 +1,7 @@
 import React from "react";
 import "./Table.css";
 import { useParams } from "react-router-dom";
+import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 
 const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
   const { name, status, shape_type, orders } = table || {};
@@ -86,28 +87,42 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
                 const order = orders?.[0];
                 if (!order) return "0.00 ₼";
 
-                // Consistency with CheckDetailModal and CheckBottom
-                const subtotal = Number(order.amount || 0);
+                // CheckBottom / CheckDetailModal ilə eyni: əvvəl məhsul sətirləri, sonra taymer (bir dəfə).
+                // order.amount DB-də tez-tez artıq (məhsul + taymer) saxlanır — amount+rate ikiqat verir.
                 const discount = Number(order.discount || 0);
                 const deposit = Number(order.deposit || 0);
                 const service = Number(order.service_charge || 0);
                 const deliveryFee = Number(order.delivery_fee || 0);
 
-                let timerCharge = Number(order.rate_per_minute || 0);
+                const effHourly = getEffectiveHourlyPrice({
+                  ...order,
+                  table: { hourly_price: table?.hourly_price },
+                  orders_items: order.orders_items || [],
+                });
 
-                // Auto-calculate timer charge if missing but clock exists (hall view fallback)
-                if (timerCharge === 0 && order.is_timer_clock && order.is_timer_clock !== "00:00:00") {
-                  const hPrice = Number(table?.hourly_price || 0);
-                  if (hPrice > 0) {
-                    const parts = order.is_timer_clock.split(':').map(Number);
-                    if (parts.length === 3) {
-                      const totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-                      timerCharge = (hPrice / 3600) * totalSeconds;
-                    }
+                let itemsBase = 0;
+                if (order.orders_items && order.orders_items.length > 0) {
+                  itemsBase = order.orders_items.reduce((sum, it) => {
+                    const q = Number(it.count) || 0;
+                    const p = Number(it.price) || 0;
+                    return sum + q * p;
+                  }, 0);
+                } else {
+                  const amt = Number(order.amount || 0);
+                  const rate = Number(order.rate_per_minute || 0);
+                  itemsBase = rate > 0 ? Math.max(0, amt - rate) : amt;
+                }
+
+                let timerCharge = Number(order.rate_per_minute || 0);
+                if (timerCharge === 0 && order.is_timer_clock && order.is_timer_clock !== "00:00:00" && effHourly > 0) {
+                  const parts = order.is_timer_clock.split(":").map(Number);
+                  if (parts.length === 3) {
+                    const totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                    timerCharge = (effHourly / 3600) * totalSeconds;
                   }
                 }
 
-                const subtotalAfterDiscount = (subtotal + timerCharge) - discount;
+                const subtotalAfterDiscount = (itemsBase + timerCharge) - discount;
                 const displayAmount = Math.max(subtotalAfterDiscount, deposit) + service + deliveryFee;
                 const isDepositFloor = deposit > subtotalAfterDiscount;
 
@@ -137,7 +152,20 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
               </div>
             )}
 
-            {(orders?.[0]?.is_timer_status == 1 || (orders?.[0]?.is_timer_clock && orders?.[0]?.is_timer_clock !== "00:00:00") || Number(orders?.[0]?.rate_per_minute || 0) > 0) && Number(table?.hourly_price || 0) > 0 && (
+            {(() => {
+              const o = orders?.[0];
+              if (!o) return false;
+              const eff = getEffectiveHourlyPrice({
+                ...o,
+                table: { hourly_price: table?.hourly_price },
+                orders_items: o.orders_items || [],
+              });
+              const hasTimerSignal =
+                o.is_timer_status == 1 ||
+                (o.is_timer_clock && o.is_timer_clock !== "00:00:00") ||
+                Number(o.rate_per_minute || 0) > 0;
+              return hasTimerSignal && eff > 0;
+            })() && (
               <div className="table-timer-info" style={{ color: '#053796', fontSize: '0.9rem', fontWeight: '700', marginTop: '6px', background: 'rgba(5, 55, 150, 0.05)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center' }}>
                 <i className={`bi bi-clock${orders?.[0]?.is_timer_status == 1 ? '-fill' : ''} me-1`} style={{ fontSize: '0.8rem', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.6 }}></i>
                 <span style={{ fontVariantNumeric: 'tabular-nums', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.8 }}>{orders?.[0]?.is_timer_clock || "00:00:00"}</span>

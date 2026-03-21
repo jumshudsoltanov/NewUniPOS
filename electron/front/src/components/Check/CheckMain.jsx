@@ -3,9 +3,10 @@ import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal"; // Import
-import { addPendingDeletion, removeAllProductsById, startTimer, stopTimer, resetTimer } from "../../redux/Slices/OrdersSlice"; // Import action
+import { addPendingDeletion, removeAllProductsById } from "../../redux/Slices/OrdersSlice"; // Import action
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
+import { getProductHourlySum } from "../../utils/orderHourlyPrice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault.jpg";
@@ -24,6 +25,7 @@ const CheckMain = ({ orders, table }) => {
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { id: orderIdParam } = useParams();
 
   const allItems = useMemo(() => {
     const groupedMap = new Map();
@@ -150,6 +152,71 @@ const CheckMain = ({ orders, table }) => {
 
   }, [orders, menu, products, sentProducts, pendingDeletions]);
 
+  /* Əvvəlcə BooksSlice — məhsul saatlığı + canlı tickTimer (1s). TablesSlice yalnız masa hourly>0 olduqda yenilənir. */
+  const liveTimerData = useSelector((state) => {
+    if (!orderIdParam) return null;
+    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
+    if (booksData) {
+      const order = booksData.find((o) => o.uuid == orderIdParam);
+      if (order) {
+        return {
+          is_timer_status: order.is_timer_status,
+          is_timer_clock: order.is_timer_clock,
+          rate_per_minute: order.rate_per_minute,
+          is_active_timer: order.is_active_timer,
+        };
+      }
+    }
+    const tg = state.TablesSlice.tableGroups?.data;
+    if (tg) {
+      for (const hall of tg) {
+        for (const t of (hall.tables || [])) {
+          const order = t.orders?.find((o) => o.uuid == orderIdParam);
+          if (order) {
+            return {
+              is_timer_status: order.is_timer_status,
+              is_timer_clock: order.is_timer_clock,
+              rate_per_minute: order.rate_per_minute,
+              is_active_timer: order.is_active_timer,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  });
+
+  const orderForTimer = useMemo(() => {
+    if (!orders) return null;
+    return {
+      ...orders,
+      table: {
+        ...(orders.table || {}),
+        hourly_price: orders?.table?.hourly_price ?? table?.hourly_price,
+      },
+    };
+  }, [orders, table]);
+
+  const usesProductTimer = useMemo(() => {
+    if (!orderForTimer) return false;
+    return getProductHourlySum(orderForTimer) > 0;
+  }, [orderForTimer]);
+
+  const firstHourlyProductRowIndex = useMemo(() => {
+    if (!usesProductTimer) return -1;
+    return allItems.findIndex((item) => {
+      const pi = menu.find((m) => m.id === item.product_id);
+      return Number(pi?.hourly_price ?? item.product?.hourly_price ?? 0) > 0;
+    });
+  }, [allItems, menu, usesProductTimer]);
+
+  const timerClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
+  const timerCharge = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
+
+  const stopTimerBubble = (e) => {
+    e.stopPropagation();
+  };
+
   const handleItemClick = (item) => {
     if (orders?.is_locked == 1) {
       toast.error("Qəbz kilidlidir!");
@@ -158,29 +225,6 @@ const CheckMain = ({ orders, table }) => {
     if (item.isDeleted) return; // Prevent clicking deleted items
     setSelectedProduct(item);
     setEditItemModal(true);
-  };
-
-  const handleStartTimer = () => {
-    dispatch(startTimer({ orderId: orders.uuid }));
-  };
-
-  const handleStopTimer = () => {
-    let seconds = 0;
-    if (orders.is_timer_clock && String(orders.is_timer_clock).includes(':')) {
-      const p = orders.is_timer_clock.split(':').map(Number);
-      if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
-    }
-    dispatch(stopTimer({ 
-      orderId: orders.uuid,
-      elapsedSeconds: seconds,
-      clockStr: orders.is_timer_clock 
-    }));
-  };
-
-  const handleResetTimer = () => {
-    if (window.confirm("Taymeri sıfırlamaq istədiyinizə əminsiniz?")) {
-      dispatch(resetTimer({ orderId: orders.uuid }));
-    }
   };
 
   let fallbackProfileData = null;
@@ -254,6 +298,14 @@ const CheckMain = ({ orders, table }) => {
               const isDiscounted = item.discount_value > 0 && !isNoDiscount;
               const isGift = item.is_gift === 1;
               const rowStyle = item.isDeleted ? { textDecoration: 'line-through', color: 'red', opacity: 0.7 } : {};
+              const hourlyLine = Number(productInfo?.hourly_price ?? item.product?.hourly_price ?? 0);
+              const showInlineProductTimer =
+                Number(profileInfo?.is_timer || 0) === 1 &&
+                usesProductTimer &&
+                hourlyLine > 0 &&
+                index === firstHourlyProductRowIndex &&
+                firstHourlyProductRowIndex >= 0 &&
+                !!orders?.uuid;
 
               return (
                 <div
@@ -300,6 +352,29 @@ const CheckMain = ({ orders, table }) => {
                         <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
                           Endirim: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
                         </span>
+                      )}
+
+                      {hourlyLine > 0 && (
+                        <div style={{ fontSize: "0.75rem", color: "#053796", fontWeight: 600, lineHeight: "1.2" }}>
+                          Saatlıq: {hourlyLine.toFixed(2)} ₼/saat
+                        </div>
+                      )}
+
+                      {showInlineProductTimer && (
+                        <div
+                          className="check-item-product-timer-lite"
+                          onClick={stopTimerBubble}
+                          title="Taymer — idarə: məhsula toxun və «Saatlıq» tabı"
+                        >
+                          <span className="check-item-timer-lite-sep">
+                            <i className="bi bi-stopwatch" aria-hidden />
+                            <span className="check-item-timer-lite-mono">{timerClock}</span>
+                          </span>
+                          <span className="check-item-timer-lite-sep">
+                            <i className="bi bi-plus-circle" aria-hidden />
+                            <span className="check-item-timer-lite-mono">{Number(timerCharge).toFixed(2)} ₼</span>
+                          </span>
+                        </div>
                       )}
 
                     </div>

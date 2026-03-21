@@ -2357,6 +2357,34 @@
     color: #2d3748;
 }
 
+/* Məhsul saatlığı — taymer sətirdə (yalnız vaxt + məbləğ; idarə Edit modal «Saatlıq») */
+.check-item-product-timer-lite {
+    margin-top: 4px;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.72rem;
+    color: #053796;
+    font-weight: 600;
+}
+
+.check-item-timer-lite-sep {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.check-item-timer-lite-sep > i {
+    font-size: 0.85rem;
+    opacity: 0.85;
+}
+
+.check-item-timer-lite-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+}
+
 /* ========================
    MOBILE VIEWPORT FIX
    dvh (dynamic viewport height) - fixes footer cut-off when browser URL bar is visible

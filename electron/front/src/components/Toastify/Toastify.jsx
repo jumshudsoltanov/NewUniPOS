@@ -1,5 +1,4 @@
 import { Toaster } from "sonner";
-import "./Toastify.css";
 
 const Toastify = () => {
   return (

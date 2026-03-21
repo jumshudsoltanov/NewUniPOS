@@ -581,3 +581,304 @@
         font-size: 1rem;
     }
 }
+
+/* Taymer + saatlıq qiymət (Dəyişmək tab) */
+.edit-hourly-timer-block {
+    padding: 10px 14px 0;
+    border-top: 1px solid #eef2f7;
+    margin-top: 4px;
+}
+
+.edit-timer-action-btn {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    background: #053796;
+    color: #fff;
+    cursor: pointer;
+}
+
+.edit-timer-action-btn-outline {
+    background: #fff;
+    color: #053796;
+    border: 2px solid #053796;
+}
+
+.edit-hourly-tab-panel {
+    padding-top: 4px;
+}
+
+/* Taymer sıfırlama — sistem alert əvəzinə (brend rəngləri) */
+.editmodal-reset-confirm-dialog {
+    max-width: 380px !important;
+}
+
+.editmodal-reset-confirm .modal-content {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.edit-reset-confirm-header-bar.edit-header {
+    height: 52px;
+}
+
+.edit-reset-confirm-inner {
+    padding: 18px 20px 20px;
+    background: #fff;
+}
+
+.edit-reset-confirm-text {
+    font-size: 0.95rem;
+    color: #334155;
+    line-height: 1.45;
+}
+
+.edit-reset-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.edit-reset-confirm-btn {
+    min-width: 100px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s;
+}
+
+.edit-reset-confirm-btn:hover {
+    opacity: 1;
+}
+
+.edit-reset-confirm-btn-cancel {
+    background: #fff;
+    color: #053796;
+    border: 2px solid #053796;
+}
+
+.edit-reset-confirm-btn-ok {
+    background: #053796;
+    color: #fff;
+}
+
+/* Saatlıq tab — modalın ümumi üslubu: input-display / save-action / sidebar rəngləri */
+.edit-hourly-dashboard {
+    gap: 12px !important;
+}
+
+.edit-hourly-live-panel {
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #E9ECEF;
+    padding: 12px 14px 14px;
+}
+
+.edit-hourly-live-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.edit-hourly-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #fff;
+    background: #4F85F4;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.edit-hourly-live-sub {
+    font-size: 0.75rem;
+    color: #6B7280;
+    font-weight: 500;
+}
+
+.edit-hourly-live-clock-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.edit-hourly-live-clock-ico {
+    font-size: 1.45rem;
+    color: #4F85F4;
+}
+
+.edit-hourly-live-clock {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1F2937;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.03em;
+    line-height: 1.1;
+}
+
+.edit-hourly-live-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.edit-hourly-metric {
+    background: #F8F9FA;
+    border-radius: 6px;
+    padding: 8px 10px 8px 34px;
+    border: 1px solid #E9ECEF;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    position: relative;
+}
+
+.edit-hourly-metric > i {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.95rem;
+    color: #4F85F4;
+}
+
+.edit-hourly-metric-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6B7280;
+    font-weight: 600;
+}
+
+.edit-hourly-metric-val {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1F2937;
+    font-variant-numeric: tabular-nums;
+}
+
+.edit-hourly-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.edit-hourly-tile {
+    border-radius: 6px;
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    min-height: 58px;
+}
+
+.edit-hourly-tile i {
+    font-size: 1.2rem;
+}
+
+.edit-hourly-tile:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.edit-hourly-tile:not(:disabled):active {
+    transform: none;
+}
+
+/* Başlat — stepper btn-plus / sidebar ilə eyni mavi */
+.edit-hourly-tile-brand {
+    background: #4F85F4;
+    color: #fff;
+    border: none;
+}
+
+.edit-hourly-tile-brand:hover,
+.edit-hourly-tile-brand:focus-visible {
+    background: #4F85F4;
+    color: #fff;
+}
+
+/* Dayandır — edit-timer-action-btn ilə eyni tünd mavi */
+.edit-hourly-tile-primary {
+    background: #053796;
+    color: #fff;
+    border: none;
+}
+
+.edit-hourly-tile-primary:hover,
+.edit-hourly-tile-primary:focus-visible {
+    background: #053796;
+    color: #fff;
+}
+
+/* Sıfırla — outline */
+.edit-hourly-tile-outline {
+    background: #fff;
+    color: #053796;
+    border: 2px solid #053796;
+}
+
+.edit-hourly-tile-outline:hover,
+.edit-hourly-tile-outline:focus-visible {
+    background: #fff;
+    color: #053796;
+    border: 2px solid #053796;
+}
+
+.edit-hourly-price-card {
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #E9ECEF;
+    padding: 12px 14px;
+}
+
+.edit-hourly-price-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.edit-hourly-price-card-head i {
+    color: #4F85F4;
+    font-size: 1rem;
+}
+
+.edit-hourly-price-input {
+    font-size: 1.1rem !important;
+    margin-bottom: 0 !important;
+    color: #1F2937 !important;
+}
+
+.edit-hourly-price-hint {
+    font-size: 0.72rem;
+    color: #6B7280;
+    margin: 8px 0 0;
+    line-height: 1.35;
+}

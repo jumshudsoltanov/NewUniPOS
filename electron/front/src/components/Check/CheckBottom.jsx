@@ -19,6 +19,7 @@ import NewItemsModal from "../NewItemsModal/NewItemsModal";
 import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import { getSocket } from "../../utils/apiConfig";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
+import { getEffectiveHourlyPrice, getProductHourlySum } from "../../utils/orderHourlyPrice";
 
 const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending, clearCheck }) => {
   const dispatch = useDispatch();
@@ -29,10 +30,23 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   const navigate = useNavigate();
 
   // Live timer — reads from both TablesSlice and BooksSlice for real-time updates
+  /* BooksSlice əvvəl — məhsul saatlığı + real vaxt; masa saatlığı üçün də düzgün charge */
   const liveTimerData = useSelector((state) => {
     if (!id) return null;
 
-    // Try TablesSlice first (has per-second tick updates)
+    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
+    if (booksData) {
+      const order = booksData.find(o => o.uuid == id);
+      if (order) {
+        return {
+          is_timer_status: order.is_timer_status,
+          is_timer_clock: order.is_timer_clock,
+          rate_per_minute: order.rate_per_minute,
+          is_active_timer: order.is_active_timer,
+        };
+      }
+    }
+
     const tg = state.TablesSlice.tableGroups?.data;
     if (tg) {
       for (const hall of tg) {
@@ -50,26 +64,33 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       }
     }
 
-    // Fallback to BooksSlice
-    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
-    if (booksData) {
-      const order = booksData.find(o => o.uuid == id);
-      if (order) {
-        return {
-          is_timer_status: order.is_timer_status,
-          is_timer_clock: order.is_timer_clock,
-          rate_per_minute: order.rate_per_minute,
-          is_active_timer: order.is_active_timer,
-        };
-      }
-    }
-
     return null;
   });
 
   const timerClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
   const timerCharge = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
   const isTimerActive = (liveTimerData?.is_timer_status === 1) || (orders?.is_timer_status == 1);
+
+  const orderForTimer = useMemo(() => {
+    if (!orders) return null;
+    return {
+      ...orders,
+      table: {
+        ...(orders.table || {}),
+        hourly_price: orders?.table?.hourly_price ?? table?.hourly_price,
+      },
+    };
+  }, [orders, table]);
+
+  const timerHourlyRates = useMemo(() => {
+    if (!orderForTimer) return { usesProductTimer: false };
+    return { usesProductTimer: getProductHourlySum(orderForTimer) > 0 };
+  }, [orderForTimer]);
+
+  const effectiveHourlyPrice = useMemo(() => {
+    if (!orderForTimer) return Number(table?.hourly_price || 0);
+    return getEffectiveHourlyPrice(orderForTimer);
+  }, [orderForTimer, table]);
 
   const [showNewItemsModal, setShowNewItemsModal] = useState(false);
   const [showSalesTypeModal, setShowSalesTypeModal] = useState(false);
@@ -388,11 +409,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               <span>{calcTotal.depositAmount} ₼</span>
             </div>
           )}
-          {(Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 && Number(table?.hourly_price || orders?.table?.hourly_price || 0) > 0) && (
+          {(Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 && effectiveHourlyPrice > 0 && !timerHourlyRates.usesProductTimer) && (
             <div className="timer-detailed-summary mt-2 pt-2" style={{ borderTop: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }}>
               <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                <span>Saatlıq qiymət:</span>
-                <span>{Number(table?.hourly_price || orders?.table?.hourly_price || 0).toFixed(2)} ₼</span>
+                <span>Masa (saatlıq):</span>
+                <span>{Number(effectiveHourlyPrice).toFixed(2)} ₼</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
                 <span>Keçən vaxt:</span>

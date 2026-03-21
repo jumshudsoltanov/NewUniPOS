@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Modal } from 'react-bootstrap';
 import { useDispatch, useSelector } from 'react-redux';
 import { startTimer, stopTimer, resetTimer } from '../../redux/Slices/OrdersSlice';
 import { toast } from 'sonner';
+import { getEffectiveHourlyPrice, getProductHourlySum } from '../../utils/orderHourlyPrice';
 
 const TimerModal = ({ show, onHide, order, table }) => {
   const dispatch = useDispatch();
@@ -49,7 +50,26 @@ const TimerModal = ({ show, onHide, order, table }) => {
     toast.info("Taymer sıfırlandı");
   };
 
-  const hPrice = table?.hourly_price || order?.table?.hourly_price || 0;
+  const timerRates = useMemo(() => {
+    const o = displayOrder
+      ? {
+          ...displayOrder,
+          table: {
+            ...(displayOrder.table || {}),
+            hourly_price: displayOrder?.table?.hourly_price ?? table?.hourly_price,
+          },
+        }
+      : null;
+    if (!o) {
+      const th = Number(table?.hourly_price || 0);
+      return { usesProductTimer: false, eff: th };
+    }
+    const productHp = getProductHourlySum(o);
+    return {
+      usesProductTimer: productHp > 0,
+      eff: getEffectiveHourlyPrice(o),
+    };
+  }, [displayOrder, table]);
 
   return (
     <Modal 
@@ -90,8 +110,8 @@ const TimerModal = ({ show, onHide, order, table }) => {
 
           <div className="timer-info-simplified w-100" style={{ padding: '15px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #eee' }}>
              <div className="d-flex justify-content-between mb-2">
-                <span style={{ fontSize: '14px', color: '#555' }}>Saatlıq tarif:</span>
-                <span style={{ fontSize: '14px', fontWeight: '600', color: '#053796' }}>{hPrice} ₼/saat</span>
+                <span style={{ fontSize: '14px', color: '#555' }}>{timerRates.usesProductTimer ? 'Məhsul (saatlıq):' : 'Masa (saatlıq):'}</span>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#053796' }}>{Number(timerRates.eff).toFixed(2)} ₼/saat</span>
              </div>
              <div className="d-flex justify-content-between pt-2" style={{ borderTop: '1px solid #eee' }}>
                 <span style={{ fontSize: '14px', color: '#555' }}>Cəmi məbləğ:</span>

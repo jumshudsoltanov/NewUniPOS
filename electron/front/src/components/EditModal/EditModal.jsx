@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
 import {
@@ -18,8 +18,12 @@ import {
   updateCount,
   saveLog,
   splitOrder,
-  addPendingDeletion
+  addPendingDeletion,
+  startTimer,
+  stopTimer,
+  resetTimer
 } from "../../redux/Slices/OrdersSlice";
+import { updateProduct } from "../../redux/Slices/ProductSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -28,6 +32,7 @@ import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
+import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 
 
 const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
@@ -46,6 +51,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const [inputValue, setInputValue] = useState(
     product?.price ? product.price.toString() : "0",
   );
+  const [hourlyInput, setHourlyInput] = useState("0");
 
   // Discount States
   const [discountValue, setDiscountValue] = useState("0");
@@ -60,6 +66,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const [selectedTable, setSelectedTable] = useState(null);
   const [selectedWaiter, setSelectedWaiter] = useState(null);
   const [createNewOrder, setCreateNewOrder] = useState(false);
+  const [showResetTimerConfirm, setShowResetTimerConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!show) setShowResetTimerConfirm(false);
+  }, [show]);
 
   const { id: orderUuidFromUrl } = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +82,132 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   // Lookup product info from menu to ensure we have flags
   const productInfo = menu?.find(m => m.id === (product?.product_id || product?.id));
   const isNoDiscount = (product?.no_discount === 1 || product?.product?.no_discount === 1 || productInfo?.no_discount === 1);
+  const catalogHourly = Number(productInfo?.hourly_price ?? product?.product?.hourly_price ?? 0);
+  /** Yalnız kataloqda saatlıq qiyməti təyin olunmuş məhsul üçün ayrıca "Saatlıq" tabı */
+  const hasHourlyProduct = catalogHourly > 0;
+
+  const orderIdLive = orders?.uuid || orderUuidFromUrl;
+
+  const liveTimerData = useSelector((state) => {
+    if (!orderIdLive) return null;
+    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
+    if (booksData) {
+      const o = booksData.find((x) => String(x.uuid) === String(orderIdLive));
+      if (o) {
+        return {
+          is_timer_status: o.is_timer_status,
+          is_timer_clock: o.is_timer_clock,
+          rate_per_minute: o.rate_per_minute,
+        };
+      }
+    }
+    const tg = state.TablesSlice.tableGroups?.data;
+    if (tg) {
+      for (const hall of tg) {
+        for (const t of hall.tables || []) {
+          const o = t.orders?.find((x) => String(x.uuid) === String(orderIdLive));
+          if (o) {
+            return {
+              is_timer_status: o.is_timer_status,
+              is_timer_clock: o.is_timer_clock,
+              rate_per_minute: o.rate_per_minute,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  });
+
+  const orderForTimer = useMemo(() => {
+    if (!orders) return null;
+    return { ...orders, table: orders.table || {} };
+  }, [orders]);
+
+  const timerClockLive = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
+  const timerChargeLive = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
+  const isTimerRunning = (liveTimerData?.is_timer_status === 1) || (orders?.is_timer_status == 1);
+
+  const displayTariffRate = useMemo(() => {
+    const eff = orderForTimer ? getEffectiveHourlyPrice(orderForTimer) : 0;
+    if (eff > 0) return eff;
+    return parseFloat(String(hourlyInput).replace(",", ".")) || 0;
+  }, [orderForTimer, hourlyInput]);
+
+  useEffect(() => {
+    if (!show || !product) return;
+    const hp = productInfo?.hourly_price ?? product?.product?.hourly_price ?? 0;
+    setHourlyInput(
+      hp !== undefined && hp !== null && hp !== ""
+        ? String(hp)
+        : "0"
+    );
+  }, [show, product, productInfo?.hourly_price, product?.product?.hourly_price]);
+
+  useEffect(() => {
+    if (show && !hasHourlyProduct && activeTab === "hourly") {
+      setActiveTab("edit");
+    }
+  }, [show, hasHourlyProduct, activeTab]);
+
+  const syncHourlyPrice = async () => {
+    if (!productInfo) return;
+    if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) {
+      toast.error("Sizin qiymət dəyişmək icazəniz yoxdur!");
+      return;
+    }
+    const newHp = parseFloat(String(hourlyInput).replace(",", ".")) || 0;
+    const oldHp = parseFloat(productInfo.hourly_price) || 0;
+    if (newHp === oldHp) return;
+    await dispatch(updateProduct({
+      id: productInfo.id,
+      productData: {
+        ...productInfo,
+        profile_id: loginedProfileData?.data?.profile?.id,
+        price: Number(productInfo.price),
+        hourly_price: newHp,
+        is_hidden_pos: productInfo.is_hidden_pos ? 1 : 0,
+        is_hidden_qr: productInfo.is_hidden_qr ? 1 : 0,
+        no_discount: productInfo.no_discount ? 1 : 0,
+        no_service_fee: productInfo.no_service_fee ? 1 : 0,
+      }
+    })).unwrap();
+    toast.success("Saatlıq qiymət yeniləndi");
+  };
+
+  const handleStartOrderTimer = () => {
+    if (!orders?.uuid) return;
+    dispatch(startTimer({ orderId: orders.uuid }));
+    toast.info("Taymer başladı");
+  };
+
+  const handleStopOrderTimer = () => {
+    if (!orders?.uuid) return;
+    const clockSrc = timerClockLive || orders.is_timer_clock;
+    let seconds = 0;
+    if (clockSrc && String(clockSrc).includes(":")) {
+      const p = clockSrc.split(":").map(Number);
+      if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+    }
+    dispatch(stopTimer({
+      orderId: orders.uuid,
+      elapsedSeconds: seconds,
+      clockStr: clockSrc
+    }));
+    toast.info("Taymer dayandırıldı");
+  };
+
+  const handleResetOrderTimer = () => {
+    if (!orders?.uuid) return;
+    setShowResetTimerConfirm(true);
+  };
+
+  const confirmResetOrderTimer = () => {
+    if (!orders?.uuid) return;
+    dispatch(resetTimer({ orderId: orders.uuid }));
+    toast.info("Taymer sıfırlandı");
+    setShowResetTimerConfirm(false);
+  };
 
   const salesTypes = [
     { id: "dine_in", label: "Yerində" },
@@ -185,8 +322,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   };
 
   return (
+    <>
     <Modal
-      show={show}
+      show={show && !showResetTimerConfirm}
       onHide={onClose}
       centered
       className="editmodal"
@@ -243,6 +381,16 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                 >
                   <i className="bi bi-percent"></i>
                   <span>Endirim</span>
+                </button>
+              )}
+
+              {hasHourlyProduct && (
+                <button
+                  className={`sidebar-btn ${activeTab === "hourly" ? "active" : ""}`}
+                  onClick={() => { setActiveTab("hourly"); setTransferQty(1); }}
+                >
+                  <i className="bi bi-clock-history"></i>
+                  <span>Saatlıq</span>
                 </button>
               )}
 
@@ -766,6 +914,120 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                   </button>
                 </>
               )
+            ) : activeTab === "hourly" ? (
+              <>
+                <div className="edit-form-wrapper edit-hourly-dashboard">
+                  {Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 && orders?.uuid && (
+                    <div className="edit-hourly-live-panel">
+                      <div className="edit-hourly-live-head">
+                        <span className="edit-hourly-live-badge">
+                          <i className="bi bi-broadcast-pin" aria-hidden />
+                          Canlı
+                        </span>
+                        <span className="edit-hourly-live-sub">Taymer vəziyyəti</span>
+                      </div>
+                      <div className="edit-hourly-live-clock-wrap">
+                        <i className="bi bi-stopwatch edit-hourly-live-clock-ico" aria-hidden />
+                        <span className="edit-hourly-live-clock">{timerClockLive}</span>
+                      </div>
+                      <div className="edit-hourly-live-metrics">
+                        <div className="edit-hourly-metric">
+                          <i className="bi bi-cash-stack" aria-hidden />
+                          <span className="edit-hourly-metric-label">Qazanc</span>
+                          <span className="edit-hourly-metric-val">{Number(timerChargeLive).toFixed(2)} ₼</span>
+                        </div>
+                        <div className="edit-hourly-metric">
+                          <i className="bi bi-tag" aria-hidden />
+                          <span className="edit-hourly-metric-label">Tarif</span>
+                          <span className="edit-hourly-metric-val">{Number(displayTariffRate).toFixed(2)} ₼/saat</span>
+                        </div>
+                      </div>
+                      <div className="edit-hourly-tile-grid">
+                        <button
+                          type="button"
+                          className="edit-hourly-tile edit-hourly-tile-brand"
+                          onClick={handleStartOrderTimer}
+                          disabled={isTimerRunning}
+                          title={isTimerRunning ? "Artıq işləyir" : "Başlat"}
+                        >
+                          <i className="bi bi-play-fill" />
+                          <span>Başlat</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="edit-hourly-tile edit-hourly-tile-primary"
+                          onClick={handleStopOrderTimer}
+                          disabled={!isTimerRunning}
+                          title="Dayandır"
+                        >
+                          <i className="bi bi-pause-fill" />
+                          <span>Dayandır</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="edit-hourly-tile edit-hourly-tile-outline"
+                          onClick={handleResetOrderTimer}
+                          title="Sıfırla"
+                        >
+                          <i className="bi bi-arrow-counterclockwise" />
+                          <span>Sıfırla</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="edit-hourly-price-card">
+                    <div className="edit-hourly-price-card-head">
+                      <i className="bi bi-currency-exchange" aria-hidden />
+                      <span>Saatlıq qiymət (₼/saat)</span>
+                    </div>
+                    <input
+                      type="text"
+                      className="super-input edit-hourly-price-input"
+                      value={hourlyInput}
+                      disabled={Number(loginedWaiter?.data?.can_change_product_price) !== 1}
+                      onChange={(e) => {
+                        if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) {
+                          toast.error("Sizin qiymət dəyişmək icazəniz yoxdur!");
+                          return;
+                        }
+                        setHourlyInput(e.target.value);
+                      }}
+                    />
+                    <p className="edit-hourly-price-hint">Dəyişəndən sonra aşağıdan saxlayın — menyuya yazılır.</p>
+                  </div>
+                </div>
+                <button
+                  className="save-action-btn"
+                  disabled={isSubmitting}
+                  style={{ opacity: isSubmitting ? 0.7 : 1 }}
+                  onClick={async () => {
+                    if (isSubmitting) return;
+                    setIsSubmitting(true);
+                    try {
+                      await syncHourlyPrice();
+                      onClose(true);
+                    } catch (error) {
+                      console.error("Saatlıq saxlama:", error);
+                      toast.error("Xəta baş verdi");
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+                      <span>Gözləyin...</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-lg"></i>
+                      Saatlıq qiyməti saxla
+                    </>
+                  )}
+                </button>
+              </>
             ) : (
               <div className="empty-tab-content p-4 text-center text-muted">
                 <i className="bi bi-cone-striped fs-1 d-block mb-3"></i>
@@ -787,7 +1049,51 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
           onSelect={(waiter) => { setSelectedWaiter(waiter); setShowWaiterSelect(false); }}
         />
       </Modal.Body>
-    </Modal >
+    </Modal>
+
+    <Modal
+      show={show && showResetTimerConfirm}
+      onHide={() => setShowResetTimerConfirm(false)}
+      centered
+      animation={false}
+      backdrop="static"
+      className="editmodal editmodal-reset-confirm"
+      dialogClassName="editmodal-reset-confirm-dialog"
+    >
+      <Modal.Body className="p-0 overflow-hidden rounded">
+        <div className="edit-header edit-reset-confirm-header-bar">
+          <span className="edit-product-title">Təsdiq</span>
+          <button
+            type="button"
+            className="btn-close-custom"
+            onClick={() => setShowResetTimerConfirm(false)}
+            aria-label="Bağla"
+          >
+            <i className="bi bi-x-lg"></i>
+          </button>
+        </div>
+        <div className="edit-reset-confirm-inner">
+          <p className="edit-reset-confirm-text mb-0">Taymeri sıfırlamaq istədiyinizə əminsiniz?</p>
+          <div className="edit-reset-confirm-actions">
+            <button
+              type="button"
+              className="edit-reset-confirm-btn edit-reset-confirm-btn-cancel"
+              onClick={() => setShowResetTimerConfirm(false)}
+            >
+              Ləğv et
+            </button>
+            <button
+              type="button"
+              className="edit-reset-confirm-btn edit-reset-confirm-btn-ok"
+              onClick={confirmResetOrderTimer}
+            >
+              Sıfırla
+            </button>
+          </div>
+        </div>
+      </Modal.Body>
+    </Modal>
+    </>
   );
 };
 

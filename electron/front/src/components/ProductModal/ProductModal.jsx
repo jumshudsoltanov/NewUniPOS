@@ -18,6 +18,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
     const initialState = {
         name: '',
         price: '',
+        hourly_price: '',
         product_type: 'simple',
         category_id: '',
         img: null,
@@ -39,6 +40,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
             setFormData({
                 name: productToEdit.name || '',
                 price: productToEdit.price || '',
+                hourly_price: productToEdit.hourly_price != null && productToEdit.hourly_price !== '' ? String(productToEdit.hourly_price) : '',
                 product_type: productToEdit.product_type || 'simple',
                 category_id: productToEdit.category_id || '',
                 img: productToEdit.img,
@@ -90,6 +92,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
             ...formData,
             profile_id,
             price: Number(formData.price),
+            hourly_price: Number(formData.hourly_price) || 0,
             is_hidden_pos: formData.is_hidden_pos ? 1 : 0,
             is_hidden_qr: formData.is_hidden_qr ? 1 : 0,
             no_discount: formData.no_discount ? 1 : 0,
@@ -191,6 +194,24 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                     placeholder="0.00"
                                     step="0.01"
                                     required
+                                />
+                            </div>
+                        </Col>
+                    </Row>
+
+                    <Row>
+                        <Col md={4}>
+                            <div className="form-group-custom">
+                                <label>Saatlıq qiymət (₼/saat)</label>
+                                <input
+                                    type="number"
+                                    name="hourly_price"
+                                    className="form-control-custom"
+                                    value={formData.hourly_price}
+                                    onChange={handleChange}
+                                    placeholder="0 — masa tarifi"
+                                    min="0"
+                                    step="0.01"
                                 />
                             </div>
                         </Col>

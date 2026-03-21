@@ -6,6 +6,47 @@ const TablesModel = require("../model/TablesModel");
  */
 class TimerService {
   /**
+   * Masa üzrə saatlıq tarif (masa timeri) — yalnız table.hourly_price.
+   */
+  static getTableHourlyPrice(order) {
+    if (!order) return 0;
+    const v = parseFloat(order?.table?.hourly_price ?? 0);
+    return Number.isNaN(v) ? 0 : v;
+  }
+
+  /**
+   * Məhsul üzrə saatlıq cəm (məhsul timeri): Σ(hourly_price × say), hourly_price > 0 olan sətirlər.
+   */
+  static getProductHourlySum(order) {
+    if (!order) return 0;
+    let sum = 0;
+    const items = order?.orders_items || [];
+    for (const it of items) {
+      const hp = parseFloat(it?.product?.hourly_price ?? 0);
+      if (!Number.isNaN(hp) && hp > 0) {
+        sum += hp * (parseFloat(it.count) || 0);
+      }
+    }
+    return sum;
+  }
+
+  /**
+   * Effektiv saatlıq: məhsul saatlığı > 0 olarsa yalnız məhsul cəmi; əks halda masa (cəmlənmir).
+   */
+  static getEffectiveHourlyPrice(order) {
+    if (!order) return 0;
+    const ps = this.getProductHourlySum(order);
+    return ps > 0 ? ps : this.getTableHourlyPrice(order);
+  }
+
+  /**
+   * Köhnə ad — getEffectiveHourlyPrice ilə eyni məntiq.
+   */
+  static getTotalTimerHourlyRate(order) {
+    return this.getEffectiveHourlyPrice(order);
+  }
+
+  /**
    * Calculates the charge for a given elapsed time and hourly price.
    * @param {number} hourlyPrice - The price per hour for the table.
    * @param {number} elapsedSeconds - The number of seconds elapsed.

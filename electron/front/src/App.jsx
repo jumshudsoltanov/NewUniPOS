@@ -23,6 +23,7 @@ import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
 import Toastify from "./components/Toastify/Toastify";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import "./components/Toastify/Toastify.css";
 import { lazy, Suspense } from "react";
 import NetworkOverlay from "./components/NetworkOverlay/NetworkOverlay";
 import BlockPage from "./components/BlockPage/BlockPage";

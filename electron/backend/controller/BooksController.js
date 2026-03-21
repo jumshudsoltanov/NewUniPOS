@@ -4,6 +4,7 @@ const OrdersItemsModel = require("../model/OrdersItemsModel");
 const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
+const TimerService = require("../services/TimerService");
 const { Op } = require("sequelize");
 
 const getAllActiveOrders = async (req, res) => {
@@ -55,10 +56,9 @@ const getAllActiveOrders = async (req, res) => {
       include: includeOptions,
     });
 
-    const TimerService = require("../services/TimerService");
     const updatedOrders = orders.map(order => {
       if (order.is_timer_status === 1) {
-        const liveStatus = TimerService.calculateLiveStatus(order, order.table?.hourly_price || 0);
+        const liveStatus = TimerService.calculateLiveStatus(order, TimerService.getEffectiveHourlyPrice(order));
         order.dataValues.rate_per_minute = liveStatus.charge;
         order.dataValues.is_timer_clock = liveStatus.clockStr;
         
@@ -246,8 +246,7 @@ const getOrderById = async (req, res) => {
     if (order) {
       // Automatic timer calculation for active timers
       if (order.is_timer_status === 1) {
-        const TimerService = require("../services/TimerService");
-        const liveStatus = TimerService.calculateLiveStatus(order, order.table?.hourly_price || 0);
+        const liveStatus = TimerService.calculateLiveStatus(order, TimerService.getEffectiveHourlyPrice(order));
         
         order.dataValues.rate_per_minute = liveStatus.charge;
         order.dataValues.is_timer_clock = liveStatus.clockStr;

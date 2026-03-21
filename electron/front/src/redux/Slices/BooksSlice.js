@@ -101,7 +101,18 @@ const BooksSlice = createSlice({
     tickTimer: (state) => {
       const getUpdatedOrders = (list) => {
         return list.map((order) => {
-          if (order.is_timer_status === 1 && Number(order.table?.hourly_price || 0) > 0) {
+          if (order.is_timer_status === 1) {
+            const effH = (() => {
+              const th = Number(order.table?.hourly_price || 0);
+              let s = 0;
+              (order.orders_items || []).forEach((it) => {
+                const hp = Number(it.product?.hourly_price || 0);
+                if (hp > 0) s += hp * Number(it.count || 0);
+              });
+              return s > 0 ? s : th;
+            })();
+            if (effH <= 0) return order;
+
             let totalSeconds = 0;
             if (order.is_timer_clock && String(order.is_timer_clock).includes(':')) {
               const parts = order.is_timer_clock.split(':').map(Number);
@@ -117,10 +128,8 @@ const BooksSlice = createSlice({
             const ss = totalSeconds % 60;
             const clockStr = [hh, mm, ss].map(v => v < 10 ? "0" + v : v).join(":");
 
-            const hPrice = parseFloat(order.table?.hourly_price || 0);
-            const charge = parseFloat(((hPrice / 3600) * totalSeconds).toFixed(2));
+            const charge = parseFloat(((effH / 3600) * totalSeconds).toFixed(2));
 
-            // Return NEW object to trigger React re-render
             return {
               ...order,
               is_timer_clock: clockStr,

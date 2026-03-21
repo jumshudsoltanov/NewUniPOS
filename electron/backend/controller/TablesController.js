@@ -2,6 +2,8 @@ const TablesModel = require("../model/TablesModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
 const OrdersModel = require("../model/OrdersModel");
 const WaitersModel = require("../model/WaitersModel");
+const OrdersItemsModel = require("../model/OrdersItemsModel");
+const ProductsModel = require("../model/ProductsModel");
 
 const getTables = async (req, res) => {
   const { profileId } = req.params;
@@ -17,12 +19,31 @@ const getTables = async (req, res) => {
           model: OrdersModel,
           where: orderWhere,
           required: false,
-          attributes: ["id", "uuid", "amount", "discount", "discount_value", "discount_type", "deposit", "service_charge", "service_value", "service_type", "print_count", "waiter_id", "status", "guest_count", "is_timer_status", "is_active_timer", "is_timer_clock", "timer_last_started_at"],
+          attributes: [
+            "id", "uuid", "amount", "discount", "discount_value", "discount_type", "deposit",
+            "service_charge", "service_value", "service_type", "print_count", "waiter_id", "status",
+            "guest_count", "is_timer_status", "is_active_timer", "is_timer_clock", "timer_last_started_at",
+            "rate_per_minute", "total", "delivery_fee",
+          ],
           include: [
             {
               model: WaitersModel,
               as: "waiter",
               attributes: ["id", "name"],
+            },
+            {
+              model: OrdersItemsModel,
+              as: "orders_items",
+              separate: true,
+              order: [["id", "ASC"]],
+              attributes: ["count", "price", "product_id"],
+              include: [
+                {
+                  model: ProductsModel,
+                  as: "product",
+                  attributes: ["hourly_price"],
+                },
+              ],
             },
           ],
           as: "orders",
@@ -40,13 +61,26 @@ const getTables = async (req, res) => {
         hall.tables = hall.tables.map(table => {
           const activeOrder = (table.orders && table.orders.length > 0) ? table.orders[0] : null;
           if (activeOrder && activeOrder.is_timer_status === 1) {
-            const liveStatus = TimerService.calculateLiveStatus(activeOrder, table.hourly_price || 0);
+            const effHp = TimerService.getEffectiveHourlyPrice({
+              ...activeOrder.get({ plain: true }),
+              table: { hourly_price: table.hourly_price },
+              orders_items: activeOrder.orders_items || [],
+            });
+            const liveStatus = TimerService.calculateLiveStatus(activeOrder, effHp);
             activeOrder.dataValues.rate_per_minute = liveStatus.charge;
             activeOrder.dataValues.is_timer_clock = liveStatus.clockStr;
-            
-            // Note: activeOrder.amount is pre-timer subtotal
-            const itemsTotal = parseFloat(activeOrder.amount) || 0;
-            activeOrder.dataValues.total = itemsTotal + liveStatus.charge;
+
+            // amount DB-də bəzən artıq taymer daxil olur — cəm üçün sətirlər üzrə məhsul cəmi
+            const plainItems = activeOrder.orders_items || [];
+            const itemsSum =
+              Array.isArray(plainItems) && plainItems.length > 0
+                ? plainItems.reduce((s, it) => {
+                    const q = parseFloat(it.count) || 0;
+                    const p = parseFloat(it.price) || 0;
+                    return s + q * p;
+                  }, 0)
+                : parseFloat(activeOrder.amount) || 0;
+            activeOrder.dataValues.total = itemsSum + liveStatus.charge;
           }
           return table;
         });

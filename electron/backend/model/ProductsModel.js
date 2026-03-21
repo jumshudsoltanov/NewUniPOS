@@ -32,6 +32,13 @@ const ProductsModel = db.sequelize.define(
       defaultValue: 0,
     },
 
+    /** Saatlıq əlavə məbləğ (₼/saat) — taymer aktiv olanda vaxt ilə vurulur; 0 = yalnız masa saatlığı */
+    hourly_price: {
+      type: DataTypes.DOUBLE,
+      allowNull: true,
+      defaultValue: 0,
+    },
+
     discount: {
       type: DataTypes.DOUBLE,
       allowNull: true,

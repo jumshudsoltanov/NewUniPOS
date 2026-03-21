@@ -8,12 +8,13 @@ const TimerService = require("../services/TimerService");
 const SyncService = require("../services/SyncService");
 const MaxCheckService = require("../services/MaxCheckService");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
+const ProductsModel = require("../model/ProductsModel");
 
 /**
  * Helper to attach live timer status to an order object for responses.
  */
 const attachLiveTimerToOrder = (order) => {
-  const hourlyPrice = parseFloat(order?.table?.hourly_price || 0);
+  const hourlyPrice = TimerService.getEffectiveHourlyPrice(order);
   if (order && order.is_timer_status === 1 && hourlyPrice > 0) {
     const liveStatus = TimerService.calculateLiveStatus(order, hourlyPrice);
     order.dataValues.rate_per_minute = liveStatus.charge;
@@ -39,6 +40,92 @@ const attachLiveTimerToOrder = (order) => {
   }
   return order;
 };
+
+/**
+ * Məhsul köçürmə / masa dəyişmə / çek birləşdirmə zamanı cəm:
+ * məhsul + taymer (işləyəndə canlı hesab, dayananda DB-dəki rate_per_minute).
+ * onStopTimer ilə eyni məntiqi izləyir.
+ */
+const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
+  const tx = transaction || undefined;
+  const listOfProducts = await OrdersItemsModel.findAll({
+    where: { order_id: orderId },
+    attributes: ["count", "price"],
+    include: [{ model: ProductsModel, as: "product", attributes: ["hourly_price"] }],
+    transaction: tx,
+  });
+
+  const currentOrder = await OrdersModel.findOne({
+    where: { uuid: orderId },
+    attributes: [
+      "discount_value",
+      "discount_type",
+      "service_value",
+      "service_type",
+      "deposit",
+      "rate_per_minute",
+      "delivery_fee",
+      "is_timer_status",
+      "is_timer_clock",
+      "timer_last_started_at",
+      "is_active_timer",
+    ],
+    include: [{ model: TablesModel, as: "table", attributes: ["hourly_price"] }],
+    transaction: tx,
+  });
+
+  if (!currentOrder) return;
+
+  const itemsPlain = listOfProducts.map((i) => i.get({ plain: true }));
+  const orderPlain = currentOrder.get({ plain: true });
+  orderPlain.orders_items = itemsPlain;
+
+  const itemsSum = itemsPlain.reduce((sum, item) => {
+    const qty = parseFloat(item.count) || 0;
+    const prc = parseFloat(item.price) || 0;
+    return sum + qty * prc;
+  }, 0);
+
+  let timerCharge = 0;
+  const effHourly = TimerService.getEffectiveHourlyPrice(orderPlain);
+  if (Number(currentOrder.is_timer_status) === 1 && effHourly > 0) {
+    timerCharge = TimerService.calculateLiveStatus(orderPlain, effHourly).charge;
+  } else {
+    timerCharge = parseFloat(currentOrder.rate_per_minute || 0) || 0;
+  }
+
+  const total = itemsSum + timerCharge;
+
+  let discount = 0;
+  let service = 0;
+  const deposit = parseFloat(currentOrder.deposit || 0);
+  const { discount_value, discount_type, service_value, service_type } = currentOrder;
+  if (parseFloat(discount_value || 0) > 0) {
+    discount =
+      discount_type === "percent"
+        ? (total * parseFloat(discount_value)) / 100
+        : parseFloat(discount_value);
+  }
+  if (parseFloat(service_value || 0) > 0) {
+    service =
+      service_type === "percent"
+        ? (total * parseFloat(service_value)) / 100
+        : parseFloat(service_value);
+  }
+  const netTotal =
+    Math.max(total - discount + service, deposit) + Number(currentOrder.delivery_fee || 0);
+
+  await OrdersModel.update(
+    {
+      amount: total,
+      discount: discount,
+      service_charge: service,
+      total: netTotal,
+    },
+    { where: { uuid: orderId }, transaction: tx },
+  );
+};
+
 const LoginModel = require("../model/LoginModel");
 
 const sendOrdersItemsToDb = async (req, res) => {
@@ -67,11 +154,12 @@ const sendOrdersItemsToDb = async (req, res) => {
       })
     ));
 
-    // Fetch totals and order discount info in parallel
-    const [listOfProducts, currentOrder] = await Promise.all([
+    // Fetch totals and order discount info in parallel (məhsul hourly_price üçün product join)
+    const [listOfProducts, orderRow] = await Promise.all([
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
-        attributes: ["count", "price"],
+        attributes: ["count", "price", "product_id"],
+        include: [{ model: ProductsModel, as: "product", attributes: ["hourly_price"] }],
       }),
       OrdersModel.findOne({
         where: { uuid: orderId },
@@ -82,13 +170,55 @@ const sendOrdersItemsToDb = async (req, res) => {
           "service_type",
           "deposit",
           "rate_per_minute",
+          "delivery_fee",
+          "is_timer_status",
+          "is_active_timer",
+          "is_timer_clock",
+          "timer_last_started_at",
         ],
+        include: [{ model: TablesModel, as: "table", attributes: ["hourly_price"] }],
       }),
     ]);
 
-    // Calc total (Robust)
-    const TimerService = require("../services/TimerService");
-    const liveTimer = TimerService.calculateLiveStatus(currentOrder, currentOrder?.table?.hourly_price || 0);
+    let currentOrder = orderRow;
+
+    // Masaya məhsul göndəriləndə: masa və ya məhsul saatlığı varsa taymer avtomatik başlasın (işləmirsə)
+    const orderPlainForAuto = currentOrder ? currentOrder.get({ plain: true }) : {};
+    orderPlainForAuto.orders_items = listOfProducts.map((i) => i.get({ plain: true }));
+    const effHourlyAuto = TimerService.getEffectiveHourlyPrice(orderPlainForAuto);
+    if (effHourlyAuto > 0 && Number(currentOrder?.is_timer_status) !== 1) {
+      await OrdersModel.update(
+        {
+          is_timer_status: 1,
+          is_active_timer: 1,
+          timer_last_started_at: new Date(),
+          is_synced: 0,
+        },
+        { where: { uuid: orderId } },
+      );
+      currentOrder = await OrdersModel.findOne({
+        where: { uuid: orderId },
+        attributes: [
+          "discount_value",
+          "discount_type",
+          "service_value",
+          "service_type",
+          "deposit",
+          "rate_per_minute",
+          "delivery_fee",
+          "is_timer_status",
+          "is_active_timer",
+          "is_timer_clock",
+          "timer_last_started_at",
+        ],
+        include: [{ model: TablesModel, as: "table", attributes: ["hourly_price"] }],
+      });
+    }
+
+    const orderPlain = currentOrder ? currentOrder.get({ plain: true }) : {};
+    orderPlain.orders_items = listOfProducts.map((i) => i.get({ plain: true }));
+    const effHourly = TimerService.getEffectiveHourlyPrice(orderPlain);
+    const liveTimer = TimerService.calculateLiveStatus(currentOrder, effHourly);
     
     const itemsTotal = listOfProducts.reduce((sum, item) => {
       const qty = parseFloat(item.count) || 0;
@@ -395,6 +525,9 @@ const onUpdateTableOrder = async (req, res) => {
       { where: { uuid: orderId } },
     );
 
+    // Yeni masanın saatlığı ilə cəm (taymer məbləği) yenilənsin
+    await recalculateOrderTotalsWithTimer(orderId, null);
+
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
@@ -530,9 +663,6 @@ const onMergeChecks = async (req, res) => {
 
     if (!currentOrder) throw new Error("Current order not found");
 
-    const { discount_value, discount_type, service_value, service_type } =
-      currentOrder;
-
     // Move Items from newOrder to currentOrder
     await OrdersItemsModel.update(
       { order_id: currentOrderId },
@@ -583,50 +713,8 @@ const onMergeChecks = async (req, res) => {
       await OrdersItemsModel.bulkCreate(itemsToCreate, { transaction });
     }
 
-    // Recalculate Totals based on merged items
-    // 1) Subtotal (sum of all prices * count)
-    const subtotal = itemsToCreate.reduce((sum, item) => {
-      const price = parseFloat(item.price) || 0;
-      const count = parseFloat(item.count) || 0;
-      return sum + price * count;
-    }, 0);
-
-    // 2) Discount total
-    let discountAmount = 0;
-    const dValue = Number(discount_value || 0);
-    if (dValue > 0) {
-      if (discount_type === "percent") {
-        discountAmount = (subtotal * dValue) / 100;
-      } else {
-        discountAmount = dValue;
-      }
-    }
-
-    // 3) Service charge total
-    let serviceCharge = 0;
-    const sValue = Number(service_value || 0);
-    if (sValue > 0) {
-      if (service_type === "percent") {
-        serviceCharge = (subtotal * sValue) / 100;
-      } else {
-        serviceCharge = sValue;
-      }
-    }
-
-    // Final total
-    const mergeDeliveryFee = Number(currentOrder.delivery_fee || 0);
-    const total = Math.max(subtotal - discountAmount + serviceCharge, parseFloat(currentOrder.deposit || 0)) + mergeDeliveryFee;
-
-    // Update the order
-    await OrdersModel.update(
-      {
-        amount: subtotal,
-        discount: discountAmount,
-        service_charge: serviceCharge,
-        total: total,
-      },
-      { where: { uuid: currentOrderId }, transaction },
-    );
+    // Cəm: məhsullar + taymer (masa/məhsul saatlığı) — köçürmə ilə eyni məntiq
+    await recalculateOrderTotalsWithTimer(currentOrderId, transaction);
 
     // Delete the merged (old) order
     await OrdersModel.destroy({
@@ -692,6 +780,7 @@ const onChangeSaleType = async (req, res) => {
       { sale_type: saleType, table_id: tableId, hall_id: hallId, is_synced: 0 },
       { where: { uuid: orderId } },
     );
+    await recalculateOrderTotalsWithTimer(orderId, null);
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
@@ -864,60 +953,9 @@ const onSplitOrder = async (req, res) => {
       }
     }
 
-    const recalculateOrder = async (orderId, targetTransaction) => {
-      const items = await OrdersItemsModel.findAll({
-        where: { order_id: orderId },
-        attributes: ["count", "price"],
-        transaction: targetTransaction,
-      });
-
-      const totalAmount = items.reduce(
-        (sum, it) => sum + Number(it.count) * Number(it.price),
-        0,
-      );
-
-      const ord = await OrdersModel.findOne({
-        where: { uuid: orderId },
-        transaction: targetTransaction,
-      });
-
-      if (!ord) return;
-
-      let discount = 0;
-      let service = 0;
-
-      if (Number(ord.discount_value) > 0) {
-        if (ord.discount_type === "percent") {
-          discount = (totalAmount * Number(ord.discount_value)) / 100;
-        } else {
-          discount = Number(ord.discount_value);
-        }
-      }
-
-      if (Number(ord.service_value) > 0) {
-        if (ord.service_type === "percent") {
-          service = (totalAmount * Number(ord.service_value)) / 100;
-        } else {
-          service = Number(ord.service_value);
-        }
-      }
-
-      const netTotal = Math.max(totalAmount - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
-
-      await OrdersModel.update(
-        {
-          amount: totalAmount,
-          discount: discount,
-          service_charge: service,
-          total: netTotal,
-        },
-        { where: { uuid: orderId }, transaction: targetTransaction },
-      );
-    };
-
     await Promise.all([
-      recalculateOrder(data.orderId, transaction),
-      recalculateOrder(targetOrder.uuid, transaction),
+      recalculateOrderTotalsWithTimer(data.orderId, transaction),
+      recalculateOrderTotalsWithTimer(targetOrder.uuid, transaction),
     ]);
 
     await transaction.commit();
@@ -1385,13 +1423,21 @@ const onCloseOrder = async (req, res) => {
     // 1. Calculate final timer charge if active
     const order = await OrdersModel.findOne({
         where: { uuid: orderId },
-        include: [{ model: TablesModel, as: "table", attributes: ["hourly_price"] }],
+        include: [
+          { model: TablesModel, as: "table", attributes: ["hourly_price"] },
+          {
+            model: OrdersItemsModel,
+            as: "orders_items",
+            separate: true,
+            include: [{ model: ProductsModel, as: "product", attributes: ["hourly_price"] }],
+          },
+        ],
         transaction
     });
     
     let timerUpdate = {};
     if (order && order.is_active_timer) {
-        const live = TimerService.calculateLiveStatus(order, order.table?.hourly_price || 0);
+        const live = TimerService.calculateLiveStatus(order, TimerService.getEffectiveHourlyPrice(order));
         timerUpdate = {
             is_active_timer: 0,
             is_timer_status: 1, // Keep status as 1 to show it was a timer order
@@ -2237,11 +2283,21 @@ const onStartTimer = async (req, res) => {
 const onStopTimer = async (req, res) => {
   const { orderId } = req.params;
   try {
-    const order = await OrdersModel.findOne({ where: { uuid: orderId } });
+    const order = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      include: [
+        { model: TablesModel, as: "table", attributes: ["hourly_price"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          include: [{ model: ProductsModel, as: "product", attributes: ["hourly_price"] }],
+        },
+      ],
+    });
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const table = await TablesModel.findOne({ where: { id: order.table_id } });
-    const hourlyPrice = table?.hourly_price || 0;
+    const hourlyPrice = TimerService.getEffectiveHourlyPrice(order);
 
     // Always calculate server-side using timer_last_started_at for accuracy
     const liveStatus = TimerService.calculateLiveStatus(order, hourlyPrice);

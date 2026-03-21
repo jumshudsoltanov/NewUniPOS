@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../utils/apiConfig";
+import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 
 export const getTableGroups = createAsyncThunk(
   "tables/getTableGroups",
@@ -106,40 +107,49 @@ const TablesSlice = createSlice({
       state.tableGroups.data = state.tableGroups.data.map((hall) => {
         if (!hall.tables) return hall;
         const newTables = hall.tables.map((table) => {
-          const hPrice = parseFloat(table.hourly_price || 0);
-          if (table.orders && table.orders.length > 0 && hPrice > 0) {
-            const newOrders = table.orders.map((order) => {
-              if (order.is_timer_status === 1) {
-                let totalSeconds = 0;
-                if (order.is_timer_clock && String(order.is_timer_clock).includes(':')) {
-                  const parts = order.is_timer_clock.split(':').map(Number);
-                  if (parts.length === 3) totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-                } else {
-                  totalSeconds = parseInt(order.is_timer_clock || '0', 10);
-                }
+          if (!table.orders || table.orders.length === 0) return table;
 
-                totalSeconds += 1;
+          const newOrders = table.orders.map((order) => {
+            if (order.is_timer_status !== 1) return order;
 
-                const hh = Math.floor(totalSeconds / 3600);
-                const mm = Math.floor((totalSeconds % 3600) / 60);
-                const ss = totalSeconds % 60;
-                const clockStr = [hh, mm, ss].map(v => v < 10 ? "0" + v : v).join(":");
+            const orderForEff = {
+              ...order,
+              table: { ...(order.table || {}), hourly_price: table.hourly_price },
+              orders_items: order.orders_items || [],
+            };
+            const effH = getEffectiveHourlyPrice(orderForEff);
+            if (effH <= 0) return order;
 
-                return {
-                  ...order,
-                  is_timer_clock: clockStr,
-                  rate_per_minute: parseFloat(((hPrice / 3600) * totalSeconds).toFixed(2)),
-                  is_active_timer: 1
-                };
+            let totalSeconds = 0;
+            if (order.is_timer_clock && String(order.is_timer_clock).includes(":")) {
+              const parts = order.is_timer_clock.split(":").map(Number);
+              if (parts.length === 3) {
+                totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
               }
-              return order;
-            });
-
-            // Check if any order actually changed to avoid unnecessary table reference change
-            const anyChanged = newOrders.some((no, i) => no !== table.orders[i]);
-            if (anyChanged) {
-              return { ...table, orders: newOrders };
+            } else {
+              totalSeconds = parseInt(order.is_timer_clock || "0", 10);
             }
+
+            totalSeconds += 1;
+
+            const hh = Math.floor(totalSeconds / 3600);
+            const mm = Math.floor((totalSeconds % 3600) / 60);
+            const ss = totalSeconds % 60;
+            const clockStr = [hh, mm, ss].map((v) => (v < 10 ? "0" + v : v)).join(":");
+
+            const charge = parseFloat(((effH / 3600) * totalSeconds).toFixed(2));
+
+            return {
+              ...order,
+              is_timer_clock: clockStr,
+              rate_per_minute: charge,
+              is_active_timer: 1,
+            };
+          });
+
+          const anyChanged = newOrders.some((no, i) => no !== table.orders[i]);
+          if (anyChanged) {
+            return { ...table, orders: newOrders };
           }
           return table;
         });
@@ -150,7 +160,7 @@ const TablesSlice = createSlice({
         }
         return hall;
       });
-    }
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(getTableGroups.pending, (state) => {
