@@ -7,6 +7,7 @@ import { addPendingDeletion, removeAllProductsById } from "../../redux/Slices/Or
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
 import { getProductHourlySum } from "../../utils/orderHourlyPrice";
+import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault.jpg";
@@ -30,6 +31,17 @@ const CheckMain = ({ orders, table }) => {
   const allItems = useMemo(() => {
     const groupedMap = new Map();
 
+    /** Sıra: əlavə vaxtı (created_at) — DB id bəzən combo/modifikator üçün ardıcıllığı pozur */
+    const sortTimeFromSavedRow = (orderItem) => {
+      const c = orderItem.created_at || orderItem.createdAt;
+      if (c) {
+        const ms = new Date(c).getTime();
+        if (!Number.isNaN(ms)) return ms;
+      }
+      const id = Number(orderItem.id);
+      return Number.isNaN(id) ? 0 : id;
+    };
+
     // 1. Process Saved items (check-də birləşdir - şərh fərqi sayı bölməsin, yalnız mətbəxə göndərərkən ayrılsın)
     if (orders?.orders_items) {
       orders.orders_items.forEach((orderItem) => {
@@ -41,12 +53,14 @@ const CheckMain = ({ orders, table }) => {
         const uniqueKeyPart = modObj.length > 0 ? `-${orderItem.id}` : '';
         const key = `${prodId}-${isGift}-${price}-${modifiersStr}${uniqueKeyPart}`;
         const existing = groupedMap.get(key);
+        const rowSort = sortTimeFromSavedRow(orderItem);
 
         if (existing) {
           existing.count += Number(orderItem.count);
           existing.savedQuantity = (existing.savedQuantity || 0) + Number(orderItem.count);
           existing.allIds = [...(existing.allIds || [existing.firstId]), orderItem.id];
           existing.price = orderItem.price || orderItem.amount;
+          existing.sortTime = Math.min(existing.sortTime ?? rowSort, rowSort);
           if (orderItem.comment) {
             existing.commentsList = existing.commentsList || (existing.comment ? [existing.comment] : []);
             existing.commentsList.push(orderItem.comment);
@@ -66,6 +80,7 @@ const CheckMain = ({ orders, table }) => {
             isNew: false,
             is_gift: isGift,
             firstId: orderItem.id,
+            sortTime: rowSort,
             allIds: [orderItem.id],
             printer_details: menuItem?.printer_details || [],
             modifiers: orderItem.modifiers,
@@ -75,6 +90,14 @@ const CheckMain = ({ orders, table }) => {
         }
       });
     }
+
+    let maxSortTime = 0;
+    groupedMap.forEach((v) => {
+      if (v.sortTime != null && !Number.isNaN(v.sortTime)) {
+        maxSortTime = Math.max(maxSortTime, v.sortTime);
+      }
+    });
+    const localSortBase = maxSortTime + 1;
 
     // 2. Process New (Local) & Just Sent items (check-də birləşdir - şərh fərqi sayı bölməsin)
     const combinedLocal = [...products, ...(sentProducts || [])];
@@ -112,6 +135,7 @@ const CheckMain = ({ orders, table }) => {
           isNew: true,
           is_gift: isGift,
           firstId: 999999999 + idx,
+          sortTime: localSortBase + idx,
           printer_details: item.printer_details || [],
           modifiers: item.modifiers,
           comment,
@@ -120,7 +144,12 @@ const CheckMain = ({ orders, table }) => {
       }
     });
 
-    let items = Array.from(groupedMap.values()).sort((a, b) => Number(a.firstId) - Number(b.firstId));
+    let items = Array.from(groupedMap.values()).sort((a, b) => {
+      const ta = a.sortTime != null && !Number.isNaN(a.sortTime) ? a.sortTime : Number(a.firstId) || 0;
+      const tb = b.sortTime != null && !Number.isNaN(b.sortTime) ? b.sortTime : Number(b.firstId) || 0;
+      if (ta !== tb) return ta - tb;
+      return Number(a.firstId) - Number(b.firstId);
+    });
 
     const renderedItems = items.map(item => ({ ...item, displayDetails: null }));
 
@@ -152,39 +181,9 @@ const CheckMain = ({ orders, table }) => {
 
   }, [orders, menu, products, sentProducts, pendingDeletions]);
 
-  /* Əvvəlcə BooksSlice — məhsul saatlığı + canlı tickTimer (1s). TablesSlice yalnız masa hourly>0 olduqda yenilənir. */
-  const liveTimerData = useSelector((state) => {
-    if (!orderIdParam) return null;
-    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
-    if (booksData) {
-      const order = booksData.find((o) => o.uuid == orderIdParam);
-      if (order) {
-        return {
-          is_timer_status: order.is_timer_status,
-          is_timer_clock: order.is_timer_clock,
-          rate_per_minute: order.rate_per_minute,
-          is_active_timer: order.is_active_timer,
-        };
-      }
-    }
-    const tg = state.TablesSlice.tableGroups?.data;
-    if (tg) {
-      for (const hall of tg) {
-        for (const t of (hall.tables || [])) {
-          const order = t.orders?.find((o) => o.uuid == orderIdParam);
-          if (order) {
-            return {
-              is_timer_status: order.is_timer_status,
-              is_timer_clock: order.is_timer_clock,
-              rate_per_minute: order.rate_per_minute,
-              is_active_timer: order.is_active_timer,
-            };
-          }
-        }
-      }
-    }
-    return null;
-  });
+  const liveTimerData = useSelector((state) =>
+    selectLiveTimerData(state, orderIdParam),
+  );
 
   const orderForTimer = useMemo(() => {
     if (!orders) return null;

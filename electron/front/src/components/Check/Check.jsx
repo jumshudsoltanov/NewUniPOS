@@ -1039,6 +1039,8 @@ const Check = () => {
       }));
     }
 
+   console.log(loginedProfileData)
+
     // 1. Instant navigation + optimistic state removal (UI instantly shows table as empty)
     const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
     navigate(isPacksOnly ? "/checks" : "/tables", { replace: true });

@@ -13,6 +13,7 @@ import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import apiConfig, { TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
+import { sumOrderItemsLinesTotal, getOrderItemLineTotal } from "../../utils/orderItemLineTotal";
 
 const getTaxConfigId = (c) => c?.id ?? (c?.ip_addr && c?.port_addr
     ? Math.abs((c.ip_addr + ':' + c.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
@@ -67,19 +68,40 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     }, [orderLogs]);
 
     const subtotal = useMemo(() => {
-        return (order?.orders_items || []).reduce((acc, item) => acc + (Number(item.count || 0) * Number(item.price || 0)), 0);
+        return sumOrderItemsLinesTotal(order?.orders_items || []);
     }, [order?.orders_items]);
 
     const groupedItems = useMemo(() => {
         const map = {};
-        (order?.orders_items || []).forEach(item => {
+        const parseMods = (raw) => {
+            try {
+                let m = raw?.modifiers;
+                if (typeof m === "string") m = JSON.parse(m || "[]");
+                return Array.isArray(m) ? m : [];
+            } catch {
+                return [];
+            }
+        };
+        (order?.orders_items || []).forEach((item) => {
             const name = item.product?.name || item.name || "Məhsul";
             const price = Number(item.price || 0);
-            const key = `${name}__${price}`;
+            const modifiers = parseMods(item);
+            const modKey = JSON.stringify(modifiers);
+            const key = `${name}__${price}__${modKey}`;
+            const cnt = Number(item.count || 0);
+            const lineTotal = getOrderItemLineTotal(item);
             if (map[key]) {
-                map[key].count += Number(item.count || 0);
+                map[key].count += cnt;
+                map[key].lineTotal += lineTotal;
             } else {
-                map[key] = { ...item, name, count: Number(item.count || 0), price };
+                map[key] = {
+                    ...item,
+                    name,
+                    count: cnt,
+                    price,
+                    modifiers,
+                    lineTotal,
+                };
             }
         });
         return Object.values(map);
@@ -783,14 +805,38 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {groupedItems.map((item, i) => (
+                                            {groupedItems.map((item, i) => {
+                                                const safeCount = Math.max(0, Number(item.count) || 0);
+                                                const unitWithMods =
+                                                    safeCount > 0
+                                                        ? Number(item.lineTotal || 0) / safeCount
+                                                        : Number(item.price || 0);
+                                                return (
                                                 <tr key={i}>
-                                                    <td>{item.name}</td>
+                                                    <td>
+                                                        <div>{item.name}</div>
+                                                        {item.modifiers && item.modifiers.length > 0 && (
+                                                            <div className="check-detail-item-modifiers">
+                                                                {item.modifiers.map((m, mi) => {
+                                                                    const mc = Number(m.count || 1);
+                                                                    const mline = Number(m.price || 0) * mc;
+                                                                    return (
+                                                                        <span key={mi} className="check-detail-modifier-tag">
+                                                                            {m.name || "—"}
+                                                                            {mc > 1 ? ` (x${mc})` : ""}{" "}
+                                                                            +{mline.toFixed(2)}₼
+                                                                        </span>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </td>
                                                     <td>{item.count}</td>
-                                                    <td>{Number(item.price).toFixed(2)}</td>
-                                                    <td className="text-end">{(item.count * item.price).toFixed(2)}</td>
+                                                    <td>{unitWithMods.toFixed(2)}</td>
+                                                    <td className="text-end">{Number(item.lineTotal || 0).toFixed(2)}</td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

@@ -33,7 +33,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
-
+import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
 
 const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const [activeTab, setActiveTab] = useState("edit");
@@ -87,6 +87,46 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const hasHourlyProduct = catalogHourly > 0;
 
   const orderIdLive = orders?.uuid || orderUuidFromUrl;
+
+  const parsedModifiers = useMemo(() => {
+    try {
+      let mods = product?.modifiers;
+      if (typeof mods === "string") mods = JSON.parse(mods || "[]");
+      return Array.isArray(mods) ? mods : [];
+    } catch {
+      return [];
+    }
+  }, [product?.modifiers]);
+
+  const modifiersTotalPerUnit = useMemo(
+    () => getModifiersTotalPerUnit(product),
+    [product],
+  );
+
+  /** Modifikator varsa böyük sahədə vahid cəm (əsas+mod.); saxlayanda yenə əsas qiymət API-yə gedir */
+  useEffect(() => {
+    if (!show || !product) return;
+    const base = Number(product.price || 0);
+    if (parsedModifiers.length > 0) {
+      setInputValue((base + modifiersTotalPerUnit).toFixed(2));
+    } else {
+      setInputValue(
+        base
+          ? Math.abs(base % 1) < 1e-9
+            ? String(Math.round(base))
+            : base.toFixed(2)
+          : "0",
+      );
+    }
+  }, [
+    show,
+    product?.id,
+    product?.firstId,
+    product?.price,
+    product?.modifiers,
+    parsedModifiers.length,
+    modifiersTotalPerUnit,
+  ]);
 
   const liveTimerData = useSelector((state) => {
     if (!orderIdLive) return null;
@@ -456,10 +496,6 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
                     />
                     <div className="currency-icon">₼</div>
-                    <div className="input-label">
-                      Orijinal qiymət: {Number(product?.price || 0).toFixed(2)}{" "}
-                      ₼
-                    </div>
                   </div>
 
                   {/* Quantity Stepper */}
@@ -557,6 +593,18 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         return;
                       }
 
+                      const typedTotalOrBase = parseFloat(
+                        String(inputValue ?? "").replace(",", "."),
+                      );
+                      const finiteTyped = Number.isFinite(typedTotalOrBase)
+                        ? typedTotalOrBase
+                        : Number(product.price || 0);
+                      const resolvedBase =
+                        parsedModifiers.length > 0
+                          ? Math.max(0, finiteTyped - modifiersTotalPerUnit)
+                          : finiteTyped;
+                      const resolvedBaseStr = resolvedBase.toFixed(2);
+
                       if (product.isNew && !product.savedQuantity) {
                         // Pure local item — remove ALL copies and add ONE with the correct qty
                         if (qty === 0) {
@@ -565,7 +613,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                           dispatch(replaceProductQuantity({
                             productId: Number(product.product_id || product.id),
                             newQty: qty,
-                            price: inputValue,
+                            price: resolvedBaseStr,
                             // No firstId: replaces ALL entries for this product
                           }));
                         }
@@ -586,11 +634,14 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 
                         // Check if price changed - only price goes to backend immediately
-                        if (parseFloat(inputValue) !== parseFloat(product.price)) {
+                        if (
+                          Math.abs(resolvedBase - Number(product.price || 0)) >
+                          0.0001
+                        ) {
                           await dispatch(updateItemPrice({
                             orderId: orders.uuid,
                             itemId: product.id,
-                            newPrice: inputValue,
+                            newPrice: resolvedBaseStr,
                             oldPrice: product.price,
                             productName: product.name,
                             waiterName
@@ -602,7 +653,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                           dispatch(updateCount({
                             productId: Number(product.product_id || product.id),
                             count: newLocalQty,
-                            price: inputValue,
+                            price: resolvedBaseStr,
                             name: product.name,
                           }));
                         } else {

@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import CheckDetailModal from "./CheckDetailModal";
 import { toast } from "sonner";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
+import { computeOrderCardDisplayAmount } from "../../utils/orderDisplayTotal";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -78,7 +79,9 @@ const CheckListItem = React.memo(({ check, onClick }) => (
       </div>
     </div>
     <div className="checks-check-right">
-      <span className="checks-check-amount">{Number(check.total || 0).toFixed(2)} ₼</span>
+      <span className="checks-check-amount">
+        {computeOrderCardDisplayAmount(check).toFixed(2)} ₼
+      </span>
       {check.status !== 1 && check.order_payments?.length > 0 && (
         <div className="mt-1 d-flex flex-wrap justify-content-end">
           {check.order_payments.map((p, idx) => (
@@ -209,7 +212,7 @@ const Checks = () => {
   }, [currentDisplayOrders, loginedWaiter?.data, activeTab, filterStatus]);
 
   const totalAmount = useMemo(
-    () => filteredDisplayOrders.reduce((sum, order) => sum + Number(order?.total || 0), 0),
+    () => filteredDisplayOrders.reduce((sum, o) => sum + computeOrderCardDisplayAmount(o), 0),
     [filteredDisplayOrders],
   );
 

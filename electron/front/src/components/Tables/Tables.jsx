@@ -116,49 +116,59 @@ const Tables = () => {
   }, [tableGroups, currentHallId, tableOrder, tempTableOrder, isTableEditMode]);
 
   const [generatedLayout, setGeneratedLayout] = useState({});
+  /**
+   * Avtomatik şəbəkə: yalnız zal, masaların sırası və ya shape_type dəyişəndə mövqelər yenidən hesablanır.
+   * Socket/getTableGroups ilə yalnız çek/sifariş məlumatı yenilənəndə imza eyni qalır — masa yerləri dəyişmir (tərpənmə olmur).
+   */
+  const prevAutoLayoutSigRef = useRef("");
 
   useEffect(() => {
-    // Generate layout whenever tables or hall change
-    if (currentTables.length > 0) {
-      const w = window.innerWidth;
-      let cols = 2; // xs
-      if (w >= 1200) cols = 5; // xl
-      else if (w >= 992) cols = 4; // lg
-      else if (w >= 768) cols = 3; // md
-      else if (w >= 576) cols = 3; // sm
-
-      // Use a consistent width calculation
-      const containerW = containerRef.current?.offsetWidth || w;
-      const colWidth = containerW / cols;
-
-      const layout = {};
-      let currentRow = 0;
-      let currentY = 20;
-      let rowMaxH = 0;
-
-      currentTables.forEach((table, index) => {
-        const col = index % cols;
-        const isRect = table.shape_type === "rectangle";
-        const h = isRect ? 300 : 200;
-
-        if (col === 0 && index !== 0) {
-          currentY += rowMaxH + 20;
-          rowMaxH = 0;
-        }
-
-        rowMaxH = Math.max(rowMaxH, h);
-        const offsetX = Math.max(0, (colWidth - 200) / 2);
-
-        layout[table.id] = {
-          x: col * colWidth + offsetX,
-          y: currentY,
-          w: undefined,
-          h: undefined
-        };
-      });
-
-      setGeneratedLayout(layout);
+    if (currentTables.length === 0) {
+      return;
     }
+    const layoutSig = `${currentHallId}|${currentTables.map((t) => t.id).join(",")}|${currentTables.map((t) => t.shape_type || "").join(",")}`;
+    if (layoutSig === prevAutoLayoutSigRef.current) {
+      return;
+    }
+    prevAutoLayoutSigRef.current = layoutSig;
+
+    const w = window.innerWidth;
+    let cols = 2; // xs
+    if (w >= 1200) cols = 5; // xl
+    else if (w >= 992) cols = 4; // lg
+    else if (w >= 768) cols = 3; // md
+    else if (w >= 576) cols = 3; // sm
+
+    const containerW = containerRef.current?.offsetWidth || w;
+    const colWidth = containerW / cols;
+
+    const layout = {};
+    let currentRow = 0;
+    let currentY = 20;
+    let rowMaxH = 0;
+
+    currentTables.forEach((table, index) => {
+      const col = index % cols;
+      const isRect = table.shape_type === "rectangle";
+      const h = isRect ? 300 : 200;
+
+      if (col === 0 && index !== 0) {
+        currentY += rowMaxH + 20;
+        rowMaxH = 0;
+      }
+
+      rowMaxH = Math.max(rowMaxH, h);
+      const offsetX = Math.max(0, (colWidth - 200) / 2);
+
+      layout[table.id] = {
+        x: col * colWidth + offsetX,
+        y: currentY,
+        w: undefined,
+        h: undefined
+      };
+    });
+
+    setGeneratedLayout(layout);
   }, [currentTables, currentHallId]);
 
   const currentHallData = useMemo(() => {

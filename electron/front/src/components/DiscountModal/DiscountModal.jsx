@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import "./DiscountModal.css";
 import Modal from "react-bootstrap/Modal";
 import { useDispatch, useSelector } from "react-redux";
 import { updateDiscountOnOrders } from "../../redux/Slices/OrdersSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getOrderItemsAndTimerSubtotal } from "../../utils/orderDisplayTotal";
 
 const DiscountModal = React.memo(({ show, onClose, order }) => {
   const dispatch = useDispatch();
@@ -13,19 +14,23 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
   const [value, setValue] = useState("0");
   const [discountType, setDiscountType] = useState("percent");
 
-  // Calculate order subtotal from items
-  const subtotal = (order?.orders_items || []).reduce((sum, item) => {
-    const qty = Number(item.count || item.quantity || 0);
-    const price = Number(item.price || 0);
-    if (Number(item.is_gift || 0) === 1) return sum;
-    return sum + qty * price;
-  }, 0);
+  // İkram sətirləri endirim əsasının xaricində; taymer daxil
+  const subtotal = useMemo(() => {
+    if (!order) return 0;
+    const items = (order.orders_items || []).filter(
+      (it) => Number(it.is_gift || 0) !== 1,
+    );
+    return getOrderItemsAndTimerSubtotal(
+      { ...order, orders_items: items },
+      order?.table?.hourly_price,
+    );
+  }, [order]);
 
   const deposit = Number(order?.deposit || 0);
-  // Max cash discount = subtotal minus deposit (customer already paid deposit)
-  const maxCashDiscount = Math.max(0, subtotal - deposit);
-  // Max percent = percentage that corresponds to maxCashDiscount
-  const maxPercentDiscount = subtotal > 0 ? (maxCashDiscount / subtotal) * 100 : 100;
+  /* Depozit olsa belə endirim daxil edilə bilsin; yekun məbləğ serverdə
+     Math.max(cəm - endirim + xidmət, depozit) ilə depozitin altına düşmür. */
+  const maxCashDiscount = Math.max(0, subtotal);
+  const maxPercentDiscount = subtotal > 0 ? 100 : 0;
 
   const clampValue = (raw, type) => {
     const num = parseFloat(raw);
@@ -158,13 +163,20 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
 
         {/* Body */}
         <div className="discount-body">
-          {/* Max limit hint */}
-          {deposit > 0 && (
+          {(subtotal > 0 || deposit > 0) && (
             <div style={{ fontSize: '12px', color: '#888', padding: '4px 12px 0', textAlign: 'right' }}>
-              Maks: {discountType === "percent"
-                ? `${maxPercentDiscount % 1 === 0 ? maxPercentDiscount.toFixed(0) : maxPercentDiscount.toFixed(1)}%`
-                : `${maxCashDiscount.toFixed(2)} ₼`}
-              {' '}(depozit: {deposit.toFixed(2)} ₼)
+              {subtotal > 0 && (
+                <>
+                  Maks:{" "}
+                  {discountType === "percent"
+                    ? `${maxPercentDiscount % 1 === 0 ? maxPercentDiscount.toFixed(0) : maxPercentDiscount.toFixed(1)}%`
+                    : `${maxCashDiscount.toFixed(2)} ₼`}
+                </>
+              )}
+              {subtotal > 0 && deposit > 0 && " · "}
+              {deposit > 0 && (
+                <span>Depozit: {deposit.toFixed(2)} ₼ (yekun depozitdən az olmaz)</span>
+              )}
             </div>
           )}
           {/* Input Area */}

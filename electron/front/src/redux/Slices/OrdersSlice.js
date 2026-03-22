@@ -577,12 +577,61 @@ export const fetchLogs = createAsyncThunk(
 
 export const saveLog = createAsyncThunk(
   "orders/saveLog",
-  async ({ orderId, action, waiterName, details }, thunkAPI) => {
+  async ({ orderId, action, waiterName, details, profileId: profileIdArg }, thunkAPI) => {
     try {
+      const state = thunkAPI.getState();
+      // Login API: { data: { profile: { id, is_whatsapp_notify, ... } } } — profileId = profile.id
+      let profileId =
+        profileIdArg ??
+        state.LoginSlice?.loginedProfileData?.data?.profile?.id ??
+        state.LoginSlice?.loginedProfileData?.profile?.id;
+
+      if (profileId == null && typeof window !== "undefined") {
+        try {
+          const ar = JSON.parse(window.localStorage.getItem("authResult") || "{}");
+          profileId = ar?.data?.profile?.id ?? ar?.profile?.id ?? profileId;
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const profileSnap =
+        state.LoginSlice?.loginedProfileData?.data?.profile ??
+        state.LoginSlice?.loginedProfileData?.profile;
+
+      const terminalSnap =
+        state.LoginSlice?.loginedProfileData?.data?.terminal ??
+        state.LoginSlice?.loginedProfileData?.terminal;
+
+      let terminalIdForLog = terminalSnap?.terminal_id ?? terminalSnap?.id;
+      if (terminalIdForLog == null && typeof window !== "undefined") {
+        try {
+          const ar = JSON.parse(window.localStorage.getItem("authResult") || "{}");
+          const t = ar?.data?.terminal ?? ar?.terminal;
+          terminalIdForLog = t?.terminal_id ?? t?.id ?? terminalIdForLog;
+        } catch {
+          /* ignore */
+        }
+      }
+
       const response = await axios.post(
         `/orders-items/${orderId}/logs`,
-        { action, waiterName, details }
+        {
+          action,
+          waiterName,
+          details,
+          // Profil API-də `id` adlanır; backend hər ikisini qəbul edir
+          id: profileId ?? undefined,
+          profileId: profileId ?? undefined,
+          is_whatsapp_notify: profileSnap?.is_whatsapp_notify,
+          whatsapp_chat_number: profileSnap?.whatsapp_chat_number,
+          restaurant_name: profileSnap?.restaurant_name,
+          terminal_id: terminalIdForLog,
+        },
       );
+      if (typeof console !== "undefined" && console.info) {
+        console.info("[POS][Jurnal] serverə yazıldı:", action, "| orderId:", String(orderId).slice(0, 13));
+      }
       // Map snake_case to camelCase
       return {
         ...response.data,
@@ -607,12 +656,18 @@ export const updateLockChecK = createAsyncThunk(
       // Persistent Log
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: status ? "Qəbz kilidləndi" : "Qəbz açıldı",
-        waiterName,
-        details: status ? "Çek üzərində əməliyyatlar dayandırıldı" : "Çek yenidən aktiv edildi"
-      }));
+      try {
+        await thunkAPI.dispatch(
+          saveLog({
+            orderId,
+            action: status ? "Qəbz kilidləndi" : "Qəbz açıldı",
+            waiterName,
+            details: status ? "Çek üzərində əməliyyatlar dayandırıldı" : "Çek yenidən aktiv edildi",
+          }),
+        ).unwrap();
+      } catch (logErr) {
+        console.error("[OrderLog] Kilid sonrası jurnal xətası:", logErr?.message || logErr);
+      }
 
       return response.data;
     } catch (error) {
@@ -982,11 +1037,13 @@ export const OrderSlice = createSlice({
       })
       .addCase(getTableGroups.fulfilled, (state, action) => {
         state.sentProducts = [];
-        state.pendingDeletions = [];
+        // pendingDeletions saxlanılmalıdır: socket table_updated → getTableGroups işləyəndə
+        // istifadəçi modifikatorlu məhsulu “silinəcək” işarələyib hələ Göndərməyibsə,
+        // əks halda siyahı təmizlənir və çek API məlumatı ilə geri qayıdır (2 dəfə silmə).
       })
       .addCase(getActiveOrders.fulfilled, (state, action) => {
         state.sentProducts = [];
-        state.pendingDeletions = [];
+        // pendingDeletions burada da təmizlənməsin — eyni yarış vəziyyəti.
       })
       .addCase(updateDiscountOnOrders.fulfilled, (state, action) => {
         state.discount = action.payload;

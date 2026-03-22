@@ -15,24 +15,7 @@ import axios from "axios";
 import apiConfig, { getSocket, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
-
-/** CheckBottom.jsx ilə eyni: modifikator qiymətləri vahid məhsul üzrə cəmlənir */
-function getModifiersTotalPerUnit(item) {
-    let modifiersTotal = 0;
-    try {
-        let mods = item?.modifiers;
-        if (typeof mods === "string") mods = JSON.parse(mods);
-        if (Array.isArray(mods)) {
-            modifiersTotal = mods.reduce(
-                (sum, mod) => sum + Number(mod.price || 0) * Number(mod.count || 1),
-                0
-            );
-        }
-    } catch (e) {
-        /* ignore */
-    }
-    return modifiersTotal;
-}
+import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
 
 const CheckOver = () => {
     const navigate = useNavigate();

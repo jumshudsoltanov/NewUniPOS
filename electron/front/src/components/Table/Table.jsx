@@ -2,6 +2,7 @@ import React from "react";
 import "./Table.css";
 import { useParams } from "react-router-dom";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
+import { computeOrderCardMeta } from "../../utils/orderDisplayTotal";
 
 const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
   const { name, status, shape_type, orders } = table || {};
@@ -86,46 +87,7 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
               {(() => {
                 const order = orders?.[0];
                 if (!order) return "0.00 ₼";
-
-                // CheckBottom / CheckDetailModal ilə eyni: əvvəl məhsul sətirləri, sonra taymer (bir dəfə).
-                // order.amount DB-də tez-tez artıq (məhsul + taymer) saxlanır — amount+rate ikiqat verir.
-                const discount = Number(order.discount || 0);
-                const deposit = Number(order.deposit || 0);
-                const service = Number(order.service_charge || 0);
-                const deliveryFee = Number(order.delivery_fee || 0);
-
-                const effHourly = getEffectiveHourlyPrice({
-                  ...order,
-                  table: { hourly_price: table?.hourly_price },
-                  orders_items: order.orders_items || [],
-                });
-
-                let itemsBase = 0;
-                if (order.orders_items && order.orders_items.length > 0) {
-                  itemsBase = order.orders_items.reduce((sum, it) => {
-                    const q = Number(it.count) || 0;
-                    const p = Number(it.price) || 0;
-                    return sum + q * p;
-                  }, 0);
-                } else {
-                  const amt = Number(order.amount || 0);
-                  const rate = Number(order.rate_per_minute || 0);
-                  itemsBase = rate > 0 ? Math.max(0, amt - rate) : amt;
-                }
-
-                let timerCharge = Number(order.rate_per_minute || 0);
-                if (timerCharge === 0 && order.is_timer_clock && order.is_timer_clock !== "00:00:00" && effHourly > 0) {
-                  const parts = order.is_timer_clock.split(":").map(Number);
-                  if (parts.length === 3) {
-                    const totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-                    timerCharge = (effHourly / 3600) * totalSeconds;
-                  }
-                }
-
-                const subtotalAfterDiscount = (itemsBase + timerCharge) - discount;
-                const displayAmount = Math.max(subtotalAfterDiscount, deposit) + service + deliveryFee;
-                const isDepositFloor = deposit > subtotalAfterDiscount;
-
+                const { displayAmount, isDepositFloor } = computeOrderCardMeta(order, table?.hourly_price);
                 return (
                   <>
                     {displayAmount.toFixed(2)} ₼

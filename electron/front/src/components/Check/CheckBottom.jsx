@@ -20,6 +20,7 @@ import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printer
 import { getSocket } from "../../utils/apiConfig";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getEffectiveHourlyPrice, getProductHourlySum } from "../../utils/orderHourlyPrice";
+import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
 
 const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending, clearCheck }) => {
   const dispatch = useDispatch();
@@ -29,43 +30,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Live timer — reads from both TablesSlice and BooksSlice for real-time updates
-  /* BooksSlice əvvəl — məhsul saatlığı + real vaxt; masa saatlığı üçün də düzgün charge */
-  const liveTimerData = useSelector((state) => {
-    if (!id) return null;
-
-    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
-    if (booksData) {
-      const order = booksData.find(o => o.uuid == id);
-      if (order) {
-        return {
-          is_timer_status: order.is_timer_status,
-          is_timer_clock: order.is_timer_clock,
-          rate_per_minute: order.rate_per_minute,
-          is_active_timer: order.is_active_timer,
-        };
-      }
-    }
-
-    const tg = state.TablesSlice.tableGroups?.data;
-    if (tg) {
-      for (const hall of tg) {
-        for (const t of (hall.tables || [])) {
-          const order = t.orders?.find(o => o.uuid == id);
-          if (order) {
-            return {
-              is_timer_status: order.is_timer_status,
-              is_timer_clock: order.is_timer_clock,
-              rate_per_minute: order.rate_per_minute,
-              is_active_timer: order.is_active_timer,
-            };
-          }
-        }
-      }
-    }
-
-    return null;
-  });
+  /* Taymer: TablesSlice (tickTimer) + BooksSlice — aktiv masada cədvəl mənbəsi üstünlükdə */
+  const liveTimerData = useSelector((state) => selectLiveTimerData(state, id));
 
   const timerClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
   const timerCharge = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;

@@ -5,6 +5,26 @@ const WaitersModel = require("../model/WaitersModel");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
 const ProductsModel = require("../model/ProductsModel");
 
+/** Kombo/modifikator — masa kartı cəmi ilə çek içi uyğun olsun */
+function ordersItemLineTotal(it) {
+  const q = parseFloat(it.count) || 0;
+  const p = parseFloat(it.price) || 0;
+  let modifiersPerUnit = 0;
+  try {
+    let mods = it.modifiers;
+    if (typeof mods === "string") mods = JSON.parse(mods);
+    if (Array.isArray(mods)) {
+      modifiersPerUnit = mods.reduce(
+        (sum, mod) => sum + (parseFloat(mod.price) || 0) * (parseFloat(mod.count) || 1),
+        0,
+      );
+    }
+  } catch {
+    /* ignore */
+  }
+  return q * (p + modifiersPerUnit);
+}
+
 const getTables = async (req, res) => {
   const { profileId } = req.params;
   const { waiter_id } = req.query;
@@ -36,7 +56,7 @@ const getTables = async (req, res) => {
               as: "orders_items",
               separate: true,
               order: [["id", "ASC"]],
-              attributes: ["count", "price", "product_id"],
+              attributes: ["count", "price", "product_id", "modifiers"],
               include: [
                 {
                   model: ProductsModel,
@@ -74,11 +94,7 @@ const getTables = async (req, res) => {
             const plainItems = activeOrder.orders_items || [];
             const itemsSum =
               Array.isArray(plainItems) && plainItems.length > 0
-                ? plainItems.reduce((s, it) => {
-                    const q = parseFloat(it.count) || 0;
-                    const p = parseFloat(it.price) || 0;
-                    return s + q * p;
-                  }, 0)
+                ? plainItems.reduce((s, it) => s + ordersItemLineTotal(it), 0)
                 : parseFloat(activeOrder.amount) || 0;
             activeOrder.dataValues.total = itemsSum + liveStatus.charge;
           }

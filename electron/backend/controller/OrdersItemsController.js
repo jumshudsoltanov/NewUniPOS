@@ -321,62 +321,34 @@ const onUpdateDiscountOrder = async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
+  discountValue = Number(discountValue);
+  if (isNaN(discountValue) || discountValue < 0) {
+    return res.status(400).json({ message: "Invalid discount value" });
+  }
+
+  if (discountType !== "percent" && discountType !== "cash") {
+    return res.status(400).json({ message: "Invalid discount type" });
+  }
+
   try {
-    const listOfProducts = await OrdersItemsModel.findAll({
-      where: { order_id: orderId },
-      attributes: ["count", "price"],
-    });
-
-    if (!listOfProducts || listOfProducts.length === 0) {
-      return res.status(404).json({ message: "Order items not found" });
-    }
-
-    const total = listOfProducts.reduce(
-      (sum, item) => sum + Number(item.count) * Number(item.price),
-      0,
-    );
-
-    discountValue = Number(discountValue);
-
-    if (isNaN(discountValue) || discountValue < 0) {
-      return res.status(400).json({ message: "Invalid discount value" });
-    }
-
-    let discount = 0;
-    let newTotal = total;
-
-    // Fetch current service and deposit to keep them in total
-    const currentOrder = await OrdersModel.findOne({
+    const existing = await OrdersModel.findOne({
       where: { uuid: orderId },
-      attributes: ["service_charge", "deposit", "rate_per_minute"],
+      attributes: ["uuid"],
     });
-    const serviceCharge = parseFloat(currentOrder?.service_charge || 0);
-    const deposit = parseFloat(currentOrder?.deposit || 0);
-
-    if (discountType === "percent") {
-      discount = (total * discountValue) / 100;
-    } else if (discountType === "cash") {
-      discount = discountValue;
-    } else {
-      return res.status(400).json({ message: "Invalid discount type" });
+    if (!existing) {
+      return res.status(404).json({ message: "Order not found" });
     }
-
-    const timerCharge = parseFloat(currentOrder?.rate_per_minute || 0);
-    newTotal = Math.max(total + timerCharge - discount + serviceCharge, deposit);
-
-    newTotal = Math.max(newTotal, 0);
 
     await OrdersModel.update(
       {
-        discount: discount,
         discount_value: discountValue,
         discount_type: discountType,
-        total: newTotal,
-        amount: total,
         is_synced: 0,
       },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
+
+    await recalculateOrderTotalsWithTimer(orderId);
 
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
@@ -390,7 +362,7 @@ const onUpdateDiscountOrder = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [{ model: require("../model/ProductsModel"), as: "product" }],
         },
         {
           model: TablesModel,
@@ -420,62 +392,34 @@ const onUpdateServiceFeeOrder = async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
+  serviceValue = Number(serviceValue);
+  if (isNaN(serviceValue) || serviceValue < 0) {
+    return res.status(400).json({ message: "Invalid service value" });
+  }
+
+  if (feeType !== "percent" && feeType !== "cash") {
+    return res.status(400).json({ message: "Invalid service type" });
+  }
+
   try {
-    const listOfProducts = await OrdersItemsModel.findAll({
-      where: { order_id: orderId },
-      attributes: ["count", "price"],
-    });
-
-    if (!listOfProducts || listOfProducts.length === 0) {
-      return res.status(404).json({ message: "Order items not found" });
-    }
-
-    const total = listOfProducts.reduce(
-      (sum, item) => sum + Number(item.count) * Number(item.price),
-      0,
-    );
-
-    serviceValue = Number(serviceValue);
-
-    if (isNaN(serviceValue) || serviceValue < 0) {
-      return res.status(400).json({ message: "Invalid service value" });
-    }
-
-    let service = 0;
-    let newTotal = total;
-
-    // Fetch current discount and deposit to keep them in total
-    const currentOrder = await OrdersModel.findOne({
+    const existing = await OrdersModel.findOne({
       where: { uuid: orderId },
-      attributes: ["discount", "deposit", "rate_per_minute"],
+      attributes: ["uuid"],
     });
-    const discountAmount = parseFloat(currentOrder?.discount || 0);
-    const deposit = parseFloat(currentOrder?.deposit || 0);
-
-    if (feeType === "percent") {
-      service = (total * serviceValue) / 100;
-    } else if (feeType === "cash") {
-      service = serviceValue;
-    } else {
-      return res.status(400).json({ message: "Invalid service type" });
+    if (!existing) {
+      return res.status(404).json({ message: "Order not found" });
     }
-
-    const timerCharge = parseFloat(currentOrder?.rate_per_minute || 0);
-    newTotal = Math.max(total + timerCharge + service - discountAmount, deposit);
-
-    newTotal = Math.max(newTotal, 0);
 
     await OrdersModel.update(
       {
-        service_charge: service,
-        service_type: feeType,
         service_value: serviceValue,
-        total: newTotal,
-        amount: total,
+        service_type: feeType,
         is_synced: 0,
       },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
+
+    await recalculateOrderTotalsWithTimer(orderId);
 
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
@@ -489,7 +433,7 @@ const onUpdateServiceFeeOrder = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [{ model: require("../model/ProductsModel"), as: "product" }],
         },
         {
           model: TablesModel,

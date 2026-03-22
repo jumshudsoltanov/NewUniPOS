@@ -1,9 +1,12 @@
 const OrderLogsModel = require("../model/OrderLogsModel");
 const SyncService = require("../services/SyncService");
+const { notifyOrderLogWhatsapp } = require("../bot/whatsapp/Whatsapp");
 
 const addLog = async (req, res) => {
     const { orderId } = req.params;
-    const { action, waiterName, details, time } = req.body;
+    const { action, waiterName, details, time, profileId: profileIdBody, id: profileIdFromId, is_whatsapp_notify, whatsapp_chat_number, restaurant_name, terminal_id } = req.body;
+    // Profil obyektində adətən `id`; köhnə klientlər `profileId` göndərə bilər
+    const profileId = profileIdBody != null && profileIdBody !== "" ? profileIdBody : profileIdFromId;
 
     if (!orderId || !action) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -23,6 +26,22 @@ const addLog = async (req, res) => {
 
         // Trigger sync for this order to include the new log
         SyncService.queueSync(orderId);
+
+        setImmediate(() => {
+            notifyOrderLogWhatsapp({
+                orderId,
+                profileId,
+                action,
+                waiterName,
+                details,
+                is_whatsapp_notify,
+                whatsapp_chat_number,
+                restaurant_name,
+                terminal_id,
+            }).catch((err) => {
+                console.error("[WhatsApp] notifyOrderLogWhatsapp:", err?.message || err);
+            });
+        });
 
         return res.status(201).json(newLog);
     } catch (error) {
