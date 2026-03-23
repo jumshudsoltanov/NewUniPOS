@@ -148,6 +148,29 @@
   object-fit: contain;
 }
 
+/* Gizli ayarlar: logo üzərinə 5 tez toxunuş (PIN ekranı) — vizual dəyişmir */
+.pin-logo-secret-tap {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 250px;
+  max-height: 150px;
+}
+
+.pin-logo-secret-tap:focus {
+  outline: none;
+}
+
+.pin-logo-secret-tap:focus-visible {
+  outline: 2px solid rgba(5, 55, 150, 0.35);
+  outline-offset: 2px;
+}
+
 /* ==================== */
 /* PIN Container        */
 /* ==================== */

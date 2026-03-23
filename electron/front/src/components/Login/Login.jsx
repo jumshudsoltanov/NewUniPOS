@@ -16,6 +16,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
 import { toast } from "sonner";
+import apiConfig from "../../utils/apiConfig";
 import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import BrandsModal from "../BrandsModal/BrandsModal";
 
@@ -131,12 +132,13 @@ const Login = () => {
     setIsRefreshing(true);
     const toastId = toast.loading("Məlumatlar yenilənir...");
     try {
+      const profileId = loginedProfileData.data.profile.id;
+      await apiConfig.post(`/sync/refresh/${profileId}`);
       await Promise.all([
-        dispatch(getTableGroups(loginedProfileData.data.profile.id)).unwrap(),
-        dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id })).unwrap(),
-        dispatch(menuWithCategories(loginedProfileData.data.profile.id)).unwrap(),
-        dispatch(menuWithGeneralCategories(loginedProfileData.data.profile.id)).unwrap(),
-        new Promise(resolve => setTimeout(resolve, 5000))
+        dispatch(getTableGroups(profileId)).unwrap(),
+        dispatch(getActiveOrders({ profileId })).unwrap(),
+        dispatch(menuWithCategories(profileId)).unwrap(),
+        dispatch(menuWithGeneralCategories(profileId)).unwrap(),
       ]);
       toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
     } catch (error) {

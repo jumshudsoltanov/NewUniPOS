@@ -12,6 +12,23 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
         }
     };
 
+    const exitItem =
+        typeof onExit === "function"
+            ? {
+                  id: "exit",
+                  label: "Terminaldan çıx",
+                  icon: (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"></path>
+                          <polyline points="16 17 21 12 16 7"></polyline>
+                          <line x1="21" y1="12" x2="9" y2="12"></line>
+                      </svg>
+                  ),
+                  onClick: onExit,
+                  isDanger: true,
+              }
+            : null;
+
     const menuItems = [
         {
             id: "refresh",
@@ -49,19 +66,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
             ),
             onClick: onDownloadData,
         },
-        {
-            id: "exit",
-            label: "Terminaldan çıx",
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                </svg>
-            ),
-            onClick: onExit,
-            isDanger: true,
-        },
+        ...(exitItem ? [exitItem] : []),
         {
             id: "quitApp",
             label: "Proqramdan çıx",

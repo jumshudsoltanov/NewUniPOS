@@ -1356,9 +1356,14 @@
     }
 }
 
-/* New Order Table Layout */
+/* New Order Table Layout
+   Grid: məhsul sütunu qalan boşluğu doldurur; Say/Cəm yalnız məzmun enində —
+   böyük ekranda ad ilə rəqəmlər arasında artıq boşluq yaranmır.
+   .col-name üçün nowrap/ellipsis götürülüb — uzun adlar sətirə bölünür. */
 .order-table-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(96px, auto) minmax(82px, auto);
+    column-gap: 12px;
     align-items: center;
     height: 50px;
     padding: 0 15px;
@@ -1378,35 +1383,46 @@
     font-size: 0.75rem;
 }
 
-/* Update Detail Columns */
-.col-name-header,
-.col-name {
-    flex: 1.8;
-    /* Reduced from 2 to give space to others */
+.col-name-header {
+    min-width: 0;
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding-right: 5px;
+    padding-right: 4px;
+}
+
+.col-name {
+    flex: unset !important;
+    min-width: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow: visible;
+    padding-right: 8px;
 }
 
 .col-qty-header,
 .col-qty {
-    flex: 1.2;
-    /* Increased from 1 */
+    flex: unset !important;
+    justify-self: center;
     text-align: center;
 }
 
 .col-total-header,
 .col-total {
-    flex: 1;
+    flex: unset !important;
+    justify-self: end;
     text-align: right;
 }
 
-/* Update order item for grid alignment */
 .order-item {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(96px, auto) minmax(82px, auto);
+    column-gap: 12px;
+    align-items: start;
     padding: 12px 10px;
     border-bottom: 1px dashed #e2e8f0;
 }
@@ -1439,8 +1455,35 @@
     border-left: 3px solid #053796;
 }
 
+/* Geniş monitor: bir az daha rahat aralıq və oxunaqlı məhsul adı */
+@media (min-width: 1200px) {
+    .order-table-header,
+    .order-item {
+        grid-template-columns: minmax(0, 1fr) minmax(112px, auto) minmax(96px, auto);
+        column-gap: 16px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .order-item .col-name {
+        font-size: 1rem;
+        line-height: 1.45;
+    }
+
+    .order-table-header {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
+
 /* Adjust mobile styles */
 @media (max-width: 576px) {
+    .order-table-header,
+    .order-item {
+        grid-template-columns: minmax(0, 1fr) minmax(74px, auto) minmax(70px, auto);
+        column-gap: 8px;
+    }
+
     .order-table-header {
         padding: 8px 10px;
     }

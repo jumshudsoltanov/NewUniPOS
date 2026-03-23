@@ -1,4 +1,4 @@
-const { app, Menu, BrowserWindow, ipcMain, screen, globalShortcut } = require("electron");
+const { app, Menu, BrowserWindow, ipcMain, screen, globalShortcut, nativeImage } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const log = require("electron-log");
 
@@ -17,6 +17,76 @@ let mainWindow = null;
 let customerWindow = null;
 let kitchenWindow = null;
 let isCustomerDisplayManuallyClosed = false; // Global flag
+
+/** İlk tapılan fayl: köhnə static/logo.png çox vaxt yoxdur; UniPOS loqosunu front/src və ya dist-dən götürürük */
+let cachedAppIconPath;
+function getAppIconPath() {
+  if (cachedAppIconPath !== undefined) {
+    return cachedAppIconPath || undefined;
+  }
+  let found = null;
+  try {
+    const appPath = app.getAppPath();
+    const candidates = [
+      path.join(__dirname, "..", "static", "images", "logo.png"),
+      path.join(__dirname, "..", "front", "src", "assets", "images", "unipos_logo.png"),
+      path.join(__dirname, "..", "front", "src", "assets", "images", "logo.png"),
+      path.join(__dirname, "..", "front", "public", "favicon.png"),
+      path.join(__dirname, "..", "front", "dist", "favicon.png"),
+      path.join(appPath, "electron", "front", "dist", "favicon.png"),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        found = p;
+        break;
+      }
+    }
+  } catch (e) {
+    found = null;
+  }
+  cachedAppIconPath = found;
+  return found || undefined;
+}
+
+function browserWindowIconFields() {
+  const p = getAppIconPath();
+  return p ? { icon: p } : {};
+}
+
+/**
+ * DevTools pəncərəsinə tətbiq loqosunu tətbiq edir — default Electron ikonu əvəz olunur.
+ */
+function applyDevToolsIconToWindow(browserWindow) {
+  if (!browserWindow?.webContents) return;
+  const iconPath = getAppIconPath();
+  if (!iconPath || !fs.existsSync(iconPath)) return;
+  try {
+    const dwc = browserWindow.webContents.devToolsWebContents;
+    if (!dwc) return;
+    const devWin = BrowserWindow.fromWebContents(dwc);
+    if (devWin && !devWin.isDestroyed()) {
+      const img = nativeImage.createFromPath(iconPath);
+      if (!img.isEmpty()) {
+        devWin.setIcon(img);
+      } else {
+        devWin.setIcon(iconPath);
+      }
+    }
+  } catch (e) {
+    /* devToolsWebContents gec hazır ola bilər */
+  }
+}
+
+function attachDevToolsIcon(browserWindow) {
+  if (!browserWindow || !browserWindow.webContents) return;
+  const scheduleApply = () => {
+    applyDevToolsIconToWindow(browserWindow);
+  };
+  browserWindow.webContents.on("devtools-opened", () => {
+    scheduleApply();
+    [50, 150, 400, 800, 1500].forEach((ms) => setTimeout(scheduleApply, ms));
+  });
+}
 
 // --- GLOBAL CRASH REPORTER ---
 const crashLogPath = path.join(app.getPath('userData'), "UniPOS_Crash_Log.txt");
@@ -74,13 +144,15 @@ function createWindow() {
     width: 1200,
     height: 800,
     fullscreen: true, // Start in fullscreen
-    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
+    ...browserWindowIconFields(),
     webPreferences: {
       preload: preloadPath,
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
+
+  attachDevToolsIcon(mainWindow);
 
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173/");
@@ -198,13 +270,15 @@ function createWindow() {
       width: targetDisplay.bounds.width,
       height: targetDisplay.bounds.height,
       fullscreen: true,
-      icon: path.join(__dirname, "..", "static", "images", "logo.png"),
+      ...browserWindowIconFields(),
       autoHideMenuBar: true,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
       },
     });
+
+    attachDevToolsIcon(customerWindow);
 
     if (isDev) {
       customerWindow.loadURL("http://localhost:5173/#/customer");
@@ -338,13 +412,15 @@ ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
     width: targetDisplay.bounds.width,
     height: targetDisplay.bounds.height,
     fullscreen: true,
-    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
+    ...browserWindowIconFields(),
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
+
+  attachDevToolsIcon(customerWindow);
 
   if (isDev) {
     customerWindow.loadURL("http://localhost:5173/#/customer");
@@ -381,13 +457,15 @@ ipcMain.handle("toggle-kitchen-display", (event, { active, screenId }) => {
     width: targetDisplay.bounds.width,
     height: targetDisplay.bounds.height,
     fullscreen: true,
-    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
+    ...browserWindowIconFields(),
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
+
+  attachDevToolsIcon(kitchenWindow);
 
   if (isDev) {
     kitchenWindow.loadURL("http://localhost:5173/#/kitchen-display");
@@ -412,13 +490,15 @@ function createKitchenWindow(screenId) {
     width: targetDisplay.bounds.width,
     height: targetDisplay.bounds.height,
     fullscreen: true,
-    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
+    ...browserWindowIconFields(),
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
+
+  attachDevToolsIcon(kitchenWindow);
 
   if (isDev) {
     kitchenWindow.loadURL("http://localhost:5173/#/kitchen-display");
@@ -477,7 +557,7 @@ ipcMain.handle("print-receipt", async (event, { html, printerName, printerIp, pr
 
   let printWindow = new BrowserWindow({
     show: false,
-    icon: path.join(__dirname, "..", "static", "images", "logo.png"),
+    ...browserWindowIconFields(),
     webPreferences: { nodeIntegration: true, contextIsolation: false, webSecurity: false }
   });
 
@@ -647,8 +727,44 @@ ipcMain.handle("quit-app", () => {
   app.quit();
 });
 
+/** Eyni PC-də iki ayrı POS pəncərəsi üçün: `UniPOS.exe --unipos-instance=kassa2` — hər instansın kassa printer seçimi ayrı saxlanır */
+function getUniposInstanceLabel() {
+  try {
+    const argv = process.argv || [];
+    for (const a of argv) {
+      if (typeof a === "string" && a.startsWith("--unipos-instance=")) {
+        const raw = a.slice("--unipos-instance=".length).trim();
+        const safe = raw.replace(/[^a-zA-Z0-9_-]/g, "");
+        return safe || "default";
+      }
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  return "default";
+}
+
+ipcMain.handle("get-unipos-instance", () => getUniposInstanceLabel());
+
 ipcMain.handle("get-app-version", () => {
   return app.getVersion();
+});
+
+ipcMain.handle("open-devtools-detached", () => {
+  try {
+    const openDetached = (win) => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.openDevTools({ mode: "detach" });
+        [100, 300, 600].forEach((ms) => setTimeout(() => applyDevToolsIconToWindow(win), ms));
+      }
+    };
+    openDetached(mainWindow);
+    openDetached(customerWindow);
+    openDetached(kitchenWindow);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: e?.message || String(e) };
+  }
 });
 
 const STATIC_MASTER_IP_PATH = path.join(app.getPath("userData"), "unipos_master_ip.txt");
@@ -843,15 +959,15 @@ app.whenReady().then(() => {
   ensureFirewallRule();
   createWindow();
 
-  // Konsolu acmaq ucun qisa yol (Ctrl+Shift+C ve Ctrl+Shift+N)
-  const toggleDevTools = () => {
-    if (mainWindow) mainWindow.webContents.toggleDevTools();
-    if (customerWindow) customerWindow.webContents.toggleDevTools();
-    if (kitchenWindow) kitchenWindow.webContents.toggleDevTools();
-  };
-
-  globalShortcut.register('CommandOrControl+Shift+C+N', toggleDevTools);
-  globalShortcut.register('CommandOrControl+Shift+N+C', toggleDevTools);
+  globalShortcut.register("CommandOrControl+Shift+N", () => {
+    try {
+      [mainWindow, customerWindow, kitchenWindow].forEach((win) => {
+        if (win && !win.isDestroyed()) win.webContents?.openDevTools({ mode: "detach" });
+      });
+    } catch (e) {
+      log.warn("[DEVTOOLS] Shortcut xətası:", e?.message);
+    }
+  });
 
   autoUpdater.on("checking-for-update", () => {
     console.log("[AUTO-UPDATE] Yenilənmə yoxlanılır...");
@@ -938,6 +1054,9 @@ app.on("window-all-closed", () => {
 
 // Extra safety: ensure all processes are terminated
 app.on("before-quit", () => {
+  try {
+    globalShortcut.unregister("CommandOrControl+Shift+N");
+  } catch (e) {}
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy();
   if (customerWindow && !customerWindow.isDestroyed()) customerWindow.destroy();
   if (kitchenWindow && !kitchenWindow.isDestroyed()) kitchenWindow.destroy();

@@ -8,6 +8,43 @@ import CustomerReceipt from "../components/Receipt/CustomerReceipt";
 let _printersCache = { profileId: null, printers: null };
 export const clearPrintersCache = () => { _printersCache = { profileId: null, printers: null }; };
 
+/** App.jsx işə düşəndə `sessionStorage`-a yazılır (Electron `--unipos-instance`) */
+export function getUniposInstanceLabelForStorage() {
+    try {
+        return sessionStorage.getItem("unipos_instance_label") || "default";
+    } catch {
+        return "default";
+    }
+}
+
+export function cashierPrinterPrefStorageKey() {
+    return `unipos_preferred_cashier_printer_id_${getUniposInstanceLabelForStorage()}`;
+}
+
+/**
+ * Bir neçə aktiv kassa printeri olanda: Cihazlar → bu terminal üçün seçim və ya "hamısı".
+ * Boş = köhnə davranış — yalnız ilk `is_cashier` printeri.
+ */
+export function resolveCashierPrintersForPrint(printers) {
+    const cashiers = (printers || []).filter((p) => Number(p.is_cashier) === 1);
+    if (!cashiers.length) return [];
+    let pref = "";
+    try {
+        pref = localStorage.getItem(cashierPrinterPrefStorageKey()) || "";
+    } catch {
+        pref = "";
+    }
+    if (pref === "all") return cashiers;
+    if (pref) {
+        const id = Number(pref);
+        if (!Number.isNaN(id)) {
+            const one = cashiers.find((p) => Number(p.id) === id);
+            if (one) return [one];
+        }
+    }
+    return [cashiers[0]];
+}
+
 const getProfileForPrinting = (profileData, orderProfile) => {
     try {
         const authStr = localStorage.getItem("authResult");
@@ -227,8 +264,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         _printersCache = { profileId, printers };
     }
 
-    const printer = printers?.find(p => p.is_cashier === 1);
-    const printerName = printer?.local_name || printer?.name;
+    const cashierPrinters = resolveCashierPrintersForPrint(printers);
 
     const logError = async (action, details) => {
         try {
@@ -245,7 +281,7 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         }
     };
 
-    if (!printerName) {
+    if (!cashierPrinters.length) {
         addNotification("Çap Xətası", "Kassa printeri təyin edilməyib", { orderId: orderData?.checkData?.id || orderData?.orderId, category: "system", type: "error" });
         logError("Müştəri Çapı Xətası", "Kassa printeri təyin edilməyib").catch(() => {});
         return { success: false, error: "Kassa printeri tapılmadı" };
@@ -285,43 +321,65 @@ export const printCustomerReceipt = async (orderData, profileData) => {
         const forceDelegate = !window.electronAPI;
         const isSlave = !isMaster && isMasterSlaveActive;
 
-        if (canDelegate && (forceDelegate || (isMasterCashierPrinting && isSlave))) {
+        const buildCashierPrintPayload = (printer) => {
+            const printerName = printer?.local_name || printer?.name;
             const isNetworkPrinter = printer?.connection_type === "network" || !!printer?.ip;
-            const delegatePayload = isNetworkPrinter && printer?.ip && !printer?.usb_name
-                ? { html, printerName: "", printerIp: printer.ip, printerPort: printer.port || 9100 }
-                : { html, printerName: printer?.usb_name || printerName };
-            console.warn(`[PRINTER] Mərkəzi kassa çapı Slave-dən Master-a göndərilir`);
-            socket.emit("delegate_print", delegatePayload);
-            return { success: true, delegated: true };
-        } else if (forceDelegate && !canDelegate) {
+            const hasUsbName = !!(printer?.usb_name && printer.usb_name.trim());
+            if (isNetworkPrinter && printer?.ip && !hasUsbName) {
+                return { html, printerName: "", printerIp: printer.ip, printerPort: printer.port || 9100 };
+            }
+            return { html, printerName: printer?.usb_name || printerName };
+        };
+
+        if (forceDelegate && !canDelegate) {
             console.error(`[PRINTER] Customer Receipt Delegation failed. Not connected to Master.`);
             addNotification("Çap Xətası", "Master POS terminalına qoşulma yoxdur.", { orderId: orderData.checkData?.id, category: "system", type: "error" });
             return { success: false, error: "Master POS qoşulması yoxdur" };
         }
 
-        // Local target — USB (usb_name) və ya IP (raw socket)
-        const isNetworkPrinter = printer?.connection_type === "network" || !!printer?.ip;
-        const hasUsbName = !!(printer?.usb_name && printer.usb_name.trim());
-        const printPayload = isNetworkPrinter && printer?.ip && !hasUsbName
-            ? { html, printerName: "", printerIp: printer.ip, printerPort: printer.port || 9100 }
-            : { html, printerName: printer?.usb_name || printerName };
+        if (canDelegate && (forceDelegate || (isMasterCashierPrinting && isSlave))) {
+            console.warn(`[PRINTER] Mərkəzi kassa çapı Slave-dən Master-a (${cashierPrinters.length} printer)`);
+            for (const printer of cashierPrinters) {
+                const delegatePayload = buildCashierPrintPayload(printer);
+                socket.emit("delegate_print", delegatePayload);
+                await new Promise((r) => setTimeout(r, 60));
+            }
+            return { success: true, delegated: true };
+        }
 
         if (window.electronAPI && window.electronAPI.printReceipt) {
-            const result = await window.electronAPI.printReceipt(printPayload);
-
-            if (!result || !result.success) {
-                const errMsg = result?.error || 'Bilinməyən xəta';
-                addNotification("Çap Xətası", `kassa printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: orderData.checkData?.id, category: "system", type: "error" });
-                logError("Müştəri Çapı Xətası", `Kassa çapı xətası: ${errMsg}`).catch(() => {});
-                return { success: false, error: errMsg };
+            let lastErr = null;
+            let anyOk = false;
+            for (const printer of cashierPrinters) {
+                const printPayload = buildCashierPrintPayload(printer);
+                const nm = printPayload.printerName || printPayload.printerIp;
+                if (!nm) {
+                    lastErr = "Printer adı və ya IP yoxdur";
+                    continue;
+                }
+                try {
+                    const result = await window.electronAPI.printReceipt(printPayload);
+                    if (result && result.success) {
+                        anyOk = true;
+                    } else {
+                        lastErr = result?.error || "Bilinməyən xəta";
+                        const pLabel = printer?.local_name || printer?.name || printPayload.printerIp;
+                        addNotification("Çap Xətası", `${pLabel}: ${lastErr}`, { orderId: orderData.checkData?.id, category: "system", type: "error" });
+                        logError("Müştəri Çapı Xətası", `Kassa çapı (${pLabel}): ${lastErr}`).catch(() => {});
+                    }
+                } catch (pe) {
+                    lastErr = pe?.message || String(pe);
+                }
+                await new Promise((r) => setTimeout(r, 80));
             }
-            return { success: true };
-        } else {
-            const errMsg = "Electron API mövcud deyil";
-            addNotification("Sistem Xətası", errMsg, { orderId: orderData.checkData?.id, category: "system", type: "error" });
-            logError("Sistem Xətası", errMsg).catch(() => {});
-            return { success: false, error: errMsg };
+            if (anyOk) return { success: true };
+            return { success: false, error: lastErr || "Çap uğursuz" };
         }
+
+        const errMsg = "Electron API mövcud deyil";
+        addNotification("Sistem Xətası", errMsg, { orderId: orderData.checkData?.id, category: "system", type: "error" });
+        logError("Sistem Xətası", errMsg).catch(() => {});
+        return { success: false, error: errMsg };
     } catch (error) {
         console.error("Print generation error:", error);
         addNotification("Çap Xətası", "Çek yaradılarkən xəta baş verdi", { orderId: orderData.checkData?.id, category: "system", type: "error" });

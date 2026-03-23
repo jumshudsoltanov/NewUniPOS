@@ -48,6 +48,22 @@ function AppContent() {
 
   const authResultRedux = useSelector((state) => state.LoginSlice.loginedProfileData);
 
+  /* İki ayrı POS instansı üçün kassa printer seçimi: main proses `--unipos-instance=...` */
+  useEffect(() => {
+    (async () => {
+      try {
+        if (window.electronAPI?.getUniposInstance) {
+          const label = await window.electronAPI.getUniposInstance();
+          sessionStorage.setItem("unipos_instance_label", label && String(label).trim() ? String(label).trim() : "default");
+        } else {
+          sessionStorage.setItem("unipos_instance_label", "default");
+        }
+      } catch {
+        sessionStorage.setItem("unipos_instance_label", "default");
+      }
+    })();
+  }, []);
+
   // Refs - re-render olmadan state saxlamaq üçün
   const initStarted = useRef(false);
   const [showInitialLoading, setShowInitialLoading] = useState(true);
@@ -365,22 +381,14 @@ function AppContent() {
     return (
       <>
         <UpdateNotification />
-        <div
-          className="loginLoadingState"
-          style={{
-            height: "100vh",
-            background: "#F3F4F6",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div className="premium-loader">
-            <div className="loader-ring"></div>
-            <div className="loader-dot"></div>
+        <div className="loading-overlay-transparent">
+          <div className="loading-overlay-inner">
+            <div className="premium-loader">
+              <div className="loader-ring"></div>
+              <div className="loader-dot"></div>
+            </div>
+            <p className="loadingText">Sistem yüklənir...</p>
           </div>
-          <p className="loadingText">Sistem yüklənir...</p>
         </div>
       </>
     );

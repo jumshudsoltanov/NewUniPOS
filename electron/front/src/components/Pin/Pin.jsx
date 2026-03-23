@@ -5,10 +5,11 @@ import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault
 import DefaultLogo from "../../assets/images/unipos_logo.png";
 import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
+import PinAdvancedSettingsModal from "../PinAdvancedSettingsModal/PinAdvancedSettingsModal";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { getWaiter } from "../../redux/Slices/WaitersSlice";
+import { resolveWaiter } from "../../redux/Slices/WaitersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
@@ -194,6 +195,20 @@ const Pin = () => {
   const [pinSyncCounts, setPinSyncCounts] = useState(null);
   const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
   const [appVersion, setAppVersion] = useState(null);
+  const [isPinAdvancedSettingsOpen, setIsPinAdvancedSettingsOpen] = useState(false);
+
+  const keyboardBufferRef = useRef("");
+  const keyboardPinTimerRef = useRef(null);
+  const logoSecretTapCountRef = useRef(0);
+  const logoSecretTapTimerRef = useRef(null);
+
+  const clearKeyboardCapture = useCallback(() => {
+    if (keyboardPinTimerRef.current) {
+      clearTimeout(keyboardPinTimerRef.current);
+      keyboardPinTimerRef.current = null;
+    }
+    keyboardBufferRef.current = "";
+  }, []);
 
   useEffect(() => {
     if (window.electronAPI?.getAppVersion) {
@@ -262,18 +277,22 @@ const Pin = () => {
     setPinSyncCounts(null);
     try {
       const profileId = activeProfileData.data.profile.id;
-      const [syncRes] = await Promise.all([
-        apiConfig.post(`/sync/refresh/${profileId}`),
-        apiConfig.post(`/sync/force-now`).catch(() => ({})), // Gözləyən sifarişləri admin-ə göndər
+      // Əvvəl serverdən DB-yə yaz — sonra GET; əks halda Promise.all yarışında köhnə məlumat gəlirdi (2 dəfə basmaq lazım idi)
+      const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`);
+      await apiConfig.post(`/sync/force-now`).catch(() => ({}));
+
+      if (syncRes?.data?.counts) {
+        setPinSyncCounts(syncRes.data.counts);
+      }
+
+      await Promise.all([
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
         dispatch(menuWithCategories(profileId)).unwrap(),
         dispatch(menuWithGeneralCategories(profileId)).unwrap(),
-        new Promise(resolve => setTimeout(resolve, 2000))
       ]);
 
       if (syncRes?.data?.counts) {
-        setPinSyncCounts(syncRes.data.counts);
         await new Promise(resolve => setTimeout(resolve, 1800));
       } else {
         toast.success("Məlumatlar uğurla yeniləndi!");
@@ -306,6 +325,31 @@ const Pin = () => {
     navigate("/");
   };
 
+  const handleLogoSecretTap = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (logoSecretTapTimerRef.current) {
+      clearTimeout(logoSecretTapTimerRef.current);
+      logoSecretTapTimerRef.current = null;
+    }
+    logoSecretTapCountRef.current += 1;
+    if (logoSecretTapCountRef.current >= 5) {
+      logoSecretTapCountRef.current = 0;
+      setIsPinAdvancedSettingsOpen(true);
+      return;
+    }
+    logoSecretTapTimerRef.current = setTimeout(() => {
+      logoSecretTapCountRef.current = 0;
+      logoSecretTapTimerRef.current = null;
+    }, 2000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (logoSecretTapTimerRef.current) clearTimeout(logoSecretTapTimerRef.current);
+    };
+  }, []);
+
   const handleQuitApp = () => {
     if (window.electronAPI?.quitApp) {
       window.electronAPI.quitApp();
@@ -324,13 +368,10 @@ const Pin = () => {
     }
   }, [loginedProfileData?.data?.profile?.id, dispatch]);
 
-  const handlePinSubmit = async (submittedPin) => {
-    try {
-      const profileId = loginedProfileData?.data?.profile?.id;
-
-      const waiterResult = await dispatch(getWaiter(submittedPin)).unwrap();
-
+  const completeWaiterLogin = useCallback(
+    async (waiterResult) => {
       if (waiterResult.message === "success") {
+        const profileId = activeProfileData?.data?.profile?.id;
         const isPacksOnly = isPacksOnlyWaiter(waiterResult.data);
         if (profileId) {
           dispatch(getTableGroups(profileId));
@@ -344,33 +385,76 @@ const Pin = () => {
           setPin("");
         }, 500);
       }
-    } catch (error) {
-      setIsError(true);
-      setTimeout(() => {
-        setIsError(false);
-        setPin("");
-      }, 500);
-    }
-  };
+    },
+    [activeProfileData, dispatch, navigate],
+  );
+
+  const handlePinSubmit = useCallback(
+    async (submittedPin) => {
+      try {
+        const profileId = activeProfileData?.data?.profile?.id;
+        if (!profileId) {
+          toast.error("Profil məlumatı yoxdur.");
+          return;
+        }
+        const waiterResult = await dispatch(
+          resolveWaiter({ profileId, pin: submittedPin }),
+        ).unwrap();
+        await completeWaiterLogin(waiterResult);
+      } catch (error) {
+        setIsError(true);
+        setTimeout(() => {
+          setIsError(false);
+          setPin("");
+        }, 500);
+      }
+    },
+    [activeProfileData, dispatch, completeWaiterLogin],
+  );
+
+  const handleCardLogin = useCallback(
+    async (cardId) => {
+      try {
+        const profileId = activeProfileData?.data?.profile?.id;
+        if (!profileId) {
+          toast.error("Profil məlumatı yoxdur.");
+          return;
+        }
+        const waiterResult = await dispatch(
+          resolveWaiter({ profileId, cardId }),
+        ).unwrap();
+        await completeWaiterLogin(waiterResult);
+      } catch (error) {
+        setIsError(true);
+        setTimeout(() => {
+          setIsError(false);
+          setPin("");
+        }, 500);
+      }
+    },
+    [activeProfileData, dispatch, completeWaiterLogin],
+  );
 
   const handleNumberClick = useCallback(
     (num) => {
+      clearKeyboardCapture();
       setPin((prev) => {
         if (prev.length < PIN_LENGTH) {
           const next = prev + num;
           setIsError(false);
           if (next.length === PIN_LENGTH) {
-            handlePinSubmit(next);
+            queueMicrotask(() => handlePinSubmit(next));
           }
           return next;
         }
         return prev;
       });
     },
-    [dispatch, navigate, loginedProfileData],
+    [clearKeyboardCapture, handlePinSubmit],
   );
 
   const handleBackspace = useCallback(() => {
+    clearKeyboardCapture();
     setPin((prev) => {
       if (prev.length > 0) {
         setIsError(false);
@@ -378,12 +462,99 @@ const Pin = () => {
       }
       return prev;
     });
-  }, []);
+  }, [clearKeyboardCapture]);
 
   const handleClear = useCallback(() => {
+    clearKeyboardCapture();
     setPin("");
     setIsError(false);
-  }, []);
+  }, [clearKeyboardCapture]);
+
+  useEffect(() => {
+    const digitFromEvent = (e) => {
+      if (e.key >= "0" && e.key <= "9") return e.key;
+      if (e.code && /^Digit[0-9]$/.test(e.code)) return e.code.slice(5);
+      if (e.code && /^Numpad[0-9]$/.test(e.code)) return e.code.slice(6);
+      return null;
+    };
+
+    const clearPinTimerOnly = () => {
+      if (keyboardPinTimerRef.current) {
+        clearTimeout(keyboardPinTimerRef.current);
+        keyboardPinTimerRef.current = null;
+      }
+    };
+
+    const onKeyDown = (e) => {
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.target?.closest?.(".modal")) return;
+
+      const digit = digitFromEvent(e);
+      if (digit) {
+        e.preventDefault();
+        clearPinTimerOnly();
+        keyboardBufferRef.current += digit;
+        const buf = keyboardBufferRef.current;
+        if (buf.length <= PIN_LENGTH) {
+          setPin(buf);
+          setIsError(false);
+        } else {
+          setPin("");
+        }
+        if (buf.length === PIN_LENGTH) {
+          keyboardPinTimerRef.current = setTimeout(() => {
+            if (keyboardBufferRef.current.length === PIN_LENGTH) {
+              const p = keyboardBufferRef.current;
+              keyboardBufferRef.current = "";
+              setPin("");
+              handlePinSubmit(p);
+            }
+            keyboardPinTimerRef.current = null;
+          }, 220);
+        }
+        return;
+      }
+
+      if (e.key === "Backspace") {
+        e.preventDefault();
+        clearPinTimerOnly();
+        keyboardBufferRef.current = keyboardBufferRef.current.slice(0, -1);
+        const buf = keyboardBufferRef.current;
+        setPin(buf.length <= PIN_LENGTH ? buf : "");
+        setIsError(false);
+        return;
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        clearPinTimerOnly();
+        const raw = keyboardBufferRef.current.trim();
+        keyboardBufferRef.current = "";
+        setPin("");
+        if (!raw) return;
+        if (raw.length === PIN_LENGTH && /^\d+$/.test(raw)) {
+          handlePinSubmit(raw);
+        } else {
+          handleCardLogin(raw);
+        }
+        return;
+      }
+
+      if (e.key === "Escape") {
+        clearPinTimerOnly();
+        keyboardBufferRef.current = "";
+        setPin("");
+        setIsError(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      clearPinTimerOnly();
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [handlePinSubmit, handleCardLogin]);
 
   const cloudBg = terminalInfo.background || terminalInfo.bg ||
     profileInfo.background_img || profileInfo.bg || profileInfo.background;
@@ -508,16 +679,25 @@ const Pin = () => {
               </div>
 
               <div className="logoContainer">
-                <img
-                  src={logoSrc}
-                  alt="logo"
-                  onError={(e) => {
-                    if (e.target.src !== DefaultLogo) {
-                      e.target.src = DefaultLogo;
-                    }
-                  }}
-                  style={{ maxHeight: "150px", maxWidth: "250px", objectFit: "contain" }}
-                />
+                <button
+                  type="button"
+                  className="pin-logo-secret-tap"
+                  onClick={handleLogoSecretTap}
+                  title=""
+                  aria-label="Logo"
+                >
+                  <img
+                    src={logoSrc}
+                    alt="logo"
+                    onError={(e) => {
+                      if (e.target.src !== DefaultLogo) {
+                        e.target.src = DefaultLogo;
+                      }
+                    }}
+                    style={{ maxHeight: "150px", maxWidth: "250px", objectFit: "contain", pointerEvents: "none" }}
+                    draggable={false}
+                  />
+                </button>
               </div>
 
               {/* Payment Warning Banner */}
@@ -622,8 +802,13 @@ const Pin = () => {
         onRefresh={handleRefresh}
         onBrandList={handleBrandList}
         onDownloadData={handleDownloadData}
-        onExit={handleExit}
         onQuitApp={handleQuitApp}
+      />
+
+      <PinAdvancedSettingsModal
+        show={isPinAdvancedSettingsOpen}
+        onClose={() => setIsPinAdvancedSettingsOpen(false)}
+        onExitTerminal={handleExit}
       />
 
       <RefreshLoader isOpen={isRefreshing} syncCounts={pinSyncCounts} />

@@ -124,12 +124,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
   }, [orders, products, sentProducts, pendingDeletions]);
 
-  // Close Check
-  const goCloseCheck = async () => {
-    const isMaster = loginedProfileData?.data?.profile?.is_master === 1 || loginedProfileData?.data?.terminal?.is_master === 1;
-    const hasPermission = Number(loginedWaiter?.data?.cannot_close_check) === 1;
+  // Çek bağlama (CheckOver): master/slave fərqi yoxdur — yalnız cannot_close_check: 1 = bağlamaq olar, 0 = olmaz
+  const canCloseCheck = Number(loginedWaiter?.data?.cannot_close_check) === 1;
 
-    if (!isMaster && !hasPermission) {
+  const goCloseCheck = async () => {
+    if (!canCloseCheck) {
       toast.error("İcazəniz yoxdur: Çek bağlamaq hüququnuz yoxdur.");
       return;
     }
@@ -434,12 +433,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
             )}
           </div>
 
-          {(() => {
-            const isMaster = loginedProfileData?.data?.profile?.is_master === 1 || loginedProfileData?.data?.terminal?.is_master === 1;
-            const hasPermission = Number(loginedWaiter?.data?.cannot_close_check) === 1;
-
-            if (isMaster || hasPermission) {
-              return (
+          {canCloseCheck ? (
                 <button
                   className={`btn-pay ${orders?.is_locked == 1 ? 'disabled' : ''}`}
                   disabled={orders?.is_locked == 1}
@@ -448,10 +442,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
                   <i className="bi bi-check2-all"></i>
                   <span>{calcTotal.sumTotal} ₼</span>
                 </button>
-              );
-            }
-            return null;
-          })()}
+          ) : null}
         </div>
       </div>
 
@@ -516,12 +507,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         >
           <i className="bi bi-trash-fill"></i>
         </button>
-        {(() => {
-          const isMaster = loginedProfileData?.data?.profile?.is_master === 1 || loginedProfileData?.data?.terminal?.is_master === 1;
-          const hasPermission = Number(loginedWaiter?.data?.cannot_close_check) === 1;
-
-          if (isMaster || hasPermission) {
-            return (
+        {canCloseCheck ? (
               <button
                 className="mobile-pay-btn"
                 disabled={orders?.is_locked == 1}
@@ -530,10 +516,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
                 <i className="bi bi-check2-all fs-4 text-white"></i>
                 <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
               </button>
-            );
-          }
-          return null;
-        })()}
+        ) : null}
       </div>
 
       <SalesTypesModal

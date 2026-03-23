@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     quitApp: () => ipcRenderer.invoke("quit-app"),
     getAppVersion: () => ipcRenderer.invoke("get-app-version"),
     installUpdate: () => ipcRenderer.invoke("install-update"),
+    openDevToolsDetached: () => ipcRenderer.invoke("open-devtools-detached"),
+    getUniposInstance: () => ipcRenderer.invoke("get-unipos-instance"),
     onCheckingForUpdate: (callback) => ipcRenderer.on("checking-for-update", (event) => callback()),
     onUpdateAvailable: (callback) => ipcRenderer.on("update-available", (event, info) => callback(info)),
     onUpdateDownloadProgress: (callback) => ipcRenderer.on("update-download-progress", (event, percent) => callback(percent)),

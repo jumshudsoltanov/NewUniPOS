@@ -14,13 +14,16 @@ const PrintersController = require("../controller/PrintersController");
 const ProductsController = require("../controller/ProductsController");
 const KitchenController = require("../controller/KitchenController");
 const OrderingController = require("../controller/OrderingController");
+const AdminController = require("../controller/AdminController");
 
 // Routers lists
 router.get("/ping", (req, res) => res.json({ success: true }));
+router.post("/admin/reset-local-database", AdminController.resetLocalDatabase);
 router.post("/login", LoginController.getLogin);
 router.get("/orders/:profileId/next-id", SalesController.getNextOrderId);
 router.post("/sale", SalesController.CreateNewOrders);
 router.post("/other-sale", SalesController.CreateNewOtherOrders);
+router.get("/waiters/resolve", WaitersController.resolveWaiterLogin);
 router.get("/waiters/:pin", WaitersController.getWaiterInfo);
 router.get("/tables/:profileId", TablesController.getTables);
 router.get("/pos/printers/:profileId", PrintersController.getPrinters);

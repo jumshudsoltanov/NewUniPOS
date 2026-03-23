@@ -58,6 +58,17 @@ const CheckOver = () => {
     const { customers } = useSelector((state) => state.CustomersSlice);
     const dispatch = useDispatch();
 
+    // CheckBottom ilə eyni: cannot_close_check === 1 olmayan birbaşa URL ilə gələ bilməz (master/slave istisnası yoxdur)
+    useEffect(() => {
+        if (!id) return;
+        const w = loginedWaiter?.data;
+        if (w == null) return;
+        if (Number(w.cannot_close_check) !== 1) {
+            toast.error("İcazəniz yoxdur: Çek bağlamaq hüququnuz yoxdur.");
+            navigate(`/check/${id}`, { replace: true });
+        }
+    }, [id, loginedWaiter?.data, navigate]);
+
     useEffect(() => {
         const fetchData = async () => {
             const profileId = loginedProfileData?.data?.profile?.id;

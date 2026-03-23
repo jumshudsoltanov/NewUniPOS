@@ -14,6 +14,7 @@ import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import DevicesModal from "./DevicesModal";
 import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import "./Settings.css";
+import { checkIsSlaveTerminal } from "../../utils/masterSlaveHelpers";
 
 const Settings = () => {
     const navigate = useNavigate();
@@ -33,9 +34,6 @@ const Settings = () => {
         return localStorage.getItem("showHeaderClock") === "true";
     });
     const [appVersion, setAppVersion] = useState(null);
-
-    const isMaster = loginedProfileData?.data?.terminal?.is_master === 1 || loginedProfileData?.data?.profile?.is_master === 1;
-    const isSlave = !isMaster && (loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1);
 
     useEffect(() => {
         if (window.electronAPI?.getAppVersion) {
@@ -95,13 +93,13 @@ const Settings = () => {
         const toastId = toast.loading("Məlumatlar yenilənir...");
         try {
             const profileId = loginedProfileData.data.profile.id;
-            const [syncRes] = await Promise.all([
-                apiConfig.post(`/sync/refresh/${profileId}`),
+            const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`);
+            if (syncRes?.data?.counts) setSyncCounts(syncRes.data.counts);
+
+            await Promise.all([
                 dispatch(getTableGroups(profileId)).unwrap(),
                 dispatch(getActiveOrders({ profileId })).unwrap(),
-                new Promise(resolve => setTimeout(resolve, 3000))
             ]);
-            if (syncRes?.data?.counts) setSyncCounts(syncRes.data.counts);
 
             const storageData = JSON.parse(localStorage.getItem("profile"));
             if (storageData) {
@@ -194,7 +192,9 @@ const Settings = () => {
             icon: <i className="bi bi-wifi"></i>,
             highlight: true,
             onClick: () => window.dispatchEvent(new CustomEvent("openMasterSlaveSettings")),
-            permission: isSlave && Number(loginedWaiter?.data?.can_access_settings) === 1,
+            permission: Number(loginedWaiter?.data?.can_access_settings) === 1,
+            /** Master terminalda kart göstərilmir — yalnız slave + aktiv master-slave */
+            slaveOnly: true,
         },
     ];
 
@@ -258,7 +258,13 @@ const Settings = () => {
                 <div className="settings-page-content">
                     {/* Top Menu Grid */}
                     <div className="settings-grid settings-grid-top">
-                        {topMenuItems.filter(item => item.permission !== false).map((item) => (
+                        {topMenuItems
+                            .filter(
+                                (item) =>
+                                    item.permission !== false &&
+                                    (!item.slaveOnly || checkIsSlaveTerminal()),
+                            )
+                            .map((item) => (
                             <button
                                 key={item.id}
                                 className="settings-card"

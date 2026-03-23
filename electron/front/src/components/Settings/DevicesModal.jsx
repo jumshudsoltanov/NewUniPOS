@@ -7,6 +7,7 @@ import QRCode from "react-qr-code";
 import apiConfig, { localApi, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
+import { cashierPrinterPrefStorageKey } from "../../utils/printerHelpers.jsx";
 import "./DevicesModal.css";
 
 const DevicesModal = ({ show, onHide }) => {
@@ -53,6 +54,8 @@ const DevicesModal = ({ show, onHide }) => {
     const [staticMasterIp, setStaticMasterIp] = useState("");
     const [staticIpSaving, setStaticIpSaving] = useState(false);
     const [staticIpScanning, setStaticIpScanning] = useState(false);
+    /** Bir neçə kassa printeri — hansına müştəri çeki çap olunacaq (terminal/instance üzrə) */
+    const [cashierPrintPref, setCashierPrintPref] = useState("");
 
     useEffect(() => {
         if (window.electronAPI?.getStaticMasterIp) {
@@ -73,11 +76,36 @@ const DevicesModal = ({ show, onHide }) => {
         localStorage.setItem("tax_local_names", JSON.stringify(updated));
     };
 
+    const handleCashierPrintPrefChange = (e) => {
+        const v = e.target.value;
+        setCashierPrintPref(v);
+        try {
+            const key = cashierPrinterPrefStorageKey();
+            if (v === "") {
+                localStorage.removeItem(key);
+            } else {
+                localStorage.setItem(key, v);
+            }
+            toast.success("Kassa çap seçimi yadda saxlanıldı");
+        } catch {
+            toast.error("Yadda saxlanmadı");
+        }
+    };
+
     useEffect(() => {
         if (show && profileId) {
             fetchData();
         }
     }, [show, profileId]);
+
+    useEffect(() => {
+        if (!show) return;
+        try {
+            setCashierPrintPref(localStorage.getItem(cashierPrinterPrefStorageKey()) || "");
+        } catch {
+            setCashierPrintPref("");
+        }
+    }, [show, printers]);
 
     const fetchData = async () => {
         try {
@@ -659,6 +687,29 @@ const DevicesModal = ({ show, onHide }) => {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {printers.filter((p) => Number(p.is_cashier) === 1).length >= 2 && (
+                                            <div className="cashier-print-select-card">
+                                                <h4 className="cashier-print-select-title">Bu terminal üçün kassa çapı</h4>
+                                                <p className="cashier-print-select-desc">Hansı kassa printerlərinə müştəri çeki getməli olduğunu seçin.</p>
+                                                <label className="cashier-print-select-label">Seçim</label>
+                                                <select
+                                                    className="form-select form-select-sm cashier-print-select"
+                                                    value={cashierPrintPref}
+                                                    onChange={handleCashierPrintPrefChange}
+                                                >
+                                                    <option value="">Avtomatik — yalnız ilk kassa printeri</option>
+                                                    <option value="all">Bütün kassa printerlərinə çap</option>
+                                                    {printers
+                                                        .filter((p) => Number(p.is_cashier) === 1)
+                                                        .map((p) => (
+                                                            <option key={p.id} value={String(p.id)}>
+                                                                {p.local_name || p.name}
+                                                            </option>
+                                                        ))}
+                                                </select>
+                                            </div>
+                                        )}
 
                                         <div style={{ marginBottom: '16px', marginTop: '24px' }}>
                                             <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>Printerlər</h4>

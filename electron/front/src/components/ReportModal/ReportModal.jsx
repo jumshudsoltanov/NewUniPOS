@@ -3,6 +3,7 @@ import { Modal, Row, Col, Form, Table } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
 import axios from "../../utils/apiConfig";
+import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import "./ReportModal.css";
 
@@ -130,8 +131,8 @@ const ReportModal = ({ show, onClose }) => {
         try {
             const response = await axios.get(`/pos/printers/${profileId}`);
             if (response.data?.data) {
-                const cashier = response.data.data.find(p => p.is_cashier === 1);
-                if (cashier) setCashierPrinter(cashier);
+                const list = resolveCashierPrintersForPrint(response.data.data);
+                if (list.length) setCashierPrinter(list[0]);
             }
         } catch (e) {}
     };

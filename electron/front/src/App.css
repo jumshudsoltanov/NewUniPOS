@@ -20,6 +20,50 @@ body,
 /* ==================== */
 /* GLOBAL LOADING STATE */
 /* ==================== */
+/* WiFi ekranı kimi şəffaf overlay */
+
+.loading-overlay-transparent {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
+    background: linear-gradient(160deg, rgba(5, 55, 150, 0.92) 0%, rgba(79, 133, 244, 0.9) 50%, rgba(5, 55, 150, 0.92) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2147483640;
+    animation: fadeInGlobal 0.6s ease-out;
+}
+
+.loading-overlay-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-overlay-transparent .premium-loader {
+    margin-bottom: 20px;
+}
+
+.loading-overlay-transparent .loader-ring {
+    border-color: rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+}
+
+.loading-overlay-transparent .loader-dot {
+    background-color: #fff;
+}
+
+.loading-overlay-transparent .loadingText {
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
 
 .loginLoadingState {
     display: flex;

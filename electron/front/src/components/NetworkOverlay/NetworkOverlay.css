@@ -1,381 +1,916 @@
-.net-overlay {
-    position: fixed;
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+/* Slave master əlaqəsi — tam ekran; Kontrol panel (#053796, #f5f6f8, settings-card) ilə uyğun */
+
+.network-master-modal-root.modal {
+    z-index: 2147483646;
+}
+
+/* İki modal: əvvəl qopdu (tam ekran), üstdə IP — z-index qatları */
+.network-master-modal--disconnect.modal {
+    z-index: 2147483646 !important;
+}
+
+.modal-backdrop.network-master-disconnect-backdrop.show {
+    z-index: 2147483645 !important;
+    background: rgba(15, 23, 42, 0.55) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 1 !important;
+}
+
+.network-master-modal-content--disconnect.modal-content {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Tam ekran şəffaf overlay — modal deyil, bütün ekranı tutur */
+.network-disconnect-overlay {
+    position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2147483647;
-    padding: 40px;
+    padding: 24px 20px;
+    box-sizing: border-box;
+    font-family: "Poppins", system-ui, -apple-system, sans-serif;
 }
 
-.net-overlay__card {
-    background: #fff;
+.network-disconnect-wifi-trigger {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.network-disconnect-wifi-trigger:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.network-disconnect-wifi-trigger:active {
+    transform: scale(0.95);
+}
+
+.network-disconnect-inner {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    max-width: 320px;
+}
+
+.network-disconnect-icon-wrap {
+    width: 64px;
+    height: 64px;
     border-radius: 16px;
-    padding: 40px 48px;
-    width: 100%;
-    max-width: 560px;
-    min-width: 340px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    overflow: hidden;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 28px;
 }
 
-.net-overlay__header {
+.network-disconnect-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.35;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.network-disconnect-lead {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.network-disconnect-quit-btn {
+    min-width: 200px;
+    height: 48px;
+    padding: 0 28px;
+    border-radius: 10px;
+    background: #4F85F4;
+    color: #fff;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.network-disconnect-quit-btn:hover {
+    background: #3d72e0;
+}
+
+.network-disconnect-quit-btn:active {
+    background: #3366cc;
+}
+
+.network-disconnect-quit-btn .bi {
+    font-size: 1.1rem;
+}
+
+/* Köhnə fullpage (keçid üçün saxlanır) */
+.network-master-disconnect-fullpage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+    box-sizing: border-box;
+    font-family: "Poppins", system-ui, -apple-system, sans-serif;
+}
+
+/* Şüşə / şəffaf kart — səliqəli, kompakt */
+.network-master-glass-panel {
+    width: 100%;
+    max-width: 400px;
+    padding: 26px 22px 22px;
+    background: rgba(255, 255, 255, 0.52);
+    backdrop-filter: blur(16px) saturate(165%);
+    -webkit-backdrop-filter: blur(16px) saturate(165%);
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.network-master-glass-panel__icon {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 14px;
+    border-radius: 14px;
+    background: rgba(254, 242, 242, 0.9);
+    border: 1px solid rgba(252, 165, 165, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #b91c1c;
+    font-size: 24px;
+    line-height: 1;
+}
+
+.network-master-glass-panel__title {
+    margin: 0 0 8px;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+}
+
+.network-master-glass-panel__lead {
+    margin: 0 0 14px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.55;
+}
+
+.network-master-glass-panel__hint {
+    margin: 0 0 18px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #57534e;
+    line-height: 1.45;
     display: flex;
     align-items: flex-start;
-    gap: 20px;
-    margin-bottom: 32px;
+    gap: 8px;
+    text-align: left;
+    padding: 10px 12px;
+    background: rgba(255, 251, 235, 0.55);
+    border: 1px solid rgba(253, 230, 138, 0.45);
+    border-radius: 10px;
+}
+
+.network-master-glass-panel__hint .bi {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: #ca8a04;
+    font-size: 0.95rem;
+}
+
+.network-master-glass-panel__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    align-items: stretch;
+}
+
+.network-master-btn-sm {
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0 16px;
+    min-height: 44px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    line-height: 1.25;
+    transition: background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, transform 0.08s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.network-master-btn-sm:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.network-master-btn-sm__ic {
+    font-size: 1.05rem;
+    line-height: 1;
+    flex-shrink: 0;
+    opacity: 0.95;
+}
+
+.network-master-btn-sm__txt {
+    flex: 0 1 auto;
+    text-align: center;
+}
+
+.network-master-btn-sm--primary {
+    background: linear-gradient(180deg, #0645ad 0%, #053796 48%, #042a7a 100%);
+    color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 4px 14px rgba(5, 55, 150, 0.28);
+}
+
+.network-master-btn-sm--primary:hover {
+    background: linear-gradient(180deg, #053796 0%, #042a7a 100%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 6px 18px rgba(5, 55, 150, 0.32);
+}
+
+.network-master-btn-sm--primary:focus-visible {
+    outline: 2px solid #93c5fd;
+    outline-offset: 2px;
+}
+
+.network-master-btn-sm--ghost {
+    background: rgba(255, 255, 255, 0.72);
+    color: #334155;
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.network-master-btn-sm--ghost:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.network-master-btn-sm--ghost:focus-visible {
+    outline: 2px solid #94a3b8;
+    outline-offset: 2px;
+}
+
+@media (min-width: 380px) {
+    .network-master-glass-panel__actions {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 10px;
+    }
+
+    .network-master-btn-sm {
+        flex: 1;
+        min-width: 0;
+        width: auto;
+    }
+}
+
+.network-master-modal--ipconfig.modal {
+    z-index: 2147483652 !important;
+}
+
+.modal-backdrop.network-master-ip-modal-backdrop.show {
+    z-index: 2147483651 !important;
+}
+
+.network-master-ip-dialog.custom-modal-width {
+    max-width: 440px !important;
+    width: calc(100% - 2rem) !important;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+}
+
+.network-master-ip-modal-body.discount-body {
+    padding: 20px 22px 22px;
+    gap: 16px;
+}
+
+.network-master-ip-modal-inner.discount-modal-container {
+    border-radius: 12px;
+}
+
+.modal-backdrop.network-master-modal-backdrop {
+    z-index: 2147483645;
+    background: rgba(15, 23, 42, 0.5) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.modal-backdrop.network-master-modal-backdrop--full.show {
+    background: #f5f6f8 !important;
+    opacity: 1 !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.network-master-modal-root .modal-fullscreen {
+    width: 100vw;
+    max-width: none;
+    height: 100%;
+    margin: 0;
+}
+
+.network-master-modal-content-fullscreen.modal-content {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    min-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     position: relative;
 }
 
-.net-overlay__close-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 36px;
-    height: 36px;
-    border: none;
-    background: #f1f5f9;
-    border-radius: 8px;
-    color: #64748b;
-    cursor: pointer;
+.network-master-fullscreen-shell.discount-modal-container {
     display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    max-height: none;
+    overflow: hidden;
+    font-family: "Poppins", system-ui, -apple-system, sans-serif;
+    background: #f5f6f8;
+}
+
+.network-master-settings-header.discount-header {
+    background-color: #053796 !important;
+    height: auto;
+    min-height: 60px;
+    padding: 14px 20px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+}
+
+.network-master-settings-header .header-icon {
+    background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.network-master-settings-header .header-icon i {
+    color: #fff !important;
+}
+
+.network-master-header-wifi-ic {
+    font-size: 22px;
+}
+
+.network-master-fullscreen-body.discount-body {
+    flex: 1;
+    min-height: 0;
+    background: #f5f6f8 !important;
+    padding: 20px;
+    gap: 16px;
+}
+
+/* Köhnə mərkəzi dialog ölçüsü — tam ekranda istifadə olunmur */
+.network-master-dialog.custom-modal-width {
+    max-width: 420px !important;
+    width: calc(100% - 2rem) !important;
+    margin: 1.5rem auto;
+}
+
+.network-master-fs-inner.discount-modal-container:not(.network-master-fullscreen-shell) {
+    display: flex;
+    flex-direction: column;
+    max-height: min(85vh, 720px);
+    min-height: 0;
+    overflow: hidden;
+    font-family: "Poppins", system-ui, -apple-system, sans-serif;
+}
+
+.network-master-fs-header.discount-header {
+    flex-shrink: 0;
+}
+
+.network-master-fs-body.discount-body:not(.network-master-fullscreen-body) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 18px 20px;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+}
+
+.network-master-fullscreen-body.discount-body {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+}
+
+/* IP modal məzmunu — geniş ekranda oxunaqlı en */
+.network-master-ip-modal-body .network-master-status-card,
+.network-master-ip-modal-body .network-master-fs-hint,
+.network-master-ip-modal-body .network-master-field-label,
+.network-master-ip-modal-body .network-master-ip-input.discount-input,
+.network-master-ip-modal-body .network-master-btn-grid-3,
+.network-master-ip-modal-body .network-master-exit-row {
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Köhnə tam ekran IP bədən (istifadə olunmursa) */
+.network-master-fullscreen-body .network-master-status-card,
+.network-master-fullscreen-body .network-master-fs-hint,
+.network-master-fullscreen-body .network-master-field-label,
+.network-master-fullscreen-body .network-master-ip-input.discount-input,
+.network-master-fullscreen-body .network-master-btn-grid-3 {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.network-master-fullscreen-body .network-master-exit-row {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+
+/* Master qopdu — tək ağ kart, sıx və səliqəli (düymələr məzmunun altında, böyük boşluq yox) */
+.network-master-brief--fullscreen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px 16px 24px;
+    box-sizing: border-box;
+    min-height: 0;
 }
 
-.net-overlay__close-btn:active {
-    opacity: 0.8;
+.network-master-disconnect-card {
+    width: 100%;
+    max-width: 440px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.07);
+    padding: 22px 22px 20px;
+    box-sizing: border-box;
 }
 
+.network-master-disconnect-card__head {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
 
-.net-overlay__icon {
+.network-master-disconnect-icon {
+    flex-shrink: 0;
     width: 56px;
     height: 56px;
-    flex-shrink: 0;
-    background: #fef2f2;
-    border-radius: 14px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%);
+    border: 1px solid #fecaca;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.net-overlay__icon i {
+    color: #b91c1c;
     font-size: 28px;
-    color: #dc2626;
+    line-height: 1;
 }
 
-.net-overlay__header-text {
-    flex: 1;
+.network-master-disconnect-head-text {
     min-width: 0;
+    flex: 1;
+    text-align: left;
 }
 
-.net-overlay__title {
-    font-size: 20px;
+.network-master-disconnect-title {
+    margin: 0 0 6px 0;
+    font-size: 1.05rem;
     font-weight: 700;
     color: #0f172a;
-    margin: 0 0 8px 0;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
 }
 
-.net-overlay__desc {
+.network-master-disconnect-lead {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.network-master-disconnect-hint {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    margin-bottom: 18px;
+}
+
+.network-master-disconnect-hint-ic {
+    flex-shrink: 0;
+    color: #d97706;
+    font-size: 1.1rem;
+    margin-top: 1px;
+}
+
+.network-master-disconnect-hint p {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #57534e;
+    line-height: 1.5;
+}
+
+.network-master-disconnect-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+/* Köhnə ümumi düymə sütunu — IP panelində istifadə oluna bilər */
+.network-master-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.network-master-settings-card-btn--compact {
+    min-height: 52px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+}
+
+.network-master-settings-card-btn--compact .network-master-settings-card-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+}
+
+.network-master-settings-card-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    min-height: 80px;
+    width: 100%;
+    padding: 18px 18px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #e8eaed;
+    color: #363260;
+    font-family: "Poppins", system-ui, -apple-system, sans-serif;
+    font-size: 17px;
+    font-weight: 500;
+    line-height: 1.25;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    box-sizing: border-box;
+}
+
+.network-master-settings-card-btn:active {
+    background: #f8f9fa;
+}
+
+.network-master-settings-card-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    background: #eef2ff;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #053796;
+}
+
+.network-master-settings-card-label {
+    flex: 1;
+}
+
+.network-master-settings-card-btn--primary {
+    background: #053796;
+    border-color: #053796;
+    color: #fff;
+}
+
+.network-master-settings-card-btn--primary:active {
+    background: #042a7a;
+}
+
+.network-master-settings-card-btn--primary .network-master-settings-card-icon {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+.network-master-settings-card-btn--primary:hover {
+    background: #042a7a;
+    border-color: #042a7a;
+}
+
+.network-master-status-card {
+    border-radius: 10px;
+    padding: 4px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+.network-master-status-card--ok {
+    border-color: #bbf7d0;
+    background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+}
+
+.network-master-status-card--bad {
+    border-color: #fecaca;
+    background: linear-gradient(180deg, #fffbeb 0%, #fef2f2 100%);
+}
+
+.network-master-status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+}
+
+.network-master-status-row + .network-master-status-row {
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.network-master-status-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.network-master-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.network-master-badge--ok {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.network-master-badge--bad {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.network-master-status-mono {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    text-align: right;
+    word-break: break-all;
+}
+
+/* Qısa “master qopdu” addımı — eyni Endirim / network kartı dilimi */
+.network-master-brief {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.network-master-brief-card {
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    border: 1px solid #fecaca;
+    background: linear-gradient(180deg, #fffbeb 0%, #fef2f2 100%);
+    box-sizing: border-box;
+}
+
+.network-master-brief-title {
+    margin: 0 0 10px 0;
     font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.35;
+}
+
+.network-master-brief-text {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.55;
+    font-weight: 500;
+}
+
+.network-master-brief-open-btn {
+    height: 48px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: 8px;
+}
+
+.network-master-fs-hint {
+    font-size: 13px;
     color: #64748b;
     margin: 0;
     line-height: 1.5;
 }
 
-.net-overlay__settings {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
+.network-master-fs-hint strong {
+    color: #334155;
+    font-weight: 600;
 }
 
-.net-overlay__settings-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.net-overlay__settings-title i {
-    font-size: 18px;
-    color: #053796;
-}
-
-.net-overlay__settings-body {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.net-overlay__setting-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.net-overlay__label {
+.network-master-field-label {
     font-size: 12px;
     font-weight: 600;
     color: #64748b;
-}
-
-.net-overlay__btn-row {
-    display: flex;
-    gap: 12px;
-}
-
-.net-overlay__btn-scan {
-    flex: 1;
-    padding: 12px 16px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    color: #0f172a;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.net-overlay__btn-scan:active:not(:disabled) {
-    background: #f1f5f9;
-}
-
-.net-overlay__btn-scan:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-.net-overlay__actions {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.net-overlay__btn-primary {
-    width: 100%;
-    padding: 16px 24px;
-    background: #053796;
-    border: none;
-    border-radius: 12px;
-    color: #fff;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.net-overlay__btn-primary:active:not(:disabled) {
-    opacity: 0.9;
-}
-
-.net-overlay__btn-primary:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-.net-overlay__divider {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.net-overlay__divider::before,
-.net-overlay__divider::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: #e2e8f0;
-}
-
-.net-overlay__divider span {
-    font-size: 13px;
-    color: #94a3b8;
-}
-
-.net-overlay__input-row {
-    display: flex;
-    gap: 12px;
-}
-
-.net-overlay__input {
-    flex: 1;
-    min-width: 0;
-    padding: 14px 18px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 15px;
-    font-family: ui-monospace, monospace;
-    color: #0f172a;
-    background: #f8fafc;
-    outline: none;
-}
-
-.net-overlay__input:focus {
-    border-color: #053796;
-    background: #fff;
-}
-
-.net-overlay__input::placeholder {
-    color: #94a3b8;
-}
-
-.net-overlay__btn-connect {
-    padding: 14px 28px;
-    background: #053796;
-    border: none;
-    border-radius: 12px;
-    color: #fff;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.net-overlay__btn-connect:active:not(:disabled) {
-    opacity: 0.9;
-}
-
-.net-overlay__btn-connect:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.net-overlay__spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid rgba(255,255,255,0.4);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: net-spin 0.8s linear infinite;
-}
-
-@keyframes net-spin {
-    to { transform: rotate(360deg); }
-}
-
-.net-overlay__tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.net-overlay__tab {
-    padding: 10px 20px;
-    border: none;
-    background: transparent;
-    color: #64748b;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.net-overlay__tab.active {
-    color: #053796;
-    border-bottom-color: #053796;
-}
-
-.net-overlay__status-content {
-    margin-bottom: 20px;
-}
-
-.net-overlay__footer {
-    margin-top: 28px;
-    padding-top: 24px;
-    border-top: 1px solid #f1f5f9;
-}
-
-.net-overlay__ips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px 24px;
-    font-size: 13px;
-    color: #64748b;
-    margin-bottom: 8px;
-}
-
-.net-overlay__ips strong {
-    color: #0f172a;
-    font-weight: 600;
-}
-
-.net-overlay__hint {
-    font-size: 12px;
-    color: #94a3b8;
     margin: 0;
 }
 
-.net-overlay__exit {
-    display: block;
-    width: 100%;
-    margin-top: 24px;
-    padding: 14px 20px;
-    background: linear-gradient(135deg, #053796 0%, #042d75 100%);
-    border: none;
-    border-radius: 12px;
-    color: #fff;
+.network-master-ip-input.discount-input {
+    height: 48px;
+    font-family: ui-monospace, monospace;
     font-size: 15px;
+    width: 100%;
+    border-color: #cbd5e1;
+}
+
+.network-master-ip-input.discount-input:focus {
+    border-color: #053796;
+}
+
+.network-master-btn-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.network-master-chip-btn {
+    height: 44px;
+    border-radius: 8px;
+    font-size: 12px;
     font-weight: 600;
+    font-family: inherit;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(5, 55, 150, 0.3);
-    transition: all 0.2s ease;
+    transition: background 0.15s ease, opacity 0.15s ease;
+    padding: 0 6px;
 }
 
-.net-overlay__exit:active {
-    opacity: 0.9;
+.network-master-chip-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-.net-overlay__exit i {
-    margin-right: 8px;
+.network-master-chip-btn--outline {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    color: #053796;
 }
 
-@media (max-width: 600px) {
-    .net-overlay {
-        padding: 20px;
+.network-master-chip-btn--outline:hover:not(:disabled) {
+    background: #f1f5f9;
+}
+
+.network-master-chip-btn--primary {
+    background: #053796;
+    color: #fff;
+    border: none;
+    box-shadow: 0 2px 6px rgba(5, 55, 150, 0.2);
+}
+
+.network-master-chip-btn--primary:hover:not(:disabled) {
+    background: #042a7a;
+}
+
+/* İkinci dərəcəli çıxış — tam enli primary əvəzinə Axtar ilə eyni chip ölçüsü */
+.network-master-exit-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    padding-top: 4px;
+}
+
+.network-master-chip-btn.network-master-chip-btn--outline.network-master-exit-btn {
+    min-width: 148px;
+    padding: 0 16px;
+    height: 44px;
+    font-size: 13px;
+    color: #64748b;
+    border-color: #cbd5e1;
+}
+
+.network-master-chip-btn.network-master-chip-btn--outline.network-master-exit-btn:hover:not(:disabled) {
+    color: #053796;
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.network-master-btn-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: network-master-spin 0.75s linear infinite;
+    flex-shrink: 0;
+}
+
+.network-master-btn-spinner--dark {
+    border: 2px solid rgba(5, 55, 150, 0.2);
+    border-top-color: #053796;
+}
+
+@keyframes network-master-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 400px) {
+    .network-master-btn-grid-3 {
+        grid-template-columns: 1fr;
     }
 
-    .net-overlay__card {
-        padding: 28px 24px;
-    }
-
-    .net-overlay__header {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-
-    .net-overlay__input-row {
-        flex-direction: column;
-    }
-
-    .net-overlay__btn-connect {
-        width: 100%;
-    }
-
-    .net-overlay__btn-row {
-        flex-direction: column;
-    }
-
-    .net-overlay__exit {
-        margin-top: 16px;
+    .network-master-chip-btn {
+        height: 42px;
+        font-size: 13px;
     }
 }
