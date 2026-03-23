@@ -29,6 +29,10 @@ class SyncService {
     this._currentlySyncing = new Set(); // Track in-progress syncs to prevent duplicates
     this._retryCounts = new Map();      // orderId → failure count
     this._wasOffline = false;
+    /** Prod-da konsol olmayanda Status modalında göstərmək üçün son avto-sync xətası */
+    this.lastSyncError = null;
+    this.lastSyncErrorAt = null;
+    this.lastSyncErrorOrderPrefix = null;
     console.log("[SYNC_INIT] SyncService instance created.");
 
     // Retry interval — hər 2s (ən son vəziyyət tez göndərilsin)
@@ -97,6 +101,25 @@ class SyncService {
     ]);
   }
 
+  recordSyncFailure(orderId, error) {
+    const raw = error?.message || String(error);
+    this.lastSyncError =
+      raw.length > 480 ? `${raw.slice(0, 480)}…` : raw;
+    this.lastSyncErrorAt = new Date().toISOString();
+    if (orderId && typeof orderId === "string") {
+      this.lastSyncErrorOrderPrefix =
+        orderId.length >= 8 ? orderId.slice(0, 8) : orderId;
+    } else {
+      this.lastSyncErrorOrderPrefix = null;
+    }
+  }
+
+  clearLastSyncError() {
+    this.lastSyncError = null;
+    this.lastSyncErrorAt = null;
+    this.lastSyncErrorOrderPrefix = null;
+  }
+
   async getSyncStatus() {
     try {
       const currentProfileId = await this.getCurrentProfileId();
@@ -118,9 +141,19 @@ class SyncService {
         pendingCount,
         syncedCount: totalSyncedCount,
         lastSyncTime: this.lastSyncTime,
+        lastSyncError: this.lastSyncError,
+        lastSyncErrorAt: this.lastSyncErrorAt,
+        lastSyncErrorOrderPrefix: this.lastSyncErrorOrderPrefix,
       };
     } catch (error) {
-      return { isSyncing: this.isSyncing, pendingCount: 0, syncedCount: 0 };
+      return {
+        isSyncing: this.isSyncing,
+        pendingCount: 0,
+        syncedCount: 0,
+        lastSyncError: this.lastSyncError,
+        lastSyncErrorAt: this.lastSyncErrorAt,
+        lastSyncErrorOrderPrefix: this.lastSyncErrorOrderPrefix,
+      };
     }
   }
 
@@ -303,6 +336,7 @@ class SyncService {
         this._retryCounts.delete(orderId);
         return;
       }
+      this.recordSyncFailure(orderId, error);
       if (error.isValidationError) {
         // 400/422 — itki olmasın, yenidən cəhd edəcək (heç vaxt skip yoxdur)
         console.warn(`[SYNC_VALIDATION] Order ${orderId} validation error (400/422), yenidən cəhd ediləcək...`);
@@ -331,10 +365,27 @@ class SyncService {
     try {
       const isOnline = await this._withTimeout(
         this.checkConnectivity(),
-        12000,
+        22000,
         "checkConnectivity"
       ).catch(() => false);
-      if (!isOnline) return;
+      if (!isOnline) {
+        this.recordSyncFailure(
+          null,
+          new Error(
+            "Avto-sync: internet və ya admin server əlçatan deyil (yoxlama vaxtı bitdi)"
+          )
+        );
+        return;
+      }
+
+      // Status modalındakı "İnternet" yaşıl olanda köhnə "offline" mesajı çaşdırıcı qalmasın
+      if (
+        this.lastSyncError &&
+        typeof this.lastSyncError === "string" &&
+        this.lastSyncError.includes("internet və ya admin server əlçatan deyil")
+      ) {
+        this.clearLastSyncError();
+      }
 
       const pendingOrders = await OrdersModel.findAll({
         where: {
@@ -369,27 +420,62 @@ class SyncService {
       console.log("[SYNC_LOOP] Cycle complete.");
     } catch (error) {
       console.error("[SYNC_LOOP_CRITICAL]", error);
+      this.recordSyncFailure(
+        null,
+        error?.message ? error : new Error(String(error))
+      );
     } finally {
+      try {
+        const stillPending = await OrdersModel.count({
+          where: {
+            [Op.or]: [{ is_synced: 0 }, { is_synced: null }],
+          },
+          paranoid: false,
+        });
+        if (stillPending === 0) {
+          this.clearLastSyncError();
+        }
+      } catch (_) {
+        /* ignore */
+      }
       this.isSyncing = false;
       this._syncCycleStartedAt = 0;
     }
   }
 
   async checkConnectivity() {
-    const endpoints = [
-      "http://46.224.8.157:35627/api/discover",
-      "https://www.google.com",
-      "https://1.1.1.1",
+    /**
+     * Status modalı checkInternet ilə eyni ünvandan başla (Electron main.js).
+     * Əvvəl yalnız discover + Google/Cloudflare idi — bəzən UI yaşıl, sync isə "offline" qalırdı.
+     */
+    const checks = [
+      { url: "http://46.224.8.157:35627/api/terminal/login", timeout: 6000 },
+      { url: "http://46.224.8.157:35627/api/discover", timeout: 6000 },
+      {
+        url: "https://api.unipos.tech/",
+        timeout: 6000,
+        validateStatus: () => true,
+      },
+      { url: "https://www.google.com", timeout: 5000 },
+      { url: "https://1.1.1.1", timeout: 5000 },
     ];
+
+    const oneCheck = (url, timeout, validateStatus) =>
+      axios
+        .get(url, {
+          timeout,
+          validateStatus:
+            validateStatus || ((status) => status > 0 && status < 500),
+        })
+        .then(() => true)
+        .catch((e) => {
+          if (e.response) return true;
+          throw e;
+        });
 
     try {
       await Promise.any(
-        endpoints.map(url =>
-          axios.get(url, { timeout: 3000 }).then(() => true).catch(e => {
-            if (e.response) return true; // got a response = online
-            throw e;
-          })
-        )
+        checks.map((c) => oneCheck(c.url, c.timeout, c.validateStatus))
       );
       return true;
     } catch {

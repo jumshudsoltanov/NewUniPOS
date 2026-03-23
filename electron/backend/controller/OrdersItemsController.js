@@ -9,6 +9,7 @@ const SyncService = require("../services/SyncService");
 const MaxCheckService = require("../services/MaxCheckService");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 const ProductsModel = require("../model/ProductsModel");
+const { serviceableItemsSum } = require("../utils/orderServiceFeeBase");
 
 /**
  * Helper to attach live timer status to an order object for responses.
@@ -30,7 +31,11 @@ const attachLiveTimerToOrder = (order) => {
       discount = order.discount_type === "percent" ? (newTotal * parseFloat(order.discount_value)) / 100 : parseFloat(order.discount_value);
     }
     if (parseFloat(order.service_value) > 0) {
-      service = order.service_type === "percent" ? (newTotal * parseFloat(order.service_value)) / 100 : parseFloat(order.service_value);
+      const svcBase = serviceableItemsSum(order.orders_items || []);
+      service =
+        order.service_type === "percent"
+          ? (svcBase * parseFloat(order.service_value)) / 100
+          : parseFloat(order.service_value);
     }
 
     order.dataValues.amount = newTotal;
@@ -51,7 +56,9 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
   const listOfProducts = await OrdersItemsModel.findAll({
     where: { order_id: orderId },
     attributes: ["count", "price"],
-    include: [{ model: ProductsModel, as: "product", attributes: ["hourly_price"] }],
+    include: [
+      { model: ProductsModel, as: "product", attributes: ["hourly_price", "no_service_fee"] },
+    ],
     transaction: tx,
   });
 
@@ -86,6 +93,8 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
     return sum + qty * prc;
   }, 0);
 
+  const serviceFeeBase = serviceableItemsSum(listOfProducts);
+
   let timerCharge = 0;
   const effHourly = TimerService.getEffectiveHourlyPrice(orderPlain);
   if (Number(currentOrder.is_timer_status) === 1 && effHourly > 0) {
@@ -109,7 +118,7 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
   if (parseFloat(service_value || 0) > 0) {
     service =
       service_type === "percent"
-        ? (total * parseFloat(service_value)) / 100
+        ? (serviceFeeBase * parseFloat(service_value)) / 100
         : parseFloat(service_value);
   }
   const netTotal =
@@ -159,7 +168,13 @@ const sendOrdersItemsToDb = async (req, res) => {
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price", "product_id"],
-        include: [{ model: ProductsModel, as: "product", attributes: ["hourly_price"] }],
+        include: [
+          {
+            model: ProductsModel,
+            as: "product",
+            attributes: ["hourly_price", "no_service_fee"],
+          },
+        ],
       }),
       OrdersModel.findOne({
         where: { uuid: orderId },
@@ -226,6 +241,8 @@ const sendOrdersItemsToDb = async (req, res) => {
       return sum + qty * prc;
     }, 0);
 
+    const serviceFeeBase = serviceableItemsSum(listOfProducts);
+
     const total = itemsTotal + liveTimer.charge;
 
     let discount = 0;
@@ -248,7 +265,7 @@ const sendOrdersItemsToDb = async (req, res) => {
 
       if (sValue > 0) {
         if (service_type === "percent") {
-          service = (total * sValue) / 100;
+          service = (serviceFeeBase * sValue) / 100;
         } else if (service_type === "cash") {
           service = sValue;
         }
@@ -1078,6 +1095,7 @@ const onGiftItem = async (req, res) => {
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
+      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
       transaction,
     });
 
@@ -1086,6 +1104,8 @@ const onGiftItem = async (req, res) => {
       const prc = parseFloat(item.price) || 0;
       return sum + qty * prc;
     }, 0);
+
+    const serviceFeeBaseMerge = serviceableItemsSum(allItems);
 
     const ord = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -1106,7 +1126,7 @@ const onGiftItem = async (req, res) => {
       if (globServVal > 0) {
         service =
           ord.service_type === "percent"
-            ? (total * globServVal) / 100
+            ? (serviceFeeBaseMerge * globServVal) / 100
             : globServVal;
       }
     }
@@ -1222,6 +1242,7 @@ const onUpdateItemDiscount = async (req, res) => {
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
+      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
       transaction,
     });
 
@@ -1230,6 +1251,8 @@ const onUpdateItemDiscount = async (req, res) => {
       const prc = parseFloat(item.price) || 0;
       return sum + qty * prc;
     }, 0);
+
+    const serviceFeeBaseGift = serviceableItemsSum(allItems);
 
     // Global Order Discount / Service Logic
     const ord = await OrdersModel.findOne({
@@ -1252,7 +1275,7 @@ const onUpdateItemDiscount = async (req, res) => {
       if (globServVal > 0) {
         service =
           ord.service_type === "percent"
-            ? (total * globServVal) / 100
+            ? (serviceFeeBaseGift * globServVal) / 100
             : globServVal;
       }
     }
@@ -1405,8 +1428,13 @@ const onCloseOrder = async (req, res) => {
     );
 
     // Re-fetch items to calculate final total correctly including items + timer
-    const items = await OrdersItemsModel.findAll({ where: { order_id: orderId }, transaction });
+    const items = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+      transaction,
+    });
     const subtotal = items.reduce((sum, it) => sum + (Number(it.count) * Number(it.price)), 0);
+    const serviceFeeBaseClose = serviceableItemsSum(items);
     const finalTimerCharge = timerUpdate.rate_per_minute !== undefined ? timerUpdate.rate_per_minute : (order?.rate_per_minute || 0);
     
     // Simple Total Recalculation (should ideally consider discounts/service but keeping it basic for now consistent with other parts)
@@ -1420,7 +1448,7 @@ const onCloseOrder = async (req, res) => {
     }
     let serv = 0;
     if (orderToUpdate.service_value > 0) {
-        serv = orderToUpdate.service_type === 'percent' ? (subtotal * orderToUpdate.service_value / 100) : orderToUpdate.service_value;
+        serv = orderToUpdate.service_type === 'percent' ? (serviceFeeBaseClose * orderToUpdate.service_value / 100) : orderToUpdate.service_value;
     }
     
     const deliveryFee = Number(orderToUpdate.delivery_fee || 0);
@@ -1662,6 +1690,7 @@ const onDeleteItemWithReason = async (req, res) => {
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
+      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
       transaction,
     });
 
@@ -1670,6 +1699,8 @@ const onDeleteItemWithReason = async (req, res) => {
       const p = parseFloat(it.price) || 0;
       return sum + q * p;
     }, 0);
+
+    const serviceFeeBaseDel = serviceableItemsSum(allItems);
 
     const ord = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -1687,7 +1718,7 @@ const onDeleteItemWithReason = async (req, res) => {
         discount = ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
       }
       if (sVal > 0) {
-        service = ord.service_type === "percent" ? (total * sVal) / 100 : sVal;
+        service = ord.service_type === "percent" ? (serviceFeeBaseDel * sVal) / 100 : sVal;
       }
     }
 
@@ -1751,6 +1782,7 @@ const onUpdateItemPrice = async (req, res) => {
     const listOfProducts = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
+      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
     });
 
     // 2. Calculate raw total
@@ -1759,6 +1791,8 @@ const onUpdateItemPrice = async (req, res) => {
       const prc = parseFloat(item.price) || 0;
       return sum + qty * prc;
     }, 0);
+
+    const serviceFeeBasePrice = serviceableItemsSum(listOfProducts);
 
     // 3. Get Order details for discount/service/deposit
     const currentOrder = await OrdersModel.findOne({
@@ -1794,7 +1828,7 @@ const onUpdateItemPrice = async (req, res) => {
       // Calculate Service Fee
       if (sValue > 0) {
         if (service_type === "percent") {
-          service = (total * sValue) / 100;
+          service = (serviceFeeBasePrice * sValue) / 100;
         } else if (service_type === "cash") {
           service = sValue;
         }
@@ -1882,6 +1916,7 @@ const onUpdateItemCount = async (req, res) => {
     const listOfProducts = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
+      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
     });
 
     const total = listOfProducts.reduce((sum, it) => {
@@ -1889,6 +1924,8 @@ const onUpdateItemCount = async (req, res) => {
       const prc = parseFloat(it.price) || 0;
       return sum + qty * prc;
     }, 0);
+
+    const serviceFeeBaseCount = serviceableItemsSum(listOfProducts);
 
     const currentOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -1921,7 +1958,7 @@ const onUpdateItemCount = async (req, res) => {
 
       if (sValue > 0) {
         if (service_type === "percent") {
-          service = (total * sValue) / 100;
+          service = (serviceFeeBaseCount * sValue) / 100;
         } else if (service_type === "cash") {
           service = sValue;
         }
@@ -2046,17 +2083,20 @@ const onAssignCourier = async (req, res) => {
       const items = await OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price"],
+        include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
       });
 
       const subtotal = items.reduce((sum, it) => {
         return sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0);
       }, 0) + Number(ord.rate_per_minute || 0);
 
+      const serviceFeeBaseCourier = serviceableItemsSum(items);
+
       let discount = 0, service = 0;
       const dVal = parseFloat(ord.discount_value || 0);
       const sVal = parseFloat(ord.service_value || 0);
       if (dVal > 0) discount = ord.discount_type === "percent" ? (subtotal * dVal) / 100 : dVal;
-      if (sVal > 0) service = ord.service_type === "percent" ? (subtotal * sVal) / 100 : sVal;
+      if (sVal > 0) service = ord.service_type === "percent" ? (serviceFeeBaseCourier * sVal) / 100 : sVal;
 
       const netTotal = Math.max(subtotal - discount + service, parseFloat(ord.deposit || 0)) + newDeliveryFee;
 
@@ -2264,6 +2304,7 @@ const onStopTimer = async (req, res) => {
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price"],
+        include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
       }),
       OrdersModel.findOne({
         where: { uuid: orderId },
@@ -2277,6 +2318,8 @@ const onStopTimer = async (req, res) => {
       return sum + qty * prc;
     }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
 
+    const serviceFeeBaseStop = serviceableItemsSum(listOfProducts);
+
     let discount = 0;
     let service = 0;
     if (currentOrder) {
@@ -2285,7 +2328,7 @@ const onStopTimer = async (req, res) => {
         discount = discount_type === "percent" ? (total * parseFloat(discount_value)) / 100 : parseFloat(discount_value);
       }
       if (parseFloat(service_value) > 0) {
-        service = service_type === "percent" ? (total * parseFloat(service_value)) / 100 : parseFloat(service_value);
+        service = service_type === "percent" ? (serviceFeeBaseStop * parseFloat(service_value)) / 100 : parseFloat(service_value);
       }
     }
     const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0)) + Number(currentOrder?.delivery_fee || 0);
@@ -2328,6 +2371,7 @@ const onResetTimer = async (req, res) => {
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price"],
+        include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
       }),
       OrdersModel.findOne({
         where: { uuid: orderId },
@@ -2341,6 +2385,8 @@ const onResetTimer = async (req, res) => {
       return sum + qty * prc;
     }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
 
+    const serviceFeeBaseReset = serviceableItemsSum(listOfProducts);
+
     let discount = 0;
     let service = 0;
     if (currentOrder) {
@@ -2349,7 +2395,7 @@ const onResetTimer = async (req, res) => {
         discount = discount_type === "percent" ? (total * parseFloat(discount_value)) / 100 : parseFloat(discount_value);
       }
       if (parseFloat(service_value) > 0) {
-        service = service_type === "percent" ? (total * parseFloat(service_value)) / 100 : parseFloat(service_value);
+        service = service_type === "percent" ? (serviceFeeBaseReset * parseFloat(service_value)) / 100 : parseFloat(service_value);
       }
     }
     const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0)) + Number(currentOrder?.delivery_fee || 0);
@@ -2433,6 +2479,7 @@ module.exports = {
       const allItems = await OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price"],
+        include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
         transaction,
       });
 
@@ -2443,12 +2490,14 @@ module.exports = {
         return sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0);
       }, 0) + timerCharge;
 
+      const serviceFeeBaseBatch = serviceableItemsSum(allItems);
+
       let discount = 0, service = 0;
       if (ord) {
         const dVal = parseFloat(ord.discount_value) || 0;
         const sVal = parseFloat(ord.service_value) || 0;
         if (dVal > 0) discount = ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
-        if (sVal > 0) service = ord.service_type === "percent" ? (total * sVal) / 100 : sVal;
+        if (sVal > 0) service = ord.service_type === "percent" ? (serviceFeeBaseBatch * sVal) / 100 : sVal;
       }
       const netTotal = Math.max(total - discount + service, parseFloat(ord?.deposit || 0)) + Number(ord?.delivery_fee || 0);
 

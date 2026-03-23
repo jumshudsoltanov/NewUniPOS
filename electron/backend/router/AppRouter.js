@@ -480,6 +480,17 @@ router.patch("/tax/save-fiscal/:orderId", async (req, res) => {
 
 // ─── Sync Diagnostics ────────────────────────────────────────────────────────
 
+// GET /sync/status — son sync xətası daxil (brauzer / dəstək; Status modal ilə eyni məlumat)
+router.get("/sync/status", async (req, res) => {
+  try {
+    const SyncService = require("../services/SyncService");
+    const st = await SyncService.getSyncStatus();
+    res.json(st);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
 // GET /sync/pending-details — returns details of all stuck pending orders
 router.get("/sync/pending-details", async (req, res) => {
   try {

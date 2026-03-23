@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Modal, ProgressBar } from "react-bootstrap";
 import { useSelector } from "react-redux";
 import axios, { localApi } from "../../utils/apiConfig";
@@ -25,6 +25,19 @@ const StatusModal = ({ show, onHide }) => {
     const [pendingDetails, setPendingDetails] = useState(null);
     const [showPendingDetails, setShowPendingDetails] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
+    /** Gözləyən sifarişlər modalı — sinxro animasiya / sayğac */
+    const [pomSnapshotOrders, setPomSnapshotOrders] = useState([]);
+    const [pomHiddenUuids, setPomHiddenUuids] = useState([]);
+    const [pomExitingUuids, setPomExitingUuids] = useState([]);
+    const [pomSyncActive, setPomSyncActive] = useState(false);
+    const [pomSyncSeconds, setPomSyncSeconds] = useState(0);
+    const [pomSyncPhase, setPomSyncPhase] = useState("idle");
+    const pomSecIntervalRef = useRef(null);
+    const pomPollTimeoutRef = useRef(null);
+    const lastApiUuidsRef = useRef(null);
+    const pomPollAttemptsRef = useRef(0);
+    const pomPollCancelledRef = useRef(false);
+    const pomSuccessScheduledRef = useRef(false);
 
     const profile = loginedProfileData?.data?.profile || {};
     const terminal = loginedProfileData?.data?.terminal || {};
@@ -125,7 +138,48 @@ const StatusModal = ({ show, onHide }) => {
         };
     }, [show, loginedProfileData]); // Added loginedProfileData to dependencies for fetchPrinters
 
-    const handleSync = async () => {
+    const clearPomTimers = useCallback(() => {
+        if (pomSecIntervalRef.current) {
+            clearInterval(pomSecIntervalRef.current);
+            pomSecIntervalRef.current = null;
+        }
+        if (pomPollTimeoutRef.current) {
+            clearTimeout(pomPollTimeoutRef.current);
+            pomPollTimeoutRef.current = null;
+        }
+    }, []);
+
+    const resetPomSyncUi = useCallback(() => {
+        pomPollCancelledRef.current = true;
+        pomSuccessScheduledRef.current = false;
+        clearPomTimers();
+        setPomSnapshotOrders([]);
+        setPomHiddenUuids([]);
+        setPomExitingUuids([]);
+        setPomSyncActive(false);
+        setPomSyncSeconds(0);
+        setPomSyncPhase("idle");
+        lastApiUuidsRef.current = null;
+        pomPollAttemptsRef.current = 0;
+        setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
+    }, [clearPomTimers]);
+
+    useEffect(() => {
+        if (!showPendingDetails) {
+            resetPomSyncUi();
+        }
+    }, [showPendingDetails, resetPomSyncUi]);
+
+    useEffect(() => {
+        if (pomExitingUuids.length === 0) return undefined;
+        const t = setTimeout(() => {
+            setPomHiddenUuids((h) => [...new Set([...h, ...pomExitingUuids])]);
+            setPomExitingUuids([]);
+        }, 480);
+        return () => clearTimeout(t);
+    }, [pomExitingUuids.join("|")]);
+
+    const handleQuickSync = async () => {
         setSyncStatus(prev => ({ ...prev, isSyncing: true }));
         try {
             await localApi.post("/sync/force-now");
@@ -141,6 +195,112 @@ const StatusModal = ({ show, onHide }) => {
         } finally {
             setSyncStatus(prev => ({ ...prev, isSyncing: false }));
         }
+    };
+
+    const finishPendingModalSuccess = useCallback(() => {
+        pomPollCancelledRef.current = true;
+        clearPomTimers();
+        setPomSyncActive(false);
+        setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
+        if (window.electronAPI?.getSyncStatus) {
+            window.electronAPI.getSyncStatus().then(setSyncStatus).catch(() => {});
+        }
+        setPomSyncPhase("success");
+        toast.success("Sinxronizasiya tamamlandı");
+        setTimeout(() => {
+            setShowPendingDetails(false);
+            setPendingDetails(null);
+            resetPomSyncUi();
+        }, 1600);
+    }, [clearPomTimers, resetPomSyncUi]);
+
+    const handlePendingModalSync = async () => {
+        if (!pendingDetails?.orders?.length) return;
+        pomPollCancelledRef.current = false;
+        pomSuccessScheduledRef.current = false;
+        clearPomTimers();
+        setPomHiddenUuids([]);
+        setPomExitingUuids([]);
+        setPomSnapshotOrders(pendingDetails.orders.map((o) => ({ ...o })));
+        lastApiUuidsRef.current = new Set(pendingDetails.orders.map((o) => o.uuid));
+        pomPollAttemptsRef.current = 0;
+        setPomSyncActive(true);
+        setPomSyncPhase("running");
+        setPomSyncSeconds(0);
+        setSyncStatus((prev) => ({ ...prev, isSyncing: true }));
+
+        pomSecIntervalRef.current = setInterval(() => {
+            setPomSyncSeconds((s) => s + 1);
+        }, 1000);
+
+        try {
+            await localApi.post("/sync/force-now");
+        } catch (error) {
+            console.error("Manual sync error:", error);
+            clearPomTimers();
+            setPomSyncActive(false);
+            setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
+            setPomSnapshotOrders([]);
+            toast.error("Sinxronizasiya xətası");
+            return;
+        }
+
+        const maxAttempts = 50;
+        const poll = async () => {
+            if (pomPollCancelledRef.current) return;
+            pomPollAttemptsRef.current += 1;
+            try {
+                const res = await localApi.get("/sync/pending-details");
+                if (pomPollCancelledRef.current) return;
+                setPendingDetails(res.data);
+                const list = res.data.orders || [];
+                const newIds = new Set(list.map((o) => o.uuid));
+                const prev = lastApiUuidsRef.current;
+                if (prev && prev.size > 0) {
+                    const vanished = [...prev].filter((uuid) => !newIds.has(uuid));
+                    if (vanished.length > 0) {
+                        setPomExitingUuids((e) => {
+                            const next = new Set([...e, ...vanished]);
+                            return [...next];
+                        });
+                    }
+                }
+                lastApiUuidsRef.current = newIds;
+                const cnt = res.data.count ?? list.length;
+                if (cnt === 0 && !pomSuccessScheduledRef.current) {
+                    pomSuccessScheduledRef.current = true;
+                    pomPollCancelledRef.current = true;
+                    clearPomTimers();
+                    setTimeout(() => {
+                        finishPendingModalSuccess();
+                    }, 520);
+                    return;
+                }
+            } catch {
+                /* tək poll uğursuz — davam */
+            }
+            if (pomPollCancelledRef.current) return;
+            if (pomPollAttemptsRef.current >= maxAttempts) {
+                pomPollCancelledRef.current = true;
+                pomSuccessScheduledRef.current = false;
+                clearPomTimers();
+                setPomSyncActive(false);
+                setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
+                setPomSnapshotOrders([]);
+                toast.warning("Müddət bitdi — pending qala bilər, bir az sonra yenidən cəhd edin");
+                return;
+            }
+            pomPollTimeoutRef.current = setTimeout(poll, 2000);
+        };
+        pomPollTimeoutRef.current = setTimeout(poll, 600);
+    };
+
+    const handleSync = async () => {
+        if (showPendingDetails && pendingDetails?.orders?.length > 0) {
+            await handlePendingModalSync();
+            return;
+        }
+        await handleQuickSync();
     };
 
     const fetchPendingDetails = async () => {
@@ -184,6 +344,20 @@ const StatusModal = ({ show, onHide }) => {
 
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     };
+
+    const apiOrderMap =
+        pendingDetails?.orders?.length > 0
+            ? Object.fromEntries(pendingDetails.orders.map((o) => [o.uuid, o]))
+            : {};
+    const pomRowsSource =
+        pomSnapshotOrders.length > 0 ? pomSnapshotOrders : pendingDetails?.orders || [];
+    const visiblePomRows = pomRowsSource.filter((o) => !pomHiddenUuids.includes(o.uuid));
+    const pomFooterLocked = pomSyncActive || pomSyncPhase === "success";
+    const pomCloseDisabled = pomSyncPhase === "success";
+    const pomShowEmptyIdle =
+        (!pendingDetails || pendingDetails.orders.length === 0) &&
+        pomSnapshotOrders.length === 0 &&
+        !pomSyncActive;
 
     return (
         <>
@@ -296,6 +470,20 @@ const StatusModal = ({ show, onHide }) => {
                                             </button>
                                         )}
                                     </div>
+                                    {syncStatus.lastSyncError ? (
+                                        <div className="sync-last-error-hint" title={syncStatus.lastSyncError}>
+                                            <div className="sync-last-error-title">Son avto-sync xətası</div>
+                                            <div className="sync-last-error-meta">
+                                                {syncStatus.lastSyncErrorAt
+                                                    ? formatDate(syncStatus.lastSyncErrorAt)
+                                                    : "—"}
+                                                {syncStatus.lastSyncErrorOrderPrefix
+                                                    ? ` · sifariş ${syncStatus.lastSyncErrorOrderPrefix}…`
+                                                    : ""}
+                                            </div>
+                                            <div className="sync-last-error-text">{syncStatus.lastSyncError}</div>
+                                        </div>
+                                    ) : null}
 
                                     <div className="status-row">
                                         <span className={`sys-status-dot ${hasInternet ? 'green' : 'red'}`}></span>
@@ -325,7 +513,7 @@ const StatusModal = ({ show, onHide }) => {
                                                         <span className="status-indicator"></span>
                                                         <span className="device-display-name">{device.name}</span>
                                                     </div>
-                                                    <i className="bi bi-arrow-repeat device-sync-icon" onClick={handleSync}></i>
+                                                    <i className="bi bi-arrow-repeat device-sync-icon" onClick={handleQuickSync}></i>
                                                 </div>
                                                 <div className="device-code">{device.code}</div>
                                                 <div className="device-badges">
@@ -358,7 +546,17 @@ const StatusModal = ({ show, onHide }) => {
             backdrop="static"
             animation={false}
         >
-            <div className="pom-content">
+            <div
+                className={`pom-content${pomSyncPhase === "success" ? " pom-content--success-simple" : ""}`}
+            >
+                {pomSyncPhase === "success" ? (
+                    <div className="pom-success-simple">
+                        <i className="bi bi-check-circle-fill pom-success-simple-icon" aria-hidden="true" />
+                        <p className="pom-success-simple-title">Uğurla sinxronlaşdı</p>
+                        <p className="pom-success-simple-hint">Bağlanır…</p>
+                    </div>
+                ) : (
+                    <>
                 {/* Header */}
                 <div className="pom-header">
                     <div className="pom-header-left">
@@ -366,49 +564,89 @@ const StatusModal = ({ show, onHide }) => {
                             <i className="bi bi-clock-history" />
                         </div>
                         <span className="pom-title">Gözləyən sifarişlər</span>
-                        <span className="pom-badge-count">{pendingDetails?.count || 0}</span>
+                        <span className="pom-badge-count">{pendingDetails?.count ?? visiblePomRows.length}</span>
                     </div>
-                    <button className="pom-close" onClick={() => setShowPendingDetails(false)}>
+                    <button
+                        type="button"
+                        className="pom-close"
+                        onClick={() => setShowPendingDetails(false)}
+                        disabled={pomCloseDisabled}
+                        title={pomCloseDisabled ? "Bağlanır…" : "Bağla"}
+                    >
                         <i className="bi bi-x-lg" />
                     </button>
                 </div>
 
                 {/* Body */}
                 <div className="pom-body">
-                    {!pendingDetails || pendingDetails.orders.length === 0 ? (
+                    {pomSyncPhase === "running" && pomSyncActive ? (
+                        <div className="pom-sync-progress">
+                            <div className="pom-sync-progress-inner">
+                                <span className="pom-sync-spinner" aria-hidden="true" />
+                                <span className="pom-sync-progress-text">
+                                    Sinxronizasiya gedir… <strong>{pomSyncSeconds}s</strong>
+                                </span>
+                            </div>
+                        </div>
+                    ) : null}
+                    {pomShowEmptyIdle ? (
                         <div className="pom-empty">
                             <i className="bi bi-check-circle-fill" />
                             <span>Gözləyən sifariş yoxdur</span>
                         </div>
+                    ) : visiblePomRows.length === 0 && pomSyncActive && pomSyncPhase === "running" ? (
+                        <div className="pom-empty pom-empty-wait">
+                            <span className="pom-sync-spinner pom-sync-spinner-lg" aria-hidden="true" />
+                            <span>Sətirlər yenilənir…</span>
+                        </div>
                     ) : (
-                        pendingDetails.orders.map((o, i) => {
-                            const rawDate = o.updated_at || o.created_at;
-                            let timeStr = '—';
+                        visiblePomRows.map((o) => {
+                            const merged = { ...o, ...(apiOrderMap[o.uuid] || {}) };
+                            const rawDate = merged.updated_at || merged.created_at;
+                            let timeStr = "—";
                             if (rawDate) {
                                 const d = new Date(rawDate);
                                 if (!isNaN(d.getTime())) {
-                                    timeStr = d.toLocaleString('az-AZ', {
-                                        hour: '2-digit', minute: '2-digit',
-                                        day: '2-digit', month: '2-digit'
+                                    timeStr = d.toLocaleString("az-AZ", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                        day: "2-digit",
+                                        month: "2-digit",
                                     });
                                 }
                             }
+                            const exiting = pomExitingUuids.includes(merged.uuid);
                             return (
-                                <div key={i} className={`pom-row ${o.is_deleted ? 'deleted' : ''}`}>
+                                <div
+                                    key={merged.uuid}
+                                    className={`pom-row ${merged.is_deleted ? "deleted" : ""} ${exiting ? "pom-row-exit" : ""}`}
+                                >
                                     <div className="pom-row-main">
                                         <div className="pom-uuid">
                                             <i className="bi bi-receipt" />
-                                            {o.uuid?.slice(0, 8)}…
+                                            {merged.uuid?.slice(0, 8)}…
                                         </div>
                                         <div className="pom-info">
-                                            <span className="pom-table">{o.table_name || 'Masa yoxdur'}</span>
-                                            <span className="pom-items">{o.item_count} məhsul</span>
+                                            <span className="pom-table">{merged.table_name || "Masa yoxdur"}</span>
+                                            <span className="pom-items">{merged.item_count} məhsul</span>
                                         </div>
                                     </div>
                                     <div className="pom-row-side">
-                                        {o.is_deleted && <span className="pom-tag red"><i className="bi bi-trash3" /> Silinib</span>}
-                                        {o.is_synced === 2 && <span className="pom-tag orange"><i className="bi bi-exclamation-circle" /> Buraxılıb</span>}
-                                        {!o.is_deleted && o.is_synced !== 2 && <span className="pom-tag blue"><i className="bi bi-hourglass-split" /> Gözləyir</span>}
+                                        {merged.is_deleted && (
+                                            <span className="pom-tag red">
+                                                <i className="bi bi-trash3" /> Silinib
+                                            </span>
+                                        )}
+                                        {merged.is_synced === 2 && (
+                                            <span className="pom-tag orange">
+                                                <i className="bi bi-exclamation-circle" /> Buraxılıb
+                                            </span>
+                                        )}
+                                        {!merged.is_deleted && merged.is_synced !== 2 && (
+                                            <span className="pom-tag blue">
+                                                <i className="bi bi-hourglass-split" /> Gözləyir
+                                            </span>
+                                        )}
                                         <span className="pom-time">{timeStr}</span>
                                     </div>
                                 </div>
@@ -419,20 +657,37 @@ const StatusModal = ({ show, onHide }) => {
 
                 {/* Footer */}
                 <div className="pom-footer">
-                    <button className="pom-btn cancel" onClick={() => setShowPendingDetails(false)}>
+                    <button
+                        type="button"
+                        className="pom-btn cancel"
+                        onClick={() => setShowPendingDetails(false)}
+                        disabled={pomCloseDisabled}
+                    >
                         Bağla
                     </button>
                     <div className="pom-footer-right">
-                        <button className="pom-btn danger" onClick={handleClearStuck} disabled={isClearing}>
+                        <button
+                            type="button"
+                            className="pom-btn danger"
+                            onClick={handleClearStuck}
+                            disabled={isClearing || pomFooterLocked}
+                        >
                             <i className="bi bi-trash3" />
-                            {isClearing ? 'Silinir...' : 'Köhnəni Sil'}
+                            {isClearing ? "Silinir..." : "Köhnəni Sil"}
                         </button>
-                        <button className="pom-btn primary" onClick={handleSync} disabled={syncStatus.isSyncing}>
-                            <i className={`bi bi-arrow-repeat ${syncStatus.isSyncing ? 'spin' : ''}`} />
-                            {syncStatus.isSyncing ? 'Sinxronizasiya...' : 'Sinxronizasiya et'}
+                        <button
+                            type="button"
+                            className="pom-btn primary"
+                            onClick={handleSync}
+                            disabled={pomFooterLocked || syncStatus.isSyncing}
+                        >
+                            <i className={`bi bi-arrow-repeat ${pomSyncActive || syncStatus.isSyncing ? "spin" : ""}`} />
+                            {pomSyncActive || syncStatus.isSyncing ? "Sinxronizasiya..." : "Sinxronizasiya et"}
                         </button>
                     </div>
                 </div>
+                    </>
+                )}
             </div>
         </Modal>
         </>

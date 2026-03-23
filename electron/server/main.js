@@ -603,7 +603,14 @@ ipcMain.handle("get-sync-status", async () => {
     return await SyncService.getSyncStatus();
   } catch (error) {
     console.error("IPC get-sync-status error:", error);
-    return { isSyncing: false, pendingCount: 0 };
+    return {
+      isSyncing: false,
+      pendingCount: 0,
+      syncedCount: 0,
+      lastSyncError: null,
+      lastSyncErrorAt: null,
+      lastSyncErrorOrderPrefix: null,
+    };
   }
 });
 

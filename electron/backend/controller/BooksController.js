@@ -6,6 +6,7 @@ const TableGroupsModel = require("../model/TableGroupsModel");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 const TimerService = require("../services/TimerService");
 const { Op } = require("sequelize");
+const { serviceableItemsSum } = require("../utils/orderServiceFeeBase");
 
 const getAllActiveOrders = async (req, res) => {
   const { profileId } = req.params;
@@ -72,9 +73,13 @@ const getAllActiveOrders = async (req, res) => {
           discount = order.discount_type === "percent" ? (newTotal * parseFloat(order.discount_value)) / 100 : parseFloat(order.discount_value);
         }
         if (parseFloat(order.service_value) > 0) {
-          service = order.service_type === "percent" ? (newTotal * parseFloat(order.service_value)) / 100 : parseFloat(order.service_value);
+          const svcBase = serviceableItemsSum(order.orders_items || []);
+          service =
+            order.service_type === "percent"
+              ? (svcBase * parseFloat(order.service_value)) / 100
+              : parseFloat(order.service_value);
         }
-        
+
         order.dataValues.amount = newTotal;
         order.dataValues.total = Math.max(0, newTotal - discount + service);
         order.dataValues.discount = discount;
@@ -263,9 +268,13 @@ const getOrderById = async (req, res) => {
           discount = order.discount_type === "percent" ? (newTotal * parseFloat(order.discount_value)) / 100 : parseFloat(order.discount_value);
         }
         if (parseFloat(order.service_value) > 0) {
-          service = order.service_type === "percent" ? (newTotal * parseFloat(order.service_value)) / 100 : parseFloat(order.service_value);
+          const svcBase = serviceableItemsSum(order.orders_items || []);
+          service =
+            order.service_type === "percent"
+              ? (svcBase * parseFloat(order.service_value)) / 100
+              : parseFloat(order.service_value);
         }
-        
+
         order.dataValues.amount = newTotal;
         order.dataValues.total = Math.max(0, newTotal - discount + service);
         order.dataValues.discount = discount;
