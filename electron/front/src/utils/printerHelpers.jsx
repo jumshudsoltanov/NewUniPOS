@@ -4,6 +4,7 @@ import KitchenReceipt from "../components/Receipt/KitchenReceipt";
 import { addNotification } from "./notificationService";
 import axios, { getSocket } from "./apiConfig";
 import CustomerReceipt from "../components/Receipt/CustomerReceipt";
+import { maybeBlockCustomerOnCustomerReceipt, maybeLockCheckAfterCustomerReceiptPrint } from "./customerReceiptBlock";
 
 let _printersCache = { profileId: null, printers: null };
 export const clearPrintersCache = () => { _printersCache = { profileId: null, printers: null }; };
@@ -240,7 +241,10 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
 };
 
 
-export const printCustomerReceipt = async (orderData, profileData) => {
+/**
+ * @param {object} [options] — { dispatch, loginedWaiter, autoLockCheckAfterPrint } — aktiv çek ekranında ön çekdən sonra DB kilidi
+ */
+export const printCustomerReceipt = async (orderData, profileData, options = {}) => {
     let printers = profileData?.data?.printers;
     const profileId = profileData?.data?.profile?.id;
 
@@ -344,6 +348,19 @@ export const printCustomerReceipt = async (orderData, profileData) => {
                 socket.emit("delegate_print", delegatePayload);
                 await new Promise((r) => setTimeout(r, 60));
             }
+            await maybeBlockCustomerOnCustomerReceipt(
+                options?.dispatch,
+                options?.loginedWaiter,
+                orderData.checkData?.customer_id,
+            );
+            if (options?.autoLockCheckAfterPrint) {
+                await maybeLockCheckAfterCustomerReceiptPrint(
+                    options.dispatch,
+                    options.loginedWaiter,
+                    orderData.checkData,
+                    orderData.waiterName,
+                );
+            }
             return { success: true, delegated: true };
         }
 
@@ -372,7 +389,22 @@ export const printCustomerReceipt = async (orderData, profileData) => {
                 }
                 await new Promise((r) => setTimeout(r, 80));
             }
-            if (anyOk) return { success: true };
+            if (anyOk) {
+                await maybeBlockCustomerOnCustomerReceipt(
+                    options?.dispatch,
+                    options?.loginedWaiter,
+                    orderData.checkData?.customer_id,
+                );
+                if (options?.autoLockCheckAfterPrint) {
+                    await maybeLockCheckAfterCustomerReceiptPrint(
+                        options.dispatch,
+                        options.loginedWaiter,
+                        orderData.checkData,
+                        orderData.waiterName,
+                    );
+                }
+                return { success: true };
+            }
             return { success: false, error: lastErr || "Çap uğursuz" };
         }
 

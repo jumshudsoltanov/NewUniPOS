@@ -32,11 +32,8 @@ const CheckLockModal = ({ show, onClose, order }) => {
 
       if (loginedProfileData?.data?.profile?.id) {
         const profileId = loginedProfileData.data.profile.id;
-        // Refresh both to be safe and ensure reactivity in all views
-        await Promise.all([
-          dispatch(getTableGroups(profileId)),
-          dispatch(getActiveOrders({ profileId }))
-        ]);
+        dispatch(getTableGroups(profileId));
+        dispatch(getActiveOrders({ profileId, silentRefresh: true }));
       }
 
       toast.success(newStatus === 1 ? "Qəbz kilidləndi" : "Qəbz kilidi açıldı");

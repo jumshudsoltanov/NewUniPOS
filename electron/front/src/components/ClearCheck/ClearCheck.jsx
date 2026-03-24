@@ -85,10 +85,8 @@ const ClearCheck = ({ show, onClose, order }) => {
         socket.emit("order_deleted", { orderId: order.uuid });
       }
       if (profileId) {
-        Promise.all([
-          dispatch(getTableGroups(profileId)),
-          dispatch(getActiveOrders({ profileId }))
-        ]);
+        dispatch(getTableGroups(profileId));
+        dispatch(getActiveOrders({ profileId, silentRefresh: true }));
       }
       onClose(true);
     } catch (error) {

@@ -19,6 +19,7 @@ import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
 
 const CheckOver = () => {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const { id } = useParams();
     const [calcValue, setCalcValue] = useState("");
 
@@ -56,7 +57,6 @@ const CheckOver = () => {
     const { paymentMethods } = useSelector((state) => state.PaymentMethodsSlice);
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
     const { customers } = useSelector((state) => state.CustomersSlice);
-    const dispatch = useDispatch();
 
     // CheckBottom ilə eyni: cannot_close_check === 1 olmayan birbaşa URL ilə gələ bilməz (master/slave istisnası yoxdur)
     useEffect(() => {
@@ -342,7 +342,7 @@ const CheckOver = () => {
                 const paidValue = Number(calcValue) || totalPaidInMethods || 0;
                 const changeValue = Number(remainingBalance) || 0;
                 const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
-                printCustomerReceipt({
+                await printCustomerReceipt({
                     items: currentOrder?.orders_items || [],
                     checkData: {
                         ...currentOrder,
@@ -357,7 +357,7 @@ const CheckOver = () => {
                     tableName: receiptTableName,
                     hallName: receiptHallName,
                     waiterName
-                }, loginedProfileData);
+                }, loginedProfileData, { dispatch, loginedWaiter });
             }
 
             await dispatch(closeOrder({

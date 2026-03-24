@@ -108,7 +108,7 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
           dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
         }
         dispatch(getTableGroups(profileId));
-        dispatch(getActiveOrders({ profileId }));
+        dispatch(getActiveOrders({ profileId, silentRefresh: true }));
       })
       .catch((err) => console.error("Create order error:", err));
   };

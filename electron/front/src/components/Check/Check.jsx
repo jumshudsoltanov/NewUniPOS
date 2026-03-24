@@ -48,6 +48,7 @@ import {
   getTableHourlyPrice,
   getProductHourlySum,
 } from "../../utils/orderHourlyPrice";
+import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import ProductModal from "../ProductModal/ProductModal";
 import UpdateGuestCountModal from "../Customers-Modal/UpdateGuestCountModal";
@@ -250,6 +251,11 @@ const Check = () => {
 
   }, [id, tableId, tableGroups, books, searchParams]);
 
+  const orderEditLocked = useMemo(
+    () => isOrderEditLocked(currentOrder),
+    [currentOrder?.is_locked, currentOrder?.uuid],
+  );
+
   /** Taymer tarifi: məhsul saatlığı varsa yalnız o, yoxsa masa (cəmlənmir). */
   const effectiveHourlyPrice = useMemo(() => {
     if (!currentOrder) return Number(currentTable?.hourly_price || 0);
@@ -356,6 +362,11 @@ const Check = () => {
 
   const handleSendOrders = async (itemComments = {}) => {
     try {
+      if (orderEditLocked) {
+        toast.error(orderEditLockedToast());
+        return;
+      }
+
       const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || "Naməlum";
 
       const getSaleTypeName = (type, typeName) => {
@@ -436,7 +447,7 @@ const Check = () => {
         // Refresh to get definitive server state
         const profileId = loginedProfileData?.data?.profile?.id;
         if (profileId) {
-          dispatch(getActiveOrders({ profileId }));
+          dispatch(getActiveOrders({ profileId, silentRefresh: true }));
         }
 
         const deletedItemsForPrint = pendingDeletions.map(d => {
@@ -505,7 +516,7 @@ const Check = () => {
 
         const profileId = loginedProfileData?.data?.profile?.id;
         if (profileId) {
-          dispatch(getActiveOrders({ profileId }));
+          dispatch(getActiveOrders({ profileId, silentRefresh: true }));
         }
 
         const combinedForPrinting = [...productsWithComments];
@@ -600,7 +611,7 @@ const Check = () => {
           if (socket?.connected) socket.emit("order_deleted", { orderId });
           if (profileId) {
             dispatch(getTableGroups(profileId));
-            dispatch(getActiveOrders({ profileId }));
+            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
           }
         } catch (error) {
           console.error("Auto-delete error:", error);
@@ -647,10 +658,9 @@ const Check = () => {
     setShowOperationsModal(false);
   }, []);
 
-
   const clearCheck = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -667,21 +677,21 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowClearModal(true);
-  }, [currentOrder, products]);
+  }, [currentOrder, products, orderEditLocked]);
 
   const openCommentModal = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
     setShowOperationsModal(false);
     setComment(true);
-  }, [currentOrder]);
+  }, [currentOrder, orderEditLocked]);
 
   const openDiscountModal = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -692,11 +702,11 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowDiscount(true);
-  }, [currentOrder, products]);
+  }, [currentOrder, products, orderEditLocked]);
 
   const openServiceFee = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -707,11 +717,11 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowServiceFee(true);
-  }, [currentOrder, products]);
+  }, [currentOrder, products, orderEditLocked]);
 
   const openDepositModal = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -722,21 +732,21 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOnShowDeposit(true);
-  }, [currentOrder, products]);
+  }, [currentOrder, products, orderEditLocked]);
 
   const openWaitersModal = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
     setShowOperationsModal(false);
     setShowWaitersModal(true);
-  }, [currentOrder]);
+  }, [currentOrder, orderEditLocked]);
 
   const openACtiveCheck = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -747,11 +757,11 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOpenActiveChecks(true);
-  }, [currentOrder, products]);
+  }, [currentOrder, products, orderEditLocked]);
 
   const handleOpenChangeSaleType = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -762,12 +772,12 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOpenChangeSaleType(true);
-  }, [currentOrder, products]);
+  }, [currentOrder, products, orderEditLocked]);
 
   // ChangeTables
   const handleChangeTable = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -777,7 +787,7 @@ const Check = () => {
     }
 
     navigate(`/tables/${currentOrder?.uuid}`);
-  }, [navigate, currentOrder, products]);
+  }, [navigate, currentOrder, products, orderEditLocked]);
 
 
 
@@ -829,7 +839,7 @@ const Check = () => {
       if (!profileId) return;
       const elapsed = Date.now() - mountTimeRef.current;
       if (elapsed < 400) return;
-      dispatch(getActiveOrders({ profileId }));
+      dispatch(getActiveOrders({ profileId, silentRefresh: true }));
     };
 
     socket.on("order_deleted", handleOrderDeleted);
@@ -927,8 +937,8 @@ const Check = () => {
   };
 
   const handleOpenSplitModel = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -939,7 +949,7 @@ const Check = () => {
 
     setShowOperationsModal(false);
     setOpenSplitModal(true);
-  }, [currentOrder, products]);
+  }, [currentOrder, products, orderEditLocked]);
 
 
   const openHistoryModalFunc = useCallback(() => {
@@ -952,13 +962,17 @@ const Check = () => {
   }, [products]);
 
   const openCustomersModalFunc = useCallback(() => {
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
+      return;
+    }
     if (products?.length > 0) {
       toast.info("Müştəri seçmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
       return;
     }
     setShowCustomerModal(true);
     setShowOperationsModal(false);
-  }, [products]);
+  }, [products, orderEditLocked, currentOrder, loginedWaiter]);
 
   const openGuestCountModalFunc = useCallback(() => {
     if (products?.length > 0) {
@@ -993,10 +1007,8 @@ const Check = () => {
 
       if (result?.data?.newOrder?.uuid) {
         const profileId = loginedProfileData?.data?.profile?.id;
-        Promise.all([
-          dispatch(getTableGroups(profileId)),
-          dispatch(getActiveOrders({ profileId }))
-        ]);
+        dispatch(getTableGroups(profileId));
+        dispatch(getActiveOrders({ profileId, silentRefresh: true }));
 
         if (result.data.newOrder.sale_type === 'dine_in') {
           navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);
@@ -1011,14 +1023,14 @@ const Check = () => {
   }, [dispatch, loginedProfileData, tableGroups, navigate]);
 
   const handleDeleteCheckModal = useCallback(() => {
-    if (currentOrder?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
     setShowOperationsModal(false);
     setOpenDeleteCheckModal(true);
-  }, [currentOrder]);
+  }, [currentOrder, orderEditLocked]);
 
 
   const handleDeleteCheckFunction = async ({ reason, reasonName, orderId }) => {
@@ -1106,7 +1118,7 @@ const Check = () => {
           }
           if (profileId) {
             dispatch(getTableGroups(profileId));
-            dispatch(getActiveOrders({ profileId }));
+            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
           }
         } catch (error) {
           console.error("Delayed Delete Error:", error);
@@ -1221,8 +1233,7 @@ const Check = () => {
 
                 {Number(loginedWaiter?.data?.can_view_customers) === 1 && Number(loginedWaiter?.data?.can_see_shortcuts) === 1 && (
                   <div className="sidebar-icon"
-                    onClick={() => setShowCustomerModal(true)}
-                    style={{ cursor: 'pointer' }}
+                    onClick={() => openCustomersModalFunc()}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -1325,8 +1336,8 @@ const Check = () => {
 
                 {Number(loginedWaiter?.data?.can_add_discount) === 1 && Number(loginedWaiter?.data?.can_see_shortcuts) === 1 && (
                   <div className="sidebar-icon discount" onClick={() => {
-                    if (currentOrder?.is_locked === 1) {
-                      toast.error("Qəbz kilidlidir!");
+                    if (orderEditLocked) {
+                      toast.error(orderEditLockedToast());
                       return;
                     }
                     setOnShowDiscount(true);
@@ -1372,8 +1383,8 @@ const Check = () => {
 
                 {Number(loginedWaiter?.data?.can_edit_service_fee) === 1 && Number(loginedWaiter?.data?.can_see_shortcuts) === 1 && (
                   <div className="sidebar-icon service_fee" onClick={() => {
-                    if (currentOrder?.is_locked === 1) {
-                      toast.error("Qəbz kilidlidir!");
+                    if (orderEditLocked) {
+                      toast.error(orderEditLockedToast());
                       return;
                     }
                     setOnShowServiceFee(true);
@@ -1421,8 +1432,8 @@ const Check = () => {
                   <div
                     className="sidebar-icon comment-button"
                     onClick={() => {
-                      if (currentOrder?.is_locked === 1) {
-                        toast.error("Qəbz kilidlidir!");
+                      if (orderEditLocked) {
+                        toast.error(orderEditLockedToast());
                         return;
                       }
                       setComment(true);
@@ -1535,6 +1546,10 @@ const Check = () => {
                     title="Çap et"
                     onClick={async () => {
                       if (isDragMode || isPrintingCheck) return;
+                      if (orderEditLocked) {
+                        toast.error(orderEditLockedToast());
+                        return;
+                      }
 
                       if (currentOrder?.uuid) {
                         setIsPrintingCheck(true);
@@ -1567,13 +1582,13 @@ const Check = () => {
                             tableName: currentTable?.name,
                             hallName: currentHall?.name,
                             waiterName
-                          }, loginedProfileData);
+                          }, loginedProfileData, { dispatch, loginedWaiter, autoLockCheckAfterPrint: true });
 
                           if (result.success) {
                             toast.success("Ön çap uğurla tamamlandı");
                             const profileId = loginedProfileData?.data?.profile?.id;
                             dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName }));
-                            dispatch(getActiveOrders({ profileId }));
+                            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
                             if (tableGroups?.data) dispatch(getTableGroups(profileId));
                           }
                         } catch (error) {
@@ -2306,7 +2321,7 @@ const Check = () => {
         order={currentOrder}
         onSuccess={() => {
           if (loginedProfileData?.data?.profile?.id) {
-            dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id }));
+            dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id, silentRefresh: true }));
           }
         }}
       />
@@ -2447,7 +2462,7 @@ const Check = () => {
                 dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
               }
               dispatch(getTableGroups(profileId));
-              dispatch(getActiveOrders({ profileId }));
+              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
             })
             .catch((err) => {
               console.error(err);

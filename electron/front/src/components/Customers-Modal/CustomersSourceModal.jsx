@@ -399,13 +399,18 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
         return '';
     }, [customerGroups]);
 
+    const isCustomerBlocked = (c) =>
+        c?.is_blocked === true || Number(c?.is_blocked) === 1 || String(c?.is_blocked).toLowerCase() === "true";
+
     const filteredCustomers = useMemo(() => {
         if (!show) return [];
-        return customers.filter(c =>
-            (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (c.phone || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (c.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (c.email || '').toLowerCase().includes(searchTerm.toLowerCase())
+        return customers.filter(
+            (c) =>
+                !isCustomerBlocked(c) &&
+                ((c.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (c.phone || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (c.code || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (c.email || "").toLowerCase().includes(searchTerm.toLowerCase())),
         );
     }, [customers, searchTerm, show]);
 

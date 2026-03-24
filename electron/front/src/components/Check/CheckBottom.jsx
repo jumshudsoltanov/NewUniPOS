@@ -21,6 +21,7 @@ import { getSocket } from "../../utils/apiConfig";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getEffectiveHourlyPrice, getProductHourlySum } from "../../utils/orderHourlyPrice";
 import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
+import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
 
 const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending, clearCheck }) => {
   const dispatch = useDispatch();
@@ -29,6 +30,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const orderEditLocked = useMemo(
+    () => isOrderEditLocked(orders),
+    [orders?.is_locked, orders?.uuid],
+  );
 
   /* Taymer: TablesSlice (tickTimer) + BooksSlice — aktiv masada cədvəl mənbəsi üstünlükdə */
   const liveTimerData = useSelector((state) => selectLiveTimerData(state, id));
@@ -133,8 +139,9 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       return;
     }
 
-    if (products.length > 0 || pendingDeletions.length > 0) {
-      await handleSendOrders()
+    /* Kilid olsa belə CheckOver-a keçmək olar; gözləyən dəyişiklik yalnız kilid olmayanda göndərilir */
+    if (!orderEditLocked && (products.length > 0 || pendingDeletions.length > 0)) {
+      await handleSendOrders();
     }
 
     // Auto-stop timer when moving to payment screen
@@ -397,15 +404,15 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
           <div className="btn-send-group">
             <button
-              className={`btn-send ${(orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0) || isSending) ? 'disabled' : ''}`}
+              className={`btn-send ${(orderEditLocked || (products.length === 0 && pendingDeletions.length === 0) || isSending) ? 'disabled' : ''}`}
               onClick={() => {
-                if (orders?.is_locked == 1 || isSending) {
-                  toast.error(isSending ? "Əməliyyat davam edir..." : "Qəbz kilidlidir!");
+                if (orderEditLocked || isSending) {
+                  toast.error(isSending ? "Əməliyyat davam edir..." : orderEditLockedToast());
                   return;
                 }
                 handleSendOrders();
               }}
-              disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0) || isSending}
+              disabled={orderEditLocked || (products.length === 0 && pendingDeletions.length === 0) || isSending}
             >
               {isSending ? (
                 <div className="d-flex align-items-center gap-2">
@@ -435,8 +442,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
           {canCloseCheck ? (
                 <button
-                  className={`btn-pay ${orders?.is_locked == 1 ? 'disabled' : ''}`}
-                  disabled={orders?.is_locked == 1}
+                  className="btn-pay"
                   onClick={goCloseCheck}
                 >
                   <i className="bi bi-check2-all"></i>
@@ -459,8 +465,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         <button
           className="mobile-icon-btn gray-btn"
           onClick={() => {
-            if (orders?.is_locked == 1 || isSending) {
-              toast.error(isSending ? "Əməliyyat davam edir..." : "Qəbz kilidlidir!");
+            if (orderEditLocked || isSending) {
+              toast.error(isSending ? "Əməliyyat davam edir..." : orderEditLockedToast());
               return;
             }
 
@@ -482,7 +488,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
             }));
             handleSendOrders();
           }}
-          disabled={orders?.is_locked == 1 || (products.length === 0 && pendingDeletions.length === 0) || isSending}
+          disabled={orderEditLocked || (products.length === 0 && pendingDeletions.length === 0) || isSending}
         >
           {isSending ? (
             <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
@@ -493,8 +499,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         <button
           className="mobile-icon-btn gray-btn"
           onClick={() => {
-            if (orders?.is_locked == 1) {
-              toast.error("Qəbz kilidlidir!");
+            if (orderEditLocked) {
+              toast.error(orderEditLockedToast());
               return;
             }
             if (clearCheck) {
@@ -503,14 +509,13 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               dispatch(clearOrders());
             }
           }}
-          disabled={orders?.is_locked == 1}
+          disabled={orderEditLocked}
         >
           <i className="bi bi-trash-fill"></i>
         </button>
         {canCloseCheck ? (
               <button
                 className="mobile-pay-btn"
-                disabled={orders?.is_locked == 1}
                 onClick={goCloseCheck}
               >
                 <i className="bi bi-check2-all fs-4 text-white"></i>

@@ -28,10 +28,8 @@ const TagModal = ({ show, onClose, order }) => {
       ).unwrap();
 
       const profileId = loginedProfileData.data.profile.id;
-      Promise.all([
-        dispatch(getTableGroups(profileId)),
-        dispatch(getActiveOrders({ profileId }))
-      ]);
+      dispatch(getTableGroups(profileId));
+      dispatch(getActiveOrders({ profileId, silentRefresh: true }));
       onClose(true);
     } catch (error) {
       console.error("Failed to update tags:", error);

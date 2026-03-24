@@ -9,6 +9,7 @@ import {
 } from "../../redux/Slices/MenuSlice";
 import ManualPriceModal from "../Modals/ManualPriceModal";
 import ModifierModal from "../ModifierModal/ModifierModal";
+import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
 
 const Menu = ({
   order,
@@ -32,6 +33,12 @@ const Menu = ({
     (state) => state.MenuSlice,
   );
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+
+  const orderEditLocked = useMemo(
+    () => isOrderEditLocked(order),
+    [order?.is_locked, order?.uuid],
+  );
 
   // Drag state
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -118,8 +125,8 @@ const Menu = ({
 
   const handleProductClick = (product) => {
     if (isDragMode) return; // Prevent adding in drag mode
-    if (order?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
 
@@ -161,9 +168,11 @@ const Menu = ({
     dispatch(addProducts(product));
   };
 
-  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-
   const handlePriceConfirm = (price) => {
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
+      return;
+    }
     if (pendingProduct) {
       dispatch(addProducts({ ...pendingProduct, price: price }));
 
@@ -180,6 +189,10 @@ const Menu = ({
   };
 
   const handleModifierConfirm = (productWithModifiers) => {
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
+      return;
+    }
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 
     // Create a detail string for the log that includes the selected modifiers

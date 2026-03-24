@@ -19,7 +19,7 @@ const OperationsModal = React.memo(({
   openHistory,
   openCustomersModal,
   openGuestCountModal,
-  loginedWaiter
+  loginedWaiter,
 }) => {
 
   const operations = useMemo(() => [

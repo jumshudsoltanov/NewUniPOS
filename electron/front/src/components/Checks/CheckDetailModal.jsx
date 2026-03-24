@@ -132,10 +132,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             // Refresh data
             if (loginedProfileData?.data?.profile?.id) {
                 const profileId = loginedProfileData.data.profile.id;
-                await Promise.all([
-                    dispatch(getTableGroups(profileId)),
-                    dispatch(getActiveOrders({ profileId }))
-                ]);
+                dispatch(getTableGroups(profileId));
+                dispatch(getActiveOrders({ profileId, silentRefresh: true }));
             }
 
             setShowReasonModal(false);
@@ -180,7 +178,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         };
 
         try {
-            const result = await printCustomerReceipt(receiptOrderData, loginedProfileData);
+            const result = await printCustomerReceipt(receiptOrderData, loginedProfileData, {
+                dispatch,
+                loginedWaiter,
+            });
             if (result.success) {
                 toast.success("Çek çap edildi");
 

@@ -102,6 +102,9 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
     setDraggedHallIndex(index);
   };
 
+
+  console.log(loginedWaiter)
+
   const handleHallTouchMove = (e) => {
     if (!isTableEditMode || touchRef.current.startIndex === null) return;
     if (e.cancelable) e.preventDefault();

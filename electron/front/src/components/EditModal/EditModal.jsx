@@ -272,7 +272,14 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
     const payload = {
       orderId: orders.uuid,
-      items: [{ id: product.product_id || product.id, qty: transferQty }],
+      items: [
+        {
+          id: product.product_id || product.id,
+          qty: transferQty,
+          itemId: product.firstId || product.id,
+          allIds: product.allIds,
+        },
+      ],
       salesType: selectedSalesType,
       table: selectedTable,
       waiter: selectedWaiter,
@@ -293,10 +300,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
       if (result?.data?.newOrder?.uuid) {
         const profileId = loginedProfileData?.data?.profile?.id;
-        await Promise.all([
-          dispatch(getTableGroups(profileId)),
-          dispatch(getActiveOrders({ profileId }))
-        ]);
+        if (profileId) {
+          dispatch(getTableGroups(profileId));
+          dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+        }
 
         if (result.data.newOrder.sale_type === 'dine_in') {
           navigate(`/check/${result.data.newOrder.uuid}?tableId=${result.data.newOrder.table_id || 0}`);

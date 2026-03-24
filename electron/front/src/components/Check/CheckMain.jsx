@@ -11,6 +11,7 @@ import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault.jpg";
+import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
 
 const CheckMain = ({ orders, table }) => {
   const dispatch = useDispatch(); // Add dispatch
@@ -27,6 +28,11 @@ const CheckMain = ({ orders, table }) => {
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { id: orderIdParam } = useParams();
+
+  const orderEditLocked = useMemo(
+    () => isOrderEditLocked(orders),
+    [orders?.is_locked, orders?.uuid],
+  );
 
   const allItems = useMemo(() => {
     const groupedMap = new Map();
@@ -217,8 +223,8 @@ const CheckMain = ({ orders, table }) => {
   };
 
   const handleItemClick = (item) => {
-    if (orders?.is_locked == 1) {
-      toast.error("Qəbz kilidlidir!");
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
       return;
     }
     if (item.isDeleted) return; // Prevent clicking deleted items

@@ -874,43 +874,88 @@ const onSplitOrder = async (req, res) => {
     // else we have targetOrder and isMerge=true
 
     for (const item of data.items) {
-      const originalItem = await OrdersItemsModel.findOne({
-        where: { order_id: data.orderId, product_id: item.id },
-        transaction,
-      });
+      const moveQty = Number(item.qty);
+      if (!moveQty || moveQty <= 0) continue;
 
-      if (originalItem) {
-        const moveQty = Number(item.qty);
-        // Reduce from original
-        if (originalItem.count > moveQty) {
-          originalItem.count -= moveQty;
+      const productIdForTarget = Number(item.id);
+      let originalItem = null;
+
+      const idsFromPayload =
+        Array.isArray(item.allIds) && item.allIds.length > 0
+          ? item.allIds
+          : item.itemId != null && item.itemId !== ""
+            ? [item.itemId]
+            : null;
+
+      if (idsFromPayload) {
+        let remainingQty = moveQty;
+        let firstRow = null;
+
+        for (const currentId of idsFromPayload) {
+          if (remainingQty <= 0) break;
+
+          const row = await OrdersItemsModel.findOne({
+            where: { order_id: data.orderId, id: currentId },
+            transaction,
+          });
+
+          if (!row) continue;
+          if (!firstRow) firstRow = row;
+
+          const takeQty = Math.min(remainingQty, Number(row.count));
+          remainingQty -= takeQty;
+
+          if (Number(row.count) === takeQty) {
+            await row.destroy({ transaction });
+          } else {
+            row.count = Number(row.count) - takeQty;
+            await row.save({ transaction });
+          }
+        }
+
+        if (remainingQty > 0) {
+          throw new Error("Köçürmə: kifayət qədər məhsul yoxdur (sətir miqdarı uyğun deyil)");
+        }
+        if (!firstRow) {
+          throw new Error("Köçürmə: məhsul sətri tapılmadı");
+        }
+        originalItem = firstRow;
+      } else {
+        originalItem = await OrdersItemsModel.findOne({
+          where: { order_id: data.orderId, product_id: item.id },
+          transaction,
+        });
+
+        if (!originalItem) continue;
+
+        if (Number(originalItem.count) > moveQty) {
+          originalItem.count = Number(originalItem.count) - moveQty;
           await originalItem.save({ transaction });
         } else {
           await originalItem.destroy({ transaction });
         }
+      }
 
-        // Add to Target Order
-        const existingTargetItem = await OrdersItemsModel.findOne({
-          where: { order_id: targetOrder.uuid, product_id: item.id },
-          transaction,
-        });
+      const existingTargetItem = await OrdersItemsModel.findOne({
+        where: { order_id: targetOrder.uuid, product_id: productIdForTarget },
+        transaction,
+      });
 
-        if (existingTargetItem) {
-          existingTargetItem.count = Number(existingTargetItem.count) + moveQty;
-          await existingTargetItem.save({ transaction });
-        } else {
-          await OrdersItemsModel.create(
-            {
-              order_id: targetOrder.uuid,
-              product_id: item.id,
-              count: moveQty,
-              price: originalItem.price,
-              operator_id: targetOrder.waiter_id,
-              profile_id: profileId,
-            },
-            { transaction },
-          );
-        }
+      if (existingTargetItem) {
+        existingTargetItem.count = Number(existingTargetItem.count) + moveQty;
+        await existingTargetItem.save({ transaction });
+      } else {
+        await OrdersItemsModel.create(
+          {
+            order_id: targetOrder.uuid,
+            product_id: productIdForTarget,
+            count: moveQty,
+            price: originalItem.price,
+            operator_id: targetOrder.waiter_id,
+            profile_id: profileId,
+          },
+          { transaction },
+        );
       }
     }
 

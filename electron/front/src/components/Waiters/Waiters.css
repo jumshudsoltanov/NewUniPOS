@@ -115,15 +115,17 @@
     border-color: #5D99FF;
 }
 
-/* Waiters List */
+/* Waiters List — eyni vaxtda ~3 sətir görünsün, qalanı scroll */
 .waiters-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 40vh;
+    min-height: 0;
+    max-height: calc(3 * (4.75rem + 12px) - 12px);
     overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
     padding-right: 4px;
-    /* Space for scrollbar */
 }
 
 /* Scrollbar styling for Webkit browsers */

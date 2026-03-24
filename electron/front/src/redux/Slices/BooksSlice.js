@@ -3,7 +3,7 @@ import axios from "../../utils/apiConfig";
 
 export const getActiveOrders = createAsyncThunk(
   "pos/active-orders",
-  async ({ profileId, id, sale_type, waiter_id, hall_id, table_id, courier_id }, thunkAPI) => {
+  async ({ profileId, id, sale_type, waiter_id, hall_id, table_id, courier_id, silentRefresh }, thunkAPI) => {
     try {
       let effectiveWaiterId = waiter_id;
       const loginedWaiter = thunkAPI.getState()?.WaitersSlice?.loginedWaiter;
@@ -150,8 +150,10 @@ const BooksSlice = createSlice({
   },
   extraReducers: (builder) => {
     // getActiveOrders
-    builder.addCase(getActiveOrders.pending, (state) => {
-      state.status = 'loading';
+    builder.addCase(getActiveOrders.pending, (state, action) => {
+      if (!action.meta?.arg?.silentRefresh) {
+        state.status = 'loading';
+      }
     });
     builder.addCase(getActiveOrders.fulfilled, (state, action) => {
       state.status = 'succeeded';
@@ -433,6 +435,7 @@ const BooksSlice = createSlice({
         action.type === "pos/discount/fulfilled" ||
         action.type === "orders/change-saletype/fulfilled" ||
         action.type === "orders/waiters/fulfilled" ||
+        action.type === "orders/split/fulfilled" ||
         action.type === "orders/startTimer/fulfilled" ||
         action.type === "orders/stopTimer/fulfilled" ||
         action.type === "orders/resetTimer/fulfilled" ||

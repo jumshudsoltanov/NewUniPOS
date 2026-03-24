@@ -28,10 +28,8 @@ const CommentModal = React.memo(({ show, onClose, order }) => {
 
     if (loginedProfileData?.data?.profile?.id) {
       const profileId = loginedProfileData.data.profile.id;
-      await Promise.all([
-        dispatch(getTableGroups(profileId)),
-        dispatch(getActiveOrders({ profileId }))
-      ]);
+      dispatch(getTableGroups(profileId));
+      dispatch(getActiveOrders({ profileId, silentRefresh: true }));
     }
 
     onClose(true);

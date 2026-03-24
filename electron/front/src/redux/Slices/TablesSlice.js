@@ -254,6 +254,49 @@ const TablesSlice = createSlice({
       });
     });
 
+    builder.addCase("orders/split/fulfilled", (state, action) => {
+      const inner = action.payload?.data || action.payload;
+      const originalOrder = inner?.originalOrder;
+      const newOrder = inner?.newOrder;
+      if (!state.tableGroups?.data) return;
+
+      const patchOrder = (orderData) => {
+        if (!orderData?.uuid) return;
+        const tid = orderData.uuid || orderData.id;
+        state.tableGroups.data.forEach((hall) => {
+          hall.tables?.forEach((table) => {
+            if (!table.orders?.length) return;
+            const idx = table.orders.findIndex(
+              (o) => String(o.uuid) === String(tid) || o.id === tid,
+            );
+            if (idx !== -1) {
+              table.orders[idx] = { ...table.orders[idx], ...orderData };
+            }
+          });
+        });
+      };
+
+      if (originalOrder) patchOrder(originalOrder);
+
+      if (newOrder?.uuid && newOrder.table_id != null) {
+        const nu = newOrder.uuid || newOrder.id;
+        state.tableGroups.data.forEach((hall) => {
+          hall.tables?.forEach((table) => {
+            if (Number(table.id) !== Number(newOrder.table_id)) return;
+            if (!table.orders) table.orders = [];
+            const idx = table.orders.findIndex(
+              (o) => String(o.uuid) === String(nu) || o.id === nu,
+            );
+            if (idx !== -1) {
+              table.orders[idx] = { ...table.orders[idx], ...newOrder };
+            } else {
+              table.orders.unshift(newOrder);
+            }
+          });
+        });
+      }
+    });
+
     builder.addMatcher(
       (action) =>
         action.type === "orders/deleteCheck/fulfilled" ||
