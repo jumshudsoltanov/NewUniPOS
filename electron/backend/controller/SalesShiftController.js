@@ -25,7 +25,8 @@ const openShift = async (req, res) => {
       where: {
         profile_id: profileId,
         status: "open",
-        terminal_id: terminalId != null && terminalId !== "" ? terminalId : null,
+        terminal_id:
+          terminalId != null && terminalId !== "" ? terminalId : null,
       },
     });
     if (existing) {
@@ -46,14 +47,16 @@ const openShift = async (req, res) => {
     });
 
     // Admin serverə göndər (xəta olsa da davam et)
-    axios.post(`${ADMIN_API}/sales-shifts/${profileId}/open`, {
-      uuid: row.uuid,
-      terminalId: terminalId || null,
-      waiterId: waiterId || null,
-      waiterName: waiterName || null,
-      opened_at: row.opened_at,
-      startingCash: row.starting_cash || 0,
-    }).catch(() => {});
+    axios
+      .post(`${ADMIN_API}/sales-shifts/${profileId}/open`, {
+        uuid: row.uuid,
+        terminalId: terminalId || null,
+        waiterId: waiterId || null,
+        waiterName: waiterName || null,
+        opened_at: row.opened_at,
+        startingCash: row.starting_cash || 0,
+      })
+      .catch(() => {});
 
     // Bütün terminallara socket ilə xəbər ver
     try {
@@ -88,7 +91,10 @@ const getLiveSummary = async (req, res) => {
   try {
     const where = { profile_id: profileId, status: "open" };
     if (shiftUuid) where.uuid = shiftUuid;
-    const shift = await SalesShiftsModel.findOne({ where, order: [["opened_at", "DESC"]] });
+    const shift = await SalesShiftsModel.findOne({
+      where,
+      order: [["opened_at", "DESC"]],
+    });
     if (!shift) {
       return res.status(200).json({ message: "success", data: null });
     }
@@ -97,7 +103,12 @@ const getLiveSummary = async (req, res) => {
     const startStr = fmt(startDate);
     const endStr = fmt(endDate);
     // terminal_id filtri yox — bütün terminalların sifarişləri göstərilsin
-    const summary = await getShiftSummaryForRange(profileId, null, startDate, endDate);
+    const summary = await getShiftSummaryForRange(
+      profileId,
+      null,
+      startDate,
+      endDate,
+    );
     return res.status(200).json({
       message: "success",
       data: { shift, summary, range: { startStr, endStr } },
@@ -123,7 +134,12 @@ const closeShift = async (req, res) => {
     const startStr = fmt(startDate);
     const endStr = fmt(endDate);
     // terminal_id filtri yox — bütün terminalların sifarişləri göstərilsin
-    const summary = await getShiftSummaryForRange(profileId, null, startDate, endDate);
+    const summary = await getShiftSummaryForRange(
+      profileId,
+      null,
+      startDate,
+      endDate,
+    );
     const snapshot = {
       closedAt: endStr,
       openedAt: startStr,
@@ -140,17 +156,20 @@ const closeShift = async (req, res) => {
     await shift.save();
 
     // Admin serverə göndər (xəta olsa da davam et)
-    axios.post(`${ADMIN_API}/sales-shifts/shift/${shiftUuid}/close`, {
-      waiterId: waiterId || null,
-      waiterName: waiterName || null,
-      closed_at: shift.closed_at,
-      report_snapshot: snapshot,
-    }).catch(() => {});
+    axios
+      .post(`${ADMIN_API}/sales-shifts/shift/${shiftUuid}/close`, {
+        waiterId: waiterId || null,
+        waiterName: waiterName || null,
+        closed_at: shift.closed_at,
+        report_snapshot: snapshot,
+      })
+      .catch(() => {});
 
     // Bütün terminallara socket ilə xəbər ver
     try {
       const { getIo } = require("../socket/MasterServer");
-      if (getIo()) getIo().emit("shift_updated", { action: "close", profileId });
+      if (getIo())
+        getIo().emit("shift_updated", { action: "close", profileId });
     } catch (_) {}
 
     return res.status(200).json({
@@ -204,7 +223,9 @@ const getShiftByUuid = async (req, res) => {
         snapshot = null;
       }
     }
-    return res.status(200).json({ message: "success", data: { shift: row, snapshot } });
+    return res
+      .status(200)
+      .json({ message: "success", data: { shift: row, snapshot } });
   } catch (e) {
     return res.status(500).json({ message: e.message });
   }

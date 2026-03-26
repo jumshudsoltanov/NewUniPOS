@@ -152,7 +152,7 @@
         box-sizing: border-box;
     }
 
-    .sales-shift-col-right > .sales-shift-empty-right {
+    .sales-shift-col-right>.sales-shift-empty-right {
         flex: 1 1 auto;
         min-height: 160px;
         display: flex;
@@ -627,8 +627,13 @@
 }
 
 /* köhnə class-lar silindi, bunlar artıq istifadə edilmir */
-.sales-shift-meta-block { display: none; }
-.sales-shift-table-wrap { display: none; }
+.sales-shift-meta-block {
+    display: none;
+}
+
+.sales-shift-table-wrap {
+    display: none;
+}
 
 .sales-shift-table-wrap th {
     background: #f8fafc;
@@ -893,7 +898,7 @@
     border-radius: 0 !important;
 }
 
-.sales-shift-detail-nested .modal-dialog > * {
+.sales-shift-detail-nested .modal-dialog>* {
     border-radius: 0 !important;
 }
 

@@ -133,23 +133,27 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                 <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', marginBottom: 10 }}>Çap növü</div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     {/* Raster seçimi */}
-                                    {(() => { const isRaster = printer.usb_name === '' || printer.usb_name === null || printer.usb_name === undefined || printer.usb_name === 'RASTER'; return (
-                                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isRaster ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isRaster ? '#eff6ff' : '#fff' }}>
-                                        <input type="radio" name={`ptype_${printer.id}`} checked={isRaster} onChange={() => updatePrinterField('usb_name', 'RASTER')} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
-                                        <div>
-                                            <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>Tam dizayn çapı (Raster) <span style={{ fontSize: 11, background: '#dcfce7', color: '#16a34a', padding: '1px 7px', borderRadius: 20, marginLeft: 4 }}>Tövsiyə</span></div>
-                                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>HTML çek dizaynı şəkil kimi çap olunur. Windows driver lazım deyil, birbaşa IP-yə göndərilir.</div>
-                                        </div>
-                                    </label>); })()}
+                                    {(() => {
+                                        const isRaster = printer.usb_name === '' || printer.usb_name === null || printer.usb_name === undefined || printer.usb_name === 'RASTER'; return (
+                                            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isRaster ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isRaster ? '#eff6ff' : '#fff' }}>
+                                                <input type="radio" name={`ptype_${printer.id}`} checked={isRaster} onChange={() => updatePrinterField('usb_name', 'RASTER')} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>Tam dizayn çapı (Raster) <span style={{ fontSize: 11, background: '#dcfce7', color: '#16a34a', padding: '1px 7px', borderRadius: 20, marginLeft: 4 }}>Tövsiyə</span></div>
+                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>HTML çek dizaynı şəkil kimi çap olunur. Windows driver lazım deyil, birbaşa IP-yə göndərilir.</div>
+                                                </div>
+                                            </label>);
+                                    })()}
                                     {/* Windows Driver seçimi */}
-                                    {(() => { const isWin = printer.usb_name && printer.usb_name !== 'RASTER'; return (
-                                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isWin ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isWin ? '#eff6ff' : '#fff' }}>
-                                        <input type="radio" name={`ptype_${printer.id}`} checked={!!isWin} onChange={() => { const autoName = printer.ip ? `UNIPOS_${String(printer.ip).replace(/\./g, '_')}` : (systemPrinters[0]?.name || 'UNIPOS_PRINTER'); updatePrinterField('usb_name', autoName); }} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
-                                        <div>
-                                            <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>Windows Driver vasitəsilə</div>
-                                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Bu printerin Windows-da qurulu olması lazımdır. Aşağıdan adını seçin.</div>
-                                        </div>
-                                    </label>); })()}
+                                    {(() => {
+                                        const isWin = printer.usb_name && printer.usb_name !== 'RASTER'; return (
+                                            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isWin ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isWin ? '#eff6ff' : '#fff' }}>
+                                                <input type="radio" name={`ptype_${printer.id}`} checked={!!isWin} onChange={() => { const autoName = printer.ip ? `UNIPOS_${String(printer.ip).replace(/\./g, '_')}` : (systemPrinters[0]?.name || 'UNIPOS_PRINTER'); updatePrinterField('usb_name', autoName); }} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>Windows Driver vasitəsilə</div>
+                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Bu printerin Windows-da qurulu olması lazımdır. Aşağıdan adını seçin.</div>
+                                                </div>
+                                            </label>);
+                                    })()}
                                 </div>
                             </div>
 
@@ -426,7 +430,7 @@ const DevicesModal = ({ show, onHide }) => {
 
     useEffect(() => {
         if (window.electronAPI?.getStaticMasterIp) {
-            window.electronAPI.getStaticMasterIp().then(ip => setStaticMasterIp(ip || "")).catch(() => {});
+            window.electronAPI.getStaticMasterIp().then(ip => setStaticMasterIp(ip || "")).catch(() => { });
         }
     }, [show]);
 
@@ -1112,36 +1116,36 @@ const DevicesModal = ({ show, onHide }) => {
                                                 const isNet = connType === 'network' || (!connType && printer.ip);
                                                 const status = isNet ? (printerStatuses[printer.id] || null) : null;
                                                 return (
-                                                <div
-                                                    key={printer.id || index}
-                                                    className="printer-edit-card"
-                                                    style={{ cursor: 'pointer', border: '1px solid #e2e8f0', boxShadow: 'none' }}
-                                                    onClick={() => { setSelectedPrinterIndex(index); setPrinterTab("connection"); }}
-                                                >
-                                                    <div className="printer-card-header">
-                                                        <div className="printer-card-icon" style={{ background: '#eff6ff', color: '#3b82f6', position: 'relative' }}>
-                                                            <i className="bi bi-printer"></i>
-                                                            {status && (
-                                                                <span className={`printer-status-dot printer-status-dot--${status}`}></span>
+                                                    <div
+                                                        key={printer.id || index}
+                                                        className="printer-edit-card"
+                                                        style={{ cursor: 'pointer', border: '1px solid #e2e8f0', boxShadow: 'none' }}
+                                                        onClick={() => { setSelectedPrinterIndex(index); setPrinterTab("connection"); }}
+                                                    >
+                                                        <div className="printer-card-header">
+                                                            <div className="printer-card-icon" style={{ background: '#eff6ff', color: '#3b82f6', position: 'relative' }}>
+                                                                <i className="bi bi-printer"></i>
+                                                                {status && (
+                                                                    <span className={`printer-status-dot printer-status-dot--${status}`}></span>
+                                                                )}
+                                                            </div>
+                                                            <div className="printer-card-title">
+                                                                <h5>{printer.local_name || printer.name}</h5>
+                                                                <span>
+                                                                    {printer.is_cashier === 1 ? "Kassa Printeri" : "Mətbəx Printeri"}
+                                                                    {printer.connection_type === 'usb' && printer.usb_name ? ` • USB: ${printer.usb_name}` : ''}
+                                                                    {printer.connection_type === 'com' && printer.usb_name ? ` • COM: ${printer.usb_name}` : ''}
+                                                                    {isNet && printer.ip ? ` • ${printer.ip}` : ''}
+                                                                </span>
+                                                            </div>
+                                                            {isNet && (
+                                                                <span className={`printer-status-badge printer-status-badge--${status || 'checking'}`}>
+                                                                    {status === 'online' ? 'Online' : status === 'offline' ? 'Offline' : '...'}
+                                                                </span>
                                                             )}
+                                                            <i className="bi bi-chevron-right" style={{ marginLeft: isNet ? '8px' : 'auto', color: '#94a3b8', fontSize: '18px' }}></i>
                                                         </div>
-                                                        <div className="printer-card-title">
-                                                            <h5>{printer.local_name || printer.name}</h5>
-                                                            <span>
-                                                                {printer.is_cashier === 1 ? "Kassa Printeri" : "Mətbəx Printeri"}
-                                                                {printer.connection_type === 'usb' && printer.usb_name ? ` • USB: ${printer.usb_name}` : ''}
-                                                                {printer.connection_type === 'com' && printer.usb_name ? ` • COM: ${printer.usb_name}` : ''}
-                                                                {isNet && printer.ip ? ` • ${printer.ip}` : ''}
-                                                            </span>
-                                                        </div>
-                                                        {isNet && (
-                                                            <span className={`printer-status-badge printer-status-badge--${status || 'checking'}`}>
-                                                                {status === 'online' ? 'Online' : status === 'offline' ? 'Offline' : '...'}
-                                                            </span>
-                                                        )}
-                                                        <i className="bi bi-chevron-right" style={{ marginLeft: isNet ? '8px' : 'auto', color: '#94a3b8', fontSize: '18px' }}></i>
                                                     </div>
-                                                </div>
                                                 );
                                             })}
                                         </div>

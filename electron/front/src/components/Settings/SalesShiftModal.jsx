@@ -353,14 +353,14 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                                     {(s.byCategory || []).length ? (
                                         s.byCategory.map((cat) => (
                                             <React.Fragment key={cat.name}>
-                                                <tr style={{background:'#f0f4ff'}}>
-                                                    <td style={{fontWeight:700, color:'#053796'}}>{cat.name}</td>
-                                                    <td className="num" style={{fontWeight:700, color:'#053796'}}>{cat.quantity?.toFixed(2)}</td>
-                                                    <td className="num" style={{fontWeight:700, color:'#053796'}}>{money(cat.total)}</td>
+                                                <tr style={{ background: '#f0f4ff' }}>
+                                                    <td style={{ fontWeight: 700, color: '#053796' }}>{cat.name}</td>
+                                                    <td className="num" style={{ fontWeight: 700, color: '#053796' }}>{cat.quantity?.toFixed(2)}</td>
+                                                    <td className="num" style={{ fontWeight: 700, color: '#053796' }}>{money(cat.total)}</td>
                                                 </tr>
                                                 {(cat.products || []).map((p) => (
                                                     <tr key={p.name}>
-                                                        <td style={{paddingLeft:24, color:'#64748b'}}>{p.name}</td>
+                                                        <td style={{ paddingLeft: 24, color: '#64748b' }}>{p.name}</td>
                                                         <td className="num">{p.quantity?.toFixed(2)}</td>
                                                         <td className="num">{money(p.total)}</td>
                                                     </tr>
@@ -482,7 +482,7 @@ const SalesShiftModal = ({ show, onHide }) => {
         const socket = getSocket();
         if (!socket) return;
         const onShiftUpdated = () => {
-            if (profileId) refreshAll().catch(() => {});
+            if (profileId) refreshAll().catch(() => { });
         };
         socket.on("shift_updated", onShiftUpdated);
         return () => socket.off("shift_updated", onShiftUpdated);
@@ -491,7 +491,7 @@ const SalesShiftModal = ({ show, onHide }) => {
     useEffect(() => {
         if (!show || !currentShift) return;
         const t = setInterval(() => {
-            fetchLive().catch(() => {});
+            fetchLive().catch(() => { });
         }, 45000);
         return () => clearInterval(t);
     }, [show, currentShift, fetchLive]);
@@ -965,14 +965,14 @@ const SalesShiftModal = ({ show, onHide }) => {
                                 {(summary.byCategory || []).length ? (
                                     summary.byCategory.map((cat) => (
                                         <React.Fragment key={cat.name}>
-                                            <tr style={{background:'#f0f4ff'}}>
-                                                <td style={{fontWeight:700, color:'#053796'}}>{cat.name}</td>
-                                                <td className="num" style={{fontWeight:700, color:'#053796'}}>{cat.quantity?.toFixed(2)}</td>
-                                                <td className="num" style={{fontWeight:700, color:'#053796'}}>{money(cat.total)}</td>
+                                            <tr style={{ background: '#f0f4ff' }}>
+                                                <td style={{ fontWeight: 700, color: '#053796' }}>{cat.name}</td>
+                                                <td className="num" style={{ fontWeight: 700, color: '#053796' }}>{cat.quantity?.toFixed(2)}</td>
+                                                <td className="num" style={{ fontWeight: 700, color: '#053796' }}>{money(cat.total)}</td>
                                             </tr>
                                             {(cat.products || []).map((p) => (
                                                 <tr key={p.name}>
-                                                    <td style={{paddingLeft:24, color:'#64748b'}}>{p.name}</td>
+                                                    <td style={{ paddingLeft: 24, color: '#64748b' }}>{p.name}</td>
                                                     <td className="num">{p.quantity?.toFixed(2)}</td>
                                                     <td className="num">{money(p.total)}</td>
                                                 </tr>
@@ -1077,9 +1077,8 @@ const SalesShiftModal = ({ show, onHide }) => {
                             Satış növbəsi
                         </Modal.Title>
                         <span
-                            className={`sales-shift-header-status ${
-                                currentShift ? "sales-shift-header-status--open" : "sales-shift-header-status--closed"
-                            }`}
+                            className={`sales-shift-header-status ${currentShift ? "sales-shift-header-status--open" : "sales-shift-header-status--closed"
+                                }`}
                             title={currentShift ? "Bu terminalda növbə açıqdır" : "Açıq növbə yoxdur"}
                         >
                             <span className="sales-shift-header-status-dot" aria-hidden />

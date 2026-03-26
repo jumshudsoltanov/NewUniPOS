@@ -394,49 +394,49 @@ const CheckOver = () => {
                         if (saleItems.length === 0) {
                             toast.warning('Fiskal çek üçün məhsul siyahısı boşdur — göndərilmədi.');
                         } else {
-                        // Call tax sale API in the background (as requested: do not wait for fiscal device)
-                        apiConfig.post('/tax/sale', {
-                            taxConfigs: taxConfigsToUse,
-                            saleData: {
-                                items: saleItems,
-                                payments,
-                                cashierName: waiterName,
-                                orderId: currentOrder?.id || id
-                            }
-                        }, { timeout: TAX_HTTP_TIMEOUT_MS }).then(taxResult => {
-                            const results = taxResult.data?.results || [];
-                            const successCount = results.filter(r => r.success).length;
-                            const failCount = results.filter(r => !r.success).length;
-                            if (successCount > 0) {
-                                toast.success(failCount > 0
-                                    ? `Vergi çeki: ${successCount} kassada uğurlu, ${failCount} kassada xəta`
-                                    : 'Vergi çeki kəsildi');
-                                const firstSuccess = results.find(r => r.success && r.data);
-                                if (firstSuccess?.data) {
-                                    const fd = firstSuccess.data;
-                                    const cfg = firstSuccess.config;
-                                    const taxId = cfg?.id ?? (cfg?.ip_addr && cfg?.port_addr
-                                        ? Math.abs((cfg.ip_addr + ':' + cfg.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
-                                        : null);
-                                    apiConfig.patch(`/tax/save-fiscal/${id}`, {
-                                        fiscal_id: fd.long_id || '',
-                                        fiscal_doc_number: String(fd.document_number || ''),
-                                        fiscal_short_id: fd.short_id || '',
-                                        tax_cash_id: taxId
-                                    }).catch(err => console.error('Save fiscal data error:', err));
+                            // Call tax sale API in the background (as requested: do not wait for fiscal device)
+                            apiConfig.post('/tax/sale', {
+                                taxConfigs: taxConfigsToUse,
+                                saleData: {
+                                    items: saleItems,
+                                    payments,
+                                    cashierName: waiterName,
+                                    orderId: currentOrder?.id || id
                                 }
-                            } else {
-                                const errDetails = results.map(r => r.error).filter(Boolean).join('; ') || 'Vergi çeki kəsilə bilmədi';
-                                addNotification('Fiskal Çək Xətası', errDetails, { category: 'system', type: 'error' });
-                            }
-                        }).catch(taxErr => {
-                            console.error('Tax sale error:', taxErr);
-                            const errMsg = taxErr.response?.data?.message || taxErr.message;
-                            addNotification('Fiskal Çək Xətası', errMsg, { category: 'system', type: 'error' });
-                        });
+                            }, { timeout: TAX_HTTP_TIMEOUT_MS }).then(taxResult => {
+                                const results = taxResult.data?.results || [];
+                                const successCount = results.filter(r => r.success).length;
+                                const failCount = results.filter(r => !r.success).length;
+                                if (successCount > 0) {
+                                    toast.success(failCount > 0
+                                        ? `Vergi çeki: ${successCount} kassada uğurlu, ${failCount} kassada xəta`
+                                        : 'Vergi çeki kəsildi');
+                                    const firstSuccess = results.find(r => r.success && r.data);
+                                    if (firstSuccess?.data) {
+                                        const fd = firstSuccess.data;
+                                        const cfg = firstSuccess.config;
+                                        const taxId = cfg?.id ?? (cfg?.ip_addr && cfg?.port_addr
+                                            ? Math.abs((cfg.ip_addr + ':' + cfg.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
+                                            : null);
+                                        apiConfig.patch(`/tax/save-fiscal/${id}`, {
+                                            fiscal_id: fd.long_id || '',
+                                            fiscal_doc_number: String(fd.document_number || ''),
+                                            fiscal_short_id: fd.short_id || '',
+                                            tax_cash_id: taxId
+                                        }).catch(err => console.error('Save fiscal data error:', err));
+                                    }
+                                } else {
+                                    const errDetails = results.map(r => r.error).filter(Boolean).join('; ') || 'Vergi çeki kəsilə bilmədi';
+                                    addNotification('Fiskal Çək Xətası', errDetails, { category: 'system', type: 'error' });
+                                }
+                            }).catch(taxErr => {
+                                console.error('Tax sale error:', taxErr);
+                                const errMsg = taxErr.response?.data?.message || taxErr.message;
+                                addNotification('Fiskal Çək Xətası', errMsg, { category: 'system', type: 'error' });
+                            });
 
-                        // Proceed without waiting for taxResult
-                        toast.info('Vergi çeki arxa planda kəsilir...');
+                            // Proceed without waiting for taxResult
+                            toast.info('Vergi çeki arxa planda kəsilir...');
                         }
                     } catch (taxErr) {
                         console.error('Tax sale error:', taxErr);
