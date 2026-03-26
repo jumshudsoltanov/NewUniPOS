@@ -37,7 +37,23 @@ const MenuSlice = createSlice({
     menuDataWithGeneralCategories: {},
     menuDataWithCategories: {},
   },
-  reducers: {},
+  reducers: {
+    applyProductOrdering: (state, action) => {
+      const { categoryId, orderedIds } = action.payload;
+      if (!state.menuDataWithCategories?.data) return;
+      const catIndex = state.menuDataWithCategories.data.findIndex(c => c.id === categoryId);
+      if (catIndex === -1) return;
+      const cat = state.menuDataWithCategories.data[catIndex];
+      if (!cat.products) return;
+      const orderMap = {};
+      orderedIds.forEach((id, i) => { orderMap[id] = i; });
+      cat.products.sort((a, b) => {
+        const ai = orderMap[a.id] !== undefined ? orderMap[a.id] : 9999;
+        const bi = orderMap[b.id] !== undefined ? orderMap[b.id] : 9999;
+        return ai - bi;
+      });
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(menuWithGeneralCategories.fulfilled, (state, action) => {
@@ -130,4 +146,5 @@ const MenuSlice = createSlice({
   },
 });
 
+export const { applyProductOrdering } = MenuSlice.actions;
 export default MenuSlice.reducer;

@@ -29,14 +29,15 @@ const OrderLogsModal = ({ show, onHide, order }) => {
             centered
             className="order-logs-modal"
             dialogClassName="order-logs-dialog"
+            contentClassName="border-0"
             size="md"
         >
-            <Modal.Header closeButton style={{ backgroundColor: '#4F85F4', color: 'white', borderBottom: 'none', padding: '15px 20px' }}>
+            <Modal.Header closeButton style={{ backgroundColor: '#4F85F4', color: 'white', borderBottom: 'none', padding: '15px 20px', borderRadius: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
                 <Modal.Title style={{ fontSize: '1.2rem', fontWeight: '600' }}>
                     Çek tarixçəsi №{order?.id || ''}
                 </Modal.Title>
             </Modal.Header>
-            <Modal.Body className="p-0" style={{ backgroundColor: '#fff', height: '450px', display: 'flex', flexDirection: 'column' }}>
+            <Modal.Body className="p-0" style={{ backgroundColor: '#f0f4ff', height: '450px', display: 'flex', flexDirection: 'column' }}>
                 {logs.length === 0 ? (
                     <div className="empty-logs p-5 text-center flex-grow-1 d-flex flex-column justify-content-center">
                         <div className="empty-icon mb-2 opacity-50">
@@ -45,7 +46,7 @@ const OrderLogsModal = ({ show, onHide, order }) => {
                         <p className="text-secondary small">Hələ ki, heç bir əməliyyat yoxdur</p>
                     </div>
                 ) : (
-                    <div className="timeline-container p-3 flex-grow-1 overflow-auto" style={{ scrollbarWidth: 'thin' }}>
+                    <div className="timeline-container p-3 flex-grow-1 logs-scroll" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
                         <div className="timeline position-relative">
                             {/* Thinner Vertical Line */}
                             <div className="position-absolute h-100" style={{

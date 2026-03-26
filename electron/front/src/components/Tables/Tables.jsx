@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { getSocket } from "../../utils/apiConfig";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
+import { checkShiftGuard } from "../../utils/shiftGuard";
 
 const Tables = () => {
   const {
@@ -39,6 +40,7 @@ const Tables = () => {
   const dispatch = useDispatch();
   const { id } = useParams();
 
+  const _tProfileId = loginedProfileData?.data?.profile?.id;
 
   // Edit Mode & Ordering States (Drag indices kept local as they are transient UI state)
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -279,6 +281,11 @@ const Tables = () => {
       } else if (orders?.length === 1) {
         navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
       } else {
+        const guard = await checkShiftGuard(loginedProfileData);
+        if (guard.blocked) {
+          toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+          return;
+        }
         setSelectedTable(table);
         setShowModal(true);
       }
@@ -641,8 +648,13 @@ const Tables = () => {
         show={showOtherChecks}
         onClose={() => setShowOtherChecks(false)}
         table={selectedTable}
-        onCreateNew={() => {
+        onCreateNew={async () => {
           setShowOtherChecks(false);
+          const guard = await checkShiftGuard(loginedProfileData);
+          if (guard.blocked) {
+            toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+            return;
+          }
           setShowModal(true);
         }}
       />

@@ -44,7 +44,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  const [qty, setQty] = useState(product?.count || 1);
+  const [qtyStr, setQtyStr] = useState(String(product?.count || 1));
+  const qty = parseFloat(qtyStr) || 0;
+  const [numpadTarget, setNumpadTarget] = useState("qty"); // "qty" | "price"
   const [price, setPrice] = useState(product?.price || 0);
   const dispatch = useDispatch();
   const { sentProducts, products, menu } = useSelector((state) => state.OrderSlice);
@@ -320,10 +322,25 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   };
 
   const handleNumpad = (val) => {
-    if (val === "backspace") {
-      setInputValue((prev) => prev.slice(0, -1));
+    if (numpadTarget === "price") {
+      if (val === "backspace") {
+        setInputValue((prev) => prev.slice(0, -1) || "0");
+      } else if (val === ".") {
+        setInputValue((prev) => (prev.includes(".") ? prev : prev + "."));
+      } else {
+        setInputValue((prev) => (prev === "0" ? String(val) : prev + val));
+      }
     } else {
-      setInputValue((prev) => prev + val);
+      if (val === "backspace") {
+        setQtyStr((prev) => {
+          const next = prev.slice(0, -1);
+          return next === "" || next === "-" ? "0" : next;
+        });
+      } else if (val === ".") {
+        setQtyStr((prev) => (prev.includes(".") ? prev : prev + "."));
+      } else {
+        setQtyStr((prev) => (prev === "0" ? String(val) : prev + val));
+      }
     }
   };
 
@@ -489,8 +506,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                   <div className="input-display-box" onClick={() => {
                     if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) {
                       toast.error("Sizin qiymət dəyişmək icazəniz yoxdur!");
+                      return;
                     }
-                  }}>
+                    setNumpadTarget("price");
+                  }} style={{ outline: numpadTarget === "price" ? "2px solid #3b82f6" : undefined, borderRadius: 8 }}>
                     <input
                       type="text"
                       className="super-input"
@@ -516,15 +535,23 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                           toast.error("Sizin məhsul silmək icazəniz yoxdur!");
                           return;
                         }
-                        setQty(newQty);
+                        setQtyStr(String(newQty));
                       }}
                     >
                       <i className="bi bi-dash"></i>
                     </button>
-                    <span className="stepper-value" style={qty === 0 ? { color: '#FF4D4D', fontWeight: 800 } : {}}>{qty}</span>
+                    <span
+                      className="stepper-value"
+                      onClick={() => setNumpadTarget("qty")}
+                      style={{
+                        ...(qty === 0 ? { color: '#FF4D4D', fontWeight: 800 } : {}),
+                        outline: numpadTarget === "qty" ? "2px solid #3b82f6" : undefined,
+                        borderRadius: 6, padding: "0 4px", cursor: "pointer"
+                      }}
+                    >{qtyStr}</span>
                     <button
                       className="stepper-btn btn-plus"
-                      onClick={() => setQty((q) => q + 1)}
+                      onClick={() => setQtyStr((prev) => String((parseFloat(prev) || 0) + 1))}
                     >
                       <i className="bi bi-plus-lg"></i>
                     </button>
@@ -589,7 +616,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       if (newLocalQty < 0) {
                         if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
                           toast.error("Sizin məhsul silmək icazəniz yoxdur!");
-                          setQty(savedQty);
+                          setQtyStr(String(savedQty));
                           return;
                         }
                         if (product.isNew && product.localQuantity > 0) {

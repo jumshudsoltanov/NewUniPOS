@@ -22,6 +22,7 @@ import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getEffectiveHourlyPrice, getProductHourlySum } from "../../utils/orderHourlyPrice";
 import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
 import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
+import { checkShiftGuard } from "../../utils/shiftGuard";
 
 const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending, clearCheck }) => {
   const dispatch = useDispatch();
@@ -66,6 +67,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
   const [showNewItemsModal, setShowNewItemsModal] = useState(false);
   const [showSalesTypeModal, setShowSalesTypeModal] = useState(false);
+
+  const _cbProfileId = loginedProfileData?.data?.profile?.id;
 
   // BroadCast to Customer Display
   useEffect(() => {
@@ -457,7 +460,14 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         {Number(loginedWaiter?.data?.can_create_order) === 1 && (
           <button
             className="mobile-icon-btn gray-btn"
-            onClick={() => setShowSalesTypeModal(true)}
+            onClick={async () => {
+              const guard = await checkShiftGuard(loginedProfileData);
+              if (guard.blocked) {
+                toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                return;
+              }
+              setShowSalesTypeModal(true);
+            }}
           >
             <i className="bi bi-plus-lg"></i>
           </button>

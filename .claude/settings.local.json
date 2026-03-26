@@ -7,7 +7,18 @@
       "Bash(xargs grep -l \"status.*===.*1\\\\|status.*===.*2\")",
       "Bash(grep -l \"await.*dispatch\" \"c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components\"/**/*.jsx)",
       "Bash(node -e \":*)",
-      "Bash(grep -rn \"check_id\\\\|checkId\\\\|cek.*id\\\\|order.*id\\\\|#id\\\\|print_count\\\\|id.*30\\\\|receipt.*id\" c:/Users/Jumshud/Desktop/unipos-new-admin --include=*.js --include=*.jsx --include=*.vue --include=*.html -l)"
+      "Bash(grep -rn \"check_id\\\\|checkId\\\\|cek.*id\\\\|order.*id\\\\|#id\\\\|print_count\\\\|id.*30\\\\|receipt.*id\" c:/Users/Jumshud/Desktop/unipos-new-admin --include=*.js --include=*.jsx --include=*.vue --include=*.html -l)",
+      "Bash(\"c:\\\\Users\\\\Jumshud\\\\Desktop\\\\POS-ReDesing\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\" --version)",
+      "Bash(npm cache:*)",
+      "Read(//c/Users/Jumshud/AppData/Local/electron/Cache/**)",
+      "Bash(node -e \"const {createCanvas} = require\\(''canvas''\\); const c = createCanvas\\(10,10\\); console.log\\(''canvas ok, version:'', require\\(''canvas/package.json''\\).version\\);\")",
+      "WebSearch",
+      "WebFetch(domain:www.xprinter.net)",
+      "Bash(node -e \"try{require\\(''puppeteer-core''\\);console.log\\(''ok''\\)}catch\\(e\\){console.log\\(''yox''\\)}\")",
+      "Bash(node -e \"try{require\\(''''electron''''\\);const e=require\\(''''electron''''\\);console.log\\(typeof e\\)}catch\\(er\\){console.log\\(er.message\\)}\")",
+      "Bash(grep -rn \"table.*click\\\\|onClick.*table\\\\|handleTable\\\\|openCheck\\\\|navigate.*check\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/Menu --include=*.jsx)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm install:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",

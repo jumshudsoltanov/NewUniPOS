@@ -338,28 +338,6 @@ const CheckOver = () => {
         }
 
         try {
-            if (printCheck) {
-                const paidValue = Number(calcValue) || totalPaidInMethods || 0;
-                const changeValue = Number(remainingBalance) || 0;
-                const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
-                await printCustomerReceipt({
-                    items: currentOrder?.orders_items || [],
-                    checkData: {
-                        ...currentOrder,
-                        orderId: currentOrder?.id,
-                        total: calcTotal.sumTotal,
-                        payments: payments,
-                        paidAmount: paidValue,
-                        change: changeValue,
-                        customer_name: selectedCustomer?.name || currentOrder?.customer_name || "",
-                        waiter_name: orderWaiter
-                    },
-                    tableName: receiptTableName,
-                    hallName: receiptHallName,
-                    waiterName
-                }, loginedProfileData, { dispatch, loginedWaiter });
-            }
-
             await dispatch(closeOrder({
                 orderId: id,
                 payments,
@@ -475,6 +453,31 @@ const CheckOver = () => {
             }
             const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
             navigate(isPacksOnly ? "/checks" : "/tables");
+
+            // Print in background after navigation (non-blocking)
+            if (printCheck) {
+                const paidValue = Number(calcValue) || totalPaidInMethods || 0;
+                const changeValue = Number(remainingBalance) || 0;
+                const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
+                printCustomerReceipt({
+                    items: currentOrder?.orders_items || [],
+                    checkData: {
+                        ...currentOrder,
+                        orderId: currentOrder?.id,
+                        total: calcTotal.sumTotal,
+                        payments: payments,
+                        paidAmount: paidValue,
+                        change: changeValue,
+                        customer_name: selectedCustomer?.name || currentOrder?.customer_name || "",
+                        waiter_name: orderWaiter
+                    },
+                    tableName: receiptTableName,
+                    hallName: receiptHallName,
+                    waiterName
+                }, loginedProfileData, { dispatch, loginedWaiter }).catch(err => {
+                    console.error("Background print failed:", err);
+                });
+            }
         } catch (err) {
             console.error("Close order failed:", err);
         }

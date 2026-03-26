@@ -164,6 +164,20 @@ const BooksSlice = createSlice({
       state.error = action.payload;
     });
 
+    // sendOrdersItems fulfilled — server tam order qaytarır, birbaşa books-da yenilə
+    builder.addCase("pos/orders/fulfilled", (state, action) => {
+      const updatedOrder = action.payload;
+      if (!updatedOrder?.uuid) return;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(updatedOrder.uuid));
+      if (idx !== -1) {
+        ordersList[idx] = updatedOrder;
+      }
+    });
+
+    // batchDeleteOrderItems fulfilled — getActiveOrders ilə yenilənir (socket table_updated)
+
     // getArchivedOrders
     builder.addCase(getArchivedOrders.pending, (state) => {
       state.status = 'loading';

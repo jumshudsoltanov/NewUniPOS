@@ -1,3 +1,32 @@
+.order-logs-dialog {
+    border-radius: 0 !important;
+}
+
+.order-logs-dialog .modal-content {
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+}
+
+.order-logs-modal .modal-header {
+    border-radius: 0 !important;
+}
+
+.logs-scroll::-webkit-scrollbar {
+    width: 3px;
+}
+.logs-scroll::-webkit-scrollbar-track {
+    background: #e8eef8;
+}
+.logs-scroll::-webkit-scrollbar-thumb {
+    background: #4F85F4;
+    border-radius: 0;
+}
+.logs-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #4F85F4 #e8eef8;
+}
+
 .order-logs-container {
     padding: 15px;
     height: 100%;

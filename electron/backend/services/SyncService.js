@@ -449,15 +449,9 @@ class SyncService {
      * Əvvəl yalnız discover + Google/Cloudflare idi — bəzən UI yaşıl, sync isə "offline" qalırdı.
      */
     const checks = [
-      { url: "http://46.224.8.157:35627/api/terminal/login", timeout: 6000 },
-      { url: "http://46.224.8.157:35627/api/discover", timeout: 6000 },
-      {
-        url: "https://api.unipos.tech/",
-        timeout: 6000,
-        validateStatus: () => true,
-      },
-      { url: "https://www.google.com", timeout: 5000 },
-      { url: "https://1.1.1.1", timeout: 5000 },
+      { url: "https://1.1.1.1", timeout: 1500 },
+      { url: "http://46.224.8.157:35627/api/discover", timeout: 2000 },
+      { url: "https://api.unipos.tech/", timeout: 2000, validateStatus: () => true },
     ];
 
     const oneCheck = (url, timeout, validateStatus) =>

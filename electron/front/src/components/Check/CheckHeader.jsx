@@ -8,7 +8,8 @@ import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { useNavigate } from "react-router-dom";
-
+import { toast } from "sonner";
+import { checkShiftGuard } from "../../utils/shiftGuard";
 const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount = 0 }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
@@ -16,6 +17,8 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const _profileId = loginedProfileData?.data?.profile?.id;
 
   useEffect(() => {
     // Only fetch if data is missing
@@ -26,6 +29,11 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
 
   const handleCreateOrder = async () => {
     setOpenOtherCheckModal(false);
+    const guard = await checkShiftGuard(loginedProfileData);
+    if (guard.blocked) {
+      toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+      return;
+    }
     const waiterId = loginedWaiter?.data?.id;
     const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
     const profileId = loginedProfileData?.data?.profile?.id;

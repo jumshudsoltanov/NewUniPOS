@@ -11,6 +11,18 @@ export default function UpdateNotification() {
   useEffect(() => {
     if (!window.electronAPI) return;
 
+    // Query current update state (in case events already fired before component mounted)
+    if (window.electronAPI.getUpdateState) {
+      window.electronAPI.getUpdateState().then((state) => {
+        if (!state || !state.status) return;
+        setVersion(state.version || null);
+        setProgress(state.progress || 0);
+        setStatus(state.status);
+        setVisible(true);
+        if (state.status === "ready") setCountdown(5);
+      }).catch(() => {});
+    }
+
     if (window.electronAPI.onCheckingForUpdate) {
       window.electronAPI.onCheckingForUpdate(() => {
         setStatus("checking");

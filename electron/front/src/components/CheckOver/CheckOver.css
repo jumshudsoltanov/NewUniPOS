@@ -134,6 +134,14 @@
 
 .payment-methods {
     width: 100%;
+    max-height: calc(100vh - 380px);
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.payment-methods::-webkit-scrollbar {
+    display: none;
 }
 
 .payment-method-item {
@@ -308,6 +316,17 @@
 }
 
 /* Unpaid Reasons */
+.unpaid-reasons {
+    max-height: calc(100vh - 460px);
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.unpaid-reasons::-webkit-scrollbar {
+    display: none;
+}
+
 .unpaid-reason-item {
     width: 100%;
     cursor: pointer;

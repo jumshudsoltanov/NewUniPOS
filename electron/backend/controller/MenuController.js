@@ -22,7 +22,6 @@ const getMenuWithGeneralCategories = async (req, res) => {
           as: "products",
           where: { is_hidden_pos: { [Op.or]: [0, null] } },
           required: false,
-          order: [['ordering', 'ASC']],
         },
       },
     });
@@ -44,8 +43,7 @@ const getMenuWithGeneralCategories = async (req, res) => {
       const ids = String(item.printer_id).split(",").map(Number);
       return ids
         .map((id) => printerMap[id])
-        .filter(Boolean)
-        .map((p) => ({ name: p.name, local_name: p.local_name }));
+        .filter(Boolean);
     };
 
     const data = response.map((gc) => {
@@ -54,6 +52,11 @@ const getMenuWithGeneralCategories = async (req, res) => {
         gcPlain.categories.forEach((c) => {
           c.printer_details = attachPrinters(c);
           if (c.products) {
+            c.products.sort((a, b) => {
+              const ao = a.ordering != null ? a.ordering : 999999;
+              const bo = b.ordering != null ? b.ordering : 999999;
+              return ao - bo;
+            });
             c.products.forEach((p) => {
               p.printer_details = attachPrinters(p);
             });
@@ -77,7 +80,7 @@ const getMenuWithCategories = async (req, res) => {
       where: { profile_id: profileId },
       order: [
         ['ordering', 'ASC'],
-        [{ model: ProductsModel, as: 'products' }, 'ordering', 'ASC']
+        [{ model: ProductsModel, as: 'products' }, 'ordering', 'ASC'],
       ],
       include: {
         model: ProductsModel,
@@ -104,14 +107,18 @@ const getMenuWithCategories = async (req, res) => {
       const ids = String(item.printer_id).split(",").map(Number);
       return ids
         .map((id) => printerMap[id])
-        .filter(Boolean)
-        .map((p) => ({ name: p.name, local_name: p.local_name }));
+        .filter(Boolean);
     };
 
     const data = response.map((c) => {
       const cPlain = c.get({ plain: true });
       cPlain.printer_details = attachPrinters(cPlain);
       if (cPlain.products) {
+        cPlain.products.sort((a, b) => {
+          const ao = a.ordering != null ? a.ordering : 999999;
+          const bo = b.ordering != null ? b.ordering : 999999;
+          return ao - bo;
+        });
         cPlain.products.forEach((p) => {
           p.printer_details = attachPrinters(p);
         });

@@ -465,9 +465,11 @@
 
 .checkRightBoxContent {
     background-color: #EBF2FE;
-    /* Brand light blue background */
-    overflow-y: auto;
+    overflow: hidden;
     min-height: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 /* =========================================

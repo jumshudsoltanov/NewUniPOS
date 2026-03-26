@@ -32,6 +32,7 @@ router.post("/printers/test-print", PrintersController.testPrint);
 router.patch("/profiles/master-printing", PrintersController.toggleMasterPrinting);
 router.patch("/profiles/customer-display", PrintersController.updateCustomerDisplaySettings);
 router.patch("/profiles/customer-receipt-auto", PrintersController.updateCustomerReceiptAutoPrint);
+router.patch("/profiles/sales-shift-required", PrintersController.updateSalesShiftRequired);
 router.patch("/profiles/kitchen-display", KitchenController.updateKitchenDisplaySettings);
 router.get("/kitchen/:profileId/orders", KitchenController.getKitchenOrders);
 router.patch("/kitchen/item/:itemId/status", KitchenController.updateKdsStatus);
@@ -208,6 +209,14 @@ router.patch(
 const ReportController = require("../controller/ReportController");
 router.get("/reports/:profileId/data", ReportController.getReportData);
 router.get("/reports/:profileId/terminals", ReportController.getTerminals);
+
+const SalesShiftController = require("../controller/SalesShiftController");
+router.post("/sales-shifts/:profileId/open", SalesShiftController.openShift);
+router.get("/sales-shifts/:profileId/current", SalesShiftController.getCurrentShift);
+router.get("/sales-shifts/:profileId/live-summary", SalesShiftController.getLiveSummary);
+router.post("/sales-shifts/:profileId/:shiftUuid/close", SalesShiftController.closeShift);
+router.get("/sales-shifts/:profileId/history", SalesShiftController.listHistory);
+router.get("/sales-shifts/:profileId/shift/:shiftUuid", SalesShiftController.getShiftByUuid);
 
 // Assign Customer to Order
 router.patch(

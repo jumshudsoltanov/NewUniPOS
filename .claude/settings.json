@@ -5,7 +5,10 @@
       "Bash(grep -rn \"fiscal_id\\\\|long_id\\\\|parentDocument\\\\|tax_fiscal\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/backend/ --include=*.js -l)",
       "Bash(find c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src -name *CheckDetail* -o -name *check*detail* -o -name *Close*Check*)",
       "Bash(find c:/Users/Jumshud/Desktop/POS-ReDesing/electron/mobile/src -name *.css -o -name *.jsx)",
-      "Bash(find c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src -name Slave* -o -name *Slave*)"
+      "Bash(find c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src -name Slave* -o -name *Slave*)",
+      "Bash(git -C \"c:/Users/Jumshud/Desktop/POS-ReDesing\" log --oneline -10)",
+      "Bash(git -C \"c:/Users/Jumshud/Desktop/POS-ReDesing\" show a1cca09 --stat)",
+      "Bash(gh release:*)"
     ]
   }
 }

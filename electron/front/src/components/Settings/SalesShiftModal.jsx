@@ -1,0 +1,1112 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Modal, Button, Spinner } from "react-bootstrap";
+import { useSelector } from "react-redux";
+import apiConfig, { getSocket } from "../../utils/apiConfig";
+import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
+import { toast } from "sonner";
+import "../ReportModal/ReportModal.css";
+import "./SalesShiftModal.css";
+
+const money = (n) => {
+    const v = Number(n);
+    if (Number.isNaN(v)) return "0.00";
+    return v.toFixed(2);
+};
+
+function tryParseSnapshot(row) {
+    if (!row?.report_snapshot) return null;
+    try {
+        return JSON.parse(row.report_snapshot);
+    } catch {
+        return null;
+    }
+}
+
+const buildShiftPrintHtml = ({
+    profileName,
+    logoSrc,
+    openedAt,
+    closedAt,
+    terminalLabel,
+    openedBy,
+    closedBy,
+    summary,
+    footerNote,
+    baseFontPx,
+}) => {
+    const fs = (baseSize) => `${baseSize + (Number(baseFontPx) || 0)}px`;
+    const empRows = (summary?.byEmployee || [])
+        .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td class="r">${r.checks_count}</td><td class="r">${money(r.total)}</td></tr>`)
+        .join("");
+    const smRows = (summary?.bySaleMethod || [])
+        .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td class="r">${r.count}</td><td class="r">${money(r.total)}</td></tr>`)
+        .join("");
+    const payRows = Object.entries(summary?.payments || {})
+        .map(([n, a]) => `<tr><td>${escapeHtml(n)}</td><td class="r">${money(a)}</td></tr>`)
+        .join("");
+    const unpaidRows = Object.entries(summary?.unpaid_payments || {})
+        .map(([n, a]) => `<tr><td>${escapeHtml(n)}</td><td class="r">${money(a)}</td></tr>`)
+        .join("");
+    const tagRows = Object.entries(summary?.tags || {})
+        .map(([t, d]) => `<tr><td>${escapeHtml(t)} (${d.count})</td><td class="r">${money(d.total)}</td></tr>`)
+        .join("");
+    const catRows = (summary?.byCategory || [])
+        .map((cat) => `<tr class="cat-row"><td><b>${escapeHtml(cat.name)}</b></td><td class="r"><b>${cat.quantity?.toFixed(2)}</b></td><td class="r"><b>${money(cat.total)}</b></td></tr>`)
+        .join("");
+
+    return `
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; color: #000; }
+  body { font-family: 'Consolas', 'Courier New', monospace; font-size: ${fs(9)}; color: #000; }
+  .divider { border: none; border-top: 1px solid #000; margin: 3px 0; }
+  .logo-wrap { text-align: center; margin-bottom: 4px; }
+  .logo-wrap img { max-width: 60px; max-height: 40px; object-fit: contain; }
+  .title { font-size: ${fs(10)}; font-weight: 900; text-align: center; margin-bottom: 1px; letter-spacing: 1px; }
+  .profile { font-size: ${fs(9)}; font-weight: 700; text-align: center; margin-bottom: 2px; }
+  .kv { display: flex; justify-content: space-between; font-size: ${fs(8)}; margin-bottom: 2px; }
+  .kv-label { color: #000; }
+  .kv-value { font-weight: 700; color: #000; text-align: right; }
+  .section-title { font-size: ${fs(8)}; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin: 4px 0 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: ${fs(8)}; color: #000; margin-bottom: 2px; }
+  th { font-weight: 900; text-align: left; padding: 2px 1px; border-bottom: 1px solid #000; font-size: ${fs(7)}; text-transform: uppercase; color: #000; }
+  td { padding: 2px 1px; border-bottom: 1px dashed #000; color: #000; }
+  tbody tr:last-child td { border-bottom: none; }
+  .r { text-align: right; }
+  .cat-row td { font-weight: 900; border-bottom: 1px solid #000; }
+  .total-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; padding-top: 2px; border-top: 2px solid #000; }
+  .total-label { font-size: ${fs(9)}; font-weight: 900; text-transform: uppercase; color: #000; }
+  .total-amount { font-size: ${fs(10)}; font-weight: 900; color: #000; }
+  .footer-note { text-align: center; font-size: ${fs(7)}; margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; }
+</style>
+${logoSrc ? `<div class="logo-wrap"><img src="${logoSrc}" alt="logo"/></div>` : ""}
+${profileName ? `<div class="profile">${escapeHtml(profileName)}</div>` : ""}
+<div class="title">SATIŞ NÖVBƏSİ HESABATI</div>
+<hr class="divider"/>
+<div class="kv"><span class="kv-label">Açılış</span><span class="kv-value">${escapeHtml(openedAt || "—")}</span></div>
+<div class="kv"><span class="kv-label">Bağlanma</span><span class="kv-value">${escapeHtml(closedAt || "—")}</span></div>
+<div class="kv"><span class="kv-label">Terminal</span><span class="kv-value">${escapeHtml(terminalLabel || "Hamısı")}</span></div>
+<div class="kv"><span class="kv-label">Açan</span><span class="kv-value">${escapeHtml(openedBy || "—")}</span></div>
+<div class="kv"><span class="kv-label">Bağlayan</span><span class="kv-value">${escapeHtml(closedBy || "—")}</span></div>
+<hr class="divider"/>
+<div class="section-title">Ümumi</div>
+<div class="kv"><span class="kv-label">Bağlanmış çek</span><span class="kv-value">${summary?.checksCount ?? 0}</span></div>
+<div class="total-row"><span class="total-label">Cəm məbləğ</span><span class="total-amount">${money(summary?.grossTotal)} &#8380;</span></div>
+<hr class="divider" style="margin-top:8px"/>
+<div class="section-title">Ofisiant üzrə</div>
+<table><thead><tr><th>Ad</th><th class="r">Çek</th><th class="r">Məbləğ</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+<hr class="divider"/>
+<div class="section-title">Satış tipi</div>
+<table><thead><tr><th>Tip</th><th class="r">Say</th><th class="r">Məbləğ</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+${payRows ? `<hr class="divider"/><div class="section-title">Ödəniş üsulları</div><table><thead><tr><th>Üsul</th><th class="r">Məbləğ</th></tr></thead><tbody>${payRows}</tbody></table>` : ""}
+${unpaidRows ? `<hr class="divider"/><div class="section-title">Ödənişsiz bağlamalar</div><table><thead><tr><th>Üsul</th><th class="r">Məbləğ</th></tr></thead><tbody>${unpaidRows}</tbody></table>` : ""}
+${tagRows ? `<hr class="divider"/><div class="section-title">Etiketlər</div><table><thead><tr><th>Etiket</th><th class="r">Məbləğ</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
+${catRows ? `<hr class="divider"/><div class="section-title">Kateqoriya hesabatı</div><table><thead><tr><th>Kateqoriya</th><th class="r">Say</th><th class="r">Məbləğ</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
+${footerNote ? `<div class="footer-note">${escapeHtml(footerNote)}</div>` : ""}`;
+};
+
+function escapeHtml(s) {
+    if (s == null) return "";
+    return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function toastShiftError(e, fallback) {
+    const raw =
+        e?.response?.data?.message ||
+        e?.response?.data?.original?.sqlMessage ||
+        e?.message ||
+        "";
+    const s = String(raw).toLowerCase();
+    if (s.includes("sales_shifts") && (s.includes("doesn't exist") || s.includes("does not exist"))) {
+        toast.error(
+            "Növbə cədvəli bazada yoxdur. Backend (Node) prosesini tam bağlayıb tətbiqi yenidən açın — cədvəl avtomatik yaradılacaq.",
+        );
+        return;
+    }
+    if (typeof raw === "string" && raw.length > 0 && raw.length < 160) {
+        toast.error(raw);
+        return;
+    }
+    toast.error(fallback);
+}
+
+function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
+    const s = snapshot?.summary;
+    const closedLabel = row?.closed_at ? new Date(row.closed_at).toLocaleString("az-AZ") : "—";
+    const openedLabel = row?.opened_at ? new Date(row.opened_at).toLocaleString("az-AZ") : "—";
+
+    return (
+        <div className="ssd-body-inner">
+            <div className="ssd-center-title">
+                <h4>{profileName || "Bağlanmış növbə"}</h4>
+                <div className="ssd-status-pill">
+                    <span className="ssd-status-pill-dot" aria-hidden />
+                    Arxiv · Bağlı
+                </div>
+            </div>
+
+            {/* Məlumat kartı */}
+            <div className="ssd-card">
+                <div className="ssd-card-title">
+                    <i className="bi bi-info-circle-fill" aria-hidden />
+                    Məlumat
+                </div>
+                <div className="ssd-kv">
+                    <span>Bağlanma</span>
+                    <span>{closedLabel}</span>
+                </div>
+                <div className="ssd-kv">
+                    <span>Açılış</span>
+                    <span>{openedLabel}</span>
+                </div>
+                <div className="ssd-kv">
+                    <span>Terminal</span>
+                    <span>{row?.terminal_id || "—"}</span>
+                </div>
+                <div className="ssd-kv">
+                    <span>Açan</span>
+                    <span>{row?.opened_by_name || "—"}</span>
+                </div>
+                <div className="ssd-kv">
+                    <span>Bağlayan</span>
+                    <span>{row?.closed_by_name || "—"}</span>
+                </div>
+            </div>
+
+            {!s ? (
+                <div className="ssd-empty-msg">
+                    Bu növbə üçün saxlanmış hesabat tapılmadı.
+                </div>
+            ) : (
+                <>
+                    {/* Ümumi kart */}
+                    <div className="ssd-card">
+                        <div className="ssd-card-title">
+                            <i className="bi bi-bar-chart-fill" aria-hidden />
+                            Ümumi
+                        </div>
+                        <div className="ssd-kv">
+                            <span>Bağlanmış çek</span>
+                            <span>{s.checksCount ?? 0}</span>
+                        </div>
+                        <div className="ssd-total-row">
+                            <span>Cəm məbləğ</span>
+                            <span>{money(s.grossTotal)} ₼</span>
+                        </div>
+                    </div>
+
+                    {/* Ofisiant */}
+                    <div className="ssd-card">
+                        <div className="ssd-card-title">
+                            <i className="bi bi-person-fill" aria-hidden />
+                            Ofisiant
+                        </div>
+                        <div className="ssd-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Ad</th>
+                                        <th className="num">Çek</th>
+                                        <th className="num">Məbləğ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(s.byEmployee || []).length ? (
+                                        s.byEmployee.map((r) => (
+                                            <tr key={r.name}>
+                                                <td>{r.name}</td>
+                                                <td className="num">{r.checks_count}</td>
+                                                <td className="num">{money(r.total)}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={3} className="ssm-table-empty">—</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Satış tipi */}
+                    <div className="ssd-card">
+                        <div className="ssd-card-title">
+                            <i className="bi bi-tag-fill" aria-hidden />
+                            Satış tipi
+                        </div>
+                        <div className="ssd-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Tip</th>
+                                        <th className="num">Say</th>
+                                        <th className="num">Məbləğ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(s.bySaleMethod || []).length ? (
+                                        s.bySaleMethod.map((r) => (
+                                            <tr key={r.name}>
+                                                <td>{r.name}</td>
+                                                <td className="num">{r.count}</td>
+                                                <td className="num">{money(r.total)}</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={3} className="ssm-table-empty">—</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Ödəniş üsulları */}
+                    <div className="ssd-card">
+                        <div className="ssd-card-title">
+                            <i className="bi bi-credit-card-fill" aria-hidden />
+                            Ödəniş üsulları
+                        </div>
+                        <div className="ssd-table-wrap">
+                            <table>
+                                <thead><tr><th>Üsul</th><th className="num">Məbləğ</th></tr></thead>
+                                <tbody>
+                                    {Object.keys(s.payments || {}).length ? (
+                                        Object.entries(s.payments).map(([name, amount]) => (
+                                            <tr key={name}><td>{name}</td><td className="num">{money(amount)}</td></tr>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan={2} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Ödənişsiz bağlamalar */}
+                    <div className="ssd-card">
+                        <div className="ssd-card-title">
+                            <i className="bi bi-x-circle-fill" aria-hidden />
+                            Ödənişsiz bağlamalar
+                        </div>
+                        <div className="ssd-table-wrap">
+                            <table>
+                                <thead><tr><th>Üsul</th><th className="num">Məbləğ</th></tr></thead>
+                                <tbody>
+                                    {Object.keys(s.unpaid_payments || {}).length ? (
+                                        Object.entries(s.unpaid_payments).map(([name, amount]) => (
+                                            <tr key={name}><td>{name}</td><td className="num">{money(amount)}</td></tr>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan={2} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Etiketlər */}
+                    <div className="ssd-card">
+                        <div className="ssd-card-title">
+                            <i className="bi bi-bookmark-fill" aria-hidden />
+                            Etiketlər
+                        </div>
+                        <div className="ssd-table-wrap">
+                            <table>
+                                <thead><tr><th>Etiket</th><th className="num">Say</th><th className="num">Məbləğ</th></tr></thead>
+                                <tbody>
+                                    {Object.keys(s.tags || {}).length ? (
+                                        Object.entries(s.tags).map(([tag, details]) => (
+                                            <tr key={tag}><td>{tag}</td><td className="num">{details.count}</td><td className="num">{money(details.total)}</td></tr>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan={3} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Kateqoriya hesabatı */}
+                    <div className="ssd-card">
+                        <div className="ssd-card-title">
+                            <i className="bi bi-grid-fill" aria-hidden />
+                            Kateqoriya hesabatı
+                        </div>
+                        <div className="ssd-table-wrap">
+                            <table>
+                                <thead><tr><th>Kateqoriya / Məhsul</th><th className="num">Say</th><th className="num">Məbləğ</th></tr></thead>
+                                <tbody>
+                                    {(s.byCategory || []).length ? (
+                                        s.byCategory.map((cat) => (
+                                            <React.Fragment key={cat.name}>
+                                                <tr style={{background:'#f0f4ff'}}>
+                                                    <td style={{fontWeight:700, color:'#053796'}}>{cat.name}</td>
+                                                    <td className="num" style={{fontWeight:700, color:'#053796'}}>{cat.quantity?.toFixed(2)}</td>
+                                                    <td className="num" style={{fontWeight:700, color:'#053796'}}>{money(cat.total)}</td>
+                                                </tr>
+                                                {(cat.products || []).map((p) => (
+                                                    <tr key={p.name}>
+                                                        <td style={{paddingLeft:24, color:'#64748b'}}>{p.name}</td>
+                                                        <td className="num">{p.quantity?.toFixed(2)}</td>
+                                                        <td className="num">{money(p.total)}</td>
+                                                    </tr>
+                                                ))}
+                                            </React.Fragment>
+                                        ))
+                                    ) : (
+                                        <tr><td colSpan={3} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+const SalesShiftModal = ({ show, onHide }) => {
+    const profile = useSelector((state) => state.LoginSlice?.loginedProfileData?.data?.profile);
+    const terminalInfo = useSelector((state) => state.LoginSlice?.loginedProfileData?.data?.terminal) || {};
+    const waiter = useSelector((state) => state.WaitersSlice?.loginedWaiter?.data);
+    const profileId = profile?.id;
+    const terminalId = terminalInfo?.terminal_id || null;
+
+    const [loading, setLoading] = useState(false);
+    const [currentShift, setCurrentShift] = useState(null);
+    const [livePayload, setLivePayload] = useState(null);
+    const [history, setHistory] = useState([]);
+    const [cashierPrinter, setCashierPrinter] = useState(null);
+    const [showClosePrompt, setShowClosePrompt] = useState(false);
+    const [extraSnapshots, setExtraSnapshots] = useState({});
+    /** { row, snapshot, loading } | null */
+    const [shiftDetailModal, setShiftDetailModal] = useState(null);
+
+    const baseReceiptFont = Number(terminalInfo?.customer_receipt || profile?.customer_receipt || 0);
+    const profileDisplayName = profile?.company_name || profile?.name || "";
+
+    useEffect(() => {
+        if (!show) {
+            setShowClosePrompt(false);
+            setExtraSnapshots({});
+            setShiftDetailModal(null);
+        }
+    }, [show]);
+
+    useEffect(() => {
+        if (!currentShift) setShowClosePrompt(false);
+    }, [currentShift]);
+
+    const loadPrinter = useCallback(async () => {
+        if (!profileId) return;
+        try {
+            const res = await apiConfig.get(`/pos/printers/${profileId}`);
+            if (res.data?.data) {
+                const list = resolveCashierPrintersForPrint(res.data.data);
+                if (list.length) setCashierPrinter(list[0]);
+            }
+        } catch {
+            /* ignore */
+        }
+    }, [profileId]);
+
+    const fetchCurrent = useCallback(async () => {
+        if (!profileId) return null;
+        const res = await apiConfig.get(`/sales-shifts/${profileId}/current`);
+        const row = res.data?.data ?? null;
+        setCurrentShift(row);
+        return row;
+    }, [profileId]);
+
+    const fetchLive = useCallback(async () => {
+        if (!profileId) return;
+        const res = await apiConfig.get(`/sales-shifts/${profileId}/live-summary`);
+        setLivePayload(res.data?.data ?? null);
+    }, [profileId]);
+
+    const fetchHistory = useCallback(async () => {
+        if (!profileId) return;
+        const res = await apiConfig.get(`/sales-shifts/${profileId}/history`, { params: { limit: 80 } });
+        setHistory(Array.isArray(res.data?.data) ? res.data.data : []);
+    }, [profileId]);
+
+    const refreshAll = useCallback(async () => {
+        if (!profileId) return;
+        setLoading(true);
+        try {
+            const open = await fetchCurrent();
+            if (open) await fetchLive();
+            else setLivePayload(null);
+            await fetchHistory();
+        } catch (e) {
+            console.error(e);
+            toastShiftError(e, "Növbə məlumatı alınmadı");
+        } finally {
+            setLoading(false);
+        }
+    }, [profileId, fetchCurrent, fetchLive, fetchHistory]);
+
+    useEffect(() => {
+        if (show && profileId) {
+            loadPrinter();
+            refreshAll();
+        }
+    }, [show, profileId, loadPrinter, refreshAll]);
+
+    // Digər terminaldan gələn növbə dəyişikliyi
+    useEffect(() => {
+        const socket = getSocket();
+        if (!socket) return;
+        const onShiftUpdated = () => {
+            if (profileId) refreshAll().catch(() => {});
+        };
+        socket.on("shift_updated", onShiftUpdated);
+        return () => socket.off("shift_updated", onShiftUpdated);
+    }, [profileId, refreshAll]);
+
+    useEffect(() => {
+        if (!show || !currentShift) return;
+        const t = setInterval(() => {
+            fetchLive().catch(() => {});
+        }, 45000);
+        return () => clearInterval(t);
+    }, [show, currentShift, fetchLive]);
+
+    const printToCashier = async (html) => {
+        if (window.electronAPI?.printReceipt && cashierPrinter) {
+            const connType = cashierPrinter.connection_type;
+            const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
+            const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
+            const printerSettings = {
+                paper_size: cashierPrinter.paper_size || '80',
+                cut_mode: cashierPrinter.cut_mode || 'full',
+                sound_notify: cashierPrinter.sound_notify || 0,
+                cash_drawer: cashierPrinter.cash_drawer || 0,
+                open_drawer_without_print: cashierPrinter.open_drawer_without_print || 0,
+                encoding: cashierPrinter.encoding || 'utf8',
+                copies: cashierPrinter.copies || 1,
+                darkness: cashierPrinter.darkness || 5,
+                trailing_space: cashierPrinter.trailing_space || 0,
+                receipt_header: cashierPrinter.receipt_header || null,
+                receipt_footer: cashierPrinter.receipt_footer || null,
+                bold_header: cashierPrinter.bold_header || 0,
+                double_height_header: cashierPrinter.double_height_header || 0,
+                font_family: cashierPrinter.font_family || 'Arial',
+                fast_print: cashierPrinter.fast_print ? 1 : 0,
+                print_logo: cashierPrinter.print_logo != null ? Number(cashierPrinter.print_logo) : 1,
+                rotate_180: cashierPrinter.rotate_180 ? 1 : 0,
+                usb_name: hasUsbName ? cashierPrinter.usb_name : null,
+            };
+
+            let payload;
+            if (isNetwork && cashierPrinter.ip && !hasUsbName) {
+                payload = {
+                    html,
+                    printerName: "",
+                    printerIp: String(cashierPrinter.ip),
+                    printerPort: Number(cashierPrinter.port) || 9100,
+                    printerSettings,
+                };
+            } else {
+                const targetPrinter = hasUsbName ? cashierPrinter.usb_name : (cashierPrinter.local_name || cashierPrinter.name);
+                payload = { html, printerName: targetPrinter, printerSettings };
+            }
+
+            await window.electronAPI.printReceipt(payload);
+        } else {
+            toast.warning("Kassa printeri tapılmadı və ya Electron çapı yoxdur");
+        }
+    };
+
+    const handlePrintSnapshot = async (snapshot, shiftRow, { isReprint } = {}) => {
+        if (!snapshot?.summary) {
+            toast.error("Hesabat məlumatı yoxdur");
+            return;
+        }
+        const validLogo = (logo) =>
+            logo && logo !== "null" && logo !== "undefined" && logo !== "data:directory;base64,";
+        const resolveLogoUrl = (logo) => {
+            if (!validLogo(logo)) return null;
+            if (logo.startsWith("http") || logo.startsWith("data:")) return logo;
+            return `http://46.224.8.157:35627/${logo}`;
+        };
+        const logoSrc =
+            resolveLogoUrl(terminalInfo?.logoPrint) || resolveLogoUrl(profile?.logo) || null;
+        const html = buildShiftPrintHtml({
+            profileName: profile?.company_name || profile?.name || `Profil #${profileId}`,
+            logoSrc,
+            openedAt: snapshot.openedAt,
+            closedAt: snapshot.closedAt,
+            terminalLabel: snapshot.terminalId || "Hamısı",
+            openedBy: shiftRow?.opened_by_name || "—",
+            closedBy: shiftRow?.closed_by_name || "—",
+            summary: snapshot.summary,
+            footerNote: isReprint ? "TƏKRAR ÇAP" : "",
+            baseFontPx: baseReceiptFont,
+        });
+        await printToCashier(html);
+    };
+
+    const handleOpenShift = async () => {
+        if (!profileId) return;
+        setLoading(true);
+        try {
+            const res = await apiConfig.post(`/sales-shifts/${profileId}/open`, {
+                terminalId,
+                waiterId: waiter?.id,
+                waiterName: waiter?.name,
+            });
+            if (res.data?.message === "success") {
+                toast.success("Satış növbəsi açıldı");
+                window.dispatchEvent(new CustomEvent("salesShiftChanged"));
+                await refreshAll();
+            }
+        } catch (e) {
+            if (e.response?.data?.message === "open_exists") {
+                toast.warning("Bu terminal üçün artıq açıq növbə var");
+                await refreshAll();
+            } else {
+                toastShiftError(e, "Növbə açılmadı");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const executeCloseShift = async () => {
+        if (!profileId || !currentShift?.uuid) return;
+        setShowClosePrompt(false);
+        setLoading(true);
+        try {
+            const res = await apiConfig.post(`/sales-shifts/${profileId}/${currentShift.uuid}/close`, {
+                waiterId: waiter?.id,
+                waiterName: waiter?.name,
+                terminalId,
+            });
+            if (res.data?.message === "success") {
+                const { shift, summary, range } = res.data.data;
+                const snapshot = {
+                    closedAt: range?.endStr,
+                    openedAt: range?.startStr,
+                    terminalId: terminalId || shift?.terminal_id || null,
+                    summary,
+                    profileId: Number(profileId),
+                };
+                await handlePrintSnapshot(snapshot, shift, { isReprint: false });
+                toast.success("Növbə bağlandı");
+                window.dispatchEvent(new CustomEvent("salesShiftChanged"));
+                setCurrentShift(null);
+                setLivePayload(null);
+                await fetchHistory();
+                await fetchCurrent();
+            }
+        } catch (e) {
+            toastShiftError(e, "Növbə bağlanmadı");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleReprintFromHistory = async (row) => {
+        let snap = tryParseSnapshot(row) || extraSnapshots[row.uuid];
+        if (!snap) {
+            try {
+                const res = await apiConfig.get(`/sales-shifts/${profileId}/shift/${row.uuid}`);
+                const d = res.data?.data;
+                snap = d?.snapshot;
+                if (snap) setExtraSnapshots((prev) => ({ ...prev, [row.uuid]: snap }));
+            } catch {
+                /* ignore */
+            }
+        }
+        await handlePrintSnapshot(snap, row, { isReprint: true });
+    };
+
+    const getSnapshotForHistoryRow = (h) => tryParseSnapshot(h) || extraSnapshots[h.uuid] || null;
+
+    const openShiftDetailModal = async (h) => {
+        let snap = getSnapshotForHistoryRow(h);
+        setShiftDetailModal({ row: h, snapshot: snap, loading: !snap });
+        if (!snap && profileId) {
+            try {
+                const res = await apiConfig.get(`/sales-shifts/${profileId}/shift/${h.uuid}`);
+                const d = res.data?.data;
+                snap = d?.snapshot;
+                if (snap) setExtraSnapshots((prev) => ({ ...prev, [h.uuid]: snap }));
+            } catch {
+                /* ignore */
+            }
+        }
+        setShiftDetailModal({ row: h, snapshot: snap, loading: false });
+    };
+
+    const summary = livePayload?.summary;
+
+    const currentShiftBody = !currentShift ? (
+        <>
+            <p className="sales-shift-hint mb-0">
+                Açıq növbə yoxdur. «Növbəni aç» ilə başladın. Bu terminal üzrə bağlanmış çeklər izlənəcək;
+                növbəni bağlayanda kassa printerindən hesabat çap olunacaq.
+            </p>
+            <div className="sales-shift-actions mt-3">
+                <Button variant="primary" onClick={handleOpenShift} disabled={loading || !profileId}>
+                    Növbəni aç
+                </Button>
+                <Button variant="outline-secondary" onClick={refreshAll} disabled={loading}>
+                    Yenilə
+                </Button>
+            </div>
+        </>
+    ) : (
+        <>
+            {/* Məlumat kartı */}
+            <div className="ssm-info-card">
+                <div className="ssm-info-row">
+                    <span className="ssm-info-label">Açılış</span>
+                    <span className="ssm-info-value">
+                        {currentShift.opened_at ? new Date(currentShift.opened_at).toLocaleString("az-AZ") : "—"}
+                    </span>
+                </div>
+                <div className="ssm-info-row">
+                    <span className="ssm-info-label">Açan</span>
+                    <span className="ssm-info-value">{currentShift.opened_by_name || "—"}</span>
+                </div>
+                <div className="ssm-info-row">
+                    <span className="ssm-info-label">Terminal</span>
+                    <span className="ssm-info-value">{currentShift.terminal_id || terminalId || "—"}</span>
+                </div>
+                {currentShift.closed_by_name && (
+                    <div className="ssm-info-row">
+                        <span className="ssm-info-label">Bağlayan</span>
+                        <span className="ssm-info-value">{currentShift.closed_by_name}</span>
+                    </div>
+                )}
+            </div>
+
+            <div className="sales-shift-actions">
+                <Button variant="outline-secondary" onClick={() => fetchLive()} disabled={loading}>
+                    <i className="bi bi-arrow-clockwise" aria-hidden />
+                    Canlı yenilə
+                </Button>
+                {!showClosePrompt && (
+                    <Button variant="danger" onClick={() => setShowClosePrompt(true)} disabled={loading}>
+                        <i className="bi bi-printer-fill" aria-hidden />
+                        Bağla və çap et
+                    </Button>
+                )}
+            </div>
+
+            {showClosePrompt && (
+                <div className="sales-shift-close-confirm">
+                    <p className="mb-0">
+                        Növbəni bağlamaq istəyirsiniz? Kassa printerinə bağlanmış növbə hesabatı göndəriləcək.
+                    </p>
+                    <div className="sales-shift-close-confirm-actions mt-2">
+                        <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            onClick={() => setShowClosePrompt(false)}
+                            disabled={loading}
+                        >
+                            Ləğv et
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={executeCloseShift} disabled={loading}>
+                            <i className="bi bi-printer-fill me-1" aria-hidden />
+                            Bəli, bağla
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {summary && (
+                <>
+                    {/* Ümumi xülasə */}
+                    <div className="ssm-section-header">
+                        <i className="bi bi-bar-chart-fill" aria-hidden />
+                        Növbə xülasəsi
+                    </div>
+                    <div className="ssm-info-card">
+                        <div className="ssm-info-row">
+                            <span className="ssm-info-label">Bağlanmış çek</span>
+                            <span className="ssm-info-value">{summary.checksCount ?? 0}</span>
+                        </div>
+                        <div className="ssm-info-row ssm-total-row">
+                            <span>Cəm məbləğ</span>
+                            <span>{money(summary.grossTotal)} ₼</span>
+                        </div>
+                    </div>
+
+                    {/* Ofisiant cədvəli */}
+                    <div className="ssm-section-header">
+                        <i className="bi bi-person-fill" aria-hidden />
+                        Ofisiant (canlı)
+                    </div>
+                    <div className="ssm-table-card">
+                        <table className="ssm-table">
+                            <thead>
+                                <tr>
+                                    <th>Ad</th>
+                                    <th className="num">Çek</th>
+                                    <th className="num">Məbləğ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(summary.byEmployee || []).length ? (
+                                    summary.byEmployee.map((r) => (
+                                        <tr key={r.name}>
+                                            <td>{r.name}</td>
+                                            <td className="num">{r.checks_count}</td>
+                                            <td className="num">{money(r.total)}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={3} className="ssm-table-empty">
+                                            Hələ bağlanmış çek yoxdur
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Satış tipi cədvəli */}
+                    <div className="ssm-section-header">
+                        <i className="bi bi-tag-fill" aria-hidden />
+                        Satış tipi (canlı)
+                    </div>
+                    <div className="ssm-table-card">
+                        <table className="ssm-table">
+                            <thead>
+                                <tr>
+                                    <th>Tip</th>
+                                    <th className="num">Say</th>
+                                    <th className="num">Məbləğ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(summary.bySaleMethod || []).length ? (
+                                    summary.bySaleMethod.map((r) => (
+                                        <tr key={r.name}>
+                                            <td>{r.name}</td>
+                                            <td className="num">{r.count}</td>
+                                            <td className="num">{money(r.total)}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={3} className="ssm-table-empty">
+                                            Məlumat yoxdur
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Ödəniş üsulları */}
+                    <div className="ssm-section-header">
+                        <i className="bi bi-credit-card-fill" aria-hidden />
+                        Ödəniş üsulları
+                    </div>
+                    <div className="ssm-table-card">
+                        <table className="ssm-table">
+                            <thead>
+                                <tr>
+                                    <th>Üsul</th>
+                                    <th className="num">Məbləğ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.keys(summary.payments || {}).length ? (
+                                    Object.entries(summary.payments).map(([name, amount]) => (
+                                        <tr key={name}>
+                                            <td>{name}</td>
+                                            <td className="num">{money(amount)}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr><td colSpan={2} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Ödənişsiz bağlamalar */}
+                    <div className="ssm-section-header">
+                        <i className="bi bi-x-circle-fill" aria-hidden />
+                        Ödənişsiz bağlamalar
+                    </div>
+                    <div className="ssm-table-card">
+                        <table className="ssm-table">
+                            <thead>
+                                <tr>
+                                    <th>Üsul</th>
+                                    <th className="num">Məbləğ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.keys(summary.unpaid_payments || {}).length ? (
+                                    Object.entries(summary.unpaid_payments).map(([name, amount]) => (
+                                        <tr key={name}>
+                                            <td>{name}</td>
+                                            <td className="num">{money(amount)}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr><td colSpan={2} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Etiketlər */}
+                    <div className="ssm-section-header">
+                        <i className="bi bi-bookmark-fill" aria-hidden />
+                        Etiketlər
+                    </div>
+                    <div className="ssm-table-card">
+                        <table className="ssm-table">
+                            <thead>
+                                <tr>
+                                    <th>Etiket</th>
+                                    <th className="num">Say</th>
+                                    <th className="num">Məbləğ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.keys(summary.tags || {}).length ? (
+                                    Object.entries(summary.tags).map(([tag, details]) => (
+                                        <tr key={tag}>
+                                            <td>{tag}</td>
+                                            <td className="num">{details.count}</td>
+                                            <td className="num">{money(details.total)}</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr><td colSpan={3} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Kateqoriya hesabatı */}
+                    <div className="ssm-section-header">
+                        <i className="bi bi-grid-fill" aria-hidden />
+                        Kateqoriya hesabatı
+                    </div>
+                    <div className="ssm-table-card">
+                        <table className="ssm-table">
+                            <thead>
+                                <tr>
+                                    <th>Kateqoriya / Məhsul</th>
+                                    <th className="num">Say</th>
+                                    <th className="num">Məbləğ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(summary.byCategory || []).length ? (
+                                    summary.byCategory.map((cat) => (
+                                        <React.Fragment key={cat.name}>
+                                            <tr style={{background:'#f0f4ff'}}>
+                                                <td style={{fontWeight:700, color:'#053796'}}>{cat.name}</td>
+                                                <td className="num" style={{fontWeight:700, color:'#053796'}}>{cat.quantity?.toFixed(2)}</td>
+                                                <td className="num" style={{fontWeight:700, color:'#053796'}}>{money(cat.total)}</td>
+                                            </tr>
+                                            {(cat.products || []).map((p) => (
+                                                <tr key={p.name}>
+                                                    <td style={{paddingLeft:24, color:'#64748b'}}>{p.name}</td>
+                                                    <td className="num">{p.quantity?.toFixed(2)}</td>
+                                                    <td className="num">{money(p.total)}</td>
+                                                </tr>
+                                            ))}
+                                        </React.Fragment>
+                                    ))
+                                ) : (
+                                    <tr><td colSpan={3} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
+        </>
+    );
+
+    const historyBody =
+        history.length === 0 ? (
+            <div className="sales-shift-empty-right">Hələ bağlanmış növbə yoxdur.</div>
+        ) : (
+            <div className="sales-shift-history-strip-wrap">
+                <div
+                    className="sales-shift-history-strip"
+                    role="list"
+                    aria-label="Keçmiş satış növbələri"
+                >
+                    {history.map((h) => {
+                        const snap = getSnapshotForHistoryRow(h);
+                        const gross = snap?.summary?.grossTotal;
+                        const checks = snap?.summary?.checksCount;
+
+                        return (
+                            <div
+                                key={h.uuid || h.id}
+                                className="sales-shift-history-card"
+                                role="listitem"
+                            >
+                                <div className="sales-shift-history-card-head">
+                                    <div className="sales-shift-history-card-dot" aria-hidden />
+                                    <div className="sales-shift-history-card-info">
+                                        <div className="sales-shift-history-time">
+                                            {h.closed_at ? new Date(h.closed_at).toLocaleString("az-AZ") : "—"}
+                                        </div>
+                                        <div className="sales-shift-history-sub">
+                                            Açılış:{" "}
+                                            {h.opened_at ? new Date(h.opened_at).toLocaleString("az-AZ") : "—"}
+                                            {h.terminal_id != null && h.terminal_id !== ""
+                                                ? ` · Term. ${h.terminal_id}`
+                                                : ""}
+                                            {checks != null && ` · Çek ${checks}`}
+                                            {gross != null && ` · ${money(gross)} ₼`}
+                                        </div>
+                                    </div>
+                                    {gross != null && (
+                                        <div className="sales-shift-history-gross">{money(gross)} ₼</div>
+                                    )}
+                                </div>
+                                <div className="sales-shift-history-card-actions">
+                                    <Button
+                                        variant="outline-secondary"
+                                        className="btn-detail-outline"
+                                        onClick={() => openShiftDetailModal(h)}
+                                        disabled={loading}
+                                    >
+                                        <i className="bi bi-layout-text-sidebar-reverse" aria-hidden />
+                                        Detallar
+                                    </Button>
+                                    <Button
+                                        variant="primary"
+                                        className="sales-shift-btn-reprint"
+                                        onClick={() => handleReprintFromHistory(h)}
+                                        disabled={loading}
+                                    >
+                                        <i className="bi bi-printer-fill" aria-hidden />
+                                        Təkrar çap
+                                    </Button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+
+    const detailRow = shiftDetailModal?.row;
+    const detailSnap = shiftDetailModal?.snapshot;
+
+    return (
+        <>
+            <Modal
+                show={show}
+                onHide={onHide}
+                centered
+                className="report-modal sales-shift-report-root"
+                dialogClassName="report-modal-dialog sales-shift-report-dialog"
+                contentClassName="sales-shift-modal-content"
+            >
+                <Modal.Header className="report-modal-header" closeButton closeVariant="white">
+                    <div className="sales-shift-main-header-inner">
+                        <Modal.Title as="h5" className="report-modal-title mb-0">
+                            Satış növbəsi
+                        </Modal.Title>
+                        <span
+                            className={`sales-shift-header-status ${
+                                currentShift ? "sales-shift-header-status--open" : "sales-shift-header-status--closed"
+                            }`}
+                            title={currentShift ? "Bu terminalda növbə açıqdır" : "Açıq növbə yoxdur"}
+                        >
+                            <span className="sales-shift-header-status-dot" aria-hidden />
+                            {currentShift ? "Açıq" : "Bağlı"}
+                        </span>
+                    </div>
+                </Modal.Header>
+                <Modal.Body className="p-0 d-flex flex-column flex-grow-1 min-vh-0">
+                    <div className="sales-shift-loading-wrap">
+                        {loading && (
+                            <div className="sales-shift-loading-overlay">
+                                <Spinner animation="border" size="sm" variant="primary" />
+                            </div>
+                        )}
+                        <div className="sales-shift-modal-body">
+                            <div className="sales-shift-col-left">
+                                <h6 className="sales-shift-panel-title">Cari növbə</h6>
+                                {currentShiftBody}
+                            </div>
+                            <div className="sales-shift-col-right">
+                                <h6 className="sales-shift-panel-title">Keçmiş növbələr</h6>
+                                <p className="sales-shift-hint mb-2">
+                                    «Detallar» tam pəncərə, «Təkrar çap» — kassa printeri.
+                                </p>
+                                {historyBody}
+                            </div>
+                        </div>
+                    </div>
+                </Modal.Body>
+            </Modal>
+
+            <Modal
+                show={!!shiftDetailModal}
+                onHide={() => setShiftDetailModal(null)}
+                centered
+                className="sales-shift-detail-nested"
+                enforceFocus={false}
+                restoreFocus={false}
+            >
+                <Modal.Header closeButton closeVariant="white">
+                    <Modal.Title>Növbə detalları</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {shiftDetailModal?.loading ? (
+                        <div className="text-center py-5">
+                            <Spinner animation="border" size="sm" variant="primary" />
+                            <p className="text-muted small mt-2 mb-0">Yüklənir…</p>
+                        </div>
+                    ) : (
+                        detailRow && (
+                            <ShiftHistoryDetailBody
+                                row={detailRow}
+                                snapshot={detailSnap}
+                                profileName={profileDisplayName}
+                            />
+                        )
+                    )}
+                </Modal.Body>
+                {!shiftDetailModal?.loading && detailRow && (
+                    <Modal.Footer className="p-0 border-0">
+                        <div className="ssd-footer-print">
+                            <Button
+                                variant="primary"
+                                className="ssd-print-btn"
+                                onClick={async () => {
+                                    await handleReprintFromHistory(detailRow);
+                                }}
+                            >
+                                <i className="bi bi-printer-fill" aria-hidden />
+                                Təkrar çap et
+                            </Button>
+                        </div>
+                    </Modal.Footer>
+                )}
+            </Modal>
+        </>
+    );
+};
+
+export default SalesShiftModal;

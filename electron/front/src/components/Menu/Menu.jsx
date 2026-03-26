@@ -43,6 +43,7 @@ const Menu = ({
   // Drag state
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const draggedIndexRef = useRef(null);
 
   // Debounced log batching for product additions
   const pendingLogNames = useRef([]);
@@ -275,6 +276,7 @@ const Menu = ({
 
   // Drag handlers
   const handleDragStart = (e, index) => {
+    draggedIndexRef.current = index;
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     const el = e.currentTarget;
@@ -288,32 +290,41 @@ const Menu = ({
   };
 
   const handleDragLeave = () => {
-    setDragOverIndex(null);
+    // dragOverIndex-i sıfırlamırıq — drop zamanı doğru index qalsın
   };
 
   const handleDrop = (e, dropIndex) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === dropIndex) {
+    const fromIndex = draggedIndexRef.current;
+    if (fromIndex === null || fromIndex === dropIndex) {
+      draggedIndexRef.current = null;
       setDraggedIndex(null);
       setDragOverIndex(null);
       return;
     }
 
-    const newItems = [...itemsToRender];
-    const [removed] = newItems.splice(draggedIndex, 1);
-    newItems.splice(dropIndex, 0, removed);
+    const snapshot = [...itemsToRenderRef.current];
+    const [removed] = snapshot.splice(fromIndex, 1);
+    snapshot.splice(dropIndex, 0, removed);
 
-    const newOrder = newItems.map(item => item.id);
+    const newOrder = snapshot.map(item => item.id);
     onCategoryOrderChange(newOrder);
 
+    draggedIndexRef.current = null;
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
 
   const handleDragEnd = () => {
+    draggedIndexRef.current = null;
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
+
+  const itemsToRenderRef = useRef([]);
+  useEffect(() => {
+    itemsToRenderRef.current = itemsToRender;
+  }, [itemsToRender]);
 
   const touchRef = useRef({ startIndex: null, currentIndex: null });
 
@@ -347,11 +358,11 @@ const Menu = ({
     if (!isDragMode) return;
     const { startIndex, currentIndex } = touchRef.current;
     if (startIndex !== null && currentIndex !== null && startIndex !== currentIndex) {
-      const newItems = [...itemsToRender];
-      const [removed] = newItems.splice(startIndex, 1);
-      newItems.splice(currentIndex, 0, removed);
+      const snapshot = [...itemsToRenderRef.current];
+      const [removed] = snapshot.splice(startIndex, 1);
+      snapshot.splice(currentIndex, 0, removed);
 
-      const newOrder = newItems.map(item => item.id);
+      const newOrder = snapshot.map(item => item.id);
       onCategoryOrderChange(newOrder);
     }
     touchRef.current = { startIndex: null, currentIndex: null };
@@ -360,10 +371,10 @@ const Menu = ({
   };
 
   return (
-    <Container fluid className="p-0 h-100 d-flex flex-column">
+    <Container fluid className="p-0 d-flex flex-column" style={{ flex: 1, minHeight: 0 }}>
       <Row
-        className="g-2 px-2 overflow-auto"
-        style={{ flex: 1, alignContent: "flex-start" }}
+        className="g-2 px-2 menu-scroll-row"
+        style={{ flex: 1, alignContent: "flex-start", overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", scrollbarColor: "#c1d0e8 transparent" }}
       >
         {itemsToRender
           ?.filter((item) => item && item.name)
@@ -392,7 +403,7 @@ const Menu = ({
 
             return (
               <Col
-                key={item.id ? `${item.id}-${index}` : index}
+                key={item.id ?? index}
                 xs={4}
                 sm={3}
                 md={3}

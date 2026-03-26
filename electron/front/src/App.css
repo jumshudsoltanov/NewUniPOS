@@ -28,9 +28,9 @@ body,
     width: 100vw;
     height: 100vh;
     min-height: 100vh;
-    background: linear-gradient(160deg, rgba(5, 55, 150, 0.92) 0%, rgba(79, 133, 244, 0.9) 50%, rgba(5, 55, 150, 0.92) 100%);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -50,19 +50,19 @@ body,
 }
 
 .loading-overlay-transparent .loader-ring {
-    border-color: rgba(255, 255, 255, 0.25);
-    border-top-color: #fff;
+    border-color: rgba(5, 55, 150, 0.15);
+    border-top-color: #053796;
 }
 
 .loading-overlay-transparent .loader-dot {
-    background-color: #fff;
+    background-color: #053796;
 }
 
 .loading-overlay-transparent .loadingText {
-    color: #fff;
+    color: #374151;
     font-size: 0.95rem;
     font-weight: 500;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    text-shadow: none;
 }
 
 .loginLoadingState {

@@ -19,6 +19,9 @@ const getReportData = async (req, res) => {
         // Ensure we are working with the correct date range.
         const startStr = `${startDate} ${startTime}:00`;
         const endStr = `${endDate} ${endTime}:00`;
+        // Date obyektlərini istifadə et — Sequelize timezone-a görə düzgün çevirir
+        const startDateObj = new Date(startStr);
+        const endDateObj = new Date(endStr);
 
         console.log(`Generating report from ${startStr} to ${endStr}`);
 
@@ -35,7 +38,7 @@ const getReportData = async (req, res) => {
             ...baseWhere,
             status: 2,
             end_date: {
-                [Op.between]: [startStr, endStr],
+                [Op.between]: [startDateObj, endDateObj],
             },
         };
 
@@ -43,7 +46,7 @@ const getReportData = async (req, res) => {
 
         switch (reportType) {
             case "simple":
-                data = await getSimpleReport(profileId, baseWhere, startStr, endStr, showTransactions === 'true');
+                data = await getSimpleReport(profileId, baseWhere, startDateObj, endDateObj, showTransactions === 'true');
                 break;
             case "products":
                 data = await getProductsReport(closedWhere);
@@ -68,13 +71,13 @@ const getReportData = async (req, res) => {
                 data = await getCategoryReport(closedWhere);
                 break;
             case "refunds":
-                data = await getRefundsReport(baseWhere, startStr, endStr);
+                data = await getRefundsReport(baseWhere, startDateObj, endDateObj);
                 break;
             case "gifted_products":
                 data = await getGiftedProductsReport(closedWhere);
                 break;
             case "financial":
-                data = await getFinancialReport(baseWhere, startStr, endStr);
+                data = await getFinancialReport(baseWhere, startDateObj, endDateObj);
                 break;
             case "inventory":
                 data = [];
@@ -762,7 +765,90 @@ const getTerminals = async (req, res) => {
     }
 };
 
+/**
+ * Bağlanmış çeklər üzrə növbə/interval xülasəsi (ofisiant + satış üsulu).
+ * @param {string|number} profileId
+ * @param {string|null|undefined} terminalId — boş və ya "all" = bütün terminallar
+ * @param {Date|string} startStr — Date obyekti və ya "YYYY-MM-DD HH:mm:ss"
+ * @param {Date|string} endStr
+ */
+const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) => {
+    // Date obyekti gəlsə olduğu kimi işlət (Sequelize timezone-a görə düzgün çevirir)
+    // String gəlsə Date-ə çevir
+    const startVal = startStr instanceof Date ? startStr : new Date(startStr);
+    const endVal = endStr instanceof Date ? endStr : new Date(endStr);
+    const closedWhere = {
+        profile_id: profileId,
+        status: 2,
+        end_date: { [Op.between]: [startVal, endVal] },
+    };
+    if (terminalId && String(terminalId) !== "all") {
+        closedWhere.terminal_id = terminalId;
+    }
+
+    const [byEmployee, bySaleMethod, byCategory, checksCount, grossSum, closedOrders] = await Promise.all([
+        getEmployeeReport(closedWhere),
+        getSaleMethodReport(closedWhere),
+        getCategoryReport(closedWhere),
+        OrdersModel.count({ where: closedWhere }),
+        OrdersModel.sum("total", { where: closedWhere }),
+        OrdersModel.findAll({
+            where: closedWhere,
+            include: [{
+                model: OrderPaymentsModel,
+                as: 'order_payments',
+                required: false,
+                include: [
+                    { model: PaymentMethodsModel, as: 'payment_method', required: false },
+                    { model: require("../model/TagsModel"), as: 'tag', required: false }
+                ]
+            }]
+        }),
+    ]);
+
+    const payments = {};
+    const unpaid_payments = {};
+    const tags = {};
+
+    closedOrders.forEach(order => {
+        if (order.order_payments) {
+            order.order_payments.forEach(p => {
+                const amount = parseFloat(p.paid || 0);
+                if (p.without_payment_method_id && p.without_payment_method_id > 0) {
+                    const name = p.name || p.tag?.name || 'Ödənişsiz';
+                    unpaid_payments[name] = (unpaid_payments[name] || 0) + amount;
+                } else {
+                    const name = p.name || p.payment_method?.name || 'Nağd';
+                    payments[name] = (payments[name] || 0) + amount;
+                }
+            });
+        }
+        let orderTags = [];
+        if (order.tags) orderTags = order.tags.split(',').map(t => t.trim()).filter(t => t);
+        if (order.order_payments) {
+            order.order_payments.forEach(p => { if (p.tag?.name) orderTags.push(p.tag.name); });
+        }
+        [...new Set(orderTags)].forEach(tagName => {
+            if (!tags[tagName]) tags[tagName] = { count: 0, total: 0 };
+            tags[tagName].count += 1;
+            tags[tagName].total += parseFloat(order.total || 0);
+        });
+    });
+
+    return {
+        byEmployee,
+        bySaleMethod,
+        byCategory,
+        checksCount: checksCount || 0,
+        grossTotal: parseFloat(grossSum || 0),
+        payments,
+        unpaid_payments,
+        tags,
+    };
+};
+
 module.exports = {
     getReportData,
-    getTerminals
+    getTerminals,
+    getShiftSummaryForRange,
 };

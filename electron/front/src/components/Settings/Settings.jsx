@@ -10,6 +10,7 @@ import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
+import SalesShiftModal from "./SalesShiftModal";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import DevicesModal from "./DevicesModal";
 import RefreshLoader from "../RefreshLoader/RefreshLoader";
@@ -24,6 +25,7 @@ const Settings = () => {
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [showSupportModal, setShowSupportModal] = useState(false);
     const [showReportModal, setShowReportModal] = useState(false);
+    const [showSalesShiftModal, setShowSalesShiftModal] = useState(false);
     const [showCustomersModal, setShowCustomersModal] = useState(false);
     const [showDevicesModal, setShowDevicesModal] = useState(false);
     const [showMasterSlaveSettings, setShowMasterSlaveSettings] = useState(false);
@@ -154,6 +156,15 @@ const Settings = () => {
             icon: <i className="bi bi-file-earmark-text"></i>,
             permission: Number(loginedWaiter?.data?.can_create_report) === 1,
             onClick: () => setShowReportModal(true),
+        },
+        {
+            id: "sales-shift",
+            label: "Satış növbəsi",
+            icon: <i className="bi bi-clock-history"></i>,
+            permission:
+                Number(loginedProfileData?.data?.profile?.queue_sales_module) === 1 &&
+                Number(loginedWaiter?.data?.can_see_sale_type_queue) === 1,
+            onClick: () => setShowSalesShiftModal(true),
         },
         {
             id: "operation",
@@ -317,6 +328,11 @@ const Settings = () => {
             <ReportModal
                 show={showReportModal}
                 onClose={() => setShowReportModal(false)}
+            />
+
+            <SalesShiftModal
+                show={showSalesShiftModal}
+                onHide={() => setShowSalesShiftModal(false)}
             />
 
             {/* Customers Source Modal */}

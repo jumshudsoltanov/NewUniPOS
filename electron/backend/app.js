@@ -29,6 +29,7 @@ const { getPaymentMethods } = require("./data/PaymentMethodsData");
 const { getTags } = require("./data/TagsData");
 const { getSalesTypes } = require("./data/SalesTypesData");
 const PrintersModel = require("./model/PrintersModel");
+const SalesShiftsModel = require("./model/SalesShiftsModel");
 const { getPrinters } = require("./data/PrintersData");
 
 // Allow Cors
@@ -62,6 +63,28 @@ const ensureSchemaColumns = async () => {
         allowNull: true,
       });
       console.log("[SCHEMA] Added profiles.is_customer_receipt_auto_print");
+    }
+    if (!tableDesc.is_sales_shift_required) {
+      await qi.addColumn("profiles", "is_sales_shift_required", {
+        type: db.Sequelize.DataTypes.TINYINT,
+        defaultValue: 0,
+        allowNull: true,
+      });
+      console.log("[SCHEMA] Added profiles.is_sales_shift_required");
+    }
+
+    // orders_items.count: INTEGER → FLOAT (decimal qty support)
+    try {
+      const itemsDesc = await qi.describeTable("orders_items");
+      if (itemsDesc.count && itemsDesc.count.type && !String(itemsDesc.count.type).toUpperCase().includes("FLOAT") && !String(itemsDesc.count.type).toUpperCase().includes("DOUBLE") && !String(itemsDesc.count.type).toUpperCase().includes("DECIMAL")) {
+        await qi.changeColumn("orders_items", "count", {
+          type: db.Sequelize.DataTypes.FLOAT,
+          allowNull: false,
+        });
+        console.log("[SCHEMA] orders_items.count changed to FLOAT");
+      }
+    } catch (colErr) {
+      console.warn("[SCHEMA] orders_items.count alter:", colErr?.message);
     }
   } catch (e) {
     if (e.message?.includes("Duplicate") || e.message?.includes("already exists")) {
@@ -246,6 +269,23 @@ let creaedtToTabel = async () => {
       } catch (_) {}
     }
   } catch (_) {}
+
+  /** sales_shifts — ümumi sync uğursuz olanda cədvəl yaradılmırdı; ayrıca sinxron */
+  try {
+    await SalesShiftsModel.sync({ alter: true });
+    console.log("[Schema] sales_shifts cədvəli sinxronizə edildi");
+  } catch (salesShiftSyncErr) {
+    console.warn(
+      "[Schema] sales_shifts alter:",
+      salesShiftSyncErr?.message || salesShiftSyncErr,
+    );
+    try {
+      await SalesShiftsModel.sync();
+      console.log("[Schema] sales_shifts cədvəli yaradıldı (sync)");
+    } catch (e2) {
+      console.warn("[Schema] sales_shifts sync:", e2?.message || e2);
+    }
+  }
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -55,6 +55,7 @@ import UpdateGuestCountModal from "../Customers-Modal/UpdateGuestCountModal";
 import apiConfig from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 import StatusModal from "../StatusModal/StatusModal";
+import { checkShiftGuard } from "../../utils/shiftGuard";
 
 // Cloud API Base URL (Same as Admin)
 // Local Backend Sync URL
@@ -63,6 +64,7 @@ const LOCAL_SYNC_URL = "/sync";
 import {
   menuWithGeneralCategories,
   menuWithCategories,
+  applyProductOrdering,
 } from "../../redux/Slices/MenuSlice";
 
 const Check = () => {
@@ -76,6 +78,7 @@ const Check = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDragMode, setIsDragMode] = useState(false);
   const [customOrders, setCustomOrders] = useState({});
+  const customOrdersRef = useRef({});
   const [tempCustomOrders, setTempCustomOrders] = useState(null);
   const [lockCheck, setLockCheck] = useState(false);
   const [comment, setComment] = useState(false);
@@ -190,6 +193,7 @@ const Check = () => {
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const newOrderBtnRef = useRef(null);
 
+
   const { currentOrder, currentHall, currentTable } = useMemo(() => {
     if (!id)
       return { currentOrder: null, currentHall: null, currentTable: null };
@@ -211,7 +215,8 @@ const Check = () => {
     }
 
 
-    console.log(loginedProfileData);
+    console.log(loginedProfileData)
+
 
     // Priority 1: books (full order data with orders_items)
     const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
@@ -834,11 +839,11 @@ const Check = () => {
       }
     };
 
-    const handleTableUpdated = () => {
+    const handleTableUpdated = ({ orderId: updatedOrderId } = {}) => {
       const profileId = loginedProfileData?.data?.profile?.id;
       if (!profileId) return;
-      const elapsed = Date.now() - mountTimeRef.current;
-      if (elapsed < 400) return;
+      // Only refresh if this event is for the current order or no orderId specified
+      if (updatedOrderId && updatedOrderId !== id) return;
       dispatch(getActiveOrders({ profileId, silentRefresh: true }));
     };
 
@@ -1168,10 +1173,9 @@ const Check = () => {
     else if (menuViewMode === "PRODUCTS" && selectedCat) key = `CAT_${selectedCat.id}`;
 
     if (key) {
-      setCustomOrders(prev => ({
-        ...prev,
-        [key]: newOrder
-      }));
+      const updated = { ...customOrdersRef.current, [key]: newOrder };
+      customOrdersRef.current = updated;
+      setCustomOrders(updated);
     }
   }, [menuViewMode, selectedGenCat, selectedCat]);
 
@@ -1732,7 +1736,14 @@ const Check = () => {
                   <button
                     ref={newOrderBtnRef}
                     className="create-order-btn small-btn"
-                    onClick={() => setOnShowSalesTypeModal(true)}
+                    onClick={async () => {
+                      const guard = await checkShiftGuard(loginedProfileData);
+                      if (guard.blocked) {
+                        toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                        return;
+                      }
+                      setOnShowSalesTypeModal(true);
+                    }}
                   >
                     <svg
                       width="18"
@@ -2142,11 +2153,6 @@ const Check = () => {
                           className="drag-mode-btn confirm"
                           title="Təsdiqlə"
                           onClick={async () => {
-                            if (!navigator.onLine) {
-                              toast.error("İnternet bağlantısı yoxdur!");
-                              return;
-                            }
-
                             const loadingToast = toast.loading("Dəyişikliklər yadda saxlanılır...");
 
                             try {
@@ -2162,8 +2168,10 @@ const Check = () => {
                               let endpoint = "";
                               let isRootSaved = false;
 
+                              const latestOrders = customOrdersRef.current;
+
                               if (menuViewMode === "ROOT") {
-                                const items = customOrders["ROOT"] || [];
+                                const items = latestOrders["ROOT"] || [];
                                 const genCats = menuDataWithGeneralCategories?.data || [];
                                 const rootCats = (menuDataWithCategories?.data || []).filter(
                                   (c) => !c.general_categorie_id || c.general_categorie_id === 0
@@ -2186,11 +2194,11 @@ const Check = () => {
                                 }
                                 isRootSaved = items.length > 0;
                               } else if (menuViewMode === "CATEGORIES" && selectedGenCat) {
-                                const items = customOrders[`GEN_${selectedGenCat.id}`] || [];
+                                const items = latestOrders[`GEN_${selectedGenCat.id}`] || [];
                                 orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
                                 endpoint = "/categories/ordering";
                               } else if (menuViewMode === "PRODUCTS" && selectedCat) {
-                                const items = customOrders[`CAT_${selectedCat.id}`] || [];
+                                const items = latestOrders[`CAT_${selectedCat.id}`] || [];
                                 orderedItems = items.map((id, index) => ({ id, ordering: index + 1 }));
                                 endpoint = "/products/ordering";
                               }
@@ -2203,13 +2211,23 @@ const Check = () => {
                                   }
                                   await apiConfig.put(endpoint, putPayload);
                                 }
+                                // Redux state-i dərhal güncəllə — yenidən fetch etmə (fetch köhnə data gətirib üzərinə yazar)
+                                if (menuViewMode === "PRODUCTS" && selectedCat && orderedItems.length > 0) {
+                                  dispatch(applyProductOrdering({
+                                    categoryId: selectedCat.id,
+                                    orderedIds: orderedItems.map(i => i.id),
+                                  }));
+                                } else {
+                                  dispatch(menuWithGeneralCategories(profileId));
+                                  dispatch(menuWithCategories(profileId));
+                                }
                                 setIsDragMode(false);
                                 setTempCustomOrders(null);
+                                customOrdersRef.current = {};
+                                setCustomOrders({});
                                 toast.dismiss(loadingToast);
                                 addNotification("Sıralama Dəyişdirildi", "Menyu sıralaması yeniləndi.");
                                 toast.success("Sıralama uğurla yadda saxlanıldı!");
-                                dispatch(menuWithGeneralCategories(profileId));
-                                dispatch(menuWithCategories(profileId));
                               } else {
                                 toast.dismiss(loadingToast);
                                 setIsDragMode(false);
@@ -2232,7 +2250,7 @@ const Check = () => {
             </div>
 
             {/* Content placeholder for the rest of the right box */}
-            <div className="checkRightBoxContent flex-grow-1 p-3">
+            <div className="checkRightBoxContent flex-grow-1 p-3" style={{ minHeight: 0 }}>
               <Menu
                 order={currentOrder}
                 searchText={searchText}

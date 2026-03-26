@@ -190,10 +190,24 @@ const getProducts = async (passedProfileId) => {
       }
 
       if (products.length > 0) {
-        const updateKeys = Object.keys(products[0]).filter(
+        // Mövcud ordering-ləri saxla
+        const existingOrders = await ProductsModel.findAll({
+          attributes: ["id", "ordering"],
+          where: { id: products.map(p => p.id) },
+          raw: true,
+        });
+        const orderMap = {};
+        existingOrders.forEach(r => { if (r.ordering != null) orderMap[r.id] = r.ordering; });
+
+        const productsWithOrder = products.map(p => ({
+          ...p,
+          ordering: orderMap[p.id] != null ? orderMap[p.id] : (p.ordering ?? 0),
+        }));
+
+        const updateKeys = Object.keys(productsWithOrder[0]).filter(
           (key) => ProductsModel.rawAttributes[key] && key !== "ordering",
         );
-        await ProductsModel.bulkCreate(products, {
+        await ProductsModel.bulkCreate(productsWithOrder, {
           updateOnDuplicate: updateKeys,
         });
       }

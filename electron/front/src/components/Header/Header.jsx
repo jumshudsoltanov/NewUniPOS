@@ -17,6 +17,10 @@ import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
 import StatusModal from "../StatusModal/StatusModal";
 import { useLocation, useNavigate } from "react-router-dom"; // Moved here
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
+import SalesShiftStatusPill from "../common/SalesShiftStatusPill";
+import SalesShiftModal from "../Settings/SalesShiftModal";
+import { checkShiftGuard } from "../../utils/shiftGuard";
+import { toast } from "sonner";
 
 const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -33,8 +37,11 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false); // This was duplicated, keeping the one that's used
+  const [showSalesShiftModal, setShowSalesShiftModal] = useState(false);
   const prevSyncedCountRef = useRef(0);
   const newOrderBtnRef = useRef(null);
+
+  const _hProfileId = loginedProfileData?.data?.profile?.id;
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
@@ -102,8 +109,6 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
     setDraggedHallIndex(index);
   };
 
-
-  console.log(loginedWaiter)
 
   const handleHallTouchMove = (e) => {
     if (!isTableEditMode || touchRef.current.startIndex === null) return;
@@ -358,6 +363,15 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
               {isChecksPage ? "Çeklər" : (!showBack && !hideWaiterName && loginedWaiter?.data?.name)}
             </div>
             <div className="d-flex align-items-center gap-2">
+              {Number(loginedProfileData?.data?.profile?.queue_sales_module) === 1 &&
+                Number(loginedWaiter?.data?.can_see_sale_type_queue) === 1 && (
+                <SalesShiftStatusPill
+                  profileId={loginedProfileData?.data?.profile?.id}
+                  terminalId={loginedProfileData?.data?.terminal?.terminal_id}
+                  variant="header"
+                  onClick={() => setShowSalesShiftModal(true)}
+                />
+              )}
               <Link className="header-icon-btn" to="/pin">
                 <svg
                   width="24"
@@ -413,7 +427,14 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                   <button
                     ref={newOrderBtnRef}
                     className="create-order-btn small-btn"
-                    onClick={() => setOnShowSalesTypeModal(true)}
+                    onClick={async () => {
+                      const guard = await checkShiftGuard(loginedProfileData);
+                      if (guard.blocked) {
+                        toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                        return;
+                      }
+                      setOnShowSalesTypeModal(true);
+                    }}
                   >
                     <svg
                       width="18"
@@ -432,6 +453,18 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                     </svg>
                     <span className="d-none d-xl-inline">Yeni sifariş</span>
                   </button>
+                </>
+              )}
+              {Number(loginedProfileData?.data?.profile?.queue_sales_module) === 1 &&
+                Number(loginedWaiter?.data?.can_see_sale_type_queue) === 1 && (
+                <>
+                  <div className="tools-divider"></div>
+                  <SalesShiftStatusPill
+                    profileId={loginedProfileData?.data?.profile?.id}
+                    terminalId={loginedProfileData?.data?.terminal?.terminal_id}
+                    variant="header"
+                    onClick={() => setShowSalesShiftModal(true)}
+                  />
                 </>
               )}
 
@@ -628,7 +661,14 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
           {Number(loginedWaiter?.data?.can_create_order) === 1 && (
             <button
               className="mobile-add-btn"
-              onClick={() => setOnShowSalesTypeModal(true)}
+              onClick={async () => {
+                const guard = await checkShiftGuard(loginedProfileData);
+                if (guard.blocked) {
+                  toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                  return;
+                }
+                setOnShowSalesTypeModal(true);
+              }}
             >
               <svg
                 width="24"
@@ -666,6 +706,10 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
       <StatusModal
         show={showStatusModal}
         onHide={() => setShowStatusModal(false)}
+      />
+      <SalesShiftModal
+        show={showSalesShiftModal}
+        onHide={() => setShowSalesShiftModal(false)}
       />
     </>
   );

@@ -100,6 +100,10 @@ const LoginModel = db.sequelize.define(
       defaultValue: 0,
     },
 
+    is_sales_shift_required: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
     is_master_cashier_printing: {
       type: DataTypes.TINYINT,
       defaultValue: 0,

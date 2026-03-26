@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Modal } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import { setLoginData } from "../../redux/Slices/LoginSlice";
@@ -7,8 +7,370 @@ import QRCode from "react-qr-code";
 import apiConfig, { localApi, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
-import { cashierPrinterPrefStorageKey } from "../../utils/printerHelpers.jsx";
+import { cashierPrinterPrefStorageKey, clearPrintersCache, savePrintersToStorage } from "../../utils/printerHelpers.jsx";
 import "./DevicesModal.css";
+
+
+const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField, systemPrinters, networkScanResults, networkScanning, onBack, onSave, onTestPrint, onScan, profileLogo }) => {
+    const ct = printer.connection_type || 'network';
+    const isNetwork = ct !== 'usb' && ct !== 'com';
+    const [pingStatus, setPingStatus] = React.useState(null); // null | 'checking' | 'online' | 'offline'
+
+    const handlePing = async () => {
+        if (!printer.ip) return;
+        setPingStatus('checking');
+        try {
+            const res = await window.electronAPI?.pingPrinter({ ip: printer.ip, port: printer.port || 9100 });
+            setPingStatus(res?.online ? 'online' : 'offline');
+        } catch { setPingStatus('offline'); }
+    };
+    return (
+        <div>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button onClick={onBack} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}>
+                        <i className="bi bi-chevron-left"></i>
+                    </button>
+                    <div>
+                        <div style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b' }}>
+                            {ct === 'usb' ? 'USB / System' : ct === 'com' ? 'COM Port' : 'Network'}
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#64748b' }}>
+                            {ct === 'com' ? (printer.usb_name || '—') : (printer.ip || printer.usb_name || printer.local_name || printer.name)}
+                        </div>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                    <button className="btn-test" onClick={() => {
+                        if (isNetwork && printer.ip) onTestPrint(null, printer.ip, printer.port || 9100);
+                        else onTestPrint(printer.usb_name || printer.local_name || printer.name);
+                    }}>Test çapı</button>
+                    <button className="btn-save-printer" onClick={onSave}>Yadda saxla</button>
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', marginBottom: '20px', gap: '4px' }}>
+                {["connection", "settings"].map(t => (
+                    <button key={t} onClick={() => setPrinterTab(t)} style={{ padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: printerTab === t ? 600 : 400, color: printerTab === t ? '#3b82f6' : '#64748b', borderBottom: printerTab === t ? '2px solid #3b82f6' : '2px solid transparent', marginBottom: '-2px' }}>
+                        {t === "connection" ? "Əlaqə" : "Tənzimləmələr"}
+                    </button>
+                ))}
+            </div>
+
+            {printerTab === "connection" ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div className="connection-toggle">
+                        <button className={`conn-btn ${isNetwork ? 'active' : ''}`} onClick={() => updatePrinterField('connection_type', 'network')}>Network (IP)</button>
+                        <button className={`conn-btn ${ct === 'usb' ? 'active' : ''}`} onClick={() => updatePrinterField('connection_type', 'usb')}>USB / System</button>
+                        <button className={`conn-btn ${ct === 'com' ? 'active' : ''}`} onClick={() => updatePrinterField('connection_type', 'com')}>COM Port</button>
+                    </div>
+
+                    <div className="printer-form-group">
+                        <label>Görünən adı</label>
+                        <input className="printer-input" value={printer.local_name || ""} onChange={e => updatePrinterField('local_name', e.target.value)} />
+                    </div>
+
+                    {ct === 'usb' ? (
+                        <div className="printer-form-group">
+                            <label>Sistem Printeri</label>
+                            <select className="printer-select" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value)}>
+                                <option value="">Seçilməyib</option>
+                                {systemPrinters.map(sp => <option key={sp.name} value={sp.name}>{sp.name}</option>)}
+                            </select>
+                        </div>
+                    ) : ct === 'com' ? (
+                        <div className="printer-form-group">
+                            <label>COM Port (məs. COM3, COM4)</label>
+                            <input className="printer-input" placeholder="COM3" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value.toUpperCase())} />
+                            <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>Virtual COM port vasitəsilə qoşulmuş printer üçün</small>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="ip-port-row">
+                                <div className="printer-form-group">
+                                    <label>IP Address</label>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <input className="printer-input" placeholder="192.168.1.100" value={printer.ip || ""} onChange={e => { updatePrinterField('ip', e.target.value); setPingStatus(null); }} />
+                                        <button className={`ping-btn ${pingStatus || ''}`} onClick={handlePing} disabled={!printer.ip || pingStatus === 'checking'} title="Bağlantını yoxla">
+                                            {pingStatus === 'checking' && <i className="bi bi-arrow-repeat spin"></i>}
+                                            {pingStatus === 'online' && <i className="bi bi-check-circle-fill"></i>}
+                                            {pingStatus === 'offline' && <i className="bi bi-x-circle-fill"></i>}
+                                            {!pingStatus && <i className="bi bi-activity"></i>}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="printer-form-group">
+                                    <label>Port</label>
+                                    <input className="printer-input" placeholder="9100" value={printer.port || ""} onChange={e => updatePrinterField('port', e.target.value)} />
+                                </div>
+                            </div>
+
+                            <div className="network-scan-section">
+                                <div className="network-scan-header">
+                                    <span className="network-scan-label">Şəbəkədə tap</span>
+                                    <button className={`network-scan-btn ${networkScanning ? 'scanning' : ''}`} onClick={onScan} disabled={networkScanning}>
+                                        {networkScanning ? <><i className="bi bi-arrow-repeat spin"></i> Axtarılır...</> : <><i className="bi bi-wifi"></i> Axtar</>}
+                                    </button>
+                                </div>
+                                {networkScanResults.length > 0 && (
+                                    <div className="network-scan-results">
+                                        {networkScanResults.map(r => (
+                                            <div key={r.ip} className={`network-scan-item ${printer.ip === r.ip ? 'selected' : ''}`} onClick={() => { updatePrinterField('ip', r.ip); updatePrinterField('port', r.port); }}>
+                                                <i className="bi bi-printer-fill"></i>
+                                                <span className="scan-ip">{r.ip}</span>
+                                                <span className="scan-port">:{r.port}</span>
+                                                {printer.ip === r.ip && <i className="bi bi-check-circle-fill scan-check"></i>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Çap növü: Raster (default) vs Windows Driver */}
+                            <div style={{ padding: '12px 14px', background: '#f8faff', border: '1px solid #e0e9ff', borderRadius: 10 }}>
+                                <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', marginBottom: 10 }}>Çap növü</div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                    {/* Raster seçimi */}
+                                    {(() => { const isRaster = printer.usb_name === '' || printer.usb_name === null || printer.usb_name === undefined || printer.usb_name === 'RASTER'; return (
+                                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isRaster ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isRaster ? '#eff6ff' : '#fff' }}>
+                                        <input type="radio" name={`ptype_${printer.id}`} checked={isRaster} onChange={() => updatePrinterField('usb_name', 'RASTER')} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>Tam dizayn çapı (Raster) <span style={{ fontSize: 11, background: '#dcfce7', color: '#16a34a', padding: '1px 7px', borderRadius: 20, marginLeft: 4 }}>Tövsiyə</span></div>
+                                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>HTML çek dizaynı şəkil kimi çap olunur. Windows driver lazım deyil, birbaşa IP-yə göndərilir.</div>
+                                        </div>
+                                    </label>); })()}
+                                    {/* Windows Driver seçimi */}
+                                    {(() => { const isWin = printer.usb_name && printer.usb_name !== 'RASTER'; return (
+                                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isWin ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isWin ? '#eff6ff' : '#fff' }}>
+                                        <input type="radio" name={`ptype_${printer.id}`} checked={!!isWin} onChange={() => { const autoName = printer.ip ? `UNIPOS_${String(printer.ip).replace(/\./g, '_')}` : (systemPrinters[0]?.name || 'UNIPOS_PRINTER'); updatePrinterField('usb_name', autoName); }} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>Windows Driver vasitəsilə</div>
+                                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Bu printerin Windows-da qurulu olması lazımdır. Aşağıdan adını seçin.</div>
+                                        </div>
+                                    </label>); })()}
+                                </div>
+                            </div>
+
+                            {/* Windows Driver seçilibsə — sistem printer adı + Qur düyməsi */}
+                            {(printer.usb_name && printer.usb_name.trim() && printer.usb_name !== 'RASTER') ? (
+                                <div className="printer-form-group">
+                                    <label>Windows Sistem Printer Adı</label>
+                                    <select className="printer-select" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value)}>
+                                        <option value="">— Printer seçin —</option>
+                                        {systemPrinters.map(sp => <option key={sp.name} value={sp.name}>{sp.name}</option>)}
+                                    </select>
+                                </div>
+                            ) : null}
+                        </>
+                    )}
+                </div>
+            ) : (
+                <div className="printer-settings-tab">
+
+                    {/* ── Printer type — read-only, admin serverdən gəlir ── */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: '#f8faff', border: '1px solid #e0e9ff', borderRadius: '10px', marginBottom: '4px' }}>
+                        <div style={{ width: 38, height: 38, background: '#eff6ff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4F85F4', fontSize: 17, flexShrink: 0 }}>
+                            <i className={`bi ${Number(printer.is_cashier) === 1 ? 'bi-receipt' : 'bi-egg-fried'}`}></i>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
+                                {Number(printer.is_cashier) === 1 ? 'Kassa Printeri' : 'Mətbəx Printeri'}
+                            </span>
+                            <span style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>
+                                {Number(printer.is_cashier) === 1
+                                    ? 'Müştəri çekləri və hesabatlar bu printerə gedir'
+                                    : 'Mətbəx sifarişləri admin paneldə məhsul/kateqoriyaya təyin olunur'}
+                            </span>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.5px', background: Number(printer.is_cashier) === 1 ? '#dbeafe' : '#fef3c7', color: Number(printer.is_cashier) === 1 ? '#1d4ed8' : '#d97706' }}>
+                            {Number(printer.is_cashier) === 1 ? 'Kassa' : 'Mətbəx'}
+                        </span>
+                    </div>
+
+                    {/* ── Toggles ── */}
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Çap parametrləri</div>
+                    {[
+                        { label: 'Səsli bildiriş', field: 'sound_notify', icon: 'bi-volume-up', desc: 'Yeni çap gəldikdə zəng səsi çıxarsın' },
+                        { label: 'Pul yeşiyi', field: 'cash_drawer', icon: 'bi-cash-stack', desc: 'Çapdan sonra pul yeşiyini avto aç' },
+                        { label: 'Pul yeşiyi (çapsız)', field: 'open_drawer_without_print', icon: 'bi-box-arrow-up', desc: 'Çap olmadan manual açıq trigger göndər' },
+                        { label: 'Sürətli çap', field: 'fast_print', icon: 'bi-lightning', desc: 'Görüntü keyfiyyətini azaldıb sürəti artır' },
+                        { label: 'Loqo çapı', field: 'print_logo', icon: 'bi-image', desc: profileLogo ? 'Çekin başında profil loqosu çap olunacaq' : 'Loqo admin paneldən profilə yüklənməlidir' },
+                    ].map(item => (
+                        <div key={item.field} className="settings-toggle-row">
+                            <div className="settings-toggle-icon"><i className={`bi ${item.icon}`}></i></div>
+                            <div className="settings-toggle-text">
+                                <span className="settings-toggle-label">{item.label}</span>
+                                <span className="settings-toggle-desc">{item.desc}</span>
+                            </div>
+                            <div className={`premium-switch ${printer[item.field] ? 'active' : ''}`} onClick={() => updatePrinterField(item.field, printer[item.field] ? 0 : 1)}>
+                                <div className="switch-handle"></div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Logo preview — print_logo aktiv və logo varsa göstər */}
+                    {printer.print_logo ? (
+                        <div className="logo-preview-card">
+                            {profileLogo ? (
+                                <>
+                                    <img
+                                        src={profileLogo.startsWith('http') || profileLogo.startsWith('data:') ? profileLogo : `http://46.224.8.157:35627/${profileLogo}`}
+                                        alt="Profil loqosu"
+                                        className="logo-preview-img"
+                                    />
+                                    <span className="logo-preview-label">Bu loqo çekin üstündə çap olunacaq</span>
+                                </>
+                            ) : (
+                                <div className="logo-preview-empty">
+                                    <i className="bi bi-exclamation-triangle"></i>
+                                    <span>Admin paneldən profil loqosu yükləyin</span>
+                                </div>
+                            )}
+                        </div>
+                    ) : null}
+
+                    {/* ── Copies + Darkness ── */}
+                    <div className="settings-inputs-grid" style={{ marginTop: '16px' }}>
+                        <div className="settings-input-card">
+                            <div className="settings-input-icon"><i className="bi bi-files"></i></div>
+                            <div className="settings-input-body">
+                                <label>Nüsxə sayı</label>
+                                <input className="printer-input" type="number" min="1" max="10" value={printer.copies ?? 1} onChange={e => updatePrinterField('copies', Number(e.target.value))} />
+                            </div>
+                        </div>
+                        <div className="settings-input-card">
+                            <div className="settings-input-icon"><i className="bi bi-circle-half"></i></div>
+                            <div className="settings-input-body">
+                                <label>Çap sıxlığı (1–10)</label>
+                                <input className="printer-input" type="number" min="1" max="10" value={printer.darkness ?? 5} onChange={e => updatePrinterField('darkness', Number(e.target.value))} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Paper ── */}
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Kağız</div>
+                    <div className="settings-chip-row">
+                        <span className="settings-chip-label">Ölçü</span>
+                        <div className="settings-chip-group">
+                            {['58', '80'].map(s => (
+                                <button key={s} className={`settings-chip ${(printer.paper_size || '80') === s ? 'active' : ''}`} onClick={() => updatePrinterField('paper_size', s)}>{s}mm</button>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="settings-inputs-grid" style={{ marginTop: '10px' }}>
+                        <div className="settings-input-card">
+                            <div className="settings-input-icon"><i className="bi bi-rulers"></i></div>
+                            <div className="settings-input-body">
+                                <label>Simvol eni (override)</label>
+                                <input className="printer-input" type="number" min="24" max="80" value={printer.paper_width ?? 48} onChange={e => updatePrinterField('paper_width', Number(e.target.value))} />
+                            </div>
+                        </div>
+                        <div className="settings-input-card">
+                            <div className="settings-input-icon"><i className="bi bi-arrow-bar-down"></i></div>
+                            <div className="settings-input-body">
+                                <label>Boş sətir (kəsimdən sonra)</label>
+                                <input className="printer-input" type="number" min="0" max="20" value={printer.trailing_space ?? 0} onChange={e => updatePrinterField('trailing_space', Number(e.target.value))} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Cut mode ── */}
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Kəsim növü</div>
+                    <div className="settings-chip-group">
+                        {[
+                            { val: 'full', label: 'Tam kəsim' },
+                            { val: 'partial', label: 'Qismən kəsim' },
+                            { val: 'none', label: 'Kəsim yox' },
+                        ].map(o => (
+                            <button key={o.val} className={`settings-chip ${(printer.cut_mode || 'full') === o.val ? 'active' : ''}`} onClick={() => updatePrinterField('cut_mode', o.val)}>{o.label}</button>
+                        ))}
+                    </div>
+
+                    {/* ── Encoding ── */}
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Kodlaşdırma</div>
+                    <div className="settings-chip-group">
+                        {[
+                            { val: 'utf8', label: 'UTF-8' },
+                            { val: 'cp1251', label: 'CP1251 (Kiril)' },
+                            { val: 'cp866', label: 'CP866 (DOS)' },
+                            { val: 'ascii', label: 'ASCII' },
+                        ].map(o => (
+                            <button key={o.val} className={`settings-chip ${(printer.encoding || 'utf8') === o.val ? 'active' : ''}`} onClick={() => updatePrinterField('encoding', o.val)}>{o.label}</button>
+                        ))}
+                    </div>
+
+                    {/* ── Font ── */}
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Şrift</div>
+                    <div className="settings-font-row">
+                        {['Arial', 'Courier New', 'Tahoma', 'Verdana', 'Consolas'].map(f => (
+                            <button key={f} className={`font-chip ${(printer.font_family || 'Arial') === f ? 'active' : ''}`} onClick={() => updatePrinterField('font_family', f)} style={{ fontFamily: f }}>{f}</button>
+                        ))}
+                    </div>
+
+                    {/* ── Header / Footer text ── */}
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Çek başlığı</div>
+                    <div className="settings-toggle-row" style={{ marginBottom: 8 }}>
+                        <div className="settings-toggle-icon"><i className="bi bi-type-bold"></i></div>
+                        <div className="settings-toggle-text">
+                            <span className="settings-toggle-label">Qalın şrift (bold)</span>
+                            <span className="settings-toggle-desc">Başlıq mətni bold çap olunsun</span>
+                        </div>
+                        <div className={`premium-switch ${printer.bold_header ? 'active' : ''}`} onClick={() => updatePrinterField('bold_header', printer.bold_header ? 0 : 1)}>
+                            <div className="switch-handle"></div>
+                        </div>
+                    </div>
+                    <div className="settings-toggle-row" style={{ marginBottom: 12 }}>
+                        <div className="settings-toggle-icon"><i className="bi bi-fonts"></i></div>
+                        <div className="settings-toggle-text">
+                            <span className="settings-toggle-label">Böyük şrift (double-height)</span>
+                            <span className="settings-toggle-desc">Başlıq ESC/POS double-height rejimində</span>
+                        </div>
+                        <div className={`premium-switch ${printer.double_height_header ? 'active' : ''}`} onClick={() => updatePrinterField('double_height_header', printer.double_height_header ? 0 : 1)}>
+                            <div className="switch-handle"></div>
+                        </div>
+                    </div>
+                    <div className="printer-form-group">
+                        <label>Başlıq mətni (çekin üstündə)</label>
+                        <textarea
+                            className="printer-input"
+                            rows={2}
+                            placeholder={"Şirkət adı, ünvan və s.\nİkinci sətir"}
+                            value={printer.receipt_header || ""}
+                            onChange={e => updatePrinterField('receipt_header', e.target.value)}
+                            style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '13px' }}
+                        />
+                    </div>
+                    <div className="printer-form-group" style={{ marginTop: 10 }}>
+                        <label>Altlıq mətni (çekin altında)</label>
+                        <textarea
+                            className="printer-input"
+                            rows={2}
+                            placeholder={"Təşəkkürlər! Yenidən gözləyirik."}
+                            value={printer.receipt_footer || ""}
+                            onChange={e => updatePrinterField('receipt_footer', e.target.value)}
+                            style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '13px' }}
+                        />
+                    </div>
+
+                    {/* ── Other ── */}
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Digər</div>
+                    <div className="settings-toggle-row">
+                        <div className="settings-toggle-icon"><i className="bi bi-arrow-down-up"></i></div>
+                        <div className="settings-toggle-text">
+                            <span className="settings-toggle-label">Çevrilmiş çap (180°)</span>
+                            <span className="settings-toggle-desc">Çeki baş-aşağı çap et</span>
+                        </div>
+                        <div className={`premium-switch ${printer.rotate_180 ? 'active' : ''}`} onClick={() => updatePrinterField('rotate_180', printer.rotate_180 ? 0 : 1)}>
+                            <div className="switch-handle"></div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const DevicesModal = ({ show, onHide }) => {
     const dispatch = useDispatch();
@@ -25,11 +387,14 @@ const DevicesModal = ({ show, onHide }) => {
     const [localIp, setLocalIp] = useState("");
     const [printers, setPrinters] = useState([]);
     const [systemPrinters, setSystemPrinters] = useState([]);
+    const [networkScanResults, setNetworkScanResults] = useState([]);
+    const [networkScanning, setNetworkScanning] = useState(false);
     const [masterModes, setMasterModes] = useState({
         cashier: false,
         product: false
     });
     const [customerReceiptAutoPrint, setCustomerReceiptAutoPrint] = useState(false);
+    const [salesShiftRequired, setSalesShiftRequired] = useState(false);
     const [screens, setScreens] = useState([]);
     const [customerDisplay, setCustomerDisplay] = useState({
         active: false,
@@ -43,6 +408,8 @@ const DevicesModal = ({ show, onHide }) => {
     const [taxLoading, setTaxLoading] = useState({});
     const [selectedTaxIndex, setSelectedTaxIndex] = useState(null);
     const [selectedPrinterIndex, setSelectedPrinterIndex] = useState(null);
+    const [printerTab, setPrinterTab] = useState("connection");
+    const [printerStatuses, setPrinterStatuses] = useState({}); // { [printer.id]: 'online'|'offline'|'checking' }
     const [taxDailyInfo, setTaxDailyInfo] = useState({});
 
     // Periodic Report States
@@ -107,16 +474,41 @@ const DevicesModal = ({ show, onHide }) => {
         }
     }, [show, printers]);
 
+    const pingAllPrinters = useCallback(async (printerList) => {
+        if (!window.electronAPI?.pingPrinter) return;
+        const networkOnes = printerList.filter(p => (p.connection_type === 'network' || !p.connection_type) && p.ip);
+        if (!networkOnes.length) return;
+        // Mark all as checking
+        const checking = {};
+        networkOnes.forEach(p => { checking[p.id] = 'checking'; });
+        setPrinterStatuses(prev => ({ ...prev, ...checking }));
+        // Ping in parallel
+        await Promise.all(networkOnes.map(async (p) => {
+            try {
+                const res = await window.electronAPI.pingPrinter({ ip: p.ip, port: p.port || 9100 });
+                setPrinterStatuses(prev => ({ ...prev, [p.id]: res?.online ? 'online' : 'offline' }));
+            } catch {
+                setPrinterStatuses(prev => ({ ...prev, [p.id]: 'offline' }));
+            }
+        }));
+    }, []);
+
     const fetchData = async () => {
         try {
             const prRes = await apiConfig.get(`/pos/printers/${profileId}`);
 
             const rawPrinters = prRes.data.data || [];
-            const normalizedPrinters = rawPrinters.map(p => ({
-                ...p,
-                connection_type: p.connection_type || 'network'
-            }));
+            const normalizedPrinters = rawPrinters.map(p => {
+                const ct = p.connection_type || 'network';
+                const isNet = ct !== 'usb' && ct !== 'com';
+                const autoName = isNet && p.ip ? `UNIPOS_${String(p.ip).replace(/\./g, '_')}` : null;
+                const usbName = p.usb_name && p.usb_name.trim() ? p.usb_name : (autoName || '');
+                return { ...p, connection_type: ct, usb_name: usbName };
+            });
             setPrinters(normalizedPrinters);
+            setPrinterStatuses({});
+            // Ping after short delay so UI renders first
+            setTimeout(() => pingAllPrinters(normalizedPrinters), 300);
 
             const authStr = localStorage.getItem("authResult");
             const authProfile = authStr ? (JSON.parse(authStr)?.data?.profile || {}) : {};
@@ -127,6 +519,7 @@ const DevicesModal = ({ show, onHide }) => {
                 product: merged.is_master_product_printing === 1
             });
             setCustomerReceiptAutoPrint(merged.is_customer_receipt_auto_print === 1);
+            setSalesShiftRequired(merged.queue_sales_module === 1);
 
             try {
                 if (window.electronAPI?.getSystemPrinters) {
@@ -161,17 +554,51 @@ const DevicesModal = ({ show, onHide }) => {
         }
     };
 
+    const updatePrinterField = useCallback((field, value) => {
+        setPrinters(prev => prev.map((p, i) => i === selectedPrinterIndex ? { ...p, [field]: value } : p));
+    }, [selectedPrinterIndex]);
+
+    const handleNetworkScan = async () => {
+        setNetworkScanning(true);
+        setNetworkScanResults([]);
+        try {
+            const baseIp = localIp ? localIp.split('.').slice(0, 3).join('.') : '192.168.1';
+            const results = await window.electronAPI?.scanNetworkPrinters?.({ baseIp, port: 9100 }) || [];
+            setNetworkScanResults(results);
+            if (results.length === 0) toast.info("Şəbəkədə printer tapılmadı");
+            else toast.success(`${results.length} printer tapıldı`);
+        } catch (e) {
+            toast.error("Scan xətası: " + e.message);
+        }
+        setNetworkScanning(false);
+    };
+
     const handleUpdatePrinter = async (printer) => {
         try {
             await apiConfig.put(`/printers/${printer.id}`, printer);
-            toast.success(`${printer.name} yeniləndi`);
-            fetchData();
+            // Cache-i təmizlə ki növbəti çapdа yeni parametrlər götürülsün
+            clearPrintersCache();
+            // Redux store-dakı printers siyahısını da yenilə
+            try {
+                const authStr = localStorage.getItem("authResult");
+                if (authStr) {
+                    const auth = JSON.parse(authStr);
+                    if (auth?.data?.printers) {
+                        auth.data.printers = auth.data.printers.map(p => Number(p.id) === Number(printer.id) ? { ...p, ...printer } : p);
+                        localStorage.setItem("authResult", JSON.stringify(auth));
+                        dispatch(setLoginData(auth));
+                        // Printer məlumatlarını localStorage cache-ə yaz (şəbəkə kəsildikdə istifadə üçün)
+                        savePrintersToStorage(auth.data.profile?.id, auth.data.printers);
+                    }
+                }
+            } catch (e) { /* non-critical */ }
+            toast.success(`${printer.local_name || printer.name} yadda saxlandı`);
         } catch (error) {
-            toast.error("Xəta baş verdi");
+            toast.error("Xəta baş verdi: " + (error?.response?.data?.message || error.message));
         }
     };
 
-    const handleTestPrint = async (printerName) => {
+    const handleTestPrint = async (printerName, printerIp, printerPort) => {
         try {
             if (window.electronAPI?.printReceipt) {
                 const testHtml = `
@@ -179,13 +606,13 @@ const DevicesModal = ({ show, onHide }) => {
                         <h2 style="margin: 0;">UniPOS</h2>
                         <h4 style="margin: 5px 0;">TEST ÇAPI</h4>
                         <p style="margin: 5px 0;">-------------------------</p>
-                        <p style="margin: 2px 0;">Printer: ${printerName}</p>
+                        <p style="margin: 2px 0;">Printer: ${printerIp || printerName}</p>
                         <p style="margin: 2px 0;">Tarix: ${new Date().toLocaleString()}</p>
                         <p style="margin: 5px 0;">-------------------------</p>
                         <p style="margin: 5px 0; font-size: 12px;">Sistem uğurla qoşuldu</p>
                     </div>
                 `;
-                await window.electronAPI.printReceipt({ html: testHtml, printerName });
+                await window.electronAPI.printReceipt({ html: testHtml, printerName: printerIp ? "" : printerName, printerIp: printerIp || "", printerPort: printerPort || 9100 });
                 toast.success("Test çapı göndərildi");
             }
         } catch (error) {
@@ -248,6 +675,36 @@ const DevicesModal = ({ show, onHide }) => {
         } catch (error) {
             setCustomerReceiptAutoPrint(!nextStatus);
             console.error("Customer receipt auto print toggle error:", error);
+            toast.error("Xəta: " + (error?.response?.data?.message || error.message));
+        }
+    };
+
+    const handleToggleSalesShiftRequired = async () => {
+        const nextStatus = !salesShiftRequired;
+        if (!profileId) { toast.error("Profil tapılmadı."); return; }
+        setSalesShiftRequired(nextStatus);
+        const saveLocal = () => {
+            const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+            storedProfile.queue_sales_module = nextStatus ? 1 : 0;
+            localStorage.setItem("profile", JSON.stringify(storedProfile));
+            try {
+                const authStr = localStorage.getItem("authResult");
+                if (authStr) {
+                    const auth = JSON.parse(authStr);
+                    if (auth?.data?.profile) {
+                        auth.data.profile = { ...auth.data.profile, queue_sales_module: nextStatus ? 1 : 0 };
+                        localStorage.setItem("authResult", JSON.stringify(auth));
+                        dispatch(setLoginData(auth));
+                    }
+                }
+            } catch (e) { console.warn(e); }
+        };
+        try {
+            await localApi.patch("/profiles/sales-shift-required", { profileId, isActive: nextStatus });
+            saveLocal();
+            toast.success(nextStatus ? "Növbə tələbi AKTİV" : "Növbə tələbi DEAKTİV");
+        } catch (error) {
+            setSalesShiftRequired(!nextStatus);
             toast.error("Xəta: " + (error?.response?.data?.message || error.message));
         }
     };
@@ -686,6 +1143,18 @@ const DevicesModal = ({ show, onHide }) => {
                                                     <div className="switch-handle"></div>
                                                 </div>
                                             </div>
+                                            <div className="master-printing-card">
+                                                <div className="master-printing-info">
+                                                    <h4>Növbəli açılış tələb et</h4>
+                                                    <p>Növbə açılmadan sifariş yaratmaq mümkün olmasın.</p>
+                                                </div>
+                                                <div
+                                                    className={`premium-switch ${salesShiftRequired ? "active" : ""}`}
+                                                    onClick={handleToggleSalesShiftRequired}
+                                                >
+                                                    <div className="switch-handle"></div>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {printers.filter((p) => Number(p.is_cashier) === 1).length >= 2 && (
@@ -716,164 +1185,61 @@ const DevicesModal = ({ show, onHide }) => {
                                             <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Cihaza klikləyərək tənzimləmələri edin</p>
                                         </div>
                                         <div className="printers-grid">
-                                            {printers.map((printer, index) => (
+                                            {printers.map((printer, index) => {
+                                                const connType = printer.connection_type;
+                                                const isNet = connType === 'network' || (!connType && printer.ip);
+                                                const status = isNet ? (printerStatuses[printer.id] || null) : null;
+                                                return (
                                                 <div
                                                     key={printer.id || index}
                                                     className="printer-edit-card"
                                                     style={{ cursor: 'pointer', border: '1px solid #e2e8f0', boxShadow: 'none' }}
-                                                    onClick={() => setSelectedPrinterIndex(index)}
+                                                    onClick={() => { setSelectedPrinterIndex(index); setPrinterTab("connection"); }}
                                                 >
                                                     <div className="printer-card-header">
-                                                        <div className="printer-card-icon" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+                                                        <div className="printer-card-icon" style={{ background: '#eff6ff', color: '#3b82f6', position: 'relative' }}>
                                                             <i className="bi bi-printer"></i>
+                                                            {status && (
+                                                                <span className={`printer-status-dot printer-status-dot--${status}`}></span>
+                                                            )}
                                                         </div>
                                                         <div className="printer-card-title">
                                                             <h5>{printer.local_name || printer.name}</h5>
                                                             <span>
                                                                 {printer.is_cashier === 1 ? "Kassa Printeri" : "Mətbəx Printeri"}
                                                                 {printer.connection_type === 'usb' && printer.usb_name ? ` • USB: ${printer.usb_name}` : ''}
+                                                                {printer.connection_type === 'com' && printer.usb_name ? ` • COM: ${printer.usb_name}` : ''}
+                                                                {isNet && printer.ip ? ` • ${printer.ip}` : ''}
                                                             </span>
                                                         </div>
-                                                        <i className="bi bi-chevron-right" style={{ marginLeft: 'auto', color: '#94a3b8', fontSize: '18px' }}></i>
+                                                        {isNet && (
+                                                            <span className={`printer-status-badge printer-status-badge--${status || 'checking'}`}>
+                                                                {status === 'online' ? 'Online' : status === 'offline' ? 'Offline' : '...'}
+                                                            </span>
+                                                        )}
+                                                        <i className="bi bi-chevron-right" style={{ marginLeft: isNet ? '8px' : 'auto', color: '#94a3b8', fontSize: '18px' }}></i>
                                                     </div>
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </>
-                                ) : (
-                                    (() => {
-                                        const printer = printers[selectedPrinterIndex];
-                                        return (
-                                            <div>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '6px', background: '#fff' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                        <button
-                                                            onClick={() => setSelectedPrinterIndex(null)}
-                                                            style={{
-                                                                background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px',
-                                                                width: '36px', height: '36px', display: 'flex', alignItems: 'center',
-                                                                justifyContent: 'center', cursor: 'pointer', color: '#64748b'
-                                                            }}
-                                                        >
-                                                            <i className="bi bi-chevron-left" style={{ fontSize: '14px' }}></i>
-                                                        </button>
-                                                        <div>
-                                                            <h3 style={{ margin: 0, color: '#1e293b', fontWeight: 700, fontSize: '16px' }}>{printer.local_name || printer.name}</h3>
-                                                            <span style={{ fontSize: '13px', color: '#64748b', display: 'block', marginTop: '4px' }}>
-                                                                {printer.is_cashier === 1 ? "Kassa Printeri" : "Mətbəx Printeri"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ background: '#fff', border: '1px solid #e2e8f0', padding: '24px', borderRadius: '6px' }}>
-                                                    <div className="connection-toggle">
-                                                        <button
-                                                            className={`conn-btn ${printer.connection_type !== 'usb' ? 'active' : ''}`}
-                                                            onClick={() => {
-                                                                const newArr = printers.map(p => p.id === printer.id ? { ...p, connection_type: 'network' } : p);
-                                                                setPrinters(newArr);
-                                                            }}
-                                                        >
-                                                            Network (IP)
-                                                        </button>
-                                                        <button
-                                                            className={`conn-btn ${printer.connection_type === 'usb' ? 'active' : ''}`}
-                                                            onClick={() => {
-                                                                const newArr = printers.map(p => p.id === printer.id ? { ...p, connection_type: 'usb' } : p);
-                                                                setPrinters(newArr);
-                                                            }}
-                                                        >
-                                                            USB / System
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="printer-form-group">
-                                                        <label>Görünən adı</label>
-                                                        <input
-                                                            className="printer-input"
-                                                            value={printer.local_name || ""}
-                                                            onChange={(e) => {
-                                                                const newArr = printers.map(p => p.id === printer.id ? { ...p, local_name: e.target.value } : p);
-                                                                setPrinters(newArr);
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    {printer.connection_type === 'usb' ? (
-                                                        <div className="printer-form-group">
-                                                            <label>Sistem Printeri Seçin</label>
-                                                            <select
-                                                                className="printer-select"
-                                                                value={printer.usb_name || ""}
-                                                                onChange={(e) => {
-                                                                    const newArr = printers.map(p => p.id === printer.id ? { ...p, usb_name: e.target.value } : p);
-                                                                    setPrinters(newArr);
-                                                                }}
-                                                            >
-                                                                <option value="">Seçilməyib</option>
-                                                                {systemPrinters.map(sp => (
-                                                                    <option key={sp.name} value={sp.name}>{sp.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <div style={{ display: 'flex', gap: '10px' }}>
-                                                                <div className="printer-form-group" style={{ flex: 2 }}>
-                                                                    <label>IP Address</label>
-                                                                    <input
-                                                                        className="printer-input"
-                                                                        placeholder="192.168.1.100"
-                                                                        value={printer.ip || ""}
-                                                                        onChange={(e) => {
-                                                                            const newArr = printers.map(p => p.id === printer.id ? { ...p, ip: e.target.value } : p);
-                                                                            setPrinters(newArr);
-                                                                        }}
-                                                                    />
-                                                                </div>
-                                                                <div className="printer-form-group" style={{ flex: 1 }}>
-                                                                    <label>Port</label>
-                                                                    <input
-                                                                        className="printer-input"
-                                                                        placeholder="9100"
-                                                                        value={printer.port || ""}
-                                                                        onChange={(e) => {
-                                                                            const newArr = printers.map(p => p.id === printer.id ? { ...p, port: e.target.value } : p);
-                                                                            setPrinters(newArr);
-                                                                        }}
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                            <div className="printer-form-group">
-                                                                <label>Sistem printeri (Windows-da qeydiyyatlı ad)</label>
-                                                                <select
-                                                                    className="printer-select"
-                                                                    value={printer.usb_name || ""}
-                                                                    onChange={(e) => {
-                                                                        const newArr = printers.map(p => p.id === printer.id ? { ...p, usb_name: e.target.value } : p);
-                                                                        setPrinters(newArr);
-                                                                    }}
-                                                                >
-                                                                    <option value="">Seçilməyib</option>
-                                                                    {systemPrinters.map(sp => (
-                                                                        <option key={sp.name} value={sp.name}>{sp.name}</option>
-                                                                    ))}
-                                                                </select>
-                                                                <small style={{ color: '#64748b', fontSize: '11px', marginTop: '4px', display: 'block' }}>IP printeri Windows-a əlavə edib buradan seçin</small>
-                                                            </div>
-                                                        </>
-                                                    )}
-
-                                                    <div className="printer-actions" style={{ marginTop: '24px' }}>
-                                                        <button className="btn-test" onClick={() => handleTestPrint(printer.usb_name || printer.local_name || printer.name)}>Test çapı göndər</button>
-                                                        <button className="btn-save-printer" onClick={() => handleUpdatePrinter(printer)}>Yadda saxla</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()
-                                )}
+                                ) : selectedPrinterIndex !== null && printers[selectedPrinterIndex] ? (
+                                    <PrinterDetail
+                                        printer={printers[selectedPrinterIndex]}
+                                        printerTab={printerTab}
+                                        setPrinterTab={setPrinterTab}
+                                        updatePrinterField={updatePrinterField}
+                                        systemPrinters={systemPrinters}
+                                        networkScanResults={networkScanResults}
+                                        networkScanning={networkScanning}
+                                        onBack={() => setSelectedPrinterIndex(null)}
+                                        onSave={() => handleUpdatePrinter(printers[selectedPrinterIndex])}
+                                        onTestPrint={handleTestPrint}
+                                        onScan={handleNetworkScan}
+                                        profileLogo={loginedProfileData?.data?.profile?.logo || null}
+                                    />
+                                ) : null}
                             </div>
                         ) : activeTab === "display" ? (
                             <div className="display-settings">

@@ -26,7 +26,7 @@ const OrdersItemsModel = db.sequelize.define(
     },
 
     count: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.FLOAT,
       allowNull: false,
     },
 

@@ -256,6 +256,11 @@ const WaitersModel = db.sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
+    can_see_sale_type_queue: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "waiters",

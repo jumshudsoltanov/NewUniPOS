@@ -9,6 +9,26 @@ import { maybeBlockCustomerOnCustomerReceipt, maybeLockCheckAfterCustomerReceipt
 let _printersCache = { profileId: null, printers: null };
 export const clearPrintersCache = () => { _printersCache = { profileId: null, printers: null }; };
 
+const PRINTERS_LS_KEY = "unipos_printers_cache";
+
+export const savePrintersToStorage = (profileId, printers) => {
+    try {
+        localStorage.setItem(PRINTERS_LS_KEY, JSON.stringify({ profileId, printers, savedAt: Date.now() }));
+    } catch (e) { /* ignore */ }
+};
+
+const loadPrintersFromStorage = (profileId) => {
+    try {
+        const raw = localStorage.getItem(PRINTERS_LS_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed.profileId === profileId && Array.isArray(parsed.printers) && parsed.printers.length > 0) {
+            return parsed.printers;
+        }
+    } catch (e) { /* ignore */ }
+    return null;
+};
+
 /** App.jsx işə düşəndə `sessionStorage`-a yazılır (Electron `--unipos-instance`) */
 export function getUniposInstanceLabelForStorage() {
     try {
@@ -175,13 +195,22 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 const isSlave = !isMaster && isMasterSlaveActive;
 
                 if (canDelegate && (forceDelegate || (isMasterProductPrinting && isSlave))) {
-                    let printerObj = groupItems[0]?.printer_details?.find(p => (p.local_name || p.name) === printerName) || groupItems[0]?.printer_details?.[0];
+                    const delegateProfilePrinters = orderData.profileData?.data?.printers || [];
+                    let printerObj = groupItems[0]?.printer_details?.find(p => (p.local_name || p.name) === printerName);
                     if (!printerObj?.ip && !printerObj?.usb_name) {
-                        const profilePrinters = orderData.profileData?.data?.printers || [];
-                        printerObj = profilePrinters.find(p => (p.local_name || p.name) === printerName) || printerObj;
+                        const fromProfile = delegateProfilePrinters.find(p => (p.local_name || p.name) === printerName);
+                        if (fromProfile) printerObj = fromProfile;
                     }
-                    const isNet = printerObj?.connection_type === "network" || !!printerObj?.ip;
-                    const hasUsb = !!(printerObj?.usb_name && printerObj.usb_name.trim());
+                    if (!printerObj?.ip && !printerObj?.usb_name) {
+                        const detailPrinter = groupItems[0]?.printer_details?.[0];
+                        if (detailPrinter?.id) {
+                            const byId = delegateProfilePrinters.find(p => p.id === detailPrinter.id);
+                            if (byId) printerObj = byId;
+                        }
+                    }
+                    const _connType1 = printerObj?.connection_type;
+                    const isNet = _connType1 === "network" || (_connType1 !== "usb" && _connType1 !== "com" && !!printerObj?.ip);
+                    const hasUsb = !!(printerObj?.usb_name && printerObj.usb_name.trim() && printerObj.usb_name !== 'RASTER');
                     const delegatePayload = isNet && printerObj?.ip && !hasUsb
                         ? { html, printerName: "", printerIp: printerObj.ip, printerPort: printerObj.port || 9100 }
                         : { html, printerName: printerObj?.usb_name || printerName };
@@ -196,17 +225,54 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 }
 
                 // Local Print Logic — printer_details və ya profile printers-dan tam printer obyektini al
-                let printerObj = groupItems[0]?.printer_details?.find(p => (p.local_name || p.name) === printerName) || groupItems[0]?.printer_details?.[0];
+                const profilePrinters = orderData.profileData?.data?.printers || [];
+                // 1. printer_details-dan adla tap
+                let printerObj = groupItems[0]?.printer_details?.find(p => (p.local_name || p.name) === printerName);
+                // 2. profile printers-dan adla tap (lokal ip/connection_type olan versiya)
                 if (!printerObj?.ip && !printerObj?.usb_name) {
-                    const profilePrinters = orderData.profileData?.data?.printers || [];
-                    printerObj = profilePrinters.find(p => (p.local_name || p.name) === printerName) || printerObj;
+                    const fromProfile = profilePrinters.find(p => (p.local_name || p.name) === printerName);
+                    if (fromProfile) printerObj = fromProfile;
                 }
-                const isNetwork = printerObj?.connection_type === "network" || !!printerObj?.ip;
-                const hasUsbName = !!(printerObj?.usb_name && printerObj.usb_name.trim());
-                const targetPrinter = printerObj?.usb_name || printerName;
+                // 3. id ilə tap (admin və lokal arasında ad fərqi varsa)
+                if (!printerObj?.ip && !printerObj?.usb_name) {
+                    const detailPrinter = groupItems[0]?.printer_details?.find(p => (p.local_name || p.name) === printerName) || groupItems[0]?.printer_details?.[0];
+                    if (detailPrinter?.id) {
+                        const byId = profilePrinters.find(p => p.id === detailPrinter.id);
+                        if (byId) printerObj = byId;
+                    }
+                }
+                // 4. Hələ tapılmadısa — is_cashier=0 olan ilk mətbəx printeri götür
+                if (!printerObj?.ip && !printerObj?.usb_name && profilePrinters.length > 0) {
+                    printerObj = profilePrinters.find(p => Number(p.is_cashier) === 0) || printerObj;
+                }
+                const _connType2 = printerObj?.connection_type;
+                const isNetwork = _connType2 === "network" || (_connType2 !== "usb" && _connType2 !== "com" && !!printerObj?.ip);
+                const hasUsbName = !!(printerObj?.usb_name && printerObj.usb_name.trim() && printerObj.usb_name !== 'RASTER');
+                const targetPrinter = (printerObj?.usb_name && printerObj.usb_name !== 'RASTER') ? printerObj.usb_name : printerName;
+                const printerSettings = printerObj ? {
+                    encoding: printerObj.encoding || 'utf8',
+                    copies: printerObj.copies || 1,
+                    darkness: printerObj.darkness || 5,
+                    cut_mode: printerObj.cut_mode || 'full',
+                    trailing_space: printerObj.trailing_space || 0,
+                    receipt_header: printerObj.receipt_header || null,
+                    receipt_footer: printerObj.receipt_footer || null,
+                    bold_header: printerObj.bold_header || 0,
+                    double_height_header: printerObj.double_height_header || 0,
+                    sound_notify: printerObj.sound_notify || 0,
+                    cash_drawer: printerObj.cash_drawer || 0,
+                    open_drawer_without_print: printerObj.open_drawer_without_print || 0,
+                    paper_size: printerObj.paper_size || '80',
+                    font_family: printerObj.font_family || 'Arial',
+                    usb_name: (printerObj.usb_name && printerObj.usb_name !== 'RASTER') ? printerObj.usb_name : null,
+                    fast_print: printerObj.fast_print ? 1 : 0,
+                    print_logo: printerObj.print_logo != null ? Number(printerObj.print_logo) : 1,
+                    rotate_180: printerObj.rotate_180 ? 1 : 0,
+                } : {};
+                const safeSettings = JSON.parse(JSON.stringify(printerSettings));
                 const printPayload = isNetwork && printerObj?.ip && !hasUsbName
-                    ? { html, printerName: "", printerIp: printerObj.ip, printerPort: printerObj.port || 9100 }
-                    : { html, printerName: targetPrinter };
+                    ? { html, printerName: "", printerIp: String(printerObj.ip), printerPort: Number(printerObj.port) || 9100, printerSettings: safeSettings }
+                    : { html, printerName: String(targetPrinter || ""), printerSettings: safeSettings };
 
                 if (window.electronAPI && window.electronAPI.printReceipt) {
                     const printPromise = window.electronAPI.printReceipt(printPayload);
@@ -258,14 +324,23 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
                     if (response.data && Array.isArray(response.data.data)) {
                         printers = response.data.data;
                         _printersCache = { profileId, printers };
+                        savePrintersToStorage(profileId, printers);
                     }
                 }
             } catch (error) {
                 console.error("Error fetching printers:", error);
+                // DB-dən gəlmədisə localStorage-dan oxu
+                const stored = loadPrintersFromStorage(profileId);
+                if (stored) {
+                    printers = stored;
+                    _printersCache = { profileId, printers };
+                    console.warn("[PRINTER] DB-dən printer yükləmə uğursuz, localStorage cache istifadə edilir");
+                }
             }
         }
     } else if (profileId) {
         _printersCache = { profileId, printers };
+        savePrintersToStorage(profileId, printers);
     }
 
     const cashierPrinters = resolveCashierPrintersForPrint(printers);
@@ -327,12 +402,34 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
 
         const buildCashierPrintPayload = (printer) => {
             const printerName = printer?.local_name || printer?.name;
-            const isNetworkPrinter = printer?.connection_type === "network" || !!printer?.ip;
-            const hasUsbName = !!(printer?.usb_name && printer.usb_name.trim());
+            const connType = printer?.connection_type;
+            const isNetworkPrinter = connType === "network" || (connType !== "usb" && connType !== "com" && !!printer?.ip);
+            const hasUsbName = !!(printer?.usb_name && printer.usb_name.trim() && printer.usb_name !== 'RASTER');
+            const printerSettings = printer ? {
+                encoding: printer.encoding || 'utf8',
+                copies: printer.copies || 1,
+                darkness: printer.darkness || 5,
+                cut_mode: printer.cut_mode || 'full',
+                trailing_space: printer.trailing_space || 0,
+                receipt_header: printer.receipt_header || null,
+                receipt_footer: printer.receipt_footer || null,
+                bold_header: printer.bold_header || 0,
+                double_height_header: printer.double_height_header || 0,
+                sound_notify: printer.sound_notify || 0,
+                cash_drawer: printer.cash_drawer || 0,
+                open_drawer_without_print: printer.open_drawer_without_print || 0,
+                paper_size: printer.paper_size || '80',
+                font_family: printer.font_family || 'Arial',
+                usb_name: (printer.usb_name && printer.usb_name !== 'RASTER') ? printer.usb_name : null,
+                fast_print: printer.fast_print ? 1 : 0,
+                print_logo: printer.print_logo != null ? Number(printer.print_logo) : 1,
+                rotate_180: printer.rotate_180 ? 1 : 0,
+            } : {};
+            const safeSettings = JSON.parse(JSON.stringify(printerSettings));
             if (isNetworkPrinter && printer?.ip && !hasUsbName) {
-                return { html, printerName: "", printerIp: printer.ip, printerPort: printer.port || 9100 };
+                return { html, printerName: "", printerIp: String(printer.ip), printerPort: Number(printer.port) || 9100, printerSettings: safeSettings };
             }
-            return { html, printerName: printer?.usb_name || printerName };
+            return { html, printerName: String(printer?.usb_name || printerName || ""), printerSettings: safeSettings };
         };
 
         if (forceDelegate && !canDelegate) {

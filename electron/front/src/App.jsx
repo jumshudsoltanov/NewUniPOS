@@ -9,6 +9,7 @@ import Checks from "./components/Checks/Checks";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
+import { savePrintersToStorage } from "./utils/printerHelpers.jsx";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "./redux/Slices/CustomersSlice";
 import { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } from "./redux/Slices/SyncSlice";
 import { getTableGroups } from "./redux/Slices/TablesSlice";
@@ -39,7 +40,6 @@ import { preloadCheck } from "./utils/preloadCheck";
 import { isPaymentExpired, isPosBlocked } from "./utils/dateHelpers";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
-import UpdateNotification from "./components/UpdateNotification/UpdateNotification";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -93,6 +93,11 @@ function AppContent() {
     // Connectivity and Sync Polling
     const handleConnectivity = () => {
       const isOnline = navigator.onLine;
+      // If browser says offline, skip the async check — instant response
+      if (!isOnline) {
+        dispatch(updateConnectivity({ isOnline: false, hasInternet: false }));
+        return;
+      }
       if (window.electronAPI && window.electronAPI.checkInternet) {
         window.electronAPI.checkInternet().then(hasInternet => {
           dispatch(updateConnectivity({ isOnline, hasInternet }));
@@ -281,6 +286,10 @@ function AppContent() {
           try {
             const data = await dispatch(authPos(storageData)).unwrap();
             localStorage.setItem("authResult", JSON.stringify(data));
+            // Printer məlumatlarını localStorage-a yaz (şəbəkə kəsildikdə istifadə üçün)
+            if (data?.data?.printers?.length && data?.data?.profile?.id) {
+              savePrintersToStorage(data.data.profile.id, data.data.printers);
+            }
 
             // authPos LoginModel-i yenilədi — backend rolunu yenidən yoxlasın (Master/Slave)
             if (window.electronAPI?.reEvaluateRole) {
@@ -380,7 +389,6 @@ function AppContent() {
   if (showInitialLoading) {
     return (
       <>
-        <UpdateNotification />
         <div className="loading-overlay-transparent">
           <div className="loading-overlay-inner">
             <div className="premium-loader">
@@ -399,7 +407,6 @@ function AppContent() {
       <Toastify />
       <ToastContainer position="bottom-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick theme="light" style={{ zIndex: 99998 }} />
       <NetworkOverlay />
-      <UpdateNotification />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/pin" element={<Pin />} />

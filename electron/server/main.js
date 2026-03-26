@@ -1,9 +1,12 @@
 const { app, Menu, BrowserWindow, ipcMain, screen, globalShortcut, nativeImage } = require("electron");
+
 const { autoUpdater } = require("electron-updater");
 const log = require("electron-log");
 
 autoUpdater.logger = log;
-autoUpdater.logger.transports.file.level = "info";
+autoUpdater.logger.transports.file.level = "debug";
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = true;
 log.info("UniPOS Desktop Application is starting...");
 
 Menu.setApplicationMenu(null);
@@ -15,7 +18,73 @@ const { exec } = require("child_process");
 const isDev = !app.isPackaged;
 let mainWindow = null;
 let customerWindow = null;
+
+// ─── Print Queue (TCP uğursuz olduqda saxla, qayıdanda yenidən göndər) ───────
+const PRINT_QUEUE_FILE = path.join(app.getPath ? app.getPath('userData') : os.tmpdir(), 'print_queue.json');
+
+const loadPrintQueue = () => {
+  try {
+    if (fs.existsSync(PRINT_QUEUE_FILE)) {
+      return JSON.parse(fs.readFileSync(PRINT_QUEUE_FILE, 'utf8')) || [];
+    }
+  } catch (e) {}
+  return [];
+};
+
+const savePrintQueue = (queue) => {
+  try { fs.writeFileSync(PRINT_QUEUE_FILE, JSON.stringify(queue), 'utf8'); } catch (e) {}
+};
+
+let _printQueue = loadPrintQueue();
+let _printQueueRunning = false;
+
+const addToPrintQueue = (job) => {
+  job.id = Date.now() + Math.random().toString(36).slice(2);
+  job.addedAt = new Date().toISOString();
+  job.attempts = 0;
+  _printQueue.push(job);
+  savePrintQueue(_printQueue);
+};
+
+const processPrintQueue = async () => {
+  if (_printQueueRunning || _printQueue.length === 0) return;
+  _printQueueRunning = true;
+  const net = require('net');
+  const tryTcp = (buf, ip, port) => new Promise((resolve) => {
+    const sock = net.connect(Number(port) || 9100, ip, () => {
+      sock.write(buf, () => { sock.end(); resolve(true); });
+    });
+    sock.setTimeout(5000);
+    sock.on('error', () => resolve(false));
+    sock.on('timeout', () => { sock.destroy(); resolve(false); });
+  });
+
+  const remaining = [];
+  for (const job of _printQueue) {
+    if (job.attempts >= 20) continue; // 20 cəhddən sonra sil
+    try {
+      const buf = Buffer.from(job.bufHex, 'hex');
+      const ok = await tryTcp(buf, job.ip, job.port);
+      if (ok) {
+        console.log(`[PRINT_QUEUE] Göndərildi: ${job.ip}:${job.port} (${job.id})`);
+      } else {
+        job.attempts = (job.attempts || 0) + 1;
+        remaining.push(job);
+      }
+    } catch (e) {
+      job.attempts = (job.attempts || 0) + 1;
+      remaining.push(job);
+    }
+  }
+  _printQueue = remaining;
+  savePrintQueue(_printQueue);
+  _printQueueRunning = false;
+};
+
+// Hər 30 saniyədə bir queue-dəki işləri yenidən göndər
+setInterval(() => { processPrintQueue().catch(() => {}); }, 30000);
 let kitchenWindow = null;
+let updateState = { status: null, version: null, progress: 0 };
 let isCustomerDisplayManuallyClosed = false; // Global flag
 
 /** İlk tapılan fayl: köhnə static/logo.png çox vaxt yoxdur; UniPOS loqosunu front/src və ya dist-dən götürürük */
@@ -275,6 +344,7 @@ function createWindow() {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        preload: preloadPath,
       },
     });
 
@@ -355,6 +425,66 @@ ipcMain.handle("get-anydesk-id", () => {
   return null;
 });
 
+ipcMain.handle("install-network-printer", async (event, { ip, port, printerName }) => {
+  if (!ip || !printerName) return { success: false, error: "IP və ya printer adı yoxdur" };
+  const portNum = Number(port) || 9100;
+  const portName = `UNIPOS_${ip.replace(/\./g, '_')}`;
+
+  const script = [
+    `$pn='${portName}'; $pr='${printerName}'; $ip='${ip}'; $po=${portNum}`,
+    `if(-not(Get-PrinterPort -Name $pn -EA SilentlyContinue)){Add-PrinterPort -Name $pn -PrinterHostAddress $ip -PortNumber $po}`,
+    `if(-not(Get-Printer -Name $pr -EA SilentlyContinue)){`,
+    `$dl=@('Generic / Text Only','MS Publisher Imagesetter','Generic IBM Graphics 9pin wide','Generic IBM Graphics 9pin')`,
+    `$dr=$null`,
+    `foreach($d in $dl){if(Get-PrinterDriver -Name $d -EA SilentlyContinue){$dr=$d;break}}`,
+    `if(-not $dr){$dr=(Get-PrinterDriver|Select-Object -First 1).Name}`,
+    `if($dr){Add-Printer -Name $pr -DriverName $dr -PortName $pn}`,
+    `}`,
+    `Write-Output 'DONE'`
+  ].join('; ');
+
+  return new Promise((resolve) => {
+    exec(`powershell -WindowStyle Hidden -Command "${script}"`, { timeout: 15000 }, (err, stdout, stderr) => {
+      if (err) {
+        console.error('[install-network-printer] Xəta:', err.message, stderr);
+        // Admin hüquq lazımdır — UAC ilə yenidən cəhd et
+        const elevatedScript = script.replace(/'/g, "\\'");
+        exec(
+          `powershell -Command "Start-Process powershell -ArgumentList '-WindowStyle Hidden -Command \\"${script.replace(/"/g, '\\"')}\\"' -Verb RunAs -Wait"`,
+          { timeout: 30000 },
+          (err2, out2, err2s) => {
+            if (err2) {
+              console.error('[install-network-printer] Elevated Xəta:', err2.message);
+              resolve({ success: false, error: err2.message });
+            } else {
+              console.log('[install-network-printer] Elevated Quruldu:', printerName);
+              resolve({ success: true, printerName });
+            }
+          }
+        );
+      } else {
+        console.log('[install-network-printer] Quruldu:', printerName, stdout.trim());
+        resolve({ success: true, printerName });
+      }
+    });
+  });
+});
+
+ipcMain.handle("get-com-ports", async () => {
+  try {
+    const { exec } = require("child_process");
+    return await new Promise((resolve) => {
+      exec(`powershell -Command "Get-WMIObject Win32_SerialPort | Select-Object -ExpandProperty DeviceID"`, (err, stdout) => {
+        if (err || !stdout.trim()) return resolve([]);
+        const ports = stdout.trim().split('\n').map(p => p.trim()).filter(p => /^COM\d+$/i.test(p));
+        resolve(ports);
+      });
+    });
+  } catch (e) {
+    return [];
+  }
+});
+
 ipcMain.handle("get-system-printers", async () => {
   try {
     if (mainWindow && mainWindow.webContents) {
@@ -370,6 +500,45 @@ ipcMain.handle("get-system-printers", async () => {
     console.error("Error getting system printers:", e ? String(e) : "Unknown Printer Error");
     return [];
   }
+});
+
+ipcMain.handle("ping-printer", async (_event, { ip, port = 9100 }) => {
+  const net = require("net");
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(2000);
+    socket.connect(Number(port), ip, () => {
+      socket.destroy();
+      resolve({ online: true });
+    });
+    socket.on("error", () => { socket.destroy(); resolve({ online: false }); });
+    socket.on("timeout", () => { socket.destroy(); resolve({ online: false }); });
+  });
+});
+
+ipcMain.handle("scan-network-printers", async (_event, { baseIp, port = 9100 }) => {
+  const net = require("net");
+  const found = [];
+  const promises = [];
+  for (let i = 1; i <= 254; i++) {
+    const ip = `${baseIp}.${i}`;
+    promises.push(new Promise((resolve) => {
+      const socket = new net.Socket();
+      socket.setTimeout(400);
+      socket.connect(port, ip, () => {
+        socket.destroy();
+        found.push({ ip, port });
+        resolve();
+      });
+      socket.on("error", () => { socket.destroy(); resolve(); });
+      socket.on("timeout", () => { socket.destroy(); resolve(); });
+    }));
+  }
+  // 30-30 paralel işlət — hamsını birdən açma
+  const chunks = [];
+  for (let i = 0; i < promises.length; i += 30) chunks.push(promises.slice(i, i + 30));
+  for (const chunk of chunks) await Promise.all(chunk);
+  return found;
 });
 
 ipcMain.handle("get-screens", () => {
@@ -417,6 +586,7 @@ ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: preloadPath,
     },
   });
 
@@ -511,47 +681,249 @@ function createKitchenWindow(screenId) {
   });
 }
 
-ipcMain.handle("print-receipt", async (event, { html, printerName, printerIp, printerPort } = {}) => {
-  // Network printer (IP) — raw socket ilə birbaşa çap
-  if (printerIp && printerPort && (!printerName || printerName === "")) {
-    try {
-      const net = require("net");
-      let text = (html || "")
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<\/div>/gi, "\n")
-        .replace(/<\/tr>/gi, "\n")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/&nbsp;/g, " ")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/\n\s*\n/g, "\n")
-        .replace(/[ \t]+/g, " ")
-        .trim();
-      const escInit = Buffer.from([0x1b, 0x40]);
-      const escCut = Buffer.from([0x1d, 0x56, 0x00]);
-      const content = Buffer.from(text + "\n\n\n", "utf8");
-      const data = Buffer.concat([escInit, content, escCut]);
-      return new Promise((res) => {
-        const socket = net.connect(Number(printerPort) || 9100, printerIp, () => {
-          socket.write(data, () => {
-            socket.end();
-            res({ success: true });
-          });
-        });
-        socket.setTimeout(5000);
-        socket.on("error", (e) => {
-          console.error("[PRINT] Raw socket error:", e.message);
-          res({ success: false, error: e.message });
-        });
-        socket.on("timeout", () => {
-          socket.destroy();
-          res({ success: false, error: "Timeout" });
-        });
+ipcMain.handle("print-receipt", async (event, { html, printerName, printerIp, printerPort, printerSettings } = {}) => {
+  const settings = printerSettings || {};
+
+  const sendToTcpOnce = (buf, ip, port) => new Promise((resolve) => {
+    const net = require('net');
+    const sock = net.connect(Number(port) || 9100, ip, () => {
+      sock.write(buf, () => { sock.end(); resolve({ success: true }); });
+    });
+    sock.setTimeout(8000);
+    sock.on('error', e => resolve({ success: false, error: e.message }));
+    sock.on('timeout', () => { sock.destroy(); resolve({ success: false, error: 'Timeout' }); });
+  });
+
+  const sendToTcp = async (buf, ip, port, retries = 3, delayMs = 2000) => {
+    let lastErr = '';
+    for (let i = 0; i < retries; i++) {
+      const result = await sendToTcpOnce(buf, ip, port);
+      if (result.success) return result;
+      lastErr = result.error || 'Bilinməyən xəta';
+      console.warn(`[TCP] Çap uğursuz (cəhd ${i + 1}/${retries}): ${ip}:${port} — ${lastErr}`);
+      if (i < retries - 1) await new Promise(r => setTimeout(r, delayMs));
+    }
+    return { success: false, error: lastErr };
+  };
+
+  const sendToCom = (buf, portPath) => new Promise((resolve) => {
+    const st = fs.createWriteStream(portPath, { flags: 'w' });
+    st.on('error', e => resolve({ success: false, error: e.message }));
+    st.write(buf, err => { st.end(); resolve(err ? { success: false, error: err.message } : { success: true }); });
+  });
+
+  const paperSize = settings.paper_size || '80';
+  const receiptWidthPx = paperSize === '58' ? 384 : 576;
+  const contentBaseWidth = 272; // HTML həmişə 272px üçün render olur
+  const zoomLevel = receiptWidthPx / contentBaseWidth;
+
+  const renderHtmlToRasterBuffer = async (htmlContent, s) => {
+    let rasterWindow = new BrowserWindow({
+      show: false,
+      width: receiptWidthPx + 40,
+      height: 6000,
+      ...browserWindowIconFields(),
+      webPreferences: { nodeIntegration: false, contextIsolation: true, webSecurity: false, offscreen: true }
+    });
+
+    const _hdr = s.receipt_header ? String(s.receipt_header).trim() : "";
+    const _ftr = s.receipt_footer ? String(s.receipt_footer).trim() : "";
+    const headerHtml = _hdr ? `<div style="text-align:center; padding-bottom: 10px; font-family: monospace; white-space: pre-wrap; font-weight: ${s.bold_header == 1 ? 'bold' : 'normal'}; font-size: ${s.double_height_header == 1 ? '1.5em' : '1.1em'};">${_hdr.replace(/</g, "&lt;")}</div>` : "";
+    const footerHtml = _ftr ? `<div style="text-align:center; padding-top: 10px; font-family: monospace; white-space: pre-wrap; margin-bottom: 20px;">${_ftr.replace(/</g, "&lt;")}</div>` : "";
+    const fontFamily = (s.font_family && s.font_family !== 'Arial') ? `"${s.font_family}", monospace` : "monospace";
+
+    const printLogo = s.print_logo != null ? Number(s.print_logo) : 1;
+    const fastPrint = s.fast_print ? 1 : 0;
+    const logoStyle = printLogo === 0 ? `img { display: none !important; }` : `img { max-width: 100%; }`;
+    const imageQuality = fastPrint ? `image-rendering: pixelated;` : ``;
+
+    const rasterPageHtml = `<!DOCTYPE html><html><head>
+      <meta charset="utf-8">
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+          margin: 0; padding: 0; background: #fff;
+          font-family: ${fontFamily}, sans-serif;
+          color: #000;
+          overflow: hidden;
+        }
+#zoom-wrap {
+          width: ${contentBaseWidth}px;
+          zoom: ${zoomLevel.toFixed(4)};
+          padding-top: 0px;
+          padding-bottom: 30px;
+        }
+        #zoom-wrap > *:first-child,
+        #zoom-wrap > *:first-child > *:first-child {
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+        }
+        ${logoStyle}
+        body, body * { font-weight: bold; ${imageQuality} }
+      </style>
+    </head><body><div id="zoom-wrap">${headerHtml}${htmlContent}${footerHtml}</div></body></html>`;
+
+    await new Promise((resolve) => {
+      rasterWindow.webContents.once('did-finish-load', resolve);
+      rasterWindow.loadURL("data:text/html;base64," + Buffer.from(rasterPageHtml, "utf8").toString("base64"));
+    });
+
+    // Fontlar tam yüklənsin — "Aa" artifact-ının qarşısını alır
+    await rasterWindow.webContents.executeJavaScript(`
+      new Promise(resolve => {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(resolve).catch(resolve);
+        } else {
+          resolve();
+        }
       });
-    } catch (e) {
-      console.error("[PRINT] Raw print error:", e);
-      return { success: false, error: e?.message || "Raw print failed" };
+    `).catch(() => {});
+
+    await rasterWindow.webContents.executeJavaScript(`
+      new Promise(resolve => {
+        const imgs = document.querySelectorAll('img');
+        if (!imgs.length) return resolve();
+        let loaded = 0;
+        const check = () => { loaded++; if (loaded >= imgs.length) resolve(); };
+        imgs.forEach(img => {
+          if (img.complete) check();
+          else { img.onload = check; img.onerror = check; }
+        });
+        setTimeout(resolve, ${s.fast_print == 1 ? 150 : 1500});
+      });
+    `);
+
+    const wrapInfo = await rasterWindow.webContents.executeJavaScript(`
+      (function() {
+        var wrap = document.getElementById('zoom-wrap');
+        var rawH = wrap.scrollHeight;
+        var zoomed = Math.ceil(rawH * ${zoomLevel.toFixed(4)});
+        var rect = wrap.getBoundingClientRect();
+        return { height: Math.max(zoomed, 200), offsetY: Math.floor(rect.top) };
+      })();
+    `);
+
+    const totalH = wrapInfo.height;
+    const captureY = Math.max(0, wrapInfo.offsetY);
+
+    rasterWindow.setSize(receiptWidthPx + 40, totalH + captureY + 40);
+    await new Promise(r => setTimeout(r, s.fast_print == 1 ? 50 : 400));
+
+    const capturedImage = await rasterWindow.webContents.capturePage({
+      x: 0, y: captureY, width: receiptWidthPx, height: totalH
+    });
+
+    if (!rasterWindow.isDestroyed()) rasterWindow.close();
+    rasterWindow = null;
+
+    const pngBuf = capturedImage.toPNG();
+    const bmp = nativeImage.createFromBuffer(pngBuf).toBitmap();
+    const imgSize = capturedImage.getSize();
+    const imgW = imgSize.width;
+    const imgH = imgSize.height;
+    const widthBytes = Math.ceil(receiptWidthPx / 8);
+    const scaleX = imgW / receiptWidthPx;
+
+    const isRotated = s.rotate_180 == 1;
+    const darkLevel = s.darkness ? Number(s.darkness) : 5;
+    const threshold = 100 + ((darkLevel - 1) * 11);
+
+    const ESC = 0x1b, GS = 0x1d;
+    const parts = [];
+
+    parts.push(Buffer.from([ESC, 0x40]));
+    parts.push(Buffer.from([ESC, 0x33, 0x00]));
+
+    for (let row = 0; row < imgH; row++) {
+      const rowData = Buffer.alloc(widthBytes, 0x00);
+      const srcY = isRotated ? (imgH - 1 - row) : row;
+
+      for (let col = 0; col < receiptWidthPx; col++) {
+        const srcX = Math.min(Math.floor((isRotated ? (receiptWidthPx - 1 - col) : col) * scaleX), imgW - 1);
+        const pixelOffset = (srcY * imgW + srcX) * 4;
+        const r = bmp[pixelOffset] || 0;
+        const g = bmp[pixelOffset + 1] || 0;
+        const b = bmp[pixelOffset + 2] || 0;
+
+        const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+        if (gray < threshold) {
+          const byteIdx = Math.floor(col / 8);
+          const bitIdx = 7 - (col % 8);
+          rowData[byteIdx] |= (1 << bitIdx);
+        }
+      }
+
+      const header = Buffer.from([
+        GS, 0x76, 0x30, 0x00,
+        widthBytes & 0xff, (widthBytes >> 8) & 0xff,
+        0x01, 0x00
+      ]);
+      parts.push(header);
+      parts.push(rowData);
+    }
+
+    parts.push(Buffer.from([ESC, 0x33, 0x1e]));
+    const tSpace = s.trailing_space ? Number(s.trailing_space) : 4;
+    parts.push(Buffer.from([ESC, 0x64, tSpace]));
+
+    const finalCutParts = [];
+    
+    // Səs və Pul Yeşiyi komandaları (XPrinter və Epson standartları birlikdə göndərilir)
+    if (s.sound_notify) {
+      finalCutParts.push(Buffer.from([ESC, 0x42, 0x04, 0x01])); // XPrinter Alarm
+      finalCutParts.push(Buffer.from([ESC, 0x28, 0x41, 0x04, 0x00, 0x61, 0x03, 0x01, 0x01])); // Epson Beeper
+    }
+    
+    if (s.cash_drawer || s.open_drawer_without_print) {
+      finalCutParts.push(Buffer.from([ESC, 0x70, 0x00, 0x19, 0xfa])); // XPrinter Drawer 1
+      finalCutParts.push(Buffer.from([ESC, 0x70, 0x01, 0x19, 0xfa])); // XPrinter Drawer 2
+    }
+
+    const cut = s.cut_mode || 'full';
+    if (cut === 'partial') {
+      finalCutParts.push(Buffer.from([ESC, 0x64, 0x04])); // Feed 4 lines before cut
+      finalCutParts.push(Buffer.from([GS, 0x56, 0x01]));  // GS V 1 — partial cut
+    } else if (cut !== 'none') {
+      finalCutParts.push(Buffer.from([ESC, 0x64, 0x04])); // Feed 4 lines before cut
+      finalCutParts.push(Buffer.from([GS, 0x56, 0x00]));  // GS V 0 — full cut
+    }
+
+    const singleJobBuffer = Buffer.concat([...parts, ...finalCutParts]);
+    const copies = s.copies ? Number(s.copies) : 1;
+    if (copies <= 1) return singleJobBuffer;
+
+    const multi = [];
+    for (let i = 0; i < copies; i++) multi.push(singleJobBuffer);
+    return Buffer.concat(multi);
+  };
+
+  // usb_name='RASTER' və ya boşdursa — Raster yolu; əks halda Windows driver
+  const forceRaster = !settings.usb_name || settings.usb_name === 'RASTER';
+  const isDirectPrinter = (printerIp && printerPort && forceRaster) || (printerName && /^COM\d+$/i.test(printerName.trim()));
+  if (!forceRaster && settings.usb_name && printerIp && printerPort) {
+    printerName = settings.usb_name;
+  }
+
+  if (isDirectPrinter) {
+    try {
+      const rasterBuf = await renderHtmlToRasterBuffer(html, settings);
+
+      if (printerName && /^COM\d+$/i.test(printerName.trim())) {
+        const portPath = `\\\\.\\${printerName.trim().toUpperCase()}`;
+        return await sendToCom(rasterBuf, portPath);
+      }
+
+      const tcpResult = await sendToTcp(rasterBuf, printerIp, printerPort);
+      if (!tcpResult.success) {
+        // 3 cəhd uğursuz — queue-ya əlavə et, printer qayıdanda avtomatik göndəriləcək
+        addToPrintQueue({ bufHex: rasterBuf.toString('hex'), ip: printerIp, port: printerPort });
+        console.warn(`[print-receipt] Çap uğursuz, queue-ya əlavə edildi: ${printerIp}:${printerPort}`);
+      }
+      return tcpResult;
+    } catch (err) {
+      console.error("[print-receipt] Raster çap xətası:", err);
+      // Render uğurlu olsa amma TCP xətası varsa queue-ya əlavə et
+      return { success: false, error: String(err.message || err) };
     }
   }
 
@@ -562,24 +934,16 @@ ipcMain.handle("print-receipt", async (event, { html, printerName, printerIp, pr
   });
 
   const cutBufferMm = 30;
-
-  const htmlContent = `<!DOCTYPE html><html><head>
+  const pageHtml = `<!DOCTYPE html><html><head>
     <meta charset="utf-8">
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      html, body {
-        margin: 0; padding: 0; width: 72mm;
-        font-family: 'Consolas', 'Courier New', 'Lucida Console', monospace;
-        -webkit-font-smoothing: antialiased;
-        text-rendering: optimizeLegibility;
-      }
-      body > div { width: 100% !important; max-width: 100% !important; }
-      .receipt-content { padding: 0 1mm; box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; width: 72mm; }
       .receipt-cut-buffer { min-height: 25mm; }
     </style>
   </head><body><div class="receipt-content">${html}</div><div class="receipt-cut-buffer"></div></body></html>`;
 
-  await printWindow.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(htmlContent));
+  await printWindow.loadURL("data:text/html;base64," + Buffer.from(pageHtml, "utf8").toString("base64"));
 
   try {
     await printWindow.webContents.executeJavaScript(`
@@ -624,6 +988,27 @@ ipcMain.handle("print-receipt", async (event, { html, printerName, printerIp, pr
     });
 
     if (!printWindow.isDestroyed()) printWindow.close();
+
+    if (printerIp && (settings.sound_notify || settings.cash_drawer || settings.open_drawer_without_print)) {
+      try {
+        const net2 = require("net");
+        const parts2 = [Buffer.from([0x1b, 0x40])];
+        if (settings.sound_notify) {
+          parts2.push(Buffer.from([0x1b, 0x42, 0x04, 0x01])); // XPrinter Alarm
+          parts2.push(Buffer.from([0x1b, 0x28, 0x41, 0x04, 0x00, 0x61, 0x03, 0x01, 0x01])); // Epson Beeper
+        }
+        if (settings.cash_drawer || settings.open_drawer_without_print) {
+          parts2.push(Buffer.from([0x1b, 0x70, 0x00, 0x19, 0xfa])); // XPrinter Drawer 1
+          parts2.push(Buffer.from([0x1b, 0x70, 0x01, 0x19, 0xfa])); // XPrinter Drawer 2
+        }
+        const cmdBuf = Buffer.concat(parts2);
+        const s2 = net2.connect(Number(printerPort) || 9100, printerIp, () => { s2.write(cmdBuf, () => s2.end()); });
+        s2.setTimeout(3000);
+        s2.on("error", () => {});
+        s2.on("timeout", () => s2.destroy());
+      } catch (e2) { /* non-critical */ }
+    }
+
     return { success: true };
   } catch (error) {
     console.error("Receipt printing failed:", error);
@@ -709,17 +1094,24 @@ ipcMain.handle("get-local-ip", () => {
 
 ipcMain.handle("check-internet", async () => {
   const http = require("http");
+  const https = require("https");
+  // Fast check: try 1.1.1.1 (Cloudflare DNS) with 1.5s timeout — no DNS resolution needed
   return new Promise((resolve) => {
-    // Try to reach a reliable public IP or our sync server domain
-    const req = http.get("http://46.224.8.157:35627/api/terminal/login", { timeout: 3000 }, (res) => {
-      resolve(true);
-      res.resume();
-    });
-    req.on("error", () => resolve(false));
-    req.on("timeout", () => {
-      req.destroy();
-      resolve(false);
-    });
+    let resolved = false;
+    const done = (val) => { if (!resolved) { resolved = true; resolve(val); } };
+
+    // Try HTTPS first (1.1.1.1)
+    const req1 = https.get("https://1.1.1.1", { timeout: 1500 }, () => { done(true); req1.destroy(); });
+    req1.on("error", () => {});
+    req1.on("timeout", () => req1.destroy());
+
+    // Fallback: our sync server
+    const req2 = http.get("http://46.224.8.157:35627/api/discover", { timeout: 1500 }, () => { done(true); req2.destroy(); });
+    req2.on("error", () => {});
+    req2.on("timeout", () => req2.destroy());
+
+    // If both fail within 1.8s → offline
+    setTimeout(() => done(false), 1800);
   });
 });
 
@@ -745,6 +1137,7 @@ function getUniposInstanceLabel() {
 }
 
 ipcMain.handle("get-unipos-instance", () => getUniposInstanceLabel());
+ipcMain.handle("get-update-state", () => updateState);
 
 ipcMain.handle("get-app-version", () => {
   return app.getVersion();
@@ -971,6 +1364,7 @@ app.whenReady().then(() => {
 
   autoUpdater.on("checking-for-update", () => {
     console.log("[AUTO-UPDATE] Yenilənmə yoxlanılır...");
+    updateState = { status: "checking", version: null, progress: 0 };
     if (mainWindow) {
       mainWindow.webContents.send("checking-for-update");
     }
@@ -978,6 +1372,7 @@ app.whenReady().then(() => {
 
   autoUpdater.on("update-available", (info) => {
     console.log("[AUTO-UPDATE] Yeni versiya tapıldı:", info.version);
+    updateState = { status: "found", version: info.version, progress: 0 };
     if (mainWindow) {
       mainWindow.webContents.send("update-available", info);
     }
@@ -985,15 +1380,18 @@ app.whenReady().then(() => {
 
   autoUpdater.on("update-not-available", (info) => {
     console.log("[AUTO-UPDATE] Cari versiya ən sonuncudur.");
+    updateState = { status: null, version: null, progress: 0 };
   });
 
   autoUpdater.on("error", (err) => {
     console.error("[AUTO-UPDATE] Xəta baş verdi:", err ? (err.message || err.toString()) : "Naməlum xəta");
+    updateState = { status: null, version: null, progress: 0 };
   });
 
   autoUpdater.on("download-progress", (progressObj) => {
     const percent = Math.round(progressObj.percent);
     console.log(`[AUTO-UPDATE] Yüklənir: ${percent}%`);
+    updateState = { status: "downloading", version: updateState.version, progress: percent };
     if (mainWindow) {
       mainWindow.webContents.send("update-download-progress", percent);
     }
@@ -1001,6 +1399,7 @@ app.whenReady().then(() => {
 
   autoUpdater.on("update-downloaded", (info) => {
     console.log("[AUTO-UPDATE] Yenilənmə yükləndi. 5 saniyə sonra quraşdırılır...");
+    updateState = { status: "ready", version: info.version, progress: 100 };
     if (mainWindow) {
       mainWindow.webContents.send("update-downloaded", info);
     }
@@ -1034,7 +1433,7 @@ app.whenReady().then(() => {
       }, 2000);
     } else {
       autoUpdater.checkForUpdatesAndNotify().catch(err => {
-        console.error("[AUTO-UPDATE] Yenilənmə yoxlanışı zamanı xəta:", err ? (err.message || err.toString()) : "Naməlum xəta");
+        log.error("[AUTO-UPDATE] Xəta:", err ? (err.message || err.toString()) : "Naməlum xəta");
       });
     }
   }, 4000);

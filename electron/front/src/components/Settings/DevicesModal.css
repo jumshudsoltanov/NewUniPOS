@@ -6,7 +6,8 @@
 }
 
 .devices-modal .modal-dialog {
-    max-width: 960px;
+    max-width: 1100px;
+    margin: 20px auto;
 }
 
 .devices-modal .modal-header {
@@ -35,51 +36,26 @@
     padding: 0;
     display: flex;
     background: #fff;
-    height: 75vh;
+    height: 82vh;
+    max-height: 820px;
 }
 
 .devices-main-scroll {
     height: 100%;
     overflow-y: auto;
-    scrollbar-width: thin;
+    scrollbar-width: none;
 }
 
 .devices-main-scroll::-webkit-scrollbar {
-    width: 8px;
-}
-
-.devices-main-scroll::-webkit-scrollbar-track {
-    background: #f1f5f9;
-}
-
-.devices-main-scroll::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
-
-.devices-main-scroll::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    display: none;
 }
 
 .devices-content {
-    scrollbar-width: thin;
+    scrollbar-width: none;
 }
 
 .devices-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-.devices-content::-webkit-scrollbar-track {
-    background: #f1f5f9;
-}
-
-.devices-content::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 4px;
-}
-
-.devices-content::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    display: none;
 }
 
 /* Kassa çap seçimi — sadə kart */
@@ -119,10 +95,10 @@
 }
 
 .devices-sidebar {
-    width: 200px;
-    min-width: 200px;
+    width: 220px;
+    min-width: 220px;
     border-right: 1px solid #f0f2f5;
-    padding: 16px 12px;
+    padding: 20px 14px;
 }
 
 .devices-menu-item {
@@ -159,7 +135,7 @@
 
 .devices-content {
     flex: 1;
-    padding: 20px 24px;
+    padding: 28px 32px;
     background: #f8fafc;
     overflow-y: auto;
     min-height: 0;
@@ -230,7 +206,41 @@
     font-size: 18px;
     color: #4F85F4;
     flex-shrink: 0;
+    position: relative;
 }
+
+.printer-status-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+}
+.printer-status-dot--online  { background: #22c55e; }
+.printer-status-dot--offline { background: #ef4444; }
+.printer-status-dot--checking {
+    background: #94a3b8;
+    animation: dot-pulse 1s infinite;
+}
+@keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.printer-status-badge {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.printer-status-badge--online   { background: #dcfce7; color: #16a34a; }
+.printer-status-badge--offline  { background: #fee2e2; color: #dc2626; }
+.printer-status-badge--checking { background: #f1f5f9; color: #94a3b8; }
 
 .printer-card-title h5 {
     margin: 0;
@@ -254,11 +264,11 @@
 
 .conn-btn {
     flex: 1;
-    height: 30px;
+    height: 34px;
     border: none;
     background: transparent;
-    border-radius: 8px;
-    font-size: 12px;
+    border-radius: 6px;
+    font-size: 13px;
     font-weight: 600;
     color: #94a3b8;
     cursor: pointer;
@@ -276,31 +286,41 @@
     font-size: 12px;
     font-weight: 600;
     color: #64748b;
-    margin-bottom: 5px;
+    margin-bottom: 7px;
+    letter-spacing: 0.2px;
 }
 
 .printer-input,
-.printer-select {
+.printer-select,
+textarea.printer-input {
     width: 100%;
-    height: 38px;
-    border-radius: 6px;
-    border: 2px solid #f0f2f5;
-    padding: 8px 12px;
-    font-size: 13px;
+    height: 42px;
+    border-radius: 8px;
+    border: 1.5px solid #e8edf5;
+    padding: 8px 14px;
+    font-size: 14px;
     font-weight: 500;
     color: #1e293b;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
     background: #fff;
-}
-
-.printer-input::placeholder {
-    color: #cbd5e1;
 }
 
 .printer-input:focus,
 .printer-select:focus {
     border-color: #4F85F4;
+    box-shadow: 0 0 0 3px rgba(79, 133, 244, 0.1);
+}
+
+.printer-input::placeholder,
+textarea.printer-input::placeholder {
+    color: #cbd5e1;
+}
+
+textarea.printer-input {
+    height: auto;
+    padding: 10px 14px;
+    line-height: 1.5;
 }
 
 .printer-actions {
@@ -310,8 +330,8 @@
 }
 
 .btn-test {
-    flex: 1;
     height: 38px;
+    padding: 0 16px;
     border-radius: 6px;
     border: 2px solid #f0f2f5;
     background: #fff;
@@ -319,11 +339,13 @@
     font-size: 13px;
     color: #64748b;
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .btn-save-printer {
-    flex: 2;
     height: 38px;
+    padding: 0 20px;
     border-radius: 6px;
     background: #4F85F4;
     color: #fff;
@@ -331,6 +353,8 @@
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(79, 133, 244, 0.25);
 }
 
@@ -368,6 +392,487 @@
 
 .premium-switch.active .switch-handle {
     transform: translateX(20px);
+}
+
+/* Ping button */
+.ping-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    border: 1.5px solid #e8edf5;
+    background: #f8fafc;
+    color: #94a3b8;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.ping-btn:hover:not(:disabled) {
+    border-color: #4F85F4;
+    color: #4F85F4;
+    background: #eff6ff;
+}
+
+.ping-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ping-btn.online {
+    border-color: #10b981;
+    color: #10b981;
+    background: #f0fdf4;
+}
+
+.ping-btn.offline {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+.ping-btn.checking {
+    border-color: #4F85F4;
+    color: #4F85F4;
+    background: #eff6ff;
+}
+
+/* Settings chips */
+.settings-chip-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-chip-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.settings-chip-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.settings-chip {
+    padding: 7px 16px;
+    border-radius: 8px;
+    border: 1.5px solid #e8edf5;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.settings-chip:hover {
+    border-color: #4F85F4;
+    color: #4F85F4;
+    background: #eff6ff;
+}
+
+.settings-chip.active {
+    background: #4F85F4;
+    border-color: #4F85F4;
+    color: #fff;
+    font-weight: 600;
+}
+
+/* IP + Port row */
+.ip-port-row {
+    display: grid;
+    grid-template-columns: 1fr 120px;
+    gap: 12px;
+    align-items: end;
+}
+
+/* Network Scan */
+.network-scan-section {
+    background: #f8fafc;
+    border: 1.5px dashed #c7d7f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+
+.network-scan-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.network-scan-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.network-scan-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1.5px solid #4F85F4;
+    background: #fff;
+    color: #4F85F4;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.network-scan-btn:hover {
+    background: #4F85F4;
+    color: #fff;
+}
+
+.network-scan-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.network-scan-btn.scanning {
+    border-color: #94a3b8;
+    color: #94a3b8;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin {
+    display: inline-block;
+    animation: spin 0.8s linear infinite;
+}
+
+.network-scan-results {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 12px;
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #c7d7f0 transparent;
+    padding-right: 2px;
+}
+
+.network-scan-results::-webkit-scrollbar {
+    width: 4px;
+}
+
+.network-scan-results::-webkit-scrollbar-thumb {
+    background: #c7d7f0;
+    border-radius: 4px;
+}
+
+.network-scan-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1.5px solid #e8edf5;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.network-scan-item:hover {
+    border-color: #4F85F4;
+    background: #eff6ff;
+}
+
+.network-scan-item.selected {
+    border-color: #4F85F4;
+    background: #eff6ff;
+}
+
+.network-scan-item i {
+    color: #4F85F4;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.scan-ip {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    flex: 1;
+}
+
+.scan-port {
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.scan-check {
+    margin-left: auto;
+    color: #4F85F4;
+    font-size: 16px;
+}
+
+/* Printer Settings Tab */
+.printer-settings-tab {
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    padding-left: 2px;
+}
+
+.settings-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #eef2f7;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    transition: border-color 0.15s;
+}
+
+.settings-toggle-row:hover {
+    border-color: #dbeafe;
+}
+
+/* ── Printer type info card ── */
+.printer-type-info-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: #f8faff;
+    border: 1px solid #e0e9ff;
+    border-radius: 10px;
+    margin-bottom: 4px;
+}
+
+.printer-type-info-icon {
+    width: 38px;
+    height: 38px;
+    background: #eff6ff;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4F85F4;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.printer-type-info-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.printer-type-info-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.printer-type-info-desc {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.printer-type-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-cashier {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.badge-kitchen {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+/* ── Logo preview ── */
+.logo-preview-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: #f0fdf4;
+    border: 1px dashed #86efac;
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+
+.logo-preview-img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    padding: 4px;
+    flex-shrink: 0;
+}
+
+.logo-preview-label {
+    font-size: 13px;
+    color: #16a34a;
+    font-weight: 500;
+}
+
+.logo-preview-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #f59e0b;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.logo-preview-empty i {
+    font-size: 18px;
+}
+
+.settings-toggle-icon {
+    width: 38px;
+    height: 38px;
+    background: #eff6ff;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4F85F4;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.settings-toggle-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.settings-toggle-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.settings-toggle-desc {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.settings-inputs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.settings-input-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #eef2f7;
+    border-radius: 10px;
+}
+
+.settings-input-icon {
+    width: 36px;
+    height: 36px;
+    background: #eff6ff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #4F85F4;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.settings-input-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.settings-input-body label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0;
+}
+
+.settings-input-body .printer-input {
+    height: 36px;
+    font-size: 14px;
+    padding: 6px 10px;
+}
+
+.settings-font-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.font-chip {
+    padding: 8px 18px;
+    border-radius: 22px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.font-chip:hover {
+    border-color: #4F85F4;
+    color: #4F85F4;
+    background: #eff6ff;
+}
+
+.font-chip.active {
+    background: #4F85F4;
+    border-color: #4F85F4;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(79, 133, 244, 0.25);
 }
 
 /* Display Settings */

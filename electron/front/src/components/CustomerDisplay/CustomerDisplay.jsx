@@ -67,43 +67,40 @@ const CustomerDisplay = () => {
     }, []);
 
     useEffect(() => {
-        // Connect to the local backend on port 55667
-        // On a tablet, this would connect to the POS's IP address (e.g. http://192.168.1.X:55667)
-        // Since the tablet loads the frontend from the POS IP:5173, we can use window.location.hostname
-        const savedMasterIp = localStorage.getItem("master_ip");
-        const hostname = window.location.hostname || "localhost";
-        const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
-        
-        // If we are on localhost but have a saved master_ip, we are likely a slave terminal
-        const effectiveHostname = (isLocalhost && savedMasterIp) ? savedMasterIp : hostname;
-        const backendUrl = `http://${effectiveHostname}:55667`;
-        
-        console.warn(`[CUSTOMER_DISPLAY] Connecting to socket at: ${backendUrl}`);
-        
-        const newSocket = io(backendUrl, {
-            transports: ['websocket', 'polling'],
-            reconnection: true,
-            reconnectionAttempts: Infinity,
-            reconnectionDelay: 2000
-        });
+        let socketInstance = null;
 
-        newSocket.on("connect", () => {
-            setIsConnected(true);
-        });
+        const init = async () => {
+            let masterIp = null;
+            if (window.electronAPI?.getStaticMasterIp) {
+                try { masterIp = await window.electronAPI.getStaticMasterIp(); } catch (_) {}
+            }
+            const hostname = window.location.hostname || "localhost";
+            const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+            const savedMasterIp = masterIp || localStorage.getItem("master_ip");
+            const effectiveHostname = (isLocalhost && savedMasterIp) ? savedMasterIp : hostname;
+            const backendUrl = `http://${effectiveHostname}:55667`;
 
-        newSocket.on("disconnect", () => {
-            setIsConnected(false);
-            setOrderData({ items: [], total: 0, received: 0, change: 0 });
-        });
+            console.warn(`[CUSTOMER_DISPLAY] Connecting to socket at: ${backendUrl}`);
 
-        newSocket.on("customer_display_update", (data) => {
-            setOrderData(data);
-        });
+            socketInstance = io(backendUrl, {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 2000
+            });
 
-        // setSocket(newSocket); // Removed as per instruction
+            socketInstance.on("connect", () => setIsConnected(true));
+            socketInstance.on("disconnect", () => {
+                setIsConnected(false);
+                setOrderData({ items: [], total: 0, received: 0, change: 0 });
+            });
+            socketInstance.on("customer_display_update", (data) => setOrderData(data));
+        };
+
+        init();
 
         return () => {
-            newSocket.disconnect();
+            if (socketInstance) socketInstance.disconnect();
         };
     }, []);
 

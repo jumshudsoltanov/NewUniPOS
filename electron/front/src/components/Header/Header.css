@@ -10,11 +10,19 @@
 .hallsTab {
   display: flex;
   align-items: center;
-  /* background: rgba(0, 0, 0, 0.2); */
-  width: fit-content;
   list-style: none;
   margin: 0;
   padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  max-width: calc(100vw - 420px);
+  flex-shrink: 1;
+}
+
+.hallsTab::-webkit-scrollbar {
+  display: none;
 }
 
 /* Individual Tab Button */
@@ -187,8 +195,8 @@
   /* transition: all 0.2s ease; */
   height: 40px;
   /* Distinct button height */
-  margin-right: 8px;
-  /* Spacing from tabs */
+  margin: 0 8px;
+  /* Centered spacing from dividers */
   white-space: nowrap;
 }
 
@@ -217,6 +225,7 @@ ul li {
   flex-shrink: 0;
   align-self: center;
 }
+
 
 /* Header Clock */
 .header-clock {
@@ -347,14 +356,45 @@ body {
   .waiter-btn {
     padding: 0;
     width: 40px;
-    /* Square button */
     justify-content: center;
   }
 
   .create-order-btn span,
   .waiter-btn span {
     display: none;
-    /* Redundant but safe */
+  }
+}
+
+@media (max-width: 1400px) {
+  .hall-btn {
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .header-action-item,
+  .header-icon-btn {
+    padding: 0 7px;
+    font-size: 12px;
+  }
+
+  .hallsTab {
+    max-width: calc(100vw - 360px);
+  }
+
+  .header-clock {
+    font-size: 12px;
+    padding: 0 6px;
+  }
+
+  .tools-divider {
+    margin: 0 1px;
+  }
+
+  .create-order-btn {
+    font-size: 12px;
+    padding: 0 10px;
+    height: 36px;
+    margin: 0 4px;
   }
 }
 
