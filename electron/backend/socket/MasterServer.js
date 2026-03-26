@@ -115,8 +115,10 @@ const initMasterServer = (server, isBroadcastingActive = true) => {
         console.log(`🔌 Yeni terminal qoşuldu: ${socket.id}`);
 
         // Customer Display event handling
+        // Use io.emit (not socket.broadcast.emit) so the Customer Display window
+        // on the SAME machine (slave or master) also receives the update
         socket.on("broadcast_customer_display", (data) => {
-            socket.broadcast.emit("customer_display_update", data);
+            io.emit("customer_display_update", data);
         });
 
         socket.on("delegate_print", (data) => {

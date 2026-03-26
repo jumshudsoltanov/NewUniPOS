@@ -748,23 +748,23 @@ const DevicesModal = ({ show, onHide }) => {
             window.electronAPI.toggleCustomerDisplay({ active: nextActive, screenId: nextScreenId });
         }
 
+        // Always persist to localStorage so slave auto-start works
+        const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+        storedProfile.is_customer_display_active = nextActive ? 1 : 0;
+        storedProfile.customer_display_screen_id = nextScreenId;
+        localStorage.setItem("profile", JSON.stringify(storedProfile));
+
         try {
             await localApi.patch("/profiles/customer-display", {
                 profileId,
                 isActive: nextActive,
                 screenId: nextScreenId
             });
-
-            // Update local storage for persistence
-            const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
-            storedProfile.is_customer_display_active = nextActive ? 1 : 0;
-            storedProfile.customer_display_screen_id = nextScreenId;
-            localStorage.setItem("profile", JSON.stringify(storedProfile));
-
             toast.success("Müştəri ekranı tənzimləmələri yadda saxlanıldı");
         } catch (error) {
-            console.error("Customer Display Sync Error:", error);
-            toast.error("Sinxronizasiya xətası: " + error.message);
+            // On slave, local DB may not have this endpoint — localStorage save is enough
+            console.warn("Customer Display API sync skipped (slave or offline):", error?.response?.status);
+            toast.success("Müştəri ekranı tənzimləmələri yadda saxlanıldı (lokal)");
         }
     };
 
@@ -778,23 +778,23 @@ const DevicesModal = ({ show, onHide }) => {
             window.electronAPI.toggleKitchenDisplay({ active: nextActive, screenId: nextScreenId });
         }
 
+        // Always persist to localStorage so slave auto-start works
+        const storedProfile2 = JSON.parse(localStorage.getItem("profile") || "{}");
+        storedProfile2.is_kitchen_display_active = nextActive ? 1 : 0;
+        storedProfile2.kitchen_display_screen_id = nextScreenId;
+        localStorage.setItem("profile", JSON.stringify(storedProfile2));
+
         try {
             await localApi.patch("/profiles/kitchen-display", {
                 profileId,
                 isActive: nextActive,
                 screenId: nextScreenId
             });
-
-            // Update local storage for persistence
-            const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
-            storedProfile.is_kitchen_display_active = nextActive ? 1 : 0;
-            storedProfile.kitchen_display_screen_id = nextScreenId;
-            localStorage.setItem("profile", JSON.stringify(storedProfile));
-
             toast.success("Mətbəx ekranı tənzimləmələri yadda saxlanıldı");
         } catch (error) {
-            console.error("KDS Sync Error:", error);
-            toast.error("Sinxronizasiya xətası (KDS marşrutu tapılmadı, amma ekran açıldı)");
+            // On slave, local DB may not have this endpoint — localStorage save is enough
+            console.warn("Kitchen Display API sync skipped (slave or offline):", error?.response?.status);
+            toast.success("Mətbəx ekranı tənzimləmələri yadda saxlanıldı (lokal)");
         }
     };
 
@@ -982,6 +982,12 @@ const DevicesModal = ({ show, onHide }) => {
                             Printerlər
                         </div>
                         <div
+                            className={`devices-mobile-tab ${activeTab === "printSettings" ? "active" : ""}`}
+                            onClick={() => setActiveTab("printSettings")}
+                        >
+                            Çap Tənzimləmələri
+                        </div>
+                        <div
                             className={`devices-mobile-tab ${activeTab === "display" ? "active" : ""}`}
                             onClick={() => setActiveTab("display")}
                         >
@@ -1015,14 +1021,6 @@ const DevicesModal = ({ show, onHide }) => {
                                 Mobil Qoşulma
                             </div>
                         )}
-                        {isSlave && (
-                            <div
-                                className={`devices-mobile-tab ${activeTab === "network" ? "active" : ""}`}
-                                onClick={() => setActiveTab("network")}
-                            >
-                                Master IP
-                            </div>
-                        )}
                     </div>
                 )
             }
@@ -1037,6 +1035,13 @@ const DevicesModal = ({ show, onHide }) => {
                             >
                                 <i className="bi bi-printer"></i>
                                 <span>Printerlər</span>
+                            </div>
+                            <div
+                                className={`devices-menu-item ${activeTab === "printSettings" ? "active" : ""}`}
+                                onClick={() => setActiveTab("printSettings")}
+                            >
+                                <i className="bi bi-sliders"></i>
+                                <span>Çap Tənzimləmələri</span>
                             </div>
                             <div
                                 className={`devices-menu-item ${activeTab === "display" ? "active" : ""}`}
@@ -1087,15 +1092,6 @@ const DevicesModal = ({ show, onHide }) => {
                                     <span>Mobil Qoşulma</span>
                                 </div>
                             )}
-                            {isSlave && (
-                                <div
-                                    className={`devices-menu-item ${activeTab === "network" ? "active" : ""}`}
-                                    onClick={() => setActiveTab("network")}
-                                >
-                                    <i className="bi bi-hdd-network"></i>
-                                    <span>Statik Master IP</span>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
@@ -1106,81 +1102,7 @@ const DevicesModal = ({ show, onHide }) => {
                             <div className="display-settings">
                                 {selectedPrinterIndex === null ? (
                                     <>
-                                        <div className="master-modes-grid">
-                                            <div className="master-printing-card">
-                                                <div className="master-printing-info">
-                                                    <h4>Mərkəzi Kassa Çapı</h4>
-                                                    <p>Mərkəzi printer Master-dadır. Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir.</p>
-                                                </div>
-                                                <div
-                                                    className={`premium-switch ${masterModes.cashier ? "active" : ""}`}
-                                                    onClick={() => handleToggleMasterPrinting('cashier')}
-                                                >
-                                                    <div className="switch-handle"></div>
-                                                </div>
-                                            </div>
-                                            <div className="master-printing-card">
-                                                <div className="master-printing-info">
-                                                    <h4>Mərkəzi Mətbəx Çapı</h4>
-                                                    <p>Mərkəzi printer Master-dadır. Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir.</p>
-                                                </div>
-                                                <div
-                                                    className={`premium-switch ${masterModes.product ? "active" : ""}`}
-                                                    onClick={() => handleToggleMasterPrinting('product')}
-                                                >
-                                                    <div className="switch-handle"></div>
-                                                </div>
-                                            </div>
-                                            <div className="master-printing-card">
-                                                <div className="master-printing-info">
-                                                    <h4>Müştəri çeki avto çap</h4>
-                                                    <p>CheckOver səhifəsində "Çeki çap et" toggle avtomatik açıq olsun.</p>
-                                                </div>
-                                                <div
-                                                    className={`premium-switch ${customerReceiptAutoPrint ? "active" : ""}`}
-                                                    onClick={handleToggleCustomerReceiptAutoPrint}
-                                                >
-                                                    <div className="switch-handle"></div>
-                                                </div>
-                                            </div>
-                                            <div className="master-printing-card">
-                                                <div className="master-printing-info">
-                                                    <h4>Növbəli açılış tələb et</h4>
-                                                    <p>Növbə açılmadan sifariş yaratmaq mümkün olmasın.</p>
-                                                </div>
-                                                <div
-                                                    className={`premium-switch ${salesShiftRequired ? "active" : ""}`}
-                                                    onClick={handleToggleSalesShiftRequired}
-                                                >
-                                                    <div className="switch-handle"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {printers.filter((p) => Number(p.is_cashier) === 1).length >= 2 && (
-                                            <div className="cashier-print-select-card">
-                                                <h4 className="cashier-print-select-title">Bu terminal üçün kassa çapı</h4>
-                                                <p className="cashier-print-select-desc">Hansı kassa printerlərinə müştəri çeki getməli olduğunu seçin.</p>
-                                                <label className="cashier-print-select-label">Seçim</label>
-                                                <select
-                                                    className="form-select form-select-sm cashier-print-select"
-                                                    value={cashierPrintPref}
-                                                    onChange={handleCashierPrintPrefChange}
-                                                >
-                                                    <option value="">Avtomatik — yalnız ilk kassa printeri</option>
-                                                    <option value="all">Bütün kassa printerlərinə çap</option>
-                                                    {printers
-                                                        .filter((p) => Number(p.is_cashier) === 1)
-                                                        .map((p) => (
-                                                            <option key={p.id} value={String(p.id)}>
-                                                                {p.local_name || p.name}
-                                                            </option>
-                                                        ))}
-                                                </select>
-                                            </div>
-                                        )}
-
-                                        <div style={{ marginBottom: '16px', marginTop: '24px' }}>
+                                        <div style={{ marginBottom: '16px' }}>
                                             <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>Printerlər</h4>
                                             <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Cihaza klikləyərək tənzimləmələri edin</p>
                                         </div>
@@ -1240,6 +1162,90 @@ const DevicesModal = ({ show, onHide }) => {
                                         profileLogo={loginedProfileData?.data?.profile?.logo || null}
                                     />
                                 ) : null}
+                            </div>
+                        ) : activeTab === "printSettings" ? (
+                            <div className="display-settings">
+                                <div style={{ marginBottom: '16px' }}>
+                                    <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>Çap Tənzimləmələri</h4>
+                                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Mərkəzi çap, avto çap və növbə tənzimləmələri</p>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div className="settings-toggle-row">
+                                        <div className="settings-toggle-icon"><i className="bi bi-printer"></i></div>
+                                        <div className="settings-toggle-text">
+                                            <span className="settings-toggle-label">Mərkəzi Kassa Çapı</span>
+                                            <span className="settings-toggle-desc">Mərkəzi printer Master-dadır. Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir.</span>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${masterModes.cashier ? "active" : ""}`}
+                                            onClick={() => handleToggleMasterPrinting('cashier')}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+                                    <div className="settings-toggle-row">
+                                        <div className="settings-toggle-icon"><i className="bi bi-egg-fried"></i></div>
+                                        <div className="settings-toggle-text">
+                                            <span className="settings-toggle-label">Mərkəzi Mətbəx Çapı</span>
+                                            <span className="settings-toggle-desc">Mərkəzi printer Master-dadır. Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir.</span>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${masterModes.product ? "active" : ""}`}
+                                            onClick={() => handleToggleMasterPrinting('product')}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+                                    <div className="settings-toggle-row">
+                                        <div className="settings-toggle-icon"><i className="bi bi-receipt"></i></div>
+                                        <div className="settings-toggle-text">
+                                            <span className="settings-toggle-label">Müştəri çeki avto çap</span>
+                                            <span className="settings-toggle-desc">CheckOver səhifəsində "Çeki çap et" toggle avtomatik açıq olsun.</span>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${customerReceiptAutoPrint ? "active" : ""}`}
+                                            onClick={handleToggleCustomerReceiptAutoPrint}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+                                    <div className="settings-toggle-row">
+                                        <div className="settings-toggle-icon"><i className="bi bi-clock-history"></i></div>
+                                        <div className="settings-toggle-text">
+                                            <span className="settings-toggle-label">Növbəli açılış tələb et</span>
+                                            <span className="settings-toggle-desc">Növbə açılmadan sifariş yaratmaq mümkün olmasın.</span>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${salesShiftRequired ? "active" : ""}`}
+                                            onClick={handleToggleSalesShiftRequired}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {printers.filter((p) => Number(p.is_cashier) === 1).length >= 2 && (
+                                    <div className="cashier-print-select-card" style={{ marginTop: '24px' }}>
+                                        <h4 className="cashier-print-select-title">Bu terminal üçün kassa çapı</h4>
+                                        <p className="cashier-print-select-desc">Hansı kassa printerlərinə müştəri çeki getməli olduğunu seçin.</p>
+                                        <label className="cashier-print-select-label">Seçim</label>
+                                        <select
+                                            className="form-select form-select-sm cashier-print-select"
+                                            value={cashierPrintPref}
+                                            onChange={handleCashierPrintPrefChange}
+                                        >
+                                            <option value="">Avtomatik — yalnız ilk kassa printeri</option>
+                                            <option value="all">Bütün kassa printerlərinə çap</option>
+                                            {printers
+                                                .filter((p) => Number(p.is_cashier) === 1)
+                                                .map((p) => (
+                                                    <option key={p.id} value={String(p.id)}>
+                                                        {p.local_name || p.name}
+                                                    </option>
+                                                ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         ) : activeTab === "display" ? (
                             <div className="display-settings">
@@ -1485,88 +1491,6 @@ const DevicesModal = ({ show, onHide }) => {
                                         );
                                     })()
                                 )}
-                            </div>
-                        ) : activeTab === "network" && isSlave ? (
-                            <div className="display-settings">
-                                <div className="master-ip-card">
-                                    <div className="master-ip-card__header">
-                                        <span className="master-ip-card__icon"><i className="bi bi-hdd-network-fill" /></span>
-                                        <div>
-                                            <h4 className="master-ip-card__title">Master IP ünvanı</h4>
-                                            <p className="master-ip-card__desc">Master kompüterin IP-ni daxil edin. Avtomatik tapılmazsa buradan əllə qeyd edin.</p>
-                                        </div>
-                                    </div>
-                                    <div className="master-ip-card__body">
-                                        <div className="master-ip-card__row">
-                                            <input
-                                                type="text"
-                                                className="master-ip-card__input"
-                                                placeholder="192.168.1.10"
-                                                value={staticMasterIp}
-                                                onChange={(e) => setStaticMasterIp(e.target.value)}
-                                            />
-                                            <button
-                                                type="button"
-                                                className="master-ip-card__btn master-ip-card__btn--outline"
-                                                disabled={staticIpScanning}
-                                                onClick={async () => {
-                                                    if (!window.electronAPI?.scanMaster) return;
-                                                    setStaticIpScanning(true);
-                                                    try {
-                                                        const found = await window.electronAPI.scanMaster();
-                                                        if (found) {
-                                                            setStaticMasterIp(found);
-                                                            toast.success("Master tapıldı: " + found);
-                                                        } else {
-                                                            toast.error("Master tapılmadı");
-                                                        }
-                                                    } catch (e) {
-                                                        toast.error("Axtarış xətası");
-                                                    } finally {
-                                                        setStaticIpScanning(false);
-                                                    }
-                                                }}
-                                            >
-                                                {staticIpScanning ? <span className="master-ip-card__spinner" /> : <i className="bi bi-search" />}
-                                                {staticIpScanning ? "Axtarılır..." : "Axtar"}
-                                            </button>
-                                            <button
-                                                className="master-ip-card__btn"
-                                                disabled={staticIpSaving}
-                                                onClick={async () => {
-                                                    setStaticIpSaving(true);
-                                                    try {
-                                                        const ok = await window.electronAPI?.setStaticMasterIp?.(staticMasterIp.trim() || null);
-                                                        if (ok !== false) {
-                                                            toast.success(staticMasterIp.trim() ? "Master IP yadda saxlanıldı" : "Statik IP silindi");
-                                                        } else {
-                                                            toast.error("Yadda saxlanılmadı");
-                                                        }
-                                                    } catch (e) {
-                                                        toast.error("Xəta: " + (e?.message || "Naməlum"));
-                                                    } finally {
-                                                        setStaticIpSaving(false);
-                                                    }
-                                                }}
-                                            >
-                                                {staticIpSaving ? <span className="master-ip-card__spinner" /> : "Yadda saxla"}
-                                            </button>
-                                            {staticMasterIp && (
-                                                <button
-                                                    type="button"
-                                                    className="master-ip-card__btn master-ip-card__btn--ghost"
-                                                    onClick={() => setStaticMasterIp("")}
-                                                >
-                                                    Təmizlə
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="master-ip-card__hint">
-                                            <i className="bi bi-info-circle" />
-                                            <span>Sizin IP: <strong>{localIp || "—"}</strong>. Statik IP təyin etsəniz, Slave əvvəlcə bu ünvana qoşulacaq.</span>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         ) : activeTab === "mobile" && isMaster ? (
                             <div className="mobile-qr-section">

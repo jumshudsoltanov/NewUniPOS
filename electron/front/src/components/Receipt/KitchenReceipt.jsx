@@ -238,6 +238,11 @@ const KitchenReceipt = ({
                                 <span>
                                     {item.isModifierStandalone && <span style={{ color: '#d32f2f' }}>ƏLAVƏ: </span>}
                                     {itemName}
+                                    {item.portion_name && (
+                                        <span style={{ fontSize: fs(11), display: 'block', fontWeight: '700', color: '#333', fontStyle: 'italic' }}>
+                                            [{item.portion_name}]
+                                        </span>
+                                    )}
                                     {item.isModifierStandalone && item.parentName && (
                                         <span style={{ fontSize: fs(10), display: 'block', color: '#666' }}>
                                             ({item.parentName} üçün)

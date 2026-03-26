@@ -18,7 +18,9 @@
       "Bash(node -e \"try{require\\(''''electron''''\\);const e=require\\(''''electron''''\\);console.log\\(typeof e\\)}catch\\(er\\){console.log\\(er.message\\)}\")",
       "Bash(grep -rn \"table.*click\\\\|onClick.*table\\\\|handleTable\\\\|openCheck\\\\|navigate.*check\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/Menu --include=*.jsx)",
       "Bash(npm uninstall:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Read(//c/Users/Jumshud/Desktop/POS-ReDesing/**)",
+      "Bash(grep -rn \"clearOrders\\\\|SalesTypesModal\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/ --include=*.jsx -l)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",

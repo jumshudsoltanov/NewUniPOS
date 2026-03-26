@@ -1,5 +1,6 @@
 const { randomUUID } = require("crypto");
 const axios = require("axios");
+const { Op } = require("sequelize");
 const SalesShiftsModel = require("../model/SalesShiftsModel");
 const { getShiftSummaryForRange } = require("./ReportController");
 
@@ -18,7 +19,7 @@ const fmt = (d) => {
 
 const openShift = async (req, res) => {
   const { profileId } = req.params;
-  const { terminalId, waiterId, waiterName } = req.body || {};
+  const { terminalId, waiterId, waiterName, startingCash } = req.body || {};
   try {
     const existing = await SalesShiftsModel.findOne({
       where: {
@@ -41,6 +42,7 @@ const openShift = async (req, res) => {
       status: "open",
       opened_by_waiter_id: waiterId || null,
       opened_by_name: waiterName || null,
+      starting_cash: Number(startingCash) || 0,
     });
 
     // Admin serverə göndər (xəta olsa da davam et)
@@ -50,6 +52,7 @@ const openShift = async (req, res) => {
       waiterId: waiterId || null,
       waiterName: waiterName || null,
       opened_at: row.opened_at,
+      startingCash: row.starting_cash || 0,
     }).catch(() => {});
 
     // Bütün terminallara socket ilə xəbər ver
@@ -125,6 +128,7 @@ const closeShift = async (req, res) => {
       closedAt: endStr,
       openedAt: startStr,
       terminalId: shift.terminal_id || null,
+      startingCash: Number(shift.starting_cash) || 0,
       summary,
       profileId: Number(profileId),
     };
@@ -162,9 +166,20 @@ const closeShift = async (req, res) => {
 const listHistory = async (req, res) => {
   const { profileId } = req.params;
   const limit = Math.min(Number(req.query.limit) || 50, 200);
+  const { from, to } = req.query;
   try {
+    const where = { profile_id: profileId, status: "closed" };
+    if (from || to) {
+      where.closed_at = {};
+      if (from) where.closed_at[Op.gte] = new Date(from);
+      if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        where.closed_at[Op.lte] = toDate;
+      }
+    }
     const rows = await SalesShiftsModel.findAll({
-      where: { profile_id: profileId, status: "closed" },
+      where,
       order: [["closed_at", "DESC"]],
       limit,
     });

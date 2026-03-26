@@ -82,6 +82,10 @@ const OrdersItemsModel = db.sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    portion_name: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+    },
     is_delete_reason_id: {
       type: DataTypes.INTEGER,
       allowNull: true,

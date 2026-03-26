@@ -160,6 +160,7 @@ const sendOrdersItemsToDb = async (req, res) => {
         kds_status: 0,
         modifiers: item.modifiers || null,
         comment: item.comment || null,
+        portion_name: item.portion_name || null,
       })
     ));
 

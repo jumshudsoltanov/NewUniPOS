@@ -117,11 +117,18 @@ const CheckOver = () => {
         if (!currentOrder) return { total: 0, sumTotal: "0.00" };
 
         let total = 0;
+        let totalForService = 0;
         currentOrder.orders_items?.forEach((item) => {
             const count = Number(item.count || item.quantity || 0);
             const price = Number(item.price || 0);
             const modifiersPerUnit = getModifiersTotalPerUnit(item);
-            total += count * (price + modifiersPerUnit);
+            const itemTotal = count * (price + modifiersPerUnit);
+            total += itemTotal;
+
+            const isNoService = (item.no_service_fee === 1 || item.product?.no_service_fee === 1);
+            if (!isNoService) {
+                totalForService += itemTotal;
+            }
         });
 
         // Add Timer Charge
@@ -149,7 +156,7 @@ const CheckOver = () => {
 
         if (serviceValue > 0) {
             if (serviceType === "percent") {
-                serviceAmount = (total * serviceValue) / 100;
+                serviceAmount = (totalForService * serviceValue) / 100;
             } else {
                 serviceAmount = serviceValue;
             }

@@ -290,11 +290,40 @@ function createWindow() {
       // Initial check & interval setup
       const performCheck = async () => {
         try {
-          const LoginModel = require(path.join(__dirname, "..", "backend", "model", "LoginModel"));
-          const profile = await LoginModel.findOne({ order: [['id', 'DESC']] });
+          let isActive = false;
+          let screenId = null;
 
-          if (profile && profile.is_customer_display_active === 1 && profile.customer_display_screen_id) {
-            
+          // Primary: try local DB (works on master)
+          try {
+            const LoginModel = require(path.join(__dirname, "..", "backend", "model", "LoginModel"));
+            const profile = await LoginModel.findOne({ order: [['id', 'DESC']] });
+            if (profile) {
+              isActive = profile.is_customer_display_active === 1;
+              screenId = profile.customer_display_screen_id;
+            }
+          } catch (_dbErr) {
+            // DB not available (slave without local DB) — fall through to localStorage
+          }
+
+          // Fallback: read from renderer localStorage (works on slave)
+          if (!isActive && mainWindow && !mainWindow.isDestroyed()) {
+            try {
+              const lsData = await mainWindow.webContents.executeJavaScript(`
+                (function() {
+                  try {
+                    var p = JSON.parse(localStorage.getItem('profile') || '{}');
+                    return { active: p.is_customer_display_active === 1 ? 1 : 0, screenId: p.customer_display_screen_id || '' };
+                  } catch(e) { return { active: 0, screenId: '' }; }
+                })()
+              `);
+              if (lsData && lsData.active === 1 && lsData.screenId) {
+                isActive = true;
+                screenId = lsData.screenId;
+              }
+            } catch (_lsErr) { /* ignore */ }
+          }
+
+          if (isActive && screenId) {
             // If it's supposed to be active, but manually closed by IPC, do not revive.
             if (isCustomerDisplayManuallyClosed) {
               return;
@@ -302,11 +331,11 @@ function createWindow() {
 
             // If active and NO customer window exists, revive it.
             if (!customerWindow || customerWindow.isDestroyed()) {
-              console.log("[ELECTRON] Auto-reviving/starting Customer Display on screen:", profile.customer_display_screen_id);
-              createCustomerWindow(profile.customer_display_screen_id);
+              console.log("[ELECTRON] Auto-reviving/starting Customer Display on screen:", screenId);
+              createCustomerWindow(screenId);
             }
           } else {
-             // If disabled in DB but window is open, close it cleanly
+             // If disabled but window is open, close it cleanly
              if (customerWindow && !customerWindow.isDestroyed()) {
                  customerWindow.close();
                  customerWindow = null;

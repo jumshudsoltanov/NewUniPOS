@@ -966,7 +966,7 @@ export const OrderSlice = createSlice({
 
       state.products.push({
         ...incomingProduct,
-        quantity: 1,
+        quantity: incomingProduct.quantity && incomingProduct.quantity > 1 ? incomingProduct.quantity : 1,
         newOrder: 1,
         price: parseFloat(incomingProduct.price)
       });

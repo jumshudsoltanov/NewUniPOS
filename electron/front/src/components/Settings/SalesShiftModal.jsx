@@ -30,6 +30,7 @@ const buildShiftPrintHtml = ({
     terminalLabel,
     openedBy,
     closedBy,
+    startingCash,
     summary,
     footerNote,
     baseFontPx,
@@ -87,6 +88,7 @@ ${profileName ? `<div class="profile">${escapeHtml(profileName)}</div>` : ""}
 <div class="kv"><span class="kv-label">Terminal</span><span class="kv-value">${escapeHtml(terminalLabel || "Hamısı")}</span></div>
 <div class="kv"><span class="kv-label">Açan</span><span class="kv-value">${escapeHtml(openedBy || "—")}</span></div>
 <div class="kv"><span class="kv-label">Bağlayan</span><span class="kv-value">${escapeHtml(closedBy || "—")}</span></div>
+${Number(startingCash) > 0 ? `<div class="kv"><span class="kv-label">Başlanğıc qalıq</span><span class="kv-value">${money(startingCash)} &#8380;</span></div>` : ""}
 <hr class="divider"/>
 <div class="section-title">Ümumi</div>
 <div class="kv"><span class="kv-label">Bağlanmış çek</span><span class="kv-value">${summary?.checksCount ?? 0}</span></div>
@@ -174,6 +176,12 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                     <span>Bağlayan</span>
                     <span>{row?.closed_by_name || "—"}</span>
                 </div>
+                {Number(row?.starting_cash || snapshot?.startingCash) > 0 && (
+                    <div className="ssd-kv">
+                        <span>Başlanğıc qalıq</span>
+                        <span>{money(row?.starting_cash || snapshot?.startingCash)} ₼</span>
+                    </div>
+                )}
             </div>
 
             {!s ? (
@@ -388,6 +396,9 @@ const SalesShiftModal = ({ show, onHide }) => {
     const [extraSnapshots, setExtraSnapshots] = useState({});
     /** { row, snapshot, loading } | null */
     const [shiftDetailModal, setShiftDetailModal] = useState(null);
+    const [startingCash, setStartingCash] = useState("");
+    const [historyFrom, setHistoryFrom] = useState("");
+    const [historyTo, setHistoryTo] = useState("");
 
     const baseReceiptFont = Number(terminalInfo?.customer_receipt || profile?.customer_receipt || 0);
     const profileDisplayName = profile?.company_name || profile?.name || "";
@@ -397,6 +408,9 @@ const SalesShiftModal = ({ show, onHide }) => {
             setShowClosePrompt(false);
             setExtraSnapshots({});
             setShiftDetailModal(null);
+            setStartingCash("");
+            setHistoryFrom("");
+            setHistoryTo("");
         }
     }, [show]);
 
@@ -431,9 +445,12 @@ const SalesShiftModal = ({ show, onHide }) => {
         setLivePayload(res.data?.data ?? null);
     }, [profileId]);
 
-    const fetchHistory = useCallback(async () => {
+    const fetchHistory = useCallback(async (from, to) => {
         if (!profileId) return;
-        const res = await apiConfig.get(`/sales-shifts/${profileId}/history`, { params: { limit: 80 } });
+        const params = { limit: 80 };
+        if (from) params.from = from;
+        if (to) params.to = to;
+        const res = await apiConfig.get(`/sales-shifts/${profileId}/history`, { params });
         setHistory(Array.isArray(res.data?.data) ? res.data.data : []);
     }, [profileId]);
 
@@ -547,6 +564,7 @@ const SalesShiftModal = ({ show, onHide }) => {
             terminalLabel: snapshot.terminalId || "Hamısı",
             openedBy: shiftRow?.opened_by_name || "—",
             closedBy: shiftRow?.closed_by_name || "—",
+            startingCash: snapshot.startingCash || Number(shiftRow?.starting_cash) || 0,
             summary: snapshot.summary,
             footerNote: isReprint ? "TƏKRAR ÇAP" : "",
             baseFontPx: baseReceiptFont,
@@ -562,9 +580,11 @@ const SalesShiftModal = ({ show, onHide }) => {
                 terminalId,
                 waiterId: waiter?.id,
                 waiterName: waiter?.name,
+                startingCash: Number(startingCash) || 0,
             });
             if (res.data?.message === "success") {
                 toast.success("Satış növbəsi açıldı");
+                setStartingCash("");
                 window.dispatchEvent(new CustomEvent("salesShiftChanged"));
                 await refreshAll();
             }
@@ -596,6 +616,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                     closedAt: range?.endStr,
                     openedAt: range?.startStr,
                     terminalId: terminalId || shift?.terminal_id || null,
+                    startingCash: Number(shift?.starting_cash) || 0,
                     summary,
                     profileId: Number(profileId),
                 };
@@ -655,6 +676,29 @@ const SalesShiftModal = ({ show, onHide }) => {
                 Açıq növbə yoxdur. «Növbəni aç» ilə başladın. Bu terminal üzrə bağlanmış çeklər izlənəcək;
                 növbəni bağlayanda kassa printerindən hesabat çap olunacaq.
             </p>
+            <div className="ssm-starting-cash-card mt-3">
+                <div className="ssm-starting-cash-icon">
+                    <i className="bi bi-cash-stack" aria-hidden />
+                </div>
+                <div className="ssm-starting-cash-body">
+                    <label className="ssm-starting-cash-label" htmlFor="startingCashInput">Başlanğıc qalıq</label>
+                    <span className="ssm-starting-cash-hint">Növbə başlamazdan əvvəl kassadakı pul</span>
+                </div>
+                <div className="ssm-starting-cash-input-wrap">
+                    <input
+                        id="startingCashInput"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="ssm-starting-cash-input"
+                        placeholder="0.00"
+                        value={startingCash}
+                        onChange={(e) => setStartingCash(e.target.value)}
+                        disabled={loading}
+                    />
+                    <span className="ssm-starting-cash-currency">₼</span>
+                </div>
+            </div>
             <div className="sales-shift-actions mt-3">
                 <Button variant="primary" onClick={handleOpenShift} disabled={loading || !profileId}>
                     Növbəni aç
@@ -682,6 +726,12 @@ const SalesShiftModal = ({ show, onHide }) => {
                     <span className="ssm-info-label">Terminal</span>
                     <span className="ssm-info-value">{currentShift.terminal_id || terminalId || "—"}</span>
                 </div>
+                {Number(currentShift.starting_cash) > 0 && (
+                    <div className="ssm-info-row">
+                        <span className="ssm-info-label">Başlanğıc qalıq</span>
+                        <span className="ssm-info-value">{money(currentShift.starting_cash)} ₼</span>
+                    </div>
+                )}
                 {currentShift.closed_by_name && (
                     <div className="ssm-info-row">
                         <span className="ssm-info-label">Bağlayan</span>
@@ -1046,14 +1096,66 @@ const SalesShiftModal = ({ show, onHide }) => {
                         )}
                         <div className="sales-shift-modal-body">
                             <div className="sales-shift-col-left">
-                                <h6 className="sales-shift-panel-title">Cari növbə</h6>
+                                <h6 className="sales-shift-panel-title">
+                                    <i className="bi bi-lightning-charge-fill" aria-hidden />
+                                    Cari növbə
+                                </h6>
                                 {currentShiftBody}
                             </div>
                             <div className="sales-shift-col-right">
-                                <h6 className="sales-shift-panel-title">Keçmiş növbələr</h6>
-                                <p className="sales-shift-hint mb-2">
-                                    «Detallar» tam pəncərə, «Təkrar çap» — kassa printeri.
-                                </p>
+                                <h6 className="sales-shift-panel-title">
+                                    <i className="bi bi-clock-history" aria-hidden />
+                                    Keçmiş növbələr
+                                    {history.length > 0 && (
+                                        <span className="ssm-history-count">{history.length}</span>
+                                    )}
+                                </h6>
+                                <div className="ssm-history-filter">
+                                    <div className="ssm-history-filter-row">
+                                        <div className="ssm-history-filter-field">
+                                            <label htmlFor="historyFrom">Başlanğıc</label>
+                                            <input
+                                                id="historyFrom"
+                                                type="date"
+                                                value={historyFrom}
+                                                onChange={(e) => setHistoryFrom(e.target.value)}
+                                                disabled={loading}
+                                            />
+                                        </div>
+                                        <div className="ssm-history-filter-field">
+                                            <label htmlFor="historyTo">Son</label>
+                                            <input
+                                                id="historyTo"
+                                                type="date"
+                                                value={historyTo}
+                                                onChange={(e) => setHistoryTo(e.target.value)}
+                                                disabled={loading}
+                                            />
+                                        </div>
+                                        <Button
+                                            variant="primary"
+                                            className="ssm-history-filter-btn"
+                                            disabled={loading}
+                                            onClick={() => fetchHistory(historyFrom, historyTo)}
+                                        >
+                                            <i className="bi bi-funnel-fill" aria-hidden />
+                                        </Button>
+                                        {(historyFrom || historyTo) && (
+                                            <Button
+                                                variant="outline-secondary"
+                                                className="ssm-history-filter-btn ssm-history-filter-clear"
+                                                disabled={loading}
+                                                onClick={() => {
+                                                    setHistoryFrom("");
+                                                    setHistoryTo("");
+                                                    fetchHistory("", "");
+                                                }}
+                                            >
+                                                <i className="bi bi-x-lg" aria-hidden />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
                                 {historyBody}
                             </div>
                         </div>

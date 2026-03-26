@@ -1,0 +1,310 @@
+.portion-modal .modal-content {
+    border-radius: 6px;
+    border: none;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+}
+
+.portion-modal .modal-dialog {
+    max-width: 360px;
+}
+
+/* Header */
+.portion-modal-header {
+    background: #053796;
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 8px;
+}
+
+.portion-modal-header .header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.portion-modal-header .header-icon-circle {
+    width: 34px;
+    height: 34px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.portion-modal-header .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.portion-modal-header .product-price-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.portion-modal-header .close-btn {
+    width: 34px;
+    height: 34px;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Body */
+.portion-modal-body {
+    padding: 16px 16px 0;
+    background: #f8f9fb;
+}
+
+/* Name input */
+.portion-name-row {
+    margin-bottom: 12px;
+}
+
+.portion-name-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a2e;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.portion-name-input:focus {
+    border-color: #053796;
+}
+
+.portion-name-input::placeholder {
+    color: #aab2c8;
+}
+
+/* Price display */
+.portion-price-display {
+    background: #fff;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 8px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.portion-price-display .price-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #8892a4;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.portion-price-display .price-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #053796;
+}
+
+/* Numpad */
+.portion-numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding-bottom: 16px;
+}
+
+.numpad-key {
+    height: 52px;
+    background: #fff;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s, border-color 0.1s;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.numpad-key:hover {
+    background: #eff4ff;
+    border-color: #053796;
+    color: #053796;
+}
+
+.numpad-key:active {
+    background: #dce8ff;
+    transform: scale(0.97);
+}
+
+.numpad-key.backspace {
+    color: #e74c3c;
+    border-color: #fde8e8;
+    background: #fff8f8;
+}
+
+.numpad-key.backspace:hover {
+    background: #fde8e8;
+    border-color: #e74c3c;
+}
+
+/* Quantity stepper */
+.portion-qty-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    gap: 12px;
+}
+
+.portion-qty-row .qty-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #8892a4;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex: 1;
+}
+
+.qty-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1.5px solid #e0e6f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.qty-stepper .qty-btn {
+    width: 38px;
+    height: 38px;
+    background: #f4f6fb;
+    border: none;
+    font-size: 20px;
+    font-weight: 700;
+    color: #053796;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+    flex-shrink: 0;
+}
+
+.qty-stepper .qty-btn:hover {
+    background: #e0ecff;
+}
+
+.qty-stepper .qty-btn:active {
+    background: #c7deff;
+}
+
+.qty-stepper .qty-value {
+    min-width: 44px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: #1a1a2e;
+    padding: 0 4px;
+}
+
+.portion-qty-row .qty-total {
+    font-size: 16px;
+    font-weight: 800;
+    color: #053796;
+    flex-shrink: 0;
+    min-width: 70px;
+    text-align: right;
+}
+
+/* Footer */
+.portion-modal-footer {
+    padding: 14px 16px;
+    border-top: 1px solid #e8ecf1;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.portion-cancel-btn {
+    padding: 11px 18px;
+    background: #edf0f9;
+    color: #053796;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.portion-cancel-btn:hover {
+    background: #e0ecff;
+}
+
+.portion-add-btn {
+    padding: 11px 28px;
+    background: #053796;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.portion-add-btn:hover {
+    background: #042d7a;
+    box-shadow: 0 4px 14px rgba(5, 55, 150, 0.25);
+}
+
+@media (max-width: 767px) {
+    .portion-modal .modal-dialog {
+        margin: auto 12px;
+        max-width: calc(100% - 24px);
+    }
+}

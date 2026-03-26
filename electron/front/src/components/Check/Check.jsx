@@ -351,7 +351,15 @@ const Check = () => {
     if (id) dispatch(clearOrders());
   }, [id, dispatch]);
 
-  const goTables = (skipRefresh = false, replace = false) => {
+  const goTables = async (skipRefresh = false, replace = false) => {
+    // isNew məhsullar varsa — çıxmadan əvvəl avtomatik göndər
+    if (!orderEditLocked && (products.length > 0 || pendingDeletions.length > 0)) {
+      try {
+        await handleSendOrders();
+      } catch (e) {
+        console.error("Auto-send on exit failed:", e);
+      }
+    }
     const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
     const opts = replace ? { replace: true } : undefined;
     if (isPacksOnly || location.state?.from === "/checks") {
@@ -507,7 +515,9 @@ const Check = () => {
             ...p,
             printer_details: printers,
             category_id: categoryId,
-            comment: singleComment
+            comment: singleComment,
+            count: qty,
+            quantity: qty,
           }];
         });
 
@@ -579,6 +589,13 @@ const Check = () => {
       toast.error("Xəta baş verdi");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  // Hər əməliyyatdan əvvəl isNew məhsullar varsa avtomatik göndər
+  const autoSendIfNeeded = async () => {
+    if (!orderEditLocked && (products.length > 0 || pendingDeletions.length > 0)) {
+      await handleSendOrders();
     }
   };
 
@@ -991,6 +1008,7 @@ const Check = () => {
   const handleSplitOrder = useCallback(async (splitData) => {
     const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table?.hall_id })
     try {
+      await autoSendIfNeeded();
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       // Enrich items with product names for logging
       const itemsWithNames = (splitData.items || []).map(item => {
@@ -1574,9 +1592,15 @@ const Check = () => {
                         }
 
                         try {
+                          // isNew məhsullar varsa — əvvəl göndər tələb et, çap etmə
+                          if ((products.length > 0 || pendingDeletions.length > 0) && !orderEditLocked) {
+                            toast.warning("Əvvəlcə məhsulları çap üçün göndərin (\"Göndər\" düyməsi).");
+                            setIsPrintingCheck(false);
+                            return;
+                          }
                           const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
                           const result = await printCustomerReceipt({
-                            items: products,
+                            items: currentOrder?.orders_items || [],
                             checkData: {
                               ...currentOrder,
                               customer_name: selectedCustomer?.name || currentOrder?.customer_name || "",
@@ -1711,6 +1735,7 @@ const Check = () => {
                 hall={currentHall}
                 selectedCustomer={selectedCustomer}
                 activeTableCount={activeTableCount}
+                onBeforeCreateOrder={autoSendIfNeeded}
               />
               <CheckMain orders={currentOrder} table={currentTable} />
               <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} />
@@ -1737,6 +1762,10 @@ const Check = () => {
                     ref={newOrderBtnRef}
                     className="create-order-btn small-btn"
                     onClick={async () => {
+                      if (products.length > 0 || pendingDeletions.length > 0) {
+                        toast.warning("Əvvəlcə mövcud məhsulları göndərin (\"Göndər\" düyməsi), sonra yeni sifariş yaradın.");
+                        return;
+                      }
                       const guard = await checkShiftGuard(loginedProfileData);
                       if (guard.blocked) {
                         toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
@@ -1772,7 +1801,12 @@ const Check = () => {
                   <div
                     className="header-action-item small-item"
                     style={{ cursor: "pointer" }}
-                    onClick={() => navigate("/checks")}
+                    onClick={async () => {
+                      if (!orderEditLocked && (products.length > 0 || pendingDeletions.length > 0)) {
+                        try { await handleSendOrders(); } catch (e) { console.error(e); }
+                      }
+                      navigate("/checks");
+                    }}
                   >
                     <span className="d-none d-xl-inline">Çeklər</span>
                     <svg
@@ -1808,7 +1842,7 @@ const Check = () => {
                   {/* Menu Hamburger */}
                   <button
                     className="header-icon-btn small-icon-btn"
-                    onClick={() => navigate("/settings")}
+                    onClick={async () => { await autoSendIfNeeded(); navigate("/settings"); }}
                   >
                     <svg
                       width="20"
@@ -2397,6 +2431,7 @@ const Check = () => {
         onClose={() => setOpenActiveChecks(false)}
         onCreateNew={async () => {
           setOpenActiveChecks(false);
+          await autoSendIfNeeded();
           const waiterId = loginedWaiter?.data?.id;
           const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
           const profileId = loginedProfileData?.data?.profile?.id;

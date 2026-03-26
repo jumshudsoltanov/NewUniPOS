@@ -4,19 +4,20 @@
 }
 
 .report-modal.sales-shift-report-root .modal-content {
-    height: 74vh !important;
+    height: 78vh !important;
     min-height: 520px !important;
-    max-height: 74vh !important;
+    max-height: 78vh !important;
     display: flex !important;
     flex-direction: column;
     overflow: hidden;
     border-radius: 0 !important;
+    border: none !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18) !important;
 }
 
 .report-modal.sales-shift-report-root .modal-header {
     border-radius: 0 !important;
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
+    padding: 16px 20px;
 }
 
 .report-modal.sales-shift-report-root .modal-body {
@@ -144,7 +145,7 @@
         min-height: 0;
         overflow: hidden;
         padding: 16px 18px 18px;
-        background: #f1f5f9;
+        background: #f4f6fb;
         display: flex;
         flex-direction: column;
         align-items: stretch;
@@ -212,6 +213,14 @@
     line-height: 1.25;
     border-bottom: 2px solid #e2e8f0;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sales-shift-panel-title i {
+    font-size: 15px;
+    color: #4F85F4;
 }
 
 .sales-shift-col-right .sales-shift-panel-title {
@@ -224,6 +233,194 @@
     line-height: 1.5;
     margin: 0 0 12px;
     flex-shrink: 0;
+}
+
+/* ——— Tarix filteri ——— */
+.ssm-history-filter {
+    flex-shrink: 0;
+    margin-bottom: 10px;
+}
+
+.ssm-history-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.ssm-history-filter-field {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ssm-history-filter-field label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #8891aa;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.ssm-history-filter-field input[type="date"] {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a1f36;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+    min-height: 36px;
+}
+
+.ssm-history-filter-field input[type="date"]:focus {
+    border-color: #4F85F4;
+    box-shadow: 0 0 0 2px rgba(79, 133, 244, 0.1);
+}
+
+.ssm-history-filter-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    flex-shrink: 0;
+    font-size: 14px !important;
+}
+
+.ssm-history-filter-clear {
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+    background: #fff !important;
+}
+
+.ssm-history-filter-clear:hover {
+    border-color: #f87171 !important;
+    color: #ef4444 !important;
+    background: #fef2f2 !important;
+}
+
+/* Növbə sayı badge */
+.ssm-history-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #4F85F4;
+    background: #e8efff;
+    margin-left: auto;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Başlanğıc qalıq kart */
+.ssm-starting-cash-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+    flex-shrink: 0;
+    transition: border-color 0.15s;
+}
+
+.ssm-starting-cash-card:focus-within {
+    border-color: #053796;
+    box-shadow: 0 0 0 3px rgba(5, 55, 150, 0.08);
+}
+
+.ssm-starting-cash-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #e8efff 0%, #dbeafe 100%);
+    color: #053796;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.ssm-starting-cash-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.ssm-starting-cash-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1f36;
+    line-height: 1.3;
+    cursor: pointer;
+}
+
+.ssm-starting-cash-hint {
+    display: block;
+    font-size: 11px;
+    color: #8891aa;
+    line-height: 1.3;
+    margin-top: 1px;
+}
+
+.ssm-starting-cash-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.ssm-starting-cash-input {
+    width: 100px;
+    padding: 6px 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #053796;
+    text-align: right;
+    border: none;
+    border-radius: 8px;
+    background: #f4f7fb;
+    outline: none;
+    transition: background 0.15s;
+    -moz-appearance: textfield;
+}
+
+.ssm-starting-cash-input::-webkit-outer-spin-button,
+.ssm-starting-cash-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.ssm-starting-cash-input:focus {
+    background: #eef2ff;
+}
+
+.ssm-starting-cash-input::placeholder {
+    color: #b0b8cc;
+    font-weight: 500;
+}
+
+.ssm-starting-cash-currency {
+    font-size: 15px;
+    font-weight: 700;
+    color: #053796;
 }
 
 .sales-shift-actions {
@@ -500,6 +697,12 @@
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sales-shift-history-card:hover {
+    border-color: #c7d2fe;
+    box-shadow: 0 2px 8px rgba(79, 133, 244, 0.1);
 }
 
 
@@ -667,10 +870,15 @@
     font-size: 0.8125rem;
     color: #94a3b8;
     text-align: center;
-    padding: 1.25rem 0.5rem;
-    border: 1px dashed #cbd5e1;
-    border-radius: 10px;
+    padding: 2rem 1rem;
+    border: 1.5px dashed #d1d8e8;
+    border-radius: 12px;
     background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 /* ——— Növbə detalları modalı — CheckReceiptModal stilinə uyğun ——— */
@@ -705,10 +913,6 @@
     border-bottom: none;
     padding: 14px 20px;
     border-radius: 0 !important;
-    border-top-left-radius: 0 !important;
-    border-top-right-radius: 0 !important;
-    border-bottom-left-radius: 0 !important;
-    border-bottom-right-radius: 0 !important;
     flex-shrink: 0;
     margin: 0;
 }

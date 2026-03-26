@@ -15,6 +15,7 @@ const SalesShiftsModel = db.sequelize.define(
     opened_by_name: { type: DataTypes.TEXT, allowNull: true },
     closed_by_waiter_id: { type: DataTypes.INTEGER, allowNull: true },
     closed_by_name: { type: DataTypes.TEXT, allowNull: true },
+    starting_cash: { type: DataTypes.DECIMAL(12, 2), allowNull: true, defaultValue: 0 },
     report_snapshot: { type: DataTypes.TEXT("long"), allowNull: true },
   },
   {

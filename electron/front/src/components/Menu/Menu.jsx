@@ -9,6 +9,7 @@ import {
 } from "../../redux/Slices/MenuSlice";
 import ManualPriceModal from "../Modals/ManualPriceModal";
 import ModifierModal from "../ModifierModal/ModifierModal";
+import PortionModal from "../PortionModal/PortionModal";
 import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
 
 const Menu = ({
@@ -56,6 +57,12 @@ const Menu = ({
   // Modifier Modal State
   const [showModifierModal, setShowModifierModal] = useState(false);
   const [modifierProduct, setModifierProduct] = useState(null);
+
+  // Portion Modal State (long press)
+  const [showPortionModal, setShowPortionModal] = useState(false);
+  const [portionProduct, setPortionProduct] = useState(null);
+  const longPressTimer = useRef(null);
+  const longPressTriggered = useRef(false);
 
   // Fetch Data - Only if not already present
   useEffect(() => {
@@ -211,6 +218,35 @@ const Menu = ({
     }));
 
     dispatch(addProducts(productWithModifiers));
+  };
+
+  const handlePortionConfirm = (productWithPortion) => {
+    if (orderEditLocked) { toast.error(orderEditLockedToast()); return; }
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    dispatch(saveLog({
+      orderId: order?.uuid,
+      action: "Məhsul əlavə edildi (Porsiya)",
+      waiterName,
+      details: `${productWithPortion.name}${productWithPortion.portion_name ? ` - ${productWithPortion.portion_name}` : ""} - ${parseFloat(productWithPortion.price).toFixed(2)}₼`
+    }));
+    dispatch(addProducts(productWithPortion));
+  };
+
+  const handleLongPressStart = (product) => {
+    if (orderEditLocked) return;
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setPortionProduct(product);
+      setShowPortionModal(true);
+    }, 500);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   // Apply custom ordering
@@ -424,9 +460,15 @@ const Menu = ({
                   onDragLeave={isDragMode ? handleDragLeave : undefined}
                   onDrop={isDragMode ? (e) => handleDrop(e, index) : undefined}
                   onDragEnd={isDragMode ? handleDragEnd : undefined}
-                  onTouchStart={isDragMode ? () => handleTouchStart(index) : undefined}
-                  onTouchMove={isDragMode ? handleTouchMove : undefined}
-                  onTouchEnd={isDragMode ? handleTouchEnd : undefined}
+                  onTouchStart={(e) => {
+                    if (isDragMode) { handleTouchStart(index); return; }
+                  }}
+                  onTouchMove={(e) => {
+                    if (isDragMode) { handleTouchMove(e); return; }
+                  }}
+                  onTouchEnd={(e) => {
+                    if (isDragMode) { handleTouchEnd(); return; }
+                  }}
                   onClick={() => {
                     if (isDragMode) return;
 
@@ -487,6 +529,12 @@ const Menu = ({
         onHide={() => setShowModifierModal(false)}
         product={modifierProduct}
         onConfirm={handleModifierConfirm}
+      />
+      <PortionModal
+        show={showPortionModal}
+        onHide={() => setShowPortionModal(false)}
+        product={portionProduct}
+        onConfirm={handlePortionConfirm}
       />
     </Container>
   );

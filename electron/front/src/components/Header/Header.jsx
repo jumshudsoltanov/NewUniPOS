@@ -22,7 +22,7 @@ import SalesShiftModal from "../Settings/SalesShiftModal";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 import { toast } from "sonner";
 
-const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
+const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNewOrder }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const {
     tableGroups,
@@ -33,6 +33,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
   } = useSelector((state) => state.TablesSlice);
 
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { products: pendingProducts, pendingDeletions } = useSelector((state) => state.OrderSlice);
   const [activeHall, setActiveHall] = useState(null);
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -428,6 +429,12 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false }) => {
                     ref={newOrderBtnRef}
                     className="create-order-btn small-btn"
                     onClick={async () => {
+                      if (onBeforeNewOrder) {
+                        await onBeforeNewOrder();
+                      } else if (location.pathname.startsWith("/check/") && (pendingProducts?.length > 0 || pendingDeletions?.length > 0)) {
+                        toast.warning("Əvvəlcə mövcud məhsulları göndərin (\"Göndər\" düyməsi), sonra yeni sifariş yaradın.");
+                        return;
+                      }
                       const guard = await checkShiftGuard(loginedProfileData);
                       if (guard.blocked) {
                         toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");

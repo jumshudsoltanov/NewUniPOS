@@ -10,7 +10,7 @@ import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { checkShiftGuard } from "../../utils/shiftGuard";
-const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount = 0 }) => {
+const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount = 0, onBeforeCreateOrder }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -29,6 +29,7 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
 
   const handleCreateOrder = async () => {
     setOpenOtherCheckModal(false);
+    if (onBeforeCreateOrder) await onBeforeCreateOrder();
     const guard = await checkShiftGuard(loginedProfileData);
     if (guard.blocked) {
       toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
