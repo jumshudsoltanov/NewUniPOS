@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.1.16",
+  "version": "2.1.19",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -50,8 +50,7 @@
     "asar": true,
     "asarUnpack": [
       "**/*.{node,dll}",
-      "node_modules/electron-updater/**/*",
-      "node_modules/sharp/**/*"
+      "node_modules/electron-updater/**/*"
     ],
     "win": {
       "target": [
@@ -79,21 +78,21 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "electron": "^33.4.11",
+    "electron": "^22.3.27",
     "electron-builder": "^24.13.3",
+    "sharp": "^0.32.6",
     "wait-on": "^9.0.3"
   },
   "dependencies": {
-    "axios": "^1.13.3",
+    "axios": "^1.6.8",
     "cors": "^2.8.6",
     "dotenv": "^16.4.7",
-    "electron-log": "^5.4.3",
-    "electron-updater": "^6.3.9",
+    "electron-log": "^4.4.8",
+    "electron-updater": "^5.3.0",
     "express": "^4.21.2",
-    "mariadb": "^3.4.5",
+    "mariadb": "3.3.2",
     "png-to-ico": "^3.0.1",
     "sequelize": "^6.37.7",
-    "sharp": "^0.34.5",
     "socket.io": "^4.8.3"
   }
 }

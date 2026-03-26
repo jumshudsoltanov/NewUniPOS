@@ -6,9 +6,30 @@
 const path = require("path");
 const fs = require("fs");
 
-const inputPath = path.join(__dirname, "..", "electron", "static", "images", "logo.png");
-const outputPng = path.join(__dirname, "..", "electron", "static", "images", "logo-build.png");
-const outputIco = path.join(__dirname, "..", "electron", "static", "images", "logo-build.ico");
+const inputPath = path.join(
+  __dirname,
+  "..",
+  "electron",
+  "static",
+  "images",
+  "logo.png",
+);
+const outputPng = path.join(
+  __dirname,
+  "..",
+  "electron",
+  "static",
+  "images",
+  "logo-build.png",
+);
+const outputIco = path.join(
+  __dirname,
+  "..",
+  "electron",
+  "static",
+  "images",
+  "logo-build.ico",
+);
 
 const OUT_SIZE = 256;
 /** 256px üçün loqo maksimum tərəf (təxminən CloPOS nisbəti). */
@@ -73,7 +94,8 @@ function findInnerBlueBBox(data, w, h, channels) {
       const p = ny * w + nx;
       if (vis[p]) continue;
       const i = p * channels;
-      if (!isInnerBlue(data[i], data[i + 1], data[i + 2], data[i + 3])) continue;
+      if (!isInnerBlue(data[i], data[i + 1], data[i + 2], data[i + 3]))
+        continue;
       vis[p] = 1;
       stack.push([nx, ny]);
     }
@@ -161,6 +183,14 @@ async function renderIconAtSize(sharp, innerPngBuffer, size) {
 }
 
 async function run() {
+  // İkon artıq mövcuddursa yenidən hazırlamağa ehtiyac yoxdur
+  if (fs.existsSync(outputIco) && fs.existsSync(outputPng)) {
+    console.log(
+      "[prepare-build-icon] logo-build.ico artıq mövcuddur, yenidən yaradılmır.",
+    );
+    return;
+  }
+
   try {
     const sharp = require("sharp");
     const { default: pngToIco } = await import("png-to-ico");
@@ -177,7 +207,9 @@ async function run() {
     let box = findInnerBlueBBox(data, w, h, ch);
     if (!box) {
       box = { left: 500, top: 505, width: 1431, height: 1563 };
-      console.warn("[prepare-build-icon] flood-fill tapılmadı, sabit korp istifadə olunur");
+      console.warn(
+        "[prepare-build-icon] flood-fill tapılmadı, sabit korp istifadə olunur",
+      );
     }
 
     const innerPng = await sharp(inputPath)
@@ -203,7 +235,7 @@ async function run() {
     fs.writeFileSync(outputIco, icoBuf);
 
     console.log(
-      "[prepare-build-icon] logo-build.ico hazırdır (yuvarlaq ağ fon, supersampling, yüksək keyfiyyət)"
+      "[prepare-build-icon] logo-build.ico hazırdır (yuvarlaq ağ fon, supersampling, yüksək keyfiyyət)",
     );
   } catch (e) {
     console.error("[prepare-build-icon]", e.message);

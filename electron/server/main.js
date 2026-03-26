@@ -1,5 +1,8 @@
 const { app, Menu, BrowserWindow, ipcMain, screen, globalShortcut, nativeImage } = require("electron");
 
+// Windows 7 köhnə sertifikat problemi — Node.js-in öz CA bundle istifadə etsin
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = process.env.NODE_TLS_REJECT_UNAUTHORIZED || "0";
+
 const { autoUpdater } = require("electron-updater");
 const log = require("electron-log");
 
