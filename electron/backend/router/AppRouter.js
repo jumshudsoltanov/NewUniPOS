@@ -19,6 +19,8 @@ const AdminController = require("../controller/AdminController");
 // Routers lists
 router.get("/ping", (req, res) => res.json({ success: true }));
 router.post("/admin/reset-local-database", AdminController.resetLocalDatabase);
+router.get("/admin/whatsapp-settings", AdminController.getWhatsappSettings);
+router.post("/admin/whatsapp-settings", AdminController.saveWhatsappSettings);
 router.post("/login", LoginController.getLogin);
 router.get("/orders/:profileId/next-id", SalesController.getNextOrderId);
 router.post("/sale", SalesController.CreateNewOrders);
@@ -29,11 +31,26 @@ router.get("/tables/:profileId", TablesController.getTables);
 router.get("/pos/printers/:profileId", PrintersController.getPrinters);
 router.put("/printers/:id", PrintersController.updatePrinter);
 router.post("/printers/test-print", PrintersController.testPrint);
-router.patch("/profiles/master-printing", PrintersController.toggleMasterPrinting);
-router.patch("/profiles/customer-display", PrintersController.updateCustomerDisplaySettings);
-router.patch("/profiles/customer-receipt-auto", PrintersController.updateCustomerReceiptAutoPrint);
-router.patch("/profiles/sales-shift-required", PrintersController.updateSalesShiftRequired);
-router.patch("/profiles/kitchen-display", KitchenController.updateKitchenDisplaySettings);
+router.patch(
+  "/profiles/master-printing",
+  PrintersController.toggleMasterPrinting,
+);
+router.patch(
+  "/profiles/customer-display",
+  PrintersController.updateCustomerDisplaySettings,
+);
+router.patch(
+  "/profiles/customer-receipt-auto",
+  PrintersController.updateCustomerReceiptAutoPrint,
+);
+router.patch(
+  "/profiles/sales-shift-required",
+  PrintersController.updateSalesShiftRequired,
+);
+router.patch(
+  "/profiles/kitchen-display",
+  KitchenController.updateKitchenDisplaySettings,
+);
 router.get("/kitchen/:profileId/orders", KitchenController.getKitchenOrders);
 router.patch("/kitchen/item/:itemId/status", KitchenController.updateKdsStatus);
 router.get("/waiters/:profileId/list", WaitersController.getWaiterLists);
@@ -46,21 +63,35 @@ router.get("/sale-types/:profileId", SaleTypesController.getSaleTypes);
 router.post("/products", ProductsController.createProduct);
 router.put("/products/:id", ProductsController.updateProduct);
 router.delete("/products/:id", ProductsController.deleteProduct);
-router.put("/general-categories/ordering", OrderingController.generalCategoriesOrdering);
+router.put(
+  "/general-categories/ordering",
+  OrderingController.generalCategoriesOrdering,
+);
 router.put("/categories/ordering", OrderingController.categoriesOrdering);
 router.put("/products/ordering", OrderingController.productsOrdering);
-router.put("/categories/:categoryId/products/ordering", (req, res, next) => {
-  req.body.category_id = req.body.category_id || req.params.categoryId;
-  next();
-}, OrderingController.productsOrdering);
+router.put(
+  "/categories/:categoryId/products/ordering",
+  (req, res, next) => {
+    req.body.category_id = req.body.category_id || req.params.categoryId;
+    next();
+  },
+  OrderingController.productsOrdering,
+);
 // /pos/ prefikslı ordering routes (admin və xarici çağrılar üçün)
-router.put("/pos/general-categories/ordering", OrderingController.generalCategoriesOrdering);
+router.put(
+  "/pos/general-categories/ordering",
+  OrderingController.generalCategoriesOrdering,
+);
 router.put("/pos/categories/ordering", OrderingController.categoriesOrdering);
 router.put("/pos/products/ordering", OrderingController.productsOrdering);
-router.put("/pos/categories/:categoryId/products/ordering", (req, res, next) => {
-  req.body.category_id = req.body.category_id || req.params.categoryId;
-  next();
-}, OrderingController.productsOrdering);
+router.put(
+  "/pos/categories/:categoryId/products/ordering",
+  (req, res, next) => {
+    req.body.category_id = req.body.category_id || req.params.categoryId;
+    next();
+  },
+  OrderingController.productsOrdering,
+);
 
 // Ordered Items Routers
 router.post(
@@ -212,11 +243,26 @@ router.get("/reports/:profileId/terminals", ReportController.getTerminals);
 
 const SalesShiftController = require("../controller/SalesShiftController");
 router.post("/sales-shifts/:profileId/open", SalesShiftController.openShift);
-router.get("/sales-shifts/:profileId/current", SalesShiftController.getCurrentShift);
-router.get("/sales-shifts/:profileId/live-summary", SalesShiftController.getLiveSummary);
-router.post("/sales-shifts/:profileId/:shiftUuid/close", SalesShiftController.closeShift);
-router.get("/sales-shifts/:profileId/history", SalesShiftController.listHistory);
-router.get("/sales-shifts/:profileId/shift/:shiftUuid", SalesShiftController.getShiftByUuid);
+router.get(
+  "/sales-shifts/:profileId/current",
+  SalesShiftController.getCurrentShift,
+);
+router.get(
+  "/sales-shifts/:profileId/live-summary",
+  SalesShiftController.getLiveSummary,
+);
+router.post(
+  "/sales-shifts/:profileId/:shiftUuid/close",
+  SalesShiftController.closeShift,
+);
+router.get(
+  "/sales-shifts/:profileId/history",
+  SalesShiftController.listHistory,
+);
+router.get(
+  "/sales-shifts/:profileId/shift/:shiftUuid",
+  SalesShiftController.getShiftByUuid,
+);
 
 // Assign Customer to Order
 router.patch(
@@ -240,7 +286,11 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     const { getPrinters } = require("../data/PrintersData");
     const { getWaitersList } = require("../data/WaitersData");
     const { getTableGroups, getTables } = require("../data/TablesData");
-    const { getGeneralCategories, getCategories, getProducts } = require("../data/ProductsData");
+    const {
+      getGeneralCategories,
+      getCategories,
+      getProducts,
+    } = require("../data/ProductsData");
     const { getPaymentMethods } = require("../data/PaymentMethodsData");
     const { getTags } = require("../data/TagsData");
     const { getSalesTypes } = require("../data/SalesTypesData");
@@ -271,7 +321,19 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     ]);
 
     const w = { where: { profile_id: profileId } };
-    const [products, categories, generalCategories, tables, tableGroups, waiters, tags, paymentMethods, printers, salesTypes, activeChecks] = await Promise.all([
+    const [
+      products,
+      categories,
+      generalCategories,
+      tables,
+      tableGroups,
+      waiters,
+      tags,
+      paymentMethods,
+      printers,
+      salesTypes,
+      activeChecks,
+    ] = await Promise.all([
       ProductsModel.count(w),
       CategoriesModel.count(w),
       GeneralCategoriesModel.count(w),
@@ -282,12 +344,24 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
       PaymentMethodsModel.count(w),
       PrintersModel.count(w),
       SalesTypesModal.count(w),
-      OrdersModel.count({ where: { profile_id: profileId, status: 1 } })
+      OrdersModel.count({ where: { profile_id: profileId, status: 1 } }),
     ]);
 
     res.json({
       success: true,
-      counts: { products, categories, generalCategories, tables, tableGroups, waiters, tags, paymentMethods, printers, salesTypes, activeChecks }
+      counts: {
+        products,
+        categories,
+        generalCategories,
+        tables,
+        tableGroups,
+        waiters,
+        tags,
+        paymentMethods,
+        printers,
+        salesTypes,
+        activeChecks,
+      },
     });
   } catch (e) {
     console.error("Sync refresh error:", e.message);
@@ -301,21 +375,31 @@ const TaxManager = require("../taxs/TaxManager");
 router.post("/tax/login", async (req, res) => {
   try {
     const { taxConfig, name, password } = req.body;
-    console.log('[TAX] Login request:', { taxConfig: taxConfig?.tax_cash_type, ip: taxConfig?.ip_addr });
+    console.log("[TAX] Login request:", {
+      taxConfig: taxConfig?.tax_cash_type,
+      ip: taxConfig?.ip_addr,
+    });
     const service = TaxManager.getTaxService(taxConfig);
     if (!service) {
-        console.log('[TAX] Device not supported:', taxConfig);
-        return res.status(400).json({ message: "Tax device not supported" });
+      console.log("[TAX] Device not supported:", taxConfig);
+      return res.status(400).json({ message: "Tax device not supported" });
     }
     const result = await service.login(name, password);
-    console.log('[TAX] Login result:', JSON.stringify(result));
+    console.log("[TAX] Login result:", JSON.stringify(result));
 
-    if (result && result.code && String(result.code) !== "0" && String(result.code) !== "1") {
-      return res.status(400).json({ message: result.message || "Login failed" });
+    if (
+      result &&
+      result.code &&
+      String(result.code) !== "0" &&
+      String(result.code) !== "1"
+    ) {
+      return res
+        .status(400)
+        .json({ message: result.message || "Login failed" });
     }
     res.json(result);
   } catch (e) {
-    console.error('[TAX] Login error:', e.message);
+    console.error("[TAX] Login error:", e.message);
     res.status(500).json({ message: e.message });
   }
 });
@@ -324,7 +408,8 @@ router.post("/tax/shift-status", async (req, res) => {
   try {
     const { taxConfig } = req.body;
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
     const result = await service.getShiftStatus();
     res.json(result);
   } catch (e) {
@@ -336,7 +421,8 @@ router.post("/tax/open-shift", async (req, res) => {
   try {
     const { taxConfig } = req.body;
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
     const result = await service.openShift();
     res.json(result);
   } catch (e) {
@@ -348,7 +434,8 @@ router.post("/tax/close-shift", async (req, res) => {
   try {
     const { taxConfig } = req.body;
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
     const result = await service.closeShift();
     res.json(result);
   } catch (e) {
@@ -360,7 +447,8 @@ router.post("/tax/x-report", async (req, res) => {
   try {
     const { taxConfig } = req.body;
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
     const result = await service.getXReport();
     res.json(result);
   } catch (e) {
@@ -372,7 +460,8 @@ router.post("/tax/info", async (req, res) => {
   try {
     const { taxConfig } = req.body;
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
     const result = await service.getInfo();
     res.json(result);
   } catch (e) {
@@ -385,10 +474,14 @@ router.post("/tax/sale", async (req, res) => {
     const { taxConfigs, saleData } = req.body;
     const configs = Array.isArray(taxConfigs) ? taxConfigs : [];
     if (configs.length === 0) {
-      return res.json({ success: false, results: [], message: 'Vergi konfiqurasiyası tapılmadı' });
+      return res.json({
+        success: false,
+        results: [],
+        message: "Vergi konfiqurasiyası tapılmadı",
+      });
     }
     const results = await TaxManager.processSale(configs, saleData);
-    const anySuccess = results.some(r => r.success);
+    const anySuccess = results.some((r) => r.success);
     res.json({ success: anySuccess, results });
   } catch (e) {
     res.status(500).json({ message: e.message });
@@ -398,8 +491,11 @@ router.post("/tax/sale", async (req, res) => {
 router.post("/tax/money-back", async (req, res) => {
   try {
     const { taxConfigs, moneyBackData } = req.body;
-    const results = await TaxManager.processMoneyBack(taxConfigs, moneyBackData);
-    const anySuccess = results.some(r => r.success);
+    const results = await TaxManager.processMoneyBack(
+      taxConfigs,
+      moneyBackData,
+    );
+    const anySuccess = results.some((r) => r.success);
     res.json({ success: anySuccess, results });
   } catch (e) {
     res.status(500).json({ message: e.message });
@@ -410,7 +506,7 @@ router.post("/tax/receipt-copy", async (req, res) => {
   try {
     const { taxConfigs, fiscalId } = req.body;
     const results = await TaxManager.processReceiptCopy(taxConfigs, fiscalId);
-    const anySuccess = results.some(r => r.success);
+    const anySuccess = results.some((r) => r.success);
     res.json({ success: anySuccess, results });
   } catch (e) {
     res.status(500).json({ message: e.message });
@@ -421,7 +517,8 @@ router.post("/tax/reprint-error", async (req, res) => {
   try {
     const { taxConfig } = req.body;
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
     const result = await service.reprintAfterError();
     res.json(result);
   } catch (e) {
@@ -433,15 +530,21 @@ router.post("/tax/periodic-report", async (req, res) => {
   try {
     const { taxConfig, beginDate, endDate } = req.body;
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
 
-    console.log('[TAX] Periodic report request:', { beginDate, endDate });
+    console.log("[TAX] Periodic report request:", { beginDate, endDate });
     const result = await service.getPeriodicReport(beginDate, endDate);
-    console.log('[TAX] Periodic report response:', JSON.stringify(result));
+    console.log("[TAX] Periodic report response:", JSON.stringify(result));
 
     const errCode = Number(result?.error_code || 0);
     if (errCode !== 0) {
-      return res.status(400).json({ message: result.error_message || `Dövri hesabat xətası (code: ${errCode})` });
+      return res
+        .status(400)
+        .json({
+          message:
+            result.error_message || `Dövri hesabat xətası (code: ${errCode})`,
+        });
     }
     res.json(result);
   } catch (e) {
@@ -453,15 +556,22 @@ router.post("/tax/operation-history", async (req, res) => {
   try {
     const { taxConfig, beginDate, endDate } = req.body;
     const service = TaxManager.getTaxService(taxConfig);
-    if (!service) return res.status(400).json({ message: "Tax device not supported" });
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
 
-    console.log('[TAX] Operation history request:', { beginDate, endDate });
+    console.log("[TAX] Operation history request:", { beginDate, endDate });
     const result = await service.getOperationHistory(beginDate, endDate);
-    console.log('[TAX] Operation history response:', JSON.stringify(result));
+    console.log("[TAX] Operation history response:", JSON.stringify(result));
 
     const errCode = Number(result?.error_code || 0);
     if (errCode !== 0) {
-      return res.status(400).json({ message: result.error_message || `Əməliyyat tarixçəsi xətası (code: ${errCode})` });
+      return res
+        .status(400)
+        .json({
+          message:
+            result.error_message ||
+            `Əməliyyat tarixçəsi xətası (code: ${errCode})`,
+        });
     }
     res.json(result);
   } catch (e) {
@@ -472,17 +582,27 @@ router.post("/tax/operation-history", async (req, res) => {
 const OrdersModel = require("../model/OrdersModel");
 
 // Timer Control Routes
-router.patch("/orders-items/:orderId/timer-start", OrdersItemsController.onStartTimer);
-router.patch("/orders-items/:orderId/timer-stop", OrdersItemsController.onStopTimer);
-router.patch("/orders-items/:orderId/timer-reset", OrdersItemsController.onResetTimer);
+router.patch(
+  "/orders-items/:orderId/timer-start",
+  OrdersItemsController.onStartTimer,
+);
+router.patch(
+  "/orders-items/:orderId/timer-stop",
+  OrdersItemsController.onStopTimer,
+);
+router.patch(
+  "/orders-items/:orderId/timer-reset",
+  OrdersItemsController.onResetTimer,
+);
 
 router.patch("/tax/save-fiscal/:orderId", async (req, res) => {
   try {
     const { orderId } = req.params;
-    const { fiscal_id, fiscal_doc_number, fiscal_short_id, tax_cash_id } = req.body;
+    const { fiscal_id, fiscal_doc_number, fiscal_short_id, tax_cash_id } =
+      req.body;
     await OrdersModel.update(
       { fiscal_id, fiscal_doc_number, fiscal_short_id, tax_cash_id },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
     res.json({ success: true });
   } catch (e) {
@@ -510,26 +630,42 @@ router.get("/sync/pending-details", async (req, res) => {
     const OrdersItemsModel = require("../model/OrdersItemsModel");
 
     const pending = await OrdersModel.findAll({
-      where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }] },
+      where: {
+        [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }],
+      },
       paranoid: false,
-      attributes: ["uuid", "status", "is_synced", "profile_id", "table_id", "created_at", "updated_at", "deleted_at"],
+      attributes: [
+        "uuid",
+        "status",
+        "is_synced",
+        "profile_id",
+        "table_id",
+        "created_at",
+        "updated_at",
+        "deleted_at",
+      ],
       order: [["updated_at", "ASC"]],
     });
 
-    const details = await Promise.all(pending.map(async (o) => {
-      const itemCount = await OrdersItemsModel.count({ where: { order_id: o.uuid }, paranoid: false });
-      return {
-        uuid: o.uuid,
-        status: o.status,
-        is_synced: o.is_synced,
-        profile_id: o.profile_id,
-        table_name: o.table_id ? `Masa #${o.table_id}` : 'Masa yoxdur',
-        item_count: itemCount,
-        created_at: o.created_at,
-        updated_at: o.updated_at,
-        is_deleted: !!o.deleted_at,
-      };
-    }));
+    const details = await Promise.all(
+      pending.map(async (o) => {
+        const itemCount = await OrdersItemsModel.count({
+          where: { order_id: o.uuid },
+          paranoid: false,
+        });
+        return {
+          uuid: o.uuid,
+          status: o.status,
+          is_synced: o.is_synced,
+          profile_id: o.profile_id,
+          table_name: o.table_id ? `Masa #${o.table_id}` : "Masa yoxdur",
+          item_count: itemCount,
+          created_at: o.created_at,
+          updated_at: o.updated_at,
+          is_deleted: !!o.deleted_at,
+        };
+      }),
+    );
 
     res.json({ count: details.length, orders: details });
   } catch (e) {
@@ -549,7 +685,7 @@ router.post("/sync/force-now", async (req, res) => {
       {
         where: { is_synced: 2 },
         paranoid: false,
-      }
+      },
     );
 
     // Reset retry counters so nothing is blocked
@@ -558,7 +694,9 @@ router.post("/sync/force-now", async (req, res) => {
     // Trigger immediate sync
     SyncService.syncPendingOrders().catch(() => {});
 
-    res.json({ message: "Force sync triggered (including previously skipped orders)" });
+    res.json({
+      message: "Force sync triggered (including previously skipped orders)",
+    });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -579,10 +717,12 @@ router.post("/sync/clear-stuck", async (req, res) => {
           updated_at: { [Op.lt]: cutoff },
         },
         paranoid: false,
-      }
+      },
     );
 
-    res.json({ message: `Cleared ${updated} stuck orders older than ${olderThanMinutes} minutes` });
+    res.json({
+      message: `Cleared ${updated} stuck orders older than ${olderThanMinutes} minutes`,
+    });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }

@@ -1,5 +1,6 @@
 const { QueryTypes } = require("sequelize");
 const db = require("../database/config");
+const whatsappConfig = require("../bot/whatsapp/whatsappConfig");
 
 /**
  * Cari MariaDB/MySQL verilənlər bazasındakı bütün cədvəlləri TRUNCATE edir (lokal POS məlumatı).
@@ -61,4 +62,35 @@ const resetLocalDatabase = async (req, res) => {
   }
 };
 
-module.exports = { resetLocalDatabase };
+const getWhatsappSettings = async (req, res) => {
+  try {
+    const config = whatsappConfig.readConfig();
+    return res.json({
+      ok: true,
+      denyActions: config.denyActions,
+      denyPrefixes: config.denyPrefixes,
+      defaultDenyActions: whatsappConfig.DEFAULT_DENY_ACTIONS,
+      defaultDenyPrefixes: whatsappConfig.DEFAULT_DENY_PREFIXES,
+    });
+  } catch (err) {
+    console.error("[admin] getWhatsappSettings:", err);
+    return res.status(500).json({ ok: false, message: err.message });
+  }
+};
+
+const saveWhatsappSettings = async (req, res) => {
+  try {
+    const { denyActions, denyPrefixes } = req.body;
+    const saved = whatsappConfig.writeConfig({ denyActions, denyPrefixes });
+    return res.json({ ok: true, ...saved });
+  } catch (err) {
+    console.error("[admin] saveWhatsappSettings:", err);
+    return res.status(500).json({ ok: false, message: err.message });
+  }
+};
+
+module.exports = {
+  resetLocalDatabase,
+  getWhatsappSettings,
+  saveWhatsappSettings,
+};

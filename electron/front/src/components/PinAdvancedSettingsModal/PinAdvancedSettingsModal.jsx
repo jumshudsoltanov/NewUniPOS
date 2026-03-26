@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Modal } from "react-bootstrap";
 import { toast } from "sonner";
 import "../DiscountModal/DiscountModal.css";
@@ -6,13 +6,125 @@ import "../SettingsMenu/SettingsMenu.css";
 import "./PinAdvancedSettingsModal.css";
 import apiConfig from "../../utils/apiConfig";
 
+/**
+ * All known POS actions that generate order logs.
+ * key:   exact action string (or "prefix:..." for prefix-based match)
+ * label: display name in the UI
+ */
+const ALL_ACTIONS = [
+  { key: "prefix:Yeni sifariş yaradıldı", label: "Yeni çek açıldı" },
+  { key: "Çek bağlandı", label: "Çek bağlandı" },
+  { key: "Çek yenidən açıldı", label: "Çek yenidən açıldı" },
+  { key: "Çek silindi", label: "Çek silindi" },
+  { key: "Çeklər birləşdirildi", label: "Çeklər birləşdirildi" },
+  { key: "Çek geri qaytarma", label: "Çek geri qaytarma" },
+  { key: "Çek çap edildi", label: "Çek çap edildi" },
+  { key: "Ön çap çıxarıldı", label: "Ön çap çıxarıldı" },
+  { key: "Qəbz təmizləndi", label: "Qəbz təmizləndi" },
+  { key: "Sifariş göndərildi", label: "Sifariş göndərildi" },
+  { key: "prefix:Məhsul əlavə edildi", label: "Məhsul əlavə edildi" },
+  { key: "Məhsul silindi", label: "Məhsul silindi" },
+  { key: "Məhsullar silindi", label: "Məhsullar silindi" },
+  { key: "Məhsul köçürüldü", label: "Məhsul köçürüldü" },
+  { key: "Məhsul qəbul edildi", label: "Məhsul qəbul edildi" },
+  { key: "Məhsula endirim", label: "Məhsula endirim" },
+  { key: "Miqdar dəyişdirildi", label: "Miqdar dəyişdirildi" },
+  { key: "Qiymət dəyişdirildi", label: "Qiymət dəyişdirildi" },
+  { key: "Endirim dəyişildi", label: "Endirim dəyişildi" },
+  { key: "Servis haqqı dəyişildi", label: "Servis haqqı dəyişildi" },
+  { key: "Masa dəyişildi", label: "Masa dəyişildi" },
+  { key: "Satış növü dəyişildi", label: "Satış növü dəyişildi" },
+  { key: "Ofisiant dəyişildi", label: "Ofisiant dəyişildi" },
+  { key: "Depozit dəyişildi", label: "Depozit dəyişildi" },
+  { key: "Qonaq sayı dəyişdirildi", label: "Qonaq sayı dəyişdirildi" },
+  { key: "Şərh yazıldı", label: "Şərh yazıldı" },
+  { key: "Taymer başladıldı", label: "Taymer başladıldı" },
+  { key: "Taymer dayandırıldı", label: "Taymer dayandırıldı" },
+  { key: "Taymer sıfırlandı", label: "Taymer sıfırlandı" },
+  { key: "prefix:Vergi ", label: "Vergi əməliyyatları" },
+];
+
+/** Check if an action key is in the deny lists */
+function isActionDenied(key, denyActions, denyPrefixes) {
+  if (key.startsWith("prefix:")) {
+    const prefix = key.slice(7);
+    return denyPrefixes.includes(prefix);
+  }
+  return denyActions.includes(key);
+}
+
 const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
   const [resettingDb, setResettingDb] = useState(false);
   const [showDbResetConfirm, setShowDbResetConfirm] = useState(false);
 
+  // WhatsApp settings state
+  const [showWhatsapp, setShowWhatsapp] = useState(false);
+  const [waLoading, setWaLoading] = useState(false);
+  const [waSaving, setWaSaving] = useState(false);
+  const [denyActions, setDenyActions] = useState([]);
+  const [denyPrefixes, setDenyPrefixes] = useState([]);
+
   useEffect(() => {
-    if (!show) setShowDbResetConfirm(false);
+    if (!show) {
+      setShowDbResetConfirm(false);
+      setShowWhatsapp(false);
+    }
   }, [show]);
+
+  const loadWhatsappSettings = useCallback(async () => {
+    setWaLoading(true);
+    try {
+      const { data } = await apiConfig.get("/admin/whatsapp-settings");
+      if (data?.ok) {
+        setDenyActions(data.denyActions || []);
+        setDenyPrefixes(data.denyPrefixes || []);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("WhatsApp ayarları yüklənə bilmədi");
+    } finally {
+      setWaLoading(false);
+    }
+  }, []);
+
+  const handleOpenWhatsapp = () => {
+    setShowWhatsapp(true);
+    loadWhatsappSettings();
+  };
+
+  const toggleAction = (actionKey) => {
+    if (actionKey.startsWith("prefix:")) {
+      const prefix = actionKey.slice(7);
+      setDenyPrefixes((prev) =>
+        prev.includes(prefix) ? prev.filter((p) => p !== prefix) : [...prev, prefix]
+      );
+    } else {
+      setDenyActions((prev) =>
+        prev.includes(actionKey) ? prev.filter((a) => a !== actionKey) : [...prev, actionKey]
+      );
+    }
+  };
+
+  const handleSaveWhatsapp = async () => {
+    setWaSaving(true);
+    try {
+      const { data } = await apiConfig.post("/admin/whatsapp-settings", {
+        denyActions,
+        denyPrefixes,
+      });
+      if (data?.ok) {
+        toast.success("WhatsApp ayarları saxlanıldı");
+        setShowWhatsapp(false);
+      } else {
+        toast.error(data?.message || "Saxlama xətası");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("WhatsApp ayarları saxlanıla bilmədi");
+    } finally {
+      setWaSaving(false);
+    }
+  };
 
   const handleOpenDevtools = async () => {
     if (!window.electronAPI?.openDevToolsDetached) {
@@ -60,6 +172,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
   };
 
   const handleModalHide = () => {
+    if (showWhatsapp) {
+      setShowWhatsapp(false);
+      return;
+    }
     if (showDbResetConfirm) {
       setShowDbResetConfirm(false);
       return;
@@ -72,20 +188,33 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
     onExitTerminal?.();
   };
 
+  // Determine current view
+  const currentView = showWhatsapp ? "whatsapp" : showDbResetConfirm ? "dbReset" : "main";
+
+  const headerTitle = currentView === "whatsapp"
+    ? "WhatsApp mesajları"
+    : currentView === "dbReset"
+      ? "Databaseni sıfırla"
+      : "Ayarlar";
+
   return (
     <Modal
       show={show}
       onHide={handleModalHide}
       centered
       animation={false}
-      dialogClassName="custom-modal-width"
+      dialogClassName={`custom-modal-width${currentView === "whatsapp" ? " pin-advanced-wa-wide" : ""}`}
       contentClassName="custom-modal-content"
     >
       <div className="discount-modal-container">
         <div className="discount-header">
           <div className="header-left">
             <div className="header-icon">
-              {showDbResetConfirm ? (
+              {currentView === "whatsapp" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </svg>
+              ) : currentView === "dbReset" ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -93,43 +222,71 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                   <line x1="14" y1="11" x2="14" y2="17" />
                 </svg>
               ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#053796"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3" />
                   <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
                 </svg>
               )}
             </div>
-            <span className="header-title">{showDbResetConfirm ? "Databaseni sıfırla" : "Ayarlar"}</span>
+            <span className="header-title">{headerTitle}</span>
           </div>
           <button type="button" className="close-btn" onClick={handleModalHide}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
 
-        {showDbResetConfirm ? (
+        {currentView === "whatsapp" ? (
+          <div className="discount-body wa-settings-body">
+            {waLoading ? (
+              <div className="wa-settings-loading">Yüklənir...</div>
+            ) : (
+              <>
+                <p className="wa-settings-hint">
+                  Aktiv olan əməliyyatlar WhatsApp-a göndəriləcək.
+                </p>
+                <div className="wa-settings-list">
+                  {ALL_ACTIONS.map((item) => {
+                    const denied = isActionDenied(item.key, denyActions, denyPrefixes);
+                    const enabled = !denied;
+                    return (
+                      <div
+                        key={item.key}
+                        className={`wa-settings-row ${enabled ? "wa-on" : "wa-off"}`}
+                        onClick={() => toggleAction(item.key)}
+                      >
+                        <span className="wa-settings-label">{item.label}</span>
+                        <div className={`wa-toggle ${enabled ? "wa-toggle-on" : ""}`}>
+                          <div className="wa-toggle-thumb" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="wa-settings-actions">
+                  <button
+                    type="button"
+                    className="delete-all-btn wa-settings-cancel"
+                    onClick={() => setShowWhatsapp(false)}
+                    disabled={waSaving}
+                  >
+                    Geri
+                  </button>
+                  <button
+                    type="button"
+                    className="apply-btn wa-settings-save"
+                    onClick={handleSaveWhatsapp}
+                    disabled={waSaving}
+                  >
+                    {waSaving ? "Saxlanılır..." : "Yadda saxla"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : currentView === "dbReset" ? (
           <div className="discount-body pin-advanced-reset-confirm-body">
             <p className="pin-advanced-reset-confirm-text">
               Bütün lokal verilənlər bazası silinəcək (masalar, sifarişlər, menyu surəti və s.).
@@ -155,53 +312,66 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
             </div>
           </div>
         ) : (
-        <div className="discount-body pin-advanced-settings-body">
-          <div className="settings-menu-items pin-advanced-settings-items">
-            <button
-              type="button"
-              className="settings-menu-item danger"
-              onClick={handleExitTerminal}
-            >
-              <span className="settings-menu-item-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-              </span>
-              <span className="settings-menu-item-label">Terminaldan çıx</span>
-            </button>
+          <div className="discount-body pin-advanced-settings-body">
+            <div className="settings-menu-items pin-advanced-settings-items">
+              <button
+                type="button"
+                className="settings-menu-item"
+                onClick={handleOpenWhatsapp}
+              >
+                <span className="settings-menu-item-icon" style={{ color: "#25D366" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">WhatsApp mesajları</span>
+              </button>
 
-            <button
-              type="button"
-              className="settings-menu-item danger"
-              onClick={handleAskResetDatabase}
-              disabled={resettingDb}
-            >
-              <span className="settings-menu-item-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  <line x1="10" y1="11" x2="10" y2="17" />
-                  <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
-              </span>
-              <span className="settings-menu-item-label">
-                {resettingDb ? "Sıfırlanır..." : "Databaseni sıfırla"}
-              </span>
-            </button>
+              <button
+                type="button"
+                className="settings-menu-item danger"
+                onClick={handleExitTerminal}
+              >
+                <span className="settings-menu-item-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Terminaldan çıx</span>
+              </button>
 
-            <button type="button" className="settings-menu-item" onClick={handleOpenDevtools}>
-              <span className="settings-menu-item-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="16 18 22 12 16 6" />
-                  <polyline points="8 6 2 12 8 18" />
-                </svg>
-              </span>
-              <span className="settings-menu-item-label">Devtools açmaq</span>
-            </button>
+              <button
+                type="button"
+                className="settings-menu-item danger"
+                onClick={handleAskResetDatabase}
+                disabled={resettingDb}
+              >
+                <span className="settings-menu-item-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">
+                  {resettingDb ? "Sıfırlanır..." : "Databaseni sıfırla"}
+                </span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={handleOpenDevtools}>
+                <span className="settings-menu-item-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Devtools açmaq</span>
+              </button>
+            </div>
           </div>
-        </div>
         )}
       </div>
     </Modal>

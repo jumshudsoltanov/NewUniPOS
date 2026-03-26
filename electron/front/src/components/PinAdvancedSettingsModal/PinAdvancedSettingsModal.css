@@ -1,3 +1,8 @@
+/* WhatsApp view — wider modal */
+.pin-advanced-wa-wide.custom-modal-width {
+    max-width: 460px !important;
+}
+
 /* Endirim modalı gövdəsi + kontrol paneli sətirləri — yalnız boşluq tənzimləməsi */
 .pin-advanced-settings-body {
     padding: 16px 12px 20px !important;
@@ -57,4 +62,128 @@
 
 .pin-advanced-reset-confirm-btn.apply-btn:hover {
     background-color: #991b1b;
+}
+
+/* ═══ WhatsApp settings ═══ */
+.wa-settings-body {
+    padding: 16px 16px 20px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.wa-settings-loading {
+    text-align: center;
+    padding: 40px 0;
+    color: #888;
+    font-size: 14px;
+}
+
+.wa-settings-hint {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.wa-settings-list {
+    max-height: 380px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.wa-settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s;
+}
+
+.wa-settings-row:hover {
+    background-color: #f3f4f6;
+}
+
+.wa-settings-row.wa-off {
+    opacity: 0.55;
+}
+
+.wa-settings-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Toggle switch */
+.wa-toggle {
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background-color: #d1d5db;
+    position: relative;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+}
+
+.wa-toggle-on {
+    background-color: #053796;
+}
+
+.wa-toggle-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.wa-toggle-on .wa-toggle-thumb {
+    transform: translateX(18px);
+}
+
+/* Action buttons */
+.wa-settings-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.wa-settings-cancel.delete-all-btn {
+    flex: 1;
+    width: auto !important;
+    min-width: 0;
+    height: 48px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.wa-settings-save.apply-btn {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    font-size: 15px;
+    font-weight: 600;
+    background-color: #053796;
+    box-shadow: 0 4px 6px rgba(5, 55, 150, 0.25);
+}
+
+.wa-settings-save.apply-btn:hover {
+    background-color: #042a75;
+}
+
+.wa-settings-save.apply-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
 }

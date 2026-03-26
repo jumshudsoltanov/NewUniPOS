@@ -15,36 +15,20 @@ function getWpbotUser() {
   return process.env.WPBOT_USER || DEFAULT_WPBOT_USER;
 }
 
-/** Məhsul əlavə, göndər və səs-küylü əməliyyatlar — WhatsApp göndərilməsin */
-const WHATSAPP_EXACT_DENY = new Set([
-  "Sifariş göndərildi",
-  "Taymer başladıldı",
-  "Taymer dayandırıldı",
-  "Taymer sıfırlandı",
-  "Ön çap çıxarıldı",
-  "Çek çap edildi",
-  "Miqdar dəyişdirildi",
-  "Qiymət dəyişdirildi",
-  "Məhsula endirim",
-  "Şərh yazıldı",
-  "Məhsul qəbul edildi",
-]);
+const { isActionDenied } = require("./whatsappConfig");
 
 /**
  * @param {string} [action]
  * @returns {boolean} true = WhatsApp göndərmə
  */
 function shouldSkipWhatsapp(action) {
-  if (!action || typeof action !== "string") return true;
-  const a = action.trim();
-  if (WHATSAPP_EXACT_DENY.has(a)) return true;
-  if (a.startsWith("Məhsul əlavə edildi")) return true;
-  if (a.startsWith("Vergi ")) return true;
-  return false;
+  return isActionDenied(action);
 }
 
 function isWhatsappDebug() {
-  return process.env.WHATSAPP_DEBUG === "1" || process.env.WHATSAPP_DEBUG === "true";
+  return (
+    process.env.WHATSAPP_DEBUG === "1" || process.env.WHATSAPP_DEBUG === "true"
+  );
 }
 
 function logWhatsappDebug(msg, extra) {
@@ -87,9 +71,14 @@ function buildWhatsappMessage({
     timeStyle: "medium",
   });
 
-  const rest = restaurantName && String(restaurantName).trim() ? String(restaurantName).trim() : "Naməlum";
+  const rest =
+    restaurantName && String(restaurantName).trim()
+      ? String(restaurantName).trim()
+      : "Naməlum";
   const term =
-    terminalId != null && String(terminalId).trim() !== "" ? String(terminalId).trim() : "Naməlum";
+    terminalId != null && String(terminalId).trim() !== ""
+      ? String(terminalId).trim()
+      : "Naməlum";
 
   const lines = [
     "🔔 *POS — əməliyyat jurnalı*",
@@ -134,7 +123,12 @@ async function sendBulkMessage(receiver, message) {
   ];
 
   const url = getWpbotUrl();
-  logWhatsappDebug("POST", { url, user: getWpbotUser(), receiver: clean, len: message.length });
+  logWhatsappDebug("POST", {
+    url,
+    user: getWpbotUser(),
+    receiver: clean,
+    len: message.length,
+  });
 
   try {
     const response = await axios.post(url, payload, {
@@ -183,7 +177,8 @@ async function notifyOrderLogWhatsapp({
     return;
   }
 
-  let resolvedProfileId = profileId != null && profileId !== "" ? Number(profileId) : null;
+  let resolvedProfileId =
+    profileId != null && profileId !== "" ? Number(profileId) : null;
   if (Number.isNaN(resolvedProfileId)) resolvedProfileId = null;
 
   const order = await OrdersModel.findOne({
@@ -212,7 +207,9 @@ async function notifyOrderLogWhatsapp({
   }
 
   if (resolvedProfileId == null || Number.isNaN(resolvedProfileId)) {
-    logWhatsappDebug("skip: profileId tapılmadı (body və sifarişdə yoxdur)", { orderId });
+    logWhatsappDebug("skip: profileId tapılmadı (body və sifarişdə yoxdur)", {
+      orderId,
+    });
     return;
   }
 
@@ -226,7 +223,10 @@ async function notifyOrderLogWhatsapp({
     (waNumberBody != null && String(waNumberBody).trim() !== "");
 
   if (!profile && !hasWaInBody) {
-    logWhatsappDebug("skip: profil DB-də yoxdur və bodidə WhatsApp sahələri yoxdur", { resolvedProfileId });
+    logWhatsappDebug(
+      "skip: profil DB-də yoxdur və bodidə WhatsApp sahələri yoxdur",
+      { resolvedProfileId },
+    );
     console.warn(
       "[WhatsApp] SKIP: lokal profiles cədvəlində id=",
       resolvedProfileId,
@@ -236,7 +236,8 @@ async function notifyOrderLogWhatsapp({
   }
 
   const notifyFromBody = waNotifyBody !== undefined && waNotifyBody !== null;
-  const numberFromBody = waNumberBody != null && String(waNumberBody).trim() !== "";
+  const numberFromBody =
+    waNumberBody != null && String(waNumberBody).trim() !== "";
 
   const notifyOn = notifyFromBody
     ? normalizeNotifyFlag(waNotifyBody) === 1
@@ -263,8 +264,12 @@ async function notifyOrderLogWhatsapp({
     return;
   }
   if (!chatNumber) {
-    logWhatsappDebug("skip: whatsapp_chat_number boşdur", { resolvedProfileId });
-    console.warn("[WhatsApp] SKIP: whatsapp_chat_number boşdur (body və DB)", { profileId: resolvedProfileId });
+    logWhatsappDebug("skip: whatsapp_chat_number boşdur", {
+      resolvedProfileId,
+    });
+    console.warn("[WhatsApp] SKIP: whatsapp_chat_number boşdur (body və DB)", {
+      profileId: resolvedProfileId,
+    });
     return;
   }
 
@@ -277,7 +282,8 @@ async function notifyOrderLogWhatsapp({
   const restaurantName =
     restaurantNameBody != null && String(restaurantNameBody).trim() !== ""
       ? String(restaurantNameBody).trim()
-      : profile?.restaurant_name != null && String(profile.restaurant_name).trim() !== ""
+      : profile?.restaurant_name != null &&
+          String(profile.restaurant_name).trim() !== ""
         ? String(profile.restaurant_name).trim()
         : "Naməlum";
 
@@ -296,7 +302,8 @@ async function notifyOrderLogWhatsapp({
     tableLabel = [hallName, tableName].filter(Boolean).join(" — ") || "";
   }
 
-  const orderDisplayId = order?.id != null ? String(order.id) : String(orderId).slice(0, 8);
+  const orderDisplayId =
+    order?.id != null ? String(order.id) : String(orderId).slice(0, 8);
 
   const message = buildWhatsappMessage({
     action,

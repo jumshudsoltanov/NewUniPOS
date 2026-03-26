@@ -1,0 +1,20 @@
+{
+  "denyActions": [
+    "Sifariş göndərildi",
+    "Taymer başladıldı",
+    "Taymer dayandırıldı",
+    "Taymer sıfırlandı",
+    "Ön çap çıxarıldı",
+    "Çek çap edildi",
+    "Miqdar dəyişdirildi",
+    "Qiymət dəyişdirildi",
+    "Məhsula endirim",
+    "Şərh yazıldı",
+    "Məhsul qəbul edildi"
+  ],
+  "denyPrefixes": [
+    "Məhsul əlavə edildi",
+    "Vergi ",
+    "Yeni sifariş yaradıldı"
+  ]
+}
