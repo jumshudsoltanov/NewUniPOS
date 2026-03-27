@@ -1,6 +1,6 @@
 import { Container, Modal, Form, Row, Col, Spinner } from "react-bootstrap";
 import "./Checks.css";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getActiveOrders, getArchivedOrders } from "../../redux/Slices/BooksSlice";
 import { getWaitersList } from "../../redux/Slices/WaitersSlice";
@@ -10,6 +10,7 @@ import CheckDetailModal from "./CheckDetailModal";
 import { toast } from "sonner";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { computeOrderCardDisplayAmount } from "../../utils/orderDisplayTotal";
+import { getSocket } from "../../utils/apiConfig";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -137,6 +138,33 @@ const Checks = () => {
       dispatch(getWaitersList(profileId));
       dispatch(getTableGroups(profileId));
     }
+  }, [profileId, dispatch]);
+
+  // Real-time socket sync: başqa terminaldan çek silinəndə/bağlananda siyahını yenilə
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket || !profileId) return;
+
+    const refreshOpenOrders = async () => {
+      if (activeTabRef.current !== "open") return;
+      try {
+        const result = await dispatch(getActiveOrders({ profileId, silentRefresh: true })).unwrap();
+        setOpenOrders(result.data || []);
+      } catch (e) { /* silent */ }
+    };
+
+    socket.on("order_deleted", refreshOpenOrders);
+    socket.on("order_closed", refreshOpenOrders);
+    socket.on("table_updated", refreshOpenOrders);
+
+    return () => {
+      socket.off("order_deleted", refreshOpenOrders);
+      socket.off("order_closed", refreshOpenOrders);
+      socket.off("table_updated", refreshOpenOrders);
+    };
   }, [profileId, dispatch]);
 
   const waiters = useMemo(() => waitersLists?.data || [], [waitersLists]);

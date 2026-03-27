@@ -170,6 +170,17 @@ const initMasterServer = (server, isBroadcastingActive = true) => {
             cb(false);
         });
 
+        // Başqa terminal bu çeki açıqdırmı yoxlama (Tables.jsx-dən giriş bloku üçün)
+        socket.on("check_is_open_by_other", (data, cb) => {
+            const orderId = data?.orderId;
+            if (!orderId || typeof cb !== "function") return cb?.(false);
+            const set = openChecksMap.get(orderId);
+            if (!set || set.size === 0) return cb(false);
+            // Yalnız bu socket-dən başqa biri açıqdırsa true qaytar
+            const othersHaveIt = [...set].some(sid => sid !== socket.id);
+            cb(othersHaveIt);
+        });
+
         // Pin yeniləmə: bir terminal yeniləyəndə digər terminallara (Slave) bildir
         socket.on("pin_refresh", (data) => {
             const profileId = data?.profileId;

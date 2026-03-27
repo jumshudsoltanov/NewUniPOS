@@ -327,6 +327,8 @@ const Check = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const [isSending, setIsSending] = useState(false);
+  const isSendingRef = useRef(false);
+  const isExitingRef = useRef(false);
   const [hadOrderItems, setHadOrderItems] = useState(false);
   const {
     pendingCount: syncCount,
@@ -352,8 +354,8 @@ const Check = () => {
   }, [id, dispatch]);
 
   const goTables = async (skipRefresh = false, replace = false) => {
-    // isNew məhsullar varsa — çıxmadan əvvəl avtomatik göndər
-    if (!orderEditLocked && (products.length > 0 || pendingDeletions.length > 0)) {
+    // isNew məhsullar varsa — çıxmadan əvvəl avtomatik göndər (yalnız isExiting deyilsə)
+    if (!orderEditLocked && !isExitingRef.current && (products.length > 0 || pendingDeletions.length > 0)) {
       try {
         await handleSendOrders();
       } catch (e) {
@@ -375,6 +377,7 @@ const Check = () => {
 
   const handleSendOrders = async (itemComments = {}) => {
     try {
+      if (isSendingRef.current) return;
       if (orderEditLocked) {
         toast.error(orderEditLockedToast());
         return;
@@ -421,6 +424,7 @@ const Check = () => {
         return;
       }
 
+      isSendingRef.current = true;
       setIsSending(true);
 
       if (hasDeletions) {
@@ -588,6 +592,7 @@ const Check = () => {
       console.error(e);
       toast.error("Xəta baş verdi");
     } finally {
+      isSendingRef.current = false;
       setIsSending(false);
     }
   };
@@ -600,6 +605,8 @@ const Check = () => {
   };
 
   async function handleAutoSaveAndExit(targetPath) {
+    if (isExitingRef.current || isSendingRef.current) return;
+    isExitingRef.current = true;
     const resultingItemCount = (currentOrder?.orders_items?.length || 0) - (pendingDeletions?.length || 0) + (products?.length || 0);
     const profileHasTimer = Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1;
     const hasTimerOnTable = effectiveHourlyPrice > 0 && profileHasTimer;
@@ -651,10 +658,14 @@ const Check = () => {
       if (isMasterSlaveActive) {
         const socket = getSocket();
         if (socket) {
-          doNavigate(true);
           socket.emit("check_can_delete", { orderId }, (canDelete) => {
-            if (canDelete) tryDelete();
-            else toast.info("Masa başqa terminalda açıq olduğu üçün silinmədi.");
+            if (canDelete) {
+              doNavigate(true);
+              tryDelete();
+            } else {
+              // Başqa terminal bu masada açıqdır — silmə, sadəcə çıx
+              doNavigate(false);
+            }
           });
           return;
         }
@@ -1603,6 +1614,9 @@ const Check = () => {
                             items: currentOrder?.orders_items || [],
                             checkData: {
                               ...currentOrder,
+                              orderId: currentOrder?.id,
+                              startDate: currentOrder?.start_date,
+                              endDate: currentOrder?.end_date,
                               customer_name: selectedCustomer?.name || currentOrder?.customer_name || "",
                               waiter_name: orderWaiter,
                               waiter: orderWaiter ? { name: orderWaiter } : currentOrder?.waiter

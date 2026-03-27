@@ -96,7 +96,7 @@ const ReportModal = ({ show, onClose }) => {
         { id: "customers", name: "Müştərilər" },
     ];
 
-    const [cashierPrinter, setCashierPrinter] = useState(null);
+    const [cashierPrinters, setCashierPrinters] = useState([]);
 
     useEffect(() => {
         if (show && profileId) {
@@ -132,7 +132,7 @@ const ReportModal = ({ show, onClose }) => {
             const response = await axios.get(`/pos/printers/${profileId}`);
             if (response.data?.data) {
                 const list = resolveCashierPrintersForPrint(response.data.data);
-                if (list.length) setCashierPrinter(list[0]);
+                setCashierPrinters(list);
             }
         } catch (e) {}
     };
@@ -178,37 +178,39 @@ const ReportModal = ({ show, onClose }) => {
             ${clone.innerHTML}
         `;
 
-        if (window.electronAPI?.printReceipt && cashierPrinter) {
-            const connType = cashierPrinter.connection_type;
-            const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
-            const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
-            const printerSettings = {
-                paper_size: cashierPrinter.paper_size || '80',
-                cut_mode: cashierPrinter.cut_mode || 'full',
-                sound_notify: cashierPrinter.sound_notify || 0,
-                cash_drawer: cashierPrinter.cash_drawer || 0,
-                encoding: cashierPrinter.encoding || 'utf8',
-                copies: cashierPrinter.copies || 1,
-                darkness: cashierPrinter.darkness || 5,
-                trailing_space: cashierPrinter.trailing_space || 0,
-                receipt_header: cashierPrinter.receipt_header || null,
-                receipt_footer: cashierPrinter.receipt_footer || null,
-                bold_header: cashierPrinter.bold_header || 0,
-                double_height_header: cashierPrinter.double_height_header || 0,
-                font_family: cashierPrinter.font_family || 'Arial',
-                fast_print: cashierPrinter.fast_print ? 1 : 0,
-                print_logo: cashierPrinter.print_logo != null ? Number(cashierPrinter.print_logo) : 1,
-                rotate_180: cashierPrinter.rotate_180 ? 1 : 0,
-                usb_name: hasUsbName ? cashierPrinter.usb_name : null,
-            };
-            let payload;
-            if (isNetwork && cashierPrinter.ip && !hasUsbName) {
-                payload = { html, printerName: "", printerIp: String(cashierPrinter.ip), printerPort: Number(cashierPrinter.port) || 9100, printerSettings };
-            } else {
-                const targetPrinter = hasUsbName ? cashierPrinter.usb_name : (cashierPrinter.local_name || cashierPrinter.name);
-                payload = { html, printerName: String(targetPrinter || ""), printerSettings };
+        if (window.electronAPI?.printReceipt && cashierPrinters.length) {
+            for (const cashierPrinter of cashierPrinters) {
+                const connType = cashierPrinter.connection_type;
+                const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
+                const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
+                const printerSettings = {
+                    paper_size: cashierPrinter.paper_size || '80',
+                    cut_mode: cashierPrinter.cut_mode || 'full',
+                    sound_notify: cashierPrinter.sound_notify || 0,
+                    cash_drawer: cashierPrinter.cash_drawer || 0,
+                    encoding: cashierPrinter.encoding || 'utf8',
+                    copies: cashierPrinter.copies || 1,
+                    darkness: cashierPrinter.darkness || 5,
+                    trailing_space: cashierPrinter.trailing_space || 0,
+                    receipt_header: cashierPrinter.receipt_header || null,
+                    receipt_footer: cashierPrinter.receipt_footer || null,
+                    bold_header: cashierPrinter.bold_header || 0,
+                    double_height_header: cashierPrinter.double_height_header || 0,
+                    font_family: cashierPrinter.font_family || 'Arial',
+                    fast_print: cashierPrinter.fast_print ? 1 : 0,
+                    print_logo: cashierPrinter.print_logo != null ? Number(cashierPrinter.print_logo) : 1,
+                    rotate_180: cashierPrinter.rotate_180 ? 1 : 0,
+                    usb_name: hasUsbName ? cashierPrinter.usb_name : null,
+                };
+                let payload;
+                if (isNetwork && cashierPrinter.ip && !hasUsbName) {
+                    payload = { html, printerName: "", printerIp: String(cashierPrinter.ip), printerPort: Number(cashierPrinter.port) || 9100, printerSettings };
+                } else {
+                    const targetPrinter = hasUsbName ? cashierPrinter.usb_name : (cashierPrinter.local_name || cashierPrinter.name);
+                    payload = { html, printerName: String(targetPrinter || ""), printerSettings };
+                }
+                await window.electronAPI.printReceipt(payload);
             }
-            await window.electronAPI.printReceipt(payload);
         } else {
             window.print();
         }

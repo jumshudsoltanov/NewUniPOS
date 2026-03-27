@@ -167,8 +167,9 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             items: mappedItems,
             checkData: {
                 ...order,
-                orderId: order.id, // Display ID
+                orderId: order.id,
                 startDate: order.start_date,
+                endDate: order.end_date,
                 waiter_name: order.waiter?.name || order.waiter_name,
                 payments: mappedPayments
             },

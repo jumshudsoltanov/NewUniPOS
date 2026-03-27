@@ -63,6 +63,7 @@ const Menu = ({
   const [portionProduct, setPortionProduct] = useState(null);
   const longPressTimer = useRef(null);
   const longPressTriggered = useRef(false);
+  const lastProductClickTime = useRef(0); // ikili məhsul əlavəsinin qarşısını alır
 
   // Fetch Data - Only if not already present
   useEffect(() => {
@@ -154,7 +155,15 @@ const Menu = ({
       return;
     }
 
-    if (product.modifier_groups && product.modifier_groups.length > 0) {
+    const getModifierGroups = (prod) => {
+      if (!prod?.modifier_groups) return [];
+      if (Array.isArray(prod.modifier_groups)) return prod.modifier_groups;
+      if (typeof prod.modifier_groups === 'string') {
+        try { return JSON.parse(prod.modifier_groups) || []; } catch { return []; }
+      }
+      return [];
+    };
+    if (getModifierGroups(product).length > 0) {
       setModifierProduct(product);
       setShowModifierModal(true);
       return;

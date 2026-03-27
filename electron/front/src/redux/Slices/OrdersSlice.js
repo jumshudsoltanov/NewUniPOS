@@ -1029,11 +1029,24 @@ export const OrderSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Log Sending Orders
+      // Göndərmə başlayanda products-u sentProducts-a köçür:
+      // Bu race condition-ı aradan qaldırır — getActiveOrders orders_items-i yenilədikdə
+      // products hələ doluyursa eyni məhsul 2 dəfə göstərilirdi.
+      .addCase(sendOrdersItems.pending, (state) => {
+        state.sentProducts = [...state.products];
+        state.products = [];
+        state.loading = true;
+      })
       .addCase(sendOrdersItems.fulfilled, (state, action) => {
         state.loading = false;
         state.products = [];
         state.sentProducts = [];
+      })
+      .addCase(sendOrdersItems.rejected, (state) => {
+        // Göndərmə uğursuz oldu — sentProducts-u geri qaytart ki istifadəçi yenidən cəhd edə bilsin
+        state.products = [...state.sentProducts, ...state.products];
+        state.sentProducts = [];
+        state.loading = false;
       })
       .addCase(getTableGroups.fulfilled, (state, action) => {
         state.sentProducts = [];

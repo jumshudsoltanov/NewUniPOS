@@ -75,38 +75,49 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     const socket = getSocket();
     if (!socket) return;
 
-    // Aggregate all items
-    const allItems = [];
+    // Məhsulları birləşdir: orders_items əsas, products üstünə toplanır (duplikat olmasın)
+    const groupedMap = new Map();
 
-    // 1. Items already in the check (sent)
     if (orders?.orders_items) {
       orders.orders_items.forEach(item => {
-        allItems.push({
-          name: item.name || item.product_name || item.product?.name || "Məhsul",
-          price: item.price,
-          qty: item.count || item.quantity,
-          unit: item.unit || "əd.",
-          modifiers: item.modifiers || [],
-          discount: item.discount || 0,
-          is_discount_percent: item.is_discount_percent || 0
-        });
+        const key = `${item.product_id || item.id}-${parseFloat(item.price || 0).toFixed(2)}-${JSON.stringify(item.modifiers || [])}`;
+        if (groupedMap.has(key)) {
+          groupedMap.get(key).qty += Number(item.count || item.quantity || 1);
+        } else {
+          groupedMap.set(key, {
+            name: item.name || item.product_name || item.product?.name || "Məhsul",
+            price: item.price,
+            qty: Number(item.count || item.quantity || 1),
+            unit: item.unit || "əd.",
+            modifiers: item.modifiers || [],
+            discount: item.discount || 0,
+            is_discount_percent: item.is_discount_percent || 0
+          });
+        }
       });
     }
 
-    // 2. New products added but not yet sent
+    // Yalnız serverdə olmayan (isNew) məhsulları əlavə et
     if (products) {
       products.forEach(item => {
-        allItems.push({
-          name: item.name || item.product_name || item.product?.name || "Məhsul",
-          price: item.price,
-          qty: item.count || item.quantity,
-          unit: item.unit || "əd.",
-          modifiers: item.modifiers || [],
-          discount: item.discount || 0,
-          is_discount_percent: item.is_discount_percent || 0
-        });
+        const key = `${item.product_id || item.id}-${parseFloat(item.price || 0).toFixed(2)}-${JSON.stringify(item.modifiers || [])}`;
+        if (groupedMap.has(key)) {
+          groupedMap.get(key).qty += Number(item.count || item.quantity || 1);
+        } else {
+          groupedMap.set(key, {
+            name: item.name || item.product_name || item.product?.name || "Məhsul",
+            price: item.price,
+            qty: Number(item.count || item.quantity || 1),
+            unit: item.unit || "əd.",
+            modifiers: item.modifiers || [],
+            discount: item.discount || 0,
+            is_discount_percent: item.is_discount_percent || 0
+          });
+        }
       });
     }
+
+    const allItems = Array.from(groupedMap.values());
 
     socket.emit("broadcast_customer_display", {
       items: allItems,

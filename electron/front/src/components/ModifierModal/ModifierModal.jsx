@@ -19,11 +19,21 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
         };
     };
 
+    const getModifierGroups = (prod) => {
+        if (!prod?.modifier_groups) return [];
+        if (Array.isArray(prod.modifier_groups)) return prod.modifier_groups;
+        if (typeof prod.modifier_groups === 'string') {
+            try { return JSON.parse(prod.modifier_groups) || []; } catch { return []; }
+        }
+        return [];
+    };
+
     useEffect(() => {
-        if (show && product?.modifier_groups) {
+        const groups = getModifierGroups(product);
+        if (show && groups.length > 0) {
             // Initialize default selections
             const initialSelections = {};
-            product.modifier_groups.forEach(group => {
+            groups.forEach(group => {
                 initialSelections[group.id] = {};
                 if (group.items) {
                     group.items.forEach(item => {
@@ -39,7 +49,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
     }, [show, product]);
 
     const handleSelect = (groupId, item) => {
-        const rawGroup = product.modifier_groups.find(g => g.id === groupId);
+        const rawGroup = getModifierGroups(product).find(g => g.id === groupId);
         const group = normalizeGroup(rawGroup);
         const maxSelection = group.max_selection;
         const itemFixedQty = parseInt(item.quantity || 1);
@@ -82,8 +92,9 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
 
     const validateSelections = () => {
         const newErrors = [];
-        if (product?.modifier_groups) {
-            product.modifier_groups.forEach(rawGroup => {
+        const modGroups = getModifierGroups(product);
+        if (modGroups.length > 0) {
+            modGroups.forEach(rawGroup => {
                 const group = normalizeGroup(rawGroup);
                 if (group.is_required) {
                     const groupSel = selections[group.id] || {};
@@ -103,7 +114,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
             // Format selections into array: [{ id, name, price, count }]
             const formattedModifiers = [];
 
-            product.modifier_groups.forEach(group => {
+            getModifierGroups(product).forEach(group => {
                 const groupSel = selections[group.id] || {};
                 group.items.forEach(item => {
                     const qty = groupSel[item.id];
@@ -135,15 +146,13 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
 
     const calculateTotal = () => {
         let total = parseFloat(product?.price || 0);
-        if (product?.modifier_groups) {
-            product.modifier_groups.forEach(group => {
-                const groupSel = selections[group.id] || {};
-                group.items.forEach(item => {
-                    const qty = groupSel[item.id] || 0;
-                    total += qty * parseFloat(item.price || 0);
-                });
+        getModifierGroups(product).forEach(group => {
+            const groupSel = selections[group.id] || {};
+            group.items.forEach(item => {
+                const qty = groupSel[item.id] || 0;
+                total += qty * parseFloat(item.price || 0);
             });
-        }
+        });
         return total.toFixed(2);
     };
 
@@ -181,7 +190,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
             </div>
 
             <Modal.Body className="modifier-modal-body">
-                {product.modifier_groups?.map(rawGroup => {
+                {getModifierGroups(product).map(rawGroup => {
                     const group = normalizeGroup(rawGroup);
                     const hasError = errors.includes(group.id);
                     return (

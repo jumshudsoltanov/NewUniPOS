@@ -94,6 +94,19 @@ ${Number(startingCash) > 0 ? `<div class="kv"><span class="kv-label">Başlanğı
 <div class="kv"><span class="kv-label">Bağlanmış çek</span><span class="kv-value">${summary?.checksCount ?? 0}</span></div>
 <div class="total-row"><span class="total-label">Cəm məbləğ</span><span class="total-amount">${money(summary?.grossTotal)} &#8380;</span></div>
 <hr class="divider" style="margin-top:8px"/>
+<div class="section-title">Satış hesabatı</div>
+<div class="kv"><span class="kv-label">Cəm</span><span class="kv-value">${money(summary?.total_amount)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">Vergi</span><span class="kv-value">${money(summary?.total_tax)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">İkram</span><span class="kv-value">${money(summary?.total_gift)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">Xidmət</span><span class="kv-value">${money(summary?.total_service)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">Endirim</span><span class="kv-value">${money(summary?.total_discount)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">Çatdırılma haqqı</span><span class="kv-value">${money(summary?.delivery_fee)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">Geri qaytarılma</span><span class="kv-value">${money(summary?.total_refund)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">Silinmələr</span><span class="kv-value">${money(summary?.total_deleted)} &#8380;</span></div>
+${(Number(summary?.total_paid || 0) > 0 || Number(summary?.total_unpaid || 0) > 0) ? `<div class="kv" style="border-top:1px dashed #000;margin-top:3px;padding-top:3px"><span class="kv-label">Ödənişli bağlamalar</span><span class="kv-value">${money(summary?.total_paid)} &#8380;</span></div><div class="kv"><span class="kv-label">Ödənişsiz bağlamalar</span><span class="kv-value">${money(summary?.total_unpaid)} &#8380;</span></div>` : ""}
+<div class="total-row" style="margin-top:3px"><span class="total-label">Yekun</span><span class="total-amount">${money(summary?.net_total)} &#8380;</span></div>
+${Number(summary?.guest_count || 0) > 0 ? `<div class="kv" style="margin-top:3px"><span class="kv-label">Qonaq sayı</span><span class="kv-value">${summary?.guest_count ?? 0}</span></div>` : ""}
+<hr class="divider" style="margin-top:8px"/>
 <div class="section-title">Ofisiant üzrə</div>
 <table><thead><tr><th>Ad</th><th class="r">Çek</th><th class="r">Məbləğ</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
 <hr class="divider"/>
@@ -205,6 +218,34 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                             <span>{money(s.grossTotal)} ₼</span>
                         </div>
                     </div>
+
+                    {/* Satış hesabatı */}
+                    <div className="ssd-card">
+                        <div className="ssd-card-title">
+                            <i className="bi bi-receipt" aria-hidden />
+                            Satış hesabatı
+                        </div>
+                        <div className="ssd-kv"><span>Cəm</span><span>{money(s.total_amount)} ₼</span></div>
+                        <div className="ssd-kv"><span>Vergi</span><span>{money(s.total_tax)} ₼</span></div>
+                        <div className="ssd-kv"><span>İkram</span><span>{money(s.total_gift)} ₼</span></div>
+                        <div className="ssd-kv"><span>Xidmət</span><span>{money(s.total_service)} ₼</span></div>
+                        <div className="ssd-kv"><span>Endirim</span><span>{money(s.total_discount)} ₼</span></div>
+                        <div className="ssd-kv"><span>Çatdırılma haqqı</span><span>{money(s.delivery_fee)} ₼</span></div>
+                        <div className="ssd-kv"><span>Geri qaytarılma</span><span>{money(s.total_refund)} ₼</span></div>
+                        <div className="ssd-kv"><span>Silinmələr</span><span>{money(s.total_deleted)} ₼</span></div>
+                        {(s.total_paid > 0 || s.total_unpaid > 0) && (
+                            <>
+                                <div className="ssd-kv" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span>Ödənişli bağlamalar</span><span>{money(s.total_paid)} ₼</span></div>
+                                <div className="ssd-kv"><span>Ödənişsiz bağlamalar</span><span>{money(s.total_unpaid)} ₼</span></div>
+                            </>
+                        )}
+                        <div className="ssd-total-row"><span>Yekun</span><span>{money(s.net_total)} ₼</span></div>
+                    </div>
+                    {(s.guest_count > 0) && (
+                        <div className="ssd-card">
+                            <div className="ssd-kv"><span>Qonaq sayı</span><span>{s.guest_count ?? 0}</span></div>
+                        </div>
+                    )}
 
                     {/* Ofisiant */}
                     <div className="ssd-card">
@@ -391,7 +432,7 @@ const SalesShiftModal = ({ show, onHide }) => {
     const [currentShift, setCurrentShift] = useState(null);
     const [livePayload, setLivePayload] = useState(null);
     const [history, setHistory] = useState([]);
-    const [cashierPrinter, setCashierPrinter] = useState(null);
+    const [cashierPrinters, setCashierPrinters] = useState([]);
     const [showClosePrompt, setShowClosePrompt] = useState(false);
     const [extraSnapshots, setExtraSnapshots] = useState({});
     /** { row, snapshot, loading } | null */
@@ -424,7 +465,7 @@ const SalesShiftModal = ({ show, onHide }) => {
             const res = await apiConfig.get(`/pos/printers/${profileId}`);
             if (res.data?.data) {
                 const list = resolveCashierPrintersForPrint(res.data.data);
-                if (list.length) setCashierPrinter(list[0]);
+                setCashierPrinters(list);
             }
         } catch {
             /* ignore */
@@ -497,7 +538,11 @@ const SalesShiftModal = ({ show, onHide }) => {
     }, [show, currentShift, fetchLive]);
 
     const printToCashier = async (html) => {
-        if (window.electronAPI?.printReceipt && cashierPrinter) {
+        if (!window.electronAPI?.printReceipt || !cashierPrinters.length) {
+            toast.warning("Kassa printeri tapılmadı və ya Electron çapı yoxdur");
+            return;
+        }
+        for (const cashierPrinter of cashierPrinters) {
             const connType = cashierPrinter.connection_type;
             const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
             const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
@@ -537,8 +582,6 @@ const SalesShiftModal = ({ show, onHide }) => {
             }
 
             await window.electronAPI.printReceipt(payload);
-        } else {
-            toast.warning("Kassa printeri tapılmadı və ya Electron çapı yoxdur");
         }
     };
 
@@ -791,6 +834,32 @@ const SalesShiftModal = ({ show, onHide }) => {
                             <span>Cəm məbləğ</span>
                             <span>{money(summary.grossTotal)} ₼</span>
                         </div>
+                    </div>
+
+                    {/* Satış hesabatı */}
+                    <div className="ssm-section-header">
+                        <i className="bi bi-receipt" aria-hidden />
+                        Satış hesabatı
+                    </div>
+                    <div className="ssm-info-card">
+                        <div className="ssm-info-row"><span className="ssm-info-label">Cəm</span><span className="ssm-info-value">{money(summary.total_amount)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">Vergi</span><span className="ssm-info-value">{money(summary.total_tax)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">İkram</span><span className="ssm-info-value">{money(summary.total_gift)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">Xidmət</span><span className="ssm-info-value">{money(summary.total_service)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">Endirim</span><span className="ssm-info-value">{money(summary.total_discount)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">Çatdırılma haqqı</span><span className="ssm-info-value">{money(summary.delivery_fee)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">Geri qaytarılma</span><span className="ssm-info-value">{money(summary.total_refund)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">Silinmələr</span><span className="ssm-info-value">{money(summary.total_deleted)} ₼</span></div>
+                        {(summary.total_paid > 0 || summary.total_unpaid > 0) && (
+                            <>
+                                <div className="ssm-info-row" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span className="ssm-info-label">Ödənişli bağlamalar</span><span className="ssm-info-value">{money(summary.total_paid)} ₼</span></div>
+                                <div className="ssm-info-row"><span className="ssm-info-label">Ödənişsiz bağlamalar</span><span className="ssm-info-value">{money(summary.total_unpaid)} ₼</span></div>
+                            </>
+                        )}
+                        <div className="ssm-info-row ssm-total-row"><span>Yekun</span><span>{money(summary.net_total)} ₼</span></div>
+                    </div>
+                    <div className="ssm-info-card">
+                        <div className="ssm-info-row"><span className="ssm-info-label">Qonaq sayı</span><span className="ssm-info-value">{summary.guest_count ?? 0}</span></div>
                     </div>
 
                     {/* Ofisiant cədvəli */}

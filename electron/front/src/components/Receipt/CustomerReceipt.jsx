@@ -301,10 +301,10 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
-                {checkData?.orderId && (
+                {(checkData?.orderId || checkData?.id) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Çek №</span>
-                        <span style={styles.value}>#{checkData.orderId}</span>
+                        <span style={styles.value}>#{checkData.orderId || checkData.id}</span>
                     </div>
                 )}
 
@@ -333,10 +333,17 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
-                {checkData?.startDate && (
+                {(checkData?.startDate || checkData?.start_date) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Açılma tarixi</span>
-                        <span style={styles.value}>{checkData.startDate.slice(0, 16)}</span>
+                        <span style={styles.value}>{(checkData.startDate || checkData.start_date).slice(0, 16)}</span>
+                    </div>
+                )}
+
+                {(checkData?.endDate || checkData?.end_date) && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Bağlanma tarixi</span>
+                        <span style={styles.value}>{(checkData.endDate || checkData.end_date).slice(0, 16)}</span>
                     </div>
                 )}
 

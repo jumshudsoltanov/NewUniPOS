@@ -777,16 +777,20 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
     // String gəlsə Date-ə çevir
     const startVal = startStr instanceof Date ? startStr : new Date(startStr);
     const endVal = endStr instanceof Date ? endStr : new Date(endStr);
+    const baseWhere = { profile_id: profileId };
+    if (terminalId && String(terminalId) !== "all") {
+        baseWhere.terminal_id = terminalId;
+    }
     const closedWhere = {
-        profile_id: profileId,
+        ...baseWhere,
         status: 2,
         end_date: { [Op.between]: [startVal, endVal] },
     };
-    if (terminalId && String(terminalId) !== "all") {
-        closedWhere.terminal_id = terminalId;
-    }
 
-    const [byEmployee, bySaleMethod, byCategory, checksCount, grossSum, closedOrders] = await Promise.all([
+    const profile = await LoginModel.findOne({ where: { id: profileId } });
+    const taxPercent = parseFloat(profile?.tax_percent || 0);
+
+    const [byEmployee, bySaleMethod, byCategory, checksCount, grossSum, closedOrders, returnedOrders, deletedOrders] = await Promise.all([
         getEmployeeReport(closedWhere),
         getSaleMethodReport(closedWhere),
         getCategoryReport(closedWhere),
@@ -794,35 +798,97 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
         OrdersModel.sum("total", { where: closedWhere }),
         OrdersModel.findAll({
             where: closedWhere,
-            include: [{
-                model: OrderPaymentsModel,
-                as: 'order_payments',
-                required: false,
-                include: [
-                    { model: PaymentMethodsModel, as: 'payment_method', required: false },
-                    { model: require("../model/TagsModel"), as: 'tag', required: false }
-                ]
-            }]
+            include: [
+                {
+                    model: OrderPaymentsModel,
+                    as: 'order_payments',
+                    required: false,
+                    include: [
+                        { model: PaymentMethodsModel, as: 'payment_method', required: false },
+                        { model: require("../model/TagsModel"), as: 'tag', required: false }
+                    ]
+                },
+                {
+                    model: OrdersItemsModel,
+                    as: 'orders_items',
+                    required: false,
+                    include: [{ model: ProductsModel, as: 'product', required: false }]
+                }
+            ]
+        }),
+        OrdersModel.findAll({
+            where: { ...baseWhere, status: 3, is_return: 1, updated_at: { [Op.between]: [startVal, endVal] } },
+            include: [{ model: require("../model/TagsModel"), as: 'delete_reason', required: false }],
+            paranoid: false
+        }),
+        OrdersModel.findAll({
+            where: { ...baseWhere, status: 3, is_delete_reason_id: { [Op.not]: null }, [Op.or]: [{ is_return: null }, { is_return: 0 }], updated_at: { [Op.between]: [startVal, endVal] } },
+            include: [{ model: require("../model/TagsModel"), as: 'delete_reason', required: false }],
+            paranoid: false
         }),
     ]);
 
     const payments = {};
     const unpaid_payments = {};
     const tags = {};
+    let total_amount = 0, total_discount = 0, total_service = 0, total_gift = 0;
+    let total_tax = 0, net_total = 0, guest_count = 0;
+    let total_paid = 0, total_unpaid = 0;
+    let delivery_fee = 0;
 
     closedOrders.forEach(order => {
+        const itemsSub = parseFloat(order.amount || 0) || 0;
+        const timerSub = parseFloat(order.rate_per_minute || 0) || 0;
+        total_amount += itemsSub + timerSub;
+        total_discount += parseFloat(order.discount || 0);
+        total_service += parseFloat(order.service_charge || 0);
+        delivery_fee += parseFloat(order.delivery_fee || 0);
+        guest_count += parseInt(order.guest_count || 0);
+        const orderTotal = parseFloat(order.total || 0);
+        net_total += orderTotal;
+
+        let isTaxFlag = parseFloat(order.is_tax || 0);
+        if (isTaxFlag > 0) {
+            let currentTaxPercent = isTaxFlag > 1 ? isTaxFlag : taxPercent;
+            if (currentTaxPercent > 0) {
+                total_tax += orderTotal * currentTaxPercent / (100 + currentTaxPercent);
+            }
+        }
+
+        if (order.orders_items) {
+            order.orders_items.forEach(item => {
+                const isGift = Number(item.is_gift) === 1 || item.is_gift === true;
+                if (isGift) {
+                    const itemCount = parseFloat(item.count || 0);
+                    const itemPrice = parseFloat(item.price || 0);
+                    const origPrice = parseFloat(item.original_price || 0);
+                    const productPrice = parseFloat(item.product?.price || 0);
+                    const nominalPrice = itemPrice > 0 ? itemPrice : (origPrice > 0 ? origPrice : productPrice);
+                    let modifiersTotal = 0;
+                    try {
+                        const mods = Array.isArray(item.modifiers) ? item.modifiers : (typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : []);
+                        modifiersTotal = mods.reduce((s, m) => s + (parseFloat(m.price || 0) * parseFloat(m.count || 1)), 0);
+                    } catch (_) {}
+                    total_gift += itemCount * (nominalPrice + modifiersTotal);
+                }
+            });
+        }
+
         if (order.order_payments) {
             order.order_payments.forEach(p => {
                 const amount = parseFloat(p.paid || 0);
                 if (p.without_payment_method_id && p.without_payment_method_id > 0) {
                     const name = p.name || p.tag?.name || 'Ödənişsiz';
                     unpaid_payments[name] = (unpaid_payments[name] || 0) + amount;
+                    total_unpaid += amount;
                 } else {
                     const name = p.name || p.payment_method?.name || 'Nağd';
                     payments[name] = (payments[name] || 0) + amount;
+                    total_paid += amount;
                 }
             });
         }
+
         let orderTags = [];
         if (order.tags) orderTags = order.tags.split(',').map(t => t.trim()).filter(t => t);
         if (order.order_payments) {
@@ -835,6 +901,32 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
         });
     });
 
+    let total_refund = 0;
+    returnedOrders.forEach(order => {
+        total_refund += parseFloat(order.total || order.amount || 0);
+        let orderTags = [];
+        if (order.tags) orderTags = order.tags.split(',').map(t => t.trim()).filter(t => t);
+        if (order.delete_reason?.name) orderTags.push(order.delete_reason.name);
+        [...new Set(orderTags)].forEach(tagName => {
+            if (!tags[tagName]) tags[tagName] = { count: 0, total: 0 };
+            tags[tagName].count += 1;
+            tags[tagName].total += parseFloat(order.total || order.amount || 0);
+        });
+    });
+
+    let total_deleted = 0;
+    deletedOrders.forEach(order => {
+        total_deleted += parseFloat(order.total || order.amount || 0);
+        let orderTags = [];
+        if (order.tags) orderTags = order.tags.split(',').map(t => t.trim()).filter(t => t);
+        if (order.delete_reason?.name) orderTags.push(order.delete_reason.name);
+        [...new Set(orderTags)].forEach(tagName => {
+            if (!tags[tagName]) tags[tagName] = { count: 0, total: 0 };
+            tags[tagName].count += 1;
+            tags[tagName].total += parseFloat(order.total || order.amount || 0);
+        });
+    });
+
     return {
         byEmployee,
         bySaleMethod,
@@ -844,6 +936,18 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
         payments,
         unpaid_payments,
         tags,
+        total_amount,
+        total_discount,
+        total_service,
+        total_gift,
+        total_refund,
+        total_deleted,
+        total_tax,
+        net_total,
+        guest_count,
+        total_paid,
+        total_unpaid,
+        delivery_fee,
     };
 };
 

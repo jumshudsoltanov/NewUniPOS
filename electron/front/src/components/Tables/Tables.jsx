@@ -279,7 +279,21 @@ const Tables = () => {
         setSelectedTable(table);
         setShowOtherChecks(true);
       } else if (orders?.length === 1) {
-        navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
+        const isMasterSlaveActive =
+          loginedProfileData?.data?.terminal?.is_master_slave_active === 1 ||
+          loginedProfileData?.data?.profile?.is_master_slave_active === 1;
+        const socket = getSocket();
+        if (isMasterSlaveActive && socket?.connected) {
+          socket.emit("check_is_open_by_other", { orderId: orders[0].uuid }, (isOpenByOther) => {
+            if (isOpenByOther) {
+              toast.warning("Bu masa hal-hazırda başqa terminaldadır. Əvvəlcə o terminal çıxsın.");
+            } else {
+              navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
+            }
+          });
+        } else {
+          navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
+        }
       } else {
         const guard = await checkShiftGuard(loginedProfileData);
         if (guard.blocked) {
