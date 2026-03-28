@@ -307,18 +307,25 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     const SalesTypesModal = require("../model/SalesTypesModal");
 
     const profileId = req.params.profileId;
-    await Promise.all([
-      getWaitersList(profileId),
-      getTableGroups(profileId),
-      getTables(profileId),
-      getGeneralCategories(profileId),
-      getCategories(profileId),
-      getProducts(profileId),
-      getTags(profileId),
-      getPaymentMethods(profileId),
-      getSalesTypes(profileId),
-      getPrinters(profileId),
-    ]);
+
+    // Internet yoxlaması — offline rejimində admin API-yə müraciət etmə
+    const SyncService = require("../services/SyncService");
+    const isOnline = await SyncService.checkConnectivity().catch(() => false);
+
+    if (isOnline) {
+      await Promise.all([
+        getWaitersList(profileId),
+        getTableGroups(profileId),
+        getTables(profileId),
+        getGeneralCategories(profileId),
+        getCategories(profileId),
+        getProducts(profileId),
+        getTags(profileId),
+        getPaymentMethods(profileId),
+        getSalesTypes(profileId),
+        getPrinters(profileId),
+      ]);
+    }
 
     const w = { where: { profile_id: profileId } };
     const [
@@ -349,6 +356,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
 
     res.json({
       success: true,
+      isOnline,
       counts: {
         products,
         categories,

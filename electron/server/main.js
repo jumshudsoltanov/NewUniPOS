@@ -17,8 +17,8 @@ const log = require("electron-log");
 
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = "debug";
-autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
+// autoDownload app tam hazır olandan sonra settings faylından oxunacaq (app.whenReady sonra)
 log.info("UniPOS Desktop Application is starting...");
 
 Menu.setApplicationMenu(null);
@@ -1485,6 +1485,66 @@ function getUniposInstanceLabel() {
 ipcMain.handle("get-unipos-instance", () => getUniposInstanceLabel());
 ipcMain.handle("get-update-state", () => updateState);
 
+// Update idarəetmə IPC-ləri
+const _uniposSettingsPath = () => path.join(app.getPath("userData"), "unipos-settings.json");
+const _readUniposSettings = () => {
+  try { return JSON.parse(fs.readFileSync(_uniposSettingsPath(), "utf8")); } catch { return {}; }
+};
+const _writeUniposSettings = (data) => {
+  try { fs.writeFileSync(_uniposSettingsPath(), JSON.stringify({ ..._readUniposSettings(), ...data }), "utf8"); } catch {}
+};
+
+ipcMain.handle("get-auto-update-enabled", () => {
+  const s = _readUniposSettings();
+  return s.autoUpdateEnabled !== false;
+});
+
+ipcMain.handle("set-auto-update-enabled", (_, enabled) => {
+  try {
+    _writeUniposSettings({ autoUpdateEnabled: !!enabled });
+    autoUpdater.autoDownload = !!enabled;
+    return { ok: true };
+  } catch (e) { return { ok: false, message: e.message }; }
+});
+
+ipcMain.handle("check-for-updates-now", () => {
+  try {
+    autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+    return { ok: true };
+  } catch (e) { return { ok: false, message: e.message }; }
+});
+
+ipcMain.handle("download-specific-version", async (_, version) => {
+  try {
+    autoUpdater.allowDowngrade = true;
+    await autoUpdater.downloadUpdate();
+    return { ok: true };
+  } catch (e) { return { ok: false, message: e.message }; }
+});
+
+ipcMain.handle("get-github-releases", async () => {
+  try {
+    const { net } = require("electron");
+    return new Promise((resolve) => {
+      const request = net.request({
+        method: "GET",
+        url: "https://api.github.com/repos/jumshudsoltanov/NewUniPOS/releases?per_page=10",
+        headers: { "User-Agent": "UniPOS-Desktop" },
+      });
+      let body = "";
+      request.on("response", (response) => {
+        response.on("data", (chunk) => { body += chunk.toString(); });
+        response.on("end", () => {
+          try { resolve({ ok: true, data: JSON.parse(body) }); }
+          catch { resolve({ ok: false, message: "Parse xətası" }); }
+        });
+      });
+      request.on("error", (err) => resolve({ ok: false, message: err.message }));
+      request.end();
+    });
+  } catch (e) { return { ok: false, message: e.message }; }
+});
+
 ipcMain.handle("get-app-version", () => {
   return app.getVersion();
 });
@@ -1818,16 +1878,24 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on("update-downloaded", (info) => {
-    console.log(
-      "[AUTO-UPDATE] Yenilənmə yükləndi. 5 saniyə sonra quraşdırılır...",
-    );
-    updateState = { status: "ready", version: info.version, progress: 100 };
+    // autoDownload ayarını yoxla — söndürülübsə avtomatik quraşdırma
+    let autoEnabled = true;
+    try {
+      const _sPath = path.join(app.getPath("userData"), "unipos-settings.json");
+      const _s = JSON.parse(fs.readFileSync(_sPath, "utf8"));
+      autoEnabled = _s.autoUpdateEnabled !== false;
+    } catch {}
+
+    console.log(`[AUTO-UPDATE] Yenilənmə yükləndi. autoEnabled=${autoEnabled}`);
+    updateState = { status: "ready", version: info.version, progress: 100, autoEnabled };
     if (mainWindow) {
-      mainWindow.webContents.send("update-downloaded", info);
+      mainWindow.webContents.send("update-downloaded", { ...info, autoEnabled });
     }
-    setTimeout(() => {
-      autoUpdater.quitAndInstall(true, true);
-    }, 5000);
+    if (autoEnabled) {
+      setTimeout(() => {
+        autoUpdater.quitAndInstall(true, true);
+      }, 5000);
+    }
   });
 
   ipcMain.handle("install-update", () => {
@@ -1836,14 +1904,28 @@ app.whenReady().then(() => {
 
   // Delay 4s so React has time to mount and register IPC listeners
   setTimeout(() => {
+    // autoDownload-u settings faylından oxu
+    try {
+      const _sPath = path.join(app.getPath("userData"), "unipos-settings.json");
+      const _s = JSON.parse(fs.readFileSync(_sPath, "utf8"));
+      autoUpdater.autoDownload = _s.autoUpdateEnabled !== false;
+    } catch {
+      autoUpdater.autoDownload = true;
+    }
+
     if (isDev) {
       // Dev mode: simulate update states for UI testing
+      let _devAutoEnabled = true;
+      try {
+        const _sPath = path.join(app.getPath("userData"), "unipos-settings.json");
+        const _s = JSON.parse(fs.readFileSync(_sPath, "utf8"));
+        _devAutoEnabled = _s.autoUpdateEnabled !== false;
+      } catch {}
+
       if (mainWindow) mainWindow.webContents.send("checking-for-update");
       setTimeout(() => {
         if (mainWindow)
-          mainWindow.webContents.send("update-available", {
-            version: "99.9.9",
-          });
+          mainWindow.webContents.send("update-available", { version: "99.9.9" });
         let p = 0;
         const interval = setInterval(() => {
           p += 20;
@@ -1853,18 +1935,20 @@ app.whenReady().then(() => {
             clearInterval(interval);
             setTimeout(() => {
               if (mainWindow)
-                mainWindow.webContents.send("update-downloaded", {});
+                mainWindow.webContents.send("update-downloaded", { version: "99.9.9", autoEnabled: _devAutoEnabled });
             }, 500);
           }
         }, 600);
       }, 2000);
     } else {
-      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-        log.error(
-          "[AUTO-UPDATE] Xəta:",
-          err ? err.message || err.toString() : "Naməlum xəta",
-        );
-      });
+      if (autoUpdater.autoDownload) {
+        autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+          log.error(
+            "[AUTO-UPDATE] Xəta:",
+            err ? err.message || err.toString() : "Naməlum xəta",
+          );
+        });
+      }
     }
   }, 4000);
   // ----------------------------------

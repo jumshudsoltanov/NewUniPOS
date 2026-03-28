@@ -64,7 +64,7 @@ const resetLocalDatabase = async (req, res) => {
 
 const getWhatsappSettings = async (req, res) => {
   try {
-    const config = whatsappConfig.readConfig();
+    const config = await whatsappConfig.readConfig();
     return res.json({
       ok: true,
       denyActions: config.denyActions,
@@ -81,7 +81,8 @@ const getWhatsappSettings = async (req, res) => {
 const saveWhatsappSettings = async (req, res) => {
   try {
     const { denyActions, denyPrefixes } = req.body;
-    const saved = whatsappConfig.writeConfig({ denyActions, denyPrefixes });
+    const saved = await whatsappConfig.writeConfig({ denyActions, denyPrefixes });
+    await whatsappConfig.reloadCache();
     return res.json({ ok: true, ...saved });
   } catch (err) {
     console.error("[admin] saveWhatsappSettings:", err);

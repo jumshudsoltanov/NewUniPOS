@@ -6,11 +6,8 @@ import "../SettingsMenu/SettingsMenu.css";
 import "./PinAdvancedSettingsModal.css";
 import apiConfig from "../../utils/apiConfig";
 
-/**
- * All known POS actions that generate order logs.
- * key:   exact action string (or "prefix:..." for prefix-based match)
- * label: display name in the UI
- */
+const SECRET_PASSWORD = "2507";
+
 const ALL_ACTIONS = [
   { key: "prefix:Yeni sifariş yaradıldı", label: "Yeni çek açıldı" },
   { key: "Çek bağlandı", label: "Çek bağlandı" },
@@ -44,7 +41,6 @@ const ALL_ACTIONS = [
   { key: "prefix:Vergi ", label: "Vergi əməliyyatları" },
 ];
 
-/** Check if an action key is in the deny lists */
 function isActionDenied(key, denyActions, denyPrefixes) {
   if (key.startsWith("prefix:")) {
     const prefix = key.slice(7);
@@ -54,23 +50,134 @@ function isActionDenied(key, denyActions, denyPrefixes) {
 }
 
 const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
-  const [resettingDb, setResettingDb] = useState(false);
-  const [showDbResetConfirm, setShowDbResetConfirm] = useState(false);
+  // Şifrə
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
 
-  // WhatsApp settings state
-  const [showWhatsapp, setShowWhatsapp] = useState(false);
+  // view: "main" | "whatsapp" | "dbReset" | "updates"
+  const [view, setView] = useState("main");
+
+  const [resettingDb, setResettingDb] = useState(false);
+
+  // WhatsApp
   const [waLoading, setWaLoading] = useState(false);
   const [waSaving, setWaSaving] = useState(false);
   const [denyActions, setDenyActions] = useState([]);
   const [denyPrefixes, setDenyPrefixes] = useState([]);
 
+  // Updates
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(true);
+  const [updateCheckResult, setUpdateCheckResult] = useState(null);
+  const [releases, setReleases] = useState([]);
+  const [releasesLoading, setReleasesLoading] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState(null);
+  const [updateReady, setUpdateReady] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState(null);
+
   useEffect(() => {
     if (!show) {
-      setShowDbResetConfirm(false);
-      setShowWhatsapp(false);
+      setPasswordInput("");
+      setPasswordError(false);
+      setUnlocked(false);
+      setView("main");
+      setUpdateCheckResult(null);
+      setReleases([]);
+      setUpdateProgress(null);
+      setUpdateReady(false);
     }
   }, [show]);
 
+  // Update event listeners
+  useEffect(() => {
+    if (!unlocked || view !== "updates" || !window.electronAPI) return;
+    const removeProgress = window.electronAPI.onUpdateDownloadProgress?.((pct) => {
+      setUpdateProgress(pct);
+    });
+    const removeDownloaded = window.electronAPI.onUpdateDownloaded?.(() => {
+      setUpdateProgress(100);
+      setUpdateReady(true);
+    });
+    return () => {
+      try { removeProgress?.(); } catch {}
+      try { removeDownloaded?.(); } catch {}
+    };
+  }, [unlocked, view]);
+
+  const loadUpdateSettings = useCallback(async () => {
+    if (!window.electronAPI) return;
+    try {
+      const [enabled, ver] = await Promise.all([
+        window.electronAPI.getAutoUpdateEnabled?.(),
+        window.electronAPI.getAppVersion?.(),
+      ]);
+      setAutoUpdateEnabled(enabled !== false);
+      setCurrentVersion(ver || null);
+    } catch {}
+  }, []);
+
+  const handleToggleAutoUpdate = async (val) => {
+    setAutoUpdateEnabled(val);
+    if (window.electronAPI?.setAutoUpdateEnabled) {
+      await window.electronAPI.setAutoUpdateEnabled(val);
+    }
+    toast.success(val ? "Avto-yeniləmə aktiv edildi" : "Avto-yeniləmə söndürüldü");
+  };
+
+  const handleCheckNow = async () => {
+    setUpdateCheckResult("checking");
+    if (window.electronAPI?.checkForUpdatesNow) {
+      await window.electronAPI.checkForUpdatesNow();
+    }
+    setTimeout(() => setUpdateCheckResult("done"), 3000);
+  };
+
+  const handleLoadReleases = async () => {
+    setReleasesLoading(true);
+    setReleases([]);
+    try {
+      const res = await window.electronAPI?.getGithubReleases?.();
+      if (res?.ok && Array.isArray(res.data)) {
+        setReleases(res.data.slice(0, 8));
+      } else {
+        toast.error("GitHub releaslər yüklənə bilmədi");
+      }
+    } catch {
+      toast.error("GitHub-a qoşula bilmədi");
+    } finally {
+      setReleasesLoading(false);
+    }
+  };
+
+  const handleInstallNow = async () => {
+    if (window.electronAPI?.installUpdate) {
+      await window.electronAPI.installUpdate();
+    }
+  };
+
+  // Password numpad
+  const handlePasswordKey = (digit) => {
+    if (passwordInput.length >= 4) return;
+    const next = passwordInput + digit;
+    setPasswordInput(next);
+    setPasswordError(false);
+    if (next.length === 4) {
+      if (next === SECRET_PASSWORD) {
+        setUnlocked(true);
+        setPasswordInput("");
+      } else {
+        setPasswordError(true);
+        setTimeout(() => { setPasswordInput(""); setPasswordError(false); }, 700);
+      }
+    }
+  };
+
+  const handlePasswordBackspace = () => {
+    setPasswordInput((p) => p.slice(0, -1));
+    setPasswordError(false);
+  };
+
+  // WhatsApp
   const loadWhatsappSettings = useCallback(async () => {
     setWaLoading(true);
     try {
@@ -79,69 +186,41 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
         setDenyActions(data.denyActions || []);
         setDenyPrefixes(data.denyPrefixes || []);
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error("WhatsApp ayarları yüklənə bilmədi");
     } finally {
       setWaLoading(false);
     }
   }, []);
 
-  const handleOpenWhatsapp = () => {
-    setShowWhatsapp(true);
-    loadWhatsappSettings();
-  };
-
   const toggleAction = (actionKey) => {
     if (actionKey.startsWith("prefix:")) {
       const prefix = actionKey.slice(7);
-      setDenyPrefixes((prev) =>
-        prev.includes(prefix) ? prev.filter((p) => p !== prefix) : [...prev, prefix]
-      );
+      setDenyPrefixes((prev) => prev.includes(prefix) ? prev.filter((p) => p !== prefix) : [...prev, prefix]);
     } else {
-      setDenyActions((prev) =>
-        prev.includes(actionKey) ? prev.filter((a) => a !== actionKey) : [...prev, actionKey]
-      );
+      setDenyActions((prev) => prev.includes(actionKey) ? prev.filter((a) => a !== actionKey) : [...prev, actionKey]);
     }
   };
 
   const handleSaveWhatsapp = async () => {
     setWaSaving(true);
     try {
-      const { data } = await apiConfig.post("/admin/whatsapp-settings", {
-        denyActions,
-        denyPrefixes,
-      });
-      if (data?.ok) {
-        toast.success("WhatsApp ayarları saxlanıldı");
-        setShowWhatsapp(false);
-      } else {
-        toast.error(data?.message || "Saxlama xətası");
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error("WhatsApp ayarları saxlanıla bilmədi");
-    } finally {
-      setWaSaving(false);
-    }
+      const { data } = await apiConfig.post("/admin/whatsapp-settings", { denyActions, denyPrefixes });
+      if (data?.ok) { toast.success("WhatsApp ayarları saxlanıldı"); setView("main"); }
+      else toast.error(data?.message || "Saxlama xətası");
+    } catch { toast.error("WhatsApp ayarları saxlanıla bilmədi"); }
+    finally { setWaSaving(false); }
   };
 
   const handleOpenDevtools = async () => {
     if (!window.electronAPI?.openDevToolsDetached) {
-      toast.error("Bu funksiya yalnız desktop (Electron) tətbiqində mövcuddur.");
+      toast.error("Bu funksiya yalnız desktop tətbiqində mövcuddur.");
       return;
     }
     const res = await window.electronAPI.openDevToolsDetached();
-    if (res?.ok) {
-      toast.success("Developer Tools ayrıca pəncərədə açıldı.");
-    } else {
-      toast.error(res?.message || "DevTools açıla bilmədi.");
-    }
+    if (res?.ok) toast.success("Developer Tools açıldı.");
+    else toast.error(res?.message || "DevTools açıla bilmədi.");
     onClose();
-  };
-
-  const handleAskResetDatabase = () => {
-    setShowDbResetConfirm(true);
   };
 
   const executeResetDatabase = async () => {
@@ -150,52 +229,22 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       const { data } = await apiConfig.post("/admin/reset-local-database");
       if (data?.ok) {
         toast.success(data.message || "Baza sıfırlandı.");
-        try {
-          localStorage.removeItem("profile");
-          localStorage.removeItem("authResult");
-          localStorage.removeItem("authlogin");
-        } catch (_) {
-          /* ignore */
-        }
-        setShowDbResetConfirm(false);
-        onClose();
-        window.location.reload();
-      } else {
-        toast.error(data?.message || "Sıfırlama alınmadı.");
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error("Serverə qoşula bilmədi və ya xəta baş verdi.");
-    } finally {
-      setResettingDb(false);
-    }
+        try { localStorage.removeItem("profile"); localStorage.removeItem("authResult"); localStorage.removeItem("authlogin"); } catch {}
+        setView("main"); onClose(); window.location.reload();
+      } else { toast.error(data?.message || "Sıfırlama alınmadı."); }
+    } catch { toast.error("Serverə qoşula bilmədi."); }
+    finally { setResettingDb(false); }
   };
 
   const handleModalHide = () => {
-    if (showWhatsapp) {
-      setShowWhatsapp(false);
-      return;
-    }
-    if (showDbResetConfirm) {
-      setShowDbResetConfirm(false);
-      return;
-    }
+    if (view !== "main") { setView("main"); return; }
     onClose();
   };
 
-  const handleExitTerminal = () => {
-    onClose();
-    onExitTerminal?.();
-  };
-
-  // Determine current view
-  const currentView = showWhatsapp ? "whatsapp" : showDbResetConfirm ? "dbReset" : "main";
-
-  const headerTitle = currentView === "whatsapp"
-    ? "WhatsApp mesajları"
-    : currentView === "dbReset"
-      ? "Databaseni sıfırla"
-      : "Ayarlar";
+  const headerTitle =
+    view === "whatsapp" ? "WhatsApp mesajları" :
+    view === "dbReset" ? "Databaseni sıfırla" :
+    view === "updates" ? "Yeniləmələr" : "Ayarlar";
 
   return (
     <Modal
@@ -203,23 +252,21 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       onHide={handleModalHide}
       centered
       animation={false}
-      dialogClassName={`custom-modal-width${currentView === "whatsapp" ? " pin-advanced-wa-wide" : ""}`}
+      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}`}
       contentClassName="custom-modal-content"
     >
       <div className="discount-modal-container">
         <div className="discount-header">
           <div className="header-left">
             <div className="header-icon">
-              {currentView === "whatsapp" ? (
+              {view === "whatsapp" ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#25D366" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                 </svg>
-              ) : currentView === "dbReset" ? (
+              ) : view === "updates" ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  <line x1="10" y1="11" x2="10" y2="17" />
-                  <line x1="14" y1="11" x2="14" y2="17" />
+                  <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -232,93 +279,158 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
           </div>
           <button type="button" className="close-btn" onClick={handleModalHide}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
 
-        {currentView === "whatsapp" ? (
+        {/* ── Şifrə ekranı ── */}
+        {!unlocked ? (
+          <div className="discount-body pin-adv-password-body">
+            <p className="pin-adv-password-hint">Şifrəni daxil edin</p>
+            <div className={`pin-adv-password-dots ${passwordError ? "pin-adv-password-error" : ""}`}>
+              {[0,1,2,3].map(i => (
+                <span key={i} className={`pin-adv-dot ${i < passwordInput.length ? "filled" : ""}`} />
+              ))}
+            </div>
+            <div className="pin-adv-numpad">
+              {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`pin-adv-numpad-btn${k === "" ? " invisible" : ""}${k === "⌫" ? " backspace" : ""}`}
+                  onClick={() => k === "⌫" ? handlePasswordBackspace() : k !== "" ? handlePasswordKey(k) : null}
+                  disabled={k === ""}
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+          </div>
+
+        ) : view === "whatsapp" ? (
           <div className="discount-body wa-settings-body">
             {waLoading ? (
               <div className="wa-settings-loading">Yüklənir...</div>
             ) : (
               <>
-                <p className="wa-settings-hint">
-                  Aktiv olan əməliyyatlar WhatsApp-a göndəriləcək.
-                </p>
+                <p className="wa-settings-hint">Aktiv olan əməliyyatlar WhatsApp-a göndəriləcək.</p>
                 <div className="wa-settings-list">
                   {ALL_ACTIONS.map((item) => {
-                    const denied = isActionDenied(item.key, denyActions, denyPrefixes);
-                    const enabled = !denied;
+                    const enabled = !isActionDenied(item.key, denyActions, denyPrefixes);
                     return (
-                      <div
-                        key={item.key}
-                        className={`wa-settings-row ${enabled ? "wa-on" : "wa-off"}`}
-                        onClick={() => toggleAction(item.key)}
-                      >
+                      <div key={item.key} className={`wa-settings-row ${enabled ? "wa-on" : "wa-off"}`} onClick={() => toggleAction(item.key)}>
                         <span className="wa-settings-label">{item.label}</span>
-                        <div className={`wa-toggle ${enabled ? "wa-toggle-on" : ""}`}>
-                          <div className="wa-toggle-thumb" />
-                        </div>
+                        <div className={`wa-toggle ${enabled ? "wa-toggle-on" : ""}`}><div className="wa-toggle-thumb" /></div>
                       </div>
                     );
                   })}
                 </div>
                 <div className="wa-settings-actions">
-                  <button
-                    type="button"
-                    className="delete-all-btn wa-settings-cancel"
-                    onClick={() => setShowWhatsapp(false)}
-                    disabled={waSaving}
-                  >
-                    Geri
-                  </button>
-                  <button
-                    type="button"
-                    className="apply-btn wa-settings-save"
-                    onClick={handleSaveWhatsapp}
-                    disabled={waSaving}
-                  >
-                    {waSaving ? "Saxlanılır..." : "Yadda saxla"}
-                  </button>
+                  <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")} disabled={waSaving}>Geri</button>
+                  <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveWhatsapp} disabled={waSaving}>{waSaving ? "Saxlanılır..." : "Yadda saxla"}</button>
                 </div>
               </>
             )}
           </div>
-        ) : currentView === "dbReset" ? (
+
+        ) : view === "dbReset" ? (
           <div className="discount-body pin-advanced-reset-confirm-body">
             <p className="pin-advanced-reset-confirm-text">
-              Bütün lokal verilənlər bazası silinəcək (masalar, sifarişlər, menyu surəti və s.).
-              <strong> Bu geri qaytarılmır.</strong> Davam edək?
+              Bütün lokal verilənlər bazası silinəcək.<strong> Bu geri qaytarılmır.</strong> Davam edək?
             </p>
             <div className="action-row pin-advanced-reset-confirm-actions">
-              <button
-                type="button"
-                className="delete-all-btn pin-advanced-reset-cancel"
-                onClick={() => setShowDbResetConfirm(false)}
-                disabled={resettingDb}
-              >
-                İmtina
-              </button>
-              <button
-                type="button"
-                className="apply-btn pin-advanced-reset-confirm-btn"
-                onClick={executeResetDatabase}
-                disabled={resettingDb}
-              >
-                {resettingDb ? "Sıfırlanır..." : "Bəli, sıfırla"}
-              </button>
+              <button type="button" className="delete-all-btn" onClick={() => setView("main")} disabled={resettingDb}>İmtina</button>
+              <button type="button" className="apply-btn" onClick={executeResetDatabase} disabled={resettingDb}>{resettingDb ? "Sıfırlanır..." : "Bəli, sıfırla"}</button>
             </div>
           </div>
+
+        ) : view === "updates" ? (
+          <div className="discount-body pin-adv-updates-body">
+            {currentVersion && (
+              <p className="pin-adv-current-version">Cari versiya: <strong>v{currentVersion}</strong></p>
+            )}
+
+            {/* Avto-yeniləmə toggle */}
+            <div className="pin-adv-update-row">
+              <div className="pin-adv-update-row-label">
+                <i className="bi bi-arrow-repeat" /> Avto-yeniləmə
+              </div>
+              <div className={`wa-toggle ${autoUpdateEnabled ? "wa-toggle-on" : ""}`} onClick={() => handleToggleAutoUpdate(!autoUpdateEnabled)} style={{ cursor: "pointer" }}>
+                <div className="wa-toggle-thumb" />
+              </div>
+            </div>
+
+            {/* Manuel yoxla */}
+            <button type="button" className="pin-adv-update-btn" onClick={handleCheckNow} disabled={updateCheckResult === "checking"}>
+              <i className="bi bi-search" /> {updateCheckResult === "checking" ? "Yoxlanılır..." : "İndi yenilənmə yoxla"}
+            </button>
+
+            {/* Yüklənmə progress */}
+            {updateProgress !== null && !updateReady && (
+              <div className="pin-adv-update-progress">
+                <div className="pin-adv-update-progress-bar" style={{ width: `${updateProgress}%` }} />
+                <span>{updateProgress}%</span>
+              </div>
+            )}
+
+            {/* Hazır olduqda quraşdır */}
+            {updateReady && (
+              <button type="button" className="pin-adv-update-btn success" onClick={handleInstallNow}>
+                <i className="bi bi-download" /> Yeniləməni quraşdır və yenidən başlat
+              </button>
+            )}
+
+            {/* Manuel release seçimi */}
+            <div className="pin-adv-releases-section">
+              <button type="button" className="pin-adv-update-btn secondary" onClick={handleLoadReleases} disabled={releasesLoading}>
+                <i className="bi bi-github" /> {releasesLoading ? "Yüklənir..." : "GitHub releaslərini göstər"}
+              </button>
+
+              {releases.length > 0 && (
+                <div className="pin-adv-releases-list">
+                  {releases.map((r) => {
+                    const exeAsset = r.assets?.find(a => a.name.endsWith(".exe"));
+                    return (
+                      <div key={r.id} className="pin-adv-release-row">
+                        <div className="pin-adv-release-info">
+                          <span className="pin-adv-release-tag">{r.tag_name}</span>
+                          <span className="pin-adv-release-name">{r.name || r.tag_name}</span>
+                          <span className="pin-adv-release-date">{new Date(r.published_at).toLocaleDateString("az-AZ")}</span>
+                        </div>
+                        <a
+                          href={exeAsset?.browser_download_url || r.html_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="pin-adv-release-download-btn"
+                          title="GitHub-dan yüklə"
+                        >
+                          <i className="bi bi-download" />
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
         ) : (
+          /* ── Əsas menyu ── */
           <div className="discount-body pin-advanced-settings-body">
             <div className="settings-menu-items pin-advanced-settings-items">
-              <button
-                type="button"
-                className="settings-menu-item"
-                onClick={handleOpenWhatsapp}
-              >
+
+              <button type="button" className="settings-menu-item" onClick={() => { setView("updates"); loadUpdateSettings(); }}>
+                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Yeniləmələr</span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={() => { setView("whatsapp"); loadWhatsappSettings(); }}>
                 <span className="settings-menu-item-icon" style={{ color: "#25D366" }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
@@ -327,49 +439,36 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                 <span className="settings-menu-item-label">WhatsApp mesajları</span>
               </button>
 
-              <button
-                type="button"
-                className="settings-menu-item danger"
-                onClick={handleExitTerminal}
-              >
+              <button type="button" className="settings-menu-item danger" onClick={() => { onClose(); onExitTerminal?.(); }}>
                 <span className="settings-menu-item-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
+                    <polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
                 </span>
                 <span className="settings-menu-item-label">Terminaldan çıx</span>
               </button>
 
-              <button
-                type="button"
-                className="settings-menu-item danger"
-                onClick={handleAskResetDatabase}
-                disabled={resettingDb}
-              >
+              <button type="button" className="settings-menu-item danger" onClick={() => setView("dbReset")} disabled={resettingDb}>
                 <span className="settings-menu-item-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="3 6 5 6 21 6" />
                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    <line x1="10" y1="11" x2="10" y2="17" />
-                    <line x1="14" y1="11" x2="14" y2="17" />
+                    <line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">
-                  {resettingDb ? "Sıfırlanır..." : "Databaseni sıfırla"}
-                </span>
+                <span className="settings-menu-item-label">{resettingDb ? "Sıfırlanır..." : "Databaseni sıfırla"}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={handleOpenDevtools}>
                 <span className="settings-menu-item-icon">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="16 18 22 12 16 6" />
-                    <polyline points="8 6 2 12 8 18" />
+                    <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
                   </svg>
                 </span>
                 <span className="settings-menu-item-label">Devtools açmaq</span>
               </button>
+
             </div>
           </div>
         )}

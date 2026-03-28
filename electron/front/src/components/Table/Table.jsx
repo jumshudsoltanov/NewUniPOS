@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { computeOrderCardMeta } from "../../utils/orderDisplayTotal";
 
-const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
+const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }) => {
   const { name, status, shape_type, orders } = table || {};
 
   const hasOrders = React.useMemo(() => orders && orders.length > 0, [orders]);
@@ -72,10 +72,11 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
           {/* Status Dot */}
           <div
             className={`status-dot ${orders?.length > 0 ? "has-orders" : ""}`}
+            style={rotation ? { transform: `rotate(${-rotation}deg)` } : undefined}
           ></div>
 
           {/* Center Content */}
-          <div className="table-content">
+          <div className="table-content" style={rotation ? { transform: `rotate(${-rotation}deg)` } : undefined}>
             <h3
               className={`table-name ${status} ${orders?.length > 0 ? "" : ""}`}
             >
@@ -135,7 +136,7 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle }) => {
             )}
           </div>
 
-          <div className="print-action">
+          <div className="print-action" style={rotation ? { transform: `rotate(${-rotation}deg)` } : undefined}>
             <div className="notification-badge fw-bold">
               {orders?.reduce((sum, order) => sum + (order.print_count || 0), 0) || 0}
             </div>
@@ -166,7 +167,8 @@ const areEqual = (prevProps, nextProps) => {
   return (
     prevProps.table === nextProps.table &&
     prevProps.loginedWaiter === nextProps.loginedWaiter &&
-    prevProps.customStyle === nextProps.customStyle
+    prevProps.customStyle === nextProps.customStyle &&
+    prevProps.rotation === nextProps.rotation
   );
 };
 

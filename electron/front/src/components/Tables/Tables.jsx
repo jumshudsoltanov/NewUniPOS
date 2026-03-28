@@ -365,7 +365,8 @@ const Tables = () => {
       initialLeft: layout.x || 0,
       initialTop: layout.y || 0,
       initialWidth: currentW,
-      initialHeight: currentH
+      initialHeight: currentH,
+      rotation: layout.rotation || 0
     });
   };
 
@@ -390,7 +391,8 @@ const Tables = () => {
               x: newX,
               y: newY,
               w: interactionState.initialWidth,
-              h: interactionState.initialHeight
+              h: interactionState.initialHeight,
+              rotation: interactionState.rotation
             }
           }
         }));
@@ -408,7 +410,8 @@ const Tables = () => {
               x: interactionState.initialLeft,
               y: interactionState.initialTop,
               w: newW,
-              h: newH
+              h: newH,
+              rotation: interactionState.rotation
             }
           }
         }));
@@ -512,15 +515,18 @@ const Tables = () => {
               const isResized = layout.w !== undefined || layout.h !== undefined;
               const isRect = table.shape_type === "rectangle";
               const defaultH = isRect ? 300 : 200;
+              const rotation = layout.rotation || 0;
 
               const style = {
                 position: 'absolute',
                 left: layout.x,
                 top: layout.y,
-                width: layout.w || 200, // Default to CSS wrapper size if not set
+                width: layout.w || 200,
                 height: layout.h || defaultH,
                 zIndex: interactionState.tableId === table.id ? 100 : 1,
                 cursor: isTableEditMode ? 'move' : 'default',
+                transform: rotation ? `rotate(${rotation}deg)` : undefined,
+                transformOrigin: 'center center',
                 transition: (!transitionsEnabled || interactionState.tableId === table.id) ? 'none' : 'all 0.2s ease'
               };
 
@@ -535,31 +541,68 @@ const Tables = () => {
                     table={table}
                     onTableClick={handleTableClick}
                     loginedWaiter={loginedWaiter}
-                    // Only pass dimensions to customStyle if they are explicitly set in layout (resized)
+                    rotation={rotation}
                     customStyle={isResized ? {
                       width: '100%',
                       height: '100%',
                       transform: 'none'
                     } : undefined}
-                  />    {isTableEditMode && (
-                    <div
-                      className="resize-handle"
-                      onMouseDown={(e) => handleInteractionStart(e, table, 'resize')}
-                      onTouchStart={(e) => handleInteractionStart(e, table, 'resize')}
-                      style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        right: 0,
-                        width: '20px',
-                        height: '20px',
-                        background: '#053796',
-                        borderRadius: '50% 0 50% 0',
-                        cursor: 'nwse-resize',
-                        zIndex: 101
-                      }}
-                    >
-                      <i className="bi bi-arrows-angle-expand text-white" style={{ fontSize: '10px', position: 'absolute', right: '3px', bottom: '3px' }}></i>
-                    </div>
+                  />
+                  {isTableEditMode && (
+                    <>
+                      {/* Fırlatma düyməsi — yuxarı sol */}
+                      <div
+                        onMouseDown={(e) => { e.stopPropagation(); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newRotation = ((rotation + 90) % 360);
+                          dispatch(setTempTableLayout({
+                            hallId: currentHallId,
+                            layout: {
+                              [table.id]: {
+                                ...(layout),
+                                rotation: newRotation
+                              }
+                            }
+                          }));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '24px',
+                          height: '24px',
+                          background: '#053796',
+                          borderRadius: '0 0 50% 0',
+                          cursor: 'pointer',
+                          zIndex: 102,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <i className="bi bi-arrow-clockwise text-white" style={{ fontSize: '12px' }}></i>
+                      </div>
+                      {/* Ölçü dəyişdirmə düyməsi — aşağı sağ */}
+                      <div
+                        className="resize-handle"
+                        onMouseDown={(e) => handleInteractionStart(e, table, 'resize')}
+                        onTouchStart={(e) => handleInteractionStart(e, table, 'resize')}
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          right: 0,
+                          width: '20px',
+                          height: '20px',
+                          background: '#053796',
+                          borderRadius: '50% 0 50% 0',
+                          cursor: 'nwse-resize',
+                          zIndex: 101
+                        }}
+                      >
+                        <i className="bi bi-arrows-angle-expand text-white" style={{ fontSize: '10px', position: 'absolute', right: '3px', bottom: '3px' }}></i>
+                      </div>
+                    </>
                   )}
                 </div>
               );

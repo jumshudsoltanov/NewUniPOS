@@ -401,7 +401,10 @@ const CheckOver = () => {
                                     items: saleItems,
                                     payments,
                                     cashierName: waiterName,
-                                    orderId: currentOrder?.id || id
+                                    orderId: currentOrder?.id || id,
+                                    serviceFee: Number(calcTotal.serviceAmount) || 0,
+                                    discountAmount: Number(calcTotal.discountAmount) || 0,
+                                    deliveryFee: Number(currentOrder?.delivery_fee) || 0
                                 }
                             }, { timeout: TAX_HTTP_TIMEOUT_MS }).then(taxResult => {
                                 const results = taxResult.data?.results || [];

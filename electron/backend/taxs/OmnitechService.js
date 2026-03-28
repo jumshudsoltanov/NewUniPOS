@@ -220,46 +220,111 @@ class OmnitechService {
         });
     }
 
+    _isCashlessPayment(p) {
+        const name = (p.name || '').toLowerCase();
+        const type = (p.type || '').toLowerCase();
+        return type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
+            name.includes('kart') || name.includes('card') || name.includes('cashless') ||
+            name.includes('nağdsız') || name.includes('bank');
+    }
+
     // check_type: 1
-    async createSale({ items, payments, cashierName, orderId }) {
+    async createSale({ items, payments, cashierName, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0 }) {
         // Always re-login before sale — Omnitech token expires after navigation
         this.accessToken = null;
         const token = await this._ensureToken();
         const vatPercent = this.taxPercent;
 
+        // Build base items — endirim mütənasib şəkildə hər itemə bölünür
+        const rawItemsTotal = items.reduce((acc, item) => {
+            const qty = Number(item.count || item.quantity || 1);
+            const price = Number(item.price || 0);
+            return acc + qty * price;
+        }, 0);
+
+        const discAmt = Number(discountAmount) || 0;
+        const svcFee = Number(serviceFee) || 0;
+        const dlvFee = Number(deliveryFee) || 0;
+
         const omniItems = items.map(item => {
             const qty = Number(item.count || item.quantity || 1);
             const price = Number(item.price || 0);
-            const sum = qty * price;
+            const lineTotal = qty * price;
+
+            // Endirimi bu item-ə mütənasib paylayırıq
+            let itemDiscount = 0;
+            if (discAmt > 0 && rawItemsTotal > 0) {
+                itemDiscount = Number(((discAmt * lineTotal) / rawItemsTotal).toFixed(2));
+            }
+
+            // itemPrice — endirimli vahid qiymət; itemSum = itemPrice * qty
+            const discountedLineTotal = Number((lineTotal - itemDiscount).toFixed(2));
+            const discountedPrice = qty > 0 ? Number((discountedLineTotal / qty).toFixed(2)) : 0;
+
             return {
                 itemName: this._azToLatin(item.product?.name || item.name || 'Mahsul').substring(0, 64),
                 itemCodeType: 0,
                 itemCode: String(item.product_id || item.id || '0'),
                 itemQuantityType: 0,
                 itemQuantity: qty,
-                itemPrice: price,
-                itemSum: sum,
+                itemPrice: discountedPrice,
+                itemSum: discountedLineTotal,
                 itemVatPercent: vatPercent,
                 discount: 0
             };
         });
 
-        const totalSum = omniItems.reduce((acc, i) => acc + i.itemSum, 0);
+        // Servis haqqı — ayrıca item kimi əlavə edilir
+        if (svcFee > 0) {
+            omniItems.push({
+                itemName: 'Servis haqqi',
+                itemCodeType: 0,
+                itemCode: '0',
+                itemQuantityType: 0,
+                itemQuantity: 1,
+                itemPrice: Number(svcFee.toFixed(2)),
+                itemSum: Number(svcFee.toFixed(2)),
+                itemVatPercent: vatPercent,
+                discount: 0
+            });
+        }
+
+        // Çatdırılma haqqı — ayrıca item kimi əlavə edilir
+        if (dlvFee > 0) {
+            omniItems.push({
+                itemName: 'Catdirilma haqqi',
+                itemCodeType: 0,
+                itemCode: '0',
+                itemQuantityType: 0,
+                itemQuantity: 1,
+                itemPrice: Number(dlvFee.toFixed(2)),
+                itemSum: Number(dlvFee.toFixed(2)),
+                itemVatPercent: vatPercent,
+                discount: 0
+            });
+        }
+
+        // sum = ∑items(itemSum) — Omnitech API tələbi
+        const totalSum = Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+
+        // vatAmounts — itemVatPercent-ə görə qruplaşdırılmış cəm
+        const vatMap = {};
+        omniItems.forEach(i => {
+            const pct = i.itemVatPercent;
+            vatMap[pct] = (vatMap[pct] || 0) + i.itemSum;
+        });
+        const vatAmounts = Object.entries(vatMap).map(([pct, sum]) => ({
+            vatPercent: Number(pct),
+            vatSum: Number(sum.toFixed(2))
+        }));
 
         let cashSum = 0;
         let cashlessSum = 0;
 
         if (payments && payments.length > 0) {
             payments.forEach(p => {
-                const name = (p.name || '').toLowerCase();
-                const type = (p.type || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-
-                // type: "Nağd" = cash, "Nağdsız" = cashless
-                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
-                    name.includes('kart') || name.includes('card') || name.includes('cashless') ||
-                    name.includes('nağdsız') || name.includes('bank');
-                if (isCashless) {
+                if (this._isCashlessPayment(p)) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;
@@ -292,10 +357,7 @@ class OmnitechService {
                             creditSum: 0,
                             bonusSum: 0,
                             incomingSum,
-                            vatAmounts: [{
-                                vatSum: totalSum,
-                                vatPercent: vatPercent
-                            }]
+                            vatAmounts
                         }
                     },
                     operationId: 'createDocument',
@@ -353,13 +415,8 @@ class OmnitechService {
 
         if (payments && payments.length > 0) {
             payments.forEach(p => {
-                const name = (p.name || '').toLowerCase();
-                const type = (p.type || '').toLowerCase();
                 const amount = Number(p.amount || 0);
-                
-                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
-                    name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('bank');
-                if (isCashless) {
+                if (this._isCashlessPayment(p)) {
                     cashlessSum += amount;
                 } else {
                     cashSum += amount;
@@ -371,6 +428,17 @@ class OmnitechService {
 
         cashSum = Number(cashSum.toFixed(2));
         cashlessSum = Number(cashlessSum.toFixed(2));
+
+        // vatAmounts — itemVatPercent-ə görə qruplaşdırılmış cəm
+        const vatMapMb = {};
+        omniItems.forEach(i => {
+            const pct = i.itemVatPercent;
+            vatMapMb[pct] = (vatMapMb[pct] || 0) + i.itemSum;
+        });
+        const vatAmountsMb = Object.entries(vatMapMb).map(([pct, sum]) => ({
+            vatPercent: Number(pct),
+            vatSum: Number(sum.toFixed(2))
+        }));
 
         const parameters = {
             data: {
@@ -388,10 +456,7 @@ class OmnitechService {
                 refund_document_number: String(documentNumber || ''),
                 refund_short_document_id: String(shortDocId || ''),
                 sum: totalSum,
-                vatAmounts: [{
-                    vatPercent: vatPercent,
-                    vatSum: totalSum
-                }]
+                vatAmounts: vatAmountsMb
             },
             doc_type: 'money_back'
         };

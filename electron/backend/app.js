@@ -30,6 +30,7 @@ const { getTags } = require("./data/TagsData");
 const { getSalesTypes } = require("./data/SalesTypesData");
 const PrintersModel = require("./model/PrintersModel");
 const SalesShiftsModel = require("./model/SalesShiftsModel");
+const AppSettingsModel = require("./model/AppSettingsModel");
 const { getPrinters } = require("./data/PrintersData");
 
 // Allow Cors
@@ -284,6 +285,23 @@ let creaedtToTabel = async () => {
       console.log("[Schema] sales_shifts cədvəli yaradıldı (sync)");
     } catch (e2) {
       console.warn("[Schema] sales_shifts sync:", e2?.message || e2);
+    }
+  }
+
+  /** app_settings — WhatsApp və digər lokal ayarlar */
+  try {
+    await AppSettingsModel.sync({ alter: true });
+    console.log("[Schema] app_settings cədvəli sinxronizə edildi");
+  } catch (appSettingsSyncErr) {
+    console.warn(
+      "[Schema] app_settings alter:",
+      appSettingsSyncErr?.message || appSettingsSyncErr,
+    );
+    try {
+      await AppSettingsModel.sync();
+      console.log("[Schema] app_settings cədvəli yaradıldı (sync)");
+    } catch (e2) {
+      console.warn("[Schema] app_settings sync:", e2?.message || e2);
     }
   }
 };

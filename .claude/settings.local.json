@@ -20,7 +20,8 @@
       "Bash(npm uninstall:*)",
       "Bash(npm install:*)",
       "Read(//c/Users/Jumshud/Desktop/POS-ReDesing/**)",
-      "Bash(grep -rn \"clearOrders\\\\|SalesTypesModal\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/ --include=*.jsx -l)"
+      "Bash(grep -rn \"clearOrders\\\\|SalesTypesModal\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/ --include=*.jsx -l)",
+      "Bash(\"c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/RefreshLoader/RefreshLoader.css\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",

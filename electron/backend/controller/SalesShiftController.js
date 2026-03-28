@@ -6,6 +6,86 @@ const { getShiftSummaryForRange } = require("./ReportController");
 
 const ADMIN_API = "http://46.224.8.157:8089/api";
 
+/**
+ * Növbəni admin serverə göndər. Uğursuz olsa is_synced=0 saxlanır,
+ * syncShiftsPending intervalı internet gələndə yenidən cəhd edəcək.
+ */
+async function sendShiftToAdmin(shiftUuid, payload, action) {
+  try {
+    const url =
+      action === "open"
+        ? `${ADMIN_API}/sales-shifts/${payload.profileId}/open`
+        : `${ADMIN_API}/sales-shifts/shift/${shiftUuid}/close`;
+    await axios.post(url, payload, { timeout: 15000 });
+    await SalesShiftsModel.update(
+      { is_synced: 1 },
+      { where: { uuid: shiftUuid } }
+    );
+    console.log(`[SHIFT_SYNC] ${action} sent: ${shiftUuid}`);
+  } catch (err) {
+    // is_synced=0 olaraq qalır — interval yenidən cəhd edəcək
+    console.warn(`[SHIFT_SYNC] ${action} failed (${shiftUuid}): ${err.message}`);
+  }
+}
+
+// Hər 30 saniyə: göndərilməmiş növbələri yenidən admin-ə göndər
+setInterval(async () => {
+  try {
+    const pending = await SalesShiftsModel.findAll({
+      where: { is_synced: 0 },
+      order: [["opened_at", "ASC"]],
+      limit: 20,
+    });
+    if (pending.length === 0) return;
+
+    for (const shift of pending) {
+      try {
+        const isClosed = shift.status === "closed";
+        let snapshot = null;
+        if (shift.report_snapshot) {
+          try { snapshot = JSON.parse(shift.report_snapshot); } catch { snapshot = null; }
+        }
+        if (isClosed) {
+          await axios.post(
+            `${ADMIN_API}/sales-shifts/shift/${shift.uuid}/close`,
+            {
+              waiterId: shift.closed_by_waiter_id || null,
+              waiterName: shift.closed_by_name || null,
+              closed_at: shift.closed_at,
+              report_snapshot: snapshot,
+              profileId: shift.profile_id,
+            },
+            { timeout: 15000 }
+          );
+        } else if (!isClosed) {
+          await axios.post(
+            `${ADMIN_API}/sales-shifts/${shift.profile_id}/open`,
+            {
+              uuid: shift.uuid,
+              terminalId: shift.terminal_id || null,
+              waiterId: shift.opened_by_waiter_id || null,
+              waiterName: shift.opened_by_name || null,
+              opened_at: shift.opened_at,
+              startingCash: Number(shift.starting_cash) || 0,
+              profileId: shift.profile_id,
+            },
+            { timeout: 15000 }
+          );
+        }
+        await SalesShiftsModel.update(
+          { is_synced: 1 },
+          { where: { uuid: shift.uuid } }
+        );
+        console.log(`[SHIFT_SYNC_RETRY] Synced: ${shift.uuid} (${shift.status})`);
+      } catch (e) {
+        console.warn(`[SHIFT_SYNC_RETRY] Failed ${shift.uuid}: ${e.message}`);
+      }
+    }
+  } catch (e) {
+    console.error("[SHIFT_SYNC_INTERVAL]", e.message);
+  }
+}, 30000);
+
 const fmt = (d) => {
   const pad = (n) => String(n).padStart(2, "0");
   const y = d.getFullYear();
@@ -44,19 +124,19 @@ const openShift = async (req, res) => {
       opened_by_waiter_id: waiterId || null,
       opened_by_name: waiterName || null,
       starting_cash: Number(startingCash) || 0,
+      is_synced: 0,
     });
 
-    // Admin serverə göndər (xəta olsa da davam et)
-    axios
-      .post(`${ADMIN_API}/sales-shifts/${profileId}/open`, {
-        uuid: row.uuid,
-        terminalId: terminalId || null,
-        waiterId: waiterId || null,
-        waiterName: waiterName || null,
-        opened_at: row.opened_at,
-        startingCash: row.starting_cash || 0,
-      })
-      .catch(() => {});
+    // Admin serverə göndər — uğursuz olsa is_synced=0 qalır, interval yenidən cəhd edəcək
+    sendShiftToAdmin(row.uuid, {
+      uuid: row.uuid,
+      terminalId: terminalId || null,
+      waiterId: waiterId || null,
+      waiterName: waiterName || null,
+      opened_at: row.opened_at,
+      startingCash: row.starting_cash || 0,
+      profileId: Number(profileId),
+    }, "open");
 
     // Bütün terminallara socket ilə xəbər ver
     try {
@@ -153,17 +233,16 @@ const closeShift = async (req, res) => {
     shift.closed_by_waiter_id = waiterId || null;
     shift.closed_by_name = waiterName || null;
     shift.report_snapshot = JSON.stringify(snapshot);
+    shift.is_synced = 0;
     await shift.save();
 
-    // Admin serverə göndər (xəta olsa da davam et)
-    axios
-      .post(`${ADMIN_API}/sales-shifts/shift/${shiftUuid}/close`, {
-        waiterId: waiterId || null,
-        waiterName: waiterName || null,
-        closed_at: shift.closed_at,
-        report_snapshot: snapshot,
-      })
-      .catch(() => {});
+    // Admin serverə göndər — uğursuz olsa is_synced=0 qalır, interval yenidən cəhd edəcək
+    sendShiftToAdmin(shiftUuid, {
+      waiterId: waiterId || null,
+      waiterName: waiterName || null,
+      closed_at: shift.closed_at,
+      report_snapshot: snapshot,
+    }, "close");
 
     // Bütün terminallara socket ilə xəbər ver
     try {

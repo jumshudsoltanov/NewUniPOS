@@ -32,4 +32,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     onUpdateAvailable: (callback) => ipcRenderer.on("update-available", (event, info) => callback(info)),
     onUpdateDownloadProgress: (callback) => ipcRenderer.on("update-download-progress", (event, percent) => callback(percent)),
     onUpdateDownloaded: (callback) => ipcRenderer.on("update-downloaded", (event, info) => callback(info)),
+    getAutoUpdateEnabled: () => ipcRenderer.invoke("get-auto-update-enabled"),
+    setAutoUpdateEnabled: (enabled) => ipcRenderer.invoke("set-auto-update-enabled", enabled),
+    checkForUpdatesNow: () => ipcRenderer.invoke("check-for-updates-now"),
+    getGithubReleases: () => ipcRenderer.invoke("get-github-releases"),
 });

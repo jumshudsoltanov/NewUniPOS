@@ -16,7 +16,7 @@ const SYNC_STEPS = [
     { key: "activeChecks",      label: "Aktiv çeklər",       icon: "bi-receipt" },
 ];
 
-const RefreshLoader = ({ isOpen, syncCounts }) => {
+const RefreshLoader = ({ isOpen, syncCounts, isOnline = true }) => {
     const [progress, setProgress] = useState(0);
     const [visibleSteps, setVisibleSteps] = useState(0);
     const [isDone, setIsDone] = useState(false);
@@ -29,7 +29,8 @@ const RefreshLoader = ({ isOpen, syncCounts }) => {
             return;
         }
 
-        const duration = 4000;
+        // Offline rejimində animasiya qısa olsun
+        const duration = isOnline ? 4000 : 1500;
         const intervalTime = 40;
         const totalSteps = duration / intervalTime;
         let current = 0;
@@ -44,13 +45,13 @@ const RefreshLoader = ({ isOpen, syncCounts }) => {
             stepIndex++;
             setVisibleSteps(stepIndex);
             if (stepIndex >= SYNC_STEPS.length) clearInterval(stepInterval);
-        }, 350);
+        }, isOnline ? 350 : 130);
 
         return () => {
             clearInterval(interval);
             clearInterval(stepInterval);
         };
-    }, [isOpen]);
+    }, [isOpen, isOnline]);
 
     useEffect(() => {
         if (syncCounts) {
@@ -73,6 +74,12 @@ const RefreshLoader = ({ isOpen, syncCounts }) => {
                     <img src={DefaultLogo} alt="UniPOS" className="rl-logo" />
                 </div>
 
+                {!isOnline && (
+                    <div className="rl-offline-banner">
+                        <i className="bi bi-wifi-off" /> İnternet yoxdur — lokal məlumatlar
+                    </div>
+                )}
+
                 <div className={`rl-status ${isDone ? "done" : ""}`}>
                     {isDone ? (
                         <>
@@ -81,7 +88,7 @@ const RefreshLoader = ({ isOpen, syncCounts }) => {
                                     <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </span>
-                            Sinxronizasiya tamamlandı
+                            {isOnline ? "Sinxronizasiya tamamlandı" : "Lokal məlumatlar yükləndi"}
                             {totalCount !== null && (
                                 <span className="rl-total-badge">{totalCount} qeyd</span>
                             )}
@@ -89,7 +96,7 @@ const RefreshLoader = ({ isOpen, syncCounts }) => {
                     ) : (
                         <>
                             <span className="rl-spinner" />
-                            Məlumatlar yenilənir...
+                            {isOnline ? "Məlumatlar yenilənir..." : "Lokal məlumatlar yüklənir..."}
                         </>
                     )}
                 </div>

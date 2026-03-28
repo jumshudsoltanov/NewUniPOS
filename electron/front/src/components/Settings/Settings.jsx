@@ -31,6 +31,7 @@ const Settings = () => {
     const [showMasterSlaveSettings, setShowMasterSlaveSettings] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [syncCounts, setSyncCounts] = useState(null);
+    const [refreshIsOnline, setRefreshIsOnline] = useState(true);
     const [anyDeskId, setAnyDeskId] = useState(null);
     const [showClock, setShowClock] = useState(() => {
         return localStorage.getItem("showHeaderClock") === "true";
@@ -92,16 +93,24 @@ const Settings = () => {
 
         setIsRefreshing(true);
         setSyncCounts(null);
+        setRefreshIsOnline(true);
         const toastId = toast.loading("Məlumatlar yenilənir...");
         try {
             const profileId = loginedProfileData.data.profile.id;
             const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`);
+            const isOnline = syncRes?.data?.isOnline !== false;
+            setRefreshIsOnline(isOnline);
             if (syncRes?.data?.counts) setSyncCounts(syncRes.data.counts);
 
             await Promise.all([
                 dispatch(getTableGroups(profileId)).unwrap(),
                 dispatch(getActiveOrders({ profileId })).unwrap(),
             ]);
+
+            if (!isOnline) {
+                toast.warning("İnternet yoxdur — lokal məlumatlar göstərilir", { id: toastId });
+                return;
+            }
 
             const storageData = JSON.parse(localStorage.getItem("profile"));
             if (storageData) {
@@ -127,7 +136,7 @@ const Settings = () => {
             toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
         } catch (error) {
             console.error("Yeniləmə xətası:", error);
-            
+
             if (error?.data?.isBlocked) {
                 toast.dismiss(toastId);
                 localStorage.setItem("authResult", JSON.stringify(error.data));
@@ -136,7 +145,18 @@ const Settings = () => {
                 return;
             }
 
-            toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
+            // İnternet olmadıqda lokal məlumatları yüklə
+            try {
+                setRefreshIsOnline(false);
+                const profileId = loginedProfileData.data.profile.id;
+                await Promise.all([
+                    dispatch(getTableGroups(profileId)).unwrap(),
+                    dispatch(getActiveOrders({ profileId })).unwrap(),
+                ]);
+                toast.warning("İnternet yoxdur — lokal məlumatlar göstərilir", { id: toastId });
+            } catch {
+                toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
+            }
         } finally {
             setIsRefreshing(false);
         }
@@ -347,7 +367,7 @@ const Settings = () => {
             />
 
             {/* Refreshing Overlay */}
-            <RefreshLoader isOpen={isRefreshing} syncCounts={syncCounts} />
+            <RefreshLoader isOpen={isRefreshing} syncCounts={syncCounts} isOnline={refreshIsOnline} />
         </>
     );
 };

@@ -25,6 +25,12 @@ const SalesShiftsModel = db.sequelize.define(
       defaultValue: 0,
     },
     report_snapshot: { type: DataTypes.TEXT("long"), allowNull: true },
+    is_synced: {
+      type: DataTypes.TINYINT,
+      allowNull: true,
+      defaultValue: 0,
+      comment: "0=pending, 1=synced",
+    },
   },
   {
     modelName: "SalesShiftsModel",

@@ -15,7 +15,7 @@
 .table-round,
 .table-rectangle {
     background: var(--Greyscale-Surface-Subtle, #FFF);
-    box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.12);
+    box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.18);
     position: relative;
     z-index: 10;
     display: flex;
@@ -49,8 +49,8 @@
 }
 
 .table-surface.pending {
-    background-color: #DDD6FE !important;
-    border: 1.5px solid #7C3AED;
+    background-color: #C4B5FD !important;
+    border: 2px solid #6D28D9;
 }
 
 .table-surface.my-table {
@@ -65,8 +65,8 @@
 
 /* Çoxlu açıq çek (count > 1) — benovşeyi ton */
 .table-surface.multi-checks {
-    background-color: #DDD6FE !important;
-    border: 1.5px solid #7C3AED;
+    background-color: #C4B5FD !important;
+    border: 2px solid #6D28D9;
 }
 
 .table-surface.multi-checks .table-name,
@@ -361,8 +361,8 @@
     }
 
     .table-surface.pending {
-        background: #DDD6FE !important;
-        border: 2px solid #7C3AED !important;
+        background: #C4B5FD !important;
+        border: 2px solid #6D28D9 !important;
     }
 
     .table-surface.free {
@@ -448,8 +448,8 @@
 
     /* Çoxlu açıq çek (count > 1) — benovşeyi ton */
     .table-surface.multi-checks {
-        background: #DDD6FE !important;
-        border: 2.5px solid #7C3AED !important;
+        background: #C4B5FD !important;
+        border: 2.5px solid #6D28D9 !important;
     }
 
     .table-surface.multi-checks .table-name,

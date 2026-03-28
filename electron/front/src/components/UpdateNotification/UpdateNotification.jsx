@@ -7,6 +7,7 @@ export default function UpdateNotification() {
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [autoEnabled, setAutoEnabled] = useState(true);
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -19,7 +20,9 @@ export default function UpdateNotification() {
         setProgress(state.progress || 0);
         setStatus(state.status);
         setVisible(true);
-        if (state.status === "ready") setCountdown(5);
+        const auto = state.autoEnabled !== false;
+        setAutoEnabled(auto);
+        if (state.status === "ready" && auto) setCountdown(5);
       }).catch(() => {});
     }
 
@@ -47,10 +50,12 @@ export default function UpdateNotification() {
     }
 
     if (window.electronAPI.onUpdateDownloaded) {
-      window.electronAPI.onUpdateDownloaded(() => {
+      window.electronAPI.onUpdateDownloaded((info) => {
+        const auto = info?.autoEnabled !== false;
+        setAutoEnabled(auto);
         setStatus("ready");
-        setCountdown(5);
         setVisible(true);
+        if (auto) setCountdown(5);
       });
     }
   }, []);
@@ -58,49 +63,35 @@ export default function UpdateNotification() {
   // Auto-hide "checking" after 10s if nothing happens
   useEffect(() => {
     if (status === "checking") {
-      const timer = setTimeout(() => {
-        setVisible(false);
-        setStatus(null);
-      }, 10000);
+      const timer = setTimeout(() => { setVisible(false); setStatus(null); }, 10000);
       return () => clearTimeout(timer);
     }
   }, [status]);
 
-  // Countdown when ready
+  // Countdown — yalnız avto-yeniləmə açıqdırsa
   useEffect(() => {
-    if (status !== "ready") return;
+    if (status !== "ready" || !autoEnabled) return;
     if (countdown <= 0) return;
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [status, countdown]);
+  }, [status, countdown, autoEnabled]);
 
   if (!visible) return null;
 
   const getContent = () => {
     switch (status) {
       case "checking":
-        return {
-          icon: "bi-arrow-repeat spin",
-          text: "Yeni versiya axtarılır...",
-          color: "#64748b",
-        };
+        return { icon: "bi-arrow-repeat spin", text: "Yeni versiya axtarılır...", color: "#64748b" };
       case "found":
-        return {
-          icon: "bi-cloud-download",
-          text: version ? `Yeni versiya tapıldı: v${version}` : "Yeni versiya tapıldı",
-          color: "#4F85F4",
-        };
+        return { icon: "bi-cloud-download", text: version ? `Yeni versiya tapıldı: v${version}` : "Yeni versiya tapıldı", color: "#4F85F4" };
       case "downloading":
-        return {
-          icon: "bi-cloud-arrow-down",
-          text: `Yüklənir... ${progress}%`,
-          color: "#f59e0b",
-          showBar: true,
-        };
+        return { icon: "bi-cloud-arrow-down", text: `Yüklənir... ${progress}%`, color: "#f59e0b", showBar: true };
       case "ready":
         return {
           icon: "bi-check-circle",
-          text: `Yenilənmə hazırdır! ${countdown > 0 ? `${countdown}s sonra quraşdırılır...` : "Quraşdırılır..."}`,
+          text: autoEnabled
+            ? `Yenilənmə hazırdır! ${countdown > 0 ? `${countdown}s sonra quraşdırılır...` : "Quraşdırılır..."}`
+            : "Yenilənmə hazırdır!",
           color: "#10b981",
         };
       default:
@@ -110,6 +101,12 @@ export default function UpdateNotification() {
 
   const content = getContent();
   if (!content) return null;
+
+  const handleInstall = async () => {
+    if (window.electronAPI?.installUpdate) {
+      await window.electronAPI.installUpdate();
+    }
+  };
 
   return (
     <div className="update-notification" style={{ borderLeftColor: content.color }}>
@@ -122,19 +119,20 @@ export default function UpdateNotification() {
         </div>
       )}
 
-      {status === "ready" && (
+      {status === "ready" && autoEnabled && (
         <div className="update-countdown-bar">
-          <div
-            className="update-countdown-fill"
-            style={{
-              width: `${((5 - countdown) / 5) * 100}%`,
-              background: content.color,
-            }}
-          />
+          <div className="update-countdown-fill" style={{ width: `${((5 - countdown) / 5) * 100}%`, background: content.color }} />
         </div>
       )}
 
-      {(status === "checking" || status === "found") && (
+      {/* Avto-yeniləmə söndüründə manual quraşdır düyməsi */}
+      {status === "ready" && !autoEnabled && (
+        <button className="update-install-btn" onClick={handleInstall} style={{ background: content.color }}>
+          Quraşdır
+        </button>
+      )}
+
+      {(status === "checking" || status === "found" || (status === "ready" && !autoEnabled)) && (
         <button className="update-dismiss-btn" onClick={() => { setVisible(false); setStatus(null); }}>
           <i className="bi bi-x" />
         </button>

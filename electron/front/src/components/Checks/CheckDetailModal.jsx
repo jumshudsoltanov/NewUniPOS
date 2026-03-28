@@ -347,7 +347,20 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             toast.error("Ödəniş məlumatı yoxdur — fiskal satış göndərilmədi.");
             return null;
         }
-        return { items, payments };
+        // Servis haqqı və endirim hesabla
+        const itemsTotal = items.reduce((s, i) => s + Number(i.count) * Number(i.price), 0);
+        const discountValue = Number(order.discount_value || order.discount || 0);
+        const discountType = order.discount_type || "percent";
+        const discountAmount = discountValue > 0
+            ? (discountType === "percent" ? (itemsTotal * discountValue) / 100 : discountValue)
+            : 0;
+        const serviceValue = Number(order.service_value || 0);
+        const serviceType = order.service_type || "percent";
+        const serviceFee = serviceValue > 0
+            ? (serviceType === "percent" ? (itemsTotal * serviceValue) / 100 : serviceValue)
+            : Number(order.service_charge || 0);
+
+        return { items, payments, serviceFee, discountAmount, deliveryFee: Number(order.delivery_fee || 0) };
     };
 
     /** Birdən çox vergi kassası: modal; tək kassa: birbaşa göndəriş */
@@ -369,7 +382,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
         const data = getResendSaleItemsAndPayments();
         if (!data) return;
-        const { items, payments } = data;
+        const { items, payments, serviceFee, discountAmount, deliveryFee } = data;
 
         if (order.fiscal_id) {
             const ok = window.confirm(
@@ -390,6 +403,9 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                         payments,
                         cashierName: waiterName,
                         orderId: order.id,
+                        serviceFee: serviceFee || 0,
+                        discountAmount: discountAmount || 0,
+                        deliveryFee: deliveryFee || 0,
                     },
                 },
                 { timeout: TAX_HTTP_TIMEOUT_MS }

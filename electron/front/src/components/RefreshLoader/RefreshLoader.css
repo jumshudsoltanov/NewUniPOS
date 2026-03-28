@@ -189,3 +189,20 @@
     0%   { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+.rl-offline-banner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+.rl-offline-banner .bi {
+    font-size: 15px;
+}
