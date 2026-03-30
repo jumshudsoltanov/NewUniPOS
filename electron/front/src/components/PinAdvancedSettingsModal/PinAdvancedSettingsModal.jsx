@@ -68,6 +68,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
 
   // Updates
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(true);
+  const [manualUpdateEnabled, setManualUpdateEnabled] = useState(
+    () => localStorage.getItem("manualUpdateEnabled") === "true"
+  );
   const [updateCheckResult, setUpdateCheckResult] = useState(null);
   const [releases, setReleases] = useState([]);
   const [releasesLoading, setReleasesLoading] = useState(false);
@@ -122,6 +125,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       await window.electronAPI.setAutoUpdateEnabled(val);
     }
     toast.success(val ? "Avto-yeniləmə aktiv edildi" : "Avto-yeniləmə söndürüldü");
+  };
+
+  const handleToggleManualUpdate = (val) => {
+    setManualUpdateEnabled(val);
+    localStorage.setItem("manualUpdateEnabled", val ? "true" : "false");
+    window.dispatchEvent(new CustomEvent("manualUpdateEnabledChanged", { detail: val }));
+    toast.success(val ? "Manual yeniləmə aktiv edildi" : "Manual yeniləmə söndürüldü");
   };
 
   const handleCheckNow = async () => {
@@ -360,6 +370,18 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                 <div className="wa-toggle-thumb" />
               </div>
             </div>
+
+            {/* Manual yeniləmə toggle — avto söndükdə görünsün */}
+            {!autoUpdateEnabled && (
+              <div className="pin-adv-update-row">
+                <div className="pin-adv-update-row-label">
+                  <i className="bi bi-download" /> Manual yeniləmə
+                </div>
+                <div className={`wa-toggle ${manualUpdateEnabled ? "wa-toggle-on" : ""}`} onClick={() => handleToggleManualUpdate(!manualUpdateEnabled)} style={{ cursor: "pointer" }}>
+                  <div className="wa-toggle-thumb" />
+                </div>
+              </div>
+            )}
 
             {/* Manuel yoxla */}
             <button type="button" className="pin-adv-update-btn" onClick={handleCheckNow} disabled={updateCheckResult === "checking"}>

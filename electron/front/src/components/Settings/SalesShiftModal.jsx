@@ -488,12 +488,13 @@ const SalesShiftModal = ({ show, onHide }) => {
 
     const fetchHistory = useCallback(async (from, to) => {
         if (!profileId) return;
+        if (Number(waiter?.can_see_shift_history) !== 1) return;
         const params = { limit: 80 };
         if (from) params.from = from;
         if (to) params.to = to;
         const res = await apiConfig.get(`/sales-shifts/${profileId}/history`, { params });
         setHistory(Array.isArray(res.data?.data) ? res.data.data : []);
-    }, [profileId]);
+    }, [profileId, waiter?.can_see_shift_history]);
 
     const refreshAll = useCallback(async () => {
         if (!profileId) return;
@@ -1060,7 +1061,12 @@ const SalesShiftModal = ({ show, onHide }) => {
     );
 
     const historyBody =
-        history.length === 0 ? (
+        Number(waiter?.can_see_shift_history) !== 1 ? (
+            <div className="sales-shift-empty-right">
+                <i className="bi bi-lock-fill me-2" aria-hidden />
+                İcazəniz yoxdur
+            </div>
+        ) : history.length === 0 ? (
             <div className="sales-shift-empty-right">Hələ bağlanmış növbə yoxdur.</div>
         ) : (
             <div className="sales-shift-history-strip-wrap">

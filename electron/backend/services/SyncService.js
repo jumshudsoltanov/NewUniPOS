@@ -13,11 +13,11 @@ const ADMIN_API_URL = "https://api.unipos.tech/api/sync";
 const ADMIN_API_FALLBACK_URL = "http://46.224.8.157:35627/api/sync";
 
 /** Bir sifariş üçün maks. gözləmə — donmuş HTTP/socket üçün */
-const SYNC_ORDER_TIMEOUT_MS = 75000;
+const SYNC_ORDER_TIMEOUT_MS = 20000;
 /** Hər dövrdə maks. sifariş sayı — uzun bloklamanın qarşısını alır */
 const SYNC_BATCH_LIMIT = 15;
 /** finally çağrılmırsa (nadir) — dövrün maks. müddətindən böyük olmalıdır */
-const SYNC_WATCHDOG_MS = SYNC_BATCH_LIMIT * SYNC_ORDER_TIMEOUT_MS + 90000;
+const SYNC_WATCHDOG_MS = SYNC_BATCH_LIMIT * SYNC_ORDER_TIMEOUT_MS + 30000;
 
 class SyncService {
   constructor() {
@@ -89,7 +89,7 @@ class SyncService {
       this.isSyncing = false;
       this._syncCycleStartedAt = 0;
       this._currentlySyncing.clear();
-    }, 15000);
+    }, 8000);
   }
 
   _withTimeout(promise, ms, label) {
@@ -365,7 +365,7 @@ class SyncService {
     try {
       const isOnline = await this._withTimeout(
         this.checkConnectivity(),
-        22000,
+        8000,
         "checkConnectivity"
       ).catch(() => false);
       if (!isOnline) {
@@ -400,22 +400,22 @@ class SyncService {
 
       console.log(`[SYNC_LOOP] Found ${pendingOrders.length} pending orders. Processing...`);
 
-      for (const order of pendingOrders) {
-        if (this._currentlySyncing.has(order.uuid)) continue;
-
-        try {
+      const syncTasks = pendingOrders
+        .filter(order => !this._currentlySyncing.has(order.uuid))
+        .map(order => {
           this._currentlySyncing.add(order.uuid);
-          await this._withTimeout(
+          return this._withTimeout(
             this.triggerSync(order.uuid),
             SYNC_ORDER_TIMEOUT_MS,
             `triggerSync(${order.uuid?.slice?.(0, 8) || order.uuid})`
-          );
-        } catch (e) {
-          console.warn(`[SYNC_LOOP_SKIP] ${order.uuid}: ${e.message}`);
-        } finally {
-          this._currentlySyncing.delete(order.uuid);
-        }
-      }
+          ).catch(e => {
+            console.warn(`[SYNC_LOOP_SKIP] ${order.uuid}: ${e.message}`);
+          }).finally(() => {
+            this._currentlySyncing.delete(order.uuid);
+          });
+        });
+
+      await Promise.allSettled(syncTasks);
 
       console.log("[SYNC_LOOP] Cycle complete.");
     } catch (error) {
@@ -449,9 +449,9 @@ class SyncService {
      * Əvvəl yalnız discover + Google/Cloudflare idi — bəzən UI yaşıl, sync isə "offline" qalırdı.
      */
     const checks = [
-      { url: "https://1.1.1.1", timeout: 1500 },
-      { url: "http://46.224.8.157:35627/api/discover", timeout: 2000 },
-      { url: "https://api.unipos.tech/", timeout: 2000, validateStatus: () => true },
+      { url: "https://1.1.1.1", timeout: 1000 },
+      { url: "http://46.224.8.157:35627/api/discover", timeout: 1500 },
+      { url: "https://api.unipos.tech/", timeout: 1500, validateStatus: () => true },
     ];
 
     const oneCheck = (url, timeout, validateStatus) =>
@@ -486,7 +486,7 @@ class SyncService {
     try {
       await Promise.any(
         urls.map(url =>
-          axios.post(url, payload, { timeout: 20000 }).then(res => {
+          axios.post(url, payload, { timeout: 12000 }).then(res => {
             // 2xx = success
             if (res.status >= 200 && res.status < 300) return true;
             throw new Error(`Unexpected status ${res.status}`);

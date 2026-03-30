@@ -7,7 +7,7 @@ import { getTableGroups, addOrderToTableOptimistic } from "../../redux/Slices/Ta
 import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
 import { getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount = 0, onBeforeCreateOrder }) => {
@@ -15,6 +15,15 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { id: currentId } = useParams();
+  const liveOrder = useSelector((state) => {
+    if (!currentId) return null;
+    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
+    return booksData?.find(o => String(o.uuid) === String(currentId)) ?? null;
+  });
+  const liveSaleType = liveOrder?.sale_type ?? null;
+  const liveTableName = liveOrder?.table?.name ?? liveOrder?.table_name ?? null;
+  const liveHallName = liveOrder?.table?.hall?.name ?? liveOrder?.hall_name ?? null;
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -154,21 +163,24 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
             <i className="bi bi-pencil-fill"></i>
           </div>
           <div className="header-info-text" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 0, minWidth: 0, overflow: "hidden" }}>
-            {(orders?.sale_type === "dine_in" || table || hall || orders?.table_id) ? (
-              <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
-                {hall?.name || orders?.hall_name || "Zal"} / {table?.name || orders?.table_name || orders?.table?.name || "Masa"}
-              </span>
-            ) : (
-              <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
-                {(() => {
-                  const type = orders?.sale_type;
-                  if (!type) return "Yeni Sifariş";
-                  if (type === "delivery") return "Çatdırılma";
-                  if (type === "takeaway") return "Gəl götür";
-                  return type.charAt(0).toUpperCase() + type.slice(1);
-                })()}
-              </span>
-            )}
+            {(() => {
+              const effectiveSaleType = liveSaleType ?? orders?.sale_type;
+              const isDineIn = !effectiveSaleType || effectiveSaleType === "dine_in";
+              const effectiveHallName = liveHallName || hall?.name || orders?.hall_name;
+              const effectiveTableName = liveTableName || table?.name || orders?.table_name || orders?.table?.name;
+              if (isDineIn && (effectiveTableName || effectiveHallName || orders?.table_id)) {
+                return (
+                  <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
+                    {effectiveHallName || "Zal"} / {effectiveTableName || "Masa"}
+                  </span>
+                );
+              }
+              return (
+                <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
+                  {effectiveSaleType === "delivery" ? "Çatdırılma" : effectiveSaleType === "takeaway" ? "Gəl götür" : "Yeni Sifariş"}
+                </span>
+              );
+            })()}
             <div className="header-subtitle-container" style={{ minWidth: 0 }}>
               {orders && orders?.tags && (
                 <span className="header-subtitle" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{orders.tags}</span>

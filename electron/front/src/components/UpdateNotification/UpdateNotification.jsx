@@ -8,6 +8,16 @@ export default function UpdateNotification() {
   const [visible, setVisible] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [autoEnabled, setAutoEnabled] = useState(true);
+  const [manualEnabled, setManualEnabled] = useState(
+    () => localStorage.getItem("manualUpdateEnabled") === "true"
+  );
+
+  // manualUpdateEnabled dəyişdikdə sinxronlaşdır
+  useEffect(() => {
+    const handler = (e) => setManualEnabled(e.detail === true || e.detail === "true");
+    window.addEventListener("manualUpdateEnabledChanged", handler);
+    return () => window.removeEventListener("manualUpdateEnabledChanged", handler);
+  }, []);
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -76,7 +86,8 @@ export default function UpdateNotification() {
     return () => clearTimeout(timer);
   }, [status, countdown, autoEnabled]);
 
-  if (!visible) return null;
+  // Avto söndürülüb, manual da söndürülübsə — ready badge-i göstərmə
+  if (!visible || (status === "ready" && !autoEnabled && !manualEnabled)) return null;
 
   const getContent = () => {
     switch (status) {
@@ -87,11 +98,17 @@ export default function UpdateNotification() {
       case "downloading":
         return { icon: "bi-cloud-arrow-down", text: `Yüklənir... ${progress}%`, color: "#f59e0b", showBar: true };
       case "ready":
+        if (autoEnabled) {
+          return {
+            icon: "bi-check-circle",
+            text: `Yenilənmə hazırdır! ${countdown > 0 ? `${countdown}s sonra quraşdırılır...` : "Quraşdırılır..."}`,
+            color: "#10b981",
+          };
+        }
+        // manual mode
         return {
-          icon: "bi-check-circle",
-          text: autoEnabled
-            ? `Yenilənmə hazırdır! ${countdown > 0 ? `${countdown}s sonra quraşdırılır...` : "Quraşdırılır..."}`
-            : "Yenilənmə hazırdır!",
+          icon: "bi-download",
+          text: version ? `v${version} hazırdır!` : "Yenilənmə hazırdır!",
           color: "#10b981",
         };
       default:
@@ -125,8 +142,8 @@ export default function UpdateNotification() {
         </div>
       )}
 
-      {/* Avto-yeniləmə söndüründə manual quraşdır düyməsi */}
-      {status === "ready" && !autoEnabled && (
+      {/* Manual mode: Quraşdır düyməsi */}
+      {status === "ready" && !autoEnabled && manualEnabled && (
         <button className="update-install-btn" onClick={handleInstall} style={{ background: content.color }}>
           Quraşdır
         </button>

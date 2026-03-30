@@ -388,7 +388,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   return (
     <>
     <Modal
-      show={show && !showResetTimerConfirm}
+      show={show && !showResetTimerConfirm && !showTableSelect && !showWaiterSelect}
       onHide={onClose}
       centered
       className="editmodal"
@@ -1122,19 +1122,19 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
           </div>
         </div>
 
-        {/* Modals */}
-        <SplitTableSelect
-          show={showTableSelect}
-          onClose={() => setShowTableSelect(false)}
-          onSelect={(table) => { setSelectedTable(table); setShowTableSelect(false); }}
-        />
-        <SplitWaiterSelect
-          show={showWaiterSelect}
-          onClose={() => setShowWaiterSelect(false)}
-          onSelect={(waiter) => { setSelectedWaiter(waiter); setShowWaiterSelect(false); }}
-        />
       </Modal.Body>
     </Modal>
+
+    <SplitTableSelect
+      show={showTableSelect}
+      onClose={() => setShowTableSelect(false)}
+      onSelect={(table) => { setSelectedTable(table); setShowTableSelect(false); }}
+    />
+    <SplitWaiterSelect
+      show={showWaiterSelect}
+      onClose={() => setShowWaiterSelect(false)}
+      onSelect={(waiter) => { setSelectedWaiter(waiter); setShowWaiterSelect(false); }}
+    />
 
     <Modal
       show={show && showResetTimerConfirm}

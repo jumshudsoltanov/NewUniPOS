@@ -166,7 +166,10 @@ const Check = () => {
           ao.courier_id !== bo.courier_id ||
           ao.delivery_fee !== bo.delivery_fee ||
           ao.orders_items?.length !== bo.orders_items?.length ||
-          (ao.print_count || 0) !== (bo.print_count || 0)
+          (ao.print_count || 0) !== (bo.print_count || 0) ||
+          ao.sale_type !== bo.sale_type ||
+          ao.table_id !== bo.table_id ||
+          ao.hall_id !== bo.hall_id
         ) return false;
       }
       return true;
@@ -981,6 +984,7 @@ const Check = () => {
     }
 
     setShowOperationsModal(false);
+    setShowProductModal(false);
     setOpenSplitModal(true);
   }, [currentOrder, products, orderEditLocked]);
 
@@ -2540,11 +2544,16 @@ const Check = () => {
 
       <ChangeSaleTypeModal
         show={openChangeSaleType}
-        onClose={() => setOpenChangeSaleType(false)}
+        onClose={(result) => {
+          setOpenChangeSaleType(false);
+          if (result?.data?.uuid) {
+            dispatch({ type: "orders/change-saletype/fulfilled", payload: result });
+          }
+        }}
         order={currentOrder}
       />
 
-      <SplitOrderModal show={openSplitModal} onClose={() => setOpenSplitModal(false)} order={currentOrder} onSplit={handleSplitOrder} />
+      <SplitOrderModal show={openSplitModal} onClose={() => setOpenSplitModal(false)} order={currentOrder} onSplit={handleSplitOrder} onCloseOtherModals={() => setShowProductModal(false)} />
       <CheckDeleteModal
         show={openDeleCheckModal}
         onConfirm={(data) => handleDeleteCheckFunction(data)}

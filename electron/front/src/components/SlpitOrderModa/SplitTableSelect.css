@@ -1,0 +1,161 @@
+.split-table-select-dialog.custom-modal-width {
+    max-width: 580px !important;
+}
+
+.split-table-select-dialog.custom-modal-width .custom-modal-content,
+.split-table-select-dialog .modal-content {
+    border-radius: 0 !important;
+    border: none !important;
+    overflow: hidden;
+    background-color: transparent !important;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Container */
+.split-ts-container {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+}
+
+/* Header */
+.split-ts-header {
+    background: #053796;
+    flex-shrink: 0;
+}
+
+.split-ts-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+}
+
+.split-ts-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.split-ts-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.split-ts-close-btn {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85;
+}
+
+.split-ts-close-btn:hover {
+    opacity: 1;
+}
+
+/* Tabs inside header */
+.split-ts-tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    padding: 0 8px;
+    scrollbar-width: none;
+}
+
+.split-ts-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.split-ts-tab {
+    flex-shrink: 0;
+    padding: 9px 18px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.65);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.split-ts-tab.active {
+    color: #fff;
+    border-bottom-color: #fff;
+}
+
+.split-ts-tab:hover:not(.active) {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Body */
+.split-ts-body {
+    padding: 16px;
+    max-height: 55vh;
+    overflow-y: auto;
+    background: #f8fafc;
+}
+
+/* Grid */
+.split-ts-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+@media (max-width: 480px) {
+    .split-ts-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Card */
+.split-ts-card {
+    border: 2px solid;
+    border-radius: 10px;
+    padding: 0;
+    text-align: center;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 80px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    transition: opacity 0.1s;
+}
+
+.split-ts-card:active {
+    opacity: 0.82;
+}
+
+.split-ts-name {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.split-ts-amount {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.split-ts-waiter {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+/* Empty */
+.split-ts-empty {
+    text-align: center;
+    color: #94a3b8;
+    padding: 40px 0;
+    font-size: 14px;
+}

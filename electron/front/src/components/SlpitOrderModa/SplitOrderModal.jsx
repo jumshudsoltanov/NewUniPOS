@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import "./SplitOrderModal.css";
+import "../DiscountModal/DiscountModal.css";
 
 // Icons
 const PlusIcon = () => (
@@ -24,7 +25,7 @@ const CloseIcon = () => (
 import SplitTableSelect from "./SplitTableSelect";
 import SplitWaiterSelect from "./SplitWaiterSelect";
 
-export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit }) => {
+export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit, onCloseOtherModals }) => {
     const [splitQuantities, setSplitQuantities] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -129,12 +130,12 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
     return (
         <>
             <Modal
-                show={show}
-                onClose={onClose}
+                show={show && !showTableSelect && !showWaiterSelect}
+                onHide={onClose}
                 centered
-                dialogClassName="split-order-modal-dialog"
-                backdropClassName="split-order-modal-backdrop"
-                style={{ borderRadius: '1px' }}
+                animation={false}
+                dialogClassName="split-order-modal-dialog custom-modal-width"
+                contentClassName="custom-modal-content"
             >
                 <div className="split-order-container">
                     {/* Header */}
@@ -224,7 +225,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
 
                             {/* Table Selector (Only for Dine-in) */}
                             {selectedSalesType === 'dine_in' && (
-                                <button className="btn-secondary-action" onClick={() => setShowTableSelect(true)}>
+                                <button className="btn-secondary-action" onClick={() => { onCloseOtherModals?.(); setShowTableSelect(true); }}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h18v18H3zM9 3v18M15 3v18" /></svg>
                                     {selectedTable ? `${selectedTable.hall_name || ''} - ${selectedTable.number || selectedTable.name}` : "Masa seç"}
                                 </button>
@@ -272,9 +273,9 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
                         </button>
                     </div>
                 </div>
+
             </Modal>
 
-            {/* Sub-Modals */}
             <SplitTableSelect
                 show={showTableSelect}
                 onClose={() => setShowTableSelect(false)}

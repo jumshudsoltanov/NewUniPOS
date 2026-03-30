@@ -28,8 +28,6 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
         setShowTableModal(true);
         return;
       }
-      onClose(true);
-
       const oldTypeName = saleTypes.find(t => t.id === order?.sale_type)?.name || "Naməlum";
       const newTypeName = saleTypes.find(t => t.id === selectedTypeId)?.name || "Naməlum";
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
@@ -38,11 +36,10 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
         changeSaleType({ orderId: order.uuid, saleType: selectedTypeId, tableId, hallId, oldTypeName, newTypeName, waiterName }),
       ).unwrap();
 
-      if (result) {
-        const profileId = loginedProfileData?.data?.profile?.id;
-        dispatch(getTableGroups(profileId));
-        dispatch(getActiveOrders({ profileId, silentRefresh: true }));
-      }
+      const profileId = loginedProfileData?.data?.profile?.id;
+      dispatch(getTableGroups(profileId));
+      dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+      onClose(result);
     } catch (error) {
       console.error("Sale Type Change Error", error);
     }
@@ -89,6 +86,8 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
           setShowTableModal(false);
           if (selectedTable && selectedTable.id) {
             handleChangeSaleType("dine_in", selectedTable.id, selectedTable.hall_id);
+          } else {
+            onClose();
           }
         }}
         tableGroups={tableGroups}

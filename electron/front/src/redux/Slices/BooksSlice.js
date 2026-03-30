@@ -176,6 +176,21 @@ const BooksSlice = createSlice({
       }
     });
 
+    // changeSaleType fulfilled — books-da order-i dərhal yenilə və ya əlavə et
+    builder.addCase("orders/change-saletype/fulfilled", (state, action) => {
+      const updatedOrder = action.payload?.data;
+      if (!updatedOrder?.uuid) return;
+      if (Array.isArray(state.books)) {
+        const idx = state.books.findIndex(o => String(o.uuid) === String(updatedOrder.uuid));
+        if (idx !== -1) state.books[idx] = updatedOrder;
+        else state.books.unshift(updatedOrder);
+      } else if (Array.isArray(state.books?.data)) {
+        const idx = state.books.data.findIndex(o => String(o.uuid) === String(updatedOrder.uuid));
+        if (idx !== -1) state.books.data[idx] = updatedOrder;
+        else state.books.data.unshift(updatedOrder);
+      }
+    });
+
     // batchDeleteOrderItems fulfilled — getActiveOrders ilə yenilənir (socket table_updated)
 
     // getArchivedOrders
