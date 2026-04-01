@@ -78,87 +78,92 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
 
     setIsCreating(true);
 
-    try {
-      let nextId = null;
+    const sv = selectedHall?.service_fee !== 0
+      ? Number(selectedHall?.service_fee)
+      : Number(loginedProfileData?.data?.profile?.service_fee);
+
+    const generatedUuid = crypto.randomUUID();
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+    const optimisticOrder = {
+      uuid: generatedUuid,
+      id: null,
+      waiter_id: waiterId,
+      profile_id: profileId,
+      terminal_id: terminalId,
+      sale_type: "dine_in",
+      sale_type_name: "Restoranda",
+      table_id: table.id,
+      guest_count: Number(guestCount),
+      status: 1,
+      is_selected: 1,
+      orders_items: [],
+      table: { id: table.id, name: table.name, hall: { name: selectedHall?.name } },
+      table_name: table.name,
+      hall_name: selectedHall?.name,
+      amount: 0,
+      total: 0,
+      start_date: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      discount: 0,
+      service_value: sv || 0,
+      service_type: sv ? "percent" : null,
+      waiter: { id: waiterId, name: waiterName }
+    };
+
+    // Optimistic update + navigate immediately (no waiting for API)
+    dispatch(addOrderOptimistic(optimisticOrder));
+    dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
+    onHide();
+    navigate(`/check/${generatedUuid}?tableId=${table.id}`);
+
+    // Fire API calls in the background
+    dispatch(saveLog({
+      orderId: generatedUuid,
+      action: "Yeni sifariş yaradıldı",
+      waiterName,
+      details: `Masa: ${table?.name || "Naməlum"}, Qonaq sayı: ${guestCount}`
+    }));
+
+    // Get next ID and create order in background
+    (async () => {
       try {
-        const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
-        nextId = nextIdRes?.data?.nextId;
-      } catch (e) {
-        console.warn("getNextOrderId failed, using backend-generated id", e);
-      }
+        let nextId = null;
+        try {
+          const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
+          nextId = nextIdRes?.data?.nextId;
+        } catch (e) {
+          console.warn("getNextOrderId failed, using backend-generated id", e);
+        }
 
-      const sv = selectedHall?.service_fee !== 0
-        ? Number(selectedHall?.service_fee)
-        : Number(loginedProfileData?.data?.profile?.service_fee);
+        const payload = {
+          guestCount: Number(guestCount),
+          tableId: table.id,
+          waiterId,
+          terminalId,
+          profileId,
+          sale_type: "dine_in",
+          hallId: currentHallId,
+          status: 1,
+          serviceType: sv ? "percent" : null,
+          serviceValue: sv,
+          is_selected: 1,
+          uuid: generatedUuid,
+          ...(nextId && { id: nextId }),
+        };
 
-      const generatedUuid = crypto.randomUUID();
-      const payload = {
-        guestCount: Number(guestCount),
-        tableId: table.id,
-        waiterId,
-        terminalId,
-        profileId,
-        sale_type: "dine_in",
-        hallId: currentHallId,
-        status: 1,
-        serviceType: sv ? "percent" : null,
-        serviceValue: sv,
-        is_selected: 1,
-        uuid: generatedUuid,
-        ...(nextId && { id: nextId }),
-      };
-      
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-      const optimisticOrder = {
-        uuid: payload.uuid,
-        id: nextId ?? null,
-        waiter_id: waiterId,
-        profile_id: profileId,
-        terminal_id: terminalId,
-        sale_type: "dine_in",
-        sale_type_name: "Restoranda",
-        table_id: table.id,
-        guest_count: Number(guestCount),
-        status: 1,
-        is_selected: 1,
-        orders_items: [],
-        table: { id: table.id, name: table.name, hall: { name: selectedHall?.name } },
-        table_name: table.name,
-        hall_name: selectedHall?.name,
-        amount: 0,
-        total: 0,
-        start_date: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        discount: 0,
-        service_value: sv || 0,
-        service_type: sv ? "percent" : null,
-        waiter: { id: waiterId, name: waiterName }
-      };
-
-      dispatch(addOrderOptimistic(optimisticOrder));
-      dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
-
-      dispatch(saveLog({
-        orderId: payload.uuid,
-        action: "Yeni sifariş yaradıldı",
-        waiterName,
-        details: `Masa: ${table?.name || "Naməlum"}, Qonaq sayı: ${guestCount}`
-      }));
-
-      navigate(`/check/${payload.uuid}?tableId=${table.id}`);
-
-      dispatch(saleNewOrders(payload)).unwrap().then((res) => {
+        const res = await dispatch(saleNewOrders(payload)).unwrap();
         const serverOrder = res?.data;
         const finalId = serverOrder?.id ?? res?.count;
-        if (finalId && finalId !== nextId) {
-          dispatch(updateOrderOptimisticId({ uuid: payload.uuid, newOrderData: { id: finalId } }));
+        if (finalId) {
+          dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
         }
-      }).catch(err => console.error("API Create Error:", err));
-    } catch (err) {
-      console.error("Check created error:", err);
-    } finally {
-      setIsCreating(false);
-    }
+      } catch (err) {
+        console.error("API Create Error:", err);
+      } finally {
+        setIsCreating(false);
+      }
+    })();
   }, [
     dispatch,
     guestCount,
@@ -169,6 +174,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
     currentHallId,
     selectedHall,
     navigate,
+    onHide,
     isCreating,
   ]);
 

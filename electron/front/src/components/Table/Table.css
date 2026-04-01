@@ -13,7 +13,8 @@
 /* Table Types */
 .table-square,
 .table-round,
-.table-rectangle {
+.table-rectangle,
+.table-billiard {
     background: var(--Greyscale-Surface-Subtle, #FFF);
     box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.18);
     position: relative;
@@ -42,10 +43,61 @@
     border-radius: 6px;
 }
 
+.table-billiard {
+    width: 220px;
+    height: 130px;
+    border-radius: 14px;
+}
+
 /* Base state colors — statuslu masalar boş (ağ) masadan aydın seçilsin; boş rəngə çevrilməsin */
 .table-surface.occupied {
     background-color: #BFDBFE !important;
     border: 1.5px solid #2563EB;
+}
+
+/* Billiard table - override all status colors with realistic styling */
+.table-surface.table-billiard,
+.table-surface.table-billiard.occupied,
+.table-surface.table-billiard.pending,
+.table-surface.table-billiard.my-table,
+.table-surface.table-billiard.other-waiter-table,
+.table-surface.table-billiard.free {
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%) !important;
+    border: 6px solid #4e342e !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Billiard table text colors - white for better contrast on green */
+.table-surface.table-billiard .table-name,
+.table-surface.table-billiard.occupied .table-name,
+.table-surface.table-billiard.pending .table-name,
+.table-surface.table-billiard.my-table .table-name,
+.table-surface.table-billiard.other-waiter-table .table-name,
+.table-surface.table-billiard.free .table-name {
+    color: #FFFFFF !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    font-weight: 700;
+}
+
+.table-surface.table-billiard .table-amount,
+.table-surface.table-billiard.occupied .table-amount,
+.table-surface.table-billiard.pending .table-amount,
+.table-surface.table-billiard.my-table .table-amount,
+.table-surface.table-billiard.other-waiter-table .table-amount,
+.table-surface.table-billiard.free .table-amount {
+    color: #FFFFFF !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    font-weight: 700;
+}
+
+.table-surface.table-billiard .table-waiter-info,
+.table-surface.table-billiard.occupied .table-waiter-info,
+.table-surface.table-billiard.pending .table-waiter-info,
+.table-surface.table-billiard.my-table .table-waiter-info,
+.table-surface.table-billiard.other-waiter-table .table-waiter-info,
+.table-surface.table-billiard.free .table-waiter-info {
+    color: #FFFFFF !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .table-surface.pending {
@@ -103,6 +155,12 @@
 .wrapper-rectangle {
     height: 300px;
     /* Taller wrapper for rectangle */
+}
+
+.wrapper-billiard {
+    width: 240px;
+    height: 180px;
+    /* Wrapper for billiard table with pockets inside */
 }
 
 /* Common Seat Styles */
@@ -185,6 +243,77 @@
 .seat-left-3,
 .seat-right-3 {
     bottom: 40px;
+}
+
+/* Billiard Table - Small Elegant Pockets */
+/* Corner pockets - small dark circles tucked into corners */
+.seat-billiard-top-left {
+    width: 14px;
+    height: 14px;
+    top: 2px;
+    left: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #111 50%, #3d2817 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+    z-index: 12;
+}
+
+.seat-billiard-top-right {
+    width: 14px;
+    height: 14px;
+    top: 2px;
+    right: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #111 50%, #3d2817 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+    z-index: 12;
+}
+
+.seat-billiard-bottom-left {
+    width: 14px;
+    height: 14px;
+    bottom: 2px;
+    left: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #111 50%, #3d2817 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+    z-index: 12;
+}
+
+.seat-billiard-bottom-right {
+    width: 14px;
+    height: 14px;
+    bottom: 2px;
+    right: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #111 50%, #3d2817 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+    z-index: 12;
+}
+
+/* Center pockets on long edges (top & bottom) */
+.seat-billiard-top-center {
+    width: 12px;
+    height: 12px;
+    top: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, #111 50%, #3d2817 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+    z-index: 12;
+}
+
+.seat-billiard-bottom-center {
+    width: 12px;
+    height: 12px;
+    bottom: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, #111 50%, #3d2817 100%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+    z-index: 12;
 }
 
 /* Inner Table Content Styles */
@@ -322,6 +451,10 @@
         transform: none !important;
     }
 
+    .wrapper-billiard {
+        height: 120px !important;
+    }
+
     /* Hide desktop decorations */
     .seat,
     .status-dot,
@@ -369,6 +502,17 @@
         background: #FFFFFF !important;
         border: 2px solid #9CA3AF !important;
         /* Clearly visible gray border */
+    }
+
+    /* Billiard table - always green on mobile with realistic styling */
+    .table-surface.table-billiard,
+    .table-surface.table-billiard.occupied,
+    .table-surface.table-billiard.pending,
+    .table-surface.table-billiard.my-table,
+    .table-surface.table-billiard.other-waiter-table,
+    .table-surface.table-billiard.free {
+        background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%) !important;
+        border: 4px solid #4e342e !important;
     }
 
     .table-content {
@@ -525,6 +669,18 @@
     border-radius: 10%;
 }
 
+.resizable-mode .table-billiard {
+    width: 80%;
+    height: 55%;
+    border-radius: 12%;
+}
+
+.resizable-mode .table-billiard {
+    width: 80%;
+    height: 50%;
+    border-radius: 12%;
+}
+
 .resizable-mode .seat-top {
     width: 60px;
     height: 20px;
@@ -573,6 +729,33 @@
 .resizable-mode .seat-left-3,
 .resizable-mode .seat-right-3 {
     bottom: 15%;
+}
+
+.resizable-mode .seat-billiard-top-left,
+.resizable-mode .seat-billiard-top-right {
+    width: 18px;
+    height: 18px;
+    top: 5%;
+}
+
+.resizable-mode .seat-billiard-bottom-left,
+.resizable-mode .seat-billiard-bottom-right {
+    width: 18px;
+    height: 18px;
+    bottom: 5%;
+}
+
+.resizable-mode .seat-billiard-left,
+.resizable-mode .seat-billiard-right {
+    width: 18px;
+    height: 18px;
+    left: 5%;
+    right: auto;
+}
+
+.resizable-mode .seat-billiard-right {
+    left: auto;
+    right: 5%;
 }
 
 .deposit-indicator {

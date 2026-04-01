@@ -111,4 +111,30 @@ const getTables = async (req, res) => {
   }
 };
 
-module.exports = { getTables };
+const updateTable = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { shape_type } = req.body;
+
+    if (!shape_type || !["square", "round", "rectangle", "billiard"].includes(shape_type)) {
+      return res.status(400).json({ message: "Invalid shape_type" });
+    }
+
+    const table = await TablesModel.findByPk(id);
+    if (!table) {
+      return res.status(404).json({ message: "Table not found" });
+    }
+
+    await table.update({ shape_type });
+
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) getIo().emit("table_updated", { tableId: id });
+
+    res.status(200).json({ message: "Table updated successfully", data: table });
+  } catch (error) {
+    console.error("Update Table Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+module.exports = { getTables, updateTable };

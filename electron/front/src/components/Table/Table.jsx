@@ -1,3 +1,4 @@
+
 import React from "react";
 import "./Table.css";
 import { useParams } from "react-router-dom";
@@ -5,7 +6,7 @@ import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { computeOrderCardMeta } from "../../utils/orderDisplayTotal";
 
 const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }) => {
-  const { name, status, shape_type, orders } = table || {};
+  const { name, shape_type, orders } = table || {};
 
   const hasOrders = React.useMemo(() => orders && orders.length > 0, [orders]);
 
@@ -25,6 +26,14 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
   );
   const hasPrintCount = totalPrintCount > 0;
 
+  // Compute effective status for CSS class
+  const statusClass = React.useMemo(() => {
+    if (!hasOrders) return "free";
+    if (isMyTable) return "my-table";
+    if (isOtherTable) return "other-waiter-table";
+    return "occupied";
+  }, [hasOrders, isMyTable, isOtherTable]);
+
   const renderSeats = () => {
     if (shape_type === "rectangle") {
       return (
@@ -35,6 +44,20 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
           <div className="seat seat-right-1"></div>
           <div className="seat seat-right-2"></div>
           <div className="seat seat-right-3"></div>
+        </>
+      );
+    }
+    if (shape_type === "billiard") {
+      return (
+        <>
+          {/* 4 Corner pockets */}
+          <div className="seat seat-billiard-top-left"></div>
+          <div className="seat seat-billiard-top-right"></div>
+          <div className="seat seat-billiard-bottom-left"></div>
+          <div className="seat seat-billiard-bottom-right"></div>
+          {/* 2 Center pockets on top/bottom (long edges) */}
+          <div className="seat seat-billiard-top-center"></div>
+          <div className="seat seat-billiard-bottom-center"></div>
         </>
       );
     }
@@ -67,7 +90,7 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
         {renderSeats()}
 
         <div
-          className={`table-surface table-${shape_type || "square"} ${status} ${hasOrders ? "has-orders" : ""} ${isMyTable ? "my-table" : ""} ${isOtherTable ? "other-waiter-table" : ""} ${hasPrintCount ? "multi-checks" : ""}`}
+          className={`table-surface table-${shape_type || "square"} ${statusClass} ${hasOrders ? "has-orders" : ""} ${hasPrintCount ? "multi-checks" : ""}`}
         >
           {/* Status Dot */}
           <div
@@ -78,12 +101,12 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
           {/* Center Content */}
           <div className="table-content" style={rotation ? { transform: `rotate(${-rotation}deg)` } : undefined}>
             <h3
-              className={`table-name ${status} ${orders?.length > 0 ? "" : ""}`}
+              className={`table-name ${statusClass}`}
             >
               {name}
             </h3>
             <p
-              className={`table-amount ${status} ${orders?.length > 0 ? "" : ""}`}
+              className={`table-amount ${statusClass}`}
             >
               {(() => {
                 const order = orders?.[0];
@@ -103,7 +126,7 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
             </p>
 
             <div
-              className={`table-waiter-info ${status} ${orders?.length > 0 ? "" : ""}`}
+              className={`table-waiter-info ${statusClass}`}
             >
               <i className="bi bi-people"></i>
               <span>{orders?.[0]?.waiter?.name || "—"}</span>
@@ -129,7 +152,18 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
                 Number(o.rate_per_minute || 0) > 0;
               return hasTimerSignal && eff > 0;
             })() && (
-              <div className="table-timer-info" style={{ color: '#053796', fontSize: '0.9rem', fontWeight: '700', marginTop: '6px', background: 'rgba(5, 55, 150, 0.05)', padding: '2px 8px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center' }}>
+              <div className="table-timer-info" style={{
+                color: shape_type === 'billiard' ? '#FFFFFF' : '#053796',
+                fontSize: '0.9rem',
+                fontWeight: '700',
+                marginTop: '6px',
+                background: shape_type === 'billiard' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(5, 55, 150, 0.05)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                textShadow: shape_type === 'billiard' ? '0 1px 3px rgba(0,0,0,0.5)' : 'none'
+              }}>
                 <i className={`bi bi-clock${orders?.[0]?.is_timer_status == 1 ? '-fill' : ''} me-1`} style={{ fontSize: '0.8rem', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.6 }}></i>
                 <span style={{ fontVariantNumeric: 'tabular-nums', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.8 }}>{orders?.[0]?.is_timer_clock || "00:00:00"}</span>
               </div>

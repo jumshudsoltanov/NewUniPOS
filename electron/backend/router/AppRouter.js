@@ -28,6 +28,7 @@ router.post("/other-sale", SalesController.CreateNewOtherOrders);
 router.get("/waiters/resolve", WaitersController.resolveWaiterLogin);
 router.get("/waiters/:pin", WaitersController.getWaiterInfo);
 router.get("/tables/:profileId", TablesController.getTables);
+router.put("/tables/:id", TablesController.updateTable);
 router.get("/pos/printers/:profileId", PrintersController.getPrinters);
 router.put("/printers/:id", PrintersController.updatePrinter);
 router.post("/printers/test-print", PrintersController.testPrint);

@@ -29,7 +29,6 @@ class SyncService {
     this._currentlySyncing = new Set(); // Track in-progress syncs to prevent duplicates
     this._retryCounts = new Map();      // orderId → failure count
     this._wasOffline = false;
-    /** Prod-da konsol olmayanda Status modalında göstərmək üçün son avto-sync xətası */
     this.lastSyncError = null;
     this.lastSyncErrorAt = null;
     this.lastSyncErrorOrderPrefix = null;
@@ -52,6 +51,8 @@ class SyncService {
         this._wasOffline = false;
         // Reset retry counts so all pending orders get fresh attempts after reconnect
         this._retryCounts.clear();
+        // Clear stale error from offline period — internet is back
+        this.clearLastSyncError();
         console.log("[SYNC_RECONNECT] Internet restored — triggering sync...");
         if (!this.isSyncing) {
           this.syncPendingOrders().catch(err => console.error("[SYNC_RECONNECT_ERR]", err));
@@ -326,6 +327,8 @@ class SyncService {
 
       this._retryCounts.delete(orderId);
       this.lastSyncTime = new Date();
+      // Clear stale error on successful sync — shows UI that syncing is recovering
+      this.clearLastSyncError();
       console.log(`[SYNC] Success: ${orderId}`);
     } catch (error) {
       console.error(`[SYNC_FAIL] ${orderId}: ${error.message}`);
@@ -378,11 +381,19 @@ class SyncService {
         return;
       }
 
-      // Status modalındakı "İnternet" yaşıl olanda köhnə "offline" mesajı çaşdırıcı qalmasın
+      // Connectivity OK → clear any stale network/offline errors so UI doesn't show old messages
       if (
         this.lastSyncError &&
         typeof this.lastSyncError === "string" &&
-        this.lastSyncError.includes("internet və ya admin server əlçatan deyil")
+        (
+          this.lastSyncError.includes("internet və ya admin server əlçatan deyil") ||
+          this.lastSyncError.includes("EHOSTUNREACH") ||
+          this.lastSyncError.includes("ECONNREFUSED") ||
+          this.lastSyncError.includes("ENOTFOUND") ||
+          this.lastSyncError.includes("ETIMEDOUT") ||
+          this.lastSyncError.includes("ECONNRESET") ||
+          this.lastSyncError.includes("connect ")
+        )
       ) {
         this.clearLastSyncError();
       }

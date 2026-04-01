@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Container, Row, Col, Alert } from "react-bootstrap";
 import "./Tables.css";
 import Table from "../Table/Table";
+import TableShapeModal from "../TableShapeModal/TableShapeModal";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomersModal from "../Customers-Modal/CustomersModal";
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 import { getSocket } from "../../utils/apiConfig";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { checkShiftGuard } from "../../utils/shiftGuard";
+import axios from "../../utils/apiConfig";
 
 const Tables = () => {
   const {
@@ -34,6 +36,8 @@ const Tables = () => {
   const [selectedTable, setSelectedTable] = React.useState(null);
   const [showModal, setShowModal] = React.useState(false);
   const [showOtherChecks, setShowOtherChecks] = React.useState(false);
+  const [showShapeModal, setShowShapeModal] = React.useState(false);
+  const [selectedTableForShape, setSelectedTableForShape] = React.useState(null);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const navigate = useNavigate();
@@ -208,7 +212,7 @@ const Tables = () => {
     };
   }, [dispatch, loginedProfileData]);
 
-  
+
   const handleTableClick = React.useCallback(
     async (table) => {
       if (isTableEditMode) return;
@@ -583,6 +587,31 @@ const Tables = () => {
                       >
                         <i className="bi bi-arrow-clockwise text-white" style={{ fontSize: '12px' }}></i>
                       </div>
+                      {/* Forma dəyişdirmə düyməsi — yuxarı sağ */}
+                      <div
+                        onMouseDown={(e) => { e.stopPropagation(); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTableForShape(table);
+                          setShowShapeModal(true);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          right: 0,
+                          width: '24px',
+                          height: '24px',
+                          background: '#059669',
+                          borderRadius: '0 0 0 50%',
+                          cursor: 'pointer',
+                          zIndex: 102,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <i className="bi bi-shuffle text-white" style={{ fontSize: '12px' }}></i>
+                      </div>
                       {/* Ölçü dəyişdirmə düyməsi — aşağı sağ */}
                       <div
                         className="resize-handle"
@@ -692,6 +721,29 @@ const Tables = () => {
         </div>
 
       </Container>
+
+      {/* Table Shape Modal */}
+      <TableShapeModal
+        show={showShapeModal}
+        onHide={() => {
+          setShowShapeModal(false);
+          setSelectedTableForShape(null);
+        }}
+        currentShape={selectedTableForShape?.shape_type || "square"}
+        onSelect={async (newShape) => {
+          if (!selectedTableForShape) return;
+          try {
+            await axios.put(`/tables/${selectedTableForShape.id}`, { shape_type: newShape });
+            toast.success("Masa forması dəyişdirildi");
+            dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
+            setShowShapeModal(false);
+            setSelectedTableForShape(null);
+          } catch (error) {
+            toast.error("Masa forması dəyişdirilmədi");
+            console.error(error);
+          }
+        }}
+      />
 
       {/* Global Modals */}
       <CustomersModal
