@@ -443,20 +443,20 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
             for (const printer of cashierPrinters) {
                 const delegatePayload = buildCashierPrintPayload(printer);
                 socket.emit("delegate_print", delegatePayload);
-                await new Promise((r) => setTimeout(r, 60));
             }
-            await maybeBlockCustomerOnCustomerReceipt(
+            // Post-print operations in background — don't block UI
+            maybeBlockCustomerOnCustomerReceipt(
                 options?.dispatch,
                 options?.loginedWaiter,
                 orderData.checkData?.customer_id,
-            );
+            ).catch(() => {});
             if (options?.autoLockCheckAfterPrint) {
-                await maybeLockCheckAfterCustomerReceiptPrint(
+                maybeLockCheckAfterCustomerReceiptPrint(
                     options.dispatch,
                     options.loginedWaiter,
                     orderData.checkData,
                     orderData.waiterName,
-                );
+                ).catch(() => {});
             }
             return { success: true, delegated: true };
         }
@@ -464,41 +464,39 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
         if (window.electronAPI && window.electronAPI.printReceipt) {
             let lastErr = null;
             let anyOk = false;
-            for (const printer of cashierPrinters) {
-                const printPayload = buildCashierPrintPayload(printer);
-                const nm = printPayload.printerName || printPayload.printerIp;
-                if (!nm) {
-                    lastErr = "Printer adı və ya IP yoxdur";
-                    continue;
-                }
-                try {
+            // Send all print jobs in parallel for speed
+            const printResults = await Promise.allSettled(
+                cashierPrinters.map(async (printer) => {
+                    const printPayload = buildCashierPrintPayload(printer);
+                    const nm = printPayload.printerName || printPayload.printerIp;
+                    if (!nm) throw new Error("Printer adı və ya IP yoxdur");
                     const result = await window.electronAPI.printReceipt(printPayload);
-                    if (result && result.success) {
-                        anyOk = true;
-                    } else {
-                        lastErr = result?.error || "Bilinməyən xəta";
-                        const pLabel = printer?.local_name || printer?.name || printPayload.printerIp;
-                        addNotification("Çap Xətası", `${pLabel}: ${lastErr}`, { orderId: orderData.checkData?.id, category: "system", type: "error" });
-                        logError("Müştəri Çapı Xətası", `Kassa çapı (${pLabel}): ${lastErr}`).catch(() => {});
-                    }
-                } catch (pe) {
-                    lastErr = pe?.message || String(pe);
-                }
-                await new Promise((r) => setTimeout(r, 80));
+                    if (result && result.success) return true;
+                    const pLabel = printer?.local_name || printer?.name || printPayload.printerIp;
+                    addNotification("Çap Xətası", `${pLabel}: ${result?.error || "Bilinməyən xəta"}`, { orderId: orderData.checkData?.id, category: "system", type: "error" });
+                    logError("Müştəri Çapı Xətası", `Kassa çapı (${pLabel}): ${result?.error || "Bilinməyən xəta"}`).catch(() => {});
+                    throw new Error(result?.error || "Bilinməyən xəta");
+                })
+            );
+            anyOk = printResults.some(r => r.status === "fulfilled");
+            if (!anyOk) {
+                const failed = printResults.find(r => r.status === "rejected");
+                lastErr = failed?.reason?.message || "Çap uğursuz";
             }
             if (anyOk) {
-                await maybeBlockCustomerOnCustomerReceipt(
+                // Post-print operations in background — don't block UI
+                maybeBlockCustomerOnCustomerReceipt(
                     options?.dispatch,
                     options?.loginedWaiter,
                     orderData.checkData?.customer_id,
-                );
+                ).catch(() => {});
                 if (options?.autoLockCheckAfterPrint) {
-                    await maybeLockCheckAfterCustomerReceiptPrint(
+                    maybeLockCheckAfterCustomerReceiptPrint(
                         options.dispatch,
                         options.loginedWaiter,
                         orderData.checkData,
                         orderData.waiterName,
-                    );
+                    ).catch(() => {});
                 }
                 return { success: true };
             }

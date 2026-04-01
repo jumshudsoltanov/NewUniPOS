@@ -198,11 +198,19 @@ const sendOrdersItemsToDb = async (req, res) => {
 
     let currentOrder = orderRow;
 
-    // Masaya məhsul göndəriləndə: masa və ya məhsul saatlığı varsa taymer avtomatik başlasın (işləmirsə)
+    // Masaya məhsul göndəriləndə: masa və ya məhsul saatlığı varsa taymer avtomatik başlasın (yalnız işləmirsə və əvvəlcədən dayandırılmayıbsa)
     const orderPlainForAuto = currentOrder ? currentOrder.get({ plain: true }) : {};
     orderPlainForAuto.orders_items = listOfProducts.map((i) => i.get({ plain: true }));
     const effHourlyAuto = TimerService.getEffectiveHourlyPrice(orderPlainForAuto);
-    if (effHourlyAuto > 0 && Number(currentOrder?.is_timer_status) !== 1) {
+    
+    // Only auto-start timer if:
+    // 1. There's an hourly rate (table or product)
+    // 2. Timer is not currently running
+    // 3. Timer was never stopped before (no accumulated time) OR timer was reset
+    const hasAccumulatedTime = currentOrder?.is_timer_clock && currentOrder.is_timer_clock !== "00:00:00";
+    const wasTimerStopped = Number(currentOrder?.is_timer_status) === 0 && hasAccumulatedTime;
+    
+    if (effHourlyAuto > 0 && Number(currentOrder?.is_timer_status) !== 1 && !wasTimerStopped) {
       await OrdersModel.update(
         {
           is_timer_status: 1,

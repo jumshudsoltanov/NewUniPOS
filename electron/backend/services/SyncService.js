@@ -1,4 +1,6 @@
 const axios = require("axios");
+const http = require("http");
+const https = require("https");
 const { Op } = require("sequelize");
 const OrdersModel = require("../model/OrdersModel");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
@@ -12,8 +14,15 @@ const LoginModel = require("../model/LoginModel");
 const ADMIN_API_URL = "https://api.unipos.tech/api/sync";
 const ADMIN_API_FALLBACK_URL = "http://46.224.8.157:35627/api/sync";
 
+// Fresh connection for each sync request — avoids stale/dead socket reuse
+// minVersion TLSv1 required: server uses older TLS, Node.js v24+ defaults to TLS 1.2 minimum
+const syncAxios = axios.create({
+  httpAgent: new http.Agent({ keepAlive: false }),
+  httpsAgent: new https.Agent({ keepAlive: false, rejectUnauthorized: false, minVersion: 'TLSv1' }),
+});
+
 /** Bir sifariş üçün maks. gözləmə — donmuş HTTP/socket üçün */
-const SYNC_ORDER_TIMEOUT_MS = 20000;
+const SYNC_ORDER_TIMEOUT_MS = 35000;
 /** Hər dövrdə maks. sifariş sayı — uzun bloklamanın qarşısını alır */
 const SYNC_BATCH_LIMIT = 15;
 /** finally çağrılmırsa (nadir) — dövrün maks. müddətindən böyük olmalıdır */
@@ -24,26 +33,28 @@ class SyncService {
     this.isSyncing = false;
     this.lastSyncTime = new Date();
     this._syncCycleStartedAt = 0;
-    this._pendingQueue = new Set();     // UUIDs waiting to be synced
+    this._pendingQueue = new Set(); // UUIDs waiting to be synced
     this._processingQueue = false;
     this._currentlySyncing = new Set(); // Track in-progress syncs to prevent duplicates
-    this._retryCounts = new Map();      // orderId → failure count
+    this._retryCounts = new Map(); // orderId → failure count
     this._wasOffline = false;
     this.lastSyncError = null;
     this.lastSyncErrorAt = null;
     this.lastSyncErrorOrderPrefix = null;
     console.log("[SYNC_INIT] SyncService instance created.");
-
+5
     // Retry interval — hər 2s (ən son vəziyyət tez göndərilsin)
     setInterval(() => {
-      if (global.isMasterNode && !this.isSyncing) {
-        this.syncPendingOrders().catch(err => console.error("[SYNC_INTERVAL_ERR]", err));
+      if (this._canSync() && !this.isSyncing) {
+        this.syncPendingOrders().catch((err) =>
+          console.error("[SYNC_INTERVAL_ERR]", err),
+        );
       }
     }, 2000);
 
     // Reconnect poller: when internet comes back, immediately trigger sync
     setInterval(async () => {
-      if (!global.isMasterNode) return;
+      if (!this._canSync()) return;
       const online = await this.checkConnectivity().catch(() => false);
       if (!online) {
         this._wasOffline = true;
@@ -55,57 +66,76 @@ class SyncService {
         this.clearLastSyncError();
         console.log("[SYNC_RECONNECT] Internet restored — triggering sync...");
         if (!this.isSyncing) {
-          this.syncPendingOrders().catch(err => console.error("[SYNC_RECONNECT_ERR]", err));
+          this.syncPendingOrders().catch((err) =>
+            console.error("[SYNC_RECONNECT_ERR]", err),
+          );
         }
       }
     }, 5000);
 
     // Hər 5 dəqiqə: skip olunmuş (is_synced=2) sifarişləri sıfırla və yenidən göndər — ən son halda qalmaq üçün
-    setInterval(async () => {
-      if (!global.isMasterNode) return;
-      try {
-        const { Op } = require("sequelize");
-        const [count] = await OrdersModel.update(
-          { is_synced: 0 },
-          { where: { is_synced: 2 }, paranoid: false }
-        );
-        if (count > 0) {
-          this._retryCounts.clear();
-          console.log(`[SYNC_RETRY_SKIPPED] Reset ${count} skipped orders for retry.`);
-          if (!this.isSyncing) {
-            this.syncPendingOrders().catch(err => console.error("[SYNC_RETRY_SKIPPED_ERR]", err));
+    setInterval(
+      async () => {
+        if (!this._canSync()) return;
+        try {
+          const { Op } = require("sequelize");
+          const [count] = await OrdersModel.update(
+            { is_synced: 0 },
+            { where: { is_synced: 2 }, paranoid: false },
+          );
+          if (count > 0) {
+            this._retryCounts.clear();
+            console.log(
+              `[SYNC_RETRY_SKIPPED] Reset ${count} skipped orders for retry.`,
+            );
+            if (!this.isSyncing) {
+              this.syncPendingOrders().catch((err) =>
+                console.error("[SYNC_RETRY_SKIPPED_ERR]", err),
+              );
+            }
           }
+        } catch (err) {
+          console.error("[SYNC_RETRY_SKIPPED_ERR]", err);
         }
-      } catch (err) {
-        console.error("[SYNC_RETRY_SKIPPED_ERR]", err);
-      }
-    }, 5 * 60 * 1000); // 5 dəqiqə
+      },
+      5 * 60 * 1000,
+    ); // 5 dəqiqə
 
     // Watchdog: avto sync donanda isSyncing və ya şəbəkə səbəbindən dövr bitməyəndə sıfırla
     setInterval(() => {
-      if (!global.isMasterNode) return;
+      if (!this._canSync()) return;
       if (!this.isSyncing || !this._syncCycleStartedAt) return;
       if (Date.now() - this._syncCycleStartedAt < SYNC_WATCHDOG_MS) return;
-      console.error("[SYNC_WATCHDOG] Dövr çox uzun sürdü — isSyncing sıfırlanır, növbəti interval işləyəcək");
+      console.error(
+        "[SYNC_WATCHDOG] Dövr çox uzun sürdü — isSyncing sıfırlanır, növbəti interval işləyəcək",
+      );
       this.isSyncing = false;
       this._syncCycleStartedAt = 0;
       this._currentlySyncing.clear();
     }, 8000);
   }
 
+  /**
+   * Sync həmişə işləməlidir — master olub-olmamasından asılı olmayaraq.
+   * Tək Terminal rejimində isMasterNode bəzən false qalır (login timing).
+   * Sync-in işləməsi üçün yalnız DB-də profile olması kifayətdir.
+   */
+  _canSync() {
+    return true;
+  }
+
   _withTimeout(promise, ms, label) {
     return Promise.race([
       promise,
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`${label} (${ms}ms)`)), ms)
+        setTimeout(() => reject(new Error(`${label} (${ms}ms)`)), ms),
       ),
     ]);
   }
 
   recordSyncFailure(orderId, error) {
     const raw = error?.message || String(error);
-    this.lastSyncError =
-      raw.length > 480 ? `${raw.slice(0, 480)}…` : raw;
+    this.lastSyncError = raw.length > 480 ? `${raw.slice(0, 480)}…` : raw;
     this.lastSyncErrorAt = new Date().toISOString();
     if (orderId && typeof orderId === "string") {
       this.lastSyncErrorOrderPrefix =
@@ -124,7 +154,9 @@ class SyncService {
   async getSyncStatus() {
     try {
       const currentProfileId = await this.getCurrentProfileId();
-      const profileFilter = currentProfileId ? { profile_id: currentProfileId } : {};
+      const profileFilter = currentProfileId
+        ? { profile_id: currentProfileId }
+        : {};
 
       const [totalSyncedCount, pendingCount] = await Promise.all([
         OrdersModel.count({ where: { ...profileFilter, is_synced: 1 } }),
@@ -165,12 +197,12 @@ class SyncService {
     // Mark as unsynced in DB immediately so the retry interval can catch it if queue fails
     OrdersModel.update(
       { is_synced: 0 },
-      { where: { uuid: orderId }, paranoid: false }
-    ).catch(err => console.error("[SYNC_MARK_ERR]", err));
+      { where: { uuid: orderId }, paranoid: false },
+    ).catch((err) => console.error("[SYNC_MARK_ERR]", err));
 
     this._pendingQueue.add(orderId);
     if (!this._processingQueue) {
-      this._drainQueue().catch(err => console.error("[SYNC_QUEUE_ERR]", err));
+      this._drainQueue().catch((err) => console.error("[SYNC_QUEUE_ERR]", err));
     }
   }
 
@@ -211,13 +243,22 @@ class SyncService {
       // Ensure profile_id exists (critical for routing)
       let profileId = order.profile_id;
       if (!profileId) {
-        const profile = await LoginModel.findOne({ order: [["updated_at", "DESC"]] });
+        const profile = await LoginModel.findOne({
+          order: [["updated_at", "DESC"]],
+        });
         profileId = profile?.id;
         if (profileId) {
-          await OrdersModel.update({ profile_id: profileId }, { where: { uuid: orderId }, paranoid: false });
-          console.log(`[SYNC] Recovered profile_id ${profileId} for order ${orderId}`);
+          await OrdersModel.update(
+            { profile_id: profileId },
+            { where: { uuid: orderId }, paranoid: false },
+          );
+          console.log(
+            `[SYNC] Recovered profile_id ${profileId} for order ${orderId}`,
+          );
         } else {
-          throw new Error("Missing profile_id and could not recover from LoginModel");
+          throw new Error(
+            "Missing profile_id and could not recover from LoginModel",
+          );
         }
       }
 
@@ -240,7 +281,10 @@ class SyncService {
       ]);
 
       if (items.length === 0 && order.status !== 2 && order.status !== 3) {
-        await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false });
+        await OrdersModel.update(
+          { is_synced: 1 },
+          { where: { uuid: orderId }, paranoid: false },
+        );
         this._retryCounts.delete(orderId);
         return;
       }
@@ -251,16 +295,18 @@ class SyncService {
 
       const payload = {
         profile_id: profileId,
-        orders: [(() => {
-          const plain = order.get({ plain: true });
-          if (plain.deleted_at) {
-            plain.status = 3;
-            plain.amount = 0;
-            plain.total = 0;
-          }
-          return plain;
-        })()],
-        items: items.map(item => {
+        orders: [
+          (() => {
+            const plain = order.get({ plain: true });
+            if (plain.deleted_at) {
+              plain.status = 3;
+              plain.amount = 0;
+              plain.total = 0;
+            }
+            return plain;
+          })(),
+        ],
+        items: items.map((item) => {
           const plain = item.get({ plain: true });
           if (plain.deleted_at) plain.count = 0;
           plain.order_id = order.uuid;
@@ -271,12 +317,12 @@ class SyncService {
           // modifiers saxlanılır — admin panel modifier hesabatı üçün sync olunur
           return plain;
         }),
-        logs: logs.map(log => {
+        logs: logs.map((log) => {
           const plain = log.get({ plain: true });
           plain.order_id = order.uuid;
           return plain;
         }),
-        payments: payments.map(payment => {
+        payments: payments.map((payment) => {
           const plain = payment.get({ plain: true });
           if (plain.deleted_at) plain.paid = 0;
           plain.order_id = order.uuid;
@@ -291,13 +337,20 @@ class SyncService {
       } catch (firstErr) {
         // 409 = admin-da artıq var. Bir də force_overwrite ilə cəhd et — ən son halda qalmaq üçün
         if (firstErr.isAlreadySynced) {
-          console.log(`[SYNC_409] Order ${orderId} admin-da var. Force overwrite ilə yenidən cəhd...`);
+          console.log(
+            `[SYNC_409] Order ${orderId} admin-da var. Force overwrite ilə yenidən cəhd...`,
+          );
           try {
             await this.sendToAdmin({ ...payload, force_overwrite: true });
           } catch (retryErr) {
             if (retryErr.isAlreadySynced) {
-              console.log(`[SYNC_409_OK] Order ${orderId} admin-da, synced qeyd olundu.`);
-              await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false }).catch(() => {});
+              console.log(
+                `[SYNC_409_OK] Order ${orderId} admin-da, synced qeyd olundu.`,
+              );
+              await OrdersModel.update(
+                { is_synced: 1 },
+                { where: { uuid: orderId }, paranoid: false },
+              ).catch(() => {});
               this._retryCounts.delete(orderId);
               this.lastSyncTime = new Date();
               return;
@@ -313,16 +366,24 @@ class SyncService {
       let marked = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false });
+          await OrdersModel.update(
+            { is_synced: 1 },
+            { where: { uuid: orderId }, paranoid: false },
+          );
           marked = true;
           break;
         } catch (dbErr) {
-          console.warn(`[SYNC_DB_RETRY] Attempt ${attempt} failed for ${orderId}: ${dbErr.message}`);
-          if (attempt < 3) await new Promise(r => setTimeout(r, 500 * attempt));
+          console.warn(
+            `[SYNC_DB_RETRY] Attempt ${attempt} failed for ${orderId}: ${dbErr.message}`,
+          );
+          if (attempt < 3)
+            await new Promise((r) => setTimeout(r, 500 * attempt));
         }
       }
       if (!marked) {
-        console.error(`[SYNC_DB_FAIL] Could not mark ${orderId} as synced after 3 attempts`);
+        console.error(
+          `[SYNC_DB_FAIL] Could not mark ${orderId} as synced after 3 attempts`,
+        );
       }
 
       this._retryCounts.delete(orderId);
@@ -334,29 +395,40 @@ class SyncService {
       console.error(`[SYNC_FAIL] ${orderId}: ${error.message}`);
       if (error.isAlreadySynced) {
         // Admin already has this data (409 Conflict) — mark as synced locally
-        console.log(`[SYNC_ALREADY] Order ${orderId} already on admin, marking synced.`);
-        await OrdersModel.update({ is_synced: 1 }, { where: { uuid: orderId }, paranoid: false }).catch(() => {});
+        console.log(
+          `[SYNC_ALREADY] Order ${orderId} already on admin, marking synced.`,
+        );
+        await OrdersModel.update(
+          { is_synced: 1 },
+          { where: { uuid: orderId }, paranoid: false },
+        ).catch(() => {});
         this._retryCounts.delete(orderId);
         return;
       }
       this.recordSyncFailure(orderId, error);
       if (error.isValidationError) {
         // 400/422 — itki olmasın, yenidən cəhd edəcək (heç vaxt skip yoxdur)
-        console.warn(`[SYNC_VALIDATION] Order ${orderId} validation error (400/422), yenidən cəhd ediləcək...`);
+        console.warn(
+          `[SYNC_VALIDATION] Order ${orderId} validation error (400/422), yenidən cəhd ediləcək...`,
+        );
       }
 
       // Bütün xətalar (network, 5xx, 400/422) → stays is_synced=0, davam edəcək
       const retries = (this._retryCounts.get(orderId) || 0) + 1;
       this._retryCounts.set(orderId, retries);
       if (retries % 10 === 0) {
-        console.warn(`[SYNC_RETRY] Order ${orderId} failed ${retries} times, yenidən cəhd ediləcək...`);
+        console.warn(
+          `[SYNC_RETRY] Order ${orderId} failed ${retries} times, yenidən cəhd ediləcək...`,
+        );
       }
       throw error;
     }
   }
 
   async getCurrentProfileId() {
-    const profile = await LoginModel.findOne({ order: [["updated_at", "DESC"]] });
+    const profile = await LoginModel.findOne({
+      order: [["updated_at", "DESC"]],
+    });
     return profile?.id || null;
   }
 
@@ -369,14 +441,14 @@ class SyncService {
       const isOnline = await this._withTimeout(
         this.checkConnectivity(),
         8000,
-        "checkConnectivity"
+        "checkConnectivity",
       ).catch(() => false);
       if (!isOnline) {
         this.recordSyncFailure(
           null,
           new Error(
-            "Avto-sync: internet və ya admin server əlçatan deyil (yoxlama vaxtı bitdi)"
-          )
+            "Avto-sync: internet və ya admin server əlçatan deyil (yoxlama vaxtı bitdi)",
+          ),
         );
         return;
       }
@@ -385,15 +457,15 @@ class SyncService {
       if (
         this.lastSyncError &&
         typeof this.lastSyncError === "string" &&
-        (
-          this.lastSyncError.includes("internet və ya admin server əlçatan deyil") ||
+        (this.lastSyncError.includes(
+          "internet və ya admin server əlçatan deyil",
+        ) ||
           this.lastSyncError.includes("EHOSTUNREACH") ||
           this.lastSyncError.includes("ECONNREFUSED") ||
           this.lastSyncError.includes("ENOTFOUND") ||
           this.lastSyncError.includes("ETIMEDOUT") ||
           this.lastSyncError.includes("ECONNRESET") ||
-          this.lastSyncError.includes("connect ")
-        )
+          this.lastSyncError.includes("connect "))
       ) {
         this.clearLastSyncError();
       }
@@ -409,21 +481,25 @@ class SyncService {
 
       if (pendingOrders.length === 0) return;
 
-      console.log(`[SYNC_LOOP] Found ${pendingOrders.length} pending orders. Processing...`);
+      console.log(
+        `[SYNC_LOOP] Found ${pendingOrders.length} pending orders. Processing...`,
+      );
 
       const syncTasks = pendingOrders
-        .filter(order => !this._currentlySyncing.has(order.uuid))
-        .map(order => {
+        .filter((order) => !this._currentlySyncing.has(order.uuid))
+        .map((order) => {
           this._currentlySyncing.add(order.uuid);
           return this._withTimeout(
             this.triggerSync(order.uuid),
             SYNC_ORDER_TIMEOUT_MS,
-            `triggerSync(${order.uuid?.slice?.(0, 8) || order.uuid})`
-          ).catch(e => {
-            console.warn(`[SYNC_LOOP_SKIP] ${order.uuid}: ${e.message}`);
-          }).finally(() => {
-            this._currentlySyncing.delete(order.uuid);
-          });
+            `triggerSync(${order.uuid?.slice?.(0, 8) || order.uuid})`,
+          )
+            .catch((e) => {
+              console.warn(`[SYNC_LOOP_SKIP] ${order.uuid}: ${e.message}`);
+            })
+            .finally(() => {
+              this._currentlySyncing.delete(order.uuid);
+            });
         });
 
       await Promise.allSettled(syncTasks);
@@ -433,7 +509,7 @@ class SyncService {
       console.error("[SYNC_LOOP_CRITICAL]", error);
       this.recordSyncFailure(
         null,
-        error?.message ? error : new Error(String(error))
+        error?.message ? error : new Error(String(error)),
       );
     } finally {
       try {
@@ -462,11 +538,15 @@ class SyncService {
     const checks = [
       { url: "https://1.1.1.1", timeout: 1000 },
       { url: "http://46.224.8.157:35627/api/discover", timeout: 1500 },
-      { url: "https://api.unipos.tech/", timeout: 1500, validateStatus: () => true },
+      {
+        url: "https://api.unipos.tech/",
+        timeout: 1500,
+        validateStatus: () => true,
+      },
     ];
 
     const oneCheck = (url, timeout, validateStatus) =>
-      axios
+      syncAxios
         .get(url, {
           timeout,
           validateStatus:
@@ -480,7 +560,7 @@ class SyncService {
 
     try {
       await Promise.any(
-        checks.map((c) => oneCheck(c.url, c.timeout, c.validateStatus))
+        checks.map((c) => oneCheck(c.url, c.timeout, c.validateStatus)),
       );
       return true;
     } catch {
@@ -493,13 +573,22 @@ class SyncService {
     const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
     let lastError = null;
 
+    // Log payload size for debugging
+    const payloadSize = JSON.stringify(payload).length;
+    const orderCount = payload.orders?.length || 0;
+    const itemCount = payload.items?.length || 0;
+    console.log(`[SYNC_SEND] Sending: ${orderCount} orders, ${itemCount} items, payload size: ${(payloadSize / 1024).toFixed(1)}KB`);
+
     // Try both URLs in parallel, use whichever responds first
     try {
       await Promise.any(
         urls.map(url =>
-          axios.post(url, payload, { timeout: 12000 }).then(res => {
+          syncAxios.post(url, payload, { timeout: 30000 }).then(res => {
             // 2xx = success
-            if (res.status >= 200 && res.status < 300) return true;
+            if (res.status >= 200 && res.status < 300) {
+              console.log(`[SYNC_SEND] Success via ${url}, status: ${res.status}`);
+              return true;
+            }
             throw new Error(`Unexpected status ${res.status}`);
           }).catch(error => {
             const status = error.response?.status;

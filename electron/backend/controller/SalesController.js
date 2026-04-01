@@ -44,12 +44,18 @@ const CreateNewOrders = async (req, res) => {
 
     const newId = clientId && Number(clientId) > 0 ? Number(clientId) : await MaxCheckService.getNextId(profileId);
 
+    // If client provided its own ID, report it so server max stays in sync
+    if (clientId && Number(clientId) > 0) {
+      MaxCheckService.reportUsedId(profileId, clientId);
+    }
+
     const [table, profile] = await Promise.all([
       require("../model/TablesModel").findOne({ where: { id: tableId } }),
       require("../model/LoginModel").findOne({ where: { id: profileId } }),
     ]);
 
-    const isTimerActive = (profile?.is_timer || (parseFloat(table?.hourly_price) > 0)) ? 1 : 0;
+    // Auto-start timer on order creation if table has hourly_price
+    const tableHasHourlyPrice = parseFloat(table?.hourly_price) > 0;
 
     let newSale = await OrdersModel.create({
       id: newId,
@@ -66,10 +72,11 @@ const CreateNewOrders = async (req, res) => {
       service_value: serviceValue,
       deposit: table?.deposit || 0,
       is_synced: 1,
-      is_timer_status: isTimerActive ? 1 : 0,
-      timer_last_started_at: isTimerActive ? new Date() : null,
-      is_active_timer: isTimerActive ? 1 : 0,
+      is_timer_status: tableHasHourlyPrice ? 1 : 0,
+      timer_last_started_at: tableHasHourlyPrice ? new Date() : null,
+      is_active_timer: tableHasHourlyPrice ? 1 : 0,
       is_timer_clock: "00:00:00",
+      rate_per_minute: 0,
       uuid: uuid || undefined,
     });
 
@@ -105,6 +112,11 @@ const CreateNewOtherOrders = async (req, res) => {
     }
 
     const newId = clientId && Number(clientId) > 0 ? Number(clientId) : await MaxCheckService.getNextId(profileId);
+
+    // If client provided its own ID, report it so server max stays in sync
+    if (clientId && Number(clientId) > 0) {
+      MaxCheckService.reportUsedId(profileId, clientId);
+    }
 
     let newSale = await OrdersModel.create({
       id: newId,

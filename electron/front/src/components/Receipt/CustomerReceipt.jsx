@@ -37,12 +37,24 @@ const CustomerReceipt = ({
     if (!checkData || !orderedItems)
         return <div style={styles.receipt}>Yüklənir...</div>;
 
+    const formatLocalDate = (dateStr) => {
+        if (!dateStr) return "—";
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return String(dateStr).slice(0, 16);
+        // Azerbaijan vaxt zonası ilə formatla (UTC+4)
+        const bakuOffset = 4 * 60; // +4 saat dəqiqə ilə
+        const utc = d.getTime() + d.getTimezoneOffset() * 60000;
+        const baku = new Date(utc + bakuOffset * 60000);
+        const yy = baku.getFullYear();
+        const mm = String(baku.getMonth() + 1).padStart(2, "0");
+        const dd = String(baku.getDate()).padStart(2, "0");
+        const hh = String(baku.getHours()).padStart(2, "0");
+        const mi = String(baku.getMinutes()).padStart(2, "0");
+        return `${dd}.${mm}.${yy} ${hh}:${mi}`;
+    };
+
     const now = new Date();
-    const currentTime = `${now.getFullYear()}-${String(
-        now.getMonth() + 1
-    ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(
-        now.getHours()
-    ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const currentTime = formatLocalDate(now);
 
     const baseFont = Number(terminalInfo?.customer_receipt || profileData?.data?.customer_receipt || profileData?.data?.profile?.customer_receipt || 0);
     const fs = (baseSize) => {
@@ -336,14 +348,14 @@ const CustomerReceipt = ({
                 {(checkData?.startDate || checkData?.start_date) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Açılma tarixi</span>
-                        <span style={styles.value}>{(checkData.startDate || checkData.start_date).slice(0, 16)}</span>
+                        <span style={styles.value}>{formatLocalDate(checkData.startDate || checkData.start_date)}</span>
                     </div>
                 )}
 
                 {(checkData?.endDate || checkData?.end_date) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Bağlanma tarixi</span>
-                        <span style={styles.value}>{(checkData.endDate || checkData.end_date).slice(0, 16)}</span>
+                        <span style={styles.value}>{formatLocalDate(checkData.endDate || checkData.end_date)}</span>
                     </div>
                 )}
 
@@ -356,6 +368,13 @@ const CustomerReceipt = ({
                     <span style={styles.label}>Ofisiant</span>
                     <span style={styles.value}>{checkData?.waiter_name || checkData?.waiter?.name || "-"}</span>
                 </div>
+
+                {Number(checkData?.guest_count || 0) > 0 && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Qonaq sayı</span>
+                        <span style={styles.value}>{checkData.guest_count}</span>
+                    </div>
+                )}
 
                 {displaySaleType !== "Restoranda" && (
                     <div style={styles.infoRow}>

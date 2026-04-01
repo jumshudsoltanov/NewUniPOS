@@ -246,6 +246,27 @@
     color: #2d3748;
 }
 
+/* Timer Display Styles */
+.cd-order-detail-item.cd-timer-item {
+    background: #053796;
+    border-color: #053796;
+}
+
+.cd-order-detail-item.cd-timer-item .label {
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cd-order-detail-item.cd-timer-item .value.cd-timer-clock {
+    color: #ffffff;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
 .cd-order-status {
     padding: 3px 10px;
     background: #e6fffa;

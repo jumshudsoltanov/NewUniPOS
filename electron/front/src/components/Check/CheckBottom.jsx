@@ -128,7 +128,11 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       check_id: orders?.id,
       guest_count: orders?.guest_count || 0,
       table_name: table?.name || orders?.table_name,
-      hall_name: hall?.name || orders?.hall_name
+      hall_name: hall?.name || orders?.hall_name,
+      // Timer data
+      is_timer_status: isTimerActive ? 1 : 0,
+      is_timer_clock: timerClock,
+      rate_per_minute: timerCharge
     });
 
     return () => {
@@ -137,7 +141,8 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         s.emit("broadcast_customer_display", {
           items: [], total: 0, received: 0, change: 0,
           discount: 0, service_charge: 0, deposit: 0,
-          check_id: null, guest_count: 0, table_name: "", hall_name: ""
+          check_id: null, guest_count: 0, table_name: "", hall_name: "",
+          is_timer_status: 0, is_timer_clock: "00:00:00", rate_per_minute: 0
         });
       }
     };
@@ -160,7 +165,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
     // Auto-stop timer when moving to payment screen
     if (isTimerActive) {
-      dispatch(stopTimer({ 
+      dispatch(stopTimer({
         orderId: orders.uuid,
         elapsedSeconds: 0,
         clockStr: timerClock
@@ -385,7 +390,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
               <span>+{calcTotal.deliveryFee} ₼</span>
             </div>
           )}
-          <div className="summary-row" style={{fontWeight: 700}}>
+          <div className="summary-row" style={{ fontWeight: 700 }}>
             <span>{calcTotal.isDepositFloor ? 'Minimal məbləğ:' : 'Cəm:'}</span>
             <span>{calcTotal.sumTotal} ₼</span>
           </div>
@@ -455,13 +460,13 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
           </div>
 
           {canCloseCheck ? (
-                <button
-                  className="btn-pay"
-                  onClick={goCloseCheck}
-                >
-                  <i className="bi bi-check2-all"></i>
-                  <span>{calcTotal.sumTotal} ₼</span>
-                </button>
+            <button
+              className="btn-pay"
+              onClick={goCloseCheck}
+            >
+              <i className="bi bi-check2-all"></i>
+              <span>{calcTotal.sumTotal} ₼</span>
+            </button>
           ) : null}
         </div>
       </div>
@@ -535,13 +540,13 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
           <i className="bi bi-trash-fill"></i>
         </button>
         {canCloseCheck ? (
-              <button
-                className="mobile-pay-btn"
-                onClick={goCloseCheck}
-              >
-                <i className="bi bi-check2-all fs-4 text-white"></i>
-                <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
-              </button>
+          <button
+            className="mobile-pay-btn"
+            onClick={goCloseCheck}
+          >
+            <i className="bi bi-check2-all fs-4 text-white"></i>
+            <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
+          </button>
         ) : null}
       </div>
 

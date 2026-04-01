@@ -71,6 +71,7 @@ const getTables = async (req, res) => {
       },
       order: [
         ["ordering", "ASC"],
+        [TablesModel, "ordering", "ASC"],
         [TablesModel, "id", "ASC"],
       ],
     });

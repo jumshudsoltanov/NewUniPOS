@@ -228,6 +228,15 @@ const CustomerDisplay = () => {
                                     <span className="value">{orderData.hall_name}</span>
                                 </div>
                             )}
+                            {/* Timer Display */}
+                            {orderData?.is_timer_status === 1 && (
+                                <div className="cd-order-detail-item cd-timer-item">
+                                    <span className="label">
+                                        <i className="bi bi-stopwatch-fill"></i> Taymer:
+                                    </span>
+                                    <span className="value cd-timer-clock">{orderData.is_timer_clock || "00:00:00"}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className={`cd-order-status ${!isConnected ? 'offline' : ''}`}>

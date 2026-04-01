@@ -3,6 +3,12 @@ const app = express();
 const AppRouter = require("./router/AppRouter");
 const cors = require("cors");
 const db = require("./database/config");
+
+// Node.js v24+ defaults to TLS 1.2 minimum, but api.unipos.tech uses older TLS.
+// Set global axios defaults so ALL HTTPS requests use compatible TLS settings.
+const https = require("https");
+const axios = require("axios");
+axios.defaults.httpsAgent = new https.Agent({ rejectUnauthorized: false, minVersion: "TLSv1" });
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 const TablesModel = require("./model/TablesModel");
@@ -77,7 +83,13 @@ const ensureSchemaColumns = async () => {
     // orders_items.count: INTEGER → FLOAT (decimal qty support)
     try {
       const itemsDesc = await qi.describeTable("orders_items");
-      if (itemsDesc.count && itemsDesc.count.type && !String(itemsDesc.count.type).toUpperCase().includes("FLOAT") && !String(itemsDesc.count.type).toUpperCase().includes("DOUBLE") && !String(itemsDesc.count.type).toUpperCase().includes("DECIMAL")) {
+      if (
+        itemsDesc.count &&
+        itemsDesc.count.type &&
+        !String(itemsDesc.count.type).toUpperCase().includes("FLOAT") &&
+        !String(itemsDesc.count.type).toUpperCase().includes("DOUBLE") &&
+        !String(itemsDesc.count.type).toUpperCase().includes("DECIMAL")
+      ) {
         await qi.changeColumn("orders_items", "count", {
           type: db.Sequelize.DataTypes.FLOAT,
           allowNull: false,
@@ -88,8 +100,13 @@ const ensureSchemaColumns = async () => {
       console.warn("[SCHEMA] orders_items.count alter:", colErr?.message);
     }
   } catch (e) {
-    if (e.message?.includes("Duplicate") || e.message?.includes("already exists")) {
-      console.log("[SCHEMA] profiles.is_customer_receipt_auto_print already exists");
+    if (
+      e.message?.includes("Duplicate") ||
+      e.message?.includes("already exists")
+    ) {
+      console.log(
+        "[SCHEMA] profiles.is_customer_receipt_auto_print already exists",
+      );
     } else {
       console.warn("[SCHEMA] ensureSchemaColumns:", e?.message);
     }
