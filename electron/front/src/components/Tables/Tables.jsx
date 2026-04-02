@@ -8,6 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import CustomersModal from "../Customers-Modal/CustomersModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import { updateTableOrders } from "../../redux/Slices/OrdersSlice";
+import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import {
   getTableGroups,
   setTempTableOrder,
@@ -197,11 +198,15 @@ const Tables = () => {
 
     const handleTableUpdated = (data) => {
       const now = Date.now();
-      if (now - lastSyncRef.current < 300) return;
+      if (now - lastSyncRef.current < 400) return;
 
       if (loginedProfileData?.data?.profile?.id) {
         lastSyncRef.current = now;
-        dispatch(getTableGroups(loginedProfileData.data.profile.id));
+        // Kiçik gecikmə — DB yazma əməliyyatı tamamlansın (Master-Slave: print_count, status dəyişikliyi)
+        setTimeout(() => {
+          dispatch(getTableGroups(loginedProfileData.data.profile.id));
+          dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id, silentRefresh: true }));
+        }, 150);
       }
     };
 

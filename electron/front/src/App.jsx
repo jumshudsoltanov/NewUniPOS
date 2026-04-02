@@ -68,22 +68,56 @@ function AppContent() {
   const initStarted = useRef(false);
   const [showInitialLoading, setShowInitialLoading] = useState(true);
 
-  // Blok yoxlaması — bütün səhifələrdə (Check, Tables, modallar açıq olanda da) işləsin
+  // Arxa planda blok yoxlaması — POS-u yormadan periodik olaraq serverdən yoxlayır
+  // Yalnız is_pos_block dəyişəndə və ya abunəlik bitəndə /blocked-ə yönləndirir
   useEffect(() => {
     if (showInitialLoading) return;
-    const path = (location.pathname || "").replace(/^#/, "");
-    if (path === "/blocked") return;
 
-    const authResult = authResultRedux?.data ? authResultRedux : (() => {
-      try { return JSON.parse(localStorage.getItem("authResult")); } catch { return null; }
-    })();
-    const profile = authResult?.data?.profile;
-    if (!profile) return;
+    // Lokal (keşdən) blok yoxlaması — anında, şəbəkə gözləmədən
+    const checkLocalBlock = () => {
+      const path = (location.pathname || "").replace(/^#/, "");
+      if (path === "/blocked") return;
+      const authResult = authResultRedux?.data ? authResultRedux : (() => {
+        try { return JSON.parse(localStorage.getItem("authResult")); } catch { return null; }
+      })();
+      const profile = authResult?.data?.profile;
+      if (!profile) return;
+      if (isPosBlocked(profile?.is_pos_block) || (profile?.next_payment_date && isPaymentExpired(profile.next_payment_date))) {
+        navigate("/blocked", { replace: true });
+      }
+    };
 
-    if (isPosBlocked(profile?.is_pos_block) || (profile?.next_payment_date && isPaymentExpired(profile.next_payment_date))) {
-      navigate("/blocked", { replace: true });
-    }
-  }, [location.pathname, authResultRedux, showInitialLoading, navigate]);
+    // Arxa planda serverdən blok yoxlaması — POS-u yormadan sessiz yoxlayır
+    const backgroundBlockCheck = async () => {
+      const path = (location.pathname || "").replace(/^#/, "");
+      if (path === "/blocked") return;
+      try {
+        let storageData = JSON.parse(localStorage.getItem("profile"));
+        if (!storageData) return;
+        const data = await dispatch(authPos(storageData)).unwrap();
+        localStorage.setItem("authResult", JSON.stringify(data));
+        const profile = data?.data?.profile;
+        if (profile && (isPosBlocked(profile?.is_pos_block) || (profile?.next_payment_date && isPaymentExpired(profile.next_payment_date)))) {
+          navigate("/blocked", { replace: true });
+        }
+      } catch (err) {
+        // Server xətası — POS-u bloklama, sadəcə lokal keşdən yoxla
+        if (err?.data?.isBlocked) {
+          localStorage.setItem("authResult", JSON.stringify(err.data));
+          dispatch(setLoginData(err.data));
+          navigate("/blocked", { replace: true });
+        }
+      }
+    };
+
+    // İlkin lokal yoxlama
+    checkLocalBlock();
+
+    // Hər 5 dəqiqədən bir arxa planda serverdən yoxla (300000ms = 5 dəq)
+    const blockCheckInterval = setInterval(backgroundBlockCheck, 5 * 60 * 1000);
+
+    return () => clearInterval(blockCheckInterval);
+  }, [showInitialLoading, dispatch, navigate, location.pathname, authResultRedux]);
 
   useEffect(() => {
     if (window.electronAPI && window.electronAPI.onBackendLog) {
@@ -283,89 +317,81 @@ function AppContent() {
             dispatch(setLoginData(authResult));
           }
 
-          try {
-            const data = await dispatch(authPos(storageData)).unwrap();
-            localStorage.setItem("authResult", JSON.stringify(data));
-            // Printer məlumatlarını localStorage-a yaz (şəbəkə kəsildikdə istifadə üçün)
-            if (data?.data?.printers?.length && data?.data?.profile?.id) {
-              savePrintersToStorage(data.data.profile.id, data.data.printers);
-            }
-
-            // authPos LoginModel-i yenilədi — backend rolunu yenidən yoxlasın (Master/Slave)
-            if (window.electronAPI?.reEvaluateRole) {
-              window.electronAPI.reEvaluateRole().catch(console.error);
-            }
-
-            // Re-init network only if role changed vs what we started with
-            const freshTerminal = data?.data?.terminal || {};
-            const freshProfile = data?.data?.profile || {};
-            const freshIsMaster = freshTerminal.is_master === 1 || freshProfile.is_master === 1;
-            const freshIsActive = freshTerminal.is_master_slave_active === 1 || freshProfile.is_master_slave_active === 1;
-            const currentSocket = getSocket();
-            const alreadyConnectedLocally = currentSocket?.io?.uri?.includes("localhost") || currentSocket?.io?.uri?.includes("127.0.0.1");
-            const configChanged = freshIsActive !== isMasterSlaveActive || freshIsMaster !== isMaster;
-            if (configChanged) {
-              if (freshIsActive && !freshIsMaster) {
-                window.electronAPI?.getStaticMasterIp?.().then(ip => {
-                  initNetwork(false, false, ip || undefined); // Slave → statik IP varsa birbaşa, yoxsa skan
-                }).catch(() => initNetwork(false, false));
-              } else if (freshIsMaster && !alreadyConnectedLocally) {
-                initNetwork(true, false); // Master → local socket (only if not already local)
+          // ── Lokal keşdən blok yoxla (anında, şəbəkə gözləmədən) ──
+          const cachedProfile = authResult?.data?.profile;
+          if (cachedProfile && (isPosBlocked(cachedProfile?.is_pos_block) || (cachedProfile?.next_payment_date && isPaymentExpired(cachedProfile.next_payment_date)))) {
+            navigate("/blocked");
+            // Arxa planda yenə authPos çağır — bəlkə blok götürülüb
+            dispatch(authPos(storageData)).unwrap().then(data => {
+              localStorage.setItem("authResult", JSON.stringify(data));
+              const p = data?.data?.profile;
+              if (p && !isPosBlocked(p?.is_pos_block) && !(p?.next_payment_date && isPaymentExpired(p.next_payment_date))) {
+                // Blok götürülüb — BlockPage "Yenilə" düyməsi ilə çıxa bilər
               }
-            }
+            }).catch(() => {});
+            return; // POS-u yükləmə, /blocked göstər
+          }
 
-            requestAnimationFrame(() => {
-              dispatch(fetchCustomersFromAdmin());
-              dispatch(fetchCustomerGroupsFromAdmin());
-            });
+          // ── Bloklanmayıb — dərhal /pin-ə yönləndir, authPos arxa planda işləsin ──
+          const cleanPath = currentPath.split("?")[0];
+          if (cleanPath === "/" || cleanPath === "/login" || cleanPath === "") {
+            navigate("/pin");
+          }
 
-            const profile = data?.data?.profile;
-            if (isPosBlocked(profile?.is_pos_block)) {
-              navigate("/blocked");
-              return;
-            }
+          // Arxa planda müştəri datasını yüklə
+          requestAnimationFrame(() => {
+            dispatch(fetchCustomersFromAdmin());
+            dispatch(fetchCustomerGroupsFromAdmin());
+          });
 
-            const npd = profile?.next_payment_date;
-            if (npd) {
-              if (isPaymentExpired(npd)) {
-                navigate("/blocked");
-                return;
+          // ── authPos arxa planda (non-blocking) — POS-u gözlətmir ──
+          (async () => {
+            try {
+              const data = await dispatch(authPos(storageData)).unwrap();
+              localStorage.setItem("authResult", JSON.stringify(data));
+              // Printer məlumatlarını localStorage-a yaz (şəbəkə kəsildikdə istifadə üçün)
+              if (data?.data?.printers?.length && data?.data?.profile?.id) {
+                savePrintersToStorage(data.data.profile.id, data.data.printers);
               }
-            }
 
-            const cleanPath = currentPath.split("?")[0];
+              // authPos LoginModel-i yenilədi — backend rolunu yenidən yoxlasın (Master/Slave)
+              if (window.electronAPI?.reEvaluateRole) {
+                window.electronAPI.reEvaluateRole().catch(console.error);
+              }
 
-            if (cleanPath === "/" || cleanPath === "/login" || cleanPath === "") {
-              navigate("/pin");
-            }
-          } catch (err) {
-            console.error("[AUTH] InitApp/Auto-login failed:", err);
-            
-            if (err?.data?.isBlocked) {
+              // Re-init network only if role changed vs what we started with
+              const freshTerminal = data?.data?.terminal || {};
+              const freshProfile = data?.data?.profile || {};
+              const freshIsMaster = freshTerminal.is_master === 1 || freshProfile.is_master === 1;
+              const freshIsActive = freshTerminal.is_master_slave_active === 1 || freshProfile.is_master_slave_active === 1;
+              const currentSocket = getSocket();
+              const alreadyConnectedLocally = currentSocket?.io?.uri?.includes("localhost") || currentSocket?.io?.uri?.includes("127.0.0.1");
+              const configChanged = freshIsActive !== isMasterSlaveActive || freshIsMaster !== isMaster;
+              if (configChanged) {
+                if (freshIsActive && !freshIsMaster) {
+                  window.electronAPI?.getStaticMasterIp?.().then(ip => {
+                    initNetwork(false, false, ip || undefined);
+                  }).catch(() => initNetwork(false, false));
+                } else if (freshIsMaster && !alreadyConnectedLocally) {
+                  initNetwork(true, false);
+                }
+              }
+
+              // Arxa planda blok yoxla — əgər server bloklanmış deyirsə, yönləndir
+              const profile = data?.data?.profile;
+              if (isPosBlocked(profile?.is_pos_block) || (profile?.next_payment_date && isPaymentExpired(profile.next_payment_date))) {
+                navigate("/blocked", { replace: true });
+              }
+            } catch (err) {
+              console.error("[AUTH] Background auth check failed:", err);
+              if (err?.data?.isBlocked) {
                 localStorage.setItem("authResult", JSON.stringify(err.data));
                 dispatch(setLoginData(err.data));
-                navigate("/blocked");
-                return;
+                navigate("/blocked", { replace: true });
+              }
+              // Şəbəkə xətası — POS-u bloklama, istifadəçi davam etsin
             }
-
-            // Stored authResult blokludursa, /blocked göstər — Pin/Login-ə getmə
-            const storedProfile = authResult?.data?.profile;
-            if (storedProfile && (isPosBlocked(storedProfile?.is_pos_block) || (storedProfile?.next_payment_date && isPaymentExpired(storedProfile.next_payment_date)))) {
-              localStorage.setItem("authResult", JSON.stringify(authResult));
-              dispatch(setLoginData(authResult));
-              navigate("/blocked");
-              return;
-            }
-
-            // Even if init fails, try to show the Login page instead of a white screen
-            if (authResult) {
-              dispatch(fetchCustomersFromAdmin());
-              dispatch(fetchCustomerGroupsFromAdmin());
-              if (currentPath === "/" || currentPath === "/login" || currentPath === "") navigate("/pin");
-            } else {
-              if (currentPath !== "/" && currentPath !== "") navigate("/");
-            }
-          }
+          })();
         } else {
           if (currentPath !== "/" && currentPath !== "") navigate("/");
         }

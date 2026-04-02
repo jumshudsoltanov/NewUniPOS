@@ -218,8 +218,6 @@ const Check = () => {
     }
 
 
-    console.log(loginedProfileData)
-
 
     // Priority 1: books (full order data with orders_items)
     const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
@@ -610,6 +608,8 @@ const Check = () => {
   async function handleAutoSaveAndExit(targetPath) {
     if (isExitingRef.current || isSendingRef.current) return;
     isExitingRef.current = true;
+    const hadPendingProducts = products?.length > 0;
+    const hadPendingDeletions = pendingDeletions?.length > 0;
     const resultingItemCount = (currentOrder?.orders_items?.length || 0) - (pendingDeletions?.length || 0) + (products?.length || 0);
     const profileHasTimer = Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1;
     const hasTimerOnTable = effectiveHourlyPrice > 0 && profileHasTimer;
@@ -619,11 +619,15 @@ const Check = () => {
         Number(currentOrder?.rate_per_minute || 0) > 0 ||
         (currentOrder?.is_timer_clock && currentOrder?.is_timer_clock !== "00:00:00"));
 
-    if (products.length > 0 || pendingDeletions.length > 0) {
+    if (hadPendingProducts || hadPendingDeletions) {
       await handleSendOrders();
     }
 
-    if (resultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
+    // Əgər indicə məhsul göndərilibsə, orders_items hələ yenilənməyə bilər (slave race condition).
+    // Bu halda silmə — server-də artıq məhsullar var.
+    const actualResultingItemCount = hadPendingProducts ? Math.max(resultingItemCount, 1) : resultingItemCount;
+
+    if (actualResultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const profileId = loginedProfileData?.data?.profile?.id;
       const isMasterSlaveActive = loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1;

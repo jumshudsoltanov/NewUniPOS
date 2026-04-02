@@ -1609,15 +1609,30 @@ ipcMain.handle("scan-master", async () => {
     const finishScan = (ip) => {
       if (resolved) return;
       resolved = true;
+      if (overallTimeout) clearTimeout(overallTimeout);
+      if (probeInterval) clearInterval(probeInterval);
       try {
         listener.close();
+      } catch (e) {}
+      try {
+        if (probeSender) probeSender.close();
       } catch (e) {}
       resolve(ip);
     };
 
+    // Ümumi timeout — 12 saniyədən sonra tapılmasa null qaytar
+    let overallTimeout = setTimeout(() => {
+      if (!resolved) {
+        console.log("[SLAVE SCAN] 12s timeout — Master tapılmadı");
+        finishScan(null);
+      }
+    }, 12000);
+
     // --- 1. UDP Listener ---
     const dgram = require("dgram");
-    const listener = dgram.createSocket("udp4");
+    const listener = dgram.createSocket({ type: "udp4", reuseAddr: true });
+    let probeSender = null;
+    let probeInterval = null;
 
     listener.on("message", (msg, rinfo) => {
       try {
@@ -1633,11 +1648,51 @@ ipcMain.handle("scan-master", async () => {
 
     listener.on("error", (err) => {
       console.log("[SLAVE UDP] Listener Error:", err.message);
-      // Don't finishScan(null) here, TCP might still find it
     });
 
     try {
-      listener.bind({ port: 44444, exclusive: false });
+      listener.bind({ port: 44444, exclusive: false }, () => {
+        // --- Aktiv slave_probe göndər — Master dərhal cavab versin ---
+        try {
+          probeSender = dgram.createSocket({ type: "udp4", reuseAddr: true });
+          probeSender.bind(() => {
+            probeSender.setBroadcast(true);
+
+            const sendProbes = () => {
+              if (resolved) return;
+              const probeMsg = Buffer.from(JSON.stringify({ type: "slave_probe" }));
+              // Bütün subnet-lərə probe göndər
+              const os = require("os");
+              const interfaces = os.networkInterfaces();
+              const sentTo = new Set();
+              for (const name of Object.keys(interfaces)) {
+                const isVirtual = name.toLowerCase().match(/(vmware|virtual|vbox|wsl|vethernet|loopback)/);
+                if (isVirtual) continue;
+                for (const iface of interfaces[name]) {
+                  if (iface.family === "IPv4" && !iface.internal && !iface.address.startsWith("169.254.")) {
+                    const ipParts = iface.address.split('.').map(Number);
+                    const maskParts = (iface.netmask || "255.255.255.0").split('.').map(Number);
+                    const bcast = ipParts.map((p, i) => p | (~maskParts[i] & 255)).join('.');
+                    if (!sentTo.has(bcast)) {
+                      sentTo.add(bcast);
+                      probeSender.send(probeMsg, 0, probeMsg.length, 44444, bcast, () => {});
+                    }
+                  }
+                }
+              }
+              // Ümumi broadcast da göndər
+              probeSender.send(probeMsg, 0, probeMsg.length, 44444, "255.255.255.255", () => {});
+              console.log("[SLAVE UDP] slave_probe göndərildi");
+            };
+
+            // Dərhal göndər, sonra hər 800ms-dən bir
+            sendProbes();
+            probeInterval = setInterval(sendProbes, 800);
+          });
+        } catch (e) {
+          console.warn("[SLAVE UDP] Probe sender xətası:", e.message);
+        }
+      });
     } catch (e) {
       console.log("[SLAVE UDP] Bind error:", e.message);
     }

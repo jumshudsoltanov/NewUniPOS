@@ -242,12 +242,15 @@ const Pin = () => {
   const terminalInfo = activeProfileData?.data?.terminal || {};
   const profileInfo = activeProfileData?.data?.profile || {};
 
+  // Blok yoxlaması App.jsx-dən arxa planda idarə olunur — Pin-də əlavə yoxlama lazım deyil
+  // Yalnız ilkin mount-da lokal keşdən yoxla (tez, şəbəkə gözləmədən)
   useEffect(() => {
     if (!profileInfo) return;
     if (isPosBlocked(profileInfo?.is_pos_block) || (profileInfo?.next_payment_date && isPaymentExpired(profileInfo.next_payment_date))) {
       navigate("/blocked", { replace: true });
     }
-  }, [profileInfo, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const validImg = (img) => {
     if (!img) return false;

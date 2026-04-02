@@ -92,13 +92,13 @@ const KitchenReceipt = ({
             maxWidth: "100%",
             background: "#fff",
             fontFamily: "'Consolas', 'Courier New', 'Lucida Console', monospace",
-            fontSize: fs(12),
+            fontSize: fs(13),
             color: "#000",
-            fontWeight: "500",
+            fontWeight: "700",
         },
         header: { textAlign: "center", marginBottom: "4px" },
         title: {
-            fontSize: fs(16),
+            fontSize: fs(18),
             fontWeight: "900",
             letterSpacing: "1px",
         },
@@ -106,21 +106,21 @@ const KitchenReceipt = ({
             borderBottom: "1px dashed #000",
             margin: "3px 0",
         },
-        infoSection: { fontSize: fs(11), textAlign: "center" },
+        infoSection: { fontSize: fs(13), textAlign: "center", fontWeight: "700" },
         infoRow: {
             textAlign: "center",
             marginBottom: "1px",
         },
         label: { fontWeight: "900" },
         value: { wordBreak: "break-word" },
-        items: { fontSize: fs(12) },
+        items: { fontSize: fs(14) },
         itemsHeader: {
             display: "flex",
             fontWeight: "900",
             borderBottom: "1px solid #000",
             paddingBottom: "2px",
             marginBottom: "2px",
-            fontSize: fs(12),
+            fontSize: fs(14),
         },
         colName: {
             width: "220px", // Kitchen only has name and qty usually: 220px name
@@ -135,7 +135,7 @@ const KitchenReceipt = ({
             display: "flex",
             padding: "3px 0",
             borderBottom: "1px dashed #000",
-            fontSize: fs(13),
+            fontSize: fs(15),
             fontWeight: "900",
             lineHeight: "1.2",
             alignItems: "center",
@@ -151,7 +151,7 @@ const KitchenReceipt = ({
         footer: {
             textAlign: "center",
             marginTop: "6px",
-            fontSize: fs(11),
+            fontSize: fs(13),
             fontWeight: "900",
         },
         modifier: {
@@ -162,12 +162,14 @@ const KitchenReceipt = ({
         },
     };
 
+    // Çek №: yalnız rəqəmsal ID göstərilsin
+    const displayCheckId = checkData?.id || "";
+
     return (
         <div style={styles.receipt}>
             {/* HEADER */}
             <div style={styles.header}>
-                <div style={styles.title}>MƏTBƏX ÇEKİ</div>
-                <div style={{ fontSize: fs(11), marginTop: "2px", fontWeight: "900" }}>{currentTime}</div>
+                <div style={{ fontSize: fs(13), marginTop: "2px", fontWeight: "900" }}>{currentTime}</div>
             </div>
 
             <div style={styles.line}></div>
@@ -181,7 +183,7 @@ const KitchenReceipt = ({
 
                 <div style={styles.infoRow}>
                     <span style={styles.label}>Çek №: </span>
-                    <span style={styles.value}>#{checkData?.id || orderId?.toString().slice(0, 8)}</span>
+                    <span style={styles.value}>#{displayCheckId}</span>
                 </div>
 
                 {hallName && (

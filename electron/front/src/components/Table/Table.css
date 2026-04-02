@@ -152,6 +152,20 @@
 }
 
 /* Wrapper adjustments based on type */
+
+/* Round table — smaller seats to match the circular shape */
+.wrapper-round .seat-top,
+.wrapper-round .seat-bottom {
+    width: 45px;
+    height: 16px;
+}
+
+.wrapper-round .seat-left,
+.wrapper-round .seat-right {
+    width: 16px;
+    height: 45px;
+}
+
 .wrapper-rectangle {
     height: 300px;
     /* Taller wrapper for rectangle */
@@ -330,6 +344,38 @@
 .table-content {
     text-align: center;
     width: 100%;
+}
+
+/* Round table — tighter spacing so all content fits inside the circle */
+.table-round .table-content {
+    width: 78%;
+}
+
+.table-round .table-name {
+    font-size: 14px;
+    margin: 0;
+}
+
+.table-round .table-amount {
+    font-size: 16px;
+    margin: 1px 0 3px 0;
+}
+
+.table-round .table-waiter-info {
+    font-size: 13px;
+    gap: 4px;
+}
+
+.table-round .table-multi-checks-badge {
+    margin-top: 2px;
+    padding: 4px 8px;
+    font-size: 13px;
+}
+
+.table-round .table-timer-info {
+    font-size: 0.78rem !important;
+    margin-top: 2px !important;
+    padding: 1px 6px !important;
 }
 
 .table-name {
