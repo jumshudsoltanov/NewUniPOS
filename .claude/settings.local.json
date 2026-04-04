@@ -21,7 +21,9 @@
       "Bash(npm install:*)",
       "Read(//c/Users/Jumshud/Desktop/POS-ReDesing/**)",
       "Bash(grep -rn \"clearOrders\\\\|SalesTypesModal\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/ --include=*.jsx -l)",
-      "Bash(\"c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/RefreshLoader/RefreshLoader.css\")"
+      "Bash(\"c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/RefreshLoader/RefreshLoader.css\")",
+      "Bash(grep -r \"minVersion\\\\|TLSv1\\\\|rejectUnauthorized\\\\|Socket\\\\|serialport\\\\|net\\\\\\\\.connect\\\\|ws://\" /c/Users/Jumshud/Desktop/POS-ReDesing/electron/backend/services --include=\"*.js\")",
+      "Read(//c/Users/Jumshud/.claude/projects/c--Users-Jumshud-Desktop-POS-ReDesing/c0d245db-cac2-4624-998e-27532aa6e201/tasks/**)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",

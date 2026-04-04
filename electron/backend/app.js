@@ -452,6 +452,9 @@ ipcMain.handle("re-evaluate-role", async () => {
   await creaedtToTabel();
   await ensureSchemaColumns();
 
+  // SyncService həmişə başlasın — master/slave-dən asılı deyil
+  require("./services/SyncService");
+
   // Initial check
   await checkTerminalRole(server);
 })();

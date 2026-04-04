@@ -3,7 +3,7 @@ import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal"; // Import
-import { addPendingDeletion, removeAllProductsById } from "../../redux/Slices/OrdersSlice"; // Import action
+import { addPendingDeletion, removeAllProductsById, removeProductByIdAndPrice } from "../../redux/Slices/OrdersSlice"; // Import action
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
 import { getProductHourlySum } from "../../utils/orderHourlyPrice";
@@ -56,7 +56,8 @@ const CheckMain = ({ orders, table }) => {
         const price = parseFloat(orderItem.price || orderItem.amount || 0).toFixed(2);
         const modifiersStr = typeof orderItem.modifiers === 'string' ? orderItem.modifiers : JSON.stringify(orderItem.modifiers || []);
         const modObj = typeof orderItem.modifiers === 'string' ? JSON.parse(orderItem.modifiers || '[]') : (orderItem.modifiers || []);
-        const uniqueKeyPart = modObj.length > 0 ? `-${orderItem.id}` : '';
+        const isOwnSetPrice = orderItem.product?.own_set_price === 1 || orderItem.own_set_price === 1;
+        const uniqueKeyPart = modObj.length > 0 || isOwnSetPrice ? `-${orderItem.id}` : '';
         const key = `${prodId}-${isGift}-${price}-${modifiersStr}${uniqueKeyPart}`;
         const existing = groupedMap.get(key);
         const rowSort = sortTimeFromSavedRow(orderItem);
@@ -114,7 +115,8 @@ const CheckMain = ({ orders, table }) => {
       const price = parseFloat(item.price || 0).toFixed(2);
       const modifiersStr = typeof item.modifiers === 'string' ? item.modifiers : JSON.stringify(item.modifiers || []);
       const hasModifiers = (item.modifiers && item.modifiers.length > 0);
-      const uniqueKeyPart = hasModifiers ? `-local-idx-${idx}` : '';
+      const isOwnSetPrice = item.own_set_price === 1;
+      const uniqueKeyPart = (hasModifiers || isOwnSetPrice) ? `-local-idx-${idx}` : '';
       const key = `${prodId}-${isGift}-${price}-${modifiersStr}${uniqueKeyPart}`;
       const existing = groupedMap.get(key);
 
@@ -140,6 +142,7 @@ const CheckMain = ({ orders, table }) => {
           price: item.price,
           isNew: true,
           is_gift: isGift,
+          own_set_price: item.own_set_price,
           firstId: 999999999 + idx,
           sortTime: localSortBase + idx,
           printer_details: item.printer_details || [],
@@ -320,9 +323,8 @@ const CheckMain = ({ orders, table }) => {
                   style={rowStyle}
                 >
                   <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div className="d-flex align-items-center flex-wrap gap-2">
-                      <span className="fw-bold">{item.name}</span>
-                      {item.isNew && <span className="check-item-new-badge">Yeni</span>}
+                    <div className="d-flex align-items-center flex-wrap gap-1">
+                      <span className="fw-semibold">{item.name}</span>
                       {modifiers.length > 0 && (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title="Modifikatorlar">
                           <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
@@ -451,7 +453,13 @@ const CheckMain = ({ orders, table }) => {
           if (deleteActionType === 'full') {
             // If item has local (unsaved) portion, remove those from local state too
             if (product.isNew && product.localQuantity > 0) {
-              dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+              const isOwnPrice = product.product?.own_set_price === 1 || product.own_set_price === 1;
+              if (isOwnPrice) {
+                // Serbest qiymətli məhsullar üçün yalnız eyni qiymətli birini sil
+                dispatch(removeProductByIdAndPrice({ product_id: Number(product.product_id || product.id), price: Number(product.price) }));
+              } else {
+                dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+              }
             }
 
             const idsToDelete = (product.allIds && product.allIds.length > 0)

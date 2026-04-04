@@ -2,13 +2,17 @@ const ProductsModel = require("../model/ProductsModel");
 const axios = require("axios");
 
 const API_URL = "https://api.unipos.tech/api/products";
+const API_URL_FALLBACK = "http://46.224.8.157:35627/api/products";
+
+const apiPost = (url, data) => axios.post(url, data).catch(() => axios.post(url.replace("https://api.unipos.tech", "http://46.224.8.157:35627"), data));
+const apiPut = (url, data) => axios.put(url, data).catch(() => axios.put(url.replace("https://api.unipos.tech", "http://46.224.8.157:35627"), data));
 
 exports.createProduct = async (req, res) => {
     try {
         const { profile_id, ...productData } = req.body;
 
         // 1. Send to Remote Admin API
-        const response = await axios.post(API_URL, { ...productData, profile_id });
+        const response = await apiPost(API_URL, { ...productData, profile_id });
 
         if (response.data) {
             const newProduct = response.data;
@@ -39,7 +43,7 @@ exports.updateProduct = async (req, res) => {
         const { profile_id, ...productData } = req.body;
 
         // 1. Send to Remote Admin API
-        const response = await axios.put(`${API_URL}/${id}`, { ...productData, profile_id });
+        const response = await apiPut(`${API_URL}/${id}`, { ...productData, profile_id });
 
         if (response.data) {
             const updatedProduct = response.data;
@@ -65,7 +69,7 @@ exports.deleteProduct = async (req, res) => {
         const { profile_id } = req.body; // Expect profile_id in body if needed, or fetch it
 
         // 1. Send to Remote Admin API (Soft Delete via Update)
-        await axios.put(`${API_URL}/${id}`, {
+        await apiPut(`${API_URL}/${id}`, {
             is_hidden_pos: 1,
             is_hidden_qr: 1,
             profile_id

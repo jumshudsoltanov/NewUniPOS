@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.1.26",
+  "version": "2.1.40",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",

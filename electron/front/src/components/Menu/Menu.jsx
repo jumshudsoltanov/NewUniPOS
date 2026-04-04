@@ -102,8 +102,18 @@ const Menu = ({
 
   const filteredProducts = useMemo(() => {
     if (!searchText) return [];
+    const normalize = (s) => s
+      .toLocaleLowerCase("az")
+      .replace(/i/g, "ı")       // i → ı  (qatıq → qatiq yazanda)
+      .replace(/e/g, "ə")       // e → ə  (pətənə → petene yazanda)
+      .replace(/o/g, "ö")       // o → ö  (göy → goy yazanda)
+      .replace(/u/g, "ü")       // u → ü  (üzüm → uzum yazanda)
+      .replace(/g/g, "ğ")       // g → ğ  (ağ → ag yazanda)
+      .replace(/c/g, "ç")       // c → ç  (çay → cay yazanda)
+      .replace(/s/g, "ş");      // s → ş  (şəkər → seker yazanda)
+    const q = normalize(searchText);
     return allProducts.filter((p) =>
-      p.name?.toLowerCase().includes(searchText.toLowerCase()),
+      normalize(p.name || "").includes(q),
     );
   }, [searchText, allProducts]);
 
@@ -513,7 +523,12 @@ const Menu = ({
                   )}
 
                   <div className="menu-card-content">
-                    <span className="text-center fw-bold text-white text-shadow">
+                    <span
+                      className="text-center fw-bold text-white text-shadow"
+                      style={{
+                        fontSize: item.name?.length > 30 ? '0.55rem' : item.name?.length > 20 ? '0.65rem' : item.name?.length > 12 ? '0.72rem' : '0.8rem'
+                      }}
+                    >
                       {item.name}
                     </span>
                   </div>

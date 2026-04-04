@@ -56,6 +56,7 @@ import apiConfig from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 import StatusModal from "../StatusModal/StatusModal";
 import { checkShiftGuard } from "../../utils/shiftGuard";
+import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 
 // Cloud API Base URL (Same as Admin)
 // Local Backend Sync URL
@@ -71,6 +72,9 @@ const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const posKeyboardEnabled = useMemo(() => {
+    try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
+  }, []);
   const [activeMobileTab, setActiveMobileTab] = useState("menu");
   const [showOpeationsModal, setShowOperationsModal] = useState(false);
 
@@ -633,6 +637,8 @@ const Check = () => {
       const isMasterSlaveActive = loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1;
       const orderId = currentOrder.uuid;
 
+      // Master-Slave safety: server-dən yoxla ki, çekdə həqiqətən məhsul yoxdur
+      // Race condition qarşısını alır — slave göndərib amma UI hələ yenilənməyib
       const tryDelete = async () => {
         try {
           await dispatch(deleteCheck({
@@ -650,7 +656,12 @@ const Check = () => {
             dispatch(getActiveOrders({ profileId, silentRefresh: true }));
           }
         } catch (error) {
+          // Server reject etdi (məs. məhsullar var) — silmə baş tutmadı, UI-ı yenilə
           console.error("Auto-delete error:", error);
+          if (profileId) {
+            dispatch(getTableGroups(profileId));
+            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+          }
         }
       };
 
@@ -2306,7 +2317,7 @@ const Check = () => {
             </div>
 
             {/* Content placeholder for the rest of the right box */}
-            <div className="checkRightBoxContent flex-grow-1 p-3" style={{ minHeight: 0 }}>
+            <div className="checkRightBoxContent flex-grow-1 p-3" style={{ minHeight: 0, position: "relative" }}>
               <Menu
                 order={currentOrder}
                 searchText={searchText}
@@ -2324,6 +2335,16 @@ const Check = () => {
                 onEditProduct={handleEditProductMemo}
                 onDeleteItem={handleDeleteItemMemo}
               />
+              {isSearchExpanded && posKeyboardEnabled && (
+                <VirtualKeyboard
+                  onKeyPress={(key) => setSearchText((prev) => prev + key)}
+                  onBackspace={() => setSearchText((prev) => prev.slice(0, -1))}
+                  onClose={() => {
+                    setIsSearchExpanded(false);
+                    setSearchText("");
+                  }}
+                />
+              )}
             </div>
           </div>
         </Col>

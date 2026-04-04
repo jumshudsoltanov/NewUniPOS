@@ -2,20 +2,32 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
 const ADMIN_API = "https://api.unipos.tech/api";
+const ADMIN_API_FALLBACK = "http://46.224.8.157:35627/api";
 
+const apiGet = (path, config) =>
+    axios.get(`${ADMIN_API}${path}`, config).catch(() =>
+        axios.get(`${ADMIN_API_FALLBACK}${path}`, config)
+    );
 
+const apiPost = (path, data, config) =>
+    axios.post(`${ADMIN_API}${path}`, data, config).catch(() =>
+        axios.post(`${ADMIN_API_FALLBACK}${path}`, data, config)
+    );
+
+const apiPut = (path, data, config) =>
+    axios.put(`${ADMIN_API}${path}`, data, config).catch(() =>
+        axios.put(`${ADMIN_API_FALLBACK}${path}`, data, config)
+    );
 
 // Fetch customers from admin API
 export const fetchCustomersFromAdmin = createAsyncThunk(
     "customers/fetchFromAdmin",
     async (params = {}, thunkAPI) => {
         try {
-
-
             const state = thunkAPI.getState();
             const profileId = state.LoginSlice?.loginedProfileData?.data?.profile?.id;
 
-            const response = await axios.get(`${ADMIN_API}/customers`, {
+            const response = await apiGet("/customers", {
                 params: {
                     profile_id: profileId,
                     page: params.page || 1,
@@ -38,12 +50,10 @@ export const fetchCustomerGroupsFromAdmin = createAsyncThunk(
     "customers/fetchGroupsFromAdmin",
     async (_, thunkAPI) => {
         try {
-
-
             const state = thunkAPI.getState();
             const profileId = state.LoginSlice?.loginedProfileData?.data?.profile?.id;
 
-            const response = await axios.get(`${ADMIN_API}/customer-groups`, {
+            const response = await apiGet("/customer-groups", {
                 params: { profile_id: profileId, limit: 100 },
                 timeout: 5000,
             });
@@ -61,12 +71,10 @@ export const createCustomerViaAdmin = createAsyncThunk(
     "customers/createViaAdmin",
     async (customerData, thunkAPI) => {
         try {
-
-
             const state = thunkAPI.getState();
             const profileId = state.LoginSlice?.loginedProfileData?.data?.profile?.id;
 
-            const response = await axios.post(`${ADMIN_API}/customers`, {
+            const response = await apiPost("/customers", {
                 ...customerData,
                 profile_id: profileId,
             }, { timeout: 5000 });
@@ -85,12 +93,10 @@ export const updateCustomerViaAdmin = createAsyncThunk(
     "customers/updateViaAdmin",
     async ({ id, customerData }, thunkAPI) => {
         try {
-
-
             const state = thunkAPI.getState();
             const profileId = state.LoginSlice?.loginedProfileData?.data?.profile?.id;
 
-            const response = await axios.put(`${ADMIN_API}/customers/${id}`, {
+            const response = await apiPut(`/customers/${id}`, {
                 ...customerData,
                 profile_id: profileId,
             }, { timeout: 5000 });

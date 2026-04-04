@@ -1,0 +1,242 @@
+/* ===== Virtual Keyboard — Windows-like on-screen keyboard ===== */
+
+/* Overlay — positioned at bottom of screen */
+.vk-overlay {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+/* Keyboard container — full width */
+.virtual-keyboard {
+    width: 100%;
+    background: #e8ecf3;
+    border-radius: 0;
+    box-shadow: 0 -2px 24px rgba(5, 55, 150, 0.2);
+    animation: vk-slide-up 0.2s ease-out;
+    pointer-events: auto;
+    overflow: hidden;
+}
+
+@keyframes vk-slide-up {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Title bar — blue header with close button */
+.vk-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    background: #053796;
+    padding: 0 6px;
+    height: 38px;
+    cursor: default;
+}
+
+.vk-titlebar-handle {
+    flex: 1;
+}
+
+.vk-close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 6px;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 48px;
+}
+
+.vk-close-btn:hover {
+    background: #e81123;
+    color: #fff;
+}
+
+.vk-close-btn:active {
+    background: #c50f1f;
+    color: #fff;
+}
+
+/* Keyboard body */
+.vk-body {
+    padding: 6px 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Rows */
+.vk-row {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+}
+
+.vk-row-bottom {
+    margin-top: 1px;
+}
+
+/* Keys — full width */
+.vk-key {
+    flex: 1;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #1f2937;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.08s, transform 0.06s, box-shadow 0.08s;
+    box-shadow: 0 1px 3px rgba(5, 55, 150, 0.08);
+    min-width: 0;
+}
+
+.vk-key:hover {
+    background: #eef2ff;
+}
+
+.vk-key:active {
+    background: #053796;
+    color: #fff;
+    transform: scale(0.96);
+    box-shadow: none;
+}
+
+/* Shift Key */
+.vk-key-shift {
+    flex: 1.5;
+    background: #c0c9dc;
+    color: #374151;
+    font-size: 1.15rem;
+}
+
+.vk-key-shift:hover {
+    background: #b0bbd3;
+}
+
+.vk-key-shift.vk-key-active {
+    background: #053796;
+    color: #fff;
+}
+
+.vk-key-shift:active {
+    background: #053796;
+    color: #fff;
+}
+
+/* Backspace Key */
+.vk-key-backspace {
+    flex: 1.5;
+    background: #c0c9dc;
+    color: #374151;
+    font-size: 1.15rem;
+}
+
+.vk-key-backspace:hover {
+    background: #b0bbd3;
+}
+
+.vk-key-backspace:active {
+    background: #ef4444;
+    color: #fff;
+}
+
+/* Space Key — full width */
+.vk-key-space {
+    flex: 1;
+    height: 50px;
+    background: #ffffff;
+    border: none;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.08s, transform 0.06s;
+    box-shadow: 0 1px 3px rgba(5, 55, 150, 0.08);
+}
+
+.vk-key-space:hover {
+    background: #eef2ff;
+}
+
+.vk-key-space:active {
+    background: #053796;
+    color: #fff;
+    transform: scale(0.99);
+}
+
+/* ===== Push modals up when keyboard is visible ===== */
+/* The keyboard height is approximately 310px (30px titlebar + 5 rows * 50px + gaps + padding) */
+body.vk-keyboard-open .modal.show .modal-dialog {
+    transform: translateY(-160px) !important;
+    transition: transform 0.2s ease-out !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .vk-key {
+        height: 44px;
+        font-size: 1rem;
+    }
+
+    .vk-key-space {
+        height: 44px;
+    }
+
+    .vk-body {
+        padding: 5px 4px 8px;
+        gap: 3px;
+    }
+
+    .vk-row {
+        gap: 3px;
+    }
+
+    body.vk-keyboard-open .modal.show .modal-dialog {
+        transform: translateY(-130px) !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .vk-key {
+        height: 54px;
+        font-size: 1.15rem;
+    }
+
+    .vk-key-space {
+        height: 54px;
+    }
+
+    body.vk-keyboard-open .modal.show .modal-dialog {
+        transform: translateY(-180px) !important;
+    }
+}

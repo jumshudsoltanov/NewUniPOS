@@ -13,6 +13,7 @@ import {
   updateItemPrice,
   updateTableOrders,
   removeAllProductsById,
+  removeProductByIdAndPrice,
   removeLocalProductByFirstId,
   replaceProductQuantity,
   updateCount,
@@ -34,6 +35,15 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
+
+const removeLocalProduct = (dispatch, product) => {
+  const productId = Number(product.product_id || product.id);
+  if (product.own_set_price === 1) {
+    dispatch(removeProductByIdAndPrice({ product_id: productId, price: Number(product.price) }));
+  } else {
+    dispatch(removeAllProductsById(productId));
+  }
+};
 
 const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   const [activeTab, setActiveTab] = useState("edit");
@@ -475,7 +485,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                     const productId = Number(product.product_id || product.id);
                     if (product.isNew && product.localQuantity > 0) {
                       // Remove the local (unsaved) portion immediately — no reason needed
-                      dispatch(removeAllProductsById(productId));
+                      removeLocalProduct(dispatch, product);
                       if (!product.savedQuantity || product.savedQuantity <= 0) {
                         // No DB items at all — just close
                         onClose();
@@ -590,7 +600,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                       if (qty === 0) {
                         const productId = Number(product.product_id || product.id);
                         if (product.isNew && product.localQuantity > 0) {
-                          dispatch(removeAllProductsById(productId));
+                          removeLocalProduct(dispatch, product);
                           if (!product.savedQuantity || product.savedQuantity <= 0) {
                             onClose();
                           } else {

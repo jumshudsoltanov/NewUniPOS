@@ -42,7 +42,7 @@ class SyncService {
     this.lastSyncErrorAt = null;
     this.lastSyncErrorOrderPrefix = null;
     console.log("[SYNC_INIT] SyncService instance created.");
-5
+
     // Retry interval — hər 2s (ən son vəziyyət tez göndərilsin)
     setInterval(() => {
       if (this._canSync() && !this.isSyncing) {
@@ -537,6 +537,7 @@ class SyncService {
      */
     const checks = [
       { url: "https://1.1.1.1", timeout: 1000 },
+      { url: "http://1.1.1.1", timeout: 1000 },
       { url: "http://46.224.8.157:35627/api/discover", timeout: 1500 },
       {
         url: "https://api.unipos.tech/",

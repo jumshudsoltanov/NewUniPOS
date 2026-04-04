@@ -11,9 +11,11 @@ const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 const ProductsModel = require("../model/ProductsModel");
 const { serviceableItemsSum } = require("../utils/orderServiceFeeBase");
 
+
 /**
  * Helper to attach live timer status to an order object for responses.
  */
+
 const attachLiveTimerToOrder = (order) => {
   const hourlyPrice = TimerService.getEffectiveHourlyPrice(order);
   if (order && order.is_timer_status === 1 && hourlyPrice > 0) {
@@ -1403,6 +1405,26 @@ const onDeleteCheck = async (req, res) => {
     const { getIo } = require("../socket/MasterServer");
 
     if (forceDestroy) {
+      // Safety guard: server-dən yoxla ki, çekdə həqiqətən məhsul yoxdur
+      // Master-Slave race condition: frontend boş görür, amma server-də artıq məhsullar var
+      const serverItemCount = await OrdersItemsModel.count({ where: { order_id: orderId } });
+      if (serverItemCount > 0) {
+        console.warn(`[DELETE_CHECK_GUARD] forceDestroy blocked — order ${orderId} has ${serverItemCount} items on server. Converting to soft-delete.`);
+        // Məhsullar var — forceDestroy etmə, soft-delete et (status=3)
+        await OrdersModel.update(
+          {
+            status: 3,
+            end_date: new Date(),
+            is_delete_reason_id: reason,
+            is_synced: 0,
+          },
+          { where: { uuid: orderId } },
+        );
+        SyncService.queueSync(orderId);
+        if (getIo()) getIo().emit("table_updated", { orderId });
+        return res.status(200).json({ message: "success", guarded: true });
+      }
+
       // Auto-delete: table was never touched → remove completely from DB, no sync
       await OrdersItemsModel.destroy({ where: { order_id: orderId }, force: true });
       await OrderPaymentsModel.destroy({ where: { order_id: orderId }, force: true });
@@ -1779,7 +1801,12 @@ const onDeleteItemWithReason = async (req, res) => {
     const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
 
     // Son məhsul silinəndə (boş çek) — avtomatik status=3, admin panelə sync olunsun
+    // Guard: print_count > 0 olan çeklər bağlanmasın — artıq çap olunub, müştəri üçün açıq qalmalıdır
     const isEmptyCheck = allItems.length === 0;
+    const shouldAutoClose = isEmptyCheck && Number(ord?.print_count || 0) === 0;
+    if (isEmptyCheck && !shouldAutoClose) {
+      console.warn(`[DELETE_ITEM_GUARD] Empty check ${orderId} NOT auto-closed — print_count=${ord?.print_count}`);
+    }
     await OrdersModel.update(
       {
         amount: total,
@@ -1787,7 +1814,7 @@ const onDeleteItemWithReason = async (req, res) => {
         discount,
         service_charge: service,
         is_synced: 0,
-        ...(isEmptyCheck ? { status: 3, end_date: new Date() } : {}),
+        ...(shouldAutoClose ? { status: 3, end_date: new Date() } : {}),
       },
       { where: { uuid: orderId }, transaction }
     );
@@ -2556,7 +2583,12 @@ module.exports = {
       const netTotal = Math.max(total - discount + service, parseFloat(ord?.deposit || 0)) + Number(ord?.delivery_fee || 0);
 
       // Batch silmədən sonra boş çek qalarsa — avtomatik status=3
+      // Guard: print_count > 0 olan çeklər bağlanmasın — artıq çap olunub
       const isEmptyCheck = allItems.length === 0;
+      const shouldAutoClose = isEmptyCheck && Number(ord?.print_count || 0) === 0;
+      if (isEmptyCheck && !shouldAutoClose) {
+        console.warn(`[BATCH_DELETE_GUARD] Empty check ${orderId} NOT auto-closed — print_count=${ord?.print_count}`);
+      }
       await OrdersModel.update(
         {
           amount: total,
@@ -2564,7 +2596,7 @@ module.exports = {
           discount,
           service_charge: service,
           is_synced: 0,
-          ...(isEmptyCheck ? { status: 3, end_date: new Date() } : {}),
+          ...(shouldAutoClose ? { status: 3, end_date: new Date() } : {}),
         },
         { where: { uuid: orderId }, transaction }
       );

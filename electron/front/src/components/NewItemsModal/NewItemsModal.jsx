@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Modal } from "react-bootstrap";
 import "./NewItemsModal.css";
 import ProductCommentTagsModal from "../ProductCommentTagsModal/ProductCommentTagsModal";
+import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 
 const getMergeKey = (item) => {
     const prodId = item.product_id || item.id;
@@ -17,6 +18,10 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
     const [tagsModalItem, setTagsModalItem] = useState(null);
     const [tagsModalPortion, setTagsModalPortion] = useState(0);
     const [separatedItems, setSeparatedItems] = useState({});
+    const [activeInput, setActiveInput] = useState(null); // { mergedIndex, portionIndex }
+    const posKeyboardEnabled = useMemo(() => {
+        try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
+    }, []);
 
     // Merge identical products, then group by department
     const mergedItems = items.reduce((acc, item, index) => {
@@ -347,6 +352,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                                 className="item-comment-input"
                                                                 value={commentVal}
                                                                 onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, 0)}
+                                                                onFocus={() => setActiveInput({ mergedIndex: item.mergedIndex, portionIndex: 0 })}
                                                                 placeholder="Açıqlama"
                                                                 rows={2}
                                                                 autoFocus
@@ -389,7 +395,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                             ) : null}
                                                             {isEditing && (
                                                                 <div className="item-comment-section">
-                                                                    <textarea className="item-comment-input" value={dispVal} onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, gIdx)} placeholder="Açıqlama" rows={1} autoFocus />
+                                                                    <textarea className="item-comment-input" value={dispVal} onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, gIdx)} onFocus={() => setActiveInput({ mergedIndex: item.mergedIndex, portionIndex: gIdx })} placeholder="Açıqlama" rows={1} autoFocus />
                                                                 </div>
                                                             )}
                                                         </div>
@@ -463,6 +469,34 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                 </button>
             </div>
         </Modal>
+
+        {posKeyboardEnabled && activeInput && (
+            <VirtualKeyboard
+                onKeyPress={(key) => handleCommentChange(activeInput.mergedIndex, ((() => {
+                    const item = mergedItems[activeInput.mergedIndex];
+                    const qty = item?.count || item?.quantity || item?.portion || 1;
+                    const isSep = separatedItems[activeInput.mergedIndex];
+                    if (qty > 1 && isSep) {
+                        const groups = Array.isArray(comments[activeInput.mergedIndex]) ? comments[activeInput.mergedIndex] : [{ qty, comment: "" }];
+                        return (groups[activeInput.portionIndex]?.comment ?? "") + key;
+                    }
+                    const val = comments[activeInput.mergedIndex];
+                    return (typeof val === 'string' ? val : (Array.isArray(val) && val[0]?.comment) || "") + key;
+                })()), activeInput.portionIndex)}
+                onBackspace={() => handleCommentChange(activeInput.mergedIndex, ((() => {
+                    const item = mergedItems[activeInput.mergedIndex];
+                    const qty = item?.count || item?.quantity || item?.portion || 1;
+                    const isSep = separatedItems[activeInput.mergedIndex];
+                    if (qty > 1 && isSep) {
+                        const groups = Array.isArray(comments[activeInput.mergedIndex]) ? comments[activeInput.mergedIndex] : [{ qty, comment: "" }];
+                        return (groups[activeInput.portionIndex]?.comment ?? "").slice(0, -1);
+                    }
+                    const val = comments[activeInput.mergedIndex];
+                    return (typeof val === 'string' ? val : (Array.isArray(val) && val[0]?.comment) || "").slice(0, -1);
+                })()), activeInput.portionIndex)}
+                onClose={() => setActiveInput(null)}
+            />
+        )}
 
         <ProductCommentTagsModal
             show={!!tagsModalItem}

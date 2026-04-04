@@ -399,6 +399,9 @@ const DevicesModal = ({ show, onHide }) => {
     });
     const [customerReceiptAutoPrint, setCustomerReceiptAutoPrint] = useState(false);
     const [salesShiftRequired, setSalesShiftRequired] = useState(false);
+    const [posKeyboardEnabled, setPosKeyboardEnabled] = useState(() => {
+        try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
+    });
     const [screens, setScreens] = useState([]);
     const [customerDisplay, setCustomerDisplay] = useState({
         active: false,
@@ -1222,6 +1225,24 @@ const DevicesModal = ({ show, onHide }) => {
                                         <div
                                             className={`premium-switch ${salesShiftRequired ? "active" : ""}`}
                                             onClick={handleToggleSalesShiftRequired}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+                                    <div className="settings-toggle-row">
+                                        <div className="settings-toggle-icon"><i className="bi bi-keyboard"></i></div>
+                                        <div className="settings-toggle-text">
+                                            <span className="settings-toggle-label">POS Klaviatura</span>
+                                            <span className="settings-toggle-desc">Axtarış açılanda ekran klaviaturası avtomatik açılsın (Azərbaycan hərfləri).</span>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${posKeyboardEnabled ? "active" : ""}`}
+                                            onClick={() => {
+                                                const next = !posKeyboardEnabled;
+                                                setPosKeyboardEnabled(next);
+                                                localStorage.setItem("pos_keyboard_enabled", next ? "1" : "0");
+                                                toast.success(next ? "POS Klaviatura AKTİV" : "POS Klaviatura DEAKTİV");
+                                            }}
                                         >
                                             <div className="switch-handle"></div>
                                         </div>

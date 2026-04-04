@@ -905,6 +905,13 @@ export const OrderSlice = createSlice({
         state.sentProducts = state.sentProducts.filter(p => Number(p.id || p.product_id) !== productId);
       }
     },
+    removeProductByIdAndPrice: (state, action) => {
+      const { product_id, price } = action.payload;
+      const idx = state.products.findIndex(
+        p => Number(p.id || p.product_id) === Number(product_id) && Number(p.price) === Number(price)
+      );
+      if (idx !== -1) state.products.splice(idx, 1);
+    },
     replaceProductQuantity: (state, action) => {
       const { productId, newQty, price, firstId } = action.payload;
 
@@ -1136,6 +1143,7 @@ export const {
   addProducts,
   removeProduct,
   removeAllProductsById,
+  removeProductByIdAndPrice,
   removeLocalProductByFirstId,
   replaceProductQuantity,
   sendOrders,
