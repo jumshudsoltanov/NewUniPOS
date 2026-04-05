@@ -15,6 +15,23 @@ const DEFAULT_DENY_ACTIONS = [
   "Məhsula endirim",
   "Şərh yazıldı",
   "Məhsul qəbul edildi",
+  "Qəbz kilidləndi",
+  "Qəbz açıldı",
+  "Çek bağlandı",
+  "Ödəniş edildi",
+  "Ödənişsiz bağlandı",
+];
+
+/** DB köhnə versiyasında olmayan, avtomatik əlavə ediləcək yeni action-lar.
+ *  User bunları görüb söndürməyib — ona görə məcburi əlavə olunur.
+ *  User pin səhifəsindən söndürsə — növbəti restart-da yenidən əlavə olunmayacaq
+ *  (çünki artıq DB-də olacaq, fərq tapılmayacaq). */
+const NEWLY_ADDED_DENY_ACTIONS = [
+  "Qəbz kilidləndi",
+  "Qəbz açıldı",
+  "Çek bağlandı",
+  "Ödəniş edildi",
+  "Ödənişsiz bağlandı",
 ];
 
 const DEFAULT_DENY_PREFIXES = ["Məhsul əlavə edildi", "Vergi "];
@@ -31,10 +48,14 @@ async function readConfig() {
     const row = await AppSettingsModel.findOne({ where: { key: SETTINGS_KEY } });
     if (row && row.value) {
       const parsed = JSON.parse(row.value);
-      return {
-        denyActions: Array.isArray(parsed.denyActions) ? parsed.denyActions : DEFAULT_DENY_ACTIONS,
-        denyPrefixes: Array.isArray(parsed.denyPrefixes) ? parsed.denyPrefixes : DEFAULT_DENY_PREFIXES,
-      };
+      const denyActions = Array.isArray(parsed.denyActions) ? parsed.denyActions : DEFAULT_DENY_ACTIONS;
+      const denyPrefixes = Array.isArray(parsed.denyPrefixes) ? parsed.denyPrefixes : DEFAULT_DENY_PREFIXES;
+      // Yalnız DB-də heç olmamış yeni action-ları əlavə et
+      // User-in söndürdüklərinə toxunma
+      const dbSet = new Set(denyActions);
+      const toAdd = NEWLY_ADDED_DENY_ACTIONS.filter(a => !dbSet.has(a));
+      const merged = toAdd.length > 0 ? [...denyActions, ...toAdd] : denyActions;
+      return { denyActions: merged, denyPrefixes };
     }
   } catch (err) {
     console.error("[WhatsApp Config] readConfig DB error:", err.message);

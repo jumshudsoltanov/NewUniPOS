@@ -11,6 +11,10 @@ const SECRET_PASSWORD = "2507";
 const ALL_ACTIONS = [
   { key: "prefix:Yeni sifariş yaradıldı", label: "Yeni çek açıldı" },
   { key: "Çek bağlandı", label: "Çek bağlandı" },
+  { key: "Ödəniş edildi", label: "Ödəniş edildi" },
+  { key: "Ödənişsiz bağlandı", label: "Ödənişsiz bağlandı" },
+  { key: "Qəbz kilidləndi", label: "Çek kilidləndi" },
+  { key: "Qəbz açıldı", label: "Çek kilidi açıldı" },
   { key: "Çek yenidən açıldı", label: "Çek yenidən açıldı" },
   { key: "Çek silindi", label: "Çek silindi" },
   { key: "Çeklər birləşdirildi", label: "Çeklər birləşdirildi" },
