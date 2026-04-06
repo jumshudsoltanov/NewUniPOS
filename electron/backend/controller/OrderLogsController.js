@@ -28,23 +28,21 @@ const addLog = async (req, res) => {
         SyncService.queueSync(orderId);
 
         // Slave terminalda WhatsApp bildirişi göndərmə — master öz sync-i ilə idarə edir
-        if (global.isMasterNode !== false) {
-            setImmediate(() => {
-                notifyOrderLogWhatsapp({
-                    orderId,
-                    profileId,
-                    action,
-                    waiterName,
-                    details,
-                    is_whatsapp_notify,
-                    whatsapp_chat_number,
-                    restaurant_name,
-                    terminal_id,
-                }).catch((err) => {
-                    console.error("[WhatsApp] notifyOrderLogWhatsapp:", err?.message || err);
-                });
+        setImmediate(() => {
+            notifyOrderLogWhatsapp({
+                orderId,
+                profileId,
+                action,
+                waiterName,
+                details,
+                is_whatsapp_notify,
+                whatsapp_chat_number,
+                restaurant_name,
+                terminal_id,
+            }).catch((err) => {
+                console.error("[WhatsApp] notifyOrderLogWhatsapp:", err?.message || err);
             });
-        }
+        });
 
         return res.status(201).json(newLog);
     } catch (error) {

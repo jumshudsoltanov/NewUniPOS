@@ -22,17 +22,7 @@ const DEFAULT_DENY_ACTIONS = [
   "Ödənişsiz bağlandı",
 ];
 
-/** DB köhnə versiyasında olmayan, avtomatik əlavə ediləcək yeni action-lar.
- *  User bunları görüb söndürməyib — ona görə məcburi əlavə olunur.
- *  User pin səhifəsindən söndürsə — növbəti restart-da yenidən əlavə olunmayacaq
- *  (çünki artıq DB-də olacaq, fərq tapılmayacaq). */
-const NEWLY_ADDED_DENY_ACTIONS = [
-  "Qəbz kilidləndi",
-  "Qəbz açıldı",
-  "Çek bağlandı",
-  "Ödəniş edildi",
-  "Ödənişsiz bağlandı",
-];
+const NEWLY_ADDED_DENY_ACTIONS = [];
 
 const DEFAULT_DENY_PREFIXES = ["Məhsul əlavə edildi", "Vergi "];
 
@@ -68,10 +58,12 @@ async function writeConfig(settings) {
     denyActions: Array.isArray(settings.denyActions) ? settings.denyActions : DEFAULT_DENY_ACTIONS,
     denyPrefixes: Array.isArray(settings.denyPrefixes) ? settings.denyPrefixes : DEFAULT_DENY_PREFIXES,
   };
-  try {
-    await AppSettingsModel.upsert({ key: SETTINGS_KEY, value: JSON.stringify(data) });
-  } catch (err) {
-    console.error("[WhatsApp Config] writeConfig DB error:", err.message);
+  const json = JSON.stringify(data);
+  const existing = await AppSettingsModel.findOne({ where: { key: SETTINGS_KEY } });
+  if (existing) {
+    await existing.update({ value: json });
+  } else {
+    await AppSettingsModel.create({ key: SETTINGS_KEY, value: json });
   }
   return data;
 }

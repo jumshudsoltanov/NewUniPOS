@@ -15,7 +15,8 @@ import {
   startEditMode,
   cancelEditMode,
   saveEditMode,
-  setTempTableLayout
+  setTempTableLayout,
+  loadLayoutsFromAdmin
 } from "../../redux/Slices/TablesSlice";
 import { toast } from "sonner";
 import { getSocket } from "../../utils/apiConfig";
@@ -60,6 +61,13 @@ const Tables = () => {
     const timer = setTimeout(() => setTransitionsEnabled(true), 100);
     return () => clearTimeout(timer);
   }, [currentHallId]);
+
+  // Load layouts from admin API once on mount
+  useEffect(() => {
+    if (_tProfileId) {
+      dispatch(loadLayoutsFromAdmin(_tProfileId));
+    }
+  }, [_tProfileId, dispatch]);
 
   // can_manage_packs: zalları və masaları görməsin — Checks-ə yönləndir (dərhal, UI göstərmədən)
   const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);

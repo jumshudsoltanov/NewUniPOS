@@ -184,14 +184,14 @@ export const batchDeleteOrderItems = createAsyncThunk(
       );
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      const namesWithQty = items.map(d => {
-        const qtyVal = d.qty || d.originalQty;
-        const qty = qtyVal ? String(qtyVal) + ' x ' : '';
-        return `${qty}${d.name || ''}`;
-      }).filter(Boolean);
-      
-      const detailsText = namesWithQty.length > 0
-        ? namesWithQty.join(", ")
+      const grouped = {};
+      items.forEach(d => {
+        const name = d.name || 'Məhsul';
+        const qty = Number(d.qty || d.originalQty || 1);
+        grouped[name] = (grouped[name] || 0) + qty;
+      });
+      const detailsText = Object.entries(grouped).length > 0
+        ? Object.entries(grouped).map(([name, qty]) => `${qty} x ${name}`).join(", ")
         : `${items.length} məhsul silindi`;
       thunkAPI.dispatch(saveLog({
         orderId,
@@ -542,11 +542,15 @@ export const closeOrder = createAsyncThunk(
         return `${methodPrefix}: ${p.amount} ₼`;
       }).join(', ');
 
+      let detailsParts = [];
+      if (paymentDetails) detailsParts.push(paymentDetails);
+      if (note && String(note).trim()) detailsParts.push(`Qeyd: ${String(note).trim()}`);
+
       thunkAPI.dispatch(saveLog({
         orderId,
         action: isUnpaid ? "Ödənişsiz bağlandı" : "Ödəniş edildi",
         waiterName,
-        details: paymentDetails || (note ? `Bağlandı: ${note}` : "Sifariş bağlandı")
+        details: detailsParts.join(" | ") || "Sifariş bağlandı"
       }));
 
       return response.data;

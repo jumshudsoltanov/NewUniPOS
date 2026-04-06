@@ -47,6 +47,7 @@ const LoginModel = db.sequelize.define(
 
     is_telegram_notify: DataTypes.TINYINT,
     is_whatsapp_notify: DataTypes.TINYINT,
+    is_push_notify: DataTypes.TINYINT,
 
     is_pos_block: DataTypes.TINYINT,
     is_menu_block: DataTypes.INTEGER,

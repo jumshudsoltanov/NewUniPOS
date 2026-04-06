@@ -1,6 +1,21 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../utils/apiConfig";
+import axiosRaw from "axios";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
+
+const ADMIN_API = "https://api.unipos.tech/api";
+
+export const loadLayoutsFromAdmin = createAsyncThunk(
+  "tables/loadLayoutsFromAdmin",
+  async (profile_id, thunkAPI) => {
+    try {
+      const res = await axiosRaw.get(`${ADMIN_API}/table-layouts`, { params: { profile_id }, timeout: 8000 });
+      return res.data || {};
+    } catch {
+      return {};
+    }
+  }
+);
 
 export const getTableGroups = createAsyncThunk(
   "tables/getTableGroups",
@@ -163,6 +178,21 @@ const TablesSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    builder.addCase(loadLayoutsFromAdmin.fulfilled, (state, action) => {
+      const adminLayouts = action.payload;
+      if (!adminLayouts || Object.keys(adminLayouts).length === 0) return;
+      // Merge: admin layouts override localStorage only for halls that have data
+      const merged = { ...state.tableLayouts };
+      Object.entries(adminLayouts).forEach(([hallId, layout]) => {
+        if (layout && Object.keys(layout).length > 0) {
+          merged[hallId] = layout;
+        }
+      });
+      state.tableLayouts = merged;
+      state.tempTableLayouts = {};
+      localStorage.setItem("pos_table_layouts", JSON.stringify(merged));
+    });
+
     builder.addCase(getTableGroups.pending, (state) => {
       if (!state.tableGroups?.data || state.tableGroups.data.length === 0) {
         state.isTablesLoading = true;

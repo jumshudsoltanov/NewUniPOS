@@ -92,6 +92,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       setReleases([]);
       setUpdateProgress(null);
       setUpdateReady(false);
+      setDenyActions([]);
+      setDenyPrefixes([]);
     }
   }, [show]);
 
@@ -199,9 +201,12 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       if (data?.ok) {
         setDenyActions(data.denyActions || []);
         setDenyPrefixes(data.denyPrefixes || []);
+      } else {
+        toast.error("WhatsApp ayarları yüklənə bilmədi: " + (data?.message || "Naməlum xəta"));
       }
-    } catch {
-      toast.error("WhatsApp ayarları yüklənə bilmədi");
+    } catch (err) {
+      console.error("[WhatsApp Load]", err);
+      toast.error("WhatsApp ayarları yüklənə bilmədi: " + (err?.response?.data?.message || err?.message || "Naməlum xəta"));
     } finally {
       setWaLoading(false);
     }
@@ -222,7 +227,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       const { data } = await apiConfig.post("/admin/whatsapp-settings", { denyActions, denyPrefixes });
       if (data?.ok) { toast.success("WhatsApp ayarları saxlanıldı"); setView("main"); }
       else toast.error(data?.message || "Saxlama xətası");
-    } catch { toast.error("WhatsApp ayarları saxlanıla bilmədi"); }
+    } catch (err) {
+      console.error("[WhatsApp Save]", err);
+      toast.error("WhatsApp ayarları saxlanıla bilmədi: " + (err?.response?.data?.message || err?.message || "Naməlum xəta"));
+    }
     finally { setWaSaving(false); }
   };
 
@@ -333,9 +341,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                   {ALL_ACTIONS.map((item) => {
                     const enabled = !isActionDenied(item.key, denyActions, denyPrefixes);
                     return (
-                      <div key={item.key} className={`wa-settings-row ${enabled ? "wa-on" : "wa-off"}`} onClick={() => toggleAction(item.key)}>
-                        <span className="wa-settings-label">{item.label}</span>
-                        <div className={`wa-toggle ${enabled ? "wa-toggle-on" : ""}`}><div className="wa-toggle-thumb" /></div>
+                      <div key={item.key} className={`wa-settings-row ${enabled ? "wa-on" : "wa-off"}`} onClick={() => toggleAction(item.key)} style={{ cursor: "pointer" }}>
+                        <span className="wa-settings-label" style={{ pointerEvents: "none" }}>{item.label}</span>
+                        <div className={`wa-toggle ${enabled ? "wa-toggle-on" : ""}`} style={{ pointerEvents: "none" }}><div className="wa-toggle-thumb" /></div>
                       </div>
                     );
                   })}
