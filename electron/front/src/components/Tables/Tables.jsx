@@ -62,10 +62,12 @@ const Tables = () => {
     return () => clearTimeout(timer);
   }, [currentHallId]);
 
-  // Load layouts from admin API once on mount
+  // Load layouts from admin API once on mount, then refresh table groups to get latest shape_type
   useEffect(() => {
     if (_tProfileId) {
-      dispatch(loadLayoutsFromAdmin(_tProfileId));
+      dispatch(loadLayoutsFromAdmin(_tProfileId)).then(() => {
+        dispatch(getTableGroups(_tProfileId));
+      });
     }
   }, [_tProfileId, dispatch]);
 
@@ -90,7 +92,7 @@ const Tables = () => {
   });
 
 
-  const activeLayouts = isTableEditMode ? tempTableLayouts[currentHallId] : tableLayouts[currentHallId];
+  const activeLayouts = isTableEditMode ? tempTableLayouts[String(currentHallId)] : tableLayouts[String(currentHallId)];
   const hasCustomLayout = activeLayouts && Object.keys(activeLayouts).length > 0;
 
   // Use Canvas Mode if active layouts or edit mode active
@@ -364,15 +366,15 @@ const Tables = () => {
     const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
 
     const defaultLayout = generatedLayout[table.id] || { x: 0, y: 0 };
-    const layout = activeLayouts?.[table.id] || defaultLayout;
+    const layout = activeLayouts?.[String(table.id)] || defaultLayout;
 
-    // If layout doesn't have width/height, default to 200 or 300 based on type
     const isRect = table.shape_type === "rectangle";
     const defaultW = 200;
     const defaultH = isRect ? 300 : 200;
 
-    const currentW = layout.w || defaultW;
-    const currentH = layout.h || defaultH;
+    // Ignore admin small sizes (< 150px), use POS defaults
+    const currentW = (layout.w && layout.w >= 150) ? layout.w : defaultW;
+    const currentH = (layout.h && layout.h >= 150) ? layout.h : defaultH;
 
     setInteractionState({
       type,
@@ -522,24 +524,31 @@ const Tables = () => {
 
   return (
     <>
-      <Container fluid className="tables-scroll-container position-relative" ref={containerRef}>
+      <Container fluid className="tables-scroll-container position-relative" style={isCanvasMode ? { paddingLeft: 0, paddingRight: 0 } : {}} ref={containerRef}>
         {isCanvasMode && currentTables.length > 0 ? (
           <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '80vh' }}>
             {currentTables.map((table) => {
               const defaultLayout = generatedLayout[table.id] || { x: 20, y: 20 };
-              const layout = activeLayouts?.[table.id] || defaultLayout;
+              const layout = activeLayouts?.[String(table.id)] || defaultLayout;
 
-              const isResized = layout.w !== undefined || layout.h !== undefined;
               const isRect = table.shape_type === "rectangle";
+              // POS default sizes per shape
+              const defaultW = isRect ? 200 : 200;
               const defaultH = isRect ? 300 : 200;
               const rotation = layout.rotation || 0;
+
+              // Ignore admin small sizes (< 150px), use POS shape-based defaults
+              const rawW = layout.w;
+              const rawH = layout.h;
+              const posW = (rawW && rawW >= 150) ? rawW : defaultW;
+              const posH = (rawH && rawH >= 150) ? rawH : defaultH;
 
               const style = {
                 position: 'absolute',
                 left: layout.x,
                 top: layout.y,
-                width: layout.w || 200,
-                height: layout.h || defaultH,
+                width: posW,
+                height: posH,
                 zIndex: interactionState.tableId === table.id ? 100 : 1,
                 cursor: isTableEditMode ? 'move' : 'default',
                 transform: rotation ? `rotate(${rotation}deg)` : undefined,
@@ -559,11 +568,12 @@ const Tables = () => {
                     onTableClick={handleTableClick}
                     loginedWaiter={loginedWaiter}
                     rotation={rotation}
-                    customStyle={isResized ? {
-                      width: '100%',
-                      height: '100%',
-                      transform: 'none'
-                    } : undefined}
+                    customStyle={{
+                      width: posW + 'px',
+                      height: posH + 'px',
+                      transform: 'none',
+                      margin: 0,
+                    }}
                   />
                   {isTableEditMode && (
                     <>

@@ -6,7 +6,7 @@ const AppSettingsModel = db.sequelize.define(
   "app_settings",
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    key: { type: DataTypes.STRING(128), allowNull: false, unique: true },
+    key: { type: DataTypes.STRING(128), allowNull: false },
     value: { type: DataTypes.TEXT("long"), allowNull: true },
   },
   {

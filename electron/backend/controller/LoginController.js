@@ -127,6 +127,12 @@ const getLogin = async (req, res) => {
             await getPaymentMethods(profile.id);
             await getSalesTypes(profile.id);
             console.log("[SYNC] Background update completed successfully.");
+            // Menu cache-ni yeniləmək üçün bütün terminallara pin_refresh göndər
+            try {
+              const { getIo } = require("../socket/MasterServer");
+              const io = getIo();
+              if (io) io.emit("pin_refresh", { profileId: profile.id });
+            } catch (_) {}
           } catch (syncErr) {
             console.error("[SYNC] Background update error:", syncErr.message);
           }

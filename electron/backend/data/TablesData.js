@@ -3,6 +3,22 @@ const LoginModel = require("../model/LoginModel");
 const TableGroupsModel = require("../model/TableGroupsModel");
 const TablesModel = require("../model/TablesModel");
 const { Op } = require("sequelize");
+const db = require("../database/config");
+
+const { QueryTypes } = require("sequelize");
+
+const dropTablesForeignKeys = async () => {
+  try {
+    const constraints = await db.sequelize.query(
+      "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tables' AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
+      { type: QueryTypes.SELECT }
+    );
+    for (const row of constraints) {
+      await db.sequelize.query('ALTER TABLE `tables` DROP FOREIGN KEY `' + row.CONSTRAINT_NAME + '`', { type: QueryTypes.RAW });
+      console.log('[TablesData] tables FK silindi: ' + row.CONSTRAINT_NAME);
+    }
+  } catch (_) {}
+};
 
 const profileData = async () => {
   const profile = await LoginModel.findOne({ attributes: ["id"], raw: true });
@@ -77,7 +93,8 @@ const getTables = async (passedProfileId) => {
         await TablesModel.destroy({ where: { profile_id }, force: true });
       }
 
-      // Insert / update
+      // Insert / update — FK constraint varsa əvvəlcə sil
+      await dropTablesForeignKeys();
       if (apiTables.length > 0) {
         await TablesModel.bulkCreate(apiTables, {
           updateOnDuplicate: Object.keys(apiTables[0]),

@@ -63,6 +63,7 @@ router.get(
 router.get("/sale-types/:profileId", SaleTypesController.getSaleTypes);
 router.post("/products", ProductsController.createProduct);
 router.put("/products/:id", ProductsController.updateProduct);
+router.put("/products/:id/modifiers", ProductsController.updateModifierGroups);
 router.delete("/products/:id", ProductsController.deleteProduct);
 router.put(
   "/general-categories/ordering",

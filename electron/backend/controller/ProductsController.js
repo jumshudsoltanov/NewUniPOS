@@ -63,6 +63,27 @@ exports.updateProduct = async (req, res) => {
     }
 };
 
+exports.updateModifierGroups = async (req, res) => {
+    try {
+        const { id } = req.params;
+        let { modifier_groups } = req.body;
+        const value = Array.isArray(modifier_groups)
+            ? JSON.stringify(modifier_groups)
+            : typeof modifier_groups === 'string'
+                ? modifier_groups
+                : JSON.stringify([]);
+        const [rowsUpdated] = await ProductsModel.update(
+            { modifier_groups: value },
+            { where: { id: Number(id) } }
+        );
+        console.log(`[MODIFIER] Product ${id} updated, rows: ${rowsUpdated}, value length: ${value.length}`);
+        res.status(200).json({ message: "ok", rowsUpdated });
+    } catch (error) {
+        console.error("Update Modifier Groups Error:", error.message);
+        res.status(500).json({ message: "Failed to update modifier groups", error: error.message });
+    }
+};
+
 exports.deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;

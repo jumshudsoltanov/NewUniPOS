@@ -292,6 +292,10 @@ class SyncService {
       const table = order.table_id
         ? await TablesModel.findOne({ where: { id: order.table_id } })
         : null;
+      const TableGroupsModel = require("../model/TableGroupsModel");
+      const tableGroup = table?.hall_id
+        ? await TableGroupsModel.findOne({ where: { id: table.hall_id } })
+        : null;
 
       const payload = {
         profile_id: profileId,
@@ -306,17 +310,28 @@ class SyncService {
             return plain;
           })(),
         ],
-        items: items.map((item) => {
-          const plain = item.get({ plain: true });
-          if (plain.deleted_at) plain.count = 0;
-          plain.order_id = order.uuid;
-          plain.profile_id = plain.profile_id || profileId;
-          delete plain.kds_status;
-          delete plain.comment;
-          delete plain.is_delete_reason_id;
-          // modifiers saxlanılır — admin panel modifier hesabatı üçün sync olunur
-          return plain;
-        }),
+        items: items
+          .filter((item) => item.get({ plain: true }).deleted_at === null)
+          .map((item) => {
+            const plain = item.get({ plain: true });
+            plain.order_id = order.uuid;
+            plain.profile_id = plain.profile_id || profileId;
+            delete plain.kds_status;
+            delete plain.comment;
+            delete plain.is_delete_reason_id;
+            return plain;
+          }),
+        deleted_items: items
+          .filter((item) => item.get({ plain: true }).deleted_at !== null)
+          .map((item) => {
+            const plain = item.get({ plain: true });
+            plain.order_id = order.uuid;
+            plain.profile_id = plain.profile_id || profileId;
+            delete plain.kds_status;
+            delete plain.comment;
+            delete plain.is_delete_reason_id;
+            return plain;
+          }),
         logs: logs.map((log) => {
           const plain = log.get({ plain: true });
           plain.order_id = order.uuid;
@@ -329,6 +344,7 @@ class SyncService {
           plain.profile_id = plain.profile_id || profileId;
           return plain;
         }),
+        table_groups: tableGroup ? [tableGroup.get({ plain: true })] : [],
         tables: table ? [table.get({ plain: true })] : [],
       };
 

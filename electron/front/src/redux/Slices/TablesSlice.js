@@ -9,7 +9,9 @@ export const loadLayoutsFromAdmin = createAsyncThunk(
   "tables/loadLayoutsFromAdmin",
   async (profile_id, thunkAPI) => {
     try {
-      const res = await axiosRaw.get(`${ADMIN_API}/table-layouts`, { params: { profile_id }, timeout: 8000 });
+      // Send profile_id; backend falls back to all if not found
+      const params = profile_id ? { profile_id } : {};
+      const res = await axiosRaw.get(`${ADMIN_API}/table-layouts`, { params, timeout: 8000 });
       return res.data || {};
     } catch {
       return {};
@@ -43,7 +45,19 @@ const TablesSlice = createSlice({
     isTableEditMode: false,
     hallOrder: JSON.parse(localStorage.getItem("pos_hall_order") || "[]"),
     tableOrder: JSON.parse(localStorage.getItem("pos_table_orders") || "{}"),
-    tableLayouts: JSON.parse(localStorage.getItem("pos_table_layouts") || "{}"),
+    tableLayouts: (() => {
+      try {
+        const raw = JSON.parse(localStorage.getItem("pos_table_layouts") || "{}");
+        // Normalize hall keys and table keys to strings
+        const out = {};
+        Object.entries(raw).forEach(([hallId, layout]) => {
+          const norm = {};
+          if (layout) Object.entries(layout).forEach(([tid, v]) => { norm[String(tid)] = v; });
+          out[String(hallId)] = norm;
+        });
+        return out;
+      } catch { return {}; }
+    })(),
     tempHallOrder: [],
     tempTableOrder: {},
     tempTableLayouts: {},
@@ -180,12 +194,19 @@ const TablesSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(loadLayoutsFromAdmin.fulfilled, (state, action) => {
       const adminLayouts = action.payload;
-      if (!adminLayouts || Object.keys(adminLayouts).length === 0) return;
-      // Merge: admin layouts override localStorage only for halls that have data
-      const merged = { ...state.tableLayouts };
+      // Always update even if empty — signal received
+      if (!adminLayouts) return;
+      // Normalize: convert all keys to strings for consistent lookup
+      const normalize = (hallLayout) => {
+        if (!hallLayout) return {};
+        const out = {};
+        Object.entries(hallLayout).forEach(([k, v]) => { out[String(k)] = v; });
+        return out;
+      };
+      const merged = {};
       Object.entries(adminLayouts).forEach(([hallId, layout]) => {
         if (layout && Object.keys(layout).length > 0) {
-          merged[hallId] = layout;
+          merged[String(hallId)] = normalize(layout);
         }
       });
       state.tableLayouts = merged;

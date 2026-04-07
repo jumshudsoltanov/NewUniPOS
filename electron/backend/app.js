@@ -118,7 +118,7 @@ const ensureSchemaColumns = async () => {
 let creaedtToTabel = async () => {
   try {
     // Tables and Halls
-    TableGroupsModel.hasMany(TablesModel, { foreignKey: "hall_id" });
+    TableGroupsModel.hasMany(TablesModel, { foreignKey: "hall_id", constraints: false });
     TablesModel.belongsTo(TableGroupsModel, {
       foreignKey: "hall_id",
       as: "hall",
@@ -250,15 +250,44 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
-    // sync xəta ata bilər — ayrı try-catch ilə tutub davam edirik
+    const { QueryTypes } = require("sequelize");
+
+    const dropTablesFKs = async (label) => {
+      try {
+        const constraints = await db.sequelize.query(
+          "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tables' AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
+          { type: QueryTypes.SELECT }
+        );
+        for (const row of constraints) {
+          await db.sequelize.query('ALTER TABLE `tables` DROP FOREIGN KEY `' + row.CONSTRAINT_NAME + '`', { type: QueryTypes.RAW });
+          console.log(`[Schema] tables FK silindi (${label}): ${row.CONSTRAINT_NAME}`);
+        }
+      } catch (fkErr) {
+        // FK yoxdursa problem deyil
+      }
+    };
+
+    // tables FK-ni sync-dən ƏVVƏL sil
+    await dropTablesFKs("pre-sync");
+
+    // sync({ alter: true }) — mövcud cədvəllərə yeni sütun əlavə edir
     try {
-      await db.sequelize.sync({ alter: true });
+      await db.sequelize.sync({ alter: { drop: false } });
     } catch (syncErr) {
       console.warn(
-        "[Sync] sync({ alter: true }) xətası (davam edirik):",
+        "[Sync] sync({ alter }) xətası (davam edirik):",
         syncErr.message,
       );
+      // Fallback: sadə sync (cədvəl yoxdursa yarat)
+      try {
+        await db.sequelize.sync();
+      } catch (syncErr2) {
+        console.warn("[Sync] sync() xətası:", syncErr2.message);
+      }
     }
+
+    // sync yenidən FK yaratmış ola bilər — bir daha sil
+    await dropTablesFKs("post-sync");
 
     console.log("Created Table Success!");
   } catch (error) {
@@ -288,38 +317,20 @@ let creaedtToTabel = async () => {
     }
   } catch (_) {}
 
-  /** sales_shifts — ümumi sync uğursuz olanda cədvəl yaradılmırdı; ayrıca sinxron */
+  /** sales_shifts — cədvəl yoxdursa yarat */
   try {
-    await SalesShiftsModel.sync({ alter: true });
+    await SalesShiftsModel.sync();
     console.log("[Schema] sales_shifts cədvəli sinxronizə edildi");
-  } catch (salesShiftSyncErr) {
-    console.warn(
-      "[Schema] sales_shifts alter:",
-      salesShiftSyncErr?.message || salesShiftSyncErr,
-    );
-    try {
-      await SalesShiftsModel.sync();
-      console.log("[Schema] sales_shifts cədvəli yaradıldı (sync)");
-    } catch (e2) {
-      console.warn("[Schema] sales_shifts sync:", e2?.message || e2);
-    }
+  } catch (e) {
+    console.warn("[Schema] sales_shifts sync:", e?.message || e);
   }
 
-  /** app_settings — WhatsApp və digər lokal ayarlar */
+  /** app_settings — cədvəl yoxdursa yarat */
   try {
-    await AppSettingsModel.sync({ alter: true });
+    await AppSettingsModel.sync();
     console.log("[Schema] app_settings cədvəli sinxronizə edildi");
-  } catch (appSettingsSyncErr) {
-    console.warn(
-      "[Schema] app_settings alter:",
-      appSettingsSyncErr?.message || appSettingsSyncErr,
-    );
-    try {
-      await AppSettingsModel.sync();
-      console.log("[Schema] app_settings cədvəli yaradıldı (sync)");
-    } catch (e2) {
-      console.warn("[Schema] app_settings sync:", e2?.message || e2);
-    }
+  } catch (e) {
+    console.warn("[Schema] app_settings sync:", e?.message || e);
   }
 };
 

@@ -144,6 +144,7 @@ const getProducts = async (passedProfileId) => {
     // V2 API-dən printer_id VƏ color məlumatlarını çək
     let printerMap = {};
     let colorMap = {};
+    let modifierMap = {};
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
       const v2Response = await axios.get(
@@ -165,6 +166,40 @@ const getProducts = async (passedProfileId) => {
       console.error("Xəta (v2 API):", e.message);
     }
 
+    // V1 API-dən modifier groups çək — /api/modifiers/:profile_id
+    try {
+      const modRes = await axios.get(
+        `http://46.224.8.157:35627/api/modifiers/${profile_id}`,
+      );
+      if (modRes.data && Array.isArray(modRes.data.data)) {
+        modRes.data.data.forEach((group) => {
+          if (!group.product_id) return;
+          if (!modifierMap[group.product_id]) modifierMap[group.product_id] = [];
+          modifierMap[group.product_id].push({
+            id: group.id,
+            name: group.name,
+            selection_type: group.selection_type || "multiple",
+            is_required: group.is_required || 0,
+            max_selection: group.max_selections || 0,
+            ordering: group.ordering || 0,
+            items: (group.items || []).map((item) => ({
+              id: item.id,
+              name: item.name,
+              price: item.price || 0,
+              quantity: item.quantity || 1,
+              is_default: item.is_default || 0,
+              ordering: item.ordering || 0,
+              product_id: item.product_id,
+              modifier_group_id: item.modifier_group_id,
+            })),
+          });
+        });
+        console.log(`[ProductsData] Modifier groups çəkildi: ${modRes.data.data.length} group`);
+      }
+    } catch (e) {
+      console.error("Xəta (modifier API):", e.message);
+    }
+
     if (response.data && Array.isArray(response.data.data)) {
       const products = response.data.data.map((p) => {
         Object.keys(p).forEach((k) => {
@@ -173,8 +208,8 @@ const getProducts = async (passedProfileId) => {
         if (printerMap[p.id]) p.printer_id = printerMap[p.id];
         if (Array.isArray(p.printer_id)) p.printer_id = p.printer_id.join(",");
         p.profile_id = profile_id;
-        // V2-dən gəlsə rəngi əlavə et
         if (colorMap[p.id]) p.color = colorMap[p.id];
+        if (modifierMap[p.id]) p.modifier_groups = modifierMap[p.id];
         return p;
       });
 
@@ -205,11 +240,23 @@ const getProducts = async (passedProfileId) => {
         }));
 
         const updateKeys = Object.keys(productsWithOrder[0]).filter(
-          (key) => ProductsModel.rawAttributes[key] && key !== "ordering",
+          (key) => ProductsModel.rawAttributes[key] && key !== "ordering" && key !== "modifier_groups",
         );
         await ProductsModel.bulkCreate(productsWithOrder, {
           updateOnDuplicate: updateKeys,
         });
+
+        // modifier_groups JSON kimi ayrıca update et — bulkCreate bunu düzgün saxlamır
+        const modifierUpdates = productsWithOrder.filter(p => p.modifier_groups != null);
+        for (const p of modifierUpdates) {
+          const value = typeof p.modifier_groups === "string"
+            ? p.modifier_groups
+            : JSON.stringify(p.modifier_groups);
+          await ProductsModel.update(
+            { modifier_groups: value },
+            { where: { id: p.id } }
+          );
+        }
       }
 
       console.log("DB sync olundu: insert/update + silindi");
