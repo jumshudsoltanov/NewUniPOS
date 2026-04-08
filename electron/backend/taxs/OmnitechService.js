@@ -391,28 +391,10 @@ class OmnitechService {
         const token = await this._ensureToken();
         const vatPercent = this.taxPercent;
 
-        const omniItems = items.map(item => {
-            const qty = Number(item.count || item.quantity || 1);
-            const price = Number(item.price || 0);
-            const sum = Number((qty * price).toFixed(2));
-            return {
-                itemName: this._azToLatin(item.product?.name || item.name || 'Mahsul').substring(0, 64),
-                itemCodeType: 0,
-                itemCode: String(item.product_id || item.id || '0'),
-                itemQuantityType: 0,
-                itemQuantity: Number(qty.toFixed(3)),
-                itemPrice: Number(price.toFixed(2)),
-                itemSum: sum,
-                itemVatPercent: vatPercent,
-                discount: 0
-            };
-        });
-
-        const totalSum = Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
-
+        // Faktiki ödənilmiş məbləği payments-dən hesabla
+        // (servis haqqı + endirim artıq payments-in içindədir)
         let cashSum = 0;
         let cashlessSum = 0;
-
         if (payments && payments.length > 0) {
             payments.forEach(p => {
                 const amount = Number(p.amount || 0);
@@ -422,12 +404,66 @@ class OmnitechService {
                     cashSum += amount;
                 }
             });
-        } else {
-            cashSum = totalSum;
         }
-
         cashSum = Number(cashSum.toFixed(2));
         cashlessSum = Number(cashlessSum.toFixed(2));
+
+        // Faktiki ödənilmiş ümumi məbləğ (servis haqqı/endirim daxil)
+        const actualTotal = Number((cashSum + cashlessSum).toFixed(2));
+
+        // Item-lərin xam cəmi (servis haqqı/endirim yoxdur)
+        const rawItemsTotal = items.reduce((acc, item) => {
+            const qty = Number(item.count || item.quantity || 1);
+            const price = Number(item.price || 0);
+            return acc + qty * price;
+        }, 0);
+
+        // Item-ləri scale edərək faktiki məbləğə uyğunlaşdır
+        // Omnitech: sum = ∑items(itemSum), əgər uyğun gəlməsə rədd edir
+        const scaleFactor = rawItemsTotal > 0 ? actualTotal / rawItemsTotal : 1;
+
+        const omniItems = items.map((item, idx) => {
+            const qty = Number(item.count || item.quantity || 1);
+            const price = Number(item.price || 0);
+            const rawLineTotal = qty * price;
+            // Proporsional olaraq scale edilmiş cəm
+            const scaledSum = Number((rawLineTotal * scaleFactor).toFixed(2));
+            const scaledPrice = qty > 0 ? Number((scaledSum / qty).toFixed(2)) : 0;
+            return {
+                _idx: idx,
+                itemName: this._azToLatin(item.product?.name || item.name || 'Mahsul').substring(0, 64),
+                itemCodeType: 0,
+                itemCode: String(item.product_id || item.id || '0'),
+                itemQuantityType: 0,
+                itemQuantity: Number(qty.toFixed(3)),
+                itemPrice: scaledPrice,
+                itemSum: scaledSum,
+                itemVatPercent: vatPercent,
+                discount: 0
+            };
+        });
+
+        // Yuvarlama fərqini son item-ə əlavə et ki sum = actualTotal olsun
+        const scaledItemsTotal = Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+        const roundingDiff = Number((actualTotal - scaledItemsTotal).toFixed(2));
+        if (omniItems.length > 0 && Math.abs(roundingDiff) > 0) {
+            const last = omniItems[omniItems.length - 1];
+            last.itemSum = Number((last.itemSum + roundingDiff).toFixed(2));
+            last.itemPrice = last.itemQuantity > 0
+                ? Number((last.itemSum / last.itemQuantity).toFixed(2))
+                : last.itemPrice;
+        }
+
+        // _idx köməkçi sahəsini sil
+        omniItems.forEach(i => delete i._idx);
+
+        const totalSum = actualTotal > 0 ? actualTotal
+            : Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+
+        // payments boşdursa default olaraq nağd
+        if (cashSum === 0 && cashlessSum === 0) {
+            cashSum = totalSum;
+        }
 
         // vatAmounts — itemVatPercent-ə görə qruplaşdırılmış cəm
         const vatMapMb = {};
@@ -440,7 +476,11 @@ class OmnitechService {
             vatSum: Number(sum.toFixed(2))
         }));
 
+        const docNumInt = parseInt(documentNumber, 10) || 0;
+        const shortId = String(shortDocId || '').substring(0, 12);
+
         const parameters = {
+            doc_type: 'money_back',
             data: {
                 bonusSum: 0,
                 cashSum,
@@ -454,28 +494,26 @@ class OmnitechService {
                 parentDocument: String(parentFiscalId || ''),
                 prepaymentSum: 0,
                 refund_document_number: String(documentNumber || ''),
-                refund_short_document_id: String(shortDocId || ''),
+                refund_short_document_id: shortId,
                 sum: totalSum,
                 vatAmounts: vatAmountsMb
-            },
-            doc_type: 'money_back'
+            }
         };
 
-        if (documentNumber) {
-            parameters.prev_doc_number = Number(documentNumber) || 0;
+        if (docNumInt > 0) {
+            parameters.prev_doc_number = docNumInt;
         }
 
         return this._request({
             requestData: {
                 access_token: token,
                 tokenData: {
-                    parameters,
                     operationId: 'createDocument',
+                    parameters,
                     version: 1
                 },
                 checkData: { check_type: 100 }
-            },
-            receiptDetails: []
+            }
         });
     }
 

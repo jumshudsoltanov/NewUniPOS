@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Row, Col } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "sonner";
 import axios from "../../utils/apiConfig";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import "./ReturnCheckModal.css";
 
+const TAX_HTTP_TIMEOUT_MS = 180000;
+
 const ReturnCheckModal = ({ show, onClose }) => {
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+    const [taxLoading, setTaxLoading] = useState(false);
+
+    const getTaxConfigId = (config) => config?.id ?? config?.tax_cash_id ?? null;
 
     const [checkId, setCheckId] = useState("");
     const [order, setOrder] = useState(null);
@@ -80,6 +86,57 @@ const ReturnCheckModal = ({ show, onClose }) => {
 
     // Handle return confirmation
     const handleReturnConfirm = async ({ reason, orderId }) => {
+        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+        const taxConfigs = loginedProfileData?.data?.taxes || [];
+
+        // 1. Fiskal geri qaytarma — fiskal_id varsa və cihaz tapılırsa
+        if (order?.fiscal_id && taxConfigs.length > 0) {
+            const targetConfig = taxConfigs.find(c => (c?.id ?? c?.tax_cash_id ?? null) === order.tax_cash_id);
+            if (targetConfig) {
+                setTaxLoading(true);
+                try {
+                    const items = (order.orders_items || [])
+                        .filter(item => Number(item.count ?? item.quantity ?? 0) > 0)
+                        .map(item => ({
+                            ...item,
+                            name: item.product?.name || 'Məhsul',
+                            count: Number(item.count ?? item.quantity ?? 1),
+                            price: item.price || 0
+                        }));
+                    const payments = (order.order_payments || []).map(p => ({
+                        name: p.payment_method?.name || 'Nağd',
+                        type: p.payment_method?.type || 'cash',
+                        amount: p.paid
+                    }));
+
+                    const mbResult = await axios.post('/tax/money-back', {
+                        taxConfigs: [targetConfig],
+                        moneyBackData: {
+                            items,
+                            payments,
+                            cashierName: waiterName,
+                            parentFiscalId: order.fiscal_id,
+                            documentNumber: String(order.fiscal_doc_number || order.id || ''),
+                            shortDocId: order.fiscal_short_id || '',
+                            orderId: order.uuid || order.id
+                        }
+                    }, { timeout: TAX_HTTP_TIMEOUT_MS });
+
+                    if (mbResult.data?.success) {
+                        toast.success('Vergi geri qaytarma uğurlu');
+                    } else {
+                        toast.warning('Vergi geri qaytarma uğursuz oldu, lakin çek geri qaytarılır');
+                    }
+                } catch (taxErr) {
+                    console.error('Tax moneyback error:', taxErr);
+                    toast.warning('Vergi cihazı xətası: ' + (taxErr.response?.data?.message || taxErr.message));
+                } finally {
+                    setTaxLoading(false);
+                }
+            }
+        }
+
+        // 2. DB-də geri qaytarma
         try {
             await axios.patch(
                 `/orders-items/${orderId}/return`,
@@ -89,8 +146,6 @@ const ReturnCheckModal = ({ show, onClose }) => {
                 }
             );
 
-            // Persistent Log
-            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
             dispatch(saveLog({
                 orderId,
                 action: "Çek geri qaytarma",
@@ -98,12 +153,14 @@ const ReturnCheckModal = ({ show, onClose }) => {
                 details: `Çek #${order?.id} geri qaytarıldı`
             }));
 
+            toast.success(`Çek #${order?.id} geri qaytarıldı`);
             setShowReasonModal(false);
             setOrder(null);
             setCheckId("");
             onClose();
         } catch (err) {
             console.error("Return error:", err);
+            toast.error('Geri qaytarma xətası: ' + (err.response?.data?.message || err.message));
         }
     };
 
