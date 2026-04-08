@@ -281,11 +281,18 @@ const Pin = () => {
     try {
       const profileId = activeProfileData.data.profile.id;
       // Əvvəl serverdən DB-yə yaz — sonra GET; əks halda Promise.all yarışında köhnə məlumat gəlirdi (2 dəfə basmaq lazım idi)
-      const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`);
+      const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`).catch((err) => {
+        console.error("Sync refresh xətası:", err?.message);
+        return { data: { success: false, isOnline: false } };
+      });
       await apiConfig.post(`/sync/force-now`).catch(() => ({}));
 
       if (syncRes?.data?.counts) {
         setPinSyncCounts(syncRes.data.counts);
+      }
+
+      if (syncRes?.data?.isOnline === false) {
+        toast.warn("Server əlçatmaz — lokal məlumatlar yükləndi.");
       }
 
       await Promise.all([

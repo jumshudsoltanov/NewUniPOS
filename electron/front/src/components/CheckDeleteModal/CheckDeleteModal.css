@@ -1,4 +1,4 @@
-/* Main Modal Container Overrides */
+/* ── Modal shell ── */
 .check-delete-modal .modal-content {
     border-radius: 6px !important;
     border: none !important;
@@ -8,7 +8,7 @@
 }
 
 .check-delete-modal .modal-dialog {
-    max-width: 480px !important;
+    max-width: 460px !important;
     margin: 1.75rem auto;
 }
 
@@ -18,7 +18,7 @@
     flex-direction: column;
 }
 
-/* Header - Match CustomersModal Colors */
+/* ── Header ── */
 .check-delete-modal-header {
     background-color: #5D99FF;
     padding: 16px 20px;
@@ -36,104 +36,97 @@
 }
 
 .check-delete-icon-circle {
-    width: 40px;
-    height: 40px;
-    background-color: rgba(255, 255, 255, 0.4);
+    width: 38px;
+    height: 38px;
+    background-color: rgba(255, 255, 255, 0.2);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(4px);
 }
 
 .check-delete-icon-circle i {
-    font-size: 1.2rem;
-    color: #053796;
-}
-
-.check-delete-modal-title {
-    font-size: 20px;
-    font-weight: 600;
+    font-size: 1.1rem;
     color: #fff;
 }
 
-/* Body */
-.check-delete-modal-body {
-    padding: 20px;
-    background-color: #fff;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    flex: 1;
+.check-delete-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.2px;
 }
 
-/* Big Lock Icon Content */
-.lock-icon-wrapper {
-    width: 60px;
-    height: 60px;
-    background-color: #f0f7ff;
+.btn-close-custom {
+    background: rgba(255,255,255,0.15);
+    border: none;
     border-radius: 50%;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 5px;
+    cursor: pointer;
+    transition: background 0.2s;
+    padding: 0;
+    flex-shrink: 0;
 }
 
-.lock-icon-wrapper i {
-    font-size: 28px;
-    color: #053796;
+.btn-close-custom:hover {
+    background: rgba(255,255,255,0.3);
 }
 
-.modal-question-text {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    text-align: center;
-    margin: 5px 0;
+/* ── Body (scrollable reason list) ── */
+.check-delete-modal-body {
+    padding: 20px;
+    background-color: #fff;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
-.modal-sub-text {
-    font-size: 14px;
-    color: #64748b;
-    text-align: center;
-    margin-bottom: 20px;
+.check-delete-modal-body::-webkit-scrollbar {
+    width: 5px;
+}
+.check-delete-modal-body::-webkit-scrollbar-track { background: transparent; }
+.check-delete-modal-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
 }
 
-/* Reasons List */
+/* ── Reasons list ── */
 .reasons-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 380px;
+    gap: 7px;
+    max-height: 300px;
     overflow-y: auto;
 }
 
-.reasons-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.reasons-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
+.reasons-list::-webkit-scrollbar { width: 5px; }
+.reasons-list::-webkit-scrollbar-track { background: transparent; }
 .reasons-list::-webkit-scrollbar-thumb {
     background: #d1d5db;
     border-radius: 6px;
 }
 
 .reason-item {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 12px 16px;
+    background-color: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 11px 14px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.18s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
 .reason-item:hover {
-    border-color: #cbd5e1;
+    border-color: #93c5fd;
+    background-color: #f0f7ff;
 }
 
 .reason-item.selected {
@@ -142,20 +135,26 @@
 }
 
 .reason-text {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
-    color: #475569;
+    color: #334155;
+}
+
+.reason-item.selected .reason-text {
+    color: #053796;
+    font-weight: 600;
 }
 
 .check-icon-container {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
-    border: 1px solid #cbd5e1;
+    border: 1.5px solid #cbd5e1;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.18s;
+    flex-shrink: 0;
 }
 
 .reason-item.selected .check-icon-container {
@@ -165,37 +164,158 @@
 
 .check-icon-container i {
     color: #fff;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     opacity: 0;
-    transition: all 0.2s;
+    transition: opacity 0.18s;
 }
 
-.reason-item.selected .check-icon-container i {
-    opacity: 1;
-}
+.reason-item.selected .check-icon-container i { opacity: 1; }
 
-/* Save Button */
+/* ── Footer (waste + save btn) ── */
 .modal-footer-custom {
     padding: 15px 20px;
     border-top: 1px solid #f1f5f9;
     background: #fff;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
+/* ── Waste toggle bar ── */
+.waste-toggle-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #fff;
+    user-select: none;
+}
+
+.waste-toggle-bar:hover {
+    border-color: #fca5a5;
+    background-color: #fff8f8;
+}
+
+.waste-toggle-bar.active {
+    border-color: #f87171;
+    background: linear-gradient(90deg, #fff5f5 0%, #fff 100%);
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.1);
+}
+
+.waste-toggle-icon-wrap {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background-color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.waste-toggle-icon-wrap.active {
+    background-color: #fee2e2;
+}
+
+.waste-toggle-icon-wrap i {
+    font-size: 0.9rem;
+    color: #94a3b8;
+    transition: color 0.2s;
+}
+
+.waste-toggle-icon-wrap.active i {
+    color: #ef4444;
+}
+
+.waste-toggle-label {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    transition: color 0.2s;
+}
+
+.waste-toggle-bar.active .waste-toggle-label {
+    color: #dc2626;
+}
+
+/* Toggle pill (switch) */
+.waste-toggle-pill {
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background-color: #e2e8f0;
+    position: relative;
+    transition: background-color 0.25s ease;
+    flex-shrink: 0;
+}
+
+.waste-toggle-pill.on {
+    background-color: #ef4444;
+}
+
+.waste-toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: left 0.25s ease;
+}
+
+.waste-toggle-pill.on .waste-toggle-knob {
+    left: 21px;
+}
+
+/* ── Comment textarea ── */
+.waste-comment-input {
+    width: 100%;
+    border: 1.5px solid #fca5a5;
+    border-radius: 10px;
+    padding: 9px 13px;
+    font-size: 13px;
+    color: #475569;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+    background: #fff9f9;
+}
+
+.waste-comment-input:focus {
+    border-color: #ef4444;
+    background: #fff;
+}
+
+.waste-comment-input::placeholder {
+    color: #94a3b8;
+}
+
+/* ── Save button ── */
 .check-delete-save-btn {
     width: 100%;
-    height: 52px;
+    height: 50px;
     background-color: #053796;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     color: #fff;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
+    letter-spacing: 0.3px;
 }
 
 .check-delete-save-btn:hover:not(:disabled) {
@@ -203,26 +323,25 @@
 }
 
 .check-delete-save-btn:disabled {
-    background-color: #f8fafc;
+    background: #f1f5f9;
     color: #94a3b8;
-    border: 1px solid #e2e8f0;
+    box-shadow: none;
     cursor: not-allowed;
 }
 
+/* ── Mobile ── */
 @media (max-width: 767px) {
     .check-delete-modal .modal-dialog {
-        max-width: 92% !important;
-        margin: 1rem auto !important;
+        max-width: 94% !important;
+        margin: 0.75rem auto !important;
     }
 
     .check-delete-modal-header {
-        height: 55px;
-        padding: 10px 15px;
+        height: 56px;
+        padding: 10px 14px;
     }
 
-    .check-delete-modal-title {
-        font-size: 16px;
-    }
+    .check-delete-modal-title { font-size: 15px; }
 
     .check-delete-icon-circle {
         width: 32px;
@@ -230,48 +349,18 @@
     }
 
     .check-delete-modal-body {
-        padding: 15px;
-        gap: 10px;
+        padding: 12px 12px 6px;
     }
 
-    .lock-icon-wrapper {
-        width: 45px;
-        height: 45px;
-        margin-bottom: 5px;
-    }
+    .reasons-list { max-height: 220px; gap: 6px; }
 
-    .lock-icon-wrapper i {
-        font-size: 20px;
-    }
+    .reason-item { padding: 10px 12px; }
+    .reason-text { font-size: 13px; }
 
-    .modal-question-text {
-        font-size: 15px;
-    }
+    .modal-footer-custom { padding: 10px 12px 14px; gap: 8px; }
 
-    .modal-sub-text {
-        font-size: 12px;
-        margin-bottom: 12px;
-    }
+    .check-delete-save-btn { height: 46px; font-size: 14px; }
 
-    .reasons-list {
-        max-height: 250px;
-    }
-
-    .reason-item {
-        padding: 10px 12px;
-    }
-
-    .reason-text {
-        font-size: 13px;
-    }
-
-    .modal-footer-custom {
-        padding: 10px 15px;
-    }
-
-    .check-delete-save-btn {
-        height: 48px;
-        font-size: 14px;
-        border-radius: 8px;
-    }
+    .waste-toggle-bar { padding: 9px 12px; }
+    .waste-toggle-label { font-size: 13px; }
 }

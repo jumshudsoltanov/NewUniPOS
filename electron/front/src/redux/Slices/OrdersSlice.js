@@ -182,6 +182,7 @@ export const batchDeleteOrderItems = createAsyncThunk(
         `/orders-items/${orderId}/batch-delete-items`,
         { items },
       );
+      // items already contains waste/wasteComment fields — backend handles them
       const state = thunkAPI.getState();
       const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
       const grouped = {};
@@ -447,11 +448,11 @@ export const updateItemDiscount = createAsyncThunk(
 
 export const deleteCheck = createAsyncThunk(
   "orders/deleteCheck",
-  async ({ orderId, reason, reasonText, waiterName: passedWaiterName, forceDestroy = false }, thunkAPI) => {
+  async ({ orderId, reason, reasonText, waiterName: passedWaiterName, forceDestroy = false, waste = false, wasteComment = "" }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/delete-check`,
-        { reason, forceDestroy },
+        { reason, forceDestroy, waste, wasteComment },
       );
 
       // Persistent Log

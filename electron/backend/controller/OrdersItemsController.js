@@ -10,6 +10,29 @@ const MaxCheckService = require("../services/MaxCheckService");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 const ProductsModel = require("../model/ProductsModel");
 const { serviceableItemsSum } = require("../utils/orderServiceFeeBase");
+const axios = require("axios");
+
+const WASTE_API_URL = "https://api.unipos.tech/api/pos/write-off";
+const WASTE_API_FALLBACK = "http://46.224.8.157:35627/api/pos/write-off";
+
+/**
+ * Admin anbar API-yə tullantı məlumatı göndər.
+ * waste items: [{ product_id, qty, price, reason_id, comment }]
+ */
+const sendWasteToAdmin = async (profileId, wasteItems) => {
+  if (!wasteItems || !wasteItems.length) return;
+  const payload = { profile_id: profileId, items: wasteItems };
+  for (const url of [WASTE_API_URL, WASTE_API_FALLBACK]) {
+    try {
+      await axios.post(url, payload, { timeout: 10000 });
+      console.log(`[WASTE] Sent ${wasteItems.length} items to anbar via ${url}`);
+      return;
+    } catch (e) {
+      console.warn(`[WASTE] ${url} failed: ${e.message}`);
+    }
+  }
+  console.error("[WASTE] All endpoints failed — waste not recorded in anbar");
+};
 
 
 /**
@@ -1395,7 +1418,7 @@ const onUpdateItemDiscount = async (req, res) => {
 
 const onDeleteCheck = async (req, res) => {
   const { orderId } = req.params;
-  const { reason, forceDestroy } = req.body;
+  const { reason, forceDestroy, waste, wasteComment } = req.body;
 
   if (!orderId) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -1404,46 +1427,53 @@ const onDeleteCheck = async (req, res) => {
   try {
     const { getIo } = require("../socket/MasterServer");
 
+    // Silinmədən əvvəl bütün items-i götür (anbar üçün)
+    const orderItems = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      raw: true,
+    });
+
+    const ord = await OrdersModel.findOne({ where: { uuid: orderId }, raw: true });
+
     if (forceDestroy) {
-      // Safety guard: server-dən yoxla ki, çekdə həqiqətən məhsul yoxdur
-      // Master-Slave race condition: frontend boş görür, amma server-də artıq məhsullar var
-      const serverItemCount = await OrdersItemsModel.count({ where: { order_id: orderId } });
+      const serverItemCount = orderItems.length;
       if (serverItemCount > 0) {
         console.warn(`[DELETE_CHECK_GUARD] forceDestroy blocked — order ${orderId} has ${serverItemCount} items on server. Converting to soft-delete.`);
-        // Məhsullar var — forceDestroy etmə, soft-delete et (status=3)
         await OrdersModel.update(
-          {
-            status: 3,
-            end_date: new Date(),
-            is_delete_reason_id: reason,
-            is_synced: 0,
-          },
+          { status: 3, end_date: new Date(), is_delete_reason_id: reason, is_synced: 0 },
           { where: { uuid: orderId } },
         );
         SyncService.queueSync(orderId);
         if (getIo()) getIo().emit("table_updated", { orderId });
         return res.status(200).json({ message: "success", guarded: true });
       }
-
-      // Auto-delete: table was never touched → remove completely from DB, no sync
       await OrdersItemsModel.destroy({ where: { order_id: orderId }, force: true });
       await OrderPaymentsModel.destroy({ where: { order_id: orderId }, force: true });
       await OrdersModel.destroy({ where: { uuid: orderId }, force: true });
     } else {
-      // Manual delete or had items → status=3 update + sync to admin
       await OrdersModel.update(
-        {
-          status: 3,
-          end_date: new Date(),
-          is_delete_reason_id: reason,
-          is_synced: 0,
-        },
+        { status: 3, end_date: new Date(), is_delete_reason_id: reason, is_synced: 0 },
         { where: { uuid: orderId } },
       );
       SyncService.queueSync(orderId);
     }
 
     if (getIo()) getIo().emit("table_updated", { orderId });
+
+    // Anbar əməliyyatı — arxa planda
+    if (orderItems.length > 0 && ord?.profile_id) {
+      const anbarItems = orderItems.map(item => ({
+        product_id: item.product_id,
+        qty: Number(item.count) || 1,
+        price: item.price,
+        reason_id: reason || null,
+        comment: wasteComment || "",
+        is_waste: waste ? true : false,
+      }));
+      sendWasteToAdmin(ord.profile_id, anbarItems).catch(e =>
+        console.error("[DELETE_CHECK] sendWasteToAdmin error:", e.message)
+      );
+    }
 
     return res.status(200).json({ message: "success" });
   } catch (error) {
@@ -2530,7 +2560,7 @@ module.exports = {
   onDeleteItemWithReason,
   onBatchDeleteItems: async (req, res) => {
     const { orderId } = req.params;
-    // items: [{ itemId, qty, reasonId }]
+    // items: [{ itemId, qty, reasonId, waste, wasteComment, product_id, price }]
     const { items } = req.body;
 
     if (!orderId || !items || !items.length) {
@@ -2538,15 +2568,35 @@ module.exports = {
     }
 
     const transaction = await sequelize.transaction();
+    // waste=true → tullantı (write_off), waste=false → geri qaytarma (return)
+    const wasteItems = [];    // is_waste: true
+    const returnItems = [];   // is_waste: false (geri qaytarma)
     try {
-      for (const { itemId, qty, reasonId } of items) {
+      for (const { itemId, qty, reasonId, waste, wasteComment, product_id, price } of items) {
         const item = await OrdersItemsModel.findOne({
           where: { order_id: orderId, id: itemId },
           transaction,
         });
         if (!item) continue; // already gone, skip
 
-        const remaining = qty && qty > 0 ? item.count - qty : 0;
+        const deletedQty = qty && qty > 0 ? Math.min(qty, item.count) : item.count;
+        const remaining = item.count - deletedQty;
+
+        const anbarItem = {
+          product_id: product_id || item.product_id,
+          qty: deletedQty,
+          price: price || item.price,
+          reason_id: reasonId || null,
+          comment: wasteComment || "",
+          is_waste: waste ? true : false,
+        };
+
+        if (waste) {
+          wasteItems.push(anbarItem);
+        } else {
+          returnItems.push(anbarItem);
+        }
+
         if (remaining > 0) {
           item.count = remaining;
           await item.save({ transaction });
@@ -2601,6 +2651,15 @@ module.exports = {
       SyncService.queueSync(orderId);
       const { getIo } = require("../socket/MasterServer");
       if (getIo()) getIo().emit("table_updated", { orderId });
+
+      // Waste + return items-i arxa planda admin anbar API-yə göndər
+      const allAnbarItems = [...wasteItems, ...returnItems];
+      if (allAnbarItems.length > 0) {
+        const profileId = ord?.profile_id;
+        if (profileId) {
+          sendWasteToAdmin(profileId, allAnbarItems).catch(e => console.error("[WASTE] sendWasteToAdmin error:", e.message));
+        }
+      }
 
     } catch (error) {
       try { await transaction.rollback(); } catch (e) {}

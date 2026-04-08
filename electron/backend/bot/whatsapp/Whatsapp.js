@@ -87,7 +87,7 @@ function buildWhatsappMessage({
       : "Naməlum";
 
   const lines = [
-    `*🎯 ${rest} - MƏLUMATLANDIRMA 🎯*`,
+    `*🔔 ${rest} - MƏLUMATLANDIRMA 🔔*`,
     "",
     `Əməliyyat: *${action || "—"}*`,
     `İstifadəçi adı: *${waiterName || "Naməlum"}*`,

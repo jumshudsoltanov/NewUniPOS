@@ -325,6 +325,17 @@ const CheckMain = ({ orders, table }) => {
                   <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="d-flex align-items-center flex-wrap gap-1">
                       <span className="fw-semibold">{item.name}</span>
+                      {item.isDeleted && (
+                        <span className="pending-delete-badge full" title="Silinəcək">
+                          <i className="bi bi-trash3-fill"></i>
+                        </span>
+                      )}
+                      {item.partialDelete > 0 && !item.isDeleted && (
+                        <span className="pending-delete-badge partial" title={`−${item.partialDelete} silinəcək`}>
+                          <i className="bi bi-dash-circle-fill"></i>
+                          −{item.partialDelete}
+                        </span>
+                      )}
                       {modifiers.length > 0 && (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title="Modifikatorlar">
                           <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
@@ -333,8 +344,6 @@ const CheckMain = ({ orders, table }) => {
                         </svg>
                       )}
                       {isGift && <i className="bi bi-gift-fill text-danger" title="İkram"></i>}
-                      {item.isDeleted && <span className="badge bg-danger">{item.partialDelete || 0} Silinəcək</span>}
-                      {item.partialDelete > 0 && !item.isDeleted && <span className="badge bg-warning text-dark">{item.partialDelete} Silinəcək</span>}
                     </div>
 
                     <div className="d-flex flex-column gap-1 mt-1">
@@ -483,7 +492,9 @@ const CheckMain = ({ orders, table }) => {
                 category_id: finalCategoryId,
                 printer_details: finalPrinters,
                 modifiers: product.modifiers,
-                comment: product.comment
+                comment: product.comment,
+                waste: data.waste || false,
+                wasteComment: data.wasteComment || "",
               }));
             });
             toast.success("Məhsul silinmək üçün işarələndi!");
@@ -513,7 +524,9 @@ const CheckMain = ({ orders, table }) => {
                 category_id: finalCategoryId,
                 printer_details: finalPrinters,
                 modifiers: product.modifiers,
-                comment: product.comment
+                comment: product.comment,
+                waste: data.waste || false,
+                wasteComment: data.wasteComment || "",
               }));
             }
             toast.success("Miqdar azalma üçün işarələndi!");

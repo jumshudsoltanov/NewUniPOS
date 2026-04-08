@@ -8,15 +8,15 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
     let headerName = title || (type === "checks" ? "Çeki sil" : "Məhsulu sil");
     const [selectedReason, setSelectedReason] = useState(null);
     const [tagsListData, setTagsListData] = useState([]);
+    const [isWaste, setIsWaste] = useState(false);
+    const [wasteComment, setWasteComment] = useState("");
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
-    // Fetch tags only once per profile (not on every modal open)
     useEffect(() => {
         const getTagsData = async () => {
             const profileId = loginedProfileData?.data?.profile?.id;
             if (!profileId) return;
-
             try {
                 const res = await dispatch(getTagsList(profileId)).unwrap();
                 setTagsListData(Array.isArray(res.data) ? res.data : []);
@@ -25,13 +25,15 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
                 setTagsListData([]);
             }
         };
-
         getTagsData();
     }, [loginedProfileData]);
 
-    // Reset selection when modal opens/closes
     useEffect(() => {
-        if (!show) setSelectedReason(null);
+        if (!show) {
+            setSelectedReason(null);
+            setIsWaste(false);
+            setWasteComment("");
+        }
     }, [show]);
 
     const reasons = tagsListData?.filter((item) => Number(item.type) === tagsType) ?? [];
@@ -43,7 +45,9 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
             onConfirm({
                 reason: selectedReason,
                 reasonName: reasonObj?.name,
-                orderId: order.uuid
+                orderId: order.uuid,
+                waste: isWaste,
+                wasteComment: isWaste ? wasteComment.trim() : "",
             });
         }
     };
@@ -66,17 +70,9 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
                         <div className="check-delete-modal-title">{headerName}</div>
                     </div>
                     <button className="btn-close-custom" onClick={() => onClose(false)}>
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                            viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"
+                            strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
                         </svg>
@@ -100,7 +96,34 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
                     </div>
                 </div>
 
+                {/* Waste + Footer — fixed at bottom */}
                 <div className="modal-footer-custom">
+                    {/* Waste toggle row */}
+                    <div
+                        className={`waste-toggle-bar ${isWaste ? "active" : ""}`}
+                        onClick={() => setIsWaste(v => !v)}
+                    >
+                        <div className={`waste-toggle-icon-wrap ${isWaste ? "active" : ""}`}>
+                            <i className="bi bi-trash2-fill"></i>
+                        </div>
+                        <span className="waste-toggle-label">Tullantıya at</span>
+                        <div className={`waste-toggle-pill ${isWaste ? "on" : ""}`}>
+                            <div className="waste-toggle-knob"></div>
+                        </div>
+                    </div>
+
+                    {/* Comment textarea — slides down when waste is on */}
+                    {isWaste && (
+                        <textarea
+                            className="waste-comment-input"
+                            placeholder="Şərh əlavə et (istəyə bağlı)"
+                            value={wasteComment}
+                            onChange={e => setWasteComment(e.target.value)}
+                            rows={2}
+                            onClick={e => e.stopPropagation()}
+                        />
+                    )}
+
                     <button
                         className="check-delete-save-btn"
                         disabled={!selectedReason}

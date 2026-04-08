@@ -459,7 +459,11 @@ const Check = () => {
             qty: d.type === 'partial' ? d.qty : undefined,
             reasonId: d.reasonId,
             name: d.name,
-            originalQty: d.originalQty
+            originalQty: d.originalQty,
+            waste: d.waste || false,
+            wasteComment: d.wasteComment || "",
+            product_id: d.product_id,
+            price: d.price,
           })),
           waiterName,
         })).unwrap().catch(err => {
@@ -1086,7 +1090,7 @@ const Check = () => {
   }, [currentOrder, orderEditLocked]);
 
 
-  const handleDeleteCheckFunction = async ({ reason, reasonName, orderId }) => {
+  const handleDeleteCheckFunction = async ({ reason, reasonName, orderId, waste, wasteComment }) => {
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
     const profileId = loginedProfileData?.data?.profile?.id;
 
@@ -1163,7 +1167,7 @@ const Check = () => {
 
       const deletePromise = (async () => {
         try {
-          await dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName })).unwrap();
+          await dispatch(deleteCheck({ orderId, reason, reasonText: reasonName, waiterName, waste: waste || false, wasteComment: wasteComment || "" })).unwrap();
           // Notify all other terminals to redirect if they have this order open
           const socket = getSocket();
           if (socket?.connected) {
