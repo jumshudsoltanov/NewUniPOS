@@ -72,8 +72,11 @@ const getPrinters = async (passedProfileId) => {
                     return p;
                 });
 
+                const updateKeys = Object.keys(merged[0]).filter(
+                    (key) => PrintersModel.rawAttributes[key],
+                );
                 await PrintersModel.bulkCreate(merged, {
-                    updateOnDuplicate: ["profile_id", "name", "local_name", "is_cashier", "type", "connection_type", "usb_name", "ip", "port"],
+                    updateOnDuplicate: updateKeys,
                 });
             }
 

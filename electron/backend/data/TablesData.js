@@ -39,27 +39,52 @@ const getTableGroups = async (passedProfileId) => {
         Object.keys(tg).forEach((k) => {
           if (tg[k] === undefined) tg[k] = 0;
         });
-        tg.profile_id = profile_id; // Inject profile_id
+        tg.profile_id = profile_id;
         return tg;
       });
 
+      // V2 API-dən table-groups əlavə field-lərini çək
+      try {
+        const v2Response = await axios.get(
+          `https://api.unipos.tech/api/table-groups?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
+        );
+        const v2Items = v2Response.data?.items || v2Response.data?.data || [];
+        if (Array.isArray(v2Items) && v2Items.length > 0) {
+          const v2Map = {};
+          v2Items.forEach((tg) => { if (tg.id) v2Map[tg.id] = tg; });
+          const modelFields = Object.keys(TableGroupsModel.rawAttributes);
+          apiTableGroups.forEach((tg) => {
+            const v2 = v2Map[tg.id];
+            if (!v2) return;
+            modelFields.forEach((field) => {
+              if (v2[field] !== undefined && v2[field] !== null) {
+                tg[field] = v2[field];
+              }
+            });
+          });
+        }
+      } catch (e) {
+        console.error("[TablesData] V2 table-groups API xətası:", e.message);
+      }
+
       const apiIds = apiTableGroups.map((tg) => tg.id);
 
-      // DB-də olub, API-da olmayanları sil
       if (apiIds.length > 0) {
         await TableGroupsModel.destroy({ where: { id: { [Op.notIn]: apiIds }, profile_id }, force: true });
       } else {
         await TableGroupsModel.destroy({ where: { profile_id }, force: true });
       }
 
-      // Insert / update
       if (apiTableGroups.length > 0) {
+        const updateKeys = Object.keys(apiTableGroups[0]).filter(
+          (key) => TableGroupsModel.rawAttributes[key],
+        );
         await TableGroupsModel.bulkCreate(apiTableGroups, {
-          updateOnDuplicate: Object.keys(apiTableGroups[0]),
+          updateOnDuplicate: updateKeys,
         });
       }
 
-      console.log("DB sync olundu: insert/update + silindi");
+      console.log("TableGroups DB sync olundu: insert/update + silindi");
     }
   } catch (err) {
     console.error("Xəta:", err.message);
@@ -80,28 +105,53 @@ const getTables = async (passedProfileId) => {
         Object.keys(t).forEach((k) => {
           if (t[k] === undefined) t[k] = 0;
         });
-        t.profile_id = profile_id; // Inject profile_id
+        t.profile_id = profile_id;
         return t;
       });
 
+      // V2 API-dən tables əlavə field-lərini çək (hourly_price, deposit, shape_type, vs.)
+      try {
+        const v2Response = await axios.get(
+          `https://api.unipos.tech/api/tables?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
+        );
+        const v2Items = v2Response.data?.items || v2Response.data?.data || [];
+        if (Array.isArray(v2Items) && v2Items.length > 0) {
+          const v2Map = {};
+          v2Items.forEach((t) => { if (t.id) v2Map[t.id] = t; });
+          const modelFields = Object.keys(TablesModel.rawAttributes);
+          apiTables.forEach((t) => {
+            const v2 = v2Map[t.id];
+            if (!v2) return;
+            modelFields.forEach((field) => {
+              if (v2[field] !== undefined && v2[field] !== null) {
+                t[field] = v2[field];
+              }
+            });
+          });
+        }
+      } catch (e) {
+        console.error("[TablesData] V2 tables API xətası:", e.message);
+      }
+
       const apiIds = apiTables.map((t) => t.id);
 
-      // DB-də olub, API-da olmayanları sil
       if (apiIds.length > 0) {
         await TablesModel.destroy({ where: { id: { [Op.notIn]: apiIds }, profile_id }, force: true });
       } else {
         await TablesModel.destroy({ where: { profile_id }, force: true });
       }
 
-      // Insert / update — FK constraint varsa əvvəlcə sil
       await dropTablesForeignKeys();
       if (apiTables.length > 0) {
+        const updateKeys = Object.keys(apiTables[0]).filter(
+          (key) => TablesModel.rawAttributes[key],
+        );
         await TablesModel.bulkCreate(apiTables, {
-          updateOnDuplicate: Object.keys(apiTables[0]),
+          updateOnDuplicate: updateKeys,
         });
       }
 
-      console.log("DB sync olundu: insert/update + silindi");
+      console.log("Tables DB sync olundu: insert/update + silindi");
     }
   } catch (err) {
     console.error("Xəta:", err.message);
