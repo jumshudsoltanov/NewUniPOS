@@ -24,8 +24,8 @@ import DiscountModal from "../DiscountModal/DiscountModal";
 import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
 import DepositModal from "../DepositModal/DepositModal";
 import WaitersModal from "../Waiters/WaitersModal";
-import { getTableGroups, removeOrderOptimisticFromTables, addOrderToTableOptimistic } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders, removeOrderOptimistic, tickTimer, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
+import { getTableGroups, removeOrderOptimisticFromTables, addOrderToTableOptimistic, clearDeletedOrderId } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders, removeOrderOptimistic, tickTimer, addOrderOptimistic, updateOrderOptimisticId, clearDeletedOrderIdBooks } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
@@ -656,12 +656,23 @@ const Check = () => {
           const socket = getSocket();
           if (socket?.connected) socket.emit("order_deleted", { orderId });
           if (profileId) {
-            dispatch(getTableGroups(profileId));
-            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+            setTimeout(() => {
+              dispatch(clearDeletedOrderId(orderId));
+              dispatch(clearDeletedOrderIdBooks(orderId));
+              dispatch(getTableGroups(profileId));
+              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+            }, 600);
+          } else {
+            setTimeout(() => {
+              dispatch(clearDeletedOrderId(orderId));
+              dispatch(clearDeletedOrderIdBooks(orderId));
+            }, 5000);
           }
         } catch (error) {
           // Server reject etdi (məs. məhsullar var) — silmə baş tutmadı, UI-ı yenilə
           console.error("Auto-delete error:", error);
+          dispatch(clearDeletedOrderId(orderId));
+          dispatch(clearDeletedOrderIdBooks(orderId));
           if (profileId) {
             dispatch(getTableGroups(profileId));
             dispatch(getActiveOrders({ profileId, silentRefresh: true }));
@@ -1173,9 +1184,21 @@ const Check = () => {
           if (socket?.connected) {
             socket.emit("order_deleted", { orderId });
           }
+          // Skip immediate getTableGroups — optimistic removal already cleared the UI.
+          // A delayed refresh ensures the DB commit is fully processed before re-fetching,
+          // preventing the table from briefly flashing back to "occupied".
           if (profileId) {
-            dispatch(getTableGroups(profileId));
-            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+            setTimeout(() => {
+              dispatch(clearDeletedOrderId(orderId));
+              dispatch(clearDeletedOrderIdBooks(orderId));
+              dispatch(getTableGroups(profileId));
+              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+            }, 600);
+          } else {
+            setTimeout(() => {
+              dispatch(clearDeletedOrderId(orderId));
+              dispatch(clearDeletedOrderIdBooks(orderId));
+            }, 5000);
           }
         } catch (error) {
           console.error("Delayed Delete Error:", error);

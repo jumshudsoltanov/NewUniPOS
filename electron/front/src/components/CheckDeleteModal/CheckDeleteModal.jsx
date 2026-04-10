@@ -12,6 +12,7 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
     const [wasteComment, setWasteComment] = useState("");
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const isWarehouse = Number(loginedProfileData?.data?.profile?.is_warehouse) === 1;
 
     useEffect(() => {
         const getTagsData = async () => {
@@ -98,22 +99,24 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
 
                 {/* Waste + Footer — fixed at bottom */}
                 <div className="modal-footer-custom">
-                    {/* Waste toggle row */}
-                    <div
-                        className={`waste-toggle-bar ${isWaste ? "active" : ""}`}
-                        onClick={() => setIsWaste(v => !v)}
-                    >
-                        <div className={`waste-toggle-icon-wrap ${isWaste ? "active" : ""}`}>
-                            <i className="bi bi-trash2-fill"></i>
+                    {/* Waste toggle row — only visible for warehouse profiles */}
+                    {isWarehouse && (
+                        <div
+                            className={`waste-toggle-bar ${isWaste ? "active" : ""}`}
+                            onClick={() => setIsWaste(v => !v)}
+                        >
+                            <div className={`waste-toggle-icon-wrap ${isWaste ? "active" : ""}`}>
+                                <i className="bi bi-trash2-fill"></i>
+                            </div>
+                            <span className="waste-toggle-label">Tullantıya at</span>
+                            <div className={`waste-toggle-pill ${isWaste ? "on" : ""}`}>
+                                <div className="waste-toggle-knob"></div>
+                            </div>
                         </div>
-                        <span className="waste-toggle-label">Tullantıya at</span>
-                        <div className={`waste-toggle-pill ${isWaste ? "on" : ""}`}>
-                            <div className="waste-toggle-knob"></div>
-                        </div>
-                    </div>
+                    )}
 
                     {/* Comment textarea — slides down when waste is on */}
-                    {isWaste && (
+                    {isWarehouse && isWaste && (
                         <textarea
                             className="waste-comment-input"
                             placeholder="Şərh əlavə et (istəyə bağlı)"

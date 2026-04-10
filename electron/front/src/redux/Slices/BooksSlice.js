@@ -60,12 +60,16 @@ const BooksSlice = createSlice({
     books: {},
     archivedBooks: [],
     status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
-    error: null
+    error: null,
+    deletedOrderIds: [],
   },
   reducers: {
     removeOrderOptimistic: (state, action) => {
       const orderId = action.payload;
       if (!orderId) return;
+      if (!state.deletedOrderIds.includes(String(orderId))) {
+        state.deletedOrderIds.push(String(orderId));
+      }
       if (Array.isArray(state.books)) {
         state.books = state.books.filter(
           (o) => String(o.uuid) !== String(orderId) && String(o.id) !== String(orderId)
@@ -75,6 +79,10 @@ const BooksSlice = createSlice({
           (o) => String(o.uuid) !== String(orderId) && String(o.id) !== String(orderId)
         );
       }
+    },
+    clearDeletedOrderId: (state, action) => {
+      const orderId = String(action.payload);
+      state.deletedOrderIds = state.deletedOrderIds.filter(id => id !== orderId);
     },
     addOrderOptimistic: (state, action) => {
       const newOrder = action.payload;
@@ -157,7 +165,23 @@ const BooksSlice = createSlice({
     });
     builder.addCase(getActiveOrders.fulfilled, (state, action) => {
       state.status = 'succeeded';
-      state.books = action.payload;
+      const deletedIds = state.deletedOrderIds || [];
+      if (deletedIds.length > 0) {
+        const filterOrders = (list) => list.filter(o => {
+          const oId = String(o.uuid || o.id);
+          return !deletedIds.includes(oId);
+        });
+        const payload = action.payload;
+        if (Array.isArray(payload)) {
+          state.books = filterOrders(payload);
+        } else if (payload && Array.isArray(payload.data)) {
+          state.books = { ...payload, data: filterOrders(payload.data) };
+        } else {
+          state.books = payload;
+        }
+      } else {
+        state.books = action.payload;
+      }
     });
     builder.addCase(getActiveOrders.rejected, (state, action) => {
       state.status = 'failed';
@@ -515,7 +539,7 @@ const BooksSlice = createSlice({
   },
 });
 
-export const { removeOrderOptimistic, addOrderOptimistic, updateOrderOptimisticId, tickTimer } = BooksSlice.actions;
+export const { removeOrderOptimistic, addOrderOptimistic, updateOrderOptimisticId, tickTimer, clearDeletedOrderId: clearDeletedOrderIdBooks } = BooksSlice.actions;
 export default BooksSlice.reducer;
 
 

@@ -180,7 +180,6 @@ const WaitersModel = db.sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
-    /** Müştəri çeki çap olunduqda müştərini admin API-də bloklamaq (icazə 1 olanda) */
     can_block_customer_on_check: {
       type: DataTypes.INTEGER,
       allowNull: true,

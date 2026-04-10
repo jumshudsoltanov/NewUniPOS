@@ -59,8 +59,19 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
   const [passwordError, setPasswordError] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 
-  // view: "main" | "whatsapp" | "dbReset" | "updates"
+  // view: "main" | "whatsapp" | "dbReset" | "updates" | "categoryView"
   const [view, setView] = useState("main");
+
+  // Category view settings
+  const [cardsPerRow, setCardsPerRow] = useState(
+    () => parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10)
+  );
+  const [cardFontSize, setCardFontSize] = useState(
+    () => parseFloat(localStorage.getItem("pos_card_font_size") || "0.8")
+  );
+  const [productViewMode, setProductViewMode] = useState(
+    () => localStorage.getItem("pos_product_view_mode") || "card"
+  );
 
   const [resettingDb, setResettingDb] = useState(false);
 
@@ -94,6 +105,11 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       setUpdateReady(false);
       setDenyActions([]);
       setDenyPrefixes([]);
+    } else {
+      // Reload category view settings when modal opens
+      setCardsPerRow(parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10));
+      setCardFontSize(parseFloat(localStorage.getItem("pos_card_font_size") || "0.8"));
+      setProductViewMode(localStorage.getItem("pos_product_view_mode") || "card");
     }
   }, [show]);
 
@@ -263,10 +279,22 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
     onClose();
   };
 
+  const handleSaveCategoryView = () => {
+    localStorage.setItem("pos_cards_per_row", String(cardsPerRow));
+    localStorage.setItem("pos_card_font_size", String(cardFontSize));
+    localStorage.setItem("pos_product_view_mode", productViewMode);
+    window.dispatchEvent(new CustomEvent("categoryViewSettingsChanged", {
+      detail: { cardsPerRow, cardFontSize, productViewMode }
+    }));
+    toast.success("Görünüş ayarları saxlanıldı");
+    setView("main");
+  };
+
   const headerTitle =
     view === "whatsapp" ? "WhatsApp mesajları" :
     view === "dbReset" ? "Databaseni sıfırla" :
-    view === "updates" ? "Yeniləmələr" : "Ayarlar";
+    view === "updates" ? "Yeniləmələr" :
+    view === "categoryView" ? "Kateqoriya görünüşü" : "Ayarlar";
 
   return (
     <Modal
@@ -274,7 +302,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       onHide={handleModalHide}
       centered
       animation={false}
-      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}`}
+      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" ? " pin-advanced-catview-wide" : ""}`}
       contentClassName="custom-modal-content"
     >
       <div className="discount-modal-container">
@@ -289,6 +317,11 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                </svg>
+              ) : view === "categoryView" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                  <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -449,10 +482,97 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
             </div>
           </div>
 
+        ) : view === "categoryView" ? (
+          <div className="discount-body pin-adv-catview-body">
+            <p className="pin-adv-catview-hint">Kateqoriya və məhsul kartlarının görünüş ayarları</p>
+
+            <div className="pin-adv-catview-section">
+              <span className="pin-adv-catview-label">Sırada neçə kart görsənsin</span>
+              <div className="pin-adv-cards-row-btns">
+                {[3, 4, 5, 6, 7].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`pin-adv-cards-row-btn ${cardsPerRow === n ? "active" : ""}`}
+                    onClick={() => setCardsPerRow(n)}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pin-adv-catview-section">
+              <span className="pin-adv-catview-label">Kart mətn ölçüsü</span>
+              <div className="pin-adv-font-slider-row">
+                <span className="pin-adv-font-preview-small">A</span>
+                <input
+                  type="range"
+                  min="0.55"
+                  max="1.2"
+                  step="0.05"
+                  value={cardFontSize}
+                  onChange={e => setCardFontSize(parseFloat(e.target.value))}
+                  className="pin-adv-font-slider"
+                />
+                <span className="pin-adv-font-preview-big">A</span>
+              </div>
+              <div className="pin-adv-font-size-display">
+                <span className="pin-adv-font-size-val" style={{ fontSize: `${cardFontSize}rem`, lineHeight: 1.3 }}>
+                  Nümunə mətn
+                </span>
+                <span className="pin-adv-font-size-num">{cardFontSize.toFixed(2)}rem</span>
+              </div>
+            </div>
+
+            <div className="pin-adv-catview-section">
+              <span className="pin-adv-catview-label">Məhsul görünüşü</span>
+              <div className="pin-adv-viewmode-btns">
+                <button
+                  type="button"
+                  className={`pin-adv-viewmode-btn ${productViewMode === "card" ? "active" : ""}`}
+                  onClick={() => setProductViewMode("card")}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                  <span>Kart</span>
+                </button>
+                <button
+                  type="button"
+                  className={`pin-adv-viewmode-btn ${productViewMode === "list" ? "active" : ""}`}
+                  onClick={() => setProductViewMode("list")}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+                  </svg>
+                  <span>Siyahı</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="wa-settings-actions" style={{ marginTop: "8px" }}>
+              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+              <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveCategoryView}>Yadda saxla</button>
+            </div>
+          </div>
+
         ) : (
           /* ── Əsas menyu ── */
           <div className="discount-body pin-advanced-settings-body">
             <div className="settings-menu-items pin-advanced-settings-items">
+
+              <button type="button" className="settings-menu-item" onClick={() => setView("categoryView")}>
+                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Kateqoriya görünüşü</span>
+              </button>
 
               <button type="button" className="settings-menu-item" onClick={() => { setView("updates"); loadUpdateSettings(); }}>
                 <span className="settings-menu-item-icon" style={{ color: "#053796" }}>

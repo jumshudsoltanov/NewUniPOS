@@ -56,7 +56,7 @@ const OperationsModal = React.memo(({
     { icon: "bi-table", text: "Masanı dəyiş", functions: handleChangeTable, permissions: loginedWaiter?.data?.can_change_table },
     { icon: "bi-trash", text: "Çeki sil", functions: handleDeleteCheckModal, permissions: loginedWaiter?.data?.can_delete_check },
     { icon: "bi-cash-coin", text: "Depozit", functions: openDepositModal, permissions: loginedWaiter?.data?.can_give_deposit },
-    { icon: "bi-people-fill", text: "Qonaq sayını dəyiş", functions: openGuestCountModal, permissions: 1 },
+    { icon: "bi-people-fill", text: "Qonaq sayını dəyiş", functions: openGuestCountModal, permissions: loginedWaiter?.data?.can_edit_guest_count },
   ], [
     handleOpenSplitModel, openHistory, openCommentModal, openCustomersModal,
     clearCheck, openDiscountModal, openACtiveCheck, handleOpenChangeSaleType,

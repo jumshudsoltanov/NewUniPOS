@@ -463,3 +463,160 @@
     background: #dbeafe;
     color: #053796;
 }
+
+/* Category view modal width */
+.pin-advanced-catview-wide.custom-modal-width {
+    max-width: 420px !important;
+}
+
+/* ═══ Kateqoriya görünüşü ═══ */
+.pin-adv-catview-body {
+    padding: 16px 16px 20px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.pin-adv-catview-hint {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.pin-adv-catview-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.pin-adv-catview-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.pin-adv-cards-row-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.pin-adv-cards-row-btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    background: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.pin-adv-cards-row-btn:hover {
+    border-color: #053796;
+    color: #053796;
+}
+
+.pin-adv-cards-row-btn.active {
+    background: #053796;
+    border-color: #053796;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(5, 55, 150, 0.3);
+}
+
+.pin-adv-font-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pin-adv-font-preview-small {
+    font-size: 11px;
+    font-weight: 700;
+    color: #9ca3af;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+}
+
+.pin-adv-font-preview-big {
+    font-size: 20px;
+    font-weight: 700;
+    color: #374151;
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+}
+
+.pin-adv-font-slider {
+    flex: 1;
+    accent-color: #053796;
+    cursor: pointer;
+    height: 4px;
+}
+
+.pin-adv-font-size-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.pin-adv-font-size-val {
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.pin-adv-font-size-num {
+    font-size: 12px;
+    color: #053796;
+    font-weight: 600;
+}
+
+/* ═══ View mode (card/list) toggle ═══ */
+.pin-adv-viewmode-btns {
+    display: flex;
+    gap: 10px;
+}
+
+.pin-adv-viewmode-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.pin-adv-viewmode-btn:hover {
+    border-color: #053796;
+    color: #053796;
+}
+
+.pin-adv-viewmode-btn.active {
+    background: #053796;
+    border-color: #053796;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(5, 55, 150, 0.3);
+}
+
+.pin-adv-viewmode-btn svg {
+    flex-shrink: 0;
+}

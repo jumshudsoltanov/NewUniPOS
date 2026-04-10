@@ -19,6 +19,7 @@ export const loadLayoutsFromAdmin = createAsyncThunk(
   }
 );
 
+
 export const getTableGroups = createAsyncThunk(
   "tables/getTableGroups",
   async (profileId, thunkAPI) => {
@@ -43,6 +44,7 @@ const TablesSlice = createSlice({
     currentHallId: null,
     isTablesLoading: true,
     isTableEditMode: false,
+    deletedOrderIds: [],
     hallOrder: JSON.parse(localStorage.getItem("pos_hall_order") || "[]"),
     tableOrder: JSON.parse(localStorage.getItem("pos_table_orders") || "{}"),
     tableLayouts: (() => {
@@ -107,6 +109,11 @@ const TablesSlice = createSlice({
     removeOrderOptimistic: (state, action) => {
       const orderId = action.payload;
       if (!orderId || !state.tableGroups?.data) return;
+      // Track this order as optimistically deleted so future getTableGroups
+      // responses don't bring it back
+      if (!state.deletedOrderIds.includes(String(orderId))) {
+        state.deletedOrderIds.push(String(orderId));
+      }
       state.tableGroups.data.forEach((hall) => {
         if (hall.tables) {
           hall.tables.forEach((table) => {
@@ -118,6 +125,10 @@ const TablesSlice = createSlice({
           });
         }
       });
+    },
+    clearDeletedOrderId: (state, action) => {
+      const orderId = String(action.payload);
+      state.deletedOrderIds = state.deletedOrderIds.filter(id => id !== orderId);
     },
     addOrderToTableOptimistic: (state, action) => {
       const { order, tableId } = action.payload;
@@ -222,6 +233,7 @@ const TablesSlice = createSlice({
     builder.addCase(getTableGroups.fulfilled, (state, action) => {
       state.isTablesLoading = false;
       const payload = action.payload;
+      const deletedIds = state.deletedOrderIds || [];
       if (payload?.data) {
         state.tableGroups = {
           ...payload,
@@ -229,7 +241,15 @@ const TablesSlice = createSlice({
             ...hall,
             tables: hall.tables ? hall.tables.map(table => ({
               ...table,
-              orders: table.orders ? table.orders.filter(o => o.status !== 3) : []
+              orders: table.orders ? table.orders.filter(o => {
+                if (o.status === 3) return false;
+                // Filter out optimistically deleted orders
+                if (deletedIds.length > 0) {
+                  const oId = String(o.uuid || o.id);
+                  if (deletedIds.includes(oId)) return false;
+                }
+                return true;
+              }) : []
             })) : []
           }))
         };
@@ -423,7 +443,8 @@ export const {
   setTempTableLayout,
   tickTimer,
   removeOrderOptimistic: tablesRemoveOrderOptimistic,
-  addOrderToTableOptimistic
+  addOrderToTableOptimistic,
+  clearDeletedOrderId
 } = TablesSlice.actions;
 export { tablesRemoveOrderOptimistic as removeOrderOptimisticFromTables };
 export default TablesSlice.reducer;

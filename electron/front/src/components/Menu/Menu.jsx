@@ -11,6 +11,7 @@ import ManualPriceModal from "../Modals/ManualPriceModal";
 import ModifierModal from "../ModifierModal/ModifierModal";
 import PortionModal from "../PortionModal/PortionModal";
 import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
+import "./Menu.css";
 
 const Menu = ({
   order,
@@ -30,6 +31,27 @@ const Menu = ({
   onDeleteItem = () => { },
 }) => {
   const dispatch = useDispatch();
+
+  // Category view display settings
+  const [cardsPerRow, setCardsPerRow] = useState(
+    () => parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10)
+  );
+  const [cardFontSize, setCardFontSize] = useState(
+    () => parseFloat(localStorage.getItem("pos_card_font_size") || "0.8")
+  );
+  const [productViewMode, setProductViewMode] = useState(
+    () => localStorage.getItem("pos_product_view_mode") || "card"
+  );
+
+  useEffect(() => {
+    const handleViewSettingsChanged = (e) => {
+      setCardsPerRow(e.detail.cardsPerRow);
+      setCardFontSize(e.detail.cardFontSize);
+      if (e.detail.productViewMode) setProductViewMode(e.detail.productViewMode);
+    };
+    window.addEventListener("categoryViewSettingsChanged", handleViewSettingsChanged);
+    return () => window.removeEventListener("categoryViewSettingsChanged", handleViewSettingsChanged);
+  }, []);
   const { menuDataWithGeneralCategories, menuDataWithCategories } = useSelector(
     (state) => state.MenuSlice,
   );
@@ -425,123 +447,200 @@ const Menu = ({
     setDragOverIndex(null);
   };
 
+  // Determine if list view should be used
+  const useListView = productViewMode === "list" && (menuViewMode === "PRODUCTS" || (searchText && searchText.trim().length > 0));
+
   return (
     <Container fluid className="p-0 d-flex flex-column" style={{ flex: 1, minHeight: 0 }}>
-      <Row
-        className="g-2 px-2 menu-scroll-row"
-        style={{ flex: 1, alignContent: "flex-start", overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", scrollbarColor: "#c1d0e8 transparent" }}
-      >
-        {itemsToRender
-          ?.filter((item) => item && item.name)
-          .map((item, index) => {
-            let imageSrc = "none";
-            if (item.img) {
-              if (item.img.startsWith("data:") || item.img.startsWith("http")) {
-                imageSrc = `url(${item.img})`;
-              } else {
-                imageSrc = `url(https://unipos.tech/${item.img})`;
+      {useListView ? (
+        /* ═══ LIST VIEW for products ═══ */
+        <div
+          className="menu-list-view menu-scroll-row"
+          style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", scrollbarColor: "#c1d0e8 transparent", padding: "8px 10px", flex: "1 1 auto" }}
+        >
+          {itemsToRender
+            ?.filter((item) => item && item.name)
+            .map((item, index) => {
+              let effectivePrice = Number(item.price);
+              if (item.discount && Number(item.discount) > 0) {
+                effectivePrice = Number(item.discount);
+              } else if (item.categoryDiscount && Number(item.categoryDiscount) > 0) {
+                const discountValue = (Number(item.price) * Number(item.categoryDiscount)) / 100;
+                effectivePrice = Number(item.price) - discountValue;
+                effectivePrice = Math.round(effectivePrice * 100) / 100;
               }
-            }
 
-            // Calculate effective price
-            let effectivePrice = Number(item.price);
-            if (item.discount && Number(item.discount) > 0) {
-              effectivePrice = Number(item.discount);
-            } else if (item.categoryDiscount && Number(item.categoryDiscount) > 0) {
-              const discountValue = (Number(item.price) * Number(item.categoryDiscount)) / 100;
-              effectivePrice = Number(item.price) - discountValue;
-              effectivePrice = Math.round(effectivePrice * 100) / 100; // Round to 2 decimal places
-            }
+              const isDragging = isDragMode && draggedIndex === index;
+              const isDragOver = isDragMode && dragOverIndex === index && draggedIndex !== index;
 
-            const isDragging = isDragMode && draggedIndex === index;
-            const isDragOver = isDragMode && dragOverIndex === index && draggedIndex !== index;
-
-            return (
-              <Col
-                key={item.id ?? index}
-                xs={4}
-                sm={3}
-                md={3}
-                lg={3}
-                xl={2}
-                className="category-col"
-              >
+              return (
                 <div
-                  className={`menu-card ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
-                  style={{
-                    backgroundImage: imageSrc,
-                    backgroundColor: item.color || (item.img ? "transparent" : "#555"),
-                    cursor: isDragMode ? "grab" : "pointer",
-                  }}
+                  key={item.id ?? index}
+                  className={`menu-list-item ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
                   draggable={isDragMode}
                   onDragStart={isDragMode ? (e) => handleDragStart(e, index) : undefined}
                   onDragOver={isDragMode ? (e) => handleDragOver(e, index) : undefined}
                   onDragLeave={isDragMode ? handleDragLeave : undefined}
                   onDrop={isDragMode ? (e) => handleDrop(e, index) : undefined}
                   onDragEnd={isDragMode ? handleDragEnd : undefined}
-                  onTouchStart={(e) => {
-                    if (isDragMode) { handleTouchStart(index); return; }
-                  }}
-                  onTouchMove={(e) => {
-                    if (isDragMode) { handleTouchMove(e); return; }
-                  }}
-                  onTouchEnd={(e) => {
-                    if (isDragMode) { handleTouchEnd(); return; }
-                  }}
+                  onTouchStart={() => { if (isDragMode) handleTouchStart(index); }}
+                  onTouchMove={(e) => { if (isDragMode) handleTouchMove(e); }}
+                  onTouchEnd={() => { if (isDragMode) handleTouchEnd(); }}
                   onClick={() => {
                     if (isDragMode) return;
-
                     const itemWithEffectivePrice = { ...item, price: effectivePrice };
-
-                    if (searchText?.length > 0) {
-                      handleProductClick(itemWithEffectivePrice);
-                    } else {
-                      if (menuViewMode === "PRODUCTS") {
-                        handleProductClick(itemWithEffectivePrice);
-                      } else {
-                        handleItemClick(item);
-                      }
-                    }
+                    handleProductClick(itemWithEffectivePrice);
                   }}
+                  onMouseDown={(e) => {
+                    if (isDragMode) return;
+                    handleLongPressStart(item);
+                  }}
+                  onMouseUp={handleLongPressEnd}
+                  onMouseLeave={handleLongPressEnd}
+                  onTouchStartCapture={() => { if (!isDragMode) handleLongPressStart(item); }}
+                  onTouchEndCapture={() => { if (!isDragMode) handleLongPressEnd(); }}
                 >
                   {isDragMode && (
-                    <div className="drag-handle-overlay">
-                      <div className="drag-handle-icon">
-                        <i className="bi bi-arrows-move"></i>
-                      </div>
+                    <div className="menu-list-drag-handle">
+                      <i className="bi bi-grip-vertical"></i>
                     </div>
                   )}
-
-
-
-                  {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
-                    <div className="menu-card-price">
-                      <div>
-                        {effectivePrice} ₼
-                      </div>
-                    </div>
+                  {item.color && (
+                    <div className="menu-list-item-color-bar" style={{ backgroundColor: item.color }} />
                   )}
-
-                  <div className="menu-card-content">
-                    <span
-                      className="text-center fw-bold text-white text-shadow"
-                      style={{
-                        fontSize: item.name?.length > 30 ? '0.55rem' : item.name?.length > 20 ? '0.65rem' : item.name?.length > 12 ? '0.72rem' : '0.8rem'
-                      }}
-                    >
-                      {item.name}
-                    </span>
-                  </div>
+                  <span className="menu-list-item-name" style={{ fontSize: `${cardFontSize}rem` }}>
+                    {item.name}
+                  </span>
+                  <span className="menu-list-item-price">
+                    {effectivePrice.toFixed(2)} ₼
+                  </span>
                 </div>
-              </Col>
-            );
-          })}
-        {itemsToRender?.length === 0 && (
-          <div className="text-center w-100 text-muted mt-5">
-            <p>Məlumat tapılmadı</p>
-          </div>
-        )}
-      </Row>
+              );
+            })}
+          {itemsToRender?.length === 0 && (
+            <div className="text-center w-100 text-muted mt-5">
+              <p>Məlumat tapılmadı</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ═══ CARD VIEW (default) ═══ */
+        <Row
+          className="g-2 px-2 menu-scroll-row"
+          style={{ flex: 1, alignContent: "flex-start", overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", scrollbarColor: "#c1d0e8 transparent" }}
+        >
+          {itemsToRender
+            ?.filter((item) => item && item.name)
+            .map((item, index) => {
+              let imageSrc = "none";
+              if (item.img) {
+                if (item.img.startsWith("data:") || item.img.startsWith("http")) {
+                  imageSrc = `url(${item.img})`;
+                } else {
+                  imageSrc = `url(https://unipos.tech/${item.img})`;
+                }
+              }
+
+              // Calculate effective price
+              let effectivePrice = Number(item.price);
+              if (item.discount && Number(item.discount) > 0) {
+                effectivePrice = Number(item.discount);
+              } else if (item.categoryDiscount && Number(item.categoryDiscount) > 0) {
+                const discountValue = (Number(item.price) * Number(item.categoryDiscount)) / 100;
+                effectivePrice = Number(item.price) - discountValue;
+                effectivePrice = Math.round(effectivePrice * 100) / 100;
+              }
+
+              const isDragging = isDragMode && draggedIndex === index;
+              const isDragOver = isDragMode && dragOverIndex === index && draggedIndex !== index;
+
+              return (
+                <Col
+                  key={item.id ?? index}
+                  style={{ flex: `0 0 ${100 / cardsPerRow}%`, maxWidth: `${100 / cardsPerRow}%`, padding: '6px' }}
+                  className="category-col-dynamic"
+                >
+                  <div
+                    className={`menu-card ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                    style={{
+                      backgroundImage: imageSrc,
+                      backgroundColor: item.color || (item.img ? "transparent" : "#555"),
+                      cursor: isDragMode ? "grab" : "pointer",
+                    }}
+                    draggable={isDragMode}
+                    onDragStart={isDragMode ? (e) => handleDragStart(e, index) : undefined}
+                    onDragOver={isDragMode ? (e) => handleDragOver(e, index) : undefined}
+                    onDragLeave={isDragMode ? handleDragLeave : undefined}
+                    onDrop={isDragMode ? (e) => handleDrop(e, index) : undefined}
+                    onDragEnd={isDragMode ? handleDragEnd : undefined}
+                    onTouchStart={(e) => {
+                      if (isDragMode) { handleTouchStart(index); return; }
+                    }}
+                    onTouchMove={(e) => {
+                      if (isDragMode) { handleTouchMove(e); return; }
+                    }}
+                    onTouchEnd={(e) => {
+                      if (isDragMode) { handleTouchEnd(); return; }
+                    }}
+                    onClick={() => {
+                      if (isDragMode) return;
+
+                      const itemWithEffectivePrice = { ...item, price: effectivePrice };
+
+                      if (searchText?.length > 0) {
+                        handleProductClick(itemWithEffectivePrice);
+                      } else {
+                        if (menuViewMode === "PRODUCTS") {
+                          handleProductClick(itemWithEffectivePrice);
+                        } else {
+                          handleItemClick(item);
+                        }
+                      }
+                    }}
+                  >
+                    {isDragMode && (
+                      <div className="drag-handle-overlay">
+                        <div className="drag-handle-icon">
+                          <i className="bi bi-arrows-move"></i>
+                        </div>
+                      </div>
+                    )}
+
+                    {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
+                      <div className="menu-card-price">
+                        <div>
+                          {effectivePrice} ₼
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="menu-card-content">
+                      <span
+                        className="text-center fw-bold text-white text-shadow"
+                        style={{
+                          fontSize: item.name?.length > 30
+                            ? `${Math.max(cardFontSize - 0.25, 0.5)}rem`
+                            : item.name?.length > 20
+                            ? `${Math.max(cardFontSize - 0.15, 0.55)}rem`
+                            : item.name?.length > 12
+                            ? `${Math.max(cardFontSize - 0.08, 0.6)}rem`
+                            : `${cardFontSize}rem`
+                        }}
+                      >
+                        {item.name}
+                      </span>
+                    </div>
+                  </div>
+                </Col>
+              );
+            })}
+          {itemsToRender?.length === 0 && (
+            <div className="text-center w-100 text-muted mt-5">
+              <p>Məlumat tapılmadı</p>
+            </div>
+          )}
+        </Row>
+      )}
       <ManualPriceModal
         show={showPriceModal}
         onClose={() => setShowPriceModal(false)}
