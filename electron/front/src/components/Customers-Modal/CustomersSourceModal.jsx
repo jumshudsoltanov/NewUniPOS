@@ -11,6 +11,7 @@ import {
 } from '../../redux/Slices/CustomersSlice';
 import { getArchivedOrders } from '../../redux/Slices/BooksSlice';
 import CheckReceiptModal from '../Checks/CheckReceiptModal';
+import VirtualKeyboard from '../VirtualKeyboard/VirtualKeyboard';
 
 const AZ_CITIES = [
     "Bakı", "Gəncə", "Sumqayıt", "Mingəçevir", "Lənkəran", "Şirvan", "Naxçıvan", "Şəki", "Yevlax",
@@ -172,8 +173,13 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
     const [showDotsMenu, setShowDotsMenu] = useState(false);
     const [showCheckDetail, setShowCheckDetail] = useState(false);
     const [selectedCheck, setSelectedCheck] = useState(null);
+    const [activeInputName, setActiveInputName] = useState(null);
     const dotsMenuRef = useRef(null);
     const hiddenDatePickerRef = useRef(null);
+    
+    const posKeyboardEnabled = useMemo(() => {
+        try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
+    }, [show]);
 
     const customerHistory = useMemo(() => {
         const active = (books?.data || []).filter(o => o.customer_id === selectedCustomer?.id);
@@ -250,6 +256,30 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
             setFormData(prev => ({ ...prev, [name]: formatted }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleKeyboardChange = (key) => {
+        if (!activeInputName) return;
+        if (activeInputName === 'search') {
+            setSearchTerm(prev => prev + key);
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [activeInputName]: String(prev[activeInputName] || '') + key
+            }));
+        }
+    };
+
+    const handleKeyboardBackspace = () => {
+        if (!activeInputName) return;
+        if (activeInputName === 'search') {
+            setSearchTerm(prev => prev.slice(0, -1));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [activeInputName]: String(prev[activeInputName] || '').slice(0, -1)
+            }));
         }
     };
 
@@ -483,6 +513,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                 className="form-control-custom"
                                 value={formData.name}
                                 onChange={handleInputChange}
+                                onFocus={() => setActiveInputName('name')}
                             />
                         </div>
                         <div className="form-group">
@@ -495,6 +526,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     className="form-control-custom"
                                     value={formData.code}
                                     onChange={handleInputChange}
+                                    onFocus={() => setActiveInputName('code')}
                                 />
                                 <i
                                     className="bi bi-arrow-clockwise"
@@ -530,6 +562,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     className="form-control-custom flex-1"
                                     value={formData.phone}
                                     onChange={handleInputChange}
+                                    onFocus={() => setActiveInputName('phone')}
                                 />
                             </div>
                         </div>
@@ -563,6 +596,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     className="form-control-custom"
                                     value={formData.discount}
                                     onChange={handleInputChange}
+                                    onFocus={() => setActiveInputName('discount')}
                                     min="0"
                                     max="100"
                                     step="0.01"
@@ -631,6 +665,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     className="form-control-custom w-100"
                                     value={formData.email}
                                     onChange={handleInputChange}
+                                    onFocus={() => setActiveInputName('email')}
                                 />
                                 <i className="bi bi-envelope"></i>
                             </div>
@@ -667,6 +702,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                             className="form-control-custom textarea-custom"
                             value={formData.description}
                             onChange={handleInputChange}
+                            onFocus={() => setActiveInputName('description')}
                         />
                     </div>
                 </form>
@@ -875,6 +911,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
     };
 
     return (
+        <>
         <Modal
             show={show}
             onHide={onHide}
@@ -906,6 +943,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                 className="customers-source-search-input"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                onFocus={() => setActiveInputName('search')}
                             />
                         </div>
                     </div>
@@ -976,13 +1014,21 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                 onHide={() => setShowAddressModal(false)}
                 onConfirm={handleConfirmAddress}
             />
-
             <CheckReceiptModal
                 show={showCheckDetail}
                 onClose={() => setShowCheckDetail(false)}
                 order={selectedCheck}
             />
         </Modal>
+
+        {posKeyboardEnabled && activeInputName && (
+            <VirtualKeyboard
+                onKeyPress={handleKeyboardChange}
+                onBackspace={handleKeyboardBackspace}
+                onClose={() => setActiveInputName(null)}
+            />
+        )}
+        </>
     );
 };
 

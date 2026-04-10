@@ -62,7 +62,7 @@ const CheckLockModal = ({ show, onClose, order }) => {
       className="check-lock-modal"
       animation={false}
     >
-      <div className="modal-content-wrapper">
+      <div className="check-lock-modal-wrapper">
         <div className="check-lock-modal-header">
           <div className="check-lock-header-content">
             <div className="check-lock-icon-circle">
@@ -106,7 +106,7 @@ const CheckLockModal = ({ show, onClose, order }) => {
           </p>
         </div>
 
-        <div className="modal-footer-custom">
+        <div className="check-lock-modal-footer">
           <button className="btn-cancel" onClick={onClose}>Ləğv et</button>
           <button className="check-lock-save-btn" onClick={handleUpdateStatus}>
             <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'} me-2`}></i>

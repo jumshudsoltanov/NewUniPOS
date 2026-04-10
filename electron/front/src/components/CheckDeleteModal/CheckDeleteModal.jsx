@@ -62,7 +62,7 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
             backdrop="static"
             animation={false}
         >
-            <div className="modal-content-wrapper">
+            <div className="check-delete-modal-wrapper">
                 <div className="check-delete-modal-header">
                     <div className="check-delete-header-content">
                         <div className="check-delete-icon-circle">
@@ -98,7 +98,7 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
                 </div>
 
                 {/* Waste + Footer — fixed at bottom */}
-                <div className="modal-footer-custom">
+                <div className="check-delete-modal-footer">
                     {/* Waste toggle row — only visible for warehouse profiles */}
                     {isWarehouse && (
                         <div

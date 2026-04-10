@@ -7,6 +7,7 @@ const CustomerReceipt = ({
     profileData,
     tableName,
     hallName,
+    previewSettings,
 }) => {
     const terminalInfo = profileData?.data?.terminal || {};
     const filialName = profileData?.data?.profile?.restaurant_name ||
@@ -56,13 +57,38 @@ const CustomerReceipt = ({
     const now = new Date();
     const currentTime = formatLocalDate(now);
 
-    const baseFont = Number(terminalInfo?.customer_receipt || profileData?.data?.customer_receipt || profileData?.data?.profile?.customer_receipt || 0);
+    let localSettings = {};
+    try {
+        localSettings = JSON.parse(localStorage.getItem("pos_receipt_settings"))?.customer || {};
+    } catch(e) {}
+    if (previewSettings) localSettings = previewSettings;
+
+    const baseFont = Number(localSettings.fontSizeOffset !== undefined ? localSettings.fontSizeOffset : (terminalInfo?.customer_receipt || profileData?.data?.customer_receipt || profileData?.data?.profile?.customer_receipt || 0));
     const fs = (baseSize) => {
         if (baseFont === 0) return `${baseSize}px`;
         return `${baseSize + (baseFont * 2)}px`;
     };
 
-    const isQrHidden = Number(terminalInfo?.qr_on_check) === 1;
+    const isVisible = (key, defaultVal = true) => {
+        if (localSettings[key] !== undefined) return localSettings[key];
+        return defaultVal;
+    };
+
+    const isQrHidden = !isVisible("showQrCode", Number(terminalInfo?.qr_on_check) !== 1);
+    const showLogo = isVisible("showLogo", true);
+    const showAddress = isVisible("showAddress", true);
+    const showPhone = isVisible("showPhone", true);
+    const showCheckNumber = isVisible("showCheckNumber", true);
+    const showCustomer = isVisible("showCustomer", true);
+    const showTags = isVisible("showTags", true);
+    const showHallTable = isVisible("showHallTable", true);
+    const showDates = isVisible("showDates", true);
+    const showPrintDate = isVisible("showPrintDate", true);
+    const showWaiter = isVisible("showWaiter", true);
+    const showGuestCount = isVisible("showGuestCount", true);
+    const showSaleType = isVisible("showSaleType", true);
+    const customFooterText = localSettings.footerText !== undefined && localSettings.footerText !== "" ? localSettings.footerText : "Təşəkkür edirik!";
+    const fontFamily = localSettings.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace";
 
     const styles = {
         receipt: {
@@ -71,7 +97,7 @@ const CustomerReceipt = ({
             padding: "0 2px",
             margin: "0",
             background: "#fff",
-            fontFamily: "'Consolas', 'Courier New', 'Lucida Console', monospace",
+            fontFamily: fontFamily,
             fontSize: fs(12),
             color: "#000",
             fontWeight: "500",
@@ -275,7 +301,7 @@ const CustomerReceipt = ({
         <div style={styles.receipt}>
             {/* HEADER */}
             <div style={styles.header}>
-                {logoSrc && (
+                {showLogo && logoSrc && (
                     <img
                         src={logoSrc}
                         alt="Logo"
@@ -299,42 +325,42 @@ const CustomerReceipt = ({
 
             {/* ORDER INFO */}
             <div style={styles.infoSection}>
-                {address && (
+                {showAddress && address && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Ünvan</span>
                         <span style={styles.value}>{address}</span>
                     </div>
                 )}
 
-                {phone && (
+                {showPhone && phone && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Əlaqə</span>
                         <span style={styles.value}>{phone}</span>
                     </div>
                 )}
 
-                {(checkData?.orderId || checkData?.id) && (
+                {showCheckNumber && (checkData?.orderId || checkData?.id) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Çek №</span>
                         <span style={styles.value}>#{checkData.orderId || checkData.id}</span>
                     </div>
                 )}
 
-                {(checkData?.customer_name || checkData?.customerName || checkData?.customer?.name || checkData?.customer?.full_name) && (
+                {showCustomer && (checkData?.customer_name || checkData?.customerName || checkData?.customer?.name || checkData?.customer?.full_name) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Müştəri</span>
                         <span style={styles.value}>{checkData.customer_name || checkData.customerName || checkData.customer?.name || checkData.customer?.full_name}</span>
                     </div>
                 )}
 
-                {checkData?.tags && (
+                {showTags && checkData?.tags && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Qəbz etiketi</span>
                         <span style={styles.value}>{checkData.tags}</span>
                     </div>
                 )}
 
-                {(hallName || tableName) && (
+                {showHallTable && (hallName || tableName) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Satış yeri</span>
                         <span style={styles.value}>
@@ -345,38 +371,42 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
-                {(checkData?.startDate || checkData?.start_date) && (
+                {showDates && (checkData?.startDate || checkData?.start_date) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Açılma tarixi</span>
                         <span style={styles.value}>{formatLocalDate(checkData.startDate || checkData.start_date)}</span>
                     </div>
                 )}
 
-                {(checkData?.endDate || checkData?.end_date) && (
+                {showDates && (checkData?.endDate || checkData?.end_date) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Bağlanma tarixi</span>
                         <span style={styles.value}>{formatLocalDate(checkData.endDate || checkData.end_date)}</span>
                     </div>
                 )}
 
-                <div style={styles.infoRow}>
-                    <span style={styles.label}>Çap tarixi</span>
-                    <span style={styles.value}>{currentTime}</span>
-                </div>
+                {showPrintDate && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Çap tarixi</span>
+                        <span style={styles.value}>{currentTime}</span>
+                    </div>
+                )}
 
-                <div style={styles.infoRow}>
-                    <span style={styles.label}>Ofisiant</span>
-                    <span style={styles.value}>{checkData?.waiter_name || checkData?.waiter?.name || "-"}</span>
-                </div>
+                {showWaiter && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Ofisiant</span>
+                        <span style={styles.value}>{checkData?.waiter_name || checkData?.waiter?.name || "-"}</span>
+                    </div>
+                )}
 
-                {Number(checkData?.guest_count || 0) > 0 && (
+                {showGuestCount && Number(checkData?.guest_count || 0) > 0 && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Qonaq sayı</span>
                         <span style={styles.value}>{checkData.guest_count}</span>
                     </div>
                 )}
 
-                {displaySaleType !== "Restoranda" && (
+                {showSaleType && displaySaleType !== "Restoranda" && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Satış tipi</span>
                         <span style={styles.value}>{displaySaleType}</span>
@@ -618,7 +648,7 @@ const CustomerReceipt = ({
                 )}
 
                 <div style={styles.thanks}>
-                    <div style={styles.thankText}>Təşəkkür edirik!</div>
+                    <div style={styles.thankText}>{customFooterText}</div>
                     <div style={styles.link}>unipos.tech</div>
                 </div>
             </div>

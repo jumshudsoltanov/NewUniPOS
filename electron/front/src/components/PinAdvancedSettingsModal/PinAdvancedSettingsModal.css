@@ -620,3 +620,21 @@
 .pin-adv-viewmode-btn svg {
     flex-shrink: 0;
 }
+
+/* Receipt design modal width */
+.pin-advanced-receipt-wide.custom-modal-width {
+    max-width: 800px !important;
+}
+
+/* Invisible custom scrollbar */
+.pin-invisible-scroll {
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.pin-invisible-scroll::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+    display: none;
+}

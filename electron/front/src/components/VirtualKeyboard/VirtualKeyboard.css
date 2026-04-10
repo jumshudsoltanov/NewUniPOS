@@ -196,7 +196,7 @@
 
 /* ===== Push modals up when keyboard is visible ===== */
 /* The keyboard height is approximately 310px (30px titlebar + 5 rows * 50px + gaps + padding) */
-body.vk-keyboard-open .modal.show .modal-dialog {
+body.vk-keyboard-open .modal.show .modal-dialog.modal-dialog-centered {
     transform: translateY(-160px) !important;
     transition: transform 0.2s ease-out !important;
 }
@@ -221,7 +221,7 @@ body.vk-keyboard-open .modal.show .modal-dialog {
         gap: 3px;
     }
 
-    body.vk-keyboard-open .modal.show .modal-dialog {
+    body.vk-keyboard-open .modal.show .modal-dialog.modal-dialog-centered {
         transform: translateY(-130px) !important;
     }
 }
@@ -236,7 +236,7 @@ body.vk-keyboard-open .modal.show .modal-dialog {
         height: 54px;
     }
 
-    body.vk-keyboard-open .modal.show .modal-dialog {
+    body.vk-keyboard-open .modal.show .modal-dialog.modal-dialog-centered {
         transform: translateY(-180px) !important;
     }
 }

@@ -14,8 +14,8 @@ import { toast } from "sonner";
 import axios from "axios";
 import apiConfig, { getSocket, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
-import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
+import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -41,6 +41,16 @@ const CheckOver = () => {
 
     const [showTaxSelectionModal, setShowTaxSelectionModal] = useState(false);
     const [taxLocalNames, setTaxLocalNames] = useState({});
+
+    // Virtual Keyboard logic
+    const [activeInputMode, setActiveInputMode] = useState(null); // 'comment' or 'split-0', 'split-1'
+    const posKeyboardEnabled = useMemo(() => {
+        try {
+            return localStorage.getItem("pos_keyboard_enabled") === "1";
+        } catch {
+            return false;
+        }
+    }, []);
 
     // Fetch tax names
     useEffect(() => {
@@ -242,12 +252,46 @@ const CheckOver = () => {
     };
 
     const handleNumClick = (val) => {
-        if (val === "." && calcValue.includes(".")) return;
-        setCalcValue(prev => prev + val);
+        if (activeInputMode?.startsWith("split-")) {
+            const index = parseInt(activeInputMode.split("-")[1]);
+            const currentObj = selectedMethods[index];
+            if (!currentObj) return;
+            const currentAmount = String(currentObj.amount || "");
+            if (val === "." && currentAmount.includes(".")) return;
+            handleAmountChange(index, currentAmount + val);
+        } else {
+            if (val === "." && calcValue.includes(".")) return;
+            setCalcValue(prev => prev + val);
+        }
     };
 
     const handleDelete = () => {
-        setCalcValue(prev => prev.slice(0, -1));
+        if (activeInputMode?.startsWith("split-")) {
+            const index = parseInt(activeInputMode.split("-")[1]);
+            const currentObj = selectedMethods[index];
+            if (!currentObj) return;
+            const currentAmount = String(currentObj.amount || "");
+            handleAmountChange(index, currentAmount.slice(0, -1));
+        } else {
+            setCalcValue(prev => prev.slice(0, -1));
+        }
+    };
+
+    const handleVirtualKeyboardKeyPress = (key) => {
+        if (activeInputMode === "comment") {
+            setComment((prev) => prev + key);
+        } else if (activeInputMode?.startsWith("split-")) {
+            if (!/^[0-9.]$/.test(key)) return;
+            handleNumClick(key);
+        }
+    };
+
+    const handleVirtualKeyboardBackspace = () => {
+        if (activeInputMode === "comment") {
+            setComment((prev) => prev.slice(0, -1));
+        } else if (activeInputMode?.startsWith("split-")) {
+            handleDelete();
+        }
     };
 
     const numpadButtons = ["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", "DEL"];
@@ -506,6 +550,7 @@ const CheckOver = () => {
                                 placeholder="Məbləği daxil edin"
                                 value={calcValue}
                                 readOnly
+                                onFocus={() => setActiveInputMode(null)}
                             />
                             <span className="currency-symbol">₼</span>
                         </div>
@@ -588,6 +633,7 @@ const CheckOver = () => {
                                                                         className="split-amount-input"
                                                                         value={isSelected.amount}
                                                                         onChange={(e) => handleAmountChange(idx, e.target.value)}
+                                                                        onFocus={() => setActiveInputMode(`split-${idx}`)}
                                                                         autoFocus={idx === 0}
                                                                     />
                                                                     <span className="currency-sym">₼</span>
@@ -707,6 +753,7 @@ const CheckOver = () => {
                                         className="comment-textarea"
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
+                                        onFocus={() => setActiveInputMode("comment")}
                                     />
                                 </div>
 
@@ -825,8 +872,16 @@ const CheckOver = () => {
                     </div>
                 </div>
             </Modal>
+
+            {posKeyboardEnabled && activeInputMode && (
+                <VirtualKeyboard
+                    onKeyPress={handleVirtualKeyboardKeyPress}
+                    onBackspace={handleVirtualKeyboardBackspace}
+                    onClose={() => setActiveInputMode(null)}
+                />
+            )}
         </div>
     );
-}
+};
 
 export default CheckOver;

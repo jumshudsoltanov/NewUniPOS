@@ -12,7 +12,7 @@
     margin: 1.75rem auto;
 }
 
-.modal-content-wrapper {
+.check-lock-modal-wrapper {
     background-color: #fff;
     display: flex;
     flex-direction: column;
@@ -124,7 +124,7 @@
 }
 
 /* Footer Actions */
-.modal-footer-custom {
+.check-lock-modal-footer {
     display: flex;
     gap: 12px;
     width: 100%;
@@ -217,7 +217,7 @@
         gap: 12px;
     }
 
-    .modal-footer-custom {
+    .check-lock-modal-footer {
         padding: 12px 15px;
         gap: 10px;
     }

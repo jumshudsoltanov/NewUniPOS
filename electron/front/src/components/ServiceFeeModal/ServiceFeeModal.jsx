@@ -55,7 +55,7 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
       await dispatch(
         updateServiceFeeOnOrders({
           orderId: order.uuid,
-          serviceValue: value,
+          serviceValue: Number(value) === 0 ? "0.00001" : Number(value),
           feeType,
           oldServiceValue: order.service_charge,
           oldFeeType: order.service_type,

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import './ProductModal.css';
 
 import { addNotification } from '../../utils/notificationService';
+import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 
 const ProductModal = ({ show, onHide, productToEdit = null }) => {
     const dispatch = useDispatch();
@@ -33,6 +34,13 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
     const [preview, setPreview] = useState(null);
     const fileInputRef = useRef(null);
     const [isLoading, setIsLoading] = useState(false);
+    
+    // UI State
+    const [activeTab, setActiveTab] = useState('main'); // 'main', 'settings'
+    const [activeInputName, setActiveInputName] = useState(null);
+    const posKeyboardEnabled = React.useMemo(() => {
+        try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
+    }, [show]);
 
     // Populate form on edit
     useEffect(() => {
@@ -62,6 +70,22 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
         setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleKeyboardChange = (key) => {
+        if (!activeInputName) return;
+        setFormData(prev => ({
+            ...prev,
+            [activeInputName]: String(prev[activeInputName] || '') + key
+        }));
+    };
+
+    const handleKeyboardBackspace = () => {
+        if (!activeInputName) return;
+        setFormData(prev => ({
+            ...prev,
+            [activeInputName]: String(prev[activeInputName] || '').slice(0, -1)
         }));
     };
 
@@ -122,7 +146,8 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
     const categories = menuDataWithCategories?.data || [];
 
     return (
-        <Modal show={show} onHide={onHide} centered size="lg" className="product-modal">
+        <>
+            <Modal show={show} onHide={onHide} centered size="lg" className="product-modal">
             <div className="product-modal-header">
                 <div className="header-left">
                     <div className="header-icon-circle">
@@ -142,9 +167,28 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                 </div>
             )}
 
+            <div className="product-modal-tabs">
+                <button 
+                    type="button" 
+                    className={`tab-btn ${activeTab === 'main' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('main')}
+                >
+                    Əsas Məlumatlar
+                </button>
+                <button 
+                    type="button" 
+                    className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('settings')}
+                >
+                    Parametrlər
+                </button>
+            </div>
+
             <form onSubmit={handleSubmit} className="product-modal-form">
                 <div className="product-modal-body">
-                    <Row>
+                    {activeTab === 'main' && (
+                        <>
+                            <Row>
                         <Col md={12}>
                             <div className="form-group-custom">
                                 <label>Kateqoriya</label>
@@ -177,6 +221,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                     className="form-control-custom"
                                     value={formData.name}
                                     onChange={handleChange}
+                                    onFocus={() => setActiveInputName('name')}
                                     placeholder="Məhsulun adı"
                                     required
                                 />
@@ -191,6 +236,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                     className="form-control-custom"
                                     value={formData.price}
                                     onChange={handleChange}
+                                    onFocus={() => setActiveInputName('price')}
                                     placeholder="0.00"
                                     step="0.01"
                                     required
@@ -209,6 +255,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                     className="form-control-custom"
                                     value={formData.hourly_price}
                                     onChange={handleChange}
+                                    onFocus={() => setActiveInputName('hourly_price')}
                                     placeholder="0 — masa tarifi"
                                     min="0"
                                     step="0.01"
@@ -244,60 +291,64 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                             </div>
                         </Col>
                     </Row>
+                        </>
+                    )}
 
-                    <Row>
-                        <Col md={12}>
-                            <div className="form-group-custom">
-                                <label>Parametrlər</label>
-                                <div className="toggles-container">
-                                    <div className="toggle-item">
-                                        <span className="toggle-label">POS-da gizlət</span>
-                                        <Form.Check
-                                            type="switch"
-                                            id="is_hidden_pos"
-                                            name="is_hidden_pos"
-                                            checked={formData.is_hidden_pos}
-                                            onChange={handleChange}
-                                            className="custom-switch"
-                                        />
-                                    </div>
-                                    <div className="toggle-item">
-                                        <span className="toggle-label">QR-da gizlət</span>
-                                        <Form.Check
-                                            type="switch"
-                                            id="is_hidden_qr"
-                                            name="is_hidden_qr"
-                                            checked={formData.is_hidden_qr}
-                                            onChange={handleChange}
-                                            className="custom-switch"
-                                        />
-                                    </div>
-                                    <div className="toggle-item">
-                                        <span className="toggle-label">Endirim tətbiq olunmasın</span>
-                                        <Form.Check
-                                            type="switch"
-                                            id="no_discount"
-                                            name="no_discount"
-                                            checked={formData.no_discount}
-                                            onChange={handleChange}
-                                            className="custom-switch"
-                                        />
-                                    </div>
-                                    <div className="toggle-item">
-                                        <span className="toggle-label">Servis haqqı tətbiq olunmasın</span>
-                                        <Form.Check
-                                            type="switch"
-                                            id="no_service_fee"
-                                            name="no_service_fee"
-                                            checked={formData.no_service_fee}
-                                            onChange={handleChange}
-                                            className="custom-switch"
-                                        />
+                    {activeTab === 'settings' && (
+                        <Row>
+                            <Col md={12}>
+                                <div className="form-group-custom">
+                                    <label>Parametrlər</label>
+                                    <div className="toggles-container">
+                                        <div className="toggle-item">
+                                            <span className="toggle-label">POS-da gizlət</span>
+                                            <Form.Check
+                                                type="switch"
+                                                id="is_hidden_pos"
+                                                name="is_hidden_pos"
+                                                checked={formData.is_hidden_pos}
+                                                onChange={handleChange}
+                                                className="custom-switch"
+                                            />
+                                        </div>
+                                        <div className="toggle-item">
+                                            <span className="toggle-label">QR-da gizlət</span>
+                                            <Form.Check
+                                                type="switch"
+                                                id="is_hidden_qr"
+                                                name="is_hidden_qr"
+                                                checked={formData.is_hidden_qr}
+                                                onChange={handleChange}
+                                                className="custom-switch"
+                                            />
+                                        </div>
+                                        <div className="toggle-item">
+                                            <span className="toggle-label">Endirim tətbiq olunmasın</span>
+                                            <Form.Check
+                                                type="switch"
+                                                id="no_discount"
+                                                name="no_discount"
+                                                checked={formData.no_discount}
+                                                onChange={handleChange}
+                                                className="custom-switch"
+                                            />
+                                        </div>
+                                        <div className="toggle-item">
+                                            <span className="toggle-label">Servis haqqı tətbiq olunmasın</span>
+                                            <Form.Check
+                                                type="switch"
+                                                id="no_service_fee"
+                                                name="no_service_fee"
+                                                checked={formData.no_service_fee}
+                                                onChange={handleChange}
+                                                className="custom-switch"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </Col>
-                    </Row>
+                            </Col>
+                        </Row>
+                    )}
                 </div>
 
                 <div className="modal-footer-custom">
@@ -317,8 +368,16 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                     </button>
                 </div>
             </form>
-
         </Modal>
+
+        {posKeyboardEnabled && activeInputName && (
+            <VirtualKeyboard
+                onKeyPress={handleKeyboardChange}
+                onBackspace={handleKeyboardBackspace}
+                onClose={() => setActiveInputName(null)}
+            />
+        )}
+        </>
     );
 };
 

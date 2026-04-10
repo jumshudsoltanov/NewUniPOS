@@ -7,14 +7,24 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { updateTags } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 
 const TagModal = ({ show, onClose, order }) => {
   const [tag, setTag] = useState("");
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const [activeInputName, setActiveInputName] = useState(null);
+
+  const posKeyboardEnabled = useMemo(() => {
+    try {
+      return localStorage.getItem("pos_keyboard_enabled") === "1";
+    } catch {
+      return false;
+    }
+  }, [show]);
 
   useEffect(() => {
     if (!show) return;
@@ -36,9 +46,24 @@ const TagModal = ({ show, onClose, order }) => {
     }
   };
 
+  const handleKeyboardChange = (key) => {
+    setTag((prev) => prev + key);
+  };
+
+  const handleKeyboardBackspace = () => {
+    setTag((prev) => prev.slice(0, -1));
+  };
+
   return (
-    <Modal show={show} onHide={onClose} animation={false}>
-      <Modal.Header
+    <>
+      <Modal
+        show={show}
+        onHide={onClose}
+        animation={false}
+        contentClassName="overflow-hidden border-0"
+        style={{ borderRadius: "8px" }}
+      >
+        <Modal.Header
         closeButton
         className="text-white"
         style={{ backgroundColor: "#4F85F4" }}
@@ -50,6 +75,7 @@ const TagModal = ({ show, onClose, order }) => {
           <Form.Control
             aria-label="Dollar amount (with dot and two decimal places)"
             onChange={(e) => setTag(e.target.value)}
+            onFocus={() => setActiveInputName("tag")}
             value={tag ?? ""}
             style={{ border: "1px solid #4F85F4", height: "35px" }}
           />
@@ -64,8 +90,17 @@ const TagModal = ({ show, onClose, order }) => {
         >
           Saxla
         </Button>
-      </Modal.Footer>
-    </Modal>
+        </Modal.Footer>
+      </Modal>
+
+      {posKeyboardEnabled && activeInputName && (
+        <VirtualKeyboard
+          onKeyPress={handleKeyboardChange}
+          onBackspace={handleKeyboardBackspace}
+          onClose={() => setActiveInputName(null)}
+        />
+      )}
+    </>
   );
 };
 

@@ -11,6 +11,7 @@ const KitchenReceipt = ({
     checkData,
     selectedCustomer,
     isDecrease,
+    previewSettings,
 }) => {
     const now = new Date();
     const currentTime = `${now.getFullYear()}-${String(
@@ -76,12 +77,32 @@ const KitchenReceipt = ({
     const cleanTable = String(table).replace(/masa/gi, "").trim();
     const cleanWaiter = String(waiter).replace(/ofisiant/gi, "").trim();
 
-    const baseFont = Number(terminalInfo?.kitchen_receipt || checkData?.kitchen_receipt || 0);
+    let localSettings = {};
+    try {
+        localSettings = JSON.parse(localStorage.getItem("pos_receipt_settings"))?.kitchen || {};
+    } catch(e) {}
+    if (previewSettings) localSettings = previewSettings;
+
+    const baseFont = Number(localSettings.fontSizeOffset !== undefined ? localSettings.fontSizeOffset : (terminalInfo?.kitchen_receipt || checkData?.kitchen_receipt || 0));
     // If baseFont is non-zero, apply a more significant increase (e.g. baseFont * 2)
     const fs = (n) => {
         if (baseFont === 0) return `${n}px`;
         return `${n + (baseFont * 2)}px`;
     };
+
+    const isVisible = (key, defaultVal = true) => {
+        if (localSettings[key] !== undefined) return localSettings[key];
+        return defaultVal;
+    };
+
+    const showWaiter = isVisible("showWaiter", true);
+    const showCheckNumber = isVisible("showCheckNumber", true);
+    const showHallTable = isVisible("showHallTable", true);
+    const showSaleType = isVisible("showSaleType", true);
+    const showCustomer = isVisible("showCustomer", true);
+    const showHeaderDate = isVisible("showHeaderDate", true);
+    const customFooterText = localSettings.footerText !== undefined && localSettings.footerText !== "" ? localSettings.footerText : "Mətbəxə uğurlar!";
+    const fontFamily = localSettings.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace";
 
     const styles = {
         receipt: {
@@ -91,7 +112,7 @@ const KitchenReceipt = ({
             margin: "0 auto",
             maxWidth: "100%",
             background: "#fff",
-            fontFamily: "'Consolas', 'Courier New', 'Lucida Console', monospace",
+            fontFamily: fontFamily,
             fontSize: fs(13),
             color: "#000",
             fontWeight: "700",
@@ -168,25 +189,30 @@ const KitchenReceipt = ({
     return (
         <div style={styles.receipt}>
             {/* HEADER */}
-            <div style={styles.header}>
-                <div style={{ fontSize: fs(13), marginTop: "2px", fontWeight: "900" }}>{currentTime}</div>
-            </div>
-
-            <div style={styles.line}></div>
+            {showHeaderDate && (
+                <div style={styles.header}>
+                    <div style={{ fontSize: fs(13), marginTop: "2px", fontWeight: "900" }}>{currentTime}</div>
+                </div>
+            )}
+            {showHeaderDate && <div style={styles.line}></div>}
 
             {/* ORDER INFO - mərkəzdə */}
             <div style={styles.infoSection}>
-                <div style={styles.infoRow}>
-                    <span style={styles.label}>Ofisiant: </span>
-                    <span style={styles.value}>{cleanWaiter}</span>
-                </div>
+                {showWaiter && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Ofisiant: </span>
+                        <span style={styles.value}>{cleanWaiter}</span>
+                    </div>
+                )}
 
-                <div style={styles.infoRow}>
-                    <span style={styles.label}>Çek №: </span>
-                    <span style={styles.value}>#{displayCheckId}</span>
-                </div>
+                {showCheckNumber && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Çek №: </span>
+                        <span style={styles.value}>#{displayCheckId}</span>
+                    </div>
+                )}
 
-                {hallName && (
+                {showHallTable && hallName && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Satış yeri: </span>
                         <span style={styles.value}>
@@ -196,12 +222,14 @@ const KitchenReceipt = ({
                     </div>
                 )}
 
-                <div style={styles.infoRow}>
-                    <span style={styles.label}>Satış tipi: </span>
-                    <span style={styles.value}>{typeName || "Restoranda"}</span>
-                </div>
+                {showSaleType && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Satış tipi: </span>
+                        <span style={styles.value}>{typeName || "Restoranda"}</span>
+                    </div>
+                )}
 
-                {(selectedCustomer || checkData?.customerName) && (
+                {showCustomer && (selectedCustomer || checkData?.customerName) && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Müştəri: </span>
                         <span style={styles.value}>
@@ -279,7 +307,7 @@ const KitchenReceipt = ({
             <div style={styles.line}></div>
 
             {/* FOOTER */}
-            <div style={styles.footer}>Mətbəxə uğurlar!</div>
+            <div style={styles.footer}>{customFooterText}</div>
         </div>
     );
 };

@@ -12,7 +12,7 @@
     margin: 1.75rem auto;
 }
 
-.modal-content-wrapper {
+.check-delete-modal-wrapper {
     background-color: #fff;
     display: flex;
     flex-direction: column;
@@ -172,7 +172,7 @@
 .reason-item.selected .check-icon-container i { opacity: 1; }
 
 /* ── Footer (waste + save btn) ── */
-.modal-footer-custom {
+.check-delete-modal-footer {
     padding: 15px 20px;
     border-top: 1px solid #f1f5f9;
     background: #fff;
@@ -357,7 +357,7 @@
     .reason-item { padding: 10px 12px; }
     .reason-text { font-size: 13px; }
 
-    .modal-footer-custom { padding: 10px 12px 14px; gap: 8px; }
+    .check-delete-modal-footer { padding: 10px 12px 14px; gap: 8px; }
 
     .check-delete-save-btn { height: 46px; font-size: 14px; }
 

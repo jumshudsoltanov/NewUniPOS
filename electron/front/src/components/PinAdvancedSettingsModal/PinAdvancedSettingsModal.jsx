@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Modal } from "react-bootstrap";
 import { toast } from "sonner";
 import "../DiscountModal/DiscountModal.css";
 import "../SettingsMenu/SettingsMenu.css";
 import "./PinAdvancedSettingsModal.css";
 import apiConfig from "../../utils/apiConfig";
+import CustomerReceipt from "../Receipt/CustomerReceipt";
+import KitchenReceipt from "../Receipt/KitchenReceipt";
 
 const SECRET_PASSWORD = "2507";
 
@@ -59,8 +61,37 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
   const [passwordError, setPasswordError] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 
-  // view: "main" | "whatsapp" | "dbReset" | "updates" | "categoryView"
+  // view: "main" | "whatsapp" | "dbReset" | "updates" | "categoryView" | "receiptDesign"
   const [view, setView] = useState("main");
+
+  // Receipt Design settings
+  const [receiptType, setReceiptType] = useState("customer"); // "customer" | "kitchen"
+  const [receiptSettings, setReceiptSettings] = useState(() => {
+     try {
+       const saved = JSON.parse(localStorage.getItem("pos_receipt_settings"));
+       return saved || {
+         customer: { fontSizeOffset: 0, paperWidth: 80 },
+         kitchen: { fontSizeOffset: 0, paperWidth: 80 }
+       };
+     } catch(e) {
+       return { customer: { fontSizeOffset: 0, paperWidth: 80 }, kitchen: { fontSizeOffset: 0, paperWidth: 80 }};
+     }
+  });
+
+  const previewRef = useRef(null);
+  const [previewHeightPx, setPreviewHeightPx] = useState(0);
+
+  useEffect(() => {
+    if (view === "receiptDesign" && previewRef.current) {
+      const observer = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+           setPreviewHeightPx(entry.contentRect.height);
+        }
+      });
+      observer.observe(previewRef.current);
+      return () => observer.disconnect();
+    }
+  }, [view, receiptType, receiptSettings]);
 
   // Category view settings
   const [cardsPerRow, setCardsPerRow] = useState(
@@ -110,6 +141,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       setCardsPerRow(parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10));
       setCardFontSize(parseFloat(localStorage.getItem("pos_card_font_size") || "0.8"));
       setProductViewMode(localStorage.getItem("pos_product_view_mode") || "card");
+      try {
+        const savedReceipt = JSON.parse(localStorage.getItem("pos_receipt_settings"));
+        if (savedReceipt) setReceiptSettings(savedReceipt);
+      } catch(e) {}
     }
   }, [show]);
 
@@ -290,11 +325,52 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
     setView("main");
   };
 
+  const handleSaveReceiptDesign = () => {
+     localStorage.setItem("pos_receipt_settings", JSON.stringify(receiptSettings));
+     toast.success("Çek dizayn ayarları saxlanıldı");
+     setView("main");
+  };
+
+  const updateReceiptSetting = (type, key, val) => {
+      setReceiptSettings(prev => ({
+          ...prev,
+          [type]: {
+              ...prev[type],
+              [key]: val
+          }
+      }));
+  };
+
+  const mockCustomerProps = {
+      profileData: { data: { profile: { restaurant_name: "Nümunə Restoran", address: "Bakı ş., Nümunə küç.", phone: "0123456789" }, terminal: { qr_on_check: 0 } } },
+      checkData: { id: "1024", customerName: "Əli Əliyev", startDate: new Date().toISOString(), endDate: new Date().toISOString(), waiter_name: "Zaur", guest_count: 2, sale_type_name: "Restoranda" },
+      hallName: "Zal 1",
+      tableName: "Masa 5",
+      orderedItems: [
+          { name: "Mərci Şorbası", quantity: 2, price: 4, modifiers: [] },
+          { name: "Lülə Kabab", quantity: 1, price: 10, modifiers: [] },
+          { name: "Kola 0.3", quantity: 2, price: 2, modifiers: [] }
+      ]
+  };
+
+  const mockKitchenProps = {
+      checkData: { id: "1024", customerName: "Əli Əliyev" },
+      waiter: "Zaur",
+      hallName: "Zal 1",
+      table: "Masa 5",
+      typeName: "Restoranda",
+      orderedItems: [
+          { name: "Mərci Şorbası", quantity: 2 },
+          { name: "Lülə Kabab", quantity: 1 }
+      ]
+  };
+
   const headerTitle =
     view === "whatsapp" ? "WhatsApp mesajları" :
     view === "dbReset" ? "Databaseni sıfırla" :
     view === "updates" ? "Yeniləmələr" :
-    view === "categoryView" ? "Kateqoriya görünüşü" : "Ayarlar";
+    view === "categoryView" ? "Kateqoriya görünüşü" :
+    view === "receiptDesign" ? "Çek dizaynı" : "Ayarlar";
 
   return (
     <Modal
@@ -302,7 +378,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       onHide={handleModalHide}
       centered
       animation={false}
-      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" ? " pin-advanced-catview-wide" : ""}`}
+      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" ? " pin-advanced-catview-wide" : ""}${view === "receiptDesign" ? " pin-advanced-receipt-wide" : ""}`}
       contentClassName="custom-modal-content"
     >
       <div className="discount-modal-container">
@@ -322,6 +398,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
                   <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+              ) : view === "receiptDesign" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -559,10 +639,155 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
             </div>
           </div>
 
+        ) : view === "receiptDesign" ? (
+           <div className="discount-body pin-adv-receiptdesign-body" style={{ display: 'flex', gap: '20px', flexDirection: 'row', height: '68vh', minHeight: '500px' }}>
+              <div className="receipt-settings-panel" style={{ flex: '0 0 350px', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingRight: '5px' }}>
+                  <div className="pin-invisible-scroll" style={{ flex: 1, overflowY: 'auto', paddingRight: '5px' }}>
+                      <div className="pin-adv-viewmode-btns" style={{ marginBottom: "15px" }}>
+                      <button
+                         type="button"
+                         className={`pin-adv-viewmode-btn ${receiptType === "customer" ? "active" : ""}`}
+                         onClick={() => setReceiptType("customer")}
+                         style={{ flex: 1, justifyContent: "center" }}
+                      >
+                          Müştəri Çeki
+                      </button>
+                      <button
+                         type="button"
+                         className={`pin-adv-viewmode-btn ${receiptType === "kitchen" ? "active" : ""}`}
+                         onClick={() => setReceiptType("kitchen")}
+                         style={{ flex: 1, justifyContent: "center" }}
+                      >
+                          Mətbəx Çeki
+                      </button>
+                  </div>
+                  
+                  <div className="pin-adv-catview-section" style={{ padding: '10px', background: '#f5f7fa', borderRadius: '8px', marginBottom: '15px' }}>
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px' }}>Kağızın Eni</span>
+                      <div className="pin-adv-viewmode-btns" style={{ marginBottom: "15px", height: '36px' }}>
+                          <button
+                             type="button"
+                             className={`pin-adv-viewmode-btn ${(receiptSettings[receiptType]?.paperWidth || 80) === 80 ? "active" : ""}`}
+                             onClick={() => updateReceiptSetting(receiptType, "paperWidth", 80)}
+                             style={{ flex: 1, height: '100%', fontSize: '13px' }}
+                          >
+                              80mm
+                          </button>
+                          <button
+                             type="button"
+                             className={`pin-adv-viewmode-btn ${(receiptSettings[receiptType]?.paperWidth || 80) === 58 ? "active" : ""}`}
+                             onClick={() => updateReceiptSetting(receiptType, "paperWidth", 58)}
+                             style={{ flex: 1, height: '100%', fontSize: '13px' }}
+                          >
+                              58mm
+                          </button>
+                      </div>
+
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px' }}>Şrift Ölçüsü Tənzimləyici ({receiptSettings[receiptType]?.fontSizeOffset || 0})</span>
+                      <input
+                          type="range"
+                          min="-5"
+                          max="5"
+                          step="1"
+                          value={receiptSettings[receiptType]?.fontSizeOffset || 0}
+                          onChange={e => updateReceiptSetting(receiptType, "fontSizeOffset", parseInt(e.target.value))}
+                          className="pin-adv-font-slider"
+                          style={{ marginBottom: '15px' }}
+                      />
+
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>Şrift Ailəsi</span>
+                      <select
+                          value={receiptSettings[receiptType]?.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace"}
+                          onChange={e => updateReceiptSetting(receiptType, "fontFamily", e.target.value)}
+                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e7eb', marginBottom: '15px', fontSize: '13px' }}
+                      >
+                          <option value="'Consolas', 'Courier New', 'Lucida Console', monospace">Monospace (Klassik Çek)</option>
+                          <option value="'Arial', 'Helvetica', sans-serif">Sans-serif (Müasir)</option>
+                          <option value="'Times New Roman', 'Georgia', serif">Serif (Rəsmi)</option>
+                          <option value="'Roboto', sans-serif">Roboto</option>
+                      </select>
+
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>Alt Yazı (Footer)</span>
+                      <input
+                          type="text"
+                          value={receiptSettings[receiptType]?.footerText ?? ""}
+                          placeholder={receiptType === "customer" ? "Təşəkkür edirik!" : "Mətbəxə uğurlar!"}
+                          onChange={e => updateReceiptSetting(receiptType, "footerText", e.target.value)}
+                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px' }}
+                      />
+                  </div>
+
+                  <div className="pin-adv-catview-label" style={{ marginTop: '10px', marginBottom: '10px' }}>Məlumatların Görünüşü</div>
+                  
+                  {receiptType === "customer" ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                         {[
+                            { key: 'showLogo', label: 'Loqo' },
+                            { key: 'showAddress', label: 'Ünvan' },
+                            { key: 'showPhone', label: 'Əlaqə nömrəsi' },
+                            { key: 'showCheckNumber', label: 'Çek Nömrəsi' },
+                            { key: 'showCustomer', label: 'Müştəri Adı' },
+                            { key: 'showHallTable', label: 'Zal/Masa' },
+                            { key: 'showDates', label: 'Açılma/Bağlanma Tarixi' },
+                            { key: 'showPrintDate', label: 'Çap Tarixi' },
+                            { key: 'showWaiter', label: 'Ofisiant' },
+                            { key: 'showGuestCount', label: 'Qonaq Sayı' },
+                            { key: 'showSaleType', label: 'Satış Tipi' },
+                            { key: 'showQrCode', label: 'QR Kod' },
+                         ].map(opt => (
+                            <div key={opt.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                               <span style={{ fontSize: '14px', fontWeight: '500', color: '#444' }}>{opt.label}</span>
+                               <div className={`wa-toggle ${(receiptSettings.customer[opt.key] ?? true) ? 'wa-toggle-on' : ''}`} onClick={() => updateReceiptSetting('customer', opt.key, !(receiptSettings.customer[opt.key] ?? true))} style={{ cursor: 'pointer', pointerEvents: 'auto' }}>
+                                  <div className="wa-toggle-thumb" />
+                               </div>
+                            </div>
+                         ))}
+                      </div>
+                  ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                         {[
+                            { key: 'showWaiter', label: 'Ofisiant' },
+                            { key: 'showCheckNumber', label: 'Çek Nömrəsi' },
+                            { key: 'showHallTable', label: 'Zal/Masa' },
+                            { key: 'showSaleType', label: 'Satış Tipi' },
+                            { key: 'showCustomer', label: 'Müştəri Adı' },
+                            { key: 'showHeaderDate', label: 'Çap Tarixi' },
+                         ].map(opt => (
+                             <div key={opt.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                               <span style={{ fontSize: '14px', fontWeight: '500', color: '#444' }}>{opt.label}</span>
+                               <div className={`wa-toggle ${(receiptSettings.kitchen[opt.key] ?? true) ? 'wa-toggle-on' : ''}`} onClick={() => updateReceiptSetting('kitchen', opt.key, !(receiptSettings.kitchen[opt.key] ?? true))} style={{ cursor: 'pointer', pointerEvents: 'auto' }}>
+                                  <div className="wa-toggle-thumb" />
+                               </div>
+                            </div>
+                         ))}
+                      </div>
+                  )}
+                  </div>
+
+                  <div className="wa-settings-actions" style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #e5e7eb", flexShrink: 0 }}>
+                     <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+                     <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveReceiptDesign}>Yadda saxla</button>
+                  </div>
+              </div>
+
+              <div className="receipt-preview-panel pin-invisible-scroll" style={{ flex: 1, border: '1px solid #ddd', borderRadius: '8px', padding: '20px', backgroundColor: '#e9ecef', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
+                 <div style={{ padding: '8px 12px', background: '#053796', color: '#fff', borderRadius: '6px', fontSize: '13px', fontWeight: '600', marginBottom: '15px' }}>
+                     Cari Çek Ölçüsü: {(receiptSettings[receiptType]?.paperWidth || 80) === 80 ? '80mm' : '58mm'} ⨉ Təxmini {previewHeightPx ? (((previewHeightPx / ((receiptSettings[receiptType]?.paperWidth || 80) === 80 ? 310 : 210)) * (receiptSettings[receiptType]?.paperWidth || 80)) / 10).toFixed(1) : 0} cm
+                 </div>
+                 <div ref={previewRef} style={{ width: (receiptSettings[receiptType]?.paperWidth || 80) === 80 ? '310px' : '220px', minHeight: 'min-content', backgroundColor: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', padding: '20px 10px', transition: 'width 0.3s ease, margin 0.3s ease', borderRadius: '4px', marginBottom: '20px' }}>
+                    {receiptType === "customer" ? (
+                       <CustomerReceipt {...mockCustomerProps} previewSettings={receiptSettings.customer} />
+                    ) : (
+                       <KitchenReceipt {...mockKitchenProps} previewSettings={receiptSettings.kitchen} />
+                    )}
+                 </div>
+              </div>
+           </div>
+
         ) : (
           /* ── Əsas menyu ── */
           <div className="discount-body pin-advanced-settings-body">
-            <div className="settings-menu-items pin-advanced-settings-items">
+            <div className="settings-menu-items pin-advanced-settings-items pin-invisible-scroll" style={{ maxHeight: '280px', overflowY: 'auto', paddingRight: '0' }}>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("categoryView")}>
                 <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
@@ -582,6 +807,15 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                   </svg>
                 </span>
                 <span className="settings-menu-item-label">Yeniləmələr</span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={() => setView("receiptDesign")}>
+                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Çek dizaynı</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => { setView("whatsapp"); loadWhatsappSettings(); }}>
