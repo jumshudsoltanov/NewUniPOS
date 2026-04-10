@@ -526,7 +526,7 @@ const Menu = ({
       ) : (
         /* ═══ CARD VIEW (default) ═══ */
         <Row
-          className="g-2 px-2 menu-scroll-row"
+          className="g-1 px-1 menu-scroll-row"
           style={{ flex: 1, alignContent: "flex-start", overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", scrollbarColor: "#c1d0e8 transparent" }}
         >
           {itemsToRender
@@ -557,7 +557,7 @@ const Menu = ({
               return (
                 <Col
                   key={item.id ?? index}
-                  style={{ flex: `0 0 ${100 / cardsPerRow}%`, maxWidth: `${100 / cardsPerRow}%`, padding: '6px' }}
+                  style={{ flex: `0 0 ${100 / cardsPerRow}%`, maxWidth: `${100 / cardsPerRow}%`, padding: '3px' }}
                   className="category-col-dynamic"
                 >
                   <div
