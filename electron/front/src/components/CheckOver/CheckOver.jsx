@@ -15,6 +15,7 @@ import axios from "axios";
 import apiConfig, { getSocket, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
 import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
+import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 
 const CheckOver = () => {
