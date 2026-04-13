@@ -89,12 +89,16 @@ const CustomerReceipt = ({
     const showSaleType = isVisible("showSaleType", true);
     const customFooterText = localSettings.footerText !== undefined && localSettings.footerText !== "" ? localSettings.footerText : "Təşəkkür edirik!";
     const fontFamily = localSettings.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace";
+    const padTop = localSettings.paddingTop ?? 0;
+    const padBottom = localSettings.paddingBottom ?? 0;
+    const padLeft = localSettings.paddingLeft ?? 0;
+    const padRight = localSettings.paddingRight ?? 0;
 
     const styles = {
         receipt: {
             width: "100%",
             boxSizing: "border-box",
-            padding: "0 2px",
+            padding: `${padTop}px ${2 + padRight}px ${padBottom}px ${2 + padLeft}px`,
             margin: "0",
             background: "#fff",
             fontFamily: fontFamily,

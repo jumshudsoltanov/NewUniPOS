@@ -713,8 +713,30 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                           value={receiptSettings[receiptType]?.footerText ?? ""}
                           placeholder={receiptType === "customer" ? "Təşəkkür edirik!" : "Mətbəxə uğurlar!"}
                           onChange={e => updateReceiptSetting(receiptType, "footerText", e.target.value)}
-                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px' }}
+                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px', marginBottom: '15px' }}
                       />
+
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>Kənar Boşluqlar (px)</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          {[
+                              { key: 'paddingTop', label: 'Üstdən ↑' },
+                              { key: 'paddingBottom', label: 'Altdan ↓' },
+                              { key: 'paddingLeft', label: 'Soldan ←' },
+                              { key: 'paddingRight', label: 'Sağdan →' },
+                          ].map(({ key, label }) => (
+                              <div key={key}>
+                                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '3px' }}>{label}</div>
+                                  <input
+                                      type="number"
+                                      min="0"
+                                      max="60"
+                                      value={receiptSettings[receiptType]?.[key] ?? 0}
+                                      onChange={e => updateReceiptSetting(receiptType, key, parseInt(e.target.value) || 0)}
+                                      style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px', textAlign: 'center' }}
+                                  />
+                              </div>
+                          ))}
+                      </div>
                   </div>
 
                   <div className="pin-adv-catview-label" style={{ marginTop: '10px', marginBottom: '10px' }}>Məlumatların Görünüşü</div>

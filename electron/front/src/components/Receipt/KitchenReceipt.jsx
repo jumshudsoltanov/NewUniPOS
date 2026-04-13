@@ -103,12 +103,16 @@ const KitchenReceipt = ({
     const showHeaderDate = isVisible("showHeaderDate", true);
     const customFooterText = localSettings.footerText !== undefined && localSettings.footerText !== "" ? localSettings.footerText : "Mətbəxə uğurlar!";
     const fontFamily = localSettings.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace";
+    const padTop = localSettings.paddingTop ?? 0;
+    const padBottom = localSettings.paddingBottom ?? 0;
+    const padLeft = localSettings.paddingLeft ?? 0;
+    const padRight = localSettings.paddingRight ?? 0;
 
     const styles = {
         receipt: {
             width: "100%",
             boxSizing: "border-box",
-            padding: "0 12px",
+            padding: `${padTop}px ${12 + padRight}px ${padBottom}px ${12 + padLeft}px`,
             margin: "0 auto",
             maxWidth: "100%",
             background: "#fff",
