@@ -223,9 +223,18 @@ const ReportModal = ({ show, onClose }) => {
         setReportResults(null);
         setReportSummary(null);
         try {
-            const summaryRes = await axios.get(`/reports/${profileId}/data`, {
-                params: { startDate, startTime, endDate, endTime, terminal, reportType: 'simple', showTransactions }
-            });
+            const baseParams = { startDate, startTime, endDate, endTime, terminal, showTransactions };
+
+            const requests = [
+                axios.get(`/reports/${profileId}/data`, { params: { ...baseParams, reportType: 'simple' } })
+            ];
+            if (reportType !== "simple") {
+                requests.push(
+                    axios.get(`/reports/${profileId}/data`, { params: { ...baseParams, reportType } })
+                );
+            }
+
+            const [summaryRes, detailRes] = await Promise.all(requests);
 
             const rawSummary =
                 summaryRes.data?.status === "success" && summaryRes.data.data != null
@@ -237,12 +246,8 @@ const ReportModal = ({ show, onClose }) => {
             }
 
             if (reportType !== "simple") {
-                const response = await axios.get(`/reports/${profileId}/data`, {
-                    params: { startDate, startTime, endDate, endTime, terminal, reportType, showTransactions }
-                });
-
-                if (response.data?.status === "success") {
-                    const detailData = response.data.data;
+                if (detailRes?.data?.status === "success") {
+                    const detailData = detailRes.data.data;
                     setReportResults({
                         type: reportType,
                         data: detailData != null ? detailData : []

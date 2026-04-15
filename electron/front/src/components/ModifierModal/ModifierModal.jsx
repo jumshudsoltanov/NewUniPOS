@@ -20,10 +20,15 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
     };
 
     const getModifierGroups = (prod) => {
-        if (!prod?.modifier_groups) return [];
-        if (Array.isArray(prod.modifier_groups)) return prod.modifier_groups;
-        if (typeof prod.modifier_groups === 'string') {
-            try { return JSON.parse(prod.modifier_groups) || []; } catch { return []; }
+        const groups = prod?.modifier_groups;
+        if (!groups) return [];
+        if (Array.isArray(groups)) return groups;
+        if (typeof groups === 'string') {
+            try { return JSON.parse(groups) || []; } catch { return []; }
+        }
+        if (typeof groups === 'object') {
+            // Some drivers return JSON as object. If it has values, return them as array.
+            return Object.values(groups);
         }
         return [];
     };
@@ -116,7 +121,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
 
             getModifierGroups(product).forEach(group => {
                 const groupSel = selections[group.id] || {};
-                group.items.forEach(item => {
+                (group.items || []).forEach(item => {
                     const qty = groupSel[item.id];
                     if (qty && qty > 0) {
                         formattedModifiers.push({
@@ -148,7 +153,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
         let total = parseFloat(product?.price || 0);
         getModifierGroups(product).forEach(group => {
             const groupSel = selections[group.id] || {};
-            group.items.forEach(item => {
+            (group.items || []).forEach(item => {
                 const qty = groupSel[item.id] || 0;
                 total += qty * parseFloat(item.price || 0);
             });
@@ -190,7 +195,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm }) => {
             </div>
 
             <Modal.Body className="modifier-modal-body">
-                {getModifierGroups(product).map(rawGroup => {
+                {(getModifierGroups(product) || []).map(rawGroup => {
                     const group = normalizeGroup(rawGroup);
                     const hasError = errors.includes(group.id);
                     return (

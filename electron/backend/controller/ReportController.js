@@ -97,77 +97,92 @@ const getReportData = async (req, res) => {
 };
 
 const getSimpleReport = async (profileId, baseWhere, start, end, showTransactions) => {
-    const profile = await LoginModel.findOne({ where: { id: profileId } });
-    const taxPercent = parseFloat(profile?.tax_percent || 0);
-    // 1. Fetch Closed Orders (sales)
-    const closedOrders = await OrdersModel.findAll({
-        where: {
-            ...baseWhere,
-            status: 2,
-            end_date: { [Op.between]: [start, end] }
-        },
-        include: [
-            {
-                model: OrderPaymentsModel,
-                as: 'order_payments',
-                required: false,
-                include: [
-                    { model: PaymentMethodsModel, as: 'payment_method', required: false },
-                    { model: require("../model/TagsModel"), as: 'tag', required: false }
-                ]
+    const TagsModel = require("../model/TagsModel");
+    const [profile, closedOrders, returnedOrders, deletedOrders, deletedItems, openOrders] = await Promise.all([
+        // 0. Profile (tax percent)
+        LoginModel.findOne({ where: { id: profileId }, attributes: ['id', 'tax_percent'] }),
+
+        // 1. Fetch Closed Orders — only gift items loaded (not all items)
+        OrdersModel.findAll({
+            where: {
+                ...baseWhere,
+                status: 2,
+                end_date: { [Op.between]: [start, end] }
             },
-            {
-                model: OrdersItemsModel,
-                as: 'orders_items',
-                include: [{ model: ProductsModel, as: 'product', required: false }]
-            }
-        ]
-    });
+            attributes: ['id', 'total', 'amount', 'rate_per_minute', 'discount', 'service_charge', 'guest_count', 'is_tax', 'tags'],
+            include: [
+                {
+                    model: OrderPaymentsModel,
+                    as: 'order_payments',
+                    required: false,
+                    attributes: ['id', 'paid', 'name', 'without_payment_method_id'],
+                    include: [
+                        { model: PaymentMethodsModel, as: 'payment_method', required: false, attributes: ['name'] },
+                        { model: TagsModel, as: 'tag', required: false, attributes: ['name'] }
+                    ]
+                },
+                {
+                    model: OrdersItemsModel,
+                    as: 'orders_items',
+                    where: { is_gift: 1 },
+                    required: false,
+                    attributes: ['count', 'price', 'original_price', 'modifiers', 'is_gift'],
+                    include: [{ model: ProductsModel, as: 'product', required: false, attributes: ['price'] }]
+                }
+            ]
+        }),
 
-    // 2. Fetch Returned Orders separately
-    const returnedOrders = await OrdersModel.findAll({
-        where: {
-            ...baseWhere,
-            status: 3,
-            is_return: 1,
-            updated_at: { [Op.between]: [start, end] }
-        },
-        include: [{ model: require("../model/TagsModel"), as: 'delete_reason' }],
-        paranoid: false
-    });
+        // 2. Fetch Returned Orders separately
+        OrdersModel.findAll({
+            where: {
+                ...baseWhere,
+                status: 3,
+                is_return: 1,
+                updated_at: { [Op.between]: [start, end] }
+            },
+            attributes: ['id', 'total', 'amount', 'tags'],
+            include: [{ model: TagsModel, as: 'delete_reason', attributes: ['name'] }],
+            paranoid: false
+        }),
 
-    // 3. Fetch Deleted Orders
-    const deletedOrders = await OrdersModel.findAll({
-        where: {
-            ...baseWhere,
-            status: 3,
-            is_delete_reason_id: { [Op.not]: null },
-            [Op.or]: [{ is_return: null }, { is_return: 0 }],
-            updated_at: { [Op.between]: [start, end] }
-        },
-        include: [{ model: require("../model/TagsModel"), as: 'delete_reason' }],
-        paranoid: false
-    });
+        // 3. Fetch Deleted Orders
+        OrdersModel.findAll({
+            where: {
+                ...baseWhere,
+                status: 3,
+                is_delete_reason_id: { [Op.not]: null },
+                [Op.or]: [{ is_return: null }, { is_return: 0 }],
+                updated_at: { [Op.between]: [start, end] }
+            },
+            attributes: ['id', 'total', 'amount', 'tags'],
+            include: [{ model: TagsModel, as: 'delete_reason', attributes: ['name'] }],
+            paranoid: false
+        }),
 
-    // 4. Fetch Deleted Items (Soft-deleted)
-    const deletedItems = await OrdersItemsModel.findAll({
-        where: {
-            profile_id: profileId,
-            deleted_at: { [Op.between]: [start, end] },
-            is_delete_reason_id: { [Op.not]: null }
-        },
-        include: [{ model: require("../model/TagsModel"), as: 'delete_reason' }],
-        paranoid: false // Include soft-deleted
-    });
+        // 4. Fetch Deleted Items (Soft-deleted)
+        OrdersItemsModel.findAll({
+            where: {
+                profile_id: profileId,
+                deleted_at: { [Op.between]: [start, end] },
+                is_delete_reason_id: { [Op.not]: null }
+            },
+            attributes: ['count', 'price'],
+            include: [{ model: TagsModel, as: 'delete_reason', attributes: ['name'] }],
+            paranoid: false
+        }),
 
-    // 5. Fetch Open Orders
-    const openOrders = await OrdersModel.findAll({
-        where: {
-            ...baseWhere,
-            status: 1,
-            start_date: { [Op.between]: [start, end] }
-        }
-    });
+        // 5. Fetch Open Orders
+        OrdersModel.findAll({
+            where: {
+                ...baseWhere,
+                status: 1,
+                start_date: { [Op.between]: [start, end] }
+            },
+            attributes: ['id', 'total']
+        })
+    ]);
+
+    const taxPercent = parseFloat(profile?.tax_percent || 0);
 
     let summary = {
         total_amount: 0,
@@ -363,10 +378,12 @@ const lineItemTotalForReport = (item) => {
 const getProductsReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
         where: whereClause,
+        attributes: ['id'],
         include: [{
             model: OrdersItemsModel,
             as: 'orders_items',
-            include: [{ model: ProductsModel, as: 'product' }]
+            attributes: ['product_id', 'count', 'price', 'original_price', 'modifiers', 'is_gift'],
+            include: [{ model: ProductsModel, as: 'product', attributes: ['id', 'name'] }]
         }]
     });
 
@@ -414,6 +431,7 @@ const getProductsReport = async (whereClause) => {
 const getEmployeeReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
         where: whereClause,
+        attributes: ['id', 'total'],
         include: [{ model: WaitersModel, as: 'waiter', attributes: ['name'] }]
     });
 
@@ -438,13 +456,16 @@ const getEmployeeReport = async (whereClause) => {
 const getCategoryReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
         where: whereClause,
+        attributes: ['id'],
         include: [{
             model: OrdersItemsModel,
             as: 'orders_items',
+            attributes: ['product_id', 'count', 'price', 'modifiers', 'name'],
             include: [{
                 model: ProductsModel,
                 as: 'product',
-                include: [{ model: CategoriesModel, as: 'category' }]
+                attributes: ['id', 'name'],
+                include: [{ model: CategoriesModel, as: 'category', attributes: ['name'] }]
             }]
         }]
     });
@@ -545,10 +566,12 @@ const getChecksReport = async (whereClause, showTransactions) => {
 const getHallReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
         where: whereClause,
+        attributes: ['id', 'total', 'sale_type'],
         include: [{
             model: TablesModel,
             as: 'table',
-            include: [{ model: TableGroupsModel, as: 'hall' }]
+            attributes: ['id', 'name'],
+            include: [{ model: TableGroupsModel, as: 'hall', attributes: ['name'] }]
         }]
     });
 
@@ -579,7 +602,8 @@ const getHallReport = async (whereClause) => {
 const getTablesReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
         where: whereClause,
-        include: [{ model: TablesModel, as: 'table' }]
+        attributes: ['id', 'total', 'rate_per_minute'],
+        include: [{ model: TablesModel, as: 'table', attributes: ['name'] }]
     });
 
     let tableMap = {};
@@ -609,7 +633,8 @@ const getTablesReport = async (whereClause) => {
 
 const getSaleMethodReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
-        where: whereClause
+        where: whereClause,
+        attributes: ['id', 'total', 'sale_type']
     });
 
     let methodMap = {
@@ -647,19 +672,22 @@ const getRefundsReport = async (baseWhere, start, end) => {
 };
 
 const getFinancialReport = async (baseWhere, start, end) => {
+    const TagsModel = require("../model/TagsModel");
     const orders = await OrdersModel.findAll({
         where: {
             ...baseWhere,
             status: 2,
             end_date: { [Op.between]: [start, end] }
         },
+        attributes: ['id'],
         include: [{
             model: OrderPaymentsModel,
             as: 'order_payments',
             required: false,
+            attributes: ['id', 'paid', 'name', 'without_payment_method_id'],
             include: [
-                { model: PaymentMethodsModel, as: 'payment_method', required: false },
-                { model: require("../model/TagsModel"), as: 'tag', required: false }
+                { model: PaymentMethodsModel, as: 'payment_method', required: false, attributes: ['name'] },
+                { model: TagsModel, as: 'tag', required: false, attributes: ['name'] }
             ]
         }]
     });
@@ -693,11 +721,13 @@ const getFinancialReport = async (baseWhere, start, end) => {
 const getGiftedProductsReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
         where: whereClause,
+        attributes: ['id', 'end_date'],
         include: [{
             model: OrdersItemsModel,
             as: 'orders_items',
             where: { is_gift: 1 },
-            include: [{ model: ProductsModel, as: 'product' }]
+            attributes: ['count'],
+            include: [{ model: ProductsModel, as: 'product', attributes: ['name'] }]
         }]
     });
 
@@ -720,7 +750,8 @@ const getGiftedProductsReport = async (whereClause) => {
 
 const getCustomersReport = async (whereClause) => {
     const orders = await OrdersModel.findAll({
-        where: whereClause
+        where: whereClause,
+        attributes: ['id', 'total', 'customer_id']
     });
 
     let customerMap = {};
