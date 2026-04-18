@@ -1093,17 +1093,23 @@ ipcMain.handle(
       const wrapInfo = await rasterWindow.webContents.executeJavaScript(`
         (function() {
           var wrap = document.getElementById('zoom-wrap');
+          var outer = document.getElementById('zoom-outer');
           var rect = wrap.getBoundingClientRect();
-          return { height: Math.ceil(rect.height), raw: wrap.scrollHeight };
+          var zoomed = Math.ceil(rect.height);
+          // outer-ın hündürlüyünü vizual hündürlüyə bərabər et ki capturePage kəsməsin
+          outer.style.height = (zoomed + 60) + 'px';
+          document.body.style.height = (zoomed + 60) + 'px';
+          document.documentElement.style.height = (zoomed + 60) + 'px';
+          return { height: zoomed, raw: wrap.scrollHeight };
         })();
       `);
 
       console.log(`[RASTER] H-Detect: LogicH=${wrapInfo.raw}, VisualH=${wrapInfo.height}`);
-      
+
       // Hündürlük tənzimlənməsi
-      const captureH = wrapInfo.height + 20; 
-      rasterWindow.setContentSize(receiptWidthPx, captureH + 10);
-      await new Promise(r => setTimeout(r, 300));
+      const captureH = wrapInfo.height + 60;
+      rasterWindow.setContentSize(receiptWidthPx, captureH);
+      await new Promise(r => setTimeout(r, 400));
 
       const capturedImage = await rasterWindow.webContents.capturePage();
       if (!rasterWindow.isDestroyed()) rasterWindow.close();
@@ -1304,8 +1310,8 @@ ipcMain.handle(
     <meta charset="utf-8">
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      html, body { margin: 0; padding: 0; background: #fff; width: ${driverContentPx}px; overflow: hidden; font-family: ${fontFamilyDriver}, sans-serif; color: #000; }
-      #driver-outer { width: ${driverContentPx}px; overflow: hidden; }
+      html, body { margin: 0; padding: 0; background: #fff; width: ${driverContentPx}px; font-family: ${fontFamilyDriver}, sans-serif; color: #000; }
+      #driver-outer { width: ${driverContentPx}px; }
       #driver-wrap { width: ${contentBaseWidth}px; transform-origin: top left; transform: scale(${driverScale.toFixed(6)}); }
       .receipt-cut-buffer { height: 10mm; }
       ${logoStyleD}
@@ -1342,11 +1348,15 @@ ipcMain.handle(
 
       const contentHeight = await printWindow.webContents.executeJavaScript(`
       const wrapEl = document.getElementById('driver-wrap');
+      const outerEl = document.getElementById('driver-outer');
       const rawH = wrapEl ? wrapEl.scrollHeight : document.body.scrollHeight;
       const scaledH = Math.ceil(rawH * ${driverScale.toFixed(6)});
       const bufEl = document.querySelector('.receipt-cut-buffer');
       const bufH = bufEl ? bufEl.offsetHeight : 0;
-      const hmm = Math.ceil((scaledH + bufH) * 25.4 / 96) + 10;
+      // outer-ın hündürlüyünü vizual hündürlüyə bərabər et ki kəsilməsin
+      if (outerEl) outerEl.style.height = (scaledH + bufH + 40) + 'px';
+      document.body.style.minHeight = (scaledH + bufH + 40) + 'px';
+      const hmm = Math.ceil((scaledH + bufH) * 25.4 / 96) + 15;
       const s = document.createElement('style');
       s.textContent = '@page { size: ${pageWidthMm}mm ' + hmm + 'mm; margin: 0; }';
       document.head.appendChild(s);

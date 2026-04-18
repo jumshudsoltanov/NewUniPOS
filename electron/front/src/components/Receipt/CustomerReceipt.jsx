@@ -135,20 +135,22 @@ const CustomerReceipt = ({
             fontSize: fs(11),
         },
         colName: {
-            width: "125px", // STRICT 125px out of 300px
+            flex: 1,
             whiteSpace: "normal",
             wordWrap: "break-word",
             wordBreak: "break-word",
             lineHeight: "1.3",
-            paddingRight: "4px"
+            paddingRight: "4px",
+            minWidth: 0,
         },
-        colQty: { width: "35px", textAlign: "center", fontWeight: "900", whiteSpace: "nowrap" },
-        colPrice: { width: "65px", textAlign: "right", fontWeight: "900", paddingRight: "4px", whiteSpace: "nowrap" },
+        colQty: { width: "30px", textAlign: "center", fontWeight: "900", whiteSpace: "nowrap", flexShrink: 0 },
+        colPrice: { width: "55px", textAlign: "right", fontWeight: "900", paddingRight: "4px", whiteSpace: "nowrap", flexShrink: 0 },
         colTotal: {
-            width: "75px",
+            width: "65px",
             textAlign: "right",
             fontWeight: "900",
             whiteSpace: "nowrap",
+            flexShrink: 0,
         },
         itemRow: {
             display: "flex",

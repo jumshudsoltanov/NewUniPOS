@@ -549,12 +549,14 @@ const Check = () => {
 
         const combinedForPrinting = [...productsWithComments];
 
-        // Scan for modifiers that have their own designated printers
+        // Scan for modifiers that have their own designated printers or category printers
         const standaloneModifiers = [];
         productsWithComments.forEach(p => {
           if (p.modifiers && Array.isArray(p.modifiers)) {
             p.modifiers.forEach(mod => {
-              if (mod.printer_details && mod.printer_details.length > 0) {
+              const hasOwnPrinter = mod.printer_details && mod.printer_details.length > 0;
+              const hasCategoryPrinter = !!mod.category_id;
+              if (hasOwnPrinter || hasCategoryPrinter) {
                 standaloneModifiers.push({
                   ...mod,
                   product_name: mod.name,

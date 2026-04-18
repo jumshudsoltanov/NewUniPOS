@@ -1,5 +1,4 @@
 import React from "react";
-import QRCode from "react-qr-code";
 
 const KitchenReceipt = ({
     orderedItems = [],
@@ -85,11 +84,7 @@ const KitchenReceipt = ({
     if (previewSettings) localSettings = previewSettings;
 
     const baseFont = Number(localSettings.fontSizeOffset !== undefined ? localSettings.fontSizeOffset : (terminalInfo?.kitchen_receipt || checkData?.kitchen_receipt || 0));
-    // If baseFont is non-zero, apply a more significant increase (e.g. baseFont * 2)
-    const fs = (n) => {
-        if (baseFont === 0) return `${n}px`;
-        return `${n + (baseFont * 2)}px`;
-    };
+    const fs = (n) => `${n + baseFont}px`;
 
     const isVisible = (key, defaultVal = true) => {
         if (localSettings[key] !== undefined) return localSettings[key];
@@ -314,14 +309,6 @@ const KitchenReceipt = ({
             {/* FOOTER */}
             <div style={styles.footer}>{customFooterText}</div>
 
-            {/* QR CODE - Mətbəx çekində orijinal drayverdə olduğu üçün əlavə edildi */}
-            {orderId && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px', paddingBottom: '10px' }}>
-                    <div style={{ background: 'white', padding: '5px' }}>
-                        <QRCode value={String(orderId)} size={60} level="M" />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
