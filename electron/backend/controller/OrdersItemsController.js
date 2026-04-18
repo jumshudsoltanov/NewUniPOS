@@ -25,7 +25,9 @@ const sendWasteToAdmin = async (profileId, wasteItems) => {
   for (const url of [WASTE_API_URL, WASTE_API_FALLBACK]) {
     try {
       await axios.post(url, payload, { timeout: 10000 });
-      console.log(`[WASTE] Sent ${wasteItems.length} items to anbar via ${url}`);
+      console.log(
+        `[WASTE] Sent ${wasteItems.length} items to anbar via ${url}`,
+      );
       return;
     } catch (e) {
       console.warn(`[WASTE] ${url} failed: ${e.message}`);
@@ -33,7 +35,6 @@ const sendWasteToAdmin = async (profileId, wasteItems) => {
   }
   console.error("[WASTE] All endpoints failed — waste not recorded in anbar");
 };
-
 
 /**
  * Helper to attach live timer status to an order object for responses.
@@ -46,14 +47,20 @@ const attachLiveTimerToOrder = (order) => {
     order.dataValues.rate_per_minute = liveStatus.charge;
     order.dataValues.is_timer_clock = liveStatus.clockStr;
 
-    const itemsTotal = (order.orders_items || []).reduce((sum, it) => sum + (parseFloat(it.count) * parseFloat(it.price)), 0);
+    const itemsTotal = (order.orders_items || []).reduce(
+      (sum, it) => sum + parseFloat(it.count) * parseFloat(it.price),
+      0,
+    );
     const newTotal = itemsTotal + liveStatus.charge;
 
     let discount = parseFloat(order.discount || 0);
     let service = parseFloat(order.service_charge || 0);
 
     if (parseFloat(order.discount_value) > 0) {
-      discount = order.discount_type === "percent" ? (newTotal * parseFloat(order.discount_value)) / 100 : parseFloat(order.discount_value);
+      discount =
+        order.discount_type === "percent"
+          ? (newTotal * parseFloat(order.discount_value)) / 100
+          : parseFloat(order.discount_value);
     }
     if (parseFloat(order.service_value) > 0) {
       const svcBase = serviceableItemsSum(order.orders_items || []);
@@ -82,7 +89,11 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
     where: { order_id: orderId },
     attributes: ["count", "price"],
     include: [
-      { model: ProductsModel, as: "product", attributes: ["hourly_price", "no_service_fee"] },
+      {
+        model: ProductsModel,
+        as: "product",
+        attributes: ["hourly_price", "no_service_fee"],
+      },
     ],
     transaction: tx,
   });
@@ -102,7 +113,9 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
       "timer_last_started_at",
       "is_active_timer",
     ],
-    include: [{ model: TablesModel, as: "table", attributes: ["hourly_price"] }],
+    include: [
+      { model: TablesModel, as: "table", attributes: ["hourly_price"] },
+    ],
     transaction: tx,
   });
 
@@ -123,7 +136,10 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
   let timerCharge = 0;
   const effHourly = TimerService.getEffectiveHourlyPrice(orderPlain);
   if (Number(currentOrder.is_timer_status) === 1 && effHourly > 0) {
-    timerCharge = TimerService.calculateLiveStatus(orderPlain, effHourly).charge;
+    timerCharge = TimerService.calculateLiveStatus(
+      orderPlain,
+      effHourly,
+    ).charge;
   } else {
     timerCharge = parseFloat(currentOrder.rate_per_minute || 0) || 0;
   }
@@ -133,7 +149,8 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
   let discount = 0;
   let service = 0;
   const deposit = parseFloat(currentOrder.deposit || 0);
-  const { discount_value, discount_type, service_value, service_type } = currentOrder;
+  const { discount_value, discount_type, service_value, service_type } =
+    currentOrder;
   if (parseFloat(discount_value || 0) > 0) {
     discount =
       discount_type === "percent"
@@ -147,7 +164,8 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
         : parseFloat(service_value);
   }
   const netTotal =
-    Math.max(total - discount + service, deposit) + Number(currentOrder.delivery_fee || 0);
+    Math.max(total - discount + service, deposit) +
+    Number(currentOrder.delivery_fee || 0);
 
   await OrdersModel.update(
     {
@@ -174,20 +192,22 @@ const sendOrdersItemsToDb = async (req, res) => {
 
   try {
     // insert items in parallel (preserves modifiers/comments per item)
-    const savedItems = await Promise.all(productList.map(item =>
-      OrdersItemsModel.create({
-        order_id: orderId,
-        product_id: item.product_id || item.id,
-        count: item.quantity || item.count || 1,
-        price: item.price,
-        operator_id: waiterId,
-        profile_id: profileId,
-        kds_status: 0,
-        modifiers: item.modifiers || null,
-        comment: item.comment || null,
-        portion_name: item.portion_name || null,
-      })
-    ));
+    const savedItems = await Promise.all(
+      productList.map((item) =>
+        OrdersItemsModel.create({
+          order_id: orderId,
+          product_id: item.product_id || item.id,
+          count: item.quantity || item.count || 1,
+          price: item.price,
+          operator_id: waiterId,
+          profile_id: profileId,
+          kds_status: 0,
+          modifiers: item.modifiers || null,
+          comment: item.comment || null,
+          portion_name: item.portion_name || null,
+        }),
+      ),
+    );
 
     // Fetch totals and order discount info in parallel (məhsul hourly_price üçün product join)
     const [listOfProducts, orderRow] = await Promise.all([
@@ -217,25 +237,39 @@ const sendOrdersItemsToDb = async (req, res) => {
           "is_timer_clock",
           "timer_last_started_at",
         ],
-        include: [{ model: TablesModel, as: "table", attributes: ["hourly_price"] }],
+        include: [
+          { model: TablesModel, as: "table", attributes: ["hourly_price"] },
+        ],
       }),
     ]);
 
     let currentOrder = orderRow;
 
     // Masaya məhsul göndəriləndə: masa və ya məhsul saatlığı varsa taymer avtomatik başlasın (yalnız işləmirsə və əvvəlcədən dayandırılmayıbsa)
-    const orderPlainForAuto = currentOrder ? currentOrder.get({ plain: true }) : {};
-    orderPlainForAuto.orders_items = listOfProducts.map((i) => i.get({ plain: true }));
-    const effHourlyAuto = TimerService.getEffectiveHourlyPrice(orderPlainForAuto);
-    
+    const orderPlainForAuto = currentOrder
+      ? currentOrder.get({ plain: true })
+      : {};
+    orderPlainForAuto.orders_items = listOfProducts.map((i) =>
+      i.get({ plain: true }),
+    );
+    const effHourlyAuto =
+      TimerService.getEffectiveHourlyPrice(orderPlainForAuto);
+
     // Only auto-start timer if:
     // 1. There's an hourly rate (table or product)
     // 2. Timer is not currently running
     // 3. Timer was never stopped before (no accumulated time) OR timer was reset
-    const hasAccumulatedTime = currentOrder?.is_timer_clock && currentOrder.is_timer_clock !== "00:00:00";
-    const wasTimerStopped = Number(currentOrder?.is_timer_status) === 0 && hasAccumulatedTime;
-    
-    if (effHourlyAuto > 0 && Number(currentOrder?.is_timer_status) !== 1 && !wasTimerStopped) {
+    const hasAccumulatedTime =
+      currentOrder?.is_timer_clock &&
+      currentOrder.is_timer_clock !== "00:00:00";
+    const wasTimerStopped =
+      Number(currentOrder?.is_timer_status) === 0 && hasAccumulatedTime;
+
+    if (
+      effHourlyAuto > 0 &&
+      Number(currentOrder?.is_timer_status) !== 1 &&
+      !wasTimerStopped
+    ) {
       await OrdersModel.update(
         {
           is_timer_status: 1,
@@ -260,7 +294,9 @@ const sendOrdersItemsToDb = async (req, res) => {
           "is_timer_clock",
           "timer_last_started_at",
         ],
-        include: [{ model: TablesModel, as: "table", attributes: ["hourly_price"] }],
+        include: [
+          { model: TablesModel, as: "table", attributes: ["hourly_price"] },
+        ],
       });
     }
 
@@ -268,7 +304,7 @@ const sendOrdersItemsToDb = async (req, res) => {
     orderPlain.orders_items = listOfProducts.map((i) => i.get({ plain: true }));
     const effHourly = TimerService.getEffectiveHourlyPrice(orderPlain);
     const liveTimer = TimerService.calculateLiveStatus(currentOrder, effHourly);
-    
+
     const itemsTotal = listOfProducts.reduce((sum, item) => {
       const qty = parseFloat(item.count) || 0;
       const prc = parseFloat(item.price) || 0;
@@ -307,7 +343,8 @@ const sendOrdersItemsToDb = async (req, res) => {
     }
 
     const deliveryFee = Number(currentOrder?.delivery_fee || 0);
-    const netTotal = Math.max(total - discount + service, deposit) + deliveryFee;
+    const netTotal =
+      Math.max(total - discount + service, deposit) + deliveryFee;
 
     // Order update
     await OrdersModel.update(
@@ -316,7 +353,7 @@ const sendOrdersItemsToDb = async (req, res) => {
         total: netTotal,
         discount: discount,
         service_charge: service,
-        is_synced: 0
+        is_synced: 0,
       },
       { where: { uuid: orderId } },
     );
@@ -340,7 +377,9 @@ const sendOrdersItemsToDb = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -413,7 +452,9 @@ const onUpdateDiscountOrder = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }],
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -484,7 +525,9 @@ const onUpdateServiceFeeOrder = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }],
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -575,7 +618,9 @@ const onUpdateCheckTags = async (req, res) => {
       { where: { uuid: orderId } },
     );
     // Frontend BooksSlice matcher və UI üçün: uuid + tags qaytarılmalıdır
-    res.status(200).json({ message: "tags update", data: { uuid: orderId, tags } });
+    res
+      .status(200)
+      .json({ message: "tags update", data: { uuid: orderId, tags } });
 
     // Background tasks (non-blocking after response)
     SyncService.queueSync(orderId);
@@ -599,7 +644,10 @@ const onUpdateCheckComments = async (req, res) => {
       { note: comments, is_synced: 0 },
       { where: { uuid: orderId } },
     );
-    const updatedOrder = await OrdersModel.findOne({ where: { uuid: orderId }, raw: true });
+    const updatedOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      raw: true,
+    });
     res.status(200).json({ data: updatedOrder });
 
     // Background tasks (non-blocking after response)
@@ -624,8 +672,11 @@ const onDeleteOrderItems = async (req, res) => {
       attributes: ["status", "deposit", "delivery_fee"],
     });
 
-    const nextStatus = Number(currentOrder?.status) === 3 ? 1 : (currentOrder?.status ?? 1);
-    const nextTotal = Math.max(0, Number(currentOrder?.deposit || 0)) + Number(currentOrder?.delivery_fee || 0);
+    const nextStatus =
+      Number(currentOrder?.status) === 3 ? 1 : (currentOrder?.status ?? 1);
+    const nextTotal =
+      Math.max(0, Number(currentOrder?.deposit || 0)) +
+      Number(currentOrder?.delivery_fee || 0);
 
     await OrdersItemsModel.destroy({
       where: { order_id: orderId },
@@ -644,7 +695,12 @@ const onDeleteOrderItems = async (req, res) => {
       { where: { uuid: orderId } },
     );
 
-    res.status(200).json({ message: "delete all items", data: { uuid: orderId, status: nextStatus, orders_items: [] } });
+    res
+      .status(200)
+      .json({
+        message: "delete all items",
+        data: { uuid: orderId, status: nextStatus, orders_items: [] },
+      });
 
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
@@ -753,7 +809,9 @@ const onMergeChecks = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -806,7 +864,9 @@ const onChangeSaleType = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -965,7 +1025,9 @@ const onSplitOrder = async (req, res) => {
         }
 
         if (remainingQty > 0) {
-          throw new Error("Köçürmə: kifayət qədər məhsul yoxdur (sətir miqdarı uyğun deyil)");
+          throw new Error(
+            "Köçürmə: kifayət qədər məhsul yoxdur (sətir miqdarı uyğun deyil)",
+          );
         }
         if (!firstRow) {
           throw new Error("Köçürmə: məhsul sətri tapılmadı");
@@ -1027,19 +1089,27 @@ const onSplitOrder = async (req, res) => {
         as: "orders_items",
         separate: true,
         order: [["id", "ASC"]],
-        include: [{ model: require("../model/ProductsModel"), as: "product" }]
+        include: [{ model: require("../model/ProductsModel"), as: "product" }],
       },
       {
         model: TablesModel,
         as: "table",
         attributes: ["id", "name", "hourly_price"],
-        include: [{ model: TableGroupsModel, as: "hall", attributes: ["id", "name"] }],
+        include: [
+          { model: TableGroupsModel, as: "hall", attributes: ["id", "name"] },
+        ],
       },
     ];
 
     const [updatedOriginalOrder, updatedTargetOrder] = await Promise.all([
-      OrdersModel.findOne({ where: { uuid: data.orderId }, include: includeSpec }),
-      OrdersModel.findOne({ where: { uuid: targetOrder.uuid }, include: includeSpec }),
+      OrdersModel.findOne({
+        where: { uuid: data.orderId },
+        include: includeSpec,
+      }),
+      OrdersModel.findOne({
+        where: { uuid: targetOrder.uuid },
+        include: includeSpec,
+      }),
     ]);
 
     attachLiveTimerToOrder(updatedOriginalOrder);
@@ -1057,7 +1127,9 @@ const onSplitOrder = async (req, res) => {
     });
   } catch (error) {
     if (transaction) {
-      try { await transaction.rollback(); } catch (e) { }
+      try {
+        await transaction.rollback();
+      } catch (e) {}
     }
     console.error("Split Order Error:", error);
     res.status(500).json({ message: "Split failed", error: error.message });
@@ -1076,7 +1148,8 @@ const onGiftItem = async (req, res) => {
 
   try {
     // Use allIds if provided (multiple rows for same product), otherwise single itemId
-    const idsToProcess = (Array.isArray(allIds) && allIds.length > 0) ? allIds : [itemId];
+    const idsToProcess =
+      Array.isArray(allIds) && allIds.length > 0 ? allIds : [itemId];
     let remainingQty = Number(qty);
     let firstOriginalItem = null;
 
@@ -1117,7 +1190,11 @@ const onGiftItem = async (req, res) => {
     // 2. Add to Target Item (Gift or Normal)
     const targetIsGift = isGift ? 1 : 0;
     const targetItem = await OrdersItemsModel.findOne({
-      where: { order_id: orderId, product_id: originalItem.product_id, is_gift: targetIsGift },
+      where: {
+        order_id: orderId,
+        product_id: originalItem.product_id,
+        is_gift: targetIsGift,
+      },
       transaction,
     });
 
@@ -1129,7 +1206,11 @@ const onGiftItem = async (req, res) => {
       } else {
         // Restore price - wait, if original was gift, it had price 0. Steps: Find product.
         const product = await OrdersItemsModel.findOne({
-          where: { order_id: orderId, product_id: originalItem.product_id, is_gift: 0 },
+          where: {
+            order_id: orderId,
+            product_id: originalItem.product_id,
+            is_gift: 0,
+          },
           transaction,
         });
         // If there is another non-gift item, copy its price?
@@ -1148,7 +1229,11 @@ const onGiftItem = async (req, res) => {
       } else {
         // Try to find the price from a non-gift sibling OR use original_price if available
         const sibling = await OrdersItemsModel.findOne({
-          where: { order_id: orderId, product_id: originalItem.product_id, is_gift: 0 },
+          where: {
+            order_id: orderId,
+            product_id: originalItem.product_id,
+            is_gift: 0,
+          },
           paranoid: false,
           transaction,
         });
@@ -1191,7 +1276,9 @@ const onGiftItem = async (req, res) => {
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
-      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+      include: [
+        { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
+      ],
       transaction,
     });
 
@@ -1227,7 +1314,9 @@ const onGiftItem = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
+    const netTotal =
+      Math.max(total - discount + service, parseFloat(ord.deposit || 0)) +
+      Number(ord.delivery_fee || 0);
 
     await OrdersModel.update(
       {
@@ -1235,7 +1324,7 @@ const onGiftItem = async (req, res) => {
         total: netTotal,
         discount,
         service_charge: service,
-        is_synced: 0
+        is_synced: 0,
       },
       { where: { uuid: orderId }, transaction },
     );
@@ -1257,7 +1346,9 @@ const onGiftItem = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -1275,7 +1366,9 @@ const onGiftItem = async (req, res) => {
     res.status(200).json(updatedOrder);
   } catch (error) {
     if (transaction) {
-      try { await transaction.rollback(); } catch (e) { }
+      try {
+        await transaction.rollback();
+      } catch (e) {}
     }
     console.error("Gift Error:", error);
     res.status(500).json({ message: "Error", error: error.message });
@@ -1338,7 +1431,9 @@ const onUpdateItemDiscount = async (req, res) => {
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
-      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+      include: [
+        { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
+      ],
       transaction,
     });
 
@@ -1376,7 +1471,9 @@ const onUpdateItemDiscount = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
+    const netTotal =
+      Math.max(total - discount + service, parseFloat(ord.deposit || 0)) +
+      Number(ord.delivery_fee || 0);
 
     await OrdersModel.update(
       {
@@ -1384,7 +1481,7 @@ const onUpdateItemDiscount = async (req, res) => {
         total: netTotal,
         discount: discount,
         service_charge: service,
-        is_synced: 0
+        is_synced: 0,
       },
       { where: { uuid: orderId }, transaction },
     );
@@ -1404,7 +1501,9 @@ const onUpdateItemDiscount = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -1450,26 +1549,47 @@ const onDeleteCheck = async (req, res) => {
       raw: true,
     });
 
-    const ord = await OrdersModel.findOne({ where: { uuid: orderId }, raw: true });
+    const ord = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      raw: true,
+    });
 
     if (forceDestroy) {
       const serverItemCount = orderItems.length;
       if (serverItemCount > 0) {
-        console.warn(`[DELETE_CHECK_GUARD] forceDestroy blocked — order ${orderId} has ${serverItemCount} items on server. Converting to soft-delete.`);
+        console.warn(
+          `[DELETE_CHECK_GUARD] forceDestroy blocked — order ${orderId} has ${serverItemCount} items on server. Converting to soft-delete.`,
+        );
         await OrdersModel.update(
-          { status: 3, end_date: new Date(), is_delete_reason_id: reason, is_synced: 0 },
+          {
+            status: 3,
+            end_date: new Date(),
+            is_delete_reason_id: reason,
+            is_synced: 0,
+          },
           { where: { uuid: orderId } },
         );
         SyncService.queueSync(orderId);
         if (getIo()) getIo().emit("table_updated", { orderId });
         return res.status(200).json({ message: "success", guarded: true });
       }
-      await OrdersItemsModel.destroy({ where: { order_id: orderId }, force: true });
-      await OrderPaymentsModel.destroy({ where: { order_id: orderId }, force: true });
+      await OrdersItemsModel.destroy({
+        where: { order_id: orderId },
+        force: true,
+      });
+      await OrderPaymentsModel.destroy({
+        where: { order_id: orderId },
+        force: true,
+      });
       await OrdersModel.destroy({ where: { uuid: orderId }, force: true });
     } else {
       await OrdersModel.update(
-        { status: 3, end_date: new Date(), is_delete_reason_id: reason, is_synced: 0 },
+        {
+          status: 3,
+          end_date: new Date(),
+          is_delete_reason_id: reason,
+          is_synced: 0,
+        },
         { where: { uuid: orderId } },
       );
       SyncService.queueSync(orderId);
@@ -1479,7 +1599,7 @@ const onDeleteCheck = async (req, res) => {
 
     // Anbar əməliyyatı — arxa planda
     if (orderItems.length > 0 && ord?.profile_id) {
-      const anbarItems = orderItems.map(item => ({
+      const anbarItems = orderItems.map((item) => ({
         product_id: item.product_id,
         qty: Number(item.count) || 1,
         price: item.price,
@@ -1487,8 +1607,8 @@ const onDeleteCheck = async (req, res) => {
         comment: wasteComment || "",
         is_waste: waste ? true : false,
       }));
-      sendWasteToAdmin(ord.profile_id, anbarItems).catch(e =>
-        console.error("[DELETE_CHECK] sendWasteToAdmin error:", e.message)
+      sendWasteToAdmin(ord.profile_id, anbarItems).catch((e) =>
+        console.error("[DELETE_CHECK] sendWasteToAdmin error:", e.message),
       );
     }
 
@@ -1512,40 +1632,49 @@ const onCloseOrder = async (req, res) => {
   try {
     // 1. Calculate final timer charge if active
     const order = await OrdersModel.findOne({
-        where: { uuid: orderId },
-        include: [
-          { model: TablesModel, as: "table", attributes: ["hourly_price"] },
-          {
-            model: OrdersItemsModel,
-            as: "orders_items",
-            separate: true,
-            include: [{ model: ProductsModel, as: "product", attributes: ["hourly_price"] }],
-          },
-        ],
-        transaction
+      where: { uuid: orderId },
+      include: [
+        { model: TablesModel, as: "table", attributes: ["hourly_price"] },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          include: [
+            {
+              model: ProductsModel,
+              as: "product",
+              attributes: ["hourly_price"],
+            },
+          ],
+        },
+      ],
+      transaction,
     });
-    
+
     let timerUpdate = {};
     if (order && order.is_active_timer) {
-        const live = TimerService.calculateLiveStatus(order, TimerService.getEffectiveHourlyPrice(order));
-        timerUpdate = {
-            is_active_timer: 0,
-            is_timer_status: 1, // Keep status as 1 to show it was a timer order
-            is_timer_clock: live.clockStr,
-            rate_per_minute: live.charge,
-            is_synced: 0
-        };
+      const live = TimerService.calculateLiveStatus(
+        order,
+        TimerService.getEffectiveHourlyPrice(order),
+      );
+      timerUpdate = {
+        is_active_timer: 0,
+        is_timer_status: 1, // Keep status as 1 to show it was a timer order
+        is_timer_clock: live.clockStr,
+        rate_per_minute: live.charge,
+        is_synced: 0,
+      };
     }
 
     // Update Order Status, Note, and End Date (and Timer if needed)
     await OrdersModel.update(
-      { 
-        status: status, 
-        note: note || "", 
-        end_date: new Date(), 
-        is_synced: 0, 
+      {
+        status: status,
+        note: note || "",
+        end_date: new Date(),
+        is_synced: 0,
         is_tax: is_tax !== undefined ? is_tax : 0,
-        ...timerUpdate
+        ...timerUpdate,
       },
       { where: { uuid: orderId }, transaction },
     );
@@ -1553,39 +1682,65 @@ const onCloseOrder = async (req, res) => {
     // Re-fetch items to calculate final total correctly including items + timer
     const items = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
-      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+      include: [
+        { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
+      ],
       transaction,
     });
-    const subtotal = items.reduce((sum, it) => sum + (Number(it.count) * Number(it.price)), 0);
+    const subtotal = items.reduce(
+      (sum, it) => sum + Number(it.count) * Number(it.price),
+      0,
+    );
     const serviceFeeBaseClose = serviceableItemsSum(items);
-    const finalTimerCharge = timerUpdate.rate_per_minute !== undefined ? timerUpdate.rate_per_minute : (order?.rate_per_minute || 0);
-    
+    const finalTimerCharge =
+      timerUpdate.rate_per_minute !== undefined
+        ? timerUpdate.rate_per_minute
+        : order?.rate_per_minute || 0;
+
     // Simple Total Recalculation (should ideally consider discounts/service but keeping it basic for now consistent with other parts)
-    const orderToUpdate = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
+    const orderToUpdate = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      transaction,
+    });
     let total = subtotal + Number(finalTimerCharge);
-    
+
     // Apply global discounts/service if any
     let disc = 0;
     if (orderToUpdate.discount_value > 0) {
-        disc = orderToUpdate.discount_type === 'percent' ? (subtotal * orderToUpdate.discount_value / 100) : orderToUpdate.discount_value;
+      disc =
+        orderToUpdate.discount_type === "percent"
+          ? (subtotal * orderToUpdate.discount_value) / 100
+          : orderToUpdate.discount_value;
     }
     let serv = 0;
     if (orderToUpdate.service_value > 0) {
-        serv = orderToUpdate.service_type === 'percent' ? (serviceFeeBaseClose * orderToUpdate.service_value / 100) : orderToUpdate.service_value;
+      serv =
+        orderToUpdate.service_type === "percent"
+          ? (serviceFeeBaseClose * orderToUpdate.service_value) / 100
+          : orderToUpdate.service_value;
     }
-    
+
     const deliveryFee = Number(orderToUpdate.delivery_fee || 0);
-    const finalTotal = Math.max(total - disc + serv, parseFloat(orderToUpdate.deposit || 0)) + deliveryFee;
-    
-    await OrdersModel.update({
+    const finalTotal =
+      Math.max(total - disc + serv, parseFloat(orderToUpdate.deposit || 0)) +
+      deliveryFee;
+
+    await OrdersModel.update(
+      {
         amount: subtotal,
         discount: disc,
         service_charge: serv,
-        total: finalTotal
-    }, { where: { uuid: orderId }, transaction });
+        total: finalTotal,
+      },
+      { where: { uuid: orderId }, transaction },
+    );
 
     // 2. Remove old payments (prevents duplicates on re-close after return)
-    await OrderPaymentsModel.destroy({ where: { order_id: orderId }, force: true, transaction });
+    await OrderPaymentsModel.destroy({
+      where: { order_id: orderId },
+      force: true,
+      transaction,
+    });
 
     // 3. Insert Payments if provided
     if (payments && payments.length > 0) {
@@ -1614,7 +1769,9 @@ const onCloseOrder = async (req, res) => {
     if (getIo()) getIo().emit("table_updated", { orderId });
   } catch (error) {
     if (transaction) {
-      try { await transaction.rollback(); } catch (e) { }
+      try {
+        await transaction.rollback();
+      } catch (e) {}
     }
     console.error("Close Order Error:", error);
     res
@@ -1652,16 +1809,13 @@ const onUpdateDepositOrder = async (req, res) => {
     const discount = parseFloat(currentOrder.discount || 0);
     const service_charge = parseFloat(currentOrder.service_charge || 0);
 
-    const newTotal = Math.max(
-      amount - discount + service_charge,
-      depositValue,
-    );
+    const newTotal = Math.max(amount - discount + service_charge, depositValue);
 
     await OrdersModel.update(
       {
         deposit: depositValue,
         total: newTotal,
-        is_synced: 0
+        is_synced: 0,
       },
       { where: { uuid: orderId } },
     );
@@ -1679,7 +1833,9 @@ const onUpdateDepositOrder = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -1719,9 +1875,9 @@ const onReopenOrder = async (req, res) => {
         status: 1,
         end_date: null,
         is_delete_reason_id: reasonId,
-        is_synced: 0
+        is_synced: 0,
       },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
@@ -1753,9 +1909,9 @@ const onReturnCheck = async (req, res) => {
         is_delete_reason_id: is_delete_reason_id,
         status: 1, // Reopen the check
         end_date: null, // Clear the end date
-        is_synced: 0
+        is_synced: 0,
       },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
@@ -1777,10 +1933,11 @@ const onDeleteItemWithReason = async (req, res) => {
   const { itemId, reasonId, qty } = req.body;
 
   if (!orderId || !itemId) {
-    console.error(`[DELETE REASON ERROR] Missing fields! orderId: ${orderId}, itemId: ${itemId}, reasonId: ${reasonId}`);
+    console.error(
+      `[DELETE REASON ERROR] Missing fields! orderId: ${orderId}, itemId: ${itemId}, reasonId: ${reasonId}`,
+    );
     return res.status(400).json({ message: "Missing required fields" });
   }
-
 
   const transaction = await sequelize.transaction();
 
@@ -1794,11 +1951,13 @@ const onDeleteItemWithReason = async (req, res) => {
       throw new Error("Item not found");
     }
 
-    console.log(`[DELETE REASON] Order: ${orderId}, Item: ${itemId}, Reason: ${reasonId}, Qty: ${qty || 'ALL'}`);
+    console.log(
+      `[DELETE REASON] Order: ${orderId}, Item: ${itemId}, Reason: ${reasonId}, Qty: ${qty || "ALL"}`,
+    );
 
     if (qty && qty > 0 && qty < item.count) {
-      // Partial delete - currently we don't have a good place to store reason for partial, 
-      // but let's at least update the item if we were to keep track. 
+      // Partial delete - currently we don't have a good place to store reason for partial,
+      // but let's at least update the item if we were to keep track.
       // For now, full delete is more common for "reasons".
       item.count -= qty;
       await item.save({ transaction });
@@ -1813,7 +1972,9 @@ const onDeleteItemWithReason = async (req, res) => {
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
-      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+      include: [
+        { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
+      ],
       transaction,
     });
 
@@ -1838,21 +1999,29 @@ const onDeleteItemWithReason = async (req, res) => {
       const sVal = parseFloat(ord.service_value) || 0;
 
       if (dVal > 0) {
-        discount = ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
+        discount =
+          ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
       }
       if (sVal > 0) {
-        service = ord.service_type === "percent" ? (serviceFeeBaseDel * sVal) / 100 : sVal;
+        service =
+          ord.service_type === "percent"
+            ? (serviceFeeBaseDel * sVal) / 100
+            : sVal;
       }
     }
 
-    const netTotal = Math.max(total - discount + service, parseFloat(ord.deposit || 0)) + Number(ord.delivery_fee || 0);
+    const netTotal =
+      Math.max(total - discount + service, parseFloat(ord.deposit || 0)) +
+      Number(ord.delivery_fee || 0);
 
     // Son məhsul silinəndə (boş çek) — avtomatik status=3, admin panelə sync olunsun
     // Guard: print_count > 0 olan çeklər bağlanmasın — artıq çap olunub, müştəri üçün açıq qalmalıdır
     const isEmptyCheck = allItems.length === 0;
     const shouldAutoClose = isEmptyCheck && Number(ord?.print_count || 0) === 0;
     if (isEmptyCheck && !shouldAutoClose) {
-      console.warn(`[DELETE_ITEM_GUARD] Empty check ${orderId} NOT auto-closed — print_count=${ord?.print_count}`);
+      console.warn(
+        `[DELETE_ITEM_GUARD] Empty check ${orderId} NOT auto-closed — print_count=${ord?.print_count}`,
+      );
     }
     await OrdersModel.update(
       {
@@ -1863,24 +2032,29 @@ const onDeleteItemWithReason = async (req, res) => {
         is_synced: 0,
         ...(shouldAutoClose ? { status: 3, end_date: new Date() } : {}),
       },
-      { where: { uuid: orderId }, transaction }
+      { where: { uuid: orderId }, transaction },
     );
     await transaction.commit();
 
     // Respond immediately — frontend will refresh via getActiveOrders after all deletions
-    res.status(200).json({ uuid: orderId, deletedItemId: itemId, success: true });
+    res
+      .status(200)
+      .json({ uuid: orderId, deletedItemId: itemId, success: true });
 
     // Background tasks (non-blocking)
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
-
   } catch (error) {
     if (transaction) {
-      try { await transaction.rollback(); } catch (e) { }
+      try {
+        await transaction.rollback();
+      } catch (e) {}
     }
     console.error("Delete Item Error:", error);
-    res.status(500).json({ message: "Error deleting item", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting item", error: error.message });
   }
 };
 
@@ -1892,8 +2066,8 @@ const onUpdateItemPrice = async (req, res) => {
     const item = await OrdersItemsModel.findOne({
       where: {
         order_id: orderId,
-        id: itemId
-      }
+        id: itemId,
+      },
     });
 
     if (!item) {
@@ -1910,7 +2084,9 @@ const onUpdateItemPrice = async (req, res) => {
     const listOfProducts = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
-      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+      include: [
+        { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
+      ],
     });
 
     // 2. Calculate raw total
@@ -1940,7 +2116,8 @@ const onUpdateItemPrice = async (req, res) => {
     const deposit = parseFloat(currentOrder?.deposit || 0);
 
     if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const { discount_value, discount_type, service_value, service_type } =
+        currentOrder;
       const dValue = parseFloat(discount_value || 0);
       const sValue = parseFloat(service_value || 0);
 
@@ -1963,7 +2140,9 @@ const onUpdateItemPrice = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, deposit) + Number(currentOrder?.delivery_fee || 0);
+    const netTotal =
+      Math.max(total - discount + service, deposit) +
+      Number(currentOrder?.delivery_fee || 0);
 
     // 4. Update OrdersModel
     await OrdersModel.update(
@@ -1972,7 +2151,7 @@ const onUpdateItemPrice = async (req, res) => {
         total: netTotal,
         discount: discount,
         service_charge: service,
-        is_synced: 0
+        is_synced: 0,
       },
       { where: { uuid: orderId } },
     );
@@ -1990,7 +2169,9 @@ const onUpdateItemPrice = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -2007,12 +2188,13 @@ const onUpdateItemPrice = async (req, res) => {
 
     res.status(200).json({
       message: "success",
-      data: updatedOrder
+      data: updatedOrder,
     });
-
   } catch (error) {
     console.error("Update Price Error:", error);
-    res.status(500).json({ message: "Error updating price", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error updating price", error: error.message });
   }
 };
 
@@ -2028,8 +2210,8 @@ const onUpdateItemCount = async (req, res) => {
     const item = await OrdersItemsModel.findOne({
       where: {
         order_id: orderId,
-        id: itemId
-      }
+        id: itemId,
+      },
     });
 
     if (!item) {
@@ -2044,7 +2226,9 @@ const onUpdateItemCount = async (req, res) => {
     const listOfProducts = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
       attributes: ["count", "price"],
-      include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+      include: [
+        { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
+      ],
     });
 
     const total = listOfProducts.reduce((sum, it) => {
@@ -2072,7 +2256,8 @@ const onUpdateItemCount = async (req, res) => {
     const deposit = parseFloat(currentOrder?.deposit || 0);
 
     if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const { discount_value, discount_type, service_value, service_type } =
+        currentOrder;
       const dValue = parseFloat(discount_value || 0);
       const sValue = parseFloat(service_value || 0);
 
@@ -2093,7 +2278,9 @@ const onUpdateItemCount = async (req, res) => {
       }
     }
 
-    const netTotal = Math.max(total - discount + service, deposit) + Number(currentOrder?.delivery_fee || 0);
+    const netTotal =
+      Math.max(total - discount + service, deposit) +
+      Number(currentOrder?.delivery_fee || 0);
 
     await OrdersModel.update(
       {
@@ -2101,7 +2288,7 @@ const onUpdateItemCount = async (req, res) => {
         total: netTotal,
         discount: discount,
         service_charge: service,
-        is_synced: 0
+        is_synced: 0,
       },
       { where: { uuid: orderId } },
     );
@@ -2122,7 +2309,9 @@ const onUpdateItemCount = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -2139,12 +2328,13 @@ const onUpdateItemCount = async (req, res) => {
 
     res.status(200).json({
       message: "success",
-      data: updatedOrder
+      data: updatedOrder,
     });
-
   } catch (error) {
     console.error("Update Count Error:", error);
-    res.status(500).json({ message: "Error updating count", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Error updating count", error: error.message });
   }
 };
 
@@ -2155,7 +2345,7 @@ const onAssignCustomer = async (req, res) => {
 
     await OrdersModel.update(
       { customer_id: customer_id || null, is_synced: 0 },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
@@ -2170,7 +2360,9 @@ const onAssignCustomer = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -2186,7 +2378,9 @@ const onAssignCustomer = async (req, res) => {
     return res.json({ message: "success", data: updated });
   } catch (error) {
     console.error("Assign customer error:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
 
@@ -2202,7 +2396,7 @@ const onAssignCourier = async (req, res) => {
         delivery_fee: newDeliveryFee,
         is_synced: 0,
       },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
 
     // Recalculate total with new delivery_fee
@@ -2211,26 +2405,49 @@ const onAssignCourier = async (req, res) => {
       const items = await OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price"],
-        include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+        include: [
+          {
+            model: ProductsModel,
+            as: "product",
+            attributes: ["no_service_fee"],
+          },
+        ],
       });
 
-      const subtotal = items.reduce((sum, it) => {
-        return sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0);
-      }, 0) + Number(ord.rate_per_minute || 0);
+      const subtotal =
+        items.reduce((sum, it) => {
+          return (
+            sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0)
+          );
+        }, 0) + Number(ord.rate_per_minute || 0);
 
       const serviceFeeBaseCourier = serviceableItemsSum(items);
 
-      let discount = 0, service = 0;
+      let discount = 0,
+        service = 0;
       const dVal = parseFloat(ord.discount_value || 0);
       const sVal = parseFloat(ord.service_value || 0);
-      if (dVal > 0) discount = ord.discount_type === "percent" ? (subtotal * dVal) / 100 : dVal;
-      if (sVal > 0) service = ord.service_type === "percent" ? (serviceFeeBaseCourier * sVal) / 100 : sVal;
+      if (dVal > 0)
+        discount =
+          ord.discount_type === "percent" ? (subtotal * dVal) / 100 : dVal;
+      if (sVal > 0)
+        service =
+          ord.service_type === "percent"
+            ? (serviceFeeBaseCourier * sVal) / 100
+            : sVal;
 
-      const netTotal = Math.max(subtotal - discount + service, parseFloat(ord.deposit || 0)) + newDeliveryFee;
+      const netTotal =
+        Math.max(subtotal - discount + service, parseFloat(ord.deposit || 0)) +
+        newDeliveryFee;
 
       await OrdersModel.update(
-        { amount: subtotal, total: netTotal, discount, service_charge: service },
-        { where: { uuid: orderId } }
+        {
+          amount: subtotal,
+          total: netTotal,
+          discount,
+          service_charge: service,
+        },
+        { where: { uuid: orderId } },
       );
     }
 
@@ -2246,7 +2463,9 @@ const onAssignCourier = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -2262,7 +2481,9 @@ const onAssignCourier = async (req, res) => {
     return res.json({ message: "success", data: updated });
   } catch (error) {
     console.error("Assign courier error:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
 
@@ -2272,16 +2493,20 @@ const onUpdateGuestCount = async (req, res) => {
     const { guestCount } = req.body;
 
     if (!orderId) {
-      return res.status(400).json({ message: "false", data: "Missing orderId" });
+      return res
+        .status(400)
+        .json({ message: "false", data: "Missing orderId" });
     }
 
     const updated = await OrdersModel.update(
       { guest_count: guestCount, is_synced: 0 },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
 
     if (updated[0] === 0) {
-      return res.status(404).json({ message: "false", data: "Order not found" });
+      return res
+        .status(404)
+        .json({ message: "false", data: "Order not found" });
     }
 
     res.status(200).json({ message: "success" });
@@ -2314,7 +2539,7 @@ const incrementPrintCount = async (req, res) => {
 
     await OrdersModel.update(
       { print_count: newCount, is_synced: 0 },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
 
     SyncService.queueSync(orderId);
@@ -2330,7 +2555,9 @@ const incrementPrintCount = async (req, res) => {
           as: "orders_items",
           separate: true,
           order: [["id", "ASC"]],
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -2345,7 +2572,9 @@ const incrementPrintCount = async (req, res) => {
 
     attachLiveTimerToOrder(updatedOrder);
 
-    return res.status(200).json({ message: "Print count updated", data: updatedOrder });
+    return res
+      .status(200)
+      .json({ message: "Print count updated", data: updatedOrder });
   } catch (error) {
     console.error("Error incrementing print count:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -2359,8 +2588,13 @@ const onStartTimer = async (req, res) => {
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     await OrdersModel.update(
-      { is_timer_status: 1, is_active_timer: 1, timer_last_started_at: new Date(), is_synced: 0 },
-      { where: { uuid: orderId } }
+      {
+        is_timer_status: 1,
+        is_active_timer: 1,
+        timer_last_started_at: new Date(),
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } },
     );
 
     const updatedOrder = await OrdersModel.findOne({
@@ -2371,7 +2605,9 @@ const onStartTimer = async (req, res) => {
           model: OrdersItemsModel,
           as: "orders_items",
           separate: true,
-          include: [{ model: require("../model/ProductsModel"), as: "product" }]
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
         },
         {
           model: TablesModel,
@@ -2403,7 +2639,13 @@ const onStopTimer = async (req, res) => {
           model: OrdersItemsModel,
           as: "orders_items",
           separate: true,
-          include: [{ model: ProductsModel, as: "product", attributes: ["hourly_price"] }],
+          include: [
+            {
+              model: ProductsModel,
+              as: "product",
+              attributes: ["hourly_price"],
+            },
+          ],
         },
       ],
     });
@@ -2417,14 +2659,14 @@ const onStopTimer = async (req, res) => {
     const finalClockStr = liveStatus.clockStr;
 
     await OrdersModel.update(
-      { 
-        is_timer_status: 0, 
+      {
+        is_timer_status: 0,
         is_active_timer: 0,
-        is_timer_clock: finalClockStr, 
+        is_timer_clock: finalClockStr,
         rate_per_minute: timerCharge,
         is_synced: 0,
       },
-      { where: { uuid: orderId } }
+      { where: { uuid: orderId } },
     );
 
     // Recalculate total
@@ -2432,38 +2674,70 @@ const onStopTimer = async (req, res) => {
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price"],
-        include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+        include: [
+          {
+            model: ProductsModel,
+            as: "product",
+            attributes: ["no_service_fee"],
+          },
+        ],
       }),
       OrdersModel.findOne({
         where: { uuid: orderId },
-        attributes: ["discount_value", "discount_type", "service_value", "service_type", "deposit", "rate_per_minute", "delivery_fee"],
+        attributes: [
+          "discount_value",
+          "discount_type",
+          "service_value",
+          "service_type",
+          "deposit",
+          "rate_per_minute",
+          "delivery_fee",
+        ],
       }),
     ]);
 
-    const total = listOfProducts.reduce((sum, item) => {
-      const qty = parseFloat(item.count) || 0;
-      const prc = parseFloat(item.price) || 0;
-      return sum + qty * prc;
-    }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
+    const total =
+      listOfProducts.reduce((sum, item) => {
+        const qty = parseFloat(item.count) || 0;
+        const prc = parseFloat(item.price) || 0;
+        return sum + qty * prc;
+      }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
 
     const serviceFeeBaseStop = serviceableItemsSum(listOfProducts);
 
     let discount = 0;
     let service = 0;
     if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const { discount_value, discount_type, service_value, service_type } =
+        currentOrder;
       if (parseFloat(discount_value) > 0) {
-        discount = discount_type === "percent" ? (total * parseFloat(discount_value)) / 100 : parseFloat(discount_value);
+        discount =
+          discount_type === "percent"
+            ? (total * parseFloat(discount_value)) / 100
+            : parseFloat(discount_value);
       }
       if (parseFloat(service_value) > 0) {
-        service = service_type === "percent" ? (serviceFeeBaseStop * parseFloat(service_value)) / 100 : parseFloat(service_value);
+        service =
+          service_type === "percent"
+            ? (serviceFeeBaseStop * parseFloat(service_value)) / 100
+            : parseFloat(service_value);
       }
     }
-    const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0)) + Number(currentOrder?.delivery_fee || 0);
+    const netTotal =
+      Math.max(
+        total - discount + service,
+        parseFloat(currentOrder?.deposit || 0),
+      ) + Number(currentOrder?.delivery_fee || 0);
 
     await OrdersModel.update(
-      { amount: total, total: netTotal, discount: discount, service_charge: service, is_synced: 0 },
-      { where: { uuid: orderId } }
+      {
+        amount: total,
+        total: netTotal,
+        discount: discount,
+        service_charge: service,
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } },
     );
 
     const updatedOrder = await OrdersModel.findOne({
@@ -2471,7 +2745,11 @@ const onStopTimer = async (req, res) => {
       include: [
         { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
         { model: OrdersItemsModel, as: "orders_items", separate: true },
-        { model: TablesModel, as: "table", attributes: ["id", "name", "hourly_price"] },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name", "hourly_price"],
+        },
       ],
     });
 
@@ -2480,7 +2758,12 @@ const onStopTimer = async (req, res) => {
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
-    res.json({ success: true, message: "Timer stopped", charge: timerCharge, data: updatedOrder });
+    res.json({
+      success: true,
+      message: "Timer stopped",
+      charge: timerCharge,
+      data: updatedOrder,
+    });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -2490,8 +2773,14 @@ const onResetTimer = async (req, res) => {
   const { orderId } = req.params;
   try {
     await OrdersModel.update(
-      { is_timer_status: 0, is_timer_clock: "00:00:00", is_active_timer: 0, rate_per_minute: 0, is_synced: 0 },
-      { where: { uuid: orderId } }
+      {
+        is_timer_status: 0,
+        is_timer_clock: "00:00:00",
+        is_active_timer: 0,
+        rate_per_minute: 0,
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } },
     );
 
     // Recalculate total after reset
@@ -2499,38 +2788,70 @@ const onResetTimer = async (req, res) => {
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price"],
-        include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+        include: [
+          {
+            model: ProductsModel,
+            as: "product",
+            attributes: ["no_service_fee"],
+          },
+        ],
       }),
       OrdersModel.findOne({
         where: { uuid: orderId },
-        attributes: ["discount_value", "discount_type", "service_value", "service_type", "deposit", "rate_per_minute", "delivery_fee"],
+        attributes: [
+          "discount_value",
+          "discount_type",
+          "service_value",
+          "service_type",
+          "deposit",
+          "rate_per_minute",
+          "delivery_fee",
+        ],
       }),
     ]);
 
-    const total = listOfProducts.reduce((sum, item) => {
-      const qty = parseFloat(item.count) || 0;
-      const prc = parseFloat(item.price) || 0;
-      return sum + qty * prc;
-    }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
+    const total =
+      listOfProducts.reduce((sum, item) => {
+        const qty = parseFloat(item.count) || 0;
+        const prc = parseFloat(item.price) || 0;
+        return sum + qty * prc;
+      }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
 
     const serviceFeeBaseReset = serviceableItemsSum(listOfProducts);
 
     let discount = 0;
     let service = 0;
     if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } = currentOrder;
+      const { discount_value, discount_type, service_value, service_type } =
+        currentOrder;
       if (parseFloat(discount_value) > 0) {
-        discount = discount_type === "percent" ? (total * parseFloat(discount_value)) / 100 : parseFloat(discount_value);
+        discount =
+          discount_type === "percent"
+            ? (total * parseFloat(discount_value)) / 100
+            : parseFloat(discount_value);
       }
       if (parseFloat(service_value) > 0) {
-        service = service_type === "percent" ? (serviceFeeBaseReset * parseFloat(service_value)) / 100 : parseFloat(service_value);
+        service =
+          service_type === "percent"
+            ? (serviceFeeBaseReset * parseFloat(service_value)) / 100
+            : parseFloat(service_value);
       }
     }
-    const netTotal = Math.max(total - discount + service, parseFloat(currentOrder?.deposit || 0)) + Number(currentOrder?.delivery_fee || 0);
+    const netTotal =
+      Math.max(
+        total - discount + service,
+        parseFloat(currentOrder?.deposit || 0),
+      ) + Number(currentOrder?.delivery_fee || 0);
 
     await OrdersModel.update(
-      { amount: total, total: netTotal, discount: discount, service_charge: service, is_synced: 0 },
-      { where: { uuid: orderId } }
+      {
+        amount: total,
+        total: netTotal,
+        discount: discount,
+        service_charge: service,
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } },
     );
 
     const updatedOrder = await OrdersModel.findOne({
@@ -2538,7 +2859,11 @@ const onResetTimer = async (req, res) => {
       include: [
         { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
         { model: OrdersItemsModel, as: "orders_items", separate: true },
-        { model: TablesModel, as: "table", attributes: ["id", "name", "hourly_price"] },
+        {
+          model: TablesModel,
+          as: "table",
+          attributes: ["id", "name", "hourly_price"],
+        },
       ],
     });
 
@@ -2586,17 +2911,26 @@ module.exports = {
 
     const transaction = await sequelize.transaction();
     // waste=true → tullantı (write_off), waste=false → geri qaytarma (return)
-    const wasteItems = [];    // is_waste: true
-    const returnItems = [];   // is_waste: false (geri qaytarma)
+    const wasteItems = []; // is_waste: true
+    const returnItems = []; // is_waste: false (geri qaytarma)
     try {
-      for (const { itemId, qty, reasonId, waste, wasteComment, product_id, price } of items) {
+      for (const {
+        itemId,
+        qty,
+        reasonId,
+        waste,
+        wasteComment,
+        product_id,
+        price,
+      } of items) {
         const item = await OrdersItemsModel.findOne({
           where: { order_id: orderId, id: itemId },
           transaction,
         });
         if (!item) continue; // already gone, skip
 
-        const deletedQty = qty && qty > 0 ? Math.min(qty, item.count) : item.count;
+        const deletedQty =
+          qty && qty > 0 ? Math.min(qty, item.count) : item.count;
         const remaining = item.count - deletedQty;
 
         const anbarItem = {
@@ -2628,27 +2962,48 @@ module.exports = {
       const allItems = await OrdersItemsModel.findAll({
         where: { order_id: orderId },
         attributes: ["count", "price"],
-        include: [{ model: ProductsModel, as: "product", attributes: ["no_service_fee"] }],
+        include: [
+          {
+            model: ProductsModel,
+            as: "product",
+            attributes: ["no_service_fee"],
+          },
+        ],
         transaction,
       });
 
-      const ord = await OrdersModel.findOne({ where: { uuid: orderId }, transaction });
+      const ord = await OrdersModel.findOne({
+        where: { uuid: orderId },
+        transaction,
+      });
       const timerCharge = parseFloat(ord?.rate_per_minute || 0);
 
-      const total = allItems.reduce((sum, it) => {
-        return sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0);
-      }, 0) + timerCharge;
+      const total =
+        allItems.reduce((sum, it) => {
+          return (
+            sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0)
+          );
+        }, 0) + timerCharge;
 
       const serviceFeeBaseBatch = serviceableItemsSum(allItems);
 
-      let discount = 0, service = 0;
+      let discount = 0,
+        service = 0;
       if (ord) {
         const dVal = parseFloat(ord.discount_value) || 0;
         const sVal = parseFloat(ord.service_value) || 0;
-        if (dVal > 0) discount = ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
-        if (sVal > 0) service = ord.service_type === "percent" ? (serviceFeeBaseBatch * sVal) / 100 : sVal;
+        if (dVal > 0)
+          discount =
+            ord.discount_type === "percent" ? (total * dVal) / 100 : dVal;
+        if (sVal > 0)
+          service =
+            ord.service_type === "percent"
+              ? (serviceFeeBaseBatch * sVal) / 100
+              : sVal;
       }
-      const netTotal = Math.max(total - discount + service, parseFloat(ord?.deposit || 0)) + Number(ord?.delivery_fee || 0);
+      const netTotal =
+        Math.max(total - discount + service, parseFloat(ord?.deposit || 0)) +
+        Number(ord?.delivery_fee || 0);
 
       await OrdersModel.update(
         {
@@ -2658,12 +3013,18 @@ module.exports = {
           service_charge: service,
           is_synced: 0,
         },
-        { where: { uuid: orderId }, transaction }
+        { where: { uuid: orderId }, transaction },
       );
 
       await transaction.commit();
 
-      res.status(200).json({ uuid: orderId, success: true, deletedItems: items.map(i => i.itemId) });
+      res
+        .status(200)
+        .json({
+          uuid: orderId,
+          success: true,
+          deletedItems: items.map((i) => i.itemId),
+        });
 
       SyncService.queueSync(orderId);
       const { getIo } = require("../socket/MasterServer");
@@ -2674,14 +3035,19 @@ module.exports = {
       if (allAnbarItems.length > 0) {
         const profileId = ord?.profile_id;
         if (profileId) {
-          sendWasteToAdmin(profileId, allAnbarItems).catch(e => console.error("[WASTE] sendWasteToAdmin error:", e.message));
+          sendWasteToAdmin(profileId, allAnbarItems).catch((e) =>
+            console.error("[WASTE] sendWasteToAdmin error:", e.message),
+          );
         }
       }
-
     } catch (error) {
-      try { await transaction.rollback(); } catch (e) {}
+      try {
+        await transaction.rollback();
+      } catch (e) {}
       console.error("Batch Delete Error:", error);
-      res.status(500).json({ message: "Error deleting items", error: error.message });
+      res
+        .status(500)
+        .json({ message: "Error deleting items", error: error.message });
     }
   },
   onUpdateItemCount,
