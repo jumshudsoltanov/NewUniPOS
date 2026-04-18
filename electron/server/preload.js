@@ -36,4 +36,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     setAutoUpdateEnabled: (enabled) => ipcRenderer.invoke("set-auto-update-enabled", enabled),
     checkForUpdatesNow: () => ipcRenderer.invoke("check-for-updates-now"),
     getGithubReleases: () => ipcRenderer.invoke("get-github-releases"),
+    listComPorts: () => ipcRenderer.invoke("list-com-ports"),
 });

@@ -11,7 +11,7 @@ import { cashierPrinterPrefStorageKey, clearPrintersCache, savePrintersToStorage
 import "./DevicesModal.css";
 
 
-const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField, systemPrinters, networkScanResults, networkScanning, onBack, onSave, onTestPrint, onScan, profileLogo }) => {
+const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField, systemPrinters, systemPrintersLoading, onRefreshSystemPrinters, comPorts, networkScanResults, networkScanning, onBack, onSave, onTestPrint, onScan, profileLogo }) => {
     const ct = printer.connection_type || 'network';
     const isNetwork = ct !== 'usb' && ct !== 'com';
     const [pingStatus, setPingStatus] = React.useState(null); // null | 'checking' | 'online' | 'offline'
@@ -74,18 +74,67 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
 
                     {ct === 'usb' ? (
                         <div className="printer-form-group">
-                            <label>Sistem Printeri</label>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                <label style={{ margin: 0 }}>Sistem Printeri</label>
+                                <button
+                                    onClick={onRefreshSystemPrinters}
+                                    disabled={systemPrintersLoading}
+                                    style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 10px', fontSize: '12px', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                    title="Sistem printerlərini yenilə"
+                                >
+                                    <i className={`bi bi-arrow-clockwise${systemPrintersLoading ? ' spin' : ''}`}></i>
+                                    {systemPrintersLoading ? 'Yüklənir...' : 'Yenilə'}
+                                </button>
+                            </div>
                             <select className="printer-select" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value)}>
-                                <option value="">Seçilməyib</option>
+                                <option value="">— Seçilməyib —</option>
                                 {systemPrinters.map(sp => <option key={sp.name} value={sp.name}>{sp.name}</option>)}
                             </select>
+                            {systemPrinters.length === 0 && !systemPrintersLoading && (
+                                <small style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                                    <i className="bi bi-exclamation-circle" style={{ marginRight: '4px' }}></i>
+                                    Windows-da printer tapılmadı. Printerin qurulduğunu yoxlayın (Windows → Printerlər).
+                                </small>
+                            )}
                         </div>
                     ) : ct === 'com' ? (
+                        <>
                         <div className="printer-form-group">
-                            <label>COM Port (məs. COM3, COM4)</label>
-                            <input className="printer-input" placeholder="COM3" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value.toUpperCase())} />
-                            <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>Virtual COM port vasitəsilə qoşulmuş printer üçün</small>
+                            <label>COM Port</label>
+                            {comPorts && comPorts.length > 0 ? (
+                                <>
+                                    <select className="printer-select" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value)}>
+                                        <option value="">— Port seçin —</option>
+                                        {comPorts.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                    {printer.usb_name && !/^COM\d+$/i.test(printer.usb_name) && (
+                                        <small style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                                            ⚠ Yuxarıdan COM port seçin (məs. COM3) — hal-hazırda yanlış dəyər var
+                                        </small>
+                                    )}
+                                    {(!printer.usb_name || /^COM\d+$/i.test(printer.usb_name)) && (
+                                        <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>Yuxarıda avtomatik tapılan portlar</small>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <input className="printer-input" placeholder="COM3" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value.toUpperCase())} />
+                                    <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>Sistem COM portu tapılmadı — əl ilə daxil edin (məs. COM3)</small>
+                                </>
+                            )}
                         </div>
+                        <div className="printer-form-group">
+                            <label>Baud Rate (Sürət)</label>
+                            <select className="printer-select" value={printer.baud_rate || "9600"} onChange={e => updatePrinterField('baud_rate', e.target.value)}>
+                                <option value="9600">9600 (standart)</option>
+                                <option value="19200">19200</option>
+                                <option value="38400">38400</option>
+                                <option value="57600">57600</option>
+                                <option value="115200">115200 (sürətli)</option>
+                            </select>
+                            <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>Printer baud rate ilə uyğun olmalıdır. Əgər yavaş və ya qəribə çap edirsə — 115200 sınayın.</small>
+                        </div>
+                        </>
                     ) : (
                         <>
                             <div className="ip-port-row">
@@ -391,6 +440,8 @@ const DevicesModal = ({ show, onHide }) => {
     const [localIp, setLocalIp] = useState("");
     const [printers, setPrinters] = useState([]);
     const [systemPrinters, setSystemPrinters] = useState([]);
+    const [systemPrintersLoading, setSystemPrintersLoading] = useState(false);
+    const [comPorts, setComPorts] = useState([]);
     const [networkScanResults, setNetworkScanResults] = useState([]);
     const [networkScanning, setNetworkScanning] = useState(false);
     const [masterModes, setMasterModes] = useState({
@@ -533,6 +584,10 @@ const DevicesModal = ({ show, onHide }) => {
                     const sysPrinters = await window.electronAPI.getSystemPrinters();
                     setSystemPrinters(sysPrinters || []);
                 }
+                if (window.electronAPI?.listComPorts) {
+                    const ports = await window.electronAPI.listComPorts();
+                    setComPorts(ports || []);
+                }
                 if (window.electronAPI?.getScreens) {
                     const scr = await window.electronAPI.getScreens();
                     setScreens(scr || []);
@@ -564,6 +619,24 @@ const DevicesModal = ({ show, onHide }) => {
     const updatePrinterField = useCallback((field, value) => {
         setPrinters(prev => prev.map((p, i) => i === selectedPrinterIndex ? { ...p, [field]: value } : p));
     }, [selectedPrinterIndex]);
+
+    const handleRefreshSystemPrinters = async () => {
+        setSystemPrintersLoading(true);
+        try {
+            if (window.electronAPI?.getSystemPrinters) {
+                const sysPrinters = await window.electronAPI.getSystemPrinters();
+                setSystemPrinters(sysPrinters || []);
+            }
+            if (window.electronAPI?.listComPorts) {
+                const ports = await window.electronAPI.listComPorts();
+                setComPorts(ports || []);
+            }
+        } catch (e) {
+            console.warn("Refresh system printers failed:", e.message);
+        } finally {
+            setSystemPrintersLoading(false);
+        }
+    };
 
     const handleNetworkScan = async () => {
         setNetworkScanning(true);
@@ -1160,6 +1233,9 @@ const DevicesModal = ({ show, onHide }) => {
                                         setPrinterTab={setPrinterTab}
                                         updatePrinterField={updatePrinterField}
                                         systemPrinters={systemPrinters}
+                                        systemPrintersLoading={systemPrintersLoading}
+                                        onRefreshSystemPrinters={handleRefreshSystemPrinters}
+                                        comPorts={comPorts}
                                         networkScanResults={networkScanResults}
                                         networkScanning={networkScanning}
                                         onBack={() => setSelectedPrinterIndex(null)}

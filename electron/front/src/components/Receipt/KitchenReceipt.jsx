@@ -1,4 +1,5 @@
 import React from "react";
+import QRCode from "react-qr-code";
 
 const KitchenReceipt = ({
     orderedItems = [],
@@ -312,6 +313,15 @@ const KitchenReceipt = ({
 
             {/* FOOTER */}
             <div style={styles.footer}>{customFooterText}</div>
+
+            {/* QR CODE - Mətbəx çekində orijinal drayverdə olduğu üçün əlavə edildi */}
+            {orderId && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px', paddingBottom: '10px' }}>
+                    <div style={{ background: 'white', padding: '5px' }}>
+                        <QRCode value={String(orderId)} size={60} level="M" />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

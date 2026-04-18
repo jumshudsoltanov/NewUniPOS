@@ -96,6 +96,21 @@ const getProfileForPrinting = (profileData, orderProfile) => {
     }
 };
 
+const sendRemoteLog = async (orderData, action, details) => {
+    try {
+        if (orderData?.checkData?.uuid) {
+            await axios.post(`/orders-items/${orderData.checkData.uuid}/logs`, {
+                action: action,
+                waiterName: orderData.waiterName || "Sistem",
+                details: details,
+                time: new Date().toISOString()
+            });
+        }
+    } catch (e) {
+        console.error("Failed to save log:", e);
+    }
+};
+
 export const processAndPrintOrders = async (items, orderData, menuDataWithCategories) => {
     const printerBatches = []; // Array of { printerName: [items] } pools
 
@@ -159,7 +174,7 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 container.style.position = "absolute";
                 container.style.top = "0px";
                 container.style.left = "-9999px";
-                container.style.width = "272px";
+                container.style.width = "330px";
                 document.body.appendChild(container);
 
                 const root = ReactDOM.createRoot(container);
@@ -246,9 +261,10 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                     printerObj = profilePrinters.find(p => Number(p.is_cashier) === 0) || printerObj;
                 }
                 const _connType2 = printerObj?.connection_type;
+                const isCom2 = _connType2 === 'com';
                 const isNetwork = _connType2 === "network" || (_connType2 !== "usb" && _connType2 !== "com" && !!printerObj?.ip);
-                const hasUsbName = !!(printerObj?.usb_name && printerObj.usb_name.trim() && printerObj.usb_name !== 'RASTER');
-                const targetPrinter = (printerObj?.usb_name && printerObj.usb_name !== 'RASTER') ? printerObj.usb_name : printerName;
+                const hasUsbName = !isCom2 && !!(printerObj?.usb_name && printerObj.usb_name.trim() && printerObj.usb_name !== 'RASTER');
+                const targetPrinter = isCom2 ? (printerObj.usb_name || printerName) : ((printerObj?.usb_name && printerObj.usb_name !== 'RASTER') ? printerObj.usb_name : printerName);
                 const printerSettings = printerObj ? {
                     encoding: printerObj.encoding || 'utf8',
                     copies: printerObj.copies || 1,
@@ -264,10 +280,13 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                     open_drawer_without_print: printerObj.open_drawer_without_print || 0,
                     paper_size: printerObj.paper_size || '80',
                     font_family: printerObj.font_family || 'Arial',
-                    usb_name: (printerObj.usb_name && printerObj.usb_name !== 'RASTER') ? printerObj.usb_name : null,
+                    usb_name: isCom2 ? null : ((printerObj.usb_name && printerObj.usb_name !== 'RASTER') ? printerObj.usb_name : null),
                     fast_print: printerObj.fast_print ? 1 : 0,
                     print_logo: printerObj.print_logo != null ? Number(printerObj.print_logo) : 1,
                     rotate_180: printerObj.rotate_180 ? 1 : 0,
+                    baud_rate: printerObj.baud_rate || '9600',
+                    connection_type: _connType2 || null,
+                    com_port: isCom2 ? (printerObj.usb_name || null) : null,
                 } : {};
                 const safeSettings = JSON.parse(JSON.stringify(printerSettings));
                 const printPayload = isNetwork && printerObj?.ip && !hasUsbName
@@ -287,13 +306,13 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                         const displayId = orderData.checkData?.id || orderData.orderId;
                         console.error(`[PRINTER] Print failed for ${printerName}:`, errMsg);
                         addNotification("Çap Xətası", `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: displayId, printerName, category: "system", type: "error" });
-                        await logError(errMsg);
+                        await sendRemoteLog(orderData, "Mətbəx Çapı Xətası", `${printerName}: ${errMsg}`);
                     }
                 } else {
                     const errMsg = "Electron API tapılmadı";
                     const displayId = orderData.checkData?.id || orderData.orderId;
                     addNotification("Sistem Xətası", errMsg, { orderId: displayId, printerName, category: "system", type: "error" });
-                    await logError(errMsg);
+                    await sendRemoteLog(orderData, "Sistem Xətası", errMsg);
                 }
 
                 // Minimal delay between print jobs for speed while maintaining stability
@@ -345,24 +364,9 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
 
     const cashierPrinters = resolveCashierPrintersForPrint(printers);
 
-    const logError = async (action, details) => {
-        try {
-            if (orderData?.checkData?.uuid) {
-                await axios.post(`/orders-items/${orderData.checkData.uuid}/logs`, {
-                    action: action,
-                    waiterName: orderData.waiterName || "Sistem",
-                    details: details,
-                    time: new Date().toISOString()
-                });
-            }
-        } catch (e) {
-            console.error("Failed to save log:", e);
-        }
-    };
-
     if (!cashierPrinters.length) {
         addNotification("Çap Xətası", "Kassa printeri təyin edilməyib", { orderId: orderData?.checkData?.id || orderData?.orderId, category: "system", type: "error" });
-        logError("Müştəri Çapı Xətası", "Kassa printeri təyin edilməyib").catch(() => {});
+        sendRemoteLog(orderData, "Müştəri Çapı Xətası", "Kassa printeri təyin edilməyib").catch(() => {});
         return { success: false, error: "Kassa printeri tapılmadı" };
     }
 
@@ -370,7 +374,7 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
     container.style.position = "absolute";
     container.style.top = "0px";
     container.style.left = "-9999px";
-    container.style.width = "272px";
+    container.style.width = "330px";
     document.body.appendChild(container);
 
     const root = ReactDOM.createRoot(container);
@@ -403,8 +407,9 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
         const buildCashierPrintPayload = (printer) => {
             const printerName = printer?.local_name || printer?.name;
             const connType = printer?.connection_type;
+            const isCom = connType === 'com';
             const isNetworkPrinter = connType === "network" || (connType !== "usb" && connType !== "com" && !!printer?.ip);
-            const hasUsbName = !!(printer?.usb_name && printer.usb_name.trim() && printer.usb_name !== 'RASTER');
+            const hasUsbName = !isCom && !!(printer?.usb_name && printer.usb_name.trim() && printer.usb_name !== 'RASTER');
             const printerSettings = printer ? {
                 encoding: printer.encoding || 'utf8',
                 copies: printer.copies || 1,
@@ -420,16 +425,21 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
                 open_drawer_without_print: printer.open_drawer_without_print || 0,
                 paper_size: printer.paper_size || '80',
                 font_family: printer.font_family || 'Arial',
-                usb_name: (printer.usb_name && printer.usb_name !== 'RASTER') ? printer.usb_name : null,
+                usb_name: isCom ? null : ((printer.usb_name && printer.usb_name !== 'RASTER') ? printer.usb_name : null),
                 fast_print: printer.fast_print ? 1 : 0,
                 print_logo: printer.print_logo != null ? Number(printer.print_logo) : 1,
                 rotate_180: printer.rotate_180 ? 1 : 0,
+                baud_rate: printer.baud_rate || '9600',
+                connection_type: connType || null,
+                com_port: isCom ? (printer.usb_name || null) : null,
             } : {};
             const safeSettings = JSON.parse(JSON.stringify(printerSettings));
             if (isNetworkPrinter && printer?.ip && !hasUsbName) {
                 return { html, printerName: "", printerIp: String(printer.ip), printerPort: Number(printer.port) || 9100, printerSettings: safeSettings };
             }
-            return { html, printerName: String(printer?.usb_name || printerName || ""), printerSettings: safeSettings };
+            // COM port: printerName kimi COM port adını göndər (usb_name = "COM3")
+            const targetName = isCom ? (printer.usb_name || printerName || "") : (printer.usb_name || printerName || "");
+            return { html, printerName: String(targetName), printerSettings: safeSettings };
         };
 
         if (forceDelegate && !canDelegate) {
@@ -474,7 +484,7 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
                     if (result && result.success) return true;
                     const pLabel = printer?.local_name || printer?.name || printPayload.printerIp;
                     addNotification("Çap Xətası", `${pLabel}: ${result?.error || "Bilinməyən xəta"}`, { orderId: orderData.checkData?.id, category: "system", type: "error" });
-                    logError("Müştəri Çapı Xətası", `Kassa çapı (${pLabel}): ${result?.error || "Bilinməyən xəta"}`).catch(() => {});
+                    sendRemoteLog(orderData, "Müştəri Çapı Xətası", `Kassa çapı (${pLabel}): ${result?.error || "Bilinməyən xəta"}`).catch(() => {});
                     throw new Error(result?.error || "Bilinməyən xəta");
                 })
             );
@@ -505,12 +515,12 @@ export const printCustomerReceipt = async (orderData, profileData, options = {})
 
         const errMsg = "Electron API mövcud deyil";
         addNotification("Sistem Xətası", errMsg, { orderId: orderData.checkData?.id, category: "system", type: "error" });
-        logError("Sistem Xətası", errMsg).catch(() => {});
+        sendRemoteLog(orderData, "Sistem Xətası", errMsg).catch(() => {});
         return { success: false, error: errMsg };
     } catch (error) {
         console.error("Print generation error:", error);
         addNotification("Çap Xətası", "Çek yaradılarkən xəta baş verdi", { orderId: orderData.checkData?.id, category: "system", type: "error" });
-        logError("Müştəri Çapı Xətası", `Çek yaradılarkən xəta: ${error.message}`).catch(() => {});
+        sendRemoteLog(orderData, "Müştəri Çapı Xətası", `Çek yaradılarkən xəta: ${error.message}`).catch(() => {});
         return { success: false, error: error.message };
     } finally {
         root.unmount();

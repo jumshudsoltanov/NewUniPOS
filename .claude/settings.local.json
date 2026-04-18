@@ -23,7 +23,20 @@
       "Bash(grep -rn \"clearOrders\\\\|SalesTypesModal\" c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/ --include=*.jsx -l)",
       "Bash(\"c:/Users/Jumshud/Desktop/POS-ReDesing/electron/front/src/components/RefreshLoader/RefreshLoader.css\")",
       "Bash(grep -r \"minVersion\\\\|TLSv1\\\\|rejectUnauthorized\\\\|Socket\\\\|serialport\\\\|net\\\\\\\\.connect\\\\|ws://\" /c/Users/Jumshud/Desktop/POS-ReDesing/electron/backend/services --include=\"*.js\")",
-      "Read(//c/Users/Jumshud/.claude/projects/c--Users-Jumshud-Desktop-POS-ReDesing/c0d245db-cac2-4624-998e-27532aa6e201/tasks/**)"
+      "Read(//c/Users/Jumshud/.claude/projects/c--Users-Jumshud-Desktop-POS-ReDesing/c0d245db-cac2-4624-998e-27532aa6e201/tasks/**)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); Object.entries\\(p.scripts\\).forEach\\(\\([k,v]\\) => console.log\\(k + ': ' + v\\)\\)\")",
+      "Bash(node -e \"const os = require\\('os'\\); console.log\\('arch:', os.arch\\(\\), 'platform:', os.platform\\(\\)\\)\")",
+      "Bash(\"c:/Users/Jumshud/Desktop/POS-ReDesing/node_modules/app-builder-bin/win/x64/app-builder.exe\" --version)",
+      "Bash(ls \"c:/Users/Jumshud/AppData/Local/electron-builder/Cache/winCodeSign/\"*/)",
+      "Bash(node -e ':*)",
+      "Bash(\"c:/Users/Jumshud/AppData/Local/electron-builder/Cache/nsis/nsis-3.0.4.1/Bin/makensis.exe\" /VERSION)",
+      "Bash(\"c:/Users/Jumshud/AppData/Local/electron-builder/Cache/winCodeSign/winCodeSign-2.6.0/rcedit-x64.exe\" --help)",
+      "Bash(node -e \"const v = require\\('./node_modules/electron/package.json'\\).version; console.log\\('electron version:', v\\)\" ls \"c:/Users/Jumshud/AppData/Local/electron-builder/Cache/\" ls \"c:/Users/Jumshud/.cache/electron/\")",
+      "Bash(node -e \"const m = require\\('usb'\\); console.log\\('Version:', m.version || 'v1.x'\\); console.log\\('Keys:', Object.keys\\(m\\).slice\\(0,5\\).join\\(', '\\)\\)\")",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/usb/package.json'\\).version\\)\")",
+      "Bash(npx electron-rebuild *)",
+      "Bash(node -e ' *)",
+      "Bash(npm run *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",

@@ -8,24 +8,20 @@ const {
   nativeImage,
 } = require("electron");
 
-// Windows 7 köhnə sertifikat problemi — Node.js-in öz CA bundle istifadə etsin
-process.env.NODE_TLS_REJECT_UNAUTHORIZED =
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED || "0";
-
-const { autoUpdater } = require("electron-updater");
-const log = require("electron-log");
-
-autoUpdater.logger = log;
-autoUpdater.logger.transports.file.level = "debug";
-autoUpdater.autoInstallOnAppQuit = true;
-// autoDownload app tam hazır olandan sonra settings faylından oxunacaq (app.whenReady sonra)
-log.info("UniPOS Desktop Application is starting...");
-
-Menu.setApplicationMenu(null);
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
 const { exec } = require("child_process");
+const log = require("electron-log");
+const { autoUpdater } = require("electron-updater");
+
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = "debug";
+autoUpdater.autoInstallOnAppQuit = true;
+log.info("UniPOS Desktop Application is starting...");
+
+Menu.setApplicationMenu(null);
+
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -738,6 +734,34 @@ ipcMain.handle(
   },
 );
 
+ipcMain.handle("list-com-ports", async () => {
+  return new Promise((resolve) => {
+    // PowerShell: Windows-da mövcud COM portlarını siyahıla
+    exec(
+      `powershell -WindowStyle Hidden -Command "Get-WmiObject Win32_PnPEntity | Where-Object { $_.Name -match 'COM\\d+' } | ForEach-Object { $m = [regex]::Match($_.Name, 'COM\\d+'); if ($m.Success) { $m.Value } } | Sort-Object -Unique"`,
+      { timeout: 5000 },
+      (err, stdout) => {
+        if (!err && stdout && stdout.trim()) {
+          const ports = stdout.trim().split("\n").map(p => p.trim()).filter(Boolean);
+          if (ports.length > 0) return resolve(ports);
+        }
+        // Fallback: registry-dən oxu
+        exec(
+          `powershell -WindowStyle Hidden -Command "try { $r = Get-ItemProperty -Path 'HKLM:\\HARDWARE\\DEVICEMAP\\SERIALCOMM' -ErrorAction Stop; $r.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' -and $_.Name -notmatch '^PS' } | Select-Object -ExpandProperty Value } catch {}"`,
+          { timeout: 5000 },
+          (err2, stdout2) => {
+            if (!err2 && stdout2 && stdout2.trim()) {
+              const ports2 = stdout2.trim().split("\n").map(p => p.trim()).filter(Boolean);
+              return resolve(ports2);
+            }
+            resolve([]);
+          }
+        );
+      }
+    );
+  });
+});
+
 ipcMain.handle("get-screens", () => {
   const displays = screen.getAllDisplays();
   return displays.map((d, index) => ({
@@ -899,6 +923,7 @@ ipcMain.handle(
     event,
     { html, printerName, printerIp, printerPort, printerSettings } = {},
   ) => {
+    log.info(`[PRINT-RECEIPT] Yeni çap istəyi: ${printerName}, IP: ${printerIp}, Connection: ${printerSettings?.connection_type}`);
     const settings = printerSettings || {};
 
     const sendToTcpOnce = (buf, ip, port) =>
@@ -932,93 +957,123 @@ ipcMain.handle(
       return { success: false, error: lastErr };
     };
 
-    const sendToCom = (buf, portPath) =>
+    const sendToCom = (buf, portPath, baudRate) =>
       new Promise((resolve) => {
-        const st = fs.createWriteStream(portPath, { flags: "w" });
-        st.on("error", (e) => resolve({ success: false, error: e.message }));
-        st.write(buf, (err) => {
-          st.end();
-          resolve(
-            err ? { success: false, error: err.message } : { success: true },
-          );
+        const comName = portPath.replace(/^\\\\\.\\/i, "").toUpperCase(); // \\.\COM3 → COM3
+        const baud = baudRate || settings.baud_rate || "9600";
+        const applyMode = () =>
+          new Promise((res) => {
+            exec(
+              `mode ${comName} BAUD=${baud} PARITY=N DATA=8 STOP=1 XON=OFF`,
+              { windowsHide: true },
+              () => res(),
+            );
+          });
+        applyMode().then(() => {
+          const CHUNK = 4096;
+          const st = fs.createWriteStream(portPath, { flags: "w" });
+          st.on("error", (e) => resolve({ success: false, error: e.message }));
+          let offset = 0;
+          const writeNext = () => {
+            if (offset >= buf.length) {
+              st.end();
+              return resolve({ success: true });
+            }
+            const chunk = buf.slice(offset, offset + CHUNK);
+            offset += CHUNK;
+            const ok = st.write(chunk);
+            if (ok) {
+              writeNext();
+            } else {
+              st.once("drain", writeNext);
+            }
+          };
+          writeNext();
         });
       });
 
     const paperSize = settings.paper_size || "80";
     const receiptWidthPx = paperSize === "58" ? 384 : 576;
-    const contentBaseWidth = 272; // HTML həmişə 272px üçün render olur
+    const contentBaseWidth = 330; // Orijinal ölçüyə qaytarıldı (330px)
     const zoomLevel = receiptWidthPx / contentBaseWidth;
 
     const renderHtmlToRasterBuffer = async (htmlContent, s) => {
-      // offscreen:true Win7/Electron22-də işləmir — show:false + position off-screen istifadə et
+      console.log(`[RASTER] Çap başlayır: ${receiptWidthPx}px (Base: ${contentBaseWidth})`);
       let rasterWindow = new BrowserWindow({
         show: false,
-        x: -9999,
-        y: -9999,
-        width: receiptWidthPx + 40,
-        height: 6000,
-        ...browserWindowIconFields(),
+        width: receiptWidthPx,
+        height: 1200,
+        useContentSize: true,
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true,
           webSecurity: false,
+          offscreen: false,
         },
       });
 
       const _hdr = s.receipt_header ? String(s.receipt_header).trim() : "";
       const _ftr = s.receipt_footer ? String(s.receipt_footer).trim() : "";
       const headerHtml = _hdr
-        ? `<div style="text-align:center; padding-bottom: 10px; font-family: monospace; white-space: pre-wrap; font-weight: ${s.bold_header == 1 ? "bold" : "normal"}; font-size: ${s.double_height_header == 1 ? "1.5em" : "1.1em"};">${_hdr.replace(/</g, "&lt;")}</div>`
+        ? `<div style="text-align:center; padding-bottom: 10px; font-family: monospace; white-space: pre-wrap; font-weight: bold; font-size: ${s.double_height_header == 1 ? "1.6em" : "1.2em"}; color: black !important;">${_hdr.replace(/</g, "&lt;")}</div>`
         : "";
       const footerHtml = _ftr
-        ? `<div style="text-align:center; padding-top: 10px; font-family: monospace; white-space: pre-wrap; margin-bottom: 20px;">${_ftr.replace(/</g, "&lt;")}</div>`
+        ? `<div style="text-align:center; padding-top: 10px; font-family: monospace; white-space: pre-wrap; margin-bottom: 20px; color: black !important;">${_ftr.replace(/</g, "&lt;")}</div>`
         : "";
       const fontFamily =
         s.font_family && s.font_family !== "Arial"
-          ? `"${s.font_family}", monospace`
-          : "monospace";
+          ? `"${s.font_family}", Arial, sans-serif`
+          : "Arial, sans-serif";
 
       const printLogo = s.print_logo != null ? Number(s.print_logo) : 1;
       const fastPrint = s.fast_print ? 1 : 0;
       const logoStyle =
         printLogo === 0
-          ? `img { display: none !important; }`
-          : `img { max-width: 100%; }`;
+          ? `img, svg { display: none !important; }`
+          : `img, svg { max-width: 100%; height: auto; display: block; margin: 0 auto; filter: contrast(300%) grayscale(100%); }`;
       const imageQuality = fastPrint ? `image-rendering: pixelated;` : ``;
 
-      // Win7 uyumluluğu üçün zoom əvəzinə transform:scale istifadə et
-      // #zoom-outer: vizual genişliyi receiptWidthPx edir; #zoom-wrap: orijinal contentBaseWidth-də render
       const rasterPageHtml = `<!DOCTYPE html><html><head>
       <meta charset="utf-8">
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
-          margin: 0; padding: 0; background: #fff;
+          margin: 0; padding: 0; background: white !important;
           font-family: ${fontFamily}, sans-serif;
-          color: #000;
-          overflow: hidden;
+          color: black !important;
           width: ${receiptWidthPx}px;
+          -webkit-print-color-adjust: exact;
         }
         #zoom-outer {
           width: ${receiptWidthPx}px;
-          overflow: hidden;
+          background: white !important;
         }
         #zoom-wrap {
           width: ${contentBaseWidth}px;
           transform-origin: top left;
           transform: scale(${zoomLevel.toFixed(4)});
-          padding-top: 0px;
-          padding-bottom: 30px;
-        }
-        #zoom-wrap > *:first-child,
-        #zoom-wrap > *:first-child > *:first-child {
-          margin-top: 0 !important;
-          padding-top: 0 !important;
+          padding-bottom: 20px;
         }
         ${logoStyle}
-        body, body * { font-weight: bold; ${imageQuality} }
+        body, body * { 
+          background-color: white !important;
+          color: black !important;
+          font-weight: 800 !important;
+          line-height: 1.2;
+        }
+        svg { 
+          background: white !important;
+          shape-rendering: crispEdges !important;
+          display: block;
+          margin: 10px auto !important;
+          width: 80px !important;
+          height: 80px !important;
+        }
+        #zoom-wrap {
+          /* QR-ın daxili naxışlarını qorumaq üçün artıq filtrləri yığışdırdıq */
+        }
       </style>
-    </head><body><div id="zoom-outer"><div id="zoom-wrap">${headerHtml}${htmlContent}${footerHtml}</div></div></body></html>`;
+    </head><body><div id="zoom-outer"><div id="zoom-wrap">${headerHtml || ""}${htmlContent || ""}${footerHtml || ""}</div></div></body></html>`;
 
       await new Promise((resolve) => {
         rasterWindow.webContents.once("did-finish-load", resolve);
@@ -1028,122 +1083,95 @@ ipcMain.handle(
         );
       });
 
-      // Fontlar tam yüklənsin — "Aa" artifact-ının qarşısını alır
-      await rasterWindow.webContents
-        .executeJavaScript(
-          `
-      new Promise(resolve => {
-        if (document.fonts && document.fonts.ready) {
-          document.fonts.ready.then(resolve).catch(resolve);
-        } else {
-          resolve();
-        }
-      });
-    `,
-        )
-        .catch(() => {});
-
+      // Şəkillərin tam mount olmasını gözlə
       await rasterWindow.webContents.executeJavaScript(`
-      new Promise(resolve => {
-        const imgs = document.querySelectorAll('img');
-        if (!imgs.length) return resolve();
-        let loaded = 0;
-        const check = () => { loaded++; if (loaded >= imgs.length) resolve(); };
-        imgs.forEach(img => {
-          if (img.complete) check();
-          else { img.onload = check; img.onerror = check; }
+        new Promise(resolve => {
+          setTimeout(resolve, 2000); // QR-ın tam render olunması üçün 2 saniyə
         });
-        setTimeout(resolve, ${s.fast_print == 1 ? 150 : 1500});
-      });
-    `);
+      `);
 
       const wrapInfo = await rasterWindow.webContents.executeJavaScript(`
-      (function() {
-        var wrap = document.getElementById('zoom-wrap');
-        var outer = document.getElementById('zoom-outer');
-        // scrollHeight — scale-dən əvvəlki orijinal hündürlük
-        var rawH = wrap.scrollHeight;
-        // transform:scale vurulmuş vizual hündürlük
-        var zoomed = Math.ceil(rawH * ${zoomLevel.toFixed(4)});
-        // outer-in body içindəki mövqeyi
-        var rect = outer ? outer.getBoundingClientRect() : { top: 0 };
-        return { height: Math.max(zoomed, 200), offsetY: Math.max(0, Math.floor(rect.top)) };
-      })();
-    `);
+        (function() {
+          var wrap = document.getElementById('zoom-wrap');
+          var rect = wrap.getBoundingClientRect();
+          return { height: Math.ceil(rect.height), raw: wrap.scrollHeight };
+        })();
+      `);
 
-      const totalH = wrapInfo.height;
-      const captureY = wrapInfo.offsetY;
+      console.log(`[RASTER] H-Detect: LogicH=${wrapInfo.raw}, VisualH=${wrapInfo.height}`);
+      
+      // Hündürlük tənzimlənməsi
+      const captureH = wrapInfo.height + 20; 
+      rasterWindow.setContentSize(receiptWidthPx, captureH + 10);
+      await new Promise(r => setTimeout(r, 300));
 
-      rasterWindow.setSize(receiptWidthPx + 40, totalH + captureY + 60);
-      await new Promise((r) => setTimeout(r, s.fast_print == 1 ? 80 : 500));
-
-      const capturedImage = await rasterWindow.webContents.capturePage({
-        x: 0,
-        y: captureY,
-        width: receiptWidthPx,
-        height: totalH,
-      });
-
+      const capturedImage = await rasterWindow.webContents.capturePage();
       if (!rasterWindow.isDestroyed()) rasterWindow.close();
       rasterWindow = null;
 
-      const pngBuf = capturedImage.toPNG();
-      const bmp = nativeImage.createFromBuffer(pngBuf).toBitmap();
-      const imgSize = capturedImage.getSize();
+      // Resizing captured image to exact printer width (handles High DPI systems)
+      const normalizedImage = capturedImage.resize({ width: receiptWidthPx });
+      const bmp = normalizedImage.toBitmap();
+      const imgSize = normalizedImage.getSize();
       const imgW = imgSize.width;
       const imgH = imgSize.height;
       const widthBytes = Math.ceil(receiptWidthPx / 8);
-      const scaleX = imgW / receiptWidthPx;
 
       const isRotated = s.rotate_180 == 1;
       const darkLevel = s.darkness ? Number(s.darkness) : 5;
-      const threshold = 100 + (darkLevel - 1) * 11;
+      // Ultra-kəskinlik üçün threshold-u 200-ə qaldırırıq
+      const threshold = 200 + (darkLevel - 5) * 10;
 
-      const ESC = 0x1b,
-        GS = 0x1d;
+      const ESC = 0x1b, GS = 0x1d;
       const parts = [];
-
       parts.push(Buffer.from([ESC, 0x40]));
       parts.push(Buffer.from([ESC, 0x33, 0x00]));
 
-      for (let row = 0; row < imgH; row++) {
-        const rowData = Buffer.alloc(widthBytes, 0x00);
-        const srcY = isRotated ? imgH - 1 - row : row;
-
-        for (let col = 0; col < receiptWidthPx; col++) {
-          const srcX = Math.min(
-            Math.floor((isRotated ? receiptWidthPx - 1 - col : col) * scaleX),
-            imgW - 1,
-          );
-          const pixelOffset = (srcY * imgW + srcX) * 4;
-          const r = bmp[pixelOffset] || 0;
-          const g = bmp[pixelOffset + 1] || 0;
-          const b = bmp[pixelOffset + 2] || 0;
-
-          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-          if (gray < threshold) {
-            const byteIdx = Math.floor(col / 8);
-            const bitIdx = 7 - (col % 8);
-            rowData[byteIdx] |= 1 << bitIdx;
-          }
+      // Automatik trim: Sonuncu tünd (qara) sətiri tapırıq
+      let lastBlackRow = imgH - 1;
+      for (let y = imgH - 1; y >= 0; y--) {
+        let hasBlack = false;
+        for (let x = 0; x < imgW; x++) {
+          const pixelOffset = (y * imgW + x) * 4;
+          const gray = 0.299 * bmp[pixelOffset] + 0.587 * bmp[pixelOffset + 1] + 0.114 * bmp[pixelOffset + 2];
+          if (gray < threshold) { hasBlack = true; break; }
         }
+        if (hasBlack) { lastBlackRow = y; break; }
+      }
+      
+      const trimmedH = Math.min(imgH, lastBlackRow + 10); // 10px əlavə boşluq qalsın
+      console.log(`[RASTER] Trim: OriginalH=${imgH}, TrimmedH=${trimmedH}`);
 
+      const CHUNK_ROWS = 80;
+      for (let rowStart = 0; rowStart < trimmedH; rowStart += CHUNK_ROWS) {
+        const rowsToProcess = Math.min(CHUNK_ROWS, trimmedH - rowStart);
         const header = Buffer.from([
-          GS,
-          0x76,
-          0x30,
-          0x00,
-          widthBytes & 0xff,
-          (widthBytes >> 8) & 0xff,
-          0x01,
-          0x00,
+          GS, 0x76, 0x30, 0x00,
+          widthBytes & 0xff, (widthBytes >> 8) & 0xff,
+          rowsToProcess & 0xff, (rowsToProcess >> 8) & 0xff,
         ]);
         parts.push(header);
-        parts.push(rowData);
+
+        for (let r = 0; r < rowsToProcess; r++) {
+          const row = rowStart + r;
+          const rowData = Buffer.alloc(widthBytes, 0x00);
+          const srcY = isRotated ? trimmedH - 1 - row : row;
+
+          for (let col = 0; col < receiptWidthPx; col++) {
+            const pixelOffset = (srcY * imgW + col) * 4;
+            const gray = 0.299 * bmp[pixelOffset] + 0.587 * bmp[pixelOffset+1] + 0.114 * bmp[pixelOffset+2];
+            if (gray < threshold) {
+              const byteIdx = Math.floor(col / 8);
+              const bitIdx = 7 - (col % 8);
+              rowData[byteIdx] |= 1 << bitIdx;
+            }
+          }
+          parts.push(rowData);
+        }
       }
 
       parts.push(Buffer.from([ESC, 0x33, 0x1e]));
-      const tSpace = s.trailing_space ? Number(s.trailing_space) : 4;
+      const tSpace = s.trailing_space ? Number(s.trailing_space) : 6;
       parts.push(Buffer.from([ESC, 0x64, tSpace]));
 
       const finalCutParts = [];
@@ -1163,10 +1191,10 @@ ipcMain.handle(
 
       const cut = s.cut_mode || "full";
       if (cut === "partial") {
-        finalCutParts.push(Buffer.from([ESC, 0x64, 0x04])); // Feed 4 lines before cut
+        finalCutParts.push(Buffer.from([ESC, 0x64, 0x06])); // Feed 6 lines before cut
         finalCutParts.push(Buffer.from([GS, 0x56, 0x01])); // GS V 1 — partial cut
       } else if (cut !== "none") {
-        finalCutParts.push(Buffer.from([ESC, 0x64, 0x04])); // Feed 4 lines before cut
+        finalCutParts.push(Buffer.from([ESC, 0x64, 0x06])); // Feed 6 lines before cut
         finalCutParts.push(Buffer.from([GS, 0x56, 0x00])); // GS V 0 — full cut
       }
 
@@ -1181,20 +1209,37 @@ ipcMain.handle(
 
     // usb_name='RASTER' və ya boşdursa — Raster yolu; əks halda Windows driver
     const forceRaster = !settings.usb_name || settings.usb_name === "RASTER";
-    const isDirectPrinter =
-      (printerIp && printerPort && forceRaster) ||
-      (printerName && /^COM\d+$/i.test(printerName.trim()));
+    // COM port: connection_type='com' və ya printerName COM\d+ formatındadır
+    const isComPort =
+      settings.connection_type === "com" ||
+      (settings.com_port && /^COM\d+$/i.test(String(settings.com_port).trim())) ||
+      (printerName && /^COM\d+$/i.test(String(printerName).trim()));
+
     if (!forceRaster && settings.usb_name && printerIp && printerPort) {
       printerName = settings.usb_name;
     }
+
+
+    log.info(`[PRINT-MODE] isComPort=${isComPort}, forceRaster=${forceRaster}, ConnectionType=${settings.connection_type}`);
+
+    const isDirectPrinter =
+      isComPort ||
+      (!!printerIp && !!printerPort && forceRaster);
 
     if (isDirectPrinter) {
       try {
         const rasterBuf = await renderHtmlToRasterBuffer(html, settings);
 
-        if (printerName && /^COM\d+$/i.test(printerName.trim())) {
-          const portPath = `\\\\.\\${printerName.trim().toUpperCase()}`;
-          return await sendToCom(rasterBuf, portPath);
+        // COM port adını al: settings.com_port üstünlüklüdür, sonra printerName
+        const comPortName = settings.com_port ||
+          (printerName && /^COM\d+$/i.test(String(printerName).trim()) ? printerName : null);
+
+        if (isComPort && comPortName) {
+            if (!/^COM\d+$/i.test(String(comPortName).trim())) {
+                return { success: false, error: `Yanlış COM port adı: ${comPortName}. COM port COM1, COM2 və s. formatda olmalıdır.` };
+            }
+          const portPath = `\\\\.\\${String(comPortName).trim().toUpperCase()}`;
+          return await sendToCom(rasterBuf, portPath, settings.baud_rate);
         }
 
         const tcpResult = await sendToTcp(rasterBuf, printerIp, printerPort);
@@ -1217,12 +1262,22 @@ ipcMain.handle(
       }
     }
 
+    // Windows Driver: kağız ölçüsünə görə səhifə genişliyi
+    const isSmallPaper = paperSize === "58";
+    // 80mm kağız: 72mm çap sahəsi; 58mm kağız: 58mm çap sahəsi
+    const pageWidthMm = isSmallPaper ? 58 : 72;
+    const pageWidthMicrons = pageWidthMm * 1000;
+    // 272px receipt kontent — 96 DPI-da neçə px = pageWidthMm mm
+    const driverContentPx = Math.round(pageWidthMm * 96 / 25.4);
+    // Scale: 272px-i driverContentPx-ə sığdır (80mm: ~1.0; 58mm: ~0.807)
+    const driverScale = driverContentPx / contentBaseWidth;
+
     let printWindow = new BrowserWindow({
       show: false,
       x: -9999,
       y: -9999,
-      width: 800,
-      height: 1200,
+      width: driverContentPx,
+      height: 4000,
       ...browserWindowIconFields(),
       webPreferences: {
         nodeIntegration: true,
@@ -1231,15 +1286,31 @@ ipcMain.handle(
       },
     });
 
-    const cutBufferMm = 30;
+    const fontFamilyDriver = settings.font_family && settings.font_family !== "Arial"
+      ? `"${settings.font_family}", monospace`
+      : "monospace";
+    const _hdrD = settings.receipt_header ? String(settings.receipt_header).trim() : "";
+    const _ftrD = settings.receipt_footer ? String(settings.receipt_footer).trim() : "";
+    const headerHtmlD = _hdrD
+      ? `<div style="text-align:center;padding-bottom:8px;font-family:monospace;white-space:pre-wrap;font-weight:${settings.bold_header == 1 ? "bold" : "normal"};font-size:${settings.double_height_header == 1 ? "1.5em" : "1.1em"};">${_hdrD.replace(/</g, "&lt;")}</div>`
+      : "";
+    const footerHtmlD = _ftrD
+      ? `<div style="text-align:center;padding-top:8px;font-family:monospace;white-space:pre-wrap;">${_ftrD.replace(/</g, "&lt;")}</div>`
+      : "";
+    const printLogoD = settings.print_logo != null ? Number(settings.print_logo) : 1;
+    const logoStyleD = printLogoD === 0 ? `img { display: none !important; }` : `img { max-width: 100%; }`;
+
     const pageHtml = `<!DOCTYPE html><html><head>
     <meta charset="utf-8">
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      html, body { margin: 0; padding: 0; width: 72mm; }
-      .receipt-cut-buffer { min-height: 25mm; }
+      html, body { margin: 0; padding: 0; background: #fff; width: ${driverContentPx}px; overflow: hidden; font-family: ${fontFamilyDriver}, sans-serif; color: #000; }
+      #driver-outer { width: ${driverContentPx}px; overflow: hidden; }
+      #driver-wrap { width: ${contentBaseWidth}px; transform-origin: top left; transform: scale(${driverScale.toFixed(6)}); }
+      .receipt-cut-buffer { height: 10mm; }
+      ${logoStyleD}
     </style>
-  </head><body><div class="receipt-content">${html}</div><div class="receipt-cut-buffer"></div></body></html>`;
+  </head><body><div id="driver-outer"><div id="driver-wrap">${headerHtmlD}${html}${footerHtmlD}</div></div><div class="receipt-cut-buffer"></div></body></html>`;
 
     await printWindow.loadURL(
       "data:text/html;base64," +
@@ -1249,23 +1320,35 @@ ipcMain.handle(
     try {
       await printWindow.webContents.executeJavaScript(`
       new Promise(resolve => {
-        const imgs = document.querySelectorAll('img');
-        if (!imgs.length) return resolve();
-        let loaded = 0;
-        const check = () => { loaded++; if (loaded >= imgs.length) resolve(); };
-        imgs.forEach(img => {
-          if (img.complete) check();
-          else { img.onload = check; img.onerror = check; }
-        });
-        setTimeout(resolve, 800);
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(() => {
+            const imgs = document.querySelectorAll('img');
+            if (!imgs.length) return resolve();
+            let loaded = 0;
+            const check = () => { loaded++; if (loaded >= imgs.length) resolve(); };
+            imgs.forEach(img => { if (img.complete) check(); else { img.onload = check; img.onerror = check; } });
+            setTimeout(resolve, 600);
+          }).catch(resolve);
+        } else {
+          const imgs = document.querySelectorAll('img');
+          if (!imgs.length) return resolve();
+          let loaded = 0;
+          const check = () => { loaded++; if (loaded >= imgs.length) resolve(); };
+          imgs.forEach(img => { if (img.complete) check(); else { img.onload = check; img.onerror = check; } });
+          setTimeout(resolve, 800);
+        }
       });
     `);
 
       const contentHeight = await printWindow.webContents.executeJavaScript(`
-      const h = document.body.scrollHeight;
-      const hmm = Math.ceil(h * 25.4 / 96) + ${cutBufferMm};
+      const wrapEl = document.getElementById('driver-wrap');
+      const rawH = wrapEl ? wrapEl.scrollHeight : document.body.scrollHeight;
+      const scaledH = Math.ceil(rawH * ${driverScale.toFixed(6)});
+      const bufEl = document.querySelector('.receipt-cut-buffer');
+      const bufH = bufEl ? bufEl.offsetHeight : 0;
+      const hmm = Math.ceil((scaledH + bufH) * 25.4 / 96) + 10;
       const s = document.createElement('style');
-      s.textContent = '@page { size: 72mm ' + hmm + 'mm; margin: 0; }';
+      s.textContent = '@page { size: ${pageWidthMm}mm ' + hmm + 'mm; margin: 0; }';
       document.head.appendChild(s);
       hmm;
     `);
@@ -1275,20 +1358,40 @@ ipcMain.handle(
           reject(new Error("Printing timed out (10s)"));
         }, 10000);
 
-        printWindow.webContents.print(
-          {
-            silent: true,
-            deviceName: printerName,
-            margins: { marginType: "none" },
-            preferCSSPageSize: true,
-            pageSize: { width: 72000, height: contentHeight * 1000 },
-          },
-          (success, errorType) => {
-            clearTimeout(timeout);
-            if (!success) reject(errorType || "Print failed");
-            else resolve();
-          },
-        );
+        const printOptions = {
+          silent: true,
+          deviceName: printerName,
+          margins: { marginType: "none" },
+          preferCSSPageSize: true,
+          pageSize: { width: pageWidthMicrons, height: contentHeight * 1000 },
+        };
+
+        try {
+          printWindow.webContents.print(
+            printOptions,
+            (success, errorType) => {
+              clearTimeout(timeout);
+              if (!success) {
+                // Win7 fallback: pageSize ilə problem olarsa sadə opsiyalarla yenidən cəhd et
+                log.warn(`[PRINT] İlk cəhd uğursuz (${errorType}), sadə opsiyalarla təkrar...`);
+                try {
+                  printWindow.webContents.print(
+                    { silent: true, deviceName: printerName, margins: { marginType: "none" } },
+                    (success2, errorType2) => {
+                      if (!success2) reject(new Error(errorType2 || errorType || "Print failed"));
+                      else resolve();
+                    }
+                  );
+                } catch (e2) { reject(e2); }
+              } else {
+                resolve();
+              }
+            },
+          );
+        } catch (printErr) {
+          clearTimeout(timeout);
+          reject(printErr);
+        }
       });
 
       if (!printWindow.isDestroyed()) printWindow.close();
@@ -1338,6 +1441,48 @@ ipcMain.handle(
     }
   },
 );
+
+ipcMain.handle("get-usb-printers", async () => {
+  if (!usb) return [];
+  try {
+    const list = usb.getDeviceList();
+    const result = [];
+    for (const d of list) {
+      try {
+        const vid = d.deviceDescriptor.idVendor.toString(16).padStart(4, "0");
+        const pid = d.deviceDescriptor.idProduct.toString(16).padStart(4, "0");
+        let serial = "";
+        let isPrinter = false;
+
+        try {
+          d.open();
+          if (d.deviceDescriptor.iSerialNumber > 0) {
+            serial = await new Promise((resolve) => {
+              d.getStringDescriptor(d.deviceDescriptor.iSerialNumber, (err, data) => {
+                resolve(err ? "" : data);
+              });
+            });
+          }
+          try {
+            isPrinter = d.configDescriptor && d.configDescriptor.interfaces.some(i => i.some(alt => alt.bInterfaceClass === 7));
+          } catch(_) {}
+          d.close();
+        } catch (_) {}
+
+        result.push({
+          vid,
+          pid,
+          serial: serial || "",
+          name: `USB Device ${vid}:${pid}${serial ? " [" + serial + "]" : ""}${isPrinter ? " (Printer)" : ""}`,
+          isPrinter
+        });
+      } catch (_) {}
+    }
+    return result;
+  } catch (e) {
+    return [];
+  }
+});
 
 ipcMain.handle("get-memory-info", () => {
   const totalMemory = os.totalmem();
@@ -1813,26 +1958,7 @@ ipcMain.handle("scan-master", async () => {
   });
 });
 
-// ── Yalnız Win7-də GPU flag-ları ──────────────────────────────────────────────
-// os.release() Win7-də "6.1.x", Win8-də "6.2.x", Win10-da "10.0.x" qaytarır
-if (process.platform === "win32") {
-  try {
-    const release = os.release() || "";
-    const major = parseInt(release.split(".")[0], 10);
-    const minor = parseInt(release.split(".")[1], 10);
-    const isWin7 = major === 6 && minor <= 1; // 6.0=Vista, 6.1=Win7
-    if (isWin7) {
-      log.info("[WIN7] Windows 7 aşkarlandı, GPU flag-ları tətbiq edilir...");
-      app.commandLine.appendSwitch("disable-gpu");
-      app.commandLine.appendSwitch("disable-gpu-compositing");
-      app.commandLine.appendSwitch("disable-gpu-sandbox");
-      app.commandLine.appendSwitch("use-gl", "swiftshader");
-    }
-  } catch (_gpuErr) {
-    // versiya oxunmasa keç — normal işləmə davam edir
-  }
-}
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 // Start backend server with error handling
 try {
