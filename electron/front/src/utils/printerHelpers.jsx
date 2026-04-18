@@ -114,11 +114,6 @@ const sendRemoteLog = async (orderData, action, details) => {
 export const processAndPrintOrders = async (items, orderData, menuDataWithCategories) => {
     const printerBatches = []; // Array of { printerName: [items] } pools
 
-    console.group("🖨️ [PrinterHelpers] processAndPrintOrders başladı");
-    console.log("📦 Items (", items.length, "):", items.map(i => ({ name: i.name, id: i.id, category_id: i.category_id, printer_details: i.printer_details, printer_id: i.printer_id })));
-    console.log("📂 menuDataWithCategories:", menuDataWithCategories ? `${menuDataWithCategories.data?.length} kateqoriya` : "NULL/UNDEFINED", menuDataWithCategories?.data?.slice(0,2));
-    console.groupEnd();
-
     const findCategoryPrinters = (categoryId) => {
         if (!menuDataWithCategories?.data) return [];
         for (const genCat of (menuDataWithCategories.data || [])) {
@@ -138,14 +133,6 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
         let printers = item.printer_details || [];
         const catPrinters = (printers.length === 0 && item.category_id) ? findCategoryPrinters(item.category_id) : [];
         if (printers.length === 0 && catPrinters.length > 0) printers = catPrinters;
-
-        console.log(
-            `🔍 "${item.name}" (id:${item.id}, cat:${item.category_id})`,
-            `\n  ├ product.printer_details:`, item.printer_details?.length ? item.printer_details : "❌ boş",
-            `\n  ├ product.printer_id:`, item.printer_id ?? "❌ null",
-            `\n  ├ category fallback:`, catPrinters?.length ? catPrinters : "❌ boş",
-            `\n  └ final printers:`, printers?.length ? printers.map(p => p.name || p.local_name) : "❌ HEÇ BİR PRINTER YOX"
-        );
 
         if (printers.length === 0) {
             console.warn(`❌ No printer found for item: ${item.name}`);
@@ -277,7 +264,9 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                 const isCom2 = _connType2 === 'com';
                 const isNetwork = _connType2 === "network" || (_connType2 !== "usb" && _connType2 !== "com" && !!printerObj?.ip);
                 const hasUsbName = !isCom2 && !!(printerObj?.usb_name && printerObj.usb_name.trim() && printerObj.usb_name !== 'RASTER');
-                const targetPrinter = isCom2 ? (printerObj.usb_name || printerName) : ((printerObj?.usb_name && printerObj.usb_name !== 'RASTER') ? printerObj.usb_name : printerName);
+                const targetPrinter = isCom2
+                    ? (printerObj?.usb_name || "")
+                    : ((printerObj?.usb_name && printerObj.usb_name !== 'RASTER') ? printerObj.usb_name : "");
                 const printerSettings = printerObj ? {
                     encoding: printerObj.encoding || 'utf8',
                     copies: printerObj.copies || 1,
@@ -302,6 +291,20 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                     com_port: isCom2 ? (printerObj.usb_name || null) : null,
                 } : {};
                 const safeSettings = JSON.parse(JSON.stringify(printerSettings));
+
+                if (!isNetwork && !targetPrinter) {
+                    const errMsg = "Printer konfiqurasiyası natamamdır: local/USB printer adı tapılmadı";
+                    const displayId = orderData.checkData?.id || orderData.orderId;
+                    addNotification("Çap Xətası", `${printerName} üçün ${errMsg}`, {
+                        orderId: displayId,
+                        printerName,
+                        category: "system",
+                        type: "error"
+                    });
+                    await sendRemoteLog(orderData, "Mətbəx Çapı Xətası", `${printerName}: ${errMsg}`);
+                    continue;
+                }
+
                 const printPayload = isNetwork && printerObj?.ip && !hasUsbName
                     ? { html, printerName: "", printerIp: String(printerObj.ip), printerPort: Number(printerObj.port) || 9100, printerSettings: safeSettings }
                     : { html, printerName: String(targetPrinter || ""), printerSettings: safeSettings };
@@ -317,7 +320,6 @@ export const processAndPrintOrders = async (items, orderData, menuDataWithCatego
                     if (!result || !result.success) {
                         const errMsg = result?.error || 'Bilinməyən xəta';
                         const displayId = orderData.checkData?.id || orderData.orderId;
-                        console.error(`[PRINTER] Print failed for ${printerName}:`, errMsg);
                         addNotification("Çap Xətası", `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`, { orderId: displayId, printerName, category: "system", type: "error" });
                         await sendRemoteLog(orderData, "Mətbəx Çapı Xətası", `${printerName}: ${errMsg}`);
                     }

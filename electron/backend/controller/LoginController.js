@@ -33,6 +33,7 @@ const {
   getCategories,
   getProducts,
 } = require("../data/ProductsData");
+const { getPrinters } = require("../data/PrintersData");
 const { getTags } = require("../data/TagsData");
 const { getPaymentMethods } = require("../data/PaymentMethodsData");
 const { getSalesTypes } = require("../data/SalesTypesData");
@@ -123,6 +124,7 @@ const getLogin = async (req, res) => {
             await getGeneralCategories(profile.id);
             await getCategories(profile.id);
             await getProducts(profile.id);
+            await getPrinters(profile.id);
             await getTags(profile.id);
             await getPaymentMethods(profile.id);
             await getSalesTypes(profile.id);

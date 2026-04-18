@@ -1,8 +1,12 @@
 export const addNotification = (title, message, options = {}) => {
     const { orderId = null, printerName = null, category = "info", type = "info" } = options;
     const notifications = JSON.parse(localStorage.getItem("pos_notifications") || "[]");
+    const now = Date.now();
+    const lastId = Number(localStorage.getItem("pos_notifications_last_id") || "0");
+    const nextId = now > lastId ? now : lastId + 1;
+    localStorage.setItem("pos_notifications_last_id", String(nextId));
     const newNotif = {
-        id: Date.now(),
+        id: nextId,
         title,
         message,
         orderId,

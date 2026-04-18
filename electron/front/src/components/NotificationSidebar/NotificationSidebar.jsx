@@ -106,10 +106,10 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                         {/* Notification list */}
                         <div className="notif-list-container">
                             {filteredNotifs.length > 0 ? (
-                                filteredNotifs.map(n => {
+                                filteredNotifs.map((n, idx) => {
                                     const isError = n.type === 'error' || n.title?.toLowerCase().includes("xəta");
                                     return (
-                                        <div key={n.id} className={`notif-item card-style ${isError ? 'notif-error' : ''}`}>
+                                        <div key={`${n.id}-${idx}`} className={`notif-item card-style ${isError ? 'notif-error' : ''}`}>
                                             <div className="notif-card-main">
                                                 <div className="notif-card-icon-col">
                                                     <div className={`notif-type-icon-circle ${isError ? 'error' : 'info'}`}>

@@ -226,7 +226,6 @@ const CheckHeader = ({
                       display: "block",
                     }}
                   >
-                    {effectiveHallName || "Zal"} /{" "}
                     {effectiveTableName || "Masa"}
                   </span>
                 );
@@ -249,31 +248,6 @@ const CheckHeader = ({
                 </span>
               );
             })()}
-            <div className="header-subtitle-container" style={{ minWidth: 0 }}>
-              {orders && orders?.tags && (
-                <span
-                  className="header-subtitle"
-                  style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    display: "block",
-                  }}
-                >
-                  {orders.tags}
-                </span>
-              )}
-            </div>
-            {activeTableCount > 0 && (
-              <span className="header-meta-line">
-                <span className="header-active-tables-full d-none d-sm-inline">
-                  {activeTableCount} aktiv masa
-                </span>
-                <span className="header-active-tables-short d-sm-none">
-                  {activeTableCount} masa
-                </span>
-              </span>
-            )}
           </div>
         </div>
 

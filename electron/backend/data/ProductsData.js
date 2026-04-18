@@ -23,6 +23,30 @@ const fetchColorsFromV2 = async (endpoint) => {
   return colorMap;
 };
 
+const normalizePrinterIdValue = (value) => {
+  if (value == null) return null;
+  if (Array.isArray(value)) {
+    const ids = value
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    return ids.length ? [...new Set(ids)].join(",") : null;
+  }
+  const asString = String(value).trim();
+  if (!asString || asString === "0") return null;
+  return asString;
+};
+
+const extractPrinterIdString = (item) => {
+  const direct = normalizePrinterIdValue(item?.printer_id);
+  if (direct) return direct;
+
+  const detailIds = (item?.printer_details || [])
+    .map((p) => Number(p?.id ?? p?.printer_id ?? p?.pivot?.printer_id))
+    .filter((n) => Number.isFinite(n) && n > 0);
+
+  return detailIds.length ? [...new Set(detailIds)].join(",") : null;
+};
+
 const getGeneralCategories = async (passedProfileId) => {
   try {
     const profile_id = passedProfileId || (await profileData());
@@ -146,8 +170,7 @@ const getProducts = async (passedProfileId) => {
     ]);
 
     if (v1Result.status === "rejected") {
-      console.error("[ProductsData] V1 API xətası:", v1Result.reason?.message);
-      return;
+      console.warn("[ProductsData] V1 API xətası:", v1Result.reason?.message);
     }
 
     // V2-dən printer_id, color, hourly_price çək
@@ -170,19 +193,27 @@ const getProducts = async (passedProfileId) => {
       console.error("[ProductsData] V2 API xətası:", v2Result.reason?.message);
     }
 
-    // V3 (local admin :8089) — printer_details birbaşa gəlir, ad üzrə match
+    // V3 (local admin :8089) — printer_details birbaşa gəlir, id/ad üzrə match
+    const v3IdMap = {}; // productId -> printer_id(csv)
     const v3NameMap = {}; // name.lower → { printer_id, printer_details }
     if (v3Result.status === "fulfilled") {
-      const v3Items = v3Result.value.data?.items || [];
+      const rawV3 = v3Result.value.data;
+      const v3Items = Array.isArray(rawV3)
+        ? rawV3
+        : rawV3?.items || rawV3?.data || [];
       console.log(`[ProductsData] V3 local admin: ${v3Items.length} məhsul gəldi`);
       v3Items.forEach((item) => {
         if (!item.name) return;
-        if (item.printer_id || item.printer_details?.length > 0) {
+        const extractedPrinterId = extractPrinterIdString(item);
+        if (item.id && extractedPrinterId) {
+          v3IdMap[item.id] = extractedPrinterId;
+        }
+        if (extractedPrinterId || item.printer_details?.length > 0) {
           v3NameMap[item.name.toLowerCase().trim()] = {
-            printer_id: item.printer_id ? item.printer_id.toString() : null,
+            printer_id: extractedPrinterId,
             printer_details: item.printer_details || []
           };
-          console.log(`[ProductsData] V3: "${item.name}" → printer_id:${item.printer_id}, printers:[${(item.printer_details || []).map(p => p.name).join(',')}]`);
+          console.log(`[ProductsData] V3: "${item.name}" → printer_id:${extractedPrinterId}, printers:[${(item.printer_details || []).map(p => p.name).join(',')}]`);
         }
       });
     } else {
@@ -220,13 +251,32 @@ const getProducts = async (passedProfileId) => {
       console.error("[ProductsData] Modifiers API xətası:", modResult.reason?.message);
     }
 
-    if (v1Result.value.data && Array.isArray(v1Result.value.data.data)) {
-      const products = v1Result.value.data.data.map((p) => {
+    const v1Products =
+      v1Result.status === "fulfilled" && Array.isArray(v1Result.value?.data?.data)
+        ? v1Result.value.data.data
+        : [];
+    const v3ProductsRaw =
+      v3Result.status === "fulfilled"
+        ? (Array.isArray(v3Result.value?.data)
+            ? v3Result.value.data
+            : v3Result.value?.data?.items || v3Result.value?.data?.data || [])
+        : [];
+
+    const sourceProducts = v1Products.length > 0 ? v1Products : v3ProductsRaw;
+
+    if (sourceProducts.length > 0) {
+      const products = sourceProducts.map((p) => {
         Object.keys(p).forEach((k) => {
           if (p[k] === undefined) p[k] = k === "printer_id" ? null : 0;
         });
+        // V2 əlavələri (köhnə cloud sahələri üçün fallback)
         if (printerMap[p.id]) p.printer_id = printerMap[p.id];
-        // V3 ad üzrə match
+        // New local admin prioriteti: id uyğun gəlirsə həmişə üstün tut
+        if (v3IdMap[p.id]) {
+          p.printer_id = v3IdMap[p.id];
+          console.log(`[ProductsData] V3 id match: "${p.name}" (#${p.id}) → printer_id:${p.printer_id}`);
+        }
+        // V3 ad üzrə fallback match
         if (!p.printer_id || p.printer_id === "0") {
           const nameKey = p.name?.toLowerCase().trim();
           if (nameKey && v3NameMap[nameKey]?.printer_id) {
@@ -234,7 +284,7 @@ const getProducts = async (passedProfileId) => {
             console.log(`[ProductsData] V3 ad match: "${p.name}" → printer_id:${p.printer_id}`);
           }
         }
-        if (Array.isArray(p.printer_id)) p.printer_id = p.printer_id.join(",");
+        p.printer_id = normalizePrinterIdValue(p.printer_id);
         p.profile_id = profile_id;
         if (colorMap[p.id]) p.color = colorMap[p.id];
         if (hourlyPriceMap[p.id] != null) p.hourly_price = hourlyPriceMap[p.id];
@@ -288,7 +338,9 @@ const getProducts = async (passedProfileId) => {
         }
       }
 
-      console.log("Products DB sync olundu: insert/update + silindi");
+      console.log(`[ProductsData] Products DB sync olundu: ${products.length} məhsul insert/update + silindi`);
+    } else {
+      console.warn("[ProductsData] Heç bir məhsul mənbədən gəlmədi (V1/V3 boşdur)");
     }
   } catch (err) {
     console.error("Xəta:", err.message);
