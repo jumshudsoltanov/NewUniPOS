@@ -42,12 +42,16 @@ const Menu = ({
   const [productViewMode, setProductViewMode] = useState(
     () => localStorage.getItem("pos_product_view_mode") || "card"
   );
+  const [hideImages, setHideImages] = useState(
+    () => localStorage.getItem("pos_hide_images") === "true"
+  );
 
   useEffect(() => {
     const handleViewSettingsChanged = (e) => {
       setCardsPerRow(e.detail.cardsPerRow);
       setCardFontSize(e.detail.cardFontSize);
       if (e.detail.productViewMode) setProductViewMode(e.detail.productViewMode);
+      if (e.detail.hideImages !== undefined) setHideImages(e.detail.hideImages);
     };
     window.addEventListener("categoryViewSettingsChanged", handleViewSettingsChanged);
     return () => window.removeEventListener("categoryViewSettingsChanged", handleViewSettingsChanged);
@@ -533,7 +537,7 @@ const Menu = ({
             ?.filter((item) => item && item.name)
             .map((item, index) => {
               let imageSrc = "none";
-              if (item.img) {
+              if (!hideImages && item.img) {
                 if (item.img.startsWith("data:") || item.img.startsWith("http")) {
                   imageSrc = `url(${item.img})`;
                 } else {
@@ -564,7 +568,7 @@ const Menu = ({
                     className={`menu-card ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
                     style={{
                       backgroundImage: imageSrc,
-                      backgroundColor: item.color || (item.img ? "transparent" : "#555"),
+                      backgroundColor: item.color || ((!hideImages && item.img) ? "transparent" : "#555"),
                       cursor: isDragMode ? "grab" : "pointer",
                     }}
                     draggable={isDragMode}

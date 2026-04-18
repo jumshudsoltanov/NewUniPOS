@@ -103,6 +103,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
   const [productViewMode, setProductViewMode] = useState(
     () => localStorage.getItem("pos_product_view_mode") || "card"
   );
+  const [hideImages, setHideImages] = useState(
+    () => localStorage.getItem("pos_hide_images") === "true"
+  );
 
   const [resettingDb, setResettingDb] = useState(false);
 
@@ -141,6 +144,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       setCardsPerRow(parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10));
       setCardFontSize(parseFloat(localStorage.getItem("pos_card_font_size") || "0.8"));
       setProductViewMode(localStorage.getItem("pos_product_view_mode") || "card");
+      setHideImages(localStorage.getItem("pos_hide_images") === "true");
       try {
         const savedReceipt = JSON.parse(localStorage.getItem("pos_receipt_settings"));
         if (savedReceipt) setReceiptSettings(savedReceipt);
@@ -318,8 +322,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
     localStorage.setItem("pos_cards_per_row", String(cardsPerRow));
     localStorage.setItem("pos_card_font_size", String(cardFontSize));
     localStorage.setItem("pos_product_view_mode", productViewMode);
+    localStorage.setItem("pos_hide_images", String(hideImages));
     window.dispatchEvent(new CustomEvent("categoryViewSettingsChanged", {
-      detail: { cardsPerRow, cardFontSize, productViewMode }
+      detail: { cardsPerRow, cardFontSize, productViewMode, hideImages }
     }));
     toast.success("Görünüş ayarları saxlanıldı");
     setView("main");
@@ -630,6 +635,22 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                   </svg>
                   <span>Siyahı</span>
                 </button>
+              </div>
+            </div>
+
+            <div className="pin-adv-catview-section">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Şəkilləri gizlət</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Kateqoriya və məhsul şəkilləri görünməsin</div>
+                </div>
+                <div
+                  className={`wa-toggle ${hideImages ? "wa-toggle-on" : ""}`}
+                  onClick={() => setHideImages(v => !v)}
+                  style={{ cursor: "pointer", flexShrink: 0 }}
+                >
+                  <div className="wa-toggle-thumb" />
+                </div>
               </div>
             </div>
 
