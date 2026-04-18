@@ -61,6 +61,16 @@ const MenuSlice = createSlice({
       })
       .addCase(menuWithCategories.fulfilled, (state, action) => {
         state.menuDataWithCategories = action.payload;
+        // DEBUG: printer_id vəziyyətini yoxla
+        const allProducts = (action.payload?.data || []).flatMap(c => c.products || []);
+        const withPrinter = allProducts.filter(p => p.printer_details?.length > 0);
+        const withPrinterId = allProducts.filter(p => p.printer_id && p.printer_id !== "0" && p.printer_id !== "");
+        console.group("📂 [MenuSlice] menuWithCategories yükləndi");
+        console.log(`✅ Ümumi məhsul: ${allProducts.length}`);
+        console.log(`🖨️ printer_details DOLU məhsullar (${withPrinter.length}):`, withPrinter.map(p => `${p.name} → [${p.printer_details.map(pr => pr.name || pr.local_name).join(", ")}]`));
+        console.log(`🔑 printer_id DOLU məhsullar (${withPrinterId.length}):`, withPrinterId.map(p => `${p.name} (#${p.id}) → printer_id: ${p.printer_id}`));
+        if (withPrinter.length === 0) console.warn("⚠️ Heç bir məhsula printer təyin edilməyib! Sync işləməyib ola bilər.");
+        console.groupEnd();
       })
       // Instant Update for Products
       .addMatcher(

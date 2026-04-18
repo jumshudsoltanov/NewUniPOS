@@ -55,9 +55,9 @@ const getWaitersList = async (passedProfileId) => {
       const apiIds = apiWaiters.map((w) => w.id);
 
       if (apiIds.length > 0) {
-        await WaitersModel.destroy({ where: { profile_id, id: { [Op.notIn]: apiIds } }, force: true });
+        await WaitersModel.destroy({ where: { profile_id, id: { [Op.notIn]: apiIds }, is_local: { [Op.ne]: 1 } }, force: true });
       } else {
-        await WaitersModel.destroy({ where: { profile_id }, force: true });
+        await WaitersModel.destroy({ where: { profile_id, is_local: { [Op.ne]: 1 } }, force: true });
       }
 
       if (apiWaiters.length > 0) {

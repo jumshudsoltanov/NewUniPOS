@@ -265,6 +265,11 @@ const WaitersModel = db.sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
+    is_local: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "waiters",

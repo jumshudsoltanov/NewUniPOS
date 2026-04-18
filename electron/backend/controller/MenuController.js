@@ -26,8 +26,6 @@ const getMenuWithGeneralCategories = async (req, res) => {
       },
     });
 
-
-
     const printers = await PrintersModel.findAll({
       where: { profile_id: profileId },
       raw: true,
@@ -89,8 +87,6 @@ const getMenuWithCategories = async (req, res) => {
         required: false,
       },
     });
-
-
 
     const printers = await PrintersModel.findAll({
       where: { profile_id: profileId },

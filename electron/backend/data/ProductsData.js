@@ -137,10 +137,11 @@ const getProducts = async (passedProfileId) => {
     const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
-    // V1, V2 və modifiers-i eyni anda paralel çək
-    const [v1Result, v2Result, modResult] = await Promise.allSettled([
+    // V1, V2, V3(local admin) və modifiers-i eyni anda paralel çək
+    const [v1Result, v2Result, v3Result, modResult] = await Promise.allSettled([
       axios.get(`http://46.224.8.157:35627/api/products/${profile_id}`),
       axios.get(`https://api.unipos.tech/api/products?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`),
+      axios.get(`http://localhost:8089/api/products?profile_id=${profile_id}&limit=10000&per_page=10000&page=1`),
       axios.get(`http://46.224.8.157:35627/api/modifiers/${profile_id}`),
     ]);
 
@@ -167,6 +168,25 @@ const getProducts = async (passedProfileId) => {
       });
     } else {
       console.error("[ProductsData] V2 API xətası:", v2Result.reason?.message);
+    }
+
+    // V3 (local admin :8089) — printer_details birbaşa gəlir, ad üzrə match
+    const v3NameMap = {}; // name.lower → { printer_id, printer_details }
+    if (v3Result.status === "fulfilled") {
+      const v3Items = v3Result.value.data?.items || [];
+      console.log(`[ProductsData] V3 local admin: ${v3Items.length} məhsul gəldi`);
+      v3Items.forEach((item) => {
+        if (!item.name) return;
+        if (item.printer_id || item.printer_details?.length > 0) {
+          v3NameMap[item.name.toLowerCase().trim()] = {
+            printer_id: item.printer_id ? item.printer_id.toString() : null,
+            printer_details: item.printer_details || []
+          };
+          console.log(`[ProductsData] V3: "${item.name}" → printer_id:${item.printer_id}, printers:[${(item.printer_details || []).map(p => p.name).join(',')}]`);
+        }
+      });
+    } else {
+      console.warn("[ProductsData] V3 local admin xətası (optional):", v3Result.reason?.message);
     }
 
     // Modifiers çək
@@ -206,6 +226,14 @@ const getProducts = async (passedProfileId) => {
           if (p[k] === undefined) p[k] = k === "printer_id" ? null : 0;
         });
         if (printerMap[p.id]) p.printer_id = printerMap[p.id];
+        // V3 ad üzrə match
+        if (!p.printer_id || p.printer_id === "0") {
+          const nameKey = p.name?.toLowerCase().trim();
+          if (nameKey && v3NameMap[nameKey]?.printer_id) {
+            p.printer_id = v3NameMap[nameKey].printer_id;
+            console.log(`[ProductsData] V3 ad match: "${p.name}" → printer_id:${p.printer_id}`);
+          }
+        }
         if (Array.isArray(p.printer_id)) p.printer_id = p.printer_id.join(",");
         p.profile_id = profile_id;
         if (colorMap[p.id]) p.color = colorMap[p.id];

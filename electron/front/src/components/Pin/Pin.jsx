@@ -819,6 +819,7 @@ const Pin = () => {
         show={isPinAdvancedSettingsOpen}
         onClose={() => setIsPinAdvancedSettingsOpen(false)}
         onExitTerminal={handleExit}
+        profileId={activeProfileData?.data?.profile?.id}
       />
 
       <RefreshLoader isOpen={isRefreshing} syncCounts={pinSyncCounts} />

@@ -7,8 +7,9 @@ import "./PinAdvancedSettingsModal.css";
 import apiConfig from "../../utils/apiConfig";
 import CustomerReceipt from "../Receipt/CustomerReceipt";
 import KitchenReceipt from "../Receipt/KitchenReceipt";
+import { DEFAULT_OPERATION_NAMES } from "../Operations/OperationsModal";
 
-const SECRET_PASSWORD = "2507";
+const DEFAULT_SECRET_PASSWORD = "2507";
 
 const ALL_ACTIONS = [
   { key: "prefix:Yeni sifariş yaradıldı", label: "Yeni çek açıldı" },
@@ -55,14 +56,36 @@ function isActionDenied(key, denyActions, denyPrefixes) {
   return denyActions.includes(key);
 }
 
-const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
+const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) => {
   // Şifrə
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [secretPassword, setSecretPassword] = useState(DEFAULT_SECRET_PASSWORD);
 
-  // view: "main" | "whatsapp" | "dbReset" | "updates" | "categoryView" | "receiptDesign"
+  // view: "main" | "whatsapp" | "dbReset" | "updates" | "categoryView" | "receiptDesign" | "systemUsers" | "changePin"
   const [view, setView] = useState("main");
+
+  // System Users
+  const [systemUsers, setSystemUsers] = useState([]);
+  const [suLoading, setSuLoading] = useState(false);
+  const [suNewName, setSuNewName] = useState("");
+  const [suNewPin, setSuNewPin] = useState("");
+  const [suSaving, setSuSaving] = useState(false);
+  const [suEditingId, setSuEditingId] = useState(null);
+  const [suEditName, setSuEditName] = useState("");
+  const [suEditPin, setSuEditPin] = useState("");
+
+  // Change settings PIN
+  const [cpNewPin, setCpNewPin] = useState("");
+  const [cpConfirmPin, setCpConfirmPin] = useState("");
+  const [cpSaving, setCpSaving] = useState(false);
+
+  // Operation names
+  const [operationNames, setOperationNames] = useState(() => {
+    try { return { ...DEFAULT_OPERATION_NAMES, ...JSON.parse(localStorage.getItem("pos_operation_names") || "{}") }; }
+    catch { return { ...DEFAULT_OPERATION_NAMES }; }
+  });
 
   // Receipt Design settings
   const [receiptType, setReceiptType] = useState("customer"); // "customer" | "kitchen"
@@ -139,7 +162,15 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       setUpdateReady(false);
       setDenyActions([]);
       setDenyPrefixes([]);
+      setSystemUsers([]);
+      setSuNewName(""); setSuNewPin("");
+      setSuEditingId(null); setSuEditName(""); setSuEditPin("");
+      setCpNewPin(""); setCpConfirmPin("");
     } else {
+      try {
+        const saved = JSON.parse(localStorage.getItem("pos_operation_names") || "{}");
+        setOperationNames({ ...DEFAULT_OPERATION_NAMES, ...saved });
+      } catch {}
       // Reload category view settings when modal opens
       setCardsPerRow(parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10));
       setCardFontSize(parseFloat(localStorage.getItem("pos_card_font_size") || "0.8"));
@@ -149,6 +180,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
         const savedReceipt = JSON.parse(localStorage.getItem("pos_receipt_settings"));
         if (savedReceipt) setReceiptSettings(savedReceipt);
       } catch(e) {}
+      // Load current settings PIN
+      apiConfig.get("/admin/settings-pin").then(({ data }) => {
+        if (data?.ok && data.pin) setSecretPassword(data.pin);
+      }).catch(() => {});
     }
   }, [show]);
 
@@ -228,12 +263,12 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
 
   // Password numpad
   const handlePasswordKey = (digit) => {
-    if (passwordInput.length >= 4) return;
+    if (passwordInput.length >= secretPassword.length) return;
     const next = passwordInput + digit;
     setPasswordInput(next);
     setPasswordError(false);
-    if (next.length === 4) {
-      if (next === SECRET_PASSWORD) {
+    if (next.length === secretPassword.length) {
+      if (next === secretPassword) {
         setUnlocked(true);
         setPasswordInput("");
       } else {
@@ -287,6 +322,84 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       toast.error("WhatsApp ayarları saxlanıla bilmədi: " + (err?.response?.data?.message || err?.message || "Naməlum xəta"));
     }
     finally { setWaSaving(false); }
+  };
+
+  const loadSystemUsers = useCallback(async () => {
+    if (!profileId) return;
+    setSuLoading(true);
+    try {
+      const { data } = await apiConfig.get(`/admin/system-users?profile_id=${profileId}`);
+      if (data?.ok) setSystemUsers(data.data || []);
+      else toast.error(data?.message || "İstifadəçilər yüklənmədi");
+    } catch (err) {
+      toast.error("İstifadəçilər yüklənmədi: " + (err?.message || "Xəta"));
+    } finally {
+      setSuLoading(false);
+    }
+  }, [profileId]);
+
+  const handleCreateUser = async () => {
+    if (!suNewName.trim()) return toast.error("Ad daxil edin");
+    if (!/^\d{4,6}$/.test(suNewPin)) return toast.error("PIN 4-6 rəqəmli olmalıdır");
+    setSuSaving(true);
+    try {
+      const { data } = await apiConfig.post("/admin/system-users", {
+        profile_id: profileId, name: suNewName.trim(), pin: suNewPin,
+      });
+      if (data?.ok) {
+        toast.success("İstifadəçi yaradıldı");
+        setSuNewName(""); setSuNewPin("");
+        await loadSystemUsers();
+      } else toast.error(data?.message || "Xəta");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Xəta");
+    } finally { setSuSaving(false); }
+  };
+
+  const handleUpdateUser = async (id) => {
+    if (!suEditName.trim()) return toast.error("Ad daxil edin");
+    if (suEditPin && !/^\d{4,6}$/.test(suEditPin)) return toast.error("PIN 4-6 rəqəmli olmalıdır");
+    setSuSaving(true);
+    try {
+      const body = { name: suEditName.trim() };
+      if (suEditPin) body.pin = suEditPin;
+      const { data } = await apiConfig.put(`/admin/system-users/${id}`, body);
+      if (data?.ok) {
+        toast.success("Yadda saxlanıldı");
+        setSuEditingId(null); setSuEditName(""); setSuEditPin("");
+        await loadSystemUsers();
+      } else toast.error(data?.message || "Xəta");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Xəta");
+    } finally { setSuSaving(false); }
+  };
+
+  const handleDeleteUser = async (id) => {
+    setSuSaving(true);
+    try {
+      const { data } = await apiConfig.delete(`/admin/system-users/${id}`);
+      if (data?.ok) { toast.success("Silindi"); await loadSystemUsers(); }
+      else toast.error(data?.message || "Xəta");
+    } catch (err) {
+      toast.error("Silmə xətası");
+    } finally { setSuSaving(false); }
+  };
+
+  const handleSaveSettingsPin = async () => {
+    if (!/^\d{4,6}$/.test(cpNewPin)) return toast.error("Yeni PIN 4-6 rəqəmli olmalıdır");
+    if (cpNewPin !== cpConfirmPin) return toast.error("PIN-lər uyğun gəlmir");
+    setCpSaving(true);
+    try {
+      const { data } = await apiConfig.post("/admin/settings-pin", { pin: cpNewPin });
+      if (data?.ok) {
+        setSecretPassword(cpNewPin);
+        toast.success("Şifrə dəyişdirildi");
+        setCpNewPin(""); setCpConfirmPin("");
+        setView("main");
+      } else toast.error(data?.message || "Xəta");
+    } catch (err) {
+      toast.error("Şifrə dəyişdirilə bilmədi");
+    } finally { setCpSaving(false); }
   };
 
   const handleOpenDevtools = async () => {
@@ -375,7 +488,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
     view === "dbReset" ? "Databaseni sıfırla" :
     view === "updates" ? "Yeniləmələr" :
     view === "categoryView" ? "Kateqoriya görünüşü" :
-    view === "receiptDesign" ? "Çek dizaynı" : "Ayarlar";
+    view === "receiptDesign" ? "Çek dizaynı" :
+    view === "systemUsers" ? "Sistem istifadəçiləri" :
+    view === "changePin" ? "Şifrəni dəyiş" :
+    view === "operationNames" ? "Əməliyyat adları" : "Ayarlar";
 
   return (
     <Modal
@@ -383,7 +499,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
       onHide={handleModalHide}
       centered
       animation={false}
-      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" ? " pin-advanced-catview-wide" : ""}${view === "receiptDesign" ? " pin-advanced-receipt-wide" : ""}`}
+      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" ? " pin-advanced-catview-wide" : ""}${view === "receiptDesign" ? " pin-advanced-receipt-wide" : ""}${view === "systemUsers" ? " pin-advanced-sysusers-wide" : ""}${view === "operationNames" ? " pin-advanced-opnames-wide" : ""}`}
       contentClassName="custom-modal-content"
     >
       <div className="discount-modal-container">
@@ -408,6 +524,20 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
                 </svg>
+              ) : view === "systemUsers" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              ) : view === "changePin" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  <circle cx="12" cy="16" r="1" fill="#053796" />
+                </svg>
+              ) : view === "operationNames" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="17" y1="10" x2="3" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="21" y1="14" x2="3" y2="14" /><line x1="17" y1="18" x2="3" y2="18" />
+                </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="3" />
@@ -429,7 +559,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
           <div className="discount-body pin-adv-password-body">
             <p className="pin-adv-password-hint">Şifrəni daxil edin</p>
             <div className={`pin-adv-password-dots ${passwordError ? "pin-adv-password-error" : ""}`}>
-              {[0,1,2,3].map(i => (
+              {Array.from({ length: secretPassword.length }).map((_, i) => (
                 <span key={i} className={`pin-adv-dot ${i < passwordInput.length ? "filled" : ""}`} />
               ))}
             </div>
@@ -827,6 +957,185 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
               </div>
            </div>
 
+        ) : view === "systemUsers" ? (
+          <div className="discount-body pin-adv-sysusers-body">
+            {suLoading ? (
+              <div className="wa-settings-loading">Yüklənir...</div>
+            ) : (
+              <>
+                {/* Mövcud istifadəçilər */}
+                <div className="su-list pin-invisible-scroll" style={{ maxHeight: "260px", overflowY: "auto", marginBottom: "16px" }}>
+                  {systemUsers.length === 0 && (
+                    <div style={{ textAlign: "center", color: "#aaa", padding: "20px 0", fontSize: "14px" }}>Hələ istifadəçi yoxdur</div>
+                  )}
+                  {systemUsers.map(u => (
+                    <div key={u.id} className="su-row" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", borderBottom: "1px solid #f0f0f0" }}>
+                      {suEditingId === u.id ? (
+                        <>
+                          <input
+                            value={suEditName}
+                            onChange={e => setSuEditName(e.target.value)}
+                            placeholder="Ad"
+                            style={{ flex: 1, padding: "6px 8px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px" }}
+                          />
+                          <input
+                            value={suEditPin}
+                            onChange={e => setSuEditPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                            placeholder="Yeni PIN"
+                            style={{ width: "90px", padding: "6px 8px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center" }}
+                          />
+                          <button type="button" onClick={() => handleUpdateUser(u.id)} disabled={suSaving}
+                            style={{ padding: "6px 10px", borderRadius: "6px", border: "none", background: "#053796", color: "#fff", fontSize: "12px", cursor: "pointer" }}>
+                            ✓
+                          </button>
+                          <button type="button" onClick={() => { setSuEditingId(null); setSuEditName(""); setSuEditPin(""); }}
+                            style={{ padding: "6px 10px", borderRadius: "6px", border: "none", background: "#e5e7eb", color: "#333", fontSize: "12px", cursor: "pointer" }}>
+                            ✕
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: "600", fontSize: "14px", color: "#1e293b" }}>{u.name}</div>
+                            <div style={{ fontSize: "12px", color: "#94a3b8" }}>PIN: {"•".repeat(u.pin?.length || 4)}</div>
+                          </div>
+                          <button type="button" onClick={() => { setSuEditingId(u.id); setSuEditName(u.name); setSuEditPin(""); }}
+                            style={{ padding: "5px 10px", borderRadius: "6px", border: "none", background: "#f1f5f9", color: "#053796", fontSize: "12px", cursor: "pointer" }}>
+                            Düzəlt
+                          </button>
+                          <button type="button" onClick={() => handleDeleteUser(u.id)} disabled={suSaving}
+                            style={{ padding: "5px 10px", borderRadius: "6px", border: "none", background: "#fee2e2", color: "#dc2626", fontSize: "12px", cursor: "pointer" }}>
+                            Sil
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Yeni istifadəçi əlavə et */}
+                <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "12px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "13px", fontWeight: "600", color: "#475569", marginBottom: "10px" }}>Yeni sistem istifadəçisi</div>
+                  <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+                    <input
+                      value={suNewName}
+                      onChange={e => setSuNewName(e.target.value)}
+                      placeholder="Ad (məs: Admin)"
+                      style={{ flex: 1, padding: "8px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px" }}
+                    />
+                    <input
+                      value={suNewPin}
+                      onChange={e => setSuNewPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="PIN (4-6 rəq.)"
+                      style={{ width: "110px", padding: "8px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center" }}
+                    />
+                  </div>
+                  <button type="button" onClick={handleCreateUser} disabled={suSaving || !suNewName.trim() || suNewPin.length < 4}
+                    className="apply-btn"
+                    style={{ width: "100%" }}>
+                    {suSaving ? "Yaradılır..." : "Əlavə et"}
+                  </button>
+                </div>
+
+                <div className="wa-settings-actions" style={{ marginTop: "12px" }}>
+                  <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+                </div>
+              </>
+            )}
+          </div>
+
+        ) : view === "changePin" ? (
+          <div className="discount-body pin-adv-changepin-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "20px 16px" }}>
+            <p style={{ fontSize: "13px", color: "#64748b", margin: 0, textAlign: "center" }}>
+              {cpNewPin.length < 4 ? "Yeni şifrəni daxil edin" : "Şifrəni təkrar daxil edin"}
+            </p>
+
+            <div className={`pin-adv-password-dots${cpNewPin.length >= 4 && cpConfirmPin.length === cpNewPin.length && cpConfirmPin !== cpNewPin ? " pin-adv-password-error" : ""}`} style={{ marginBottom: "4px" }}>
+              {Array.from({ length: Math.max((cpNewPin.length < 4 ? cpNewPin : cpConfirmPin).length || 4, 4) }).map((_, i) => (
+                <span key={i} className={`pin-adv-dot ${i < (cpNewPin.length < 4 ? cpNewPin : cpConfirmPin).length ? "filled" : ""}`} />
+              ))}
+            </div>
+
+            {cpNewPin.length >= 4 && cpConfirmPin.length === cpNewPin.length && cpConfirmPin !== cpNewPin && (
+              <div style={{ color: "#dc2626", fontSize: "12px", marginTop: "-8px" }}>Şifrələr uyğun gəlmir</div>
+            )}
+
+            <div className="pin-adv-numpad">
+              {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className={`pin-adv-numpad-btn${k === "" ? " invisible" : ""}${k === "⌫" ? " backspace" : ""}`}
+                  onClick={() => {
+                    if (k === "⌫") {
+                      if (cpNewPin.length < 4) setCpNewPin(p => p.slice(0, -1));
+                      else setCpConfirmPin(p => p.slice(0, -1));
+                    } else if (k !== "") {
+                      if (cpNewPin.length < 4) { if (cpNewPin.length < 6) setCpNewPin(p => p + k); }
+                      else { if (cpConfirmPin.length < 6) setCpConfirmPin(p => p + k); }
+                    }
+                  }}
+                  disabled={k === "" || cpSaving}
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+
+            <div className="wa-settings-actions" style={{ width: "100%", marginTop: "4px" }}>
+              <button type="button" className="delete-all-btn wa-settings-cancel"
+                onClick={() => { if (cpNewPin.length >= 4) { setCpNewPin(""); setCpConfirmPin(""); } else { setView("main"); } }}
+                disabled={cpSaving}>
+                {cpNewPin.length >= 4 ? "Geri" : "İmtina"}
+              </button>
+              <button type="button" className="apply-btn wa-settings-save"
+                onClick={handleSaveSettingsPin}
+                disabled={cpSaving || cpNewPin.length < 4 || cpConfirmPin.length < 4 || cpNewPin !== cpConfirmPin}>
+                {cpSaving ? "Saxlanılır..." : "Şifrəni dəyiş"}
+              </button>
+            </div>
+          </div>
+
+        ) : view === "operationNames" ? (
+          <div className="discount-body pin-adv-opnames-body">
+            <div className="pin-adv-opnames-hint">Əməliyyat düymələrinin adlarını özünüzə uyğun dəyişdirin</div>
+            <div className="pin-adv-opnames-grid pin-invisible-scroll">
+              {Object.entries(DEFAULT_OPERATION_NAMES).map(([key, defaultLabel]) => {
+                const isChanged = operationNames[key] && operationNames[key] !== defaultLabel;
+                return (
+                  <div key={key} className={`pin-adv-opname-card${isChanged ? " changed" : ""}`}>
+                    <div className="pin-adv-opname-default">{defaultLabel}</div>
+                    <div className="pin-adv-opname-input-wrap">
+                      <input
+                        value={operationNames[key] ?? defaultLabel}
+                        onChange={e => setOperationNames(prev => ({ ...prev, [key]: e.target.value }))}
+                        className="pin-adv-opname-input"
+                        placeholder={defaultLabel}
+                      />
+                      {isChanged && (
+                        <button type="button" className="pin-adv-opname-reset-btn" title="Sıfırla"
+                          onClick={() => setOperationNames(prev => ({ ...prev, [key]: defaultLabel }))}>
+                          ↺
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="wa-settings-actions" style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #f0f0f0" }}>
+              <button type="button" className="delete-all-btn wa-settings-cancel"
+                onClick={() => { setOperationNames({ ...DEFAULT_OPERATION_NAMES }); localStorage.removeItem("pos_operation_names"); toast.success("Sıfırlandı"); }}>
+                Hamısını sıfırla
+              </button>
+              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+              <button type="button" className="apply-btn wa-settings-save"
+                onClick={() => { localStorage.setItem("pos_operation_names", JSON.stringify(operationNames)); toast.success("Əməliyyat adları saxlanıldı"); setView("main"); }}>
+                Yadda saxla
+              </button>
+            </div>
+          </div>
+
         ) : (
           /* ── Əsas menyu ── */
           <div className="discount-body pin-advanced-settings-body">
@@ -868,6 +1177,34 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal }) => {
                   </svg>
                 </span>
                 <span className="settings-menu-item-label">WhatsApp mesajları</span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={() => { setView("systemUsers"); loadSystemUsers(); }}>
+                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Sistem istifadəçiləri</span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={() => setView("changePin")}>
+                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Şifrəni dəyiş</span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={() => setView("operationNames")}>
+                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="17" y1="10" x2="3" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="21" y1="14" x2="3" y2="14" /><line x1="17" y1="18" x2="3" y2="18" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Əməliyyat adları</span>
               </button>
 
               <button type="button" className="settings-menu-item danger" onClick={() => { onClose(); onExitTerminal?.(); }}>

@@ -3,6 +3,121 @@
     max-width: 460px !important;
 }
 
+.pin-advanced-sysusers-wide.custom-modal-width {
+    max-width: 480px !important;
+}
+
+.pin-advanced-opnames-wide.custom-modal-width {
+    max-width: 580px !important;
+}
+
+/* ── Əməliyyat adları view ── */
+.pin-adv-opnames-body {
+    padding: 16px 18px 18px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.pin-adv-opnames-hint {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 14px;
+    text-align: center;
+}
+
+.pin-adv-opnames-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    max-height: 370px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.pin-adv-opname-card {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pin-adv-opname-card.changed {
+    border-color: #053796;
+    background: #eef2ff;
+}
+
+.pin-adv-opname-default {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pin-adv-opname-card.changed .pin-adv-opname-default {
+    color: #053796;
+}
+
+.pin-adv-opname-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.pin-adv-opname-input {
+    width: 100%;
+    padding: 6px 28px 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1e293b;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.pin-adv-opname-input:focus {
+    border-color: #053796;
+    box-shadow: 0 0 0 2px rgba(5, 55, 150, 0.1);
+}
+
+.pin-adv-opname-reset-btn {
+    position: absolute;
+    right: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    color: #94a3b8;
+    padding: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+}
+
+.pin-adv-opname-reset-btn:hover {
+    color: #053796;
+}
+
+.pin-adv-sysusers-body {
+    padding: 16px 16px 20px !important;
+}
+
+.pin-adv-changepin-body {
+    padding: 20px 20px 24px !important;
+}
+
 /* Endirim modalı gövdəsi + kontrol paneli sətirləri — yalnız boşluq tənzimləməsi */
 .pin-advanced-settings-body {
     padding: 16px 12px 20px !important;
