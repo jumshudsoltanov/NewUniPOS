@@ -16,7 +16,7 @@ import {
   cancelEditMode,
   saveEditMode,
   setTempTableLayout,
-  loadLayoutsFromAdmin
+  loadLayoutsFromAdmin,
 } from "../../redux/Slices/TablesSlice";
 import { toast } from "sonner";
 import { getSocket } from "../../utils/apiConfig";
@@ -33,13 +33,14 @@ const Tables = () => {
     tableOrder,
     tempTableOrder,
     tableLayouts,
-    tempTableLayouts
+    tempTableLayouts,
   } = useSelector((state) => state.TablesSlice);
   const [selectedTable, setSelectedTable] = React.useState(null);
   const [showModal, setShowModal] = React.useState(false);
   const [showOtherChecks, setShowOtherChecks] = React.useState(false);
   const [showShapeModal, setShowShapeModal] = React.useState(false);
-  const [selectedTableForShape, setSelectedTableForShape] = React.useState(null);
+  const [selectedTableForShape, setSelectedTableForShape] =
+    React.useState(null);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const navigate = useNavigate();
@@ -55,6 +56,15 @@ const Tables = () => {
   // Custom Layout Interaction State
   const containerRef = useRef(null);
   const [transitionsEnabled, setTransitionsEnabled] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => window.innerWidth <= 767.98,
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileViewport(window.innerWidth <= 767.98);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     setTransitionsEnabled(false);
@@ -79,7 +89,6 @@ const Tables = () => {
     }
   }, [isPacksOnly, navigate]);
 
-
   const [interactionState, setInteractionState] = useState({
     type: null, // 'drag' | 'resize'
     tableId: null,
@@ -88,18 +97,18 @@ const Tables = () => {
     initialLeft: 0,
     initialTop: 0,
     initialWidth: 0,
-    initialHeight: 0
+    initialHeight: 0,
   });
 
-
-  const activeLayouts = isTableEditMode ? tempTableLayouts[String(currentHallId)] : tableLayouts[String(currentHallId)];
-  const hasCustomLayout = activeLayouts && Object.keys(activeLayouts).length > 0;
+  const activeLayouts = isTableEditMode
+    ? tempTableLayouts[String(currentHallId)]
+    : tableLayouts[String(currentHallId)];
+  const hasCustomLayout =
+    activeLayouts && Object.keys(activeLayouts).length > 0;
 
   // Use Canvas Mode if active layouts or edit mode active
   const isCanvasMode = hasCustomLayout || isTableEditMode;
-
-
-
+  const useCanvasMode = isCanvasMode && !isMobileViewport;
 
   const currentTables = useMemo(() => {
     if (!tableGroups?.data || !currentHallId) {
@@ -119,7 +128,9 @@ const Tables = () => {
 
     if (activeOrder && activeOrder.length > 0) {
       const orderMap = {};
-      activeOrder.forEach((id, index) => { orderMap[id] = index; });
+      activeOrder.forEach((id, index) => {
+        orderMap[id] = index;
+      });
       sortedTables.sort((a, b) => {
         const aIdx = orderMap[a.id] !== undefined ? orderMap[a.id] : 9999;
         const bIdx = orderMap[b.id] !== undefined ? orderMap[b.id] : 9999;
@@ -151,9 +162,12 @@ const Tables = () => {
 
     const w = window.innerWidth;
     let cols = 2; // xs
-    if (w >= 1200) cols = 5; // xl
-    else if (w >= 992) cols = 4; // lg
-    else if (w >= 768) cols = 3; // md
+    if (w >= 1200)
+      cols = 5; // xl
+    else if (w >= 992)
+      cols = 4; // lg
+    else if (w >= 768)
+      cols = 3; // md
     else if (w >= 576) cols = 3; // sm
 
     const containerW = containerRef.current?.offsetWidth || w;
@@ -181,7 +195,7 @@ const Tables = () => {
         x: col * colWidth + offsetX,
         y: currentY,
         w: undefined,
-        h: undefined
+        h: undefined,
       };
     });
 
@@ -190,7 +204,10 @@ const Tables = () => {
 
   const currentHallData = useMemo(() => {
     if (!tableGroups?.data) return null;
-    return tableGroups.data.find(hall => hall.id === currentHallId) || tableGroups.data[0];
+    return (
+      tableGroups.data.find((hall) => hall.id === currentHallId) ||
+      tableGroups.data[0]
+    );
   }, [tableGroups, currentHallId]);
 
   // Debug logging for mobile white-screen investigation
@@ -215,7 +232,12 @@ const Tables = () => {
         // Kiçik gecikmə — DB yazma əməliyyatı tamamlansın (Master-Slave: print_count, status dəyişikliyi)
         setTimeout(() => {
           dispatch(getTableGroups(loginedProfileData.data.profile.id));
-          dispatch(getActiveOrders({ profileId: loginedProfileData.data.profile.id, silentRefresh: true }));
+          dispatch(
+            getActiveOrders({
+              profileId: loginedProfileData.data.profile.id,
+              silentRefresh: true,
+            }),
+          );
         }, 150);
       }
     };
@@ -227,7 +249,6 @@ const Tables = () => {
     };
   }, [dispatch, loginedProfileData]);
 
-
   const handleTableClick = React.useCallback(
     async (table) => {
       if (isTableEditMode) return;
@@ -236,29 +257,42 @@ const Tables = () => {
 
       const hasOrders = orders && orders.length > 0;
       const waiterId = orders?.[0]?.waiter_id || orders?.[0]?.waiter?.id;
-      const isMyTable = hasOrders && loginedWaiter?.data?.id && waiterId == loginedWaiter.data.id;
+      const isMyTable =
+        hasOrders &&
+        loginedWaiter?.data?.id &&
+        waiterId == loginedWaiter.data.id;
       const isOtherTable = hasOrders && !isMyTable;
 
       if (isPacksOnlyWaiter(loginedWaiter?.data)) {
-        toast.error("İcazəniz yoxdur: Masada sifariş yarada və ya aça bilməzsiniz.");
+        toast.error(
+          "İcazəniz yoxdur: Masada sifariş yarada və ya aça bilməzsiniz.",
+        );
         return;
       }
 
-      if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 0 && isOtherTable) {
+      if (
+        Number(loginedWaiter?.data?.can_access_own_checks_only) === 0 &&
+        isOtherTable
+      ) {
         toast.error("İcazəniz yoxdur: Bu masa başqa ofisianta aiddir.");
         return;
       }
 
       if (id) {
         try {
-          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+          const waiterName =
+            loginedWaiter?.data?.name ||
+            loginedProfileData?.data?.profile?.name ||
+            "Naməlum";
 
           // Find old table and hall name
           let oldTableName = "Naməlum";
           let oldHallName = "Naməlum";
           if (tableGroups?.data) {
             for (const hall of tableGroups.data) {
-              const tableWithOrder = hall.tables.find(t => t.orders?.some(o => o.uuid === id));
+              const tableWithOrder = hall.tables.find((t) =>
+                t.orders?.some((o) => o.uuid === id),
+              );
               if (tableWithOrder) {
                 oldTableName = tableWithOrder.name;
                 oldHallName = hall.name;
@@ -268,8 +302,11 @@ const Tables = () => {
           }
 
           // Derive new hall name directly
-          const targetHall = tableGroups?.data?.find(h => h.id === currentHallId);
-          const newHallName = targetHall?.name || currentHallData?.name || "Naməlum";
+          const targetHall = tableGroups?.data?.find(
+            (h) => h.id === currentHallId,
+          );
+          const newHallName =
+            targetHall?.name || currentHallData?.name || "Naməlum";
 
           await dispatch(
             updateTableOrders({
@@ -280,7 +317,7 @@ const Tables = () => {
               newTableName: table?.name,
               oldHallName,
               newHallName,
-              waiterName
+              waiterName,
             }),
           ).unwrap();
 
@@ -303,13 +340,19 @@ const Tables = () => {
           loginedProfileData?.data?.profile?.is_master_slave_active === 1;
         const socket = getSocket();
         if (isMasterSlaveActive && socket?.connected) {
-          socket.emit("check_is_open_by_other", { orderId: orders[0].uuid }, (isOpenByOther) => {
-            if (isOpenByOther) {
-              toast.warning("Bu masa hal-hazırda başqa terminaldadır. Əvvəlcə o terminal çıxsın.");
-            } else {
-              navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
-            }
-          });
+          socket.emit(
+            "check_is_open_by_other",
+            { orderId: orders[0].uuid },
+            (isOpenByOther) => {
+              if (isOpenByOther) {
+                toast.warning(
+                  "Bu masa hal-hazırda başqa terminaldadır. Əvvəlcə o terminal çıxsın.",
+                );
+              } else {
+                navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
+              }
+            },
+          );
         } else {
           navigate(`/check/${orders[0].uuid}?tableId=${table.id}`);
         }
@@ -323,13 +366,23 @@ const Tables = () => {
         setShowModal(true);
       }
     },
-    [id, dispatch, currentHallId, loginedProfileData, navigate, tableGroups, currentHallData, isTableEditMode, loginedWaiter],
+    [
+      id,
+      dispatch,
+      currentHallId,
+      loginedProfileData,
+      navigate,
+      tableGroups,
+      currentHallData,
+      isTableEditMode,
+      loginedWaiter,
+    ],
   );
 
   // Drag Handlers
   const handleDragStart = (e, index) => {
     setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = "move";
     // Optional: Set ghost image
   };
 
@@ -346,12 +399,14 @@ const Tables = () => {
     const [movedItem] = newTables.splice(draggedIndex, 1);
     newTables.splice(dropIndex, 0, movedItem);
 
-    const newOrderIds = newTables.map(t => t.id);
+    const newOrderIds = newTables.map((t) => t.id);
 
-    dispatch(setTempTableOrder({
-      hallId: currentHallId,
-      order: newOrderIds
-    }));
+    dispatch(
+      setTempTableOrder({
+        hallId: currentHallId,
+        order: newOrderIds,
+      }),
+    );
 
     setDraggedIndex(null);
     setDragOverIndex(null);
@@ -362,8 +417,12 @@ const Tables = () => {
     if (!isTableEditMode) return;
     e.stopPropagation();
 
-    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+    const clientX = e.type.startsWith("touch")
+      ? e.touches[0].clientX
+      : e.clientX;
+    const clientY = e.type.startsWith("touch")
+      ? e.touches[0].clientY
+      : e.clientY;
 
     const defaultLayout = generatedLayout[table.id] || { x: 0, y: 0 };
     const layout = activeLayouts?.[String(table.id)] || defaultLayout;
@@ -373,8 +432,8 @@ const Tables = () => {
     const defaultH = isRect ? 300 : 200;
 
     // Ignore admin small sizes (< 150px), use POS defaults
-    const currentW = (layout.w && layout.w >= 150) ? layout.w : defaultW;
-    const currentH = (layout.h && layout.h >= 150) ? layout.h : defaultH;
+    const currentW = layout.w && layout.w >= 150 ? layout.w : defaultW;
+    const currentH = layout.h && layout.h >= 150 ? layout.h : defaultH;
 
     setInteractionState({
       type,
@@ -385,7 +444,7 @@ const Tables = () => {
       initialTop: layout.y || 0,
       initialWidth: currentW,
       initialHeight: currentH,
-      rotation: layout.rotation || 0
+      rotation: layout.rotation || 0,
     });
   };
 
@@ -393,47 +452,55 @@ const Tables = () => {
     const handleMove = (e) => {
       if (!interactionState.type || !isTableEditMode) return;
 
-      const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-      const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+      const clientX = e.type.startsWith("touch")
+        ? e.touches[0].clientX
+        : e.clientX;
+      const clientY = e.type.startsWith("touch")
+        ? e.touches[0].clientY
+        : e.clientY;
 
-      if (interactionState.type === 'drag') {
+      if (interactionState.type === "drag") {
         const dx = clientX - interactionState.startX;
         const dy = clientY - interactionState.startY;
 
         const newX = interactionState.initialLeft + dx;
         const newY = interactionState.initialTop + dy;
 
-        dispatch(setTempTableLayout({
-          hallId: currentHallId,
-          layout: {
-            [interactionState.tableId]: {
-              x: newX,
-              y: newY,
-              w: interactionState.initialWidth,
-              h: interactionState.initialHeight,
-              rotation: interactionState.rotation
-            }
-          }
-        }));
-      } else if (interactionState.type === 'resize') {
+        dispatch(
+          setTempTableLayout({
+            hallId: currentHallId,
+            layout: {
+              [interactionState.tableId]: {
+                x: newX,
+                y: newY,
+                w: interactionState.initialWidth,
+                h: interactionState.initialHeight,
+                rotation: interactionState.rotation,
+              },
+            },
+          }),
+        );
+      } else if (interactionState.type === "resize") {
         const dx = clientX - interactionState.startX;
         const dy = clientY - interactionState.startY;
 
         const newW = Math.max(100, interactionState.initialWidth + dx);
         const newH = Math.max(100, interactionState.initialHeight + dy);
 
-        dispatch(setTempTableLayout({
-          hallId: currentHallId,
-          layout: {
-            [interactionState.tableId]: {
-              x: interactionState.initialLeft,
-              y: interactionState.initialTop,
-              w: newW,
-              h: newH,
-              rotation: interactionState.rotation
-            }
-          }
-        }));
+        dispatch(
+          setTempTableLayout({
+            hallId: currentHallId,
+            layout: {
+              [interactionState.tableId]: {
+                x: interactionState.initialLeft,
+                y: interactionState.initialTop,
+                w: newW,
+                h: newH,
+                rotation: interactionState.rotation,
+              },
+            },
+          }),
+        );
       }
     };
 
@@ -444,20 +511,19 @@ const Tables = () => {
     };
 
     if (isTableEditMode) {
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
-      window.addEventListener('touchmove', handleMove, { passive: false });
-      window.addEventListener('touchend', handleEnd);
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleEnd);
+      window.addEventListener("touchmove", handleMove, { passive: false });
+      window.addEventListener("touchend", handleEnd);
     }
 
     return () => {
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleEnd);
-      window.removeEventListener('touchmove', handleMove);
-      window.removeEventListener('touchend', handleEnd);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleEnd);
     };
   }, [interactionState, isTableEditMode, currentHallId, dispatch]);
-
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
@@ -478,9 +544,11 @@ const Tables = () => {
     const touch = e.touches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     if (el) {
-      const col = el.closest('.drag-target');
+      const col = el.closest(".drag-target");
       if (col) {
-        const allItems = Array.from(col.parentElement.children).filter(c => c.classList.contains('drag-target'));
+        const allItems = Array.from(col.parentElement.children).filter((c) =>
+          c.classList.contains("drag-target"),
+        );
         const idx = allItems.indexOf(col);
         if (idx !== -1) {
           tableTouchRef.current.currentIndex = idx;
@@ -493,12 +561,18 @@ const Tables = () => {
   const handleTableTouchEnd = () => {
     if (!isTableEditMode) return;
     const { startIndex, currentIndex } = tableTouchRef.current;
-    if (startIndex !== null && currentIndex !== null && startIndex !== currentIndex) {
+    if (
+      startIndex !== null &&
+      currentIndex !== null &&
+      startIndex !== currentIndex
+    ) {
       const newTables = [...currentTables];
       const [movedItem] = newTables.splice(startIndex, 1);
       newTables.splice(currentIndex, 0, movedItem);
-      const newOrderIds = newTables.map(t => t.id);
-      dispatch(setTempTableOrder({ hallId: currentHallId, order: newOrderIds }));
+      const newOrderIds = newTables.map((t) => t.id);
+      dispatch(
+        setTempTableOrder({ hallId: currentHallId, order: newOrderIds }),
+      );
     }
     tableTouchRef.current = { startIndex: null, currentIndex: null };
     setDraggedIndex(null);
@@ -524,11 +598,26 @@ const Tables = () => {
 
   return (
     <>
-      <Container fluid className="tables-scroll-container position-relative" style={isCanvasMode ? { paddingLeft: 0, paddingRight: 0 } : {}} ref={containerRef}>
-        {isCanvasMode && currentTables.length > 0 ? (
-          <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '80vh' }}>
+      <Container
+        fluid
+        className="tables-scroll-container position-relative"
+        style={useCanvasMode ? { paddingLeft: 0, paddingRight: 0 } : {}}
+        ref={containerRef}
+      >
+        {useCanvasMode && currentTables.length > 0 ? (
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "100%",
+              minHeight: "80vh",
+            }}
+          >
             {currentTables.map((table) => {
-              const defaultLayout = generatedLayout[table.id] || { x: 20, y: 20 };
+              const defaultLayout = generatedLayout[table.id] || {
+                x: 20,
+                y: 20,
+              };
               const layout = activeLayouts?.[String(table.id)] || defaultLayout;
 
               const isRect = table.shape_type === "rectangle";
@@ -540,28 +629,31 @@ const Tables = () => {
               // Ignore admin small sizes (< 150px), use POS shape-based defaults
               const rawW = layout.w;
               const rawH = layout.h;
-              const posW = (rawW && rawW >= 150) ? rawW : defaultW;
-              const posH = (rawH && rawH >= 150) ? rawH : defaultH;
+              const posW = rawW && rawW >= 150 ? rawW : defaultW;
+              const posH = rawH && rawH >= 150 ? rawH : defaultH;
 
               const style = {
-                position: 'absolute',
+                position: "absolute",
                 left: layout.x,
                 top: layout.y,
                 width: posW,
                 height: posH,
                 zIndex: interactionState.tableId === table.id ? 100 : 1,
-                cursor: isTableEditMode ? 'move' : 'default',
+                cursor: isTableEditMode ? "move" : "default",
                 transform: rotation ? `rotate(${rotation}deg)` : undefined,
-                transformOrigin: 'center center',
-                transition: (!transitionsEnabled || interactionState.tableId === table.id) ? 'none' : 'all 0.2s ease'
+                transformOrigin: "center center",
+                transition:
+                  !transitionsEnabled || interactionState.tableId === table.id
+                    ? "none"
+                    : "all 0.2s ease",
               };
 
               return (
                 <div
                   key={table.id}
                   style={style}
-                  onMouseDown={(e) => handleInteractionStart(e, table, 'drag')}
-                  onTouchStart={(e) => handleInteractionStart(e, table, 'drag')}
+                  onMouseDown={(e) => handleInteractionStart(e, table, "drag")}
+                  onTouchStart={(e) => handleInteractionStart(e, table, "drag")}
                 >
                   <Table
                     table={table}
@@ -569,9 +661,9 @@ const Tables = () => {
                     loginedWaiter={loginedWaiter}
                     rotation={rotation}
                     customStyle={{
-                      width: posW + 'px',
-                      height: posH + 'px',
-                      transform: 'none',
+                      width: posW + "px",
+                      height: posH + "px",
+                      transform: "none",
                       margin: 0,
                     }}
                   />
@@ -579,80 +671,104 @@ const Tables = () => {
                     <>
                       {/* Fırlatma düyməsi — yuxarı sol */}
                       <div
-                        onMouseDown={(e) => { e.stopPropagation(); }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          const newRotation = ((rotation + 90) % 360);
-                          dispatch(setTempTableLayout({
-                            hallId: currentHallId,
-                            layout: {
-                              [table.id]: {
-                                ...(layout),
-                                rotation: newRotation
-                              }
-                            }
-                          }));
+                          const newRotation = (rotation + 90) % 360;
+                          dispatch(
+                            setTempTableLayout({
+                              hallId: currentHallId,
+                              layout: {
+                                [table.id]: {
+                                  ...layout,
+                                  rotation: newRotation,
+                                },
+                              },
+                            }),
+                          );
                         }}
                         style={{
-                          position: 'absolute',
+                          position: "absolute",
                           top: 0,
                           left: 0,
-                          width: '24px',
-                          height: '24px',
-                          background: '#053796',
-                          borderRadius: '0 0 50% 0',
-                          cursor: 'pointer',
+                          width: "24px",
+                          height: "24px",
+                          background: "#053796",
+                          borderRadius: "0 0 50% 0",
+                          cursor: "pointer",
                           zIndex: 102,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       >
-                        <i className="bi bi-arrow-clockwise text-white" style={{ fontSize: '12px' }}></i>
+                        <i
+                          className="bi bi-arrow-clockwise text-white"
+                          style={{ fontSize: "12px" }}
+                        ></i>
                       </div>
                       {/* Forma dəyişdirmə düyməsi — yuxarı sağ */}
                       <div
-                        onMouseDown={(e) => { e.stopPropagation(); }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedTableForShape(table);
                           setShowShapeModal(true);
                         }}
                         style={{
-                          position: 'absolute',
+                          position: "absolute",
                           top: 0,
                           right: 0,
-                          width: '24px',
-                          height: '24px',
-                          background: '#059669',
-                          borderRadius: '0 0 0 50%',
-                          cursor: 'pointer',
+                          width: "24px",
+                          height: "24px",
+                          background: "#059669",
+                          borderRadius: "0 0 0 50%",
+                          cursor: "pointer",
                           zIndex: 102,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       >
-                        <i className="bi bi-shuffle text-white" style={{ fontSize: '12px' }}></i>
+                        <i
+                          className="bi bi-shuffle text-white"
+                          style={{ fontSize: "12px" }}
+                        ></i>
                       </div>
                       {/* Ölçü dəyişdirmə düyməsi — aşağı sağ */}
                       <div
                         className="resize-handle"
-                        onMouseDown={(e) => handleInteractionStart(e, table, 'resize')}
-                        onTouchStart={(e) => handleInteractionStart(e, table, 'resize')}
+                        onMouseDown={(e) =>
+                          handleInteractionStart(e, table, "resize")
+                        }
+                        onTouchStart={(e) =>
+                          handleInteractionStart(e, table, "resize")
+                        }
                         style={{
-                          position: 'absolute',
+                          position: "absolute",
                           bottom: 0,
                           right: 0,
-                          width: '20px',
-                          height: '20px',
-                          background: '#053796',
-                          borderRadius: '50% 0 50% 0',
-                          cursor: 'nwse-resize',
-                          zIndex: 101
+                          width: "20px",
+                          height: "20px",
+                          background: "#053796",
+                          borderRadius: "50% 0 50% 0",
+                          cursor: "nwse-resize",
+                          zIndex: 101,
                         }}
                       >
-                        <i className="bi bi-arrows-angle-expand text-white" style={{ fontSize: '10px', position: 'absolute', right: '3px', bottom: '3px' }}></i>
+                        <i
+                          className="bi bi-arrows-angle-expand text-white"
+                          style={{
+                            fontSize: "10px",
+                            position: "absolute",
+                            right: "3px",
+                            bottom: "3px",
+                          }}
+                        ></i>
                       </div>
                     </>
                   )}
@@ -671,24 +787,50 @@ const Tables = () => {
                 xl={2}
                 xxl={2}
                 key={table.id || table.name}
-                className={`mb-3 d-flex justify-content-center ${isTableEditMode ? 'drag-target' : ''}`}
+                className={`mb-3 d-flex justify-content-center ${isTableEditMode ? "drag-target" : ""}`}
                 draggable={isTableEditMode}
-                onDragStart={isTableEditMode ? (e) => handleDragStart(e, index) : undefined}
-                onDragOver={isTableEditMode ? (e) => handleDragOver(e, index) : undefined}
-                onDrop={isTableEditMode ? (e) => handleDrop(e, index) : undefined}
+                onDragStart={
+                  isTableEditMode ? (e) => handleDragStart(e, index) : undefined
+                }
+                onDragOver={
+                  isTableEditMode ? (e) => handleDragOver(e, index) : undefined
+                }
+                onDrop={
+                  isTableEditMode ? (e) => handleDrop(e, index) : undefined
+                }
                 onDragEnd={isTableEditMode ? handleDragEnd : undefined}
-                onTouchStart={isTableEditMode ? () => handleTableTouchStart(index) : undefined}
+                onTouchStart={
+                  isTableEditMode
+                    ? () => handleTableTouchStart(index)
+                    : undefined
+                }
                 onTouchMove={isTableEditMode ? handleTableTouchMove : undefined}
                 onTouchEnd={isTableEditMode ? handleTableTouchEnd : undefined}
                 style={{
                   opacity: isTableEditMode && draggedIndex === index ? 0.4 : 1,
-                  transform: isTableEditMode && dragOverIndex === index && draggedIndex !== index ? 'scale(1.05)' : 'none',
-                  transition: 'none',
-                  cursor: isTableEditMode ? 'grab' : 'default'
+                  transform:
+                    isTableEditMode &&
+                    dragOverIndex === index &&
+                    draggedIndex !== index
+                      ? "scale(1.05)"
+                      : "none",
+                  transition: "none",
+                  cursor: isTableEditMode ? "grab" : "default",
                 }}
               >
-                <div style={{ pointerEvents: isTableEditMode ? 'none' : 'auto', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                  <Table table={table} onTableClick={handleTableClick} loginedWaiter={loginedWaiter} />
+                <div
+                  style={{
+                    pointerEvents: isTableEditMode ? "none" : "auto",
+                    width: "100%",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Table
+                    table={table}
+                    onTableClick={handleTableClick}
+                    loginedWaiter={loginedWaiter}
+                  />
                 </div>
               </Col>
             ))}
@@ -696,20 +838,22 @@ const Tables = () => {
         )}
 
         {/* Floating Edit Button / Save Bar */}
-        <div style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          zIndex: 1000,
-          display: 'flex',
-          gap: '10px'
-        }}>
+        <div
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            zIndex: 1000,
+            display: "flex",
+            gap: "10px",
+          }}
+        >
           {isTableEditMode ? (
             <>
               <button
                 className="btn btn-danger d-flex align-items-center gap-2 shadow-lg"
                 onClick={() => dispatch(cancelEditMode())}
-                style={{ borderRadius: '50px', padding: '10px 20px' }}
+                style={{ borderRadius: "50px", padding: "10px 20px" }}
               >
                 <i className="bi bi-x-lg"></i>
                 <span className="d-none d-md-inline">Ləğv et</span>
@@ -717,7 +861,7 @@ const Tables = () => {
               <button
                 className="btn btn-success d-flex align-items-center gap-2 shadow-lg"
                 onClick={() => dispatch(saveEditMode())}
-                style={{ borderRadius: '50px', padding: '10px 20px' }}
+                style={{ borderRadius: "50px", padding: "10px 20px" }}
               >
                 <i className="bi bi-check-lg"></i>
                 <span className="d-none d-md-inline">Yadda saxla</span>
@@ -729,11 +873,11 @@ const Tables = () => {
                 className="btn btn-primary d-flex align-items-center gap-2 shadow-lg"
                 onClick={() => dispatch(startEditMode())}
                 style={{
-                  backgroundColor: '#053796',
-                  border: 'none',
-                  borderRadius: '50px',
-                  padding: '12px 24px',
-                  fontSize: '16px'
+                  backgroundColor: "#053796",
+                  border: "none",
+                  borderRadius: "50px",
+                  padding: "12px 24px",
+                  fontSize: "16px",
                 }}
               >
                 <i className="bi bi-pencil-fill"></i>
@@ -742,7 +886,6 @@ const Tables = () => {
             )
           )}
         </div>
-
       </Container>
 
       {/* Table Shape Modal */}
@@ -756,7 +899,9 @@ const Tables = () => {
         onSelect={async (newShape) => {
           if (!selectedTableForShape) return;
           try {
-            await axios.put(`/tables/${selectedTableForShape.id}`, { shape_type: newShape });
+            await axios.put(`/tables/${selectedTableForShape.id}`, {
+              shape_type: newShape,
+            });
             toast.success("Masa forması dəyişdirildi");
             dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
             setShowShapeModal(false);
@@ -784,7 +929,9 @@ const Tables = () => {
           setShowOtherChecks(false);
           const guard = await checkShiftGuard(loginedProfileData);
           if (guard.blocked) {
-            toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+            toast.error(
+              guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.",
+            );
             return;
           }
           setShowModal(true);

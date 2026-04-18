@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { Container, Col, Row } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { addProducts, menuData, saveLog } from "../../redux/Slices/OrdersSlice";
@@ -10,7 +16,10 @@ import {
 import ManualPriceModal from "../Modals/ManualPriceModal";
 import ModifierModal from "../ModifierModal/ModifierModal";
 import PortionModal from "../PortionModal/PortionModal";
-import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
+import {
+  isOrderEditLocked,
+  orderEditLockedToast,
+} from "../../utils/checkEditLock";
 import "./Menu.css";
 
 const Menu = ({
@@ -24,37 +33,58 @@ const Menu = ({
   setSelectedCat,
   isDragMode = false,
   categoryOrder = null,
-  onCategoryOrderChange = () => { },
+  onCategoryOrderChange = () => {},
   isEditMode = false,
   isDeleteMode = false,
-  onEditProduct = () => { },
-  onDeleteItem = () => { },
+  onEditProduct = () => {},
+  onDeleteItem = () => {},
 }) => {
   const dispatch = useDispatch();
 
   // Category view display settings
-  const [cardsPerRow, setCardsPerRow] = useState(
-    () => parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10)
+  const [cardsPerRow, setCardsPerRow] = useState(() =>
+    parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10),
   );
-  const [cardFontSize, setCardFontSize] = useState(
-    () => parseFloat(localStorage.getItem("pos_card_font_size") || "0.8")
+  const [cardFontSize, setCardFontSize] = useState(() =>
+    parseFloat(localStorage.getItem("pos_card_font_size") || "0.8"),
   );
   const [productViewMode, setProductViewMode] = useState(
-    () => localStorage.getItem("pos_product_view_mode") || "card"
+    () => localStorage.getItem("pos_product_view_mode") || "card",
   );
   const [hideImages, setHideImages] = useState(
-    () => localStorage.getItem("pos_hide_images") === "true"
+    () => localStorage.getItem("pos_hide_images") === "true",
   );
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => window.innerWidth <= 767.98,
+  );
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileViewport(window.innerWidth <= 767.98);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const effectiveCardsPerRow = isMobileViewport
+    ? Math.min(cardsPerRow, 3)
+    : cardsPerRow;
 
   useEffect(() => {
     const handleViewSettingsChanged = (e) => {
       setCardsPerRow(e.detail.cardsPerRow);
       setCardFontSize(e.detail.cardFontSize);
-      if (e.detail.productViewMode) setProductViewMode(e.detail.productViewMode);
+      if (e.detail.productViewMode)
+        setProductViewMode(e.detail.productViewMode);
       if (e.detail.hideImages !== undefined) setHideImages(e.detail.hideImages);
     };
-    window.addEventListener("categoryViewSettingsChanged", handleViewSettingsChanged);
-    return () => window.removeEventListener("categoryViewSettingsChanged", handleViewSettingsChanged);
+    window.addEventListener(
+      "categoryViewSettingsChanged",
+      handleViewSettingsChanged,
+    );
+    return () =>
+      window.removeEventListener(
+        "categoryViewSettingsChanged",
+        handleViewSettingsChanged,
+      );
   }, []);
   const { menuDataWithGeneralCategories, menuDataWithCategories } = useSelector(
     (state) => state.MenuSlice,
@@ -94,14 +124,23 @@ const Menu = ({
   // Fetch Data - Only if not already present
   useEffect(() => {
     const getMenu = async () => {
-      const hasData = (menuDataWithGeneralCategories?.data?.length > 0 || menuDataWithCategories?.data?.length > 0);
+      const hasData =
+        menuDataWithGeneralCategories?.data?.length > 0 ||
+        menuDataWithCategories?.data?.length > 0;
       if (loginedProfileData?.data?.profile?.id && !hasData) {
-        dispatch(menuWithGeneralCategories(loginedProfileData?.data?.profile?.id));
+        dispatch(
+          menuWithGeneralCategories(loginedProfileData?.data?.profile?.id),
+        );
         dispatch(menuWithCategories(loginedProfileData?.data?.profile?.id));
       }
     };
     getMenu();
-  }, [dispatch, loginedProfileData, menuDataWithGeneralCategories?.data?.length, menuDataWithCategories?.data?.length]);
+  }, [
+    dispatch,
+    loginedProfileData,
+    menuDataWithGeneralCategories?.data?.length,
+    menuDataWithCategories?.data?.length,
+  ]);
 
   // Determine if we have General Categories
   const hasGeneralCategories =
@@ -128,19 +167,18 @@ const Menu = ({
 
   const filteredProducts = useMemo(() => {
     if (!searchText) return [];
-    const normalize = (s) => s
-      .toLocaleLowerCase("az")
-      .replace(/i/g, "ı")       // i → ı  (qatıq → qatiq yazanda)
-      .replace(/e/g, "ə")       // e → ə  (pətənə → petene yazanda)
-      .replace(/o/g, "ö")       // o → ö  (göy → goy yazanda)
-      .replace(/u/g, "ü")       // u → ü  (üzüm → uzum yazanda)
-      .replace(/g/g, "ğ")       // g → ğ  (ağ → ag yazanda)
-      .replace(/c/g, "ç")       // c → ç  (çay → cay yazanda)
-      .replace(/s/g, "ş");      // s → ş  (şəkər → seker yazanda)
+    const normalize = (s) =>
+      s
+        .toLocaleLowerCase("az")
+        .replace(/i/g, "ı") // i → ı  (qatıq → qatiq yazanda)
+        .replace(/e/g, "ə") // e → ə  (pətənə → petene yazanda)
+        .replace(/o/g, "ö") // o → ö  (göy → goy yazanda)
+        .replace(/u/g, "ü") // u → ü  (üzüm → uzum yazanda)
+        .replace(/g/g, "ğ") // g → ğ  (ağ → ag yazanda)
+        .replace(/c/g, "ç") // c → ç  (çay → cay yazanda)
+        .replace(/s/g, "ş"); // s → ş  (şəkər → seker yazanda)
     const q = normalize(searchText);
-    return allProducts.filter((p) =>
-      normalize(p.name || "").includes(q),
-    );
+    return allProducts.filter((p) => normalize(p.name || "").includes(q));
   }, [searchText, allProducts]);
 
   const handleItemClick = (item) => {
@@ -194,8 +232,12 @@ const Menu = ({
     const getModifierGroups = (prod) => {
       if (!prod?.modifier_groups) return [];
       if (Array.isArray(prod.modifier_groups)) return prod.modifier_groups;
-      if (typeof prod.modifier_groups === 'string') {
-        try { return JSON.parse(prod.modifier_groups) || []; } catch { return []; }
+      if (typeof prod.modifier_groups === "string") {
+        try {
+          return JSON.parse(prod.modifier_groups) || [];
+        } catch {
+          return [];
+        }
       }
       return [];
     };
@@ -205,16 +247,30 @@ const Menu = ({
       return;
     }
 
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    const waiterName =
+      loginedWaiter?.data?.name ||
+      loginedProfileData?.data?.profile?.name ||
+      "Naməlum";
 
     // Batch log: collect product names and flush after 800ms of inactivity
     pendingLogNames.current.push(product.name);
     if (logDebounceTimer.current) clearTimeout(logDebounceTimer.current);
     logDebounceTimer.current = setTimeout(() => {
       const grouped = {};
-      pendingLogNames.current.forEach(name => { grouped[name] = (grouped[name] || 0) + 1; });
-      const details = Object.entries(grouped).map(([name, qty]) => qty > 1 ? `${qty} x ${name}` : name).join(', ');
-      dispatch(saveLog({ orderId: order?.uuid, action: "Məhsul əlavə edildi", waiterName, details }));
+      pendingLogNames.current.forEach((name) => {
+        grouped[name] = (grouped[name] || 0) + 1;
+      });
+      const details = Object.entries(grouped)
+        .map(([name, qty]) => (qty > 1 ? `${qty} x ${name}` : name))
+        .join(", ");
+      dispatch(
+        saveLog({
+          orderId: order?.uuid,
+          action: "Məhsul əlavə edildi",
+          waiterName,
+          details,
+        }),
+      );
       pendingLogNames.current = [];
     }, 800);
 
@@ -229,13 +285,18 @@ const Menu = ({
     if (pendingProduct) {
       dispatch(addProducts({ ...pendingProduct, price: price }));
 
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-      dispatch(saveLog({
-        orderId: order?.uuid,
-        action: "Məhsul əlavə edildi (Manual qiymət)",
-        waiterName,
-        details: `${pendingProduct.name} - ${price}₼`
-      }));
+      const waiterName =
+        loginedWaiter?.data?.name ||
+        loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      dispatch(
+        saveLog({
+          orderId: order?.uuid,
+          action: "Məhsul əlavə edildi (Manual qiymət)",
+          waiterName,
+          details: `${pendingProduct.name} - ${price}₼`,
+        }),
+      );
 
       setPendingProduct(null);
     }
@@ -246,34 +307,52 @@ const Menu = ({
       toast.error(orderEditLockedToast());
       return;
     }
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    const waiterName =
+      loginedWaiter?.data?.name ||
+      loginedProfileData?.data?.profile?.name ||
+      "Naməlum";
 
     // Create a detail string for the log that includes the selected modifiers
     let details = productWithModifiers.name;
-    if (productWithModifiers.modifiers && productWithModifiers.modifiers.length > 0) {
-      const modifierText = productWithModifiers.modifiers.map(m => `${m.name}(x${m.count})`).join(', ');
+    if (
+      productWithModifiers.modifiers &&
+      productWithModifiers.modifiers.length > 0
+    ) {
+      const modifierText = productWithModifiers.modifiers
+        .map((m) => `${m.name}(x${m.count})`)
+        .join(", ");
       details += ` [+ ${modifierText}]`;
     }
 
-    dispatch(saveLog({
-      orderId: order?.uuid,
-      action: "Məhsul əlavə edildi (Modifikatorlarla)",
-      waiterName,
-      details: details
-    }));
+    dispatch(
+      saveLog({
+        orderId: order?.uuid,
+        action: "Məhsul əlavə edildi (Modifikatorlarla)",
+        waiterName,
+        details: details,
+      }),
+    );
 
     dispatch(addProducts(productWithModifiers));
   };
 
   const handlePortionConfirm = (productWithPortion) => {
-    if (orderEditLocked) { toast.error(orderEditLockedToast()); return; }
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-    dispatch(saveLog({
-      orderId: order?.uuid,
-      action: "Məhsul əlavə edildi (Porsiya)",
-      waiterName,
-      details: `${productWithPortion.name}${productWithPortion.portion_name ? ` - ${productWithPortion.portion_name}` : ""} - ${parseFloat(productWithPortion.price).toFixed(2)}₼`
-    }));
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
+      return;
+    }
+    const waiterName =
+      loginedWaiter?.data?.name ||
+      loginedProfileData?.data?.profile?.name ||
+      "Naməlum";
+    dispatch(
+      saveLog({
+        orderId: order?.uuid,
+        action: "Məhsul əlavə edildi (Porsiya)",
+        waiterName,
+        details: `${productWithPortion.name}${productWithPortion.portion_name ? ` - ${productWithPortion.portion_name}` : ""} - ${parseFloat(productWithPortion.price).toFixed(2)}₼`,
+      }),
+    );
     dispatch(addProducts(productWithPortion));
   };
 
@@ -299,7 +378,9 @@ const Menu = ({
     if (!order || !Array.isArray(order) || order.length === 0) return items;
 
     const orderMap = {};
-    order.forEach((id, idx) => { orderMap[id] = idx; });
+    order.forEach((id, idx) => {
+      orderMap[id] = idx;
+    });
 
     return [...items].sort((a, b) => {
       const aIdx = orderMap[a.id] !== undefined ? orderMap[a.id] : 999999;
@@ -316,7 +397,7 @@ const Menu = ({
     if (menuViewMode === "ROOT") {
       const genCats = menuDataWithGeneralCategories?.data || [];
       const cats = (menuDataWithCategories?.data || []).filter(
-        (c) => !c.general_categorie_id || c.general_categorie_id === 0
+        (c) => !c.general_categorie_id || c.general_categorie_id === 0,
       );
       let items = [...genCats, ...cats];
       // Apply custom ordering for ROOT view
@@ -325,19 +406,32 @@ const Menu = ({
 
     if (menuViewMode === "CATEGORIES") {
       // Find up-to-date general category from state
-      const currentGenCat = (menuDataWithGeneralCategories?.data || []).find(g => g.id === selectedGenCat?.id);
+      const currentGenCat = (menuDataWithGeneralCategories?.data || []).find(
+        (g) => g.id === selectedGenCat?.id,
+      );
       let items = currentGenCat?.categories || selectedGenCat?.categories || [];
       return applyOrder(items, categoryOrder);
     }
 
     if (menuViewMode === "PRODUCTS") {
       // Find up-to-date category from state
-      const currentCat = (menuDataWithCategories?.data || []).find(c => c.id === selectedCat?.id);
-      let items = (currentCat?.products || selectedCat?.products || []).filter((item) => item && item.name);
+      const currentCat = (menuDataWithCategories?.data || []).find(
+        (c) => c.id === selectedCat?.id,
+      );
+      let items = (currentCat?.products || selectedCat?.products || []).filter(
+        (item) => item && item.name,
+      );
 
       // Inject category discount
-      if (currentCat && currentCat.discount && Number(currentCat.discount) > 0) {
-        items = items.map(item => ({ ...item, categoryDiscount: Number(currentCat.discount) }));
+      if (
+        currentCat &&
+        currentCat.discount &&
+        Number(currentCat.discount) > 0
+      ) {
+        items = items.map((item) => ({
+          ...item,
+          categoryDiscount: Number(currentCat.discount),
+        }));
       }
 
       return applyOrder(items, categoryOrder);
@@ -359,14 +453,14 @@ const Menu = ({
   const handleDragStart = (e, index) => {
     draggedIndexRef.current = index;
     setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = "move";
     const el = e.currentTarget;
     e.dataTransfer.setDragImage(el, el.offsetWidth / 2, el.offsetHeight / 2);
   };
 
   const handleDragOver = (e, index) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = "move";
     setDragOverIndex(index);
   };
 
@@ -388,7 +482,7 @@ const Menu = ({
     const [removed] = snapshot.splice(fromIndex, 1);
     snapshot.splice(dropIndex, 0, removed);
 
-    const newOrder = snapshot.map(item => item.id);
+    const newOrder = snapshot.map((item) => item.id);
     onCategoryOrderChange(newOrder);
 
     draggedIndexRef.current = null;
@@ -421,7 +515,7 @@ const Menu = ({
     const touch = e.touches[0];
     const el = document.elementFromPoint(touch.clientX, touch.clientY);
     if (el) {
-      const card = el.closest('.menu-card');
+      const card = el.closest(".menu-card");
       if (card) {
         const col = card.parentElement;
         const allCols = Array.from(col.parentElement.children);
@@ -438,12 +532,16 @@ const Menu = ({
   const handleTouchEnd = () => {
     if (!isDragMode) return;
     const { startIndex, currentIndex } = touchRef.current;
-    if (startIndex !== null && currentIndex !== null && startIndex !== currentIndex) {
+    if (
+      startIndex !== null &&
+      currentIndex !== null &&
+      startIndex !== currentIndex
+    ) {
       const snapshot = [...itemsToRenderRef.current];
       const [removed] = snapshot.splice(startIndex, 1);
       snapshot.splice(currentIndex, 0, removed);
 
-      const newOrder = snapshot.map(item => item.id);
+      const newOrder = snapshot.map((item) => item.id);
       onCategoryOrderChange(newOrder);
     }
     touchRef.current = { startIndex: null, currentIndex: null };
@@ -452,15 +550,29 @@ const Menu = ({
   };
 
   // Determine if list view should be used
-  const useListView = productViewMode === "list" && (menuViewMode === "PRODUCTS" || (searchText && searchText.trim().length > 0));
+  const useListView =
+    productViewMode === "list" &&
+    (menuViewMode === "PRODUCTS" ||
+      (searchText && searchText.trim().length > 0));
 
   return (
-    <Container fluid className="p-0 d-flex flex-column" style={{ flex: 1, minHeight: 0 }}>
+    <Container
+      fluid
+      className="p-0 d-flex flex-column"
+      style={{ flex: 1, minHeight: 0 }}
+    >
       {useListView ? (
         /* ═══ LIST VIEW for products ═══ */
         <div
           className="menu-list-view menu-scroll-row"
-          style={{ overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", scrollbarColor: "#c1d0e8 transparent", padding: "8px 10px", flex: "1 1 auto" }}
+          style={{
+            overflowY: "auto",
+            overflowX: "hidden",
+            scrollbarWidth: "thin",
+            scrollbarColor: "#c1d0e8 transparent",
+            padding: "8px 10px",
+            flex: "1 1 auto",
+          }}
         >
           {itemsToRender
             ?.filter((item) => item && item.name)
@@ -468,31 +580,49 @@ const Menu = ({
               let effectivePrice = Number(item.price);
               if (item.discount && Number(item.discount) > 0) {
                 effectivePrice = Number(item.discount);
-              } else if (item.categoryDiscount && Number(item.categoryDiscount) > 0) {
-                const discountValue = (Number(item.price) * Number(item.categoryDiscount)) / 100;
+              } else if (
+                item.categoryDiscount &&
+                Number(item.categoryDiscount) > 0
+              ) {
+                const discountValue =
+                  (Number(item.price) * Number(item.categoryDiscount)) / 100;
                 effectivePrice = Number(item.price) - discountValue;
                 effectivePrice = Math.round(effectivePrice * 100) / 100;
               }
 
               const isDragging = isDragMode && draggedIndex === index;
-              const isDragOver = isDragMode && dragOverIndex === index && draggedIndex !== index;
+              const isDragOver =
+                isDragMode && dragOverIndex === index && draggedIndex !== index;
 
               return (
                 <div
                   key={item.id ?? index}
-                  className={`menu-list-item ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                  className={`menu-list-item ${isDragMode ? "drag-mode" : ""} ${isDragging ? "dragging" : ""} ${isDragOver ? "drag-over" : ""}`}
                   draggable={isDragMode}
-                  onDragStart={isDragMode ? (e) => handleDragStart(e, index) : undefined}
-                  onDragOver={isDragMode ? (e) => handleDragOver(e, index) : undefined}
+                  onDragStart={
+                    isDragMode ? (e) => handleDragStart(e, index) : undefined
+                  }
+                  onDragOver={
+                    isDragMode ? (e) => handleDragOver(e, index) : undefined
+                  }
                   onDragLeave={isDragMode ? handleDragLeave : undefined}
                   onDrop={isDragMode ? (e) => handleDrop(e, index) : undefined}
                   onDragEnd={isDragMode ? handleDragEnd : undefined}
-                  onTouchStart={() => { if (isDragMode) handleTouchStart(index); }}
-                  onTouchMove={(e) => { if (isDragMode) handleTouchMove(e); }}
-                  onTouchEnd={() => { if (isDragMode) handleTouchEnd(); }}
+                  onTouchStart={() => {
+                    if (isDragMode) handleTouchStart(index);
+                  }}
+                  onTouchMove={(e) => {
+                    if (isDragMode) handleTouchMove(e);
+                  }}
+                  onTouchEnd={() => {
+                    if (isDragMode) handleTouchEnd();
+                  }}
                   onClick={() => {
                     if (isDragMode) return;
-                    const itemWithEffectivePrice = { ...item, price: effectivePrice };
+                    const itemWithEffectivePrice = {
+                      ...item,
+                      price: effectivePrice,
+                    };
                     handleProductClick(itemWithEffectivePrice);
                   }}
                   onMouseDown={(e) => {
@@ -501,8 +631,12 @@ const Menu = ({
                   }}
                   onMouseUp={handleLongPressEnd}
                   onMouseLeave={handleLongPressEnd}
-                  onTouchStartCapture={() => { if (!isDragMode) handleLongPressStart(item); }}
-                  onTouchEndCapture={() => { if (!isDragMode) handleLongPressEnd(); }}
+                  onTouchStartCapture={() => {
+                    if (!isDragMode) handleLongPressStart(item);
+                  }}
+                  onTouchEndCapture={() => {
+                    if (!isDragMode) handleLongPressEnd();
+                  }}
                 >
                   {isDragMode && (
                     <div className="menu-list-drag-handle">
@@ -510,9 +644,15 @@ const Menu = ({
                     </div>
                   )}
                   {item.color && (
-                    <div className="menu-list-item-color-bar" style={{ backgroundColor: item.color }} />
+                    <div
+                      className="menu-list-item-color-bar"
+                      style={{ backgroundColor: item.color }}
+                    />
                   )}
-                  <span className="menu-list-item-name" style={{ fontSize: `${cardFontSize}rem` }}>
+                  <span
+                    className="menu-list-item-name"
+                    style={{ fontSize: `${cardFontSize}rem` }}
+                  >
                     {item.name}
                   </span>
                   <span className="menu-list-item-price">
@@ -531,14 +671,24 @@ const Menu = ({
         /* ═══ CARD VIEW (default) ═══ */
         <Row
           className="g-1 px-1 menu-scroll-row"
-          style={{ flex: 1, alignContent: "flex-start", overflowY: "auto", overflowX: "hidden", scrollbarWidth: "thin", scrollbarColor: "#c1d0e8 transparent" }}
+          style={{
+            flex: 1,
+            alignContent: "flex-start",
+            overflowY: "auto",
+            overflowX: "hidden",
+            scrollbarWidth: "thin",
+            scrollbarColor: "#c1d0e8 transparent",
+          }}
         >
           {itemsToRender
             ?.filter((item) => item && item.name)
             .map((item, index) => {
               let imageSrc = "none";
               if (!hideImages && item.img) {
-                if (item.img.startsWith("data:") || item.img.startsWith("http")) {
+                if (
+                  item.img.startsWith("data:") ||
+                  item.img.startsWith("http")
+                ) {
                   imageSrc = `url(${item.img})`;
                 } else {
                   imageSrc = `url(https://unipos.tech/${item.img})`;
@@ -549,47 +699,76 @@ const Menu = ({
               let effectivePrice = Number(item.price);
               if (item.discount && Number(item.discount) > 0) {
                 effectivePrice = Number(item.discount);
-              } else if (item.categoryDiscount && Number(item.categoryDiscount) > 0) {
-                const discountValue = (Number(item.price) * Number(item.categoryDiscount)) / 100;
+              } else if (
+                item.categoryDiscount &&
+                Number(item.categoryDiscount) > 0
+              ) {
+                const discountValue =
+                  (Number(item.price) * Number(item.categoryDiscount)) / 100;
                 effectivePrice = Number(item.price) - discountValue;
                 effectivePrice = Math.round(effectivePrice * 100) / 100;
               }
 
               const isDragging = isDragMode && draggedIndex === index;
-              const isDragOver = isDragMode && dragOverIndex === index && draggedIndex !== index;
+              const isDragOver =
+                isDragMode && dragOverIndex === index && draggedIndex !== index;
 
               return (
                 <Col
                   key={item.id ?? index}
-                  style={{ flex: `0 0 ${100 / cardsPerRow}%`, maxWidth: `${100 / cardsPerRow}%`, padding: '3px' }}
+                  style={{
+                    flex: `0 0 ${100 / effectiveCardsPerRow}%`,
+                    maxWidth: `${100 / effectiveCardsPerRow}%`,
+                    padding: "3px",
+                  }}
                   className="category-col-dynamic"
                 >
                   <div
-                    className={`menu-card ${isDragMode ? 'drag-mode' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver ? 'drag-over' : ''}`}
+                    className={`menu-card ${isDragMode ? "drag-mode" : ""} ${isDragging ? "dragging" : ""} ${isDragOver ? "drag-over" : ""}`}
                     style={{
                       backgroundImage: imageSrc,
-                      backgroundColor: item.color || ((!hideImages && item.img) ? "transparent" : "#555"),
+                      backgroundColor:
+                        item.color ||
+                        (!hideImages && item.img ? "transparent" : "#555"),
                       cursor: isDragMode ? "grab" : "pointer",
                     }}
                     draggable={isDragMode}
-                    onDragStart={isDragMode ? (e) => handleDragStart(e, index) : undefined}
-                    onDragOver={isDragMode ? (e) => handleDragOver(e, index) : undefined}
+                    onDragStart={
+                      isDragMode ? (e) => handleDragStart(e, index) : undefined
+                    }
+                    onDragOver={
+                      isDragMode ? (e) => handleDragOver(e, index) : undefined
+                    }
                     onDragLeave={isDragMode ? handleDragLeave : undefined}
-                    onDrop={isDragMode ? (e) => handleDrop(e, index) : undefined}
+                    onDrop={
+                      isDragMode ? (e) => handleDrop(e, index) : undefined
+                    }
                     onDragEnd={isDragMode ? handleDragEnd : undefined}
                     onTouchStart={(e) => {
-                      if (isDragMode) { handleTouchStart(index); return; }
+                      if (isDragMode) {
+                        handleTouchStart(index);
+                        return;
+                      }
                     }}
                     onTouchMove={(e) => {
-                      if (isDragMode) { handleTouchMove(e); return; }
+                      if (isDragMode) {
+                        handleTouchMove(e);
+                        return;
+                      }
                     }}
                     onTouchEnd={(e) => {
-                      if (isDragMode) { handleTouchEnd(); return; }
+                      if (isDragMode) {
+                        handleTouchEnd();
+                        return;
+                      }
                     }}
                     onClick={() => {
                       if (isDragMode) return;
 
-                      const itemWithEffectivePrice = { ...item, price: effectivePrice };
+                      const itemWithEffectivePrice = {
+                        ...item,
+                        price: effectivePrice,
+                      };
 
                       if (searchText?.length > 0) {
                         handleProductClick(itemWithEffectivePrice);
@@ -610,11 +789,10 @@ const Menu = ({
                       </div>
                     )}
 
-                    {(menuViewMode === "PRODUCTS" || searchText?.length > 0) && (
+                    {(menuViewMode === "PRODUCTS" ||
+                      searchText?.length > 0) && (
                       <div className="menu-card-price">
-                        <div>
-                          {effectivePrice} ₼
-                        </div>
+                        <div>{effectivePrice} ₼</div>
                       </div>
                     )}
 
@@ -622,13 +800,14 @@ const Menu = ({
                       <span
                         className="text-center fw-bold text-white text-shadow"
                         style={{
-                          fontSize: item.name?.length > 30
-                            ? `${Math.max(cardFontSize - 0.25, 0.5)}rem`
-                            : item.name?.length > 20
-                            ? `${Math.max(cardFontSize - 0.15, 0.55)}rem`
-                            : item.name?.length > 12
-                            ? `${Math.max(cardFontSize - 0.08, 0.6)}rem`
-                            : `${cardFontSize}rem`
+                          fontSize:
+                            item.name?.length > 30
+                              ? `${Math.max(cardFontSize - 0.25, 0.5)}rem`
+                              : item.name?.length > 20
+                                ? `${Math.max(cardFontSize - 0.15, 0.55)}rem`
+                                : item.name?.length > 12
+                                  ? `${Math.max(cardFontSize - 0.08, 0.6)}rem`
+                                  : `${cardFontSize}rem`,
                         }}
                       >
                         {item.name}
