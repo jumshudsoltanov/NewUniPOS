@@ -711,7 +711,11 @@ const onMergeChecks = async (req, res) => {
     // Cəm: məhsullar + taymer (masa/məhsul saatlığı) — köçürmə ilə eyni məntiq
     await recalculateOrderTotalsWithTimer(currentOrderId, transaction);
 
-    // Delete the merged (old) order
+    // Close the merged (old) order: status=3 so admin knows it's gone, then soft-delete
+    await OrdersModel.update(
+      { status: 3, amount: 0, total: 0, end_date: new Date(), is_synced: 0 },
+      { where: { uuid: newOrderId }, transaction },
+    );
     await OrdersModel.destroy({
       where: { uuid: newOrderId },
       transaction,
@@ -721,11 +725,7 @@ const onMergeChecks = async (req, res) => {
     await transaction.commit();
 
     SyncService.queueSync(currentOrderId);
-    // newOrderId is deleted, but we might want to sync that deletion too? 
-    // Usually handled by sending the deleted order as status=0/deleted. 
-    // Here we physically destroy the record. Admin sync might need to know about deletion.
-    // However, user requirement mentions syncing operations on check.
-    // For now, syncing the currentOrderId is critical.
+    SyncService.queueSync(newOrderId); // Send status=3 to admin so it no longer shows as AÇIQ
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: currentOrderId },

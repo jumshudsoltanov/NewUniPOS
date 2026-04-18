@@ -280,7 +280,8 @@ class SyncService {
         }),
       ]);
 
-      if (items.length === 0 && order.status !== 2 && order.status !== 3) {
+      const isDeleted = !!(order.deletedAt || order.deleted_at || order.get?.('deletedAt') || order.get?.('deleted_at'));
+      if (items.length === 0 && order.status !== 2 && order.status !== 3 && !isDeleted) {
         await OrdersModel.update(
           { is_synced: 1 },
           { where: { uuid: orderId }, paranoid: false },
