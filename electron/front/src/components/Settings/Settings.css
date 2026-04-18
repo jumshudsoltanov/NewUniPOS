@@ -184,18 +184,29 @@
 
     .settings-grid-top .settings-card {
         width: 100%;
-        height: 70px;
-        padding: 12px;
+        height: 72px;
+        padding: 14px 12px;
     }
 
     .settings-grid-bottom {
-        grid-template-columns: repeat(auto-fill, 120px);
+        grid-template-columns: repeat(2, 1fr);
+        margin-top: auto;
     }
 
     .settings-grid-bottom .settings-card {
-        width: 120px;
-        height: 60px;
-        padding: 10px;
+        width: 100%;
+        height: 68px;
+        padding: 14px 12px;
+    }
+
+    .settings-grid-bottom .settings-card-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 17px;
+    }
+
+    .settings-grid-bottom .settings-card-label {
+        font-size: 13px;
     }
 }
 
