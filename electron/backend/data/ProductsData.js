@@ -19,7 +19,9 @@ const fetchColorsFromV2 = async (endpoint) => {
     items.forEach((item) => {
       if (item.id && item.color) colorMap[item.id] = item.color;
     });
-  } catch (e) { /* v2 endpoint mövcud olmaya bilər */ }
+  } catch (e) {
+    /* v2 endpoint mövcud olmaya bilər */
+  }
   return colorMap;
 };
 
@@ -80,7 +82,10 @@ const getGeneralCategories = async (passedProfileId) => {
           force: true,
         });
       } else {
-        await GeneralCategoriesModel.destroy({ where: { profile_id }, force: true });
+        await GeneralCategoriesModel.destroy({
+          where: { profile_id },
+          force: true,
+        });
       }
 
       if (generalCategories.length > 0) {
@@ -164,8 +169,12 @@ const getProducts = async (passedProfileId) => {
     // V1, V2, V3(local admin) və modifiers-i eyni anda paralel çək
     const [v1Result, v2Result, v3Result, modResult] = await Promise.allSettled([
       axios.get(`http://46.224.8.157:35627/api/products/${profile_id}`),
-      axios.get(`https://api.unipos.tech/api/products?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`),
-      axios.get(`http://localhost:8089/api/products?profile_id=${profile_id}&limit=10000&per_page=10000&page=1`),
+      axios.get(
+        `https://api.unipos.tech/api/products?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
+      ),
+      axios.get(
+        `http://localhost:8089/api/products?profile_id=${profile_id}&limit=10000&per_page=10000&page=1`,
+      ),
       axios.get(`http://46.224.8.157:35627/api/modifiers/${profile_id}`),
     ]);
 
@@ -187,7 +196,8 @@ const getProducts = async (passedProfileId) => {
             : item.printer_id.toString();
         }
         if (item.color) colorMap[item.id] = item.color;
-        if (item.hourly_price != null) hourlyPriceMap[item.id] = item.hourly_price;
+        if (item.hourly_price != null)
+          hourlyPriceMap[item.id] = item.hourly_price;
       });
     } else {
       console.error("[ProductsData] V2 API xətası:", v2Result.reason?.message);
@@ -201,7 +211,9 @@ const getProducts = async (passedProfileId) => {
       const v3Items = Array.isArray(rawV3)
         ? rawV3
         : rawV3?.items || rawV3?.data || [];
-      console.log(`[ProductsData] V3 local admin: ${v3Items.length} məhsul gəldi`);
+      console.log(
+        `[ProductsData] V3 local admin: ${v3Items.length} məhsul gəldi`,
+      );
       v3Items.forEach((item) => {
         if (!item.name) return;
         const extractedPrinterId = extractPrinterIdString(item);
@@ -211,13 +223,18 @@ const getProducts = async (passedProfileId) => {
         if (extractedPrinterId || item.printer_details?.length > 0) {
           v3NameMap[item.name.toLowerCase().trim()] = {
             printer_id: extractedPrinterId,
-            printer_details: item.printer_details || []
+            printer_details: item.printer_details || [],
           };
-          console.log(`[ProductsData] V3: "${item.name}" → printer_id:${extractedPrinterId}, printers:[${(item.printer_details || []).map(p => p.name).join(',')}]`);
+          console.log(
+            `[ProductsData] V3: "${item.name}" → printer_id:${extractedPrinterId}, printers:[${(item.printer_details || []).map((p) => p.name).join(",")}]`,
+          );
         }
       });
     } else {
-      console.warn("[ProductsData] V3 local admin xətası (optional):", v3Result.reason?.message);
+      console.warn(
+        "[ProductsData] V3 local admin xətası (optional):",
+        v3Result.reason?.message,
+      );
     }
 
     // Modifiers çək
@@ -246,20 +263,26 @@ const getProducts = async (passedProfileId) => {
           })),
         });
       });
-      console.log(`[ProductsData] Modifier groups çəkildi: ${groups.length} group`);
+      console.log(
+        `[ProductsData] Modifier groups çəkildi: ${groups.length} group`,
+      );
     } else {
-      console.error("[ProductsData] Modifiers API xətası:", modResult.reason?.message);
+      console.error(
+        "[ProductsData] Modifiers API xətası:",
+        modResult.reason?.message,
+      );
     }
 
     const v1Products =
-      v1Result.status === "fulfilled" && Array.isArray(v1Result.value?.data?.data)
+      v1Result.status === "fulfilled" &&
+      Array.isArray(v1Result.value?.data?.data)
         ? v1Result.value.data.data
         : [];
     const v3ProductsRaw =
       v3Result.status === "fulfilled"
-        ? (Array.isArray(v3Result.value?.data)
-            ? v3Result.value.data
-            : v3Result.value?.data?.items || v3Result.value?.data?.data || [])
+        ? Array.isArray(v3Result.value?.data)
+          ? v3Result.value.data
+          : v3Result.value?.data?.items || v3Result.value?.data?.data || []
         : [];
 
     const sourceProducts = v1Products.length > 0 ? v1Products : v3ProductsRaw;
@@ -274,14 +297,18 @@ const getProducts = async (passedProfileId) => {
         // New local admin prioriteti: id uyğun gəlirsə həmişə üstün tut
         if (v3IdMap[p.id]) {
           p.printer_id = v3IdMap[p.id];
-          console.log(`[ProductsData] V3 id match: "${p.name}" (#${p.id}) → printer_id:${p.printer_id}`);
+          console.log(
+            `[ProductsData] V3 id match: "${p.name}" (#${p.id}) → printer_id:${p.printer_id}`,
+          );
         }
         // V3 ad üzrə fallback match
         if (!p.printer_id || p.printer_id === "0") {
           const nameKey = p.name?.toLowerCase().trim();
           if (nameKey && v3NameMap[nameKey]?.printer_id) {
             p.printer_id = v3NameMap[nameKey].printer_id;
-            console.log(`[ProductsData] V3 ad match: "${p.name}" → printer_id:${p.printer_id}`);
+            console.log(
+              `[ProductsData] V3 ad match: "${p.name}" → printer_id:${p.printer_id}`,
+            );
           }
         }
         p.printer_id = normalizePrinterIdValue(p.printer_id);
@@ -311,7 +338,9 @@ const getProducts = async (passedProfileId) => {
           raw: true,
         });
         const orderMap = {};
-        existingOrders.forEach((r) => { if (r.ordering != null) orderMap[r.id] = r.ordering; });
+        existingOrders.forEach((r) => {
+          if (r.ordering != null) orderMap[r.id] = r.ordering;
+        });
 
         const productsWithOrder = products.map((p) => ({
           ...p,
@@ -319,28 +348,38 @@ const getProducts = async (passedProfileId) => {
         }));
 
         const updateKeys = Object.keys(productsWithOrder[0]).filter(
-          (key) => ProductsModel.rawAttributes[key] && key !== "ordering" && key !== "modifier_groups",
+          (key) =>
+            ProductsModel.rawAttributes[key] &&
+            key !== "ordering" &&
+            key !== "modifier_groups",
         );
         await ProductsModel.bulkCreate(productsWithOrder, {
           updateOnDuplicate: updateKeys,
         });
 
         // modifier_groups JSON kimi ayrıca update et — bulkCreate JSON field-i düzgün saxlamır
-        const modifierUpdates = productsWithOrder.filter((p) => p.modifier_groups != null);
+        const modifierUpdates = productsWithOrder.filter(
+          (p) => p.modifier_groups != null,
+        );
         for (const p of modifierUpdates) {
-          const value = typeof p.modifier_groups === "string"
-            ? p.modifier_groups
-            : JSON.stringify(p.modifier_groups);
+          const value =
+            typeof p.modifier_groups === "string"
+              ? p.modifier_groups
+              : JSON.stringify(p.modifier_groups);
           await ProductsModel.update(
             { modifier_groups: value },
-            { where: { id: p.id } }
+            { where: { id: p.id } },
           );
         }
       }
 
-      console.log(`[ProductsData] Products DB sync olundu: ${products.length} məhsul insert/update + silindi`);
+      console.log(
+        `[ProductsData] Products DB sync olundu: ${products.length} məhsul insert/update + silindi`,
+      );
     } else {
-      console.warn("[ProductsData] Heç bir məhsul mənbədən gəlmədi (V1/V3 boşdur)");
+      console.warn(
+        "[ProductsData] Heç bir məhsul mənbədən gəlmədi (V1/V3 boşdur)",
+      );
     }
   } catch (err) {
     console.error("Xəta:", err.message);
