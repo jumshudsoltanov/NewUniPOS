@@ -9,24 +9,43 @@ import {
   clearPendingDeletions,
   addLog,
   saveLog,
-  stopTimer
+  stopTimer,
 } from "../../redux/Slices/OrdersSlice";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
-import { processAndPrintOrders, printCustomerReceipt } from "../../utils/printerHelpers.jsx";
+import {
+  processAndPrintOrders,
+  printCustomerReceipt,
+} from "../../utils/printerHelpers.jsx";
 import { getSocket } from "../../utils/apiConfig";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
-import { getEffectiveHourlyPrice, getProductHourlySum } from "../../utils/orderHourlyPrice";
+import {
+  getEffectiveHourlyPrice,
+  getProductHourlySum,
+} from "../../utils/orderHourlyPrice";
 import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
-import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
+import {
+  isOrderEditLocked,
+  orderEditLockedToast,
+} from "../../utils/checkEditLock";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 
-const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, isSending, clearCheck }) => {
+const CheckBottom = ({
+  orders,
+  table,
+  hall,
+  selectedCustomer,
+  handleSendOrders,
+  isSending,
+  clearCheck,
+}) => {
   const dispatch = useDispatch();
-  const { products, sentProducts, pendingDeletions, menu } = useSelector((state) => state.OrderSlice);
+  const { products, sentProducts, pendingDeletions, menu } = useSelector(
+    (state) => state.OrderSlice,
+  );
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { id } = useParams();
@@ -40,9 +59,12 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
   /* Taymer: TablesSlice (tickTimer) + BooksSlice — aktiv masada cədvəl mənbəsi üstünlükdə */
   const liveTimerData = useSelector((state) => selectLiveTimerData(state, id));
 
-  const timerClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
-  const timerCharge = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
-  const isTimerActive = (liveTimerData?.is_timer_status === 1) || (orders?.is_timer_status == 1);
+  const timerClock =
+    liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
+  const timerCharge =
+    liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
+  const isTimerActive =
+    liveTimerData?.is_timer_status === 1 || orders?.is_timer_status == 1;
 
   const orderForTimer = useMemo(() => {
     if (!orders) return null;
@@ -79,19 +101,20 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     const groupedMap = new Map();
 
     if (orders?.orders_items) {
-      orders.orders_items.forEach(item => {
+      orders.orders_items.forEach((item) => {
         const key = `${item.product_id || item.id}-${parseFloat(item.price || 0).toFixed(2)}-${JSON.stringify(item.modifiers || [])}`;
         if (groupedMap.has(key)) {
           groupedMap.get(key).qty += Number(item.count || item.quantity || 1);
         } else {
           groupedMap.set(key, {
-            name: item.name || item.product_name || item.product?.name || "Məhsul",
+            name:
+              item.name || item.product_name || item.product?.name || "Məhsul",
             price: item.price,
             qty: Number(item.count || item.quantity || 1),
             unit: item.unit || "əd.",
             modifiers: item.modifiers || [],
             discount: item.discount || 0,
-            is_discount_percent: item.is_discount_percent || 0
+            is_discount_percent: item.is_discount_percent || 0,
           });
         }
       });
@@ -99,19 +122,20 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
     // Yalnız serverdə olmayan (isNew) məhsulları əlavə et
     if (products) {
-      products.forEach(item => {
+      products.forEach((item) => {
         const key = `${item.product_id || item.id}-${parseFloat(item.price || 0).toFixed(2)}-${JSON.stringify(item.modifiers || [])}`;
         if (groupedMap.has(key)) {
           groupedMap.get(key).qty += Number(item.count || item.quantity || 1);
         } else {
           groupedMap.set(key, {
-            name: item.name || item.product_name || item.product?.name || "Məhsul",
+            name:
+              item.name || item.product_name || item.product?.name || "Məhsul",
             price: item.price,
             qty: Number(item.count || item.quantity || 1),
             unit: item.unit || "əd.",
             modifiers: item.modifiers || [],
             discount: item.discount || 0,
-            is_discount_percent: item.is_discount_percent || 0
+            is_discount_percent: item.is_discount_percent || 0,
           });
         }
       });
@@ -132,21 +156,30 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       // Timer data
       is_timer_status: isTimerActive ? 1 : 0,
       is_timer_clock: timerClock,
-      rate_per_minute: timerCharge
+      rate_per_minute: timerCharge,
     });
 
     return () => {
       const s = getSocket();
       if (s) {
         s.emit("broadcast_customer_display", {
-          items: [], total: 0, received: 0, change: 0,
-          discount: 0, service_charge: 0, deposit: 0,
-          check_id: null, guest_count: 0, table_name: "", hall_name: "",
-          is_timer_status: 0, is_timer_clock: "00:00:00", rate_per_minute: 0
+          items: [],
+          total: 0,
+          received: 0,
+          change: 0,
+          discount: 0,
+          service_charge: 0,
+          deposit: 0,
+          check_id: null,
+          guest_count: 0,
+          table_name: "",
+          hall_name: "",
+          is_timer_status: 0,
+          is_timer_clock: "00:00:00",
+          rate_per_minute: 0,
         });
       }
     };
-
   }, [orders, products, sentProducts, pendingDeletions]);
 
   // Çek bağlama (CheckOver): master/slave fərqi yoxdur — yalnız cannot_close_check: 1 = bağlamaq olar, 0 = olmaz
@@ -159,21 +192,26 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     }
 
     /* Kilid olsa belə CheckOver-a keçmək olar; gözləyən dəyişiklik yalnız kilid olmayanda göndərilir */
-    if (!orderEditLocked && (products.length > 0 || pendingDeletions.length > 0)) {
+    if (
+      !orderEditLocked &&
+      (products.length > 0 || pendingDeletions.length > 0)
+    ) {
       await handleSendOrders();
     }
 
     // Auto-stop timer when moving to payment screen
     if (isTimerActive) {
-      dispatch(stopTimer({
-        orderId: orders.uuid,
-        elapsedSeconds: 0,
-        clockStr: timerClock
-      }));
+      dispatch(
+        stopTimer({
+          orderId: orders.uuid,
+          elapsedSeconds: 0,
+          clockStr: timerClock,
+        }),
+      );
     }
 
-    navigate(`/closecheck/${id}`)
-  }
+    navigate(`/closecheck/${id}`);
+  };
 
   // Calculate total
   const calcTotal = useMemo(() => {
@@ -191,19 +229,28 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
         let modifiersTotal = 0;
         try {
           let mods = item.modifiers;
-          if (typeof mods === 'string') mods = JSON.parse(mods);
+          if (typeof mods === "string") mods = JSON.parse(mods);
           if (Array.isArray(mods)) {
-            modifiersTotal = mods.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
+            modifiersTotal = mods.reduce(
+              (sum, mod) =>
+                sum + Number(mod.price || 0) * Number(mod.count || 1),
+              0,
+            );
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          /* ignore */
+        }
 
         const itemTotal = count * (price + modifiersTotal);
 
         total += itemTotal;
         totalForDiscount += itemTotal;
 
-        const productInfo = menu?.find(m => m.id === (item.product_id || item.id));
-        const isNoService = (item.no_service_fee === 1 || productInfo?.no_service_fee === 1);
+        const productInfo = menu?.find(
+          (m) => m.id === (item.product_id || item.id),
+        );
+        const isNoService =
+          item.no_service_fee === 1 || productInfo?.no_service_fee === 1;
         if (!isNoService) {
           totalForService += itemTotal;
         }
@@ -221,36 +268,55 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
 
     if (pendingDeletions && pendingDeletions.length > 0) {
       pendingDeletions.forEach((del) => {
-        const delQty = del.type === 'partial' ? del.qty : del.originalQty;
+        const delQty = del.type === "partial" ? del.qty : del.originalQty;
         const delPrice = Number(del.price || 0);
 
         // Calculate Modifiers for deleted item
         let modifiersTotal = 0;
         try {
           let mods = del.modifiers;
-          if (typeof mods === 'string') mods = JSON.parse(mods);
+          if (typeof mods === "string") mods = JSON.parse(mods);
           if (Array.isArray(mods)) {
-            modifiersTotal = mods.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
+            modifiersTotal = mods.reduce(
+              (sum, mod) =>
+                sum + Number(mod.price || 0) * Number(mod.count || 1),
+              0,
+            );
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          /* ignore */
+        }
 
         const delTotal = delQty * (delPrice + modifiersTotal);
 
         total -= delTotal;
         totalForDiscount -= delTotal;
 
-        const productInfo = menu?.find(m => m.id === (del.product_id || del.itemId || del.id));
+        const productInfo = menu?.find(
+          (m) => m.id === (del.product_id || del.itemId || del.id),
+        );
 
-        const isNoService = (del.no_service_fee === 1 || productInfo?.no_service_fee === 1);
+        const isNoService =
+          del.no_service_fee === 1 || productInfo?.no_service_fee === 1;
         if (!isNoService) {
           totalForService -= delTotal;
         }
       });
     }
 
+    const normalizeMoney = (value) => {
+      const n = Number(value || 0);
+      const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+      return Math.abs(rounded) < 0.005 ? 0 : rounded;
+    };
+
     if (total < 0) total = 0;
     if (totalForDiscount < 0) totalForDiscount = 0;
     if (totalForService < 0) totalForService = 0;
+
+    total = normalizeMoney(total);
+    totalForDiscount = normalizeMoney(totalForDiscount);
+    totalForService = normalizeMoney(totalForService);
 
     const discountValue = Number(orders?.discount_value || 0);
     const discountType = orders?.discount_type || "percent";
@@ -267,6 +333,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     if (discountAmount === 0 && Number(orders?.discount) > 0) {
       discountAmount = Number(orders.discount);
     }
+    discountAmount = normalizeMoney(discountAmount);
 
     const depositAmount = Number(orders?.deposit || 0);
     const subtotalAfterDiscount = total - discountAmount;
@@ -290,12 +357,18 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     if (serviceAmount === 0 && Number(hall?.service_fee) > 0) {
       serviceAmount = (totalForService * Number(hall.service_fee)) / 100;
     }
+    serviceAmount = normalizeMoney(serviceAmount);
 
-    const deliveryFee = Number(orders?.delivery_fee || 0);
+    const deliveryFee = normalizeMoney(Number(orders?.delivery_fee || 0));
 
-    const hasPendingChanges = (products?.length > 0) || (pendingDeletions?.length > 0);
-    let sumTotal = Math.max(subtotalAfterDiscount, depositAmount) + serviceAmount + deliveryFee;
+    const hasPendingChanges =
+      products?.length > 0 || pendingDeletions?.length > 0;
+    let sumTotal =
+      Math.max(subtotalAfterDiscount, depositAmount) +
+      serviceAmount +
+      deliveryFee;
     if (sumTotal < 0) sumTotal = 0;
+    sumTotal = normalizeMoney(sumTotal);
 
     let effectivePercentage = 0;
     if (total > 0 && discountAmount > 0) {
@@ -344,7 +417,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
     orders?.delivery_fee,
     pendingDeletions,
     menu,
-    hall?.service_fee
+    hall?.service_fee,
   ]);
 
   const totalChanges = products.length + (pendingDeletions?.length || 0);
@@ -355,9 +428,14 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
       <div className="checkBottom d-none d-lg-flex">
         <div className="summary-section">
           {selectedCustomer && (
-            <div className="summary-row customer-row" style={{ color: 'white', fontWeight: '500' }}>
+            <div
+              className="summary-row customer-row"
+              style={{ color: "white", fontWeight: "500" }}
+            >
               <span>Müştəri:</span>
-              <span title={`${selectedCustomer.name} (${selectedCustomer.phone || ''})`}>
+              <span
+                title={`${selectedCustomer.name} (${selectedCustomer.phone || ""})`}
+              >
                 {selectedCustomer.name}
               </span>
             </div>
@@ -365,7 +443,12 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
           {selectedCustomer?.group && (
             <div className="summary-row">
               <span>Qrup:</span>
-              <span>{selectedCustomer.group.name} {selectedCustomer.group.discount > 0 ? `(${selectedCustomer.group.discount}%)` : ''}</span>
+              <span>
+                {selectedCustomer.group.name}{" "}
+                {selectedCustomer.group.discount > 0
+                  ? `(${selectedCustomer.group.discount}%)`
+                  : ""}
+              </span>
             </div>
           )}
           <div className="summary-row">
@@ -375,13 +458,22 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
           {Number(calcTotal.discountAmount) > 0 && (
             <div className="summary-row">
               <span>Endirim:</span>
-              <span>-{calcTotal.discountAmount} ₼ ({calcTotal.discountType === 'percent' ? `${calcTotal.discountValue}%` : `~${calcTotal.effectivePercentage}%`})</span>
+              <span>
+                -{calcTotal.discountAmount} ₼ (
+                {calcTotal.discountType === "percent"
+                  ? `${calcTotal.discountValue}%`
+                  : `~${calcTotal.effectivePercentage}%`}
+                )
+              </span>
             </div>
           )}
           {Number(calcTotal.serviceAmount) > 0 && (
             <div className="summary-row">
               <span>Servis haqqı:</span>
-              <span>+{calcTotal.serviceAmount} ₼ (~{calcTotal.effectiveServicePercentage}%)</span>
+              <span>
+                +{calcTotal.serviceAmount} ₼ (~
+                {calcTotal.effectiveServicePercentage}%)
+              </span>
             </div>
           )}
           {Number(calcTotal.deliveryFee) > 0 && (
@@ -391,51 +483,86 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
             </div>
           )}
           <div className="summary-row" style={{ fontWeight: 700 }}>
-            <span>{calcTotal.isDepositFloor ? 'Minimal məbləğ:' : 'Cəm:'}</span>
+            <span>{calcTotal.isDepositFloor ? "Minimal məbləğ:" : "Cəm:"}</span>
             <span>{calcTotal.sumTotal} ₼</span>
           </div>
           {Number(calcTotal.depositAmount) > 0 && (
-            <div className="summary-row" style={{ color: '#fff', borderTop: '1px dashed rgba(255,255,255,0.1)', marginTop: '2px', paddingTop: '2px' }}>
+            <div
+              className="summary-row"
+              style={{
+                color: "#fff",
+                borderTop: "1px dashed rgba(255,255,255,0.1)",
+                marginTop: "2px",
+                paddingTop: "2px",
+              }}
+            >
               <span>Depozit:</span>
               <span>{calcTotal.depositAmount} ₼</span>
             </div>
           )}
-          {(Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 && effectiveHourlyPrice > 0 && !timerHourlyRates.usesProductTimer) && (
-            <div className="timer-detailed-summary mt-2 pt-2" style={{ borderTop: '1px dashed rgba(255,255,255,0.2)', color: '#fff' }}>
-              <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                <span>Masa (saatlıq):</span>
-                <span>{Number(effectiveHourlyPrice).toFixed(2)} ₼</span>
+          {Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 &&
+            effectiveHourlyPrice > 0 &&
+            !timerHourlyRates.usesProductTimer && (
+              <div
+                className="timer-detailed-summary mt-2 pt-2"
+                style={{
+                  borderTop: "1px dashed rgba(255,255,255,0.2)",
+                  color: "#fff",
+                }}
+              >
+                <div
+                  className="d-flex justify-content-between align-items-center mb-1"
+                  style={{ fontSize: "0.8rem", opacity: 0.9 }}
+                >
+                  <span>Masa (saatlıq):</span>
+                  <span>{Number(effectiveHourlyPrice).toFixed(2)} ₼</span>
+                </div>
+                <div
+                  className="d-flex justify-content-between align-items-center mb-1"
+                  style={{ fontSize: "0.8rem", opacity: 0.9 }}
+                >
+                  <span>Keçən vaxt:</span>
+                  <span className="fw-bold">{timerClock}</span>
+                </div>
+                <div
+                  className="d-flex justify-content-between align-items-center mt-1 total-row"
+                  style={{ fontSize: "0.9rem", fontWeight: 700 }}
+                >
+                  <span>Taymer qazancı:</span>
+                  <span>{Number(timerCharge).toFixed(2)} ₼</span>
+                </div>
               </div>
-              <div className="d-flex justify-content-between align-items-center mb-1" style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                <span>Keçən vaxt:</span>
-                <span className="fw-bold">{timerClock}</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mt-1 total-row" style={{ fontSize: '0.9rem', fontWeight: 700 }}>
-                <span>Taymer qazancı:</span>
-                <span>{Number(timerCharge).toFixed(2)} ₼</span>
-              </div>
-            </div>
-          )}
+            )}
         </div>
 
         <div className="pt-3 action-buttons">
-
-
           <div className="btn-send-group">
             <button
-              className={`btn-send ${(orderEditLocked || (products.length === 0 && pendingDeletions.length === 0) || isSending) ? 'disabled' : ''}`}
+              className={`btn-send ${orderEditLocked || (products.length === 0 && pendingDeletions.length === 0) || isSending ? "disabled" : ""}`}
               onClick={() => {
                 if (orderEditLocked || isSending) {
-                  toast.error(isSending ? "Əməliyyat davam edir..." : orderEditLockedToast());
+                  toast.error(
+                    isSending
+                      ? "Əməliyyat davam edir..."
+                      : orderEditLockedToast(),
+                  );
                   return;
                 }
                 handleSendOrders();
               }}
-              disabled={orderEditLocked || (products.length === 0 && pendingDeletions.length === 0) || isSending}
+              disabled={
+                orderEditLocked ||
+                (products.length === 0 && pendingDeletions.length === 0) ||
+                isSending
+              }
             >
               {isSending ? (
                 <div className="d-flex align-items-center gap-2">
-                  <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  <span
+                    className="spinner-border spinner-border-sm"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
                   <span>Göndərilir...</span>
                 </div>
               ) : (
@@ -460,10 +587,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
           </div>
 
           {canCloseCheck ? (
-            <button
-              className="btn-pay"
-              onClick={goCloseCheck}
-            >
+            <button className="btn-pay" onClick={goCloseCheck}>
               <i className="bi bi-check2-all"></i>
               <span>{calcTotal.sumTotal} ₼</span>
             </button>
@@ -479,7 +603,9 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
             onClick={async () => {
               const guard = await checkShiftGuard(loginedProfileData);
               if (guard.blocked) {
-                toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                toast.error(
+                  guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.",
+                );
                 return;
               }
               setShowSalesTypeModal(true);
@@ -492,32 +618,51 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
           className="mobile-icon-btn gray-btn"
           onClick={() => {
             if (orderEditLocked || isSending) {
-              toast.error(isSending ? "Əməliyyat davam edir..." : orderEditLockedToast());
+              toast.error(
+                isSending ? "Əməliyyat davam edir..." : orderEditLockedToast(),
+              );
               return;
             }
 
             // Auto-stop timer when printing from mobile
             if (isTimerActive) {
-              dispatch(stopTimer({
-                orderId: orders.uuid,
-                elapsedSeconds: 0,
-                clockStr: timerClock
-              }));
+              dispatch(
+                stopTimer({
+                  orderId: orders.uuid,
+                  elapsedSeconds: 0,
+                  clockStr: timerClock,
+                }),
+              );
             }
 
-            const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || orders?.waiter?.name || "Naməlum";
-            dispatch(saveLog({
-              orderId: orders.uuid,
-              action: "Çek çap edildi",
-              waiterName,
-              details: "Mobil çeki"
-            }));
+            const waiterName =
+              loginedWaiter?.data?.name ||
+              loginedWaiter?.name ||
+              loginedProfileData?.data?.profile?.name ||
+              orders?.waiter?.name ||
+              "Naməlum";
+            dispatch(
+              saveLog({
+                orderId: orders.uuid,
+                action: "Çek çap edildi",
+                waiterName,
+                details: "Mobil çeki",
+              }),
+            );
             handleSendOrders();
           }}
-          disabled={orderEditLocked || (products.length === 0 && pendingDeletions.length === 0) || isSending}
+          disabled={
+            orderEditLocked ||
+            (products.length === 0 && pendingDeletions.length === 0) ||
+            isSending
+          }
         >
           {isSending ? (
-            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span
+              className="spinner-border spinner-border-sm"
+              role="status"
+              aria-hidden="true"
+            ></span>
           ) : (
             <i className="bi bi-printer-fill"></i>
           )}
@@ -540,10 +685,7 @@ const CheckBottom = ({ orders, table, hall, selectedCustomer, handleSendOrders, 
           <i className="bi bi-trash-fill"></i>
         </button>
         {canCloseCheck ? (
-          <button
-            className="mobile-pay-btn"
-            onClick={goCloseCheck}
-          >
+          <button className="mobile-pay-btn" onClick={goCloseCheck}>
             <i className="bi bi-check2-all fs-4 text-white"></i>
             <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
           </button>

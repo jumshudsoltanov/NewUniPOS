@@ -619,15 +619,32 @@ const onDeleteOrderItems = async (req, res) => {
   }
 
   try {
+    const currentOrder = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      attributes: ["status", "deposit", "delivery_fee"],
+    });
+
+    const nextStatus = Number(currentOrder?.status) === 3 ? 1 : (currentOrder?.status ?? 1);
+    const nextTotal = Math.max(0, Number(currentOrder?.deposit || 0)) + Number(currentOrder?.delivery_fee || 0);
+
     await OrdersItemsModel.destroy({
       where: { order_id: orderId },
     });
+
     await OrdersModel.update(
-      { amount: 0, total: 0, status: 3, end_date: new Date(), is_synced: 0 },
+      {
+        amount: 0,
+        total: nextTotal,
+        discount: 0,
+        service_charge: 0,
+        status: nextStatus,
+        end_date: null,
+        is_synced: 0,
+      },
       { where: { uuid: orderId } },
     );
 
-    res.status(200).json({ message: "delete all items", data: { uuid: orderId, status: 3, orders_items: [] } });
+    res.status(200).json({ message: "delete all items", data: { uuid: orderId, status: nextStatus, orders_items: [] } });
 
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");

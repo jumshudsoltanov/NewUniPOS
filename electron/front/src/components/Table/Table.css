@@ -1,13 +1,13 @@
 .table-wrapper {
-    position: relative;
-    width: 200px;
-    /* Big enough for table (140) + chairs */
-    height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-    /* Center in column, no outer margin */
+  position: relative;
+  width: 200px;
+  /* Big enough for table (140) + chairs */
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  /* Center in column, no outer margin */
 }
 
 /* Table Types */
@@ -15,44 +15,44 @@
 .table-round,
 .table-rectangle,
 .table-billiard {
-    background: var(--Greyscale-Surface-Subtle, #FFF);
-    box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.18);
-    position: relative;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+  background: var(--Greyscale-Surface-Subtle, #fff);
+  box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.18);
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .table-square {
-    width: 140px;
-    height: 140px;
-    border-radius: 0;
+  width: 140px;
+  height: 140px;
+  border-radius: 0;
 }
 
 .table-round {
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
 }
 
 .table-rectangle {
-    width: 140px;
-    height: 240px;
-    border-radius: 0;
+  width: 140px;
+  height: 240px;
+  border-radius: 0;
 }
 
 .table-billiard {
-    width: 220px;
-    height: 130px;
-    border-radius: 14px;
+  width: 220px;
+  height: 130px;
+  border-radius: 14px;
 }
 
 /* Base state colors — statuslu masalar boş (ağ) masadan aydın seçilsin; boş rəngə çevrilməsin */
 .table-surface.occupied {
-    background-color: #BFDBFE !important;
-    border: 1.5px solid #2563EB;
+  background-color: #bfdbfe !important;
+  border: 1.5px solid #2563eb;
 }
 
 /* Billiard table - override all status colors with realistic styling */
@@ -62,9 +62,11 @@
 .table-surface.table-billiard.my-table,
 .table-surface.table-billiard.other-waiter-table,
 .table-surface.table-billiard.free {
-    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%) !important;
-    border: 6px solid #4e342e !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 0 40px rgba(0, 0, 0, 0.3) !important;
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%) !important;
+  border: 6px solid #4e342e !important;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    inset 0 0 40px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Billiard table text colors - white for better contrast on green */
@@ -74,9 +76,9 @@
 .table-surface.table-billiard.my-table .table-name,
 .table-surface.table-billiard.other-waiter-table .table-name,
 .table-surface.table-billiard.free .table-name {
-    color: #FFFFFF !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    font-weight: 700;
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
 }
 
 .table-surface.table-billiard .table-amount,
@@ -85,9 +87,9 @@
 .table-surface.table-billiard.my-table .table-amount,
 .table-surface.table-billiard.other-waiter-table .table-amount,
 .table-surface.table-billiard.free .table-amount {
-    color: #FFFFFF !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    font-weight: 700;
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
 }
 
 .table-surface.table-billiard .table-waiter-info,
@@ -96,59 +98,59 @@
 .table-surface.table-billiard.my-table .table-waiter-info,
 .table-surface.table-billiard.other-waiter-table .table-waiter-info,
 .table-surface.table-billiard.free .table-waiter-info {
-    color: #FFFFFF !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .table-surface.pending {
-    background-color: #C4B5FD !important;
-    border: 2px solid #6D28D9;
+  background-color: #c4b5fd !important;
+  border: 2px solid #6d28d9;
 }
 
 .table-surface.my-table {
-    background-color: #A7F3D0 !important;
-    border: 1.5px solid #059669;
+  background-color: #a7f3d0 !important;
+  border: 1.5px solid #059669;
 }
 
 .table-surface.other-waiter-table {
-    background-color: #FECACA !important;
-    border: 1.5px solid #DC2626;
+  background-color: #fecaca !important;
+  border: 1.5px solid #dc2626;
 }
 
 /* Çoxlu açıq çek (count > 1) — benovşeyi ton */
 .table-surface.multi-checks {
-    background-color: #C4B5FD !important;
-    border: 2px solid #6D28D9;
+  background-color: #c4b5fd !important;
+  border: 2px solid #6d28d9;
 }
 
 .table-surface.multi-checks .table-name,
 .table-surface.multi-checks .table-amount {
-    color: #5B21B6 !important;
+  color: #5b21b6 !important;
 }
 
 .table-surface.multi-checks .table-waiter-info {
-    color: #5B21B6 !important;
-    font-weight: 600;
+  color: #5b21b6 !important;
+  font-weight: 600;
 }
 
 /* Masa üzərində çoxlu çek yazısı */
 .table-multi-checks-badge {
-    margin-top: 6px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #5B21B6;
-    background: rgba(124, 58, 237, 0.15);
-    padding: 8px 12px;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(124, 58, 237, 0.3);
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #5b21b6;
+  background: rgba(124, 58, 237, 0.15);
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(124, 58, 237, 0.3);
 }
 
 .table-surface.free {
-    background-color: #FFFFFF !important;
-    border: 1px solid #D1D5DB;
+  background-color: #ffffff !important;
+  border: 1px solid #d1d5db;
 }
 
 /* Wrapper adjustments based on type */
@@ -156,677 +158,674 @@
 /* Round table — smaller seats to match the circular shape */
 .wrapper-round .seat-top,
 .wrapper-round .seat-bottom {
-    width: 45px;
-    height: 16px;
+  width: 45px;
+  height: 16px;
 }
 
 .wrapper-round .seat-left,
 .wrapper-round .seat-right {
-    width: 16px;
-    height: 45px;
+  width: 16px;
+  height: 45px;
 }
 
 .wrapper-rectangle {
-    height: 300px;
-    /* Taller wrapper for rectangle */
+  height: 300px;
+  /* Taller wrapper for rectangle */
 }
 
 .wrapper-billiard {
-    width: 240px;
-    height: 180px;
-    /* Wrapper for billiard table with pockets inside */
+  width: 240px;
+  height: 180px;
+  /* Wrapper for billiard table with pockets inside */
 }
 
 /* Common Seat Styles */
 .seat {
-    position: absolute;
-    /* background-color: #E0E7FF; */
-    background-color: #5B8AEB;
-    border-radius: 8px;
-    z-index: 1;
+  position: absolute;
+  /* background-color: #E0E7FF; */
+  background-color: #5b8aeb;
+  border-radius: 8px;
+  z-index: 1;
 }
 
 /* Square/Round Seat Positions (4 seats) */
 .seat-top {
-    width: 60px;
-    height: 20px;
-    top: 20px;
-    /* Strong overlap */
-    left: 50%;
-    transform: translateX(-50%);
+  width: 60px;
+  height: 20px;
+  top: 20px;
+  /* Strong overlap */
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .seat-bottom {
-    width: 60px;
-    height: 20px;
-    bottom: 20px;
-    /* Strong overlap */
-    left: 50%;
-    transform: translateX(-50%);
+  width: 60px;
+  height: 20px;
+  bottom: 20px;
+  /* Strong overlap */
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .seat-left {
-    width: 20px;
-    height: 60px;
-    left: 20px;
-    /* Strong overlap */
-    top: 50%;
-    transform: translateY(-50%);
+  width: 20px;
+  height: 60px;
+  left: 20px;
+  /* Strong overlap */
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .seat-right {
-    width: 20px;
-    height: 60px;
-    right: 20px;
-    /* Strong overlap */
-    top: 50%;
-    transform: translateY(-50%);
+  width: 20px;
+  height: 60px;
+  right: 20px;
+  /* Strong overlap */
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 /* Rectangle Seat Positions (6 seats: 3 left, 3 right) */
 .seat-left-1,
 .seat-left-2,
 .seat-left-3 {
-    width: 20px;
-    height: 50px;
-    left: 20px;
-    /* Strong overlap */
+  width: 20px;
+  height: 50px;
+  left: 20px;
+  /* Strong overlap */
 }
 
 .seat-right-1,
 .seat-right-2,
 .seat-right-3 {
-    width: 20px;
-    height: 50px;
-    right: 20px;
-    /* Strong overlap */
+  width: 20px;
+  height: 50px;
+  right: 20px;
+  /* Strong overlap */
 }
 
 /* Evenly space vertical seats */
 .seat-left-1,
 .seat-right-1 {
-    top: 40px;
+  top: 40px;
 }
 
 .seat-left-2,
 .seat-right-2 {
-    top: 50%;
-    transform: translateY(-50%);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .seat-left-3,
 .seat-right-3 {
-    bottom: 40px;
+  bottom: 40px;
 }
 
 /* Billiard Table - Small Elegant Pockets */
 /* Corner pockets - small dark circles tucked into corners */
 .seat-billiard-top-left {
-    width: 14px;
-    height: 14px;
-    top: 2px;
-    left: 6px;
-    border-radius: 50%;
-    background: radial-gradient(circle, #111 50%, #3d2817 100%);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-    z-index: 12;
+  width: 14px;
+  height: 14px;
+  top: 2px;
+  left: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #111 50%, #3d2817 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+  z-index: 12;
 }
 
 .seat-billiard-top-right {
-    width: 14px;
-    height: 14px;
-    top: 2px;
-    right: 6px;
-    border-radius: 50%;
-    background: radial-gradient(circle, #111 50%, #3d2817 100%);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-    z-index: 12;
+  width: 14px;
+  height: 14px;
+  top: 2px;
+  right: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #111 50%, #3d2817 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+  z-index: 12;
 }
 
 .seat-billiard-bottom-left {
-    width: 14px;
-    height: 14px;
-    bottom: 2px;
-    left: 6px;
-    border-radius: 50%;
-    background: radial-gradient(circle, #111 50%, #3d2817 100%);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-    z-index: 12;
+  width: 14px;
+  height: 14px;
+  bottom: 2px;
+  left: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #111 50%, #3d2817 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+  z-index: 12;
 }
 
 .seat-billiard-bottom-right {
-    width: 14px;
-    height: 14px;
-    bottom: 2px;
-    right: 6px;
-    border-radius: 50%;
-    background: radial-gradient(circle, #111 50%, #3d2817 100%);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-    z-index: 12;
+  width: 14px;
+  height: 14px;
+  bottom: 2px;
+  right: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #111 50%, #3d2817 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+  z-index: 12;
 }
 
 /* Center pockets on long edges (top & bottom) */
 .seat-billiard-top-center {
-    width: 12px;
-    height: 12px;
-    top: 1px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    background: radial-gradient(circle, #111 50%, #3d2817 100%);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-    z-index: 12;
+  width: 12px;
+  height: 12px;
+  top: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #111 50%, #3d2817 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+  z-index: 12;
 }
 
 .seat-billiard-bottom-center {
-    width: 12px;
-    height: 12px;
-    bottom: 1px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 50%;
-    background: radial-gradient(circle, #111 50%, #3d2817 100%);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-    z-index: 12;
+  width: 12px;
+  height: 12px;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #111 50%, #3d2817 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
+  z-index: 12;
 }
 
 /* Inner Table Content Styles */
 .table-surface .status-dot {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 12px;
-    height: 12px;
-    background-color: #D97706;
-    border-radius: 50%;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 12px;
+  height: 12px;
+  background-color: #d97706;
+  border-radius: 50%;
 }
 
 .table-content {
-    text-align: center;
-    width: 100%;
+  text-align: center;
+  width: 100%;
 }
 
 /* Round table — tighter spacing so all content fits inside the circle */
 .table-round .table-content {
-    width: 78%;
+  width: 78%;
 }
 
 .table-round .table-name {
-    font-size: 14px;
-    margin: 0;
+  font-size: 14px;
+  margin: 0;
 }
 
 .table-round .table-amount {
-    font-size: 16px;
-    margin: 1px 0 3px 0;
+  font-size: 16px;
+  margin: 1px 0 3px 0;
 }
 
 .table-round .table-waiter-info {
-    font-size: 13px;
-    gap: 4px;
+  font-size: 13px;
+  gap: 4px;
 }
 
 .table-round .table-multi-checks-badge {
-    margin-top: 2px;
-    padding: 4px 8px;
-    font-size: 13px;
+  margin-top: 2px;
+  padding: 4px 8px;
+  font-size: 13px;
 }
 
 .table-round .table-timer-info {
-    font-size: 0.78rem !important;
-    margin-top: 2px !important;
-    padding: 1px 6px !important;
+  font-size: 0.78rem !important;
+  margin-top: 2px !important;
+  padding: 1px 6px !important;
 }
 
 .table-name {
-    font-size: 16px;
-    font-weight: 600;
-    color: #1E3A8A;
-    margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin: 0;
 }
 
 .table-amount {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1E3A8A;
-    margin: 5px 0 10px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 5px 0 10px 0;
 }
 
 .table-waiter-info {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    color: #1E40AF;
-    font-size: 14px;
-    font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #1e40af;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* Ofisiant adı — fon rənginə görə tünd mətn (gözlə seçilir) */
 .table-surface.occupied .table-waiter-info {
-    color: #1D4ED8;
+  color: #1d4ed8;
 }
 
 .table-surface.pending .table-waiter-info {
-    color: #6D28D9;
+  color: #6d28d9;
 }
 
 .table-surface.my-table .table-waiter-info {
-    color: #047857;
+  color: #047857;
 }
 
 .table-surface.other-waiter-table .table-waiter-info {
-    color: #B91C1C;
+  color: #b91c1c;
 }
 
 .print-action {
-    position: absolute;
-    bottom: -10px;
-    right: -10px;
-    background: white;
-    padding: 5px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: absolute;
+  bottom: -10px;
+  right: -10px;
+  background: white;
+  padding: 5px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .notification-badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: red;
-    color: white;
-    font-size: 10px;
-    border-radius: 50%;
-    width: 15px;
-    height: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: red;
+  color: white;
+  font-size: 10px;
+  border-radius: 50%;
+  width: 15px;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Medium desktop: fit 6-per-row tables at 1200-1299px */
 @media (min-width: 992px) and (max-width: 1299px) {
-    .table-wrapper {
-        transform: scale(0.88);
-        margin: -12px -12px !important;
-        width: 200px;
-        height: 200px;
-    }
+  .table-wrapper {
+    transform: scale(0.88);
+    margin: -12px -12px !important;
+    width: 200px;
+    height: 200px;
+  }
 
-    .wrapper-rectangle {
-        height: 300px;
-    }
+  .wrapper-rectangle {
+    height: 300px;
+  }
 }
 
 @media (min-width: 576px) and (max-width: 991.98px) {
+  /* Restore wrapper size for seats but scale down */
+  .table-wrapper {
+    transform: scale(0.75);
+    margin: -25px -25px !important;
+    /* Counteract scaling whitespace */
+    width: 200px;
+    /* Full size for seats */
+    height: 200px;
+  }
 
-    /* Restore wrapper size for seats but scale down */
-    .table-wrapper {
-        transform: scale(0.75);
-        margin: -25px -25px !important;
-        /* Counteract scaling whitespace */
-        width: 200px;
-        /* Full size for seats */
-        height: 200px;
-    }
+  .wrapper-rectangle {
+    height: 300px;
+    /* Full height for rectangle wrapper */
+  }
 
-    .wrapper-rectangle {
-        height: 300px;
-        /* Full height for rectangle wrapper */
-    }
+  /* Make table textual content slightly smaller */
+  .table-name {
+    font-size: 14px;
+  }
 
-    /* Make table textual content slightly smaller */
-    .table-name {
-        font-size: 14px;
-    }
-
-    .table-amount {
-        font-size: 16px;
-    }
+  .table-amount {
+    font-size: 16px;
+  }
 }
 
 /* Mobile Styles (up to 768px) */
 @media (max-width: 767.98px) {
-    .table-wrapper {
-        width: 100%;
-        height: 120px;
-        margin: 0;
-        transform: none !important;
-    }
+  .table-wrapper {
+    width: 100%;
+    height: 120px;
+    margin: 0;
+    transform: none !important;
+  }
 
-    .wrapper-billiard {
-        height: 120px !important;
-    }
+  .wrapper-billiard {
+    height: 120px !important;
+  }
 
-    /* Hide desktop decorations */
-    .seat,
-    .status-dot,
-    .print-action,
-    .table-waiter-info i {
-        display: none !important;
-    }
+  /* Hide desktop decorations */
+  .seat,
+  .status-dot,
+  .print-action,
+  .table-waiter-info i {
+    display: none !important;
+  }
 
-    /* High-Contrast Flat Card Style */
-    .table-surface {
-        width: 100% !important;
-        height: 100% !important;
-        border-radius: 6px !important;
-        box-shadow: none !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        align-items: center !important;
-        padding: 10px 6px !important;
-        border: 2px solid #D1D5DB !important;
-        /* Sharper gray border for free tables */
-        background: #FFFFFF !important;
-        transition: transform 0.1s ease;
-        position: relative;
-        overflow: hidden;
-    }
+  /* High-Contrast Flat Card Style */
+  .table-surface {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 10px 6px !important;
+    border: 2px solid #d1d5db !important;
+    /* Sharper gray border for free tables */
+    background: #ffffff !important;
+    transition: transform 0.1s ease;
+    position: relative;
+    overflow: hidden;
+  }
 
-    .table-surface:active {
-        transform: scale(0.96);
-        background-color: #F3F4F6 !important;
-    }
+  .table-surface:active {
+    transform: scale(0.96);
+    background-color: #f3f4f6 !important;
+  }
 
-    /* Vibrant Flat Status Colors */
-    .table-surface.occupied {
-        background: #BFDBFE !important;
-        border: 2px solid #2563EB !important;
-    }
+  /* Vibrant Flat Status Colors */
+  .table-surface.occupied {
+    background: #bfdbfe !important;
+    border: 2px solid #2563eb !important;
+  }
 
-    .table-surface.pending {
-        background: #C4B5FD !important;
-        border: 2px solid #6D28D9 !important;
-    }
+  .table-surface.pending {
+    background: #c4b5fd !important;
+    border: 2px solid #6d28d9 !important;
+  }
 
-    .table-surface.free {
-        background: #FFFFFF !important;
-        border: 2px solid #9CA3AF !important;
-        /* Clearly visible gray border */
-    }
+  .table-surface.free {
+    background: #ffffff !important;
+    border: 2px solid #9ca3af !important;
+    /* Clearly visible gray border */
+  }
 
-    /* Billiard table - always green on mobile with realistic styling */
-    .table-surface.table-billiard,
-    .table-surface.table-billiard.occupied,
-    .table-surface.table-billiard.pending,
-    .table-surface.table-billiard.my-table,
-    .table-surface.table-billiard.other-waiter-table,
-    .table-surface.table-billiard.free {
-        background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%) !important;
-        border: 4px solid #4e342e !important;
-    }
+  /* Billiard table - always green on mobile with realistic styling */
+  .table-surface.table-billiard,
+  .table-surface.table-billiard.occupied,
+  .table-surface.table-billiard.pending,
+  .table-surface.table-billiard.my-table,
+  .table-surface.table-billiard.other-waiter-table,
+  .table-surface.table-billiard.free {
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%) !important;
+    border: 4px solid #4e342e !important;
+  }
 
-    .table-content {
-        text-align: center !important;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        gap: 2px;
-    }
+  .table-content {
+    text-align: center !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+  }
 
-    /* High-Visibility Typography */
-    .table-name {
-        font-size: 14px !important;
-        font-weight: 800 !important;
-        /* Extra bold for visibility */
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #374151 !important;
-        /* Darker text */
-        margin-bottom: 2px !important;
-    }
+  /* High-Visibility Typography */
+  .table-name {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    /* Extra bold for visibility */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #374151 !important;
+    /* Darker text */
+    margin-bottom: 2px !important;
+  }
 
-    .table-surface.occupied .table-name,
-    .table-surface.pending .table-name {
-        color: #1E3A8A !important;
-    }
+  .table-surface.occupied .table-name,
+  .table-surface.pending .table-name {
+    color: #1e3a8a !important;
+  }
 
-    .table-amount {
-        font-size: 18px !important;
-        font-weight: 900 !important;
-        /* Heavy font for price */
-        color: #000000 !important;
-        /* Pure black for maximum contrast */
-        margin: 0 !important;
-    }
+  .table-amount {
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    /* Heavy font for price */
+    color: #000000 !important;
+    /* Pure black for maximum contrast */
+    margin: 0 !important;
+  }
 
-    .table-waiter-info {
-        font-size: 12px !important;
-        font-weight: 700 !important;
-        color: #374151 !important;
-        margin-top: 5px !important;
-    }
+  .table-waiter-info {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #374151 !important;
+    margin-top: 5px !important;
+  }
 
-    .table-surface.occupied .table-waiter-info {
-        color: #1D4ED8 !important;
-    }
+  .table-surface.occupied .table-waiter-info {
+    color: #1d4ed8 !important;
+  }
 
-    .table-surface.pending .table-waiter-info {
-        color: #6D28D9 !important;
-    }
+  .table-surface.pending .table-waiter-info {
+    color: #6d28d9 !important;
+  }
 
-    /* Reset specific wrapper heights */
-    .wrapper-rectangle {
-        height: 120px !important;
-    }
+  /* Reset specific wrapper heights */
+  .wrapper-rectangle {
+    height: 120px !important;
+  }
 
-    /* Move high-visibility mobile-specific status styles here */
-    .has-orders {
-        background-color: #047857;
-    }
+  /* Move high-visibility mobile-specific status styles here */
+  .has-orders {
+    background-color: #047857;
+  }
 
-    /* My Active Table */
-    .table-surface.my-table {
-        background: #A7F3D0 !important;
-        border: 2.5px solid #059669 !important;
-        box-shadow: none !important;
-    }
+  /* My Active Table */
+  .table-surface.my-table {
+    background: #a7f3d0 !important;
+    border: 2.5px solid #059669 !important;
+    box-shadow: none !important;
+  }
 
-    /* Other Waiter's Table */
-    .table-surface.other-waiter-table {
-        background: #FECACA !important;
-        border: 2.5px solid #DC2626 !important;
-        box-shadow: none !important;
-        opacity: 1 !important;
-    }
+  /* Other Waiter's Table */
+  .table-surface.other-waiter-table {
+    background: #fecaca !important;
+    border: 2.5px solid #dc2626 !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+  }
 
-    /* Çoxlu açıq çek (count > 1) — benovşeyi ton */
-    .table-surface.multi-checks {
-        background: #C4B5FD !important;
-        border: 2.5px solid #6D28D9 !important;
-    }
+  /* Çoxlu açıq çek (count > 1) — benovşeyi ton */
+  .table-surface.multi-checks {
+    background: #c4b5fd !important;
+    border: 2.5px solid #6d28d9 !important;
+  }
 
-    .table-surface.multi-checks .table-name,
-    .table-surface.multi-checks .table-amount {
-        color: #5B21B6 !important;
-    }
+  .table-surface.multi-checks .table-name,
+  .table-surface.multi-checks .table-amount {
+    color: #5b21b6 !important;
+  }
 
-    .table-surface.multi-checks .table-waiter-info {
-        color: #5B21B6 !important;
-    }
+  .table-surface.multi-checks .table-waiter-info {
+    color: #5b21b6 !important;
+  }
 
-    .table-multi-checks-badge {
-        font-size: 12px !important;
-        padding: 4px 10px !important;
-        margin-top: 4px !important;
-    }
+  .table-multi-checks-badge {
+    font-size: 12px !important;
+    padding: 4px 10px !important;
+    margin-top: 4px !important;
+  }
 
-    /* Text Colors for Mobile */
-    .table-surface.my-table .table-name,
-    .table-surface.my-table .table-amount {
-        color: #065F46 !important;
-    }
+  /* Text Colors for Mobile */
+  .table-surface.my-table .table-name,
+  .table-surface.my-table .table-amount {
+    color: #065f46 !important;
+  }
 
-    .table-surface.other-waiter-table .table-name,
-    .table-surface.other-waiter-table .table-amount {
-        color: #991B1B !important;
-    }
+  .table-surface.other-waiter-table .table-name,
+  .table-surface.other-waiter-table .table-amount {
+    color: #991b1b !important;
+  }
 
-    .table-surface.my-table .table-waiter-info {
-        color: #047857 !important;
-        opacity: 1 !important;
-    }
+  .table-surface.my-table .table-waiter-info {
+    color: #047857 !important;
+    opacity: 1 !important;
+  }
 
-    .table-surface.other-waiter-table .table-waiter-info {
-        color: #B91C1C !important;
-        opacity: 1 !important;
-    }
+  .table-surface.other-waiter-table .table-waiter-info {
+    color: #b91c1c !important;
+    opacity: 1 !important;
+  }
 
-    .table-surface.my-table .table-waiter-info span,
-    .table-surface.other-waiter-table .table-waiter-info span {
-        font-weight: 700;
-    }
+  .table-surface.my-table .table-waiter-info span,
+  .table-surface.other-waiter-table .table-waiter-info span {
+    font-weight: 700;
+  }
 }
 
 /* Hide status dot on colored tables - Mobile only logic could go here or remain global if safe */
 @media (max-width: 767.98px) {
-
-    .table-surface.my-table .status-dot,
-    .table-surface.other-waiter-table .status-dot {
-        display: none !important;
-    }
+  .table-surface.my-table .status-dot,
+  .table-surface.other-waiter-table .status-dot {
+    display: none !important;
+  }
 }
-
 
 /* =========================== */
 /* Resizable Mode Overrides    */
 /* =========================== */
 .resizable-mode .table-square {
-    width: 70%;
-    height: 70%;
-    border-radius: 12%;
+  width: 70%;
+  height: 70%;
+  border-radius: 12%;
 }
 
 .resizable-mode .table-round {
-    width: 70%;
-    height: 70%;
-    border-radius: 50%;
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
 }
 
 .resizable-mode .table-rectangle {
-    width: 70%;
-    height: 80%;
-    border-radius: 10%;
+  width: 70%;
+  height: 80%;
+  border-radius: 10%;
 }
 
 .resizable-mode .table-billiard {
-    width: 80%;
-    height: 55%;
-    border-radius: 12%;
+  width: 80%;
+  height: 55%;
+  border-radius: 12%;
 }
 
 .resizable-mode .table-billiard {
-    width: 80%;
-    height: 50%;
-    border-radius: 12%;
+  width: 80%;
+  height: 50%;
+  border-radius: 12%;
 }
 
 .resizable-mode .seat-top {
-    width: 60px;
-    height: 20px;
-    top: 10%;
+  width: 60px;
+  height: 20px;
+  top: 10%;
 }
 
 .resizable-mode .seat-bottom {
-    width: 60px;
-    height: 20px;
-    bottom: 10%;
+  width: 60px;
+  height: 20px;
+  bottom: 10%;
 }
 
 .resizable-mode .seat-left {
-    width: 20px;
-    height: 60px;
-    left: 10%;
+  width: 20px;
+  height: 60px;
+  left: 10%;
 }
 
 .resizable-mode .seat-right {
-    width: 20px;
-    height: 60px;
-    right: 10%;
+  width: 20px;
+  height: 60px;
+  right: 10%;
 }
 
 .resizable-mode .seat-left-1,
 .resizable-mode .seat-left-2,
 .resizable-mode .seat-left-3 {
-    width: 20px;
-    height: 50px;
-    left: 10%;
+  width: 20px;
+  height: 50px;
+  left: 10%;
 }
 
 .resizable-mode .seat-right-1,
 .resizable-mode .seat-right-2,
 .resizable-mode .seat-right-3 {
-    width: 20px;
-    height: 50px;
-    right: 10%;
+  width: 20px;
+  height: 50px;
+  right: 10%;
 }
 
 .resizable-mode .seat-left-1,
 .resizable-mode .seat-right-1 {
-    top: 15%;
+  top: 15%;
 }
 
 .resizable-mode .seat-left-3,
 .resizable-mode .seat-right-3 {
-    bottom: 15%;
+  bottom: 15%;
 }
 
 .resizable-mode .seat-billiard-top-left,
 .resizable-mode .seat-billiard-top-right {
-    width: 18px;
-    height: 18px;
-    top: 5%;
+  width: 18px;
+  height: 18px;
+  top: 5%;
 }
 
 .resizable-mode .seat-billiard-bottom-left,
 .resizable-mode .seat-billiard-bottom-right {
-    width: 18px;
-    height: 18px;
-    bottom: 5%;
+  width: 18px;
+  height: 18px;
+  bottom: 5%;
 }
 
 .resizable-mode .seat-billiard-left,
 .resizable-mode .seat-billiard-right {
-    width: 18px;
-    height: 18px;
-    left: 5%;
-    right: auto;
+  width: 18px;
+  height: 18px;
+  left: 5%;
+  right: auto;
 }
 
 .resizable-mode .seat-billiard-right {
-    left: auto;
-    right: 5%;
+  left: auto;
+  right: 5%;
 }
 
 .deposit-indicator {
-    font-size: 0.6em;
-    font-weight: 800;
-    background: rgba(30, 58, 138, 0.1);
-    color: #1e3a8a;
-    padding: 1px 6px;
-    border-radius: 4px;
-    display: block;
-    width: fit-content;
-    margin: 0 auto;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    border: 1px solid rgba(30, 58, 138, 0.2);
+  font-size: 0.6em;
+  font-weight: 800;
+  background: rgba(30, 58, 138, 0.1);
+  color: #1e3a8a;
+  padding: 1px 6px;
+  border-radius: 4px;
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid rgba(30, 58, 138, 0.2);
 }
 
 .table-surface.my-table .deposit-indicator {
-    background: #10B981;
-    color: #fff;
-    border: none;
+  background: #10b981;
+  color: #fff;
+  border: none;
 }
 
 .table-surface.other-waiter-table .deposit-indicator {
-    background: #EF4444;
-    color: #fff;
-    border: none;
+  background: #ef4444;
+  color: #fff;
+  border: none;
 }

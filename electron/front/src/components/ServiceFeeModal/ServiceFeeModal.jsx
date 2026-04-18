@@ -15,10 +15,16 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
 
+  const normalizeServiceValue = (rawValue) => {
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.abs(parsed) < 0.0001 ? 0 : parsed;
+  };
+
   useEffect(() => {
     if (order) {
       if (order?.service_value !== undefined && order?.service_value !== null) {
-        setValue(String(order.service_value));
+        setValue(String(normalizeServiceValue(order.service_value)));
         setFeeType(order?.service_type || "percent");
       }
     }
@@ -51,15 +57,19 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
         return;
       }
 
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName =
+        loginedWaiter?.data?.name ||
+        loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      const normalizedServiceValue = normalizeServiceValue(value);
       await dispatch(
         updateServiceFeeOnOrders({
           orderId: order.uuid,
-          serviceValue: Number(value) === 0 ? "0.00001" : Number(value),
+          serviceValue: normalizedServiceValue,
           feeType,
           oldServiceValue: order.service_charge,
           oldFeeType: order.service_type,
-          waiterName
+          waiterName,
         }),
       ).unwrap();
 

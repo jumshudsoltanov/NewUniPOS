@@ -3,14 +3,28 @@ import "./Check.css";
 import TagModal from "../Modals/TagModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import { useDispatch, useSelector } from "react-redux";
-import { getTableGroups, addOrderToTableOptimistic } from "../../redux/Slices/TablesSlice";
+import {
+  getTableGroups,
+  addOrderToTableOptimistic,
+} from "../../redux/Slices/TablesSlice";
 import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
-import { getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
+import {
+  getActiveOrders,
+  addOrderOptimistic,
+  updateOrderOptimisticId,
+} from "../../redux/Slices/BooksSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { checkShiftGuard } from "../../utils/shiftGuard";
-const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount = 0, onBeforeCreateOrder }) => {
+const CheckHeader = ({
+  orders,
+  hall,
+  table,
+  selectedCustomer,
+  activeTableCount = 0,
+  onBeforeCreateOrder,
+}) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -18,12 +32,15 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
   const { id: currentId } = useParams();
   const liveOrder = useSelector((state) => {
     if (!currentId) return null;
-    const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
-    return booksData?.find(o => String(o.uuid) === String(currentId)) ?? null;
+    const booksData = Array.isArray(state.BooksSlice.books)
+      ? state.BooksSlice.books
+      : state.BooksSlice.books?.data;
+    return booksData?.find((o) => String(o.uuid) === String(currentId)) ?? null;
   });
   const liveSaleType = liveOrder?.sale_type ?? null;
   const liveTableName = liveOrder?.table?.name ?? liveOrder?.table_name ?? null;
-  const liveHallName = liveOrder?.table?.hall?.name ?? liveOrder?.hall_name ?? null;
+  const liveHallName =
+    liveOrder?.table?.hall?.name ?? liveOrder?.hall_name ?? null;
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -79,7 +96,10 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
       ...(nextId && { id: nextId }),
     };
 
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    const waiterName =
+      loginedWaiter?.data?.name ||
+      loginedProfileData?.data?.profile?.name ||
+      "Naməlum";
     const optimisticOrder = {
       uuid: generatedUuid,
       id: nextId ?? null,
@@ -93,7 +113,9 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
       status: 1,
       is_selected: 1,
       orders_items: [],
-      table: table ? { id: table.id, name: table.name, hall: { name: hall?.name } } : null,
+      table: table
+        ? { id: table.id, name: table.name, hall: { name: hall?.name } }
+        : null,
       table_name: table?.name,
       hall_name: hall?.name,
       amount: 0,
@@ -108,22 +130,35 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
 
     dispatch(addOrderOptimistic(optimisticOrder));
     if (table?.id) {
-      dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
+      dispatch(
+        addOrderToTableOptimistic({
+          order: optimisticOrder,
+          tableId: table.id,
+        }),
+      );
     }
-    dispatch(saveLog({
-      orderId: generatedUuid,
-      action: "Yeni sifariş yaradıldı (Header)",
-      waiterName,
-      details: `Masa: ${table?.name || "Naməlum"}`
-    }));
+    dispatch(
+      saveLog({
+        orderId: generatedUuid,
+        action: "Yeni sifariş yaradıldı (Header)",
+        waiterName,
+        details: `Masa: ${table?.name || "Naməlum"}`,
+      }),
+    );
     navigate(`/check/${generatedUuid}?tableId=${table?.id}`);
 
-    dispatch(saleNewOrders(payload)).unwrap()
+    dispatch(saleNewOrders(payload))
+      .unwrap()
       .then((res) => {
         const serverOrder = res?.data;
         const finalId = serverOrder?.id ?? res?.count;
         if (finalId && finalId !== nextId) {
-          dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+          dispatch(
+            updateOrderOptimisticId({
+              uuid: generatedUuid,
+              newOrderData: { id: finalId },
+            }),
+          );
         }
         dispatch(getTableGroups(profileId));
         dispatch(getActiveOrders({ profileId, silentRefresh: true }));
@@ -153,58 +188,109 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
 
   return (
     <>
-      <div className="check-header-bar check-header-bar-no-overlap" style={{ position: "relative" }}>
+      <div
+        className="check-header-bar check-header-bar-no-overlap"
+        style={{ position: "relative" }}
+      >
         {/* Left Section: Edit + Info */}
-        <div className="header-left-section" style={{ flex: "1 1 0", minWidth: 0, maxWidth: "35%", display: "flex", alignItems: "center", gap: "10px" }}>
+        <div className="header-left-section">
           <div
             className="header-edit-btn"
             onClick={() => setOpenTagModal(true)}
           >
             <i className="bi bi-pencil-fill"></i>
           </div>
-          <div className="header-info-text" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 0, minWidth: 0, overflow: "hidden" }}>
+          <div className="header-info-text">
             {(() => {
               const effectiveSaleType = liveSaleType ?? orders?.sale_type;
-              const isDineIn = !effectiveSaleType || effectiveSaleType === "dine_in";
-              const effectiveHallName = liveHallName || hall?.name || orders?.hall_name;
-              const effectiveTableName = liveTableName || table?.name || orders?.table_name || orders?.table?.name;
-              if (isDineIn && (effectiveTableName || effectiveHallName || orders?.table_id)) {
+              const isDineIn =
+                !effectiveSaleType || effectiveSaleType === "dine_in";
+              const effectiveHallName =
+                liveHallName || hall?.name || orders?.hall_name;
+              const effectiveTableName =
+                liveTableName ||
+                table?.name ||
+                orders?.table_name ||
+                orders?.table?.name;
+              if (
+                isDineIn &&
+                (effectiveTableName || effectiveHallName || orders?.table_id)
+              ) {
                 return (
-                  <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
-                    {effectiveHallName || "Zal"} / {effectiveTableName || "Masa"}
+                  <span
+                    className="header-order-id"
+                    style={{
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: "block",
+                    }}
+                  >
+                    {effectiveHallName || "Zal"} /{" "}
+                    {effectiveTableName || "Masa"}
                   </span>
                 );
               }
               return (
-                <span className="header-order-id" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
-                  {effectiveSaleType === "delivery" ? "Çatdırılma" : effectiveSaleType === "takeaway" ? "Gəl götür" : "Yeni Sifariş"}
+                <span
+                  className="header-order-id"
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "block",
+                  }}
+                >
+                  {effectiveSaleType === "delivery"
+                    ? "Çatdırılma"
+                    : effectiveSaleType === "takeaway"
+                      ? "Gəl götür"
+                      : "Yeni Sifariş"}
                 </span>
               );
             })()}
             <div className="header-subtitle-container" style={{ minWidth: 0 }}>
               {orders && orders?.tags && (
-                <span className="header-subtitle" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>{orders.tags}</span>
+                <span
+                  className="header-subtitle"
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "block",
+                  }}
+                >
+                  {orders.tags}
+                </span>
               )}
             </div>
             {activeTableCount > 0 && (
               <span className="header-meta-line">
-                <span className="header-active-tables-full d-none d-sm-inline">{activeTableCount} aktiv masa</span>
-                <span className="header-active-tables-short d-sm-none">{activeTableCount} masa</span>
+                <span className="header-active-tables-full d-none d-sm-inline">
+                  {activeTableCount} aktiv masa
+                </span>
+                <span className="header-active-tables-short d-sm-none">
+                  {activeTableCount} masa
+                </span>
               </span>
             )}
           </div>
         </div>
 
-        <div className="header-center-section" style={{ flexShrink: 0, flexGrow: 0 }}>
+        <div className="header-center-section">
           <span className="header-time">
             {`${getTimeDifference(orders?.start_date).hours ?? "00"}:${getTimeDifference(orders?.start_date).minutes ?? "00"}`}
           </span>
         </div>
 
         {/* Right Section: Çek ID + Toggle */}
-        <div className="header-right-section" style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-          <span className="header-order-id">
-            {orders?.id ? `#${orders.id} / #${orders.id}` : (orders?.uuid ? "Yeni sifariş" : "Yüklənir...")}
+        <div className="header-right-section">
+          <span className="header-check-id">
+            {orders?.id
+              ? `#${orders.id} / #${orders.id}`
+              : orders?.uuid
+                ? "Yeni sifariş"
+                : "Yüklənir..."}
           </span>
           <div
             className="header-toggle-btn"
@@ -213,7 +299,7 @@ const CheckHeader = ({ orders, hall, table, selectedCustomer, activeTableCount =
             <i className="bi bi-chevron-down"></i>
           </div>
         </div>
-      </div >
+      </div>
       <TagModal
         show={openTagModal}
         onClose={() => setOpenTagModal(false)}

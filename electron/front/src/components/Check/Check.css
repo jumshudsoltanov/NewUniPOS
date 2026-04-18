@@ -455,7 +455,7 @@
     left: 0;
     bottom: 0;
     width: 56px;
-    z-index: 35;
+    z-index: 120;
     padding: 12px 0;
     box-shadow: 3px 0 10px rgba(0, 0, 0, 0.08);
   }
@@ -1047,8 +1047,8 @@
 .check-header-bar {
   background: #4f85f4;
   color: white;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   padding: 0 12px;
   height: 60px;
@@ -1093,7 +1093,21 @@
   }
 
   .header-left-section {
-    max-width: 45% !important;
+    max-width: none !important;
+    min-width: 0;
+  }
+
+  .header-info-text {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .header-order-id {
+    font-size: 0.84rem;
+  }
+
+  .header-check-id {
+    max-width: 84px;
   }
 }
 
@@ -1150,9 +1164,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1;
+  justify-self: start;
   min-width: 0;
-  /* Important for truncation */
+  max-width: 100%;
 }
 
 .header-edit-btn {
@@ -1211,8 +1225,9 @@
   /* Smaller pill */
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 0 10px;
+  margin: 0;
   flex-shrink: 0;
+  justify-self: center;
 }
 
 .header-time {
@@ -1226,9 +1241,21 @@
 .header-right-section {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
+  gap: 8px;
   justify-content: flex-end;
+  justify-self: end;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.header-check-id {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: white;
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-right {
@@ -1245,6 +1272,9 @@
   color: white;
   opacity: 0.95;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-toggle-btn {
@@ -1543,42 +1573,80 @@
 @media (max-width: 991.98px) {
   /* Header Compact Mode for Tablet */
   .check-header-bar {
-    height: 48px;
-    padding: 0 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    height: 60px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .header-left-section {
+    gap: 10px;
+    justify-self: start;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .header-right-section {
+    justify-self: end;
+    min-width: 0;
+    max-width: 100%;
+    gap: 8px;
+  }
+
+  .header-meta-line {
+    display: block;
   }
 
   .header-edit-btn {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
   }
 
   .header-edit-btn i {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
   }
 
   .header-title {
-    font-size: 0.75rem;
+    font-size: 1rem;
   }
 
   .header-center-section {
-    padding: 2px 8px;
+    padding: 2px 10px;
+    margin: 0;
+    justify-self: center;
   }
 
   .header-time {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
   }
 
   .header-order-id {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-check-id {
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: white;
+    opacity: 0.95;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 130px;
   }
 
   .header-toggle-btn {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
   }
 
   .header-toggle-btn i {
-    font-size: 0.9rem;
+    font-size: 1rem;
   }
 
   .CheckRightboxHeader {
@@ -1626,6 +1694,12 @@
 
   .check-container {
     border-radius: 0 !important;
+  }
+}
+
+@media (max-width: 575px) {
+  .check-header-bar {
+    padding: 0 10px;
   }
 }
 

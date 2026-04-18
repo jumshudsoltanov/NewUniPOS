@@ -18,358 +18,382 @@ import "./Settings.css";
 import { checkIsSlaveTerminal } from "../../utils/masterSlaveHelpers";
 
 const Settings = () => {
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-    const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-    const [showReturnModal, setShowReturnModal] = useState(false);
-    const [showSupportModal, setShowSupportModal] = useState(false);
-    const [showReportModal, setShowReportModal] = useState(false);
-    const [showSalesShiftModal, setShowSalesShiftModal] = useState(false);
-    const [showCustomersModal, setShowCustomersModal] = useState(false);
-    const [showDevicesModal, setShowDevicesModal] = useState(false);
-    const [showMasterSlaveSettings, setShowMasterSlaveSettings] = useState(false);
-    const [isRefreshing, setIsRefreshing] = useState(false);
-    const [syncCounts, setSyncCounts] = useState(null);
-    const [refreshIsOnline, setRefreshIsOnline] = useState(true);
-    const [anyDeskId, setAnyDeskId] = useState(null);
-    const [showClock, setShowClock] = useState(() => {
-        return localStorage.getItem("showHeaderClock") === "true";
-    });
-    const [appVersion, setAppVersion] = useState(null);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showSalesShiftModal, setShowSalesShiftModal] = useState(false);
+  const [showCustomersModal, setShowCustomersModal] = useState(false);
+  const [showDevicesModal, setShowDevicesModal] = useState(false);
+  const [showMasterSlaveSettings, setShowMasterSlaveSettings] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [syncCounts, setSyncCounts] = useState(null);
+  const [refreshIsOnline, setRefreshIsOnline] = useState(true);
+  const [anyDeskId, setAnyDeskId] = useState(null);
+  const [showClock, setShowClock] = useState(() => {
+    return localStorage.getItem("showHeaderClock") === "true";
+  });
+  const [appVersion, setAppVersion] = useState(null);
 
-    useEffect(() => {
-        if (window.electronAPI?.getAppVersion) {
-            window.electronAPI.getAppVersion().then(v => setAppVersion(v)).catch(() => {});
+  useEffect(() => {
+    if (window.electronAPI?.getAppVersion) {
+      window.electronAPI
+        .getAppVersion()
+        .then((v) => setAppVersion(v))
+        .catch(() => {});
+    }
+  }, []);
+
+  // Fetch AnyDesk ID on mount
+  useEffect(() => {
+    if (window.electronAPI?.getAnyDeskId) {
+      window.electronAPI
+        .getAnyDeskId()
+        .then((id) => {
+          if (id) setAnyDeskId(id);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  // Toggle clock visibility in header
+  const handleClockToggle = () => {
+    const newValue = !showClock;
+    setShowClock(newValue);
+    localStorage.setItem("showHeaderClock", newValue.toString());
+    // Dispatch custom event for Header to listen
+    window.dispatchEvent(new CustomEvent("clockToggle", { detail: newValue }));
+  };
+
+  // Toggle fullscreen via Electron API
+  const handleFullscreenToggle = async () => {
+    if (window.electronAPI?.toggleFullscreen) {
+      await window.electronAPI.toggleFullscreen();
+    } else {
+      // Fallback for browser
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  // Open AnyDesk via Electron API
+  const handleOpenAnyDesk = async () => {
+    if (window.electronAPI?.openAnyDesk) {
+      await window.electronAPI.openAnyDesk();
+    } else {
+      alert("AnyDesk yalnız Electron tətbiqində açıla bilər");
+    }
+  };
+
+  const handleSoftRefresh = async () => {
+    if (!loginedProfileData?.data?.profile?.id) {
+      toast.error("Profil məlumatı yoxdur, səhifə yenilənə bilmədi.");
+      return;
+    }
+
+    setIsRefreshing(true);
+    setSyncCounts(null);
+    setRefreshIsOnline(true);
+    const toastId = toast.loading("Məlumatlar yenilənir...");
+    try {
+      const profileId = loginedProfileData.data.profile.id;
+      const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`);
+      const isOnline = syncRes?.data?.isOnline !== false;
+      setRefreshIsOnline(isOnline);
+      if (syncRes?.data?.counts) setSyncCounts(syncRes.data.counts);
+
+      await Promise.all([
+        dispatch(getTableGroups(profileId)).unwrap(),
+        dispatch(getActiveOrders({ profileId })).unwrap(),
+      ]);
+
+      if (!isOnline) {
+        toast.warning("İnternet yoxdur — lokal məlumatlar göstərilir", {
+          id: toastId,
+        });
+        return;
+      }
+
+      const storageData = JSON.parse(localStorage.getItem("profile"));
+      if (storageData) {
+        const data = await dispatch(authPos(storageData)).unwrap();
+        localStorage.setItem("authResult", JSON.stringify(data));
+        const profile = data?.data?.profile;
+
+        if (isPosBlocked(profile?.is_pos_block)) {
+          toast.dismiss(toastId);
+          navigate("/blocked");
+          return;
         }
-    }, []);
 
-    // Fetch AnyDesk ID on mount
-    useEffect(() => {
-        if (window.electronAPI?.getAnyDeskId) {
-            window.electronAPI.getAnyDeskId().then(id => {
-                if (id) setAnyDeskId(id);
-            }).catch(() => {});
-        }
-    }, []);
-
-    // Toggle clock visibility in header
-    const handleClockToggle = () => {
-        const newValue = !showClock;
-        setShowClock(newValue);
-        localStorage.setItem("showHeaderClock", newValue.toString());
-        // Dispatch custom event for Header to listen
-        window.dispatchEvent(new CustomEvent("clockToggle", { detail: newValue }));
-    };
-
-    // Toggle fullscreen via Electron API
-    const handleFullscreenToggle = async () => {
-        if (window.electronAPI?.toggleFullscreen) {
-            await window.electronAPI.toggleFullscreen();
-        } else {
-            // Fallback for browser
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        }
-    };
-
-    // Open AnyDesk via Electron API
-    const handleOpenAnyDesk = async () => {
-        if (window.electronAPI?.openAnyDesk) {
-            await window.electronAPI.openAnyDesk();
-        } else {
-            alert("AnyDesk yalnız Electron tətbiqində açıla bilər");
-        }
-    };
-
-    const handleSoftRefresh = async () => {
-        if (!loginedProfileData?.data?.profile?.id) {
-            toast.error("Profil məlumatı yoxdur, səhifə yenilənə bilmədi.");
+        if (profile?.next_payment_date) {
+          if (isPaymentExpired(profile.next_payment_date)) {
+            toast.dismiss(toastId);
+            navigate("/blocked");
             return;
+          }
         }
+      }
 
-        setIsRefreshing(true);
-        setSyncCounts(null);
-        setRefreshIsOnline(true);
-        const toastId = toast.loading("Məlumatlar yenilənir...");
-        try {
-            const profileId = loginedProfileData.data.profile.id;
-            const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`);
-            const isOnline = syncRes?.data?.isOnline !== false;
-            setRefreshIsOnline(isOnline);
-            if (syncRes?.data?.counts) setSyncCounts(syncRes.data.counts);
+      toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
+    } catch (error) {
+      console.error("Yeniləmə xətası:", error);
 
-            await Promise.all([
-                dispatch(getTableGroups(profileId)).unwrap(),
-                dispatch(getActiveOrders({ profileId })).unwrap(),
-            ]);
+      if (error?.data?.isBlocked) {
+        toast.dismiss(toastId);
+        localStorage.setItem("authResult", JSON.stringify(error.data));
+        dispatch(setLoginData(error.data));
+        navigate("/blocked");
+        return;
+      }
 
-            if (!isOnline) {
-                toast.warning("İnternet yoxdur — lokal məlumatlar göstərilir", { id: toastId });
-                return;
-            }
+      // İnternet olmadıqda lokal məlumatları yüklə
+      try {
+        setRefreshIsOnline(false);
+        const profileId = loginedProfileData.data.profile.id;
+        await Promise.all([
+          dispatch(getTableGroups(profileId)).unwrap(),
+          dispatch(getActiveOrders({ profileId })).unwrap(),
+        ]);
+        toast.warning("İnternet yoxdur — lokal məlumatlar göstərilir", {
+          id: toastId,
+        });
+      } catch {
+        toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
-            const storageData = JSON.parse(localStorage.getItem("profile"));
-            if (storageData) {
-                const data = await dispatch(authPos(storageData)).unwrap();
-                localStorage.setItem("authResult", JSON.stringify(data));
-                const profile = data?.data?.profile;
+  const topMenuItems = [
+    {
+      id: "refund",
+      label: "Geri qaytarılma",
+      icon: <i className="bi bi-arrow-counterclockwise"></i>,
+      permission: Number(loginedWaiter?.data?.can_return_receipt) === 1,
+      onClick: () => setShowReturnModal(true),
+    },
+    {
+      id: "report",
+      label: "Hesabat yarat",
+      icon: <i className="bi bi-file-earmark-text"></i>,
+      permission: Number(loginedWaiter?.data?.can_create_report) === 1,
+      onClick: () => setShowReportModal(true),
+      hideOnMobile: true,
+    },
+    {
+      id: "sales-shift",
+      label: "Satış növbəsi",
+      icon: <i className="bi bi-clock-history"></i>,
+      permission:
+        Number(loginedProfileData?.data?.profile?.queue_sales_module) === 1 &&
+        Number(loginedWaiter?.data?.can_see_sale_type_queue) === 1,
+      onClick: () => setShowSalesShiftModal(true),
+    },
+    {
+      id: "operation",
+      label: "Əməliyyat əlavə et",
+      icon: <i className="bi bi-plus-square"></i>,
+      highlight: true,
+      hideOnMobile: true,
+    },
+    {
+      id: "customers",
+      label: "Müştərilər",
+      icon: <i className="bi bi-people"></i>,
+      highlight: true,
+      permission: Number(loginedWaiter?.data?.can_view_customers) === 1,
+      onClick: () => setShowCustomersModal(true),
+      hideOnMobile: true,
+    },
+    {
+      id: "archive",
+      label: "Çek arxivi",
+      icon: <i className="bi bi-archive"></i>,
+      permission:
+        Number(loginedWaiter?.data?.can_view_archived_checks) === 1 ||
+        Number(loginedWaiter?.data?.can_edit_all_checks) === 1,
+      onClick: () => navigate("/checks"),
+    },
+    {
+      id: "devices",
+      label: "Cihazlar",
+      icon: <i className="bi bi-laptop"></i>,
+      highlight: true,
+      onClick: () => setShowDevicesModal(true),
+      permission:
+        Number(loginedWaiter?.data?.can_access_settings) === 1 &&
+        Number(loginedWaiter?.data?.can_see_device) === 1,
+      hideOnMobile: true,
+    },
+    {
+      id: "masterip",
+      label: "Master IP",
+      icon: <i className="bi bi-wifi"></i>,
+      highlight: true,
+      onClick: () =>
+        window.dispatchEvent(new CustomEvent("openMasterSlaveSettings")),
+      permission: Number(loginedWaiter?.data?.can_access_settings) === 1,
+      /** Master terminalda kart göstərilmir — yalnız slave + aktiv master-slave */
+      slaveOnly: true,
+    },
+  ];
 
-                if (isPosBlocked(profile?.is_pos_block)) {
-                    toast.dismiss(toastId);
-                    navigate("/blocked");
-                    return;
-                }
+  const isMobile = window.innerWidth < 992;
 
-                if (profile?.next_payment_date) {
-                    if (isPaymentExpired(profile.next_payment_date)) {
-                        toast.dismiss(toastId);
-                        navigate("/blocked");
-                        return;
-                    }
-                }
-            }
+  const bottomMenuItems = [
+    {
+      id: "refresh",
+      label: "Yenilə",
+      icon: <i className="bi bi-arrow-repeat"></i>,
+      onClick: handleSoftRefresh,
+    },
+    {
+      id: "sound",
+      label: "Səs",
+      icon: <i className="bi bi-volume-up"></i>,
+    },
+    {
+      id: "clock",
+      label: showClock ? "Saatı gizlət" : "Saatı göstər",
+      icon: <i className="bi bi-clock"></i>,
+      onClick: handleClockToggle,
+    },
+    {
+      id: "fullscreen",
+      label: "Pəncərə rejimi",
+      icon: <i className="bi bi-arrows-fullscreen"></i>,
+      onClick: handleFullscreenToggle,
+      hiddenOnMobile: true,
+    },
+    {
+      id: "support",
+      label: "Dəstək",
+      icon: <i className="bi bi-question-circle"></i>,
+      onClick: () => setShowSupportModal(true),
+    },
+    {
+      id: "anydesk",
+      label: "AnyDesk",
+      icon: <i className="bi bi-display"></i>,
+      onClick: handleOpenAnyDesk,
+      hiddenOnMobile: true,
+    },
+  ];
 
-            toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
-        } catch (error) {
-            console.error("Yeniləmə xətası:", error);
+  return (
+    <>
+      <div className="settings-page">
+        {/* Header */}
+        <div className="settings-page-header">
+          <button className="settings-back-btn" onClick={() => navigate(-1)}>
+            <i className="bi bi-arrow-left"></i>
+          </button>
+          <h1 className="settings-page-title">Kontrol panel</h1>
+          {appVersion && (
+            <span className="settings-version-badge">v{appVersion}</span>
+          )}
+        </div>
 
-            if (error?.data?.isBlocked) {
-                toast.dismiss(toastId);
-                localStorage.setItem("authResult", JSON.stringify(error.data));
-                dispatch(setLoginData(error.data));
-                navigate("/blocked");
-                return;
-            }
+        {/* Content */}
+        <div className="settings-page-content">
+          {/* Top Menu Grid */}
+          <div className="settings-grid settings-grid-top">
+            {topMenuItems
+              .filter(
+                (item) =>
+                  item.permission !== false &&
+                  (!item.hideOnMobile || !isMobile) &&
+                  (!item.slaveOnly || checkIsSlaveTerminal()),
+              )
+              .map((item) => (
+                <button
+                  key={item.id}
+                  className="settings-card"
+                  onClick={item.onClick}
+                >
+                  <span
+                    className={`settings-card-icon ${item.highlight ? "highlight" : ""}`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className="settings-card-label">{item.label}</span>
+                </button>
+              ))}
+          </div>
 
-            // İnternet olmadıqda lokal məlumatları yüklə
-            try {
-                setRefreshIsOnline(false);
-                const profileId = loginedProfileData.data.profile.id;
-                await Promise.all([
-                    dispatch(getTableGroups(profileId)).unwrap(),
-                    dispatch(getActiveOrders({ profileId })).unwrap(),
-                ]);
-                toast.warning("İnternet yoxdur — lokal məlumatlar göstərilir", { id: toastId });
-            } catch {
-                toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
-            }
-        } finally {
-            setIsRefreshing(false);
-        }
-    };
-
-    const topMenuItems = [
-        {
-            id: "refund",
-            label: "Geri qaytarılma",
-            icon: <i className="bi bi-arrow-counterclockwise"></i>,
-            permission: Number(loginedWaiter?.data?.can_return_receipt) === 1,
-            onClick: () => setShowReturnModal(true),
-        },
-        {
-            id: "report",
-            label: "Hesabat yarat",
-            icon: <i className="bi bi-file-earmark-text"></i>,
-            permission: Number(loginedWaiter?.data?.can_create_report) === 1,
-            onClick: () => setShowReportModal(true),
-        },
-        {
-            id: "sales-shift",
-            label: "Satış növbəsi",
-            icon: <i className="bi bi-clock-history"></i>,
-            permission:
-                Number(loginedProfileData?.data?.profile?.queue_sales_module) === 1 &&
-                Number(loginedWaiter?.data?.can_see_sale_type_queue) === 1,
-            onClick: () => setShowSalesShiftModal(true),
-        },
-        {
-            id: "operation",
-            label: "Əməliyyat əlavə et",
-            icon: <i className="bi bi-plus-square"></i>,
-            highlight: true,
-        },
-        {
-            id: "customers",
-            label: "Müştərilər",
-            icon: <i className="bi bi-people"></i>,
-            highlight: true,
-            permission: Number(loginedWaiter?.data?.can_view_customers) === 1,
-            onClick: () => setShowCustomersModal(true),
-        },
-        {
-            id: "archive",
-            label: "Çek arxivi",
-            icon: <i className="bi bi-archive"></i>,
-            permission:
-                Number(loginedWaiter?.data?.can_view_archived_checks) === 1 ||
-                Number(loginedWaiter?.data?.can_edit_all_checks) === 1,
-            onClick: () => navigate("/checks"),
-        },
-        {
-            id: "devices",
-            label: "Cihazlar",
-            icon: <i className="bi bi-laptop"></i>,
-            highlight: true,
-            onClick: () => setShowDevicesModal(true),
-            permission: Number(loginedWaiter?.data?.can_access_settings) === 1 && Number(loginedWaiter?.data?.can_see_device) === 1,
-        },
-        {
-            id: "masterip",
-            label: "Master IP",
-            icon: <i className="bi bi-wifi"></i>,
-            highlight: true,
-            onClick: () => window.dispatchEvent(new CustomEvent("openMasterSlaveSettings")),
-            permission: Number(loginedWaiter?.data?.can_access_settings) === 1,
-            /** Master terminalda kart göstərilmir — yalnız slave + aktiv master-slave */
-            slaveOnly: true,
-        },
-    ];
-
-    const isMobile = window.innerWidth < 992;
-
-    const bottomMenuItems = [
-        {
-            id: "refresh",
-            label: "Yenilə",
-            icon: <i className="bi bi-arrow-repeat"></i>,
-            onClick: handleSoftRefresh,
-        },
-        {
-            id: "sound",
-            label: "Səs",
-            icon: <i className="bi bi-volume-up"></i>,
-        },
-        {
-            id: "clock",
-            label: showClock ? "Saatı gizlət" : "Saatı göstər",
-            icon: <i className="bi bi-clock"></i>,
-            onClick: handleClockToggle,
-        },
-        {
-            id: "fullscreen",
-            label: "Pəncərə rejimi",
-            icon: <i className="bi bi-arrows-fullscreen"></i>,
-            onClick: handleFullscreenToggle,
-            hiddenOnMobile: true,
-        },
-        {
-            id: "support",
-            label: "Dəstək",
-            icon: <i className="bi bi-question-circle"></i>,
-            onClick: () => setShowSupportModal(true),
-        },
-        {
-            id: "anydesk",
-            label: "AnyDesk",
-            icon: <i className="bi bi-display"></i>,
-            onClick: handleOpenAnyDesk,
-            hiddenOnMobile: true,
-        },
-    ];
-
-    return (
-        <>
-            <div className="settings-page">
-                {/* Header */}
-                <div className="settings-page-header">
-                    <button className="settings-back-btn" onClick={() => navigate(-1)}>
-                        <i className="bi bi-arrow-left"></i>
-                    </button>
-                    <h1 className="settings-page-title">Kontrol panel</h1>
-                    {appVersion && (
-                        <span className="settings-version-badge">v{appVersion}</span>
+          {/* Bottom Menu Row */}
+          <div className="settings-grid settings-grid-bottom">
+            {bottomMenuItems
+              .filter((item) => !item.hiddenOnMobile || !isMobile)
+              .map((item) => (
+                <button
+                  key={item.id}
+                  className="settings-card"
+                  onClick={item.onClick}
+                >
+                  <span className="settings-card-icon">{item.icon}</span>
+                  <span className="settings-card-label">
+                    {item.label}
+                    {item.id === "anydesk" && anyDeskId && (
+                      <span className="anydesk-id-badge">{anyDeskId}</span>
                     )}
-                </div>
+                  </span>
+                </button>
+              ))}
+          </div>
+        </div>
+      </div>
 
-                {/* Content */}
-                <div className="settings-page-content">
-                    {/* Top Menu Grid */}
-                    <div className="settings-grid settings-grid-top">
-                        {topMenuItems
-                            .filter(
-                                (item) =>
-                                    item.permission !== false &&
-                                    (!item.slaveOnly || checkIsSlaveTerminal()),
-                            )
-                            .map((item) => (
-                            <button
-                                key={item.id}
-                                className="settings-card"
-                                onClick={item.onClick}
-                            >
-                                <span className={`settings-card-icon ${item.highlight ? "highlight" : ""}`}>
-                                    {item.icon}
-                                </span>
-                                <span className="settings-card-label">{item.label}</span>
-                            </button>
-                        ))}
-                    </div>
+      {/* Return Check Modal */}
+      <ReturnCheckModal
+        show={showReturnModal}
+        onClose={() => setShowReturnModal(false)}
+      />
 
-                    {/* Bottom Menu Row */}
-                    <div className="settings-grid settings-grid-bottom">
-                        {bottomMenuItems
-                            .filter(item => !item.hiddenOnMobile || !isMobile)
-                            .map((item) => (
-                                <button
-                                    key={item.id}
-                                    className="settings-card"
-                                    onClick={item.onClick}
-                                >
-                                    <span className="settings-card-icon">{item.icon}</span>
-                                    <span className="settings-card-label">
-                                        {item.label}
-                                        {item.id === "anydesk" && anyDeskId && (
-                                            <span className="anydesk-id-badge">{anyDeskId}</span>
-                                        )}
-                                    </span>
-                                </button>
-                            ))}
-                    </div>
-                </div>
-            </div>
+      {/* Support Modal */}
+      <SupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+      />
 
-            {/* Return Check Modal */}
-            <ReturnCheckModal
-                show={showReturnModal}
-                onClose={() => setShowReturnModal(false)}
-            />
+      {/* Report Modal */}
+      <ReportModal
+        show={showReportModal}
+        onClose={() => setShowReportModal(false)}
+      />
 
-            {/* Support Modal */}
-            <SupportModal
-                isOpen={showSupportModal}
-                onClose={() => setShowSupportModal(false)}
-            />
+      <SalesShiftModal
+        show={showSalesShiftModal}
+        onHide={() => setShowSalesShiftModal(false)}
+      />
 
-            {/* Report Modal */}
-            <ReportModal
-                show={showReportModal}
-                onClose={() => setShowReportModal(false)}
-            />
+      {/* Customers Source Modal */}
+      <CustomersSourceModal
+        show={showCustomersModal}
+        onHide={() => setShowCustomersModal(false)}
+      />
 
-            <SalesShiftModal
-                show={showSalesShiftModal}
-                onHide={() => setShowSalesShiftModal(false)}
-            />
+      <DevicesModal
+        show={showDevicesModal}
+        onHide={() => setShowDevicesModal(false)}
+      />
 
-            {/* Customers Source Modal */}
-            <CustomersSourceModal
-                show={showCustomersModal}
-                onHide={() => setShowCustomersModal(false)}
-            />
-
-            <DevicesModal
-                show={showDevicesModal}
-                onHide={() => setShowDevicesModal(false)}
-            />
-
-            {/* Refreshing Overlay */}
-            <RefreshLoader isOpen={isRefreshing} syncCounts={syncCounts} isOnline={refreshIsOnline} />
-        </>
-    );
+      {/* Refreshing Overlay */}
+      <RefreshLoader
+        isOpen={isRefreshing}
+        syncCounts={syncCounts}
+        isOnline={refreshIsOnline}
+      />
+    </>
+  );
 };
 
 export default Settings;

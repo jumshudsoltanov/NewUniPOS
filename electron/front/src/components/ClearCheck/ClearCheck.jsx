@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import { useDispatch, useSelector } from "react-redux";
-import { clearOrders, deleteOrderItems, saveLog } from "../../redux/Slices/OrdersSlice";
+import { deleteOrderItems } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { processAndPrintOrders } from "../../utils/printerHelpers";
@@ -28,33 +28,43 @@ const ClearCheck = ({ show, onClose, order }) => {
     setIsSubmitting(true);
 
     try {
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName =
+        loginedWaiter?.data?.name ||
+        loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
       const profileId = loginedProfileData?.data?.profile?.id;
 
       // 1. Kitchen Print for all confirmed items
       if (order?.orders_items && order.orders_items.length > 0) {
-        const itemsToPrint = order.orders_items.map(item => {
-          const menuRef = menu?.find(m => m.id == (item.product_id || item.id));
+        const itemsToPrint = order.orders_items.map((item) => {
+          const menuRef = menu?.find(
+            (m) => m.id == (item.product_id || item.id),
+          );
           return {
             ...item,
             name: menuRef?.name || item.product?.name || item.name || "Məhsul",
             quantity: Number(item.count || item.quantity || 0),
-            printer_details: menuRef?.printer_details || item.printer_details || [],
+            printer_details:
+              menuRef?.printer_details || item.printer_details || [],
             category_id: menuRef?.category_id || item.category_id,
-            changeType: 'decrease' // Mark as deleted
+            changeType: "decrease", // Mark as deleted
           };
         });
 
         const menuDataWithCategories = {
           data: menu || [],
-          categories: categories || []
+          categories: categories || [],
         };
 
-        const displaySaleType = getSaleTypeName(order?.sale_type, order?.sale_type_name);
-        const hall = tableGroups?.data?.find(h => h.id == order.hall_id);
+        const displaySaleType = getSaleTypeName(
+          order?.sale_type,
+          order?.sale_type_name,
+        );
+        const hall = tableGroups?.data?.find((h) => h.id == order.hall_id);
 
         try {
-          const orderWaiter = order?.waiter?.name || order?.waiter_name || waiterName;
+          const orderWaiter =
+            order?.waiter?.name || order?.waiter_name || waiterName;
           await processAndPrintOrders(
             itemsToPrint,
             {
@@ -65,9 +75,9 @@ const ClearCheck = ({ show, onClose, order }) => {
               terminalInfo: loginedProfileData?.data?.terminal || {},
               typeName: displaySaleType,
               checkData: order,
-              isDecrease: true
+              isDecrease: true,
             },
-            menuDataWithCategories
+            menuDataWithCategories,
           );
         } catch (printErr) {
           console.error("Clear Check Printing Error:", printErr);
@@ -79,10 +89,10 @@ const ClearCheck = ({ show, onClose, order }) => {
         deleteOrderItems({ orderId: order.uuid, waiterName }),
       ).unwrap();
 
-      // Notify other terminals that this order was cleared (treated as deleted)
+      // Notify other terminals to refresh this check, but do not mark it as deleted.
       const socket = getSocket();
       if (socket?.connected) {
-        socket.emit("order_deleted", { orderId: order.uuid });
+        socket.emit("table_updated", { orderId: order.uuid });
       }
       if (profileId) {
         dispatch(getTableGroups(profileId));
@@ -97,7 +107,14 @@ const ClearCheck = ({ show, onClose, order }) => {
   };
 
   return (
-    <Modal show={show} onHide={onClose} centered className="clear-check-modal" backdrop="static" animation={false}>
+    <Modal
+      show={show}
+      onHide={onClose}
+      centered
+      className="clear-check-modal"
+      backdrop="static"
+      animation={false}
+    >
       <div className="modal-content-wrapper">
         <div className="clear-check-modal-header">
           <div className="clear-check-header-content">
@@ -126,21 +143,34 @@ const ClearCheck = ({ show, onClose, order }) => {
 
         <div className="clear-check-modal-body">
           <div className="clear-check-message">
-            <p className="clear-check-question">Qəbzi təmizləmək istədiyinizə əminsiniz?</p>
-            <p className="clear-check-warning">Bu əməliyyat bütün seçilmiş məhsulları siləcək.</p>
+            <p className="clear-check-question">
+              Qəbzi təmizləmək istədiyinizə əminsiniz?
+            </p>
+            <p className="clear-check-warning">
+              Bu əməliyyat bütün seçilmiş məhsulları siləcək.
+            </p>
           </div>
 
           <div className="clear-check-footer-buttons">
-            <button className="clear-check-cancel-btn" onClick={onClose}>Ləğv et</button>
+            <button className="clear-check-cancel-btn" onClick={onClose}>
+              Ləğv et
+            </button>
             <button
               className="clear-check-confirm-btn"
               onClick={handleClearCheck}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span
+                  className="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                ></span>
               ) : (
-                <i className="bi bi-check2 me-2" style={{ fontSize: '1.2rem' }}></i>
+                <i
+                  className="bi bi-check2 me-2"
+                  style={{ fontSize: "1.2rem" }}
+                ></i>
               )}
               Təsdiqlə
             </button>
