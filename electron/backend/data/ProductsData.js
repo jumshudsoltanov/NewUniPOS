@@ -182,10 +182,11 @@ const getProducts = async (passedProfileId) => {
       console.warn("[ProductsData] V1 API xətası:", v1Result.reason?.message);
     }
 
-    // V2-dən printer_id, color, hourly_price çək
+    // V2-dən printer_id, color, hourly_price, free_count çək
     const printerMap = {};
     const colorMap = {};
     const hourlyPriceMap = {};
+    const freeCountMap = {};
     if (v2Result.status === "fulfilled") {
       const items = v2Result.value.data?.items || [];
       items.forEach((item) => {
@@ -198,6 +199,8 @@ const getProducts = async (passedProfileId) => {
         if (item.color) colorMap[item.id] = item.color;
         if (item.hourly_price != null)
           hourlyPriceMap[item.id] = item.hourly_price;
+        if (item.free_count != null)
+          freeCountMap[item.id] = Number(item.free_count) === 1 ? 1 : 0;
       });
     } else {
       console.error("[ProductsData] V2 API xətası:", v2Result.reason?.message);
@@ -315,6 +318,7 @@ const getProducts = async (passedProfileId) => {
         p.profile_id = profile_id;
         if (colorMap[p.id]) p.color = colorMap[p.id];
         if (hourlyPriceMap[p.id] != null) p.hourly_price = hourlyPriceMap[p.id];
+        if (freeCountMap[p.id] != null) p.free_count = freeCountMap[p.id];
         if (modifierMap[p.id]) p.modifier_groups = modifierMap[p.id];
         return p;
       });

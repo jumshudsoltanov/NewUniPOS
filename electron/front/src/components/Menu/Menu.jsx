@@ -14,6 +14,7 @@ import {
   menuWithCategories,
 } from "../../redux/Slices/MenuSlice";
 import ManualPriceModal from "../Modals/ManualPriceModal";
+import FreeCountModal from "../Modals/FreeCountModal";
 import ModifierModal from "../ModifierModal/ModifierModal";
 import PortionModal from "../PortionModal/PortionModal";
 import {
@@ -109,6 +110,8 @@ const Menu = ({
   // Modal State
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [pendingProduct, setPendingProduct] = useState(null);
+  const [showFreeCountModal, setShowFreeCountModal] = useState(false);
+  const [pendingFreeCountProduct, setPendingFreeCountProduct] = useState(null);
 
   // Modifier Modal State
   const [showModifierModal, setShowModifierModal] = useState(false);
@@ -223,6 +226,12 @@ const Menu = ({
       return;
     }
 
+    if (Number(product.free_count) === 1) {
+      setPendingFreeCountProduct(product);
+      setShowFreeCountModal(true);
+      return;
+    }
+
     if (product.own_set_price === 1) {
       setPendingProduct(product);
       setShowPriceModal(true);
@@ -299,6 +308,44 @@ const Menu = ({
       );
 
       setPendingProduct(null);
+    }
+  };
+
+  const handleFreeCountConfirm = (count) => {
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
+      return;
+    }
+    if (pendingFreeCountProduct) {
+      const numericCount = Number(count);
+      if (!Number.isFinite(numericCount) || numericCount <= 0) return;
+
+      const unitPrice = Number(pendingFreeCountProduct.price || 0);
+      const lineTotal = Math.round(unitPrice * numericCount * 100) / 100;
+
+      dispatch(
+        addProducts({
+          ...pendingFreeCountProduct,
+          price: unitPrice,
+          quantity: numericCount,
+          free_count_value: numericCount,
+        }),
+      );
+
+      const waiterName =
+        loginedWaiter?.data?.name ||
+        loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      dispatch(
+        saveLog({
+          orderId: order?.uuid,
+          action: "Məhsul əlavə edildi (Sərbəst say)",
+          waiterName,
+          details: `${pendingFreeCountProduct.name} - ${numericCount} x ${unitPrice.toFixed(2)}₼ = ${lineTotal.toFixed(2)}₼`,
+        }),
+      );
+
+      setPendingFreeCountProduct(null);
     }
   };
 
@@ -829,6 +876,15 @@ const Menu = ({
         onClose={() => setShowPriceModal(false)}
         product={pendingProduct}
         onConfirm={handlePriceConfirm}
+      />
+      <FreeCountModal
+        show={showFreeCountModal}
+        onClose={() => {
+          setShowFreeCountModal(false);
+          setPendingFreeCountProduct(null);
+        }}
+        product={pendingFreeCountProduct}
+        onConfirm={handleFreeCountConfirm}
       />
       <ModifierModal
         show={showModifierModal}

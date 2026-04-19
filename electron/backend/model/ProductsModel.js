@@ -91,6 +91,12 @@ const ProductsModel = db.sequelize.define(
       defaultValue: 0,
     },
 
+    free_count: {
+      type: DataTypes.TINYINT,
+      allowNull: true,
+      defaultValue: 0,
+    },
+
     ingredient: {
       type: DataTypes.TEXT("long"),
       allowNull: true,
