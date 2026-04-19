@@ -93,7 +93,10 @@ const FreeCountModal = ({ show, onClose, product, onConfirm }) => {
             <button className="num-key" onClick={() => handleNumpad("0")}>
               0
             </button>
-            <button className="num-key" onClick={() => handleNumpad("backspace")}>
+            <button
+              className="num-key"
+              onClick={() => handleNumpad("backspace")}
+            >
               <i className="bi bi-backspace"></i>
             </button>
           </div>

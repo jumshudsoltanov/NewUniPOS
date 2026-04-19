@@ -7,29 +7,47 @@ export const sendOrdersItems = createAsyncThunk(
   "pos/orders",
   async (payload, thunkAPI) => {
     try {
-      const { orderId, profileId, productList, waiterId, waiterName: passedWaiterName } = payload;
-      const response = await axios.post(
-        `/orders-items/${orderId}/items`,
-        { productList, profileId, waiterId: waiterId || 0 },
-      );
+      const {
+        orderId,
+        profileId,
+        productList,
+        waiterId,
+        waiterName: passedWaiterName,
+      } = payload;
+      const response = await axios.post(`/orders-items/${orderId}/items`, {
+        productList,
+        profileId,
+        waiterId: waiterId || 0,
+      });
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
       const grouped = {};
-      productList?.forEach(item => {
-        const name = item.name || 'Məhsul';
+      productList?.forEach((item) => {
+        const name = item.name || "Məhsul";
         const qty = Number(item.quantity || item.count || 1);
         grouped[name] = (grouped[name] || 0) + qty;
       });
-      const itemNames = Object.entries(grouped).map(([name, qty]) => `${qty} x ${name}`).join(', ');
+      const itemNames = Object.entries(grouped)
+        .map(([name, qty]) => `${qty} x ${name}`)
+        .join(", ");
 
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Sifariş göndərildi",
-        waiterName,
-        details: itemNames ? `Göndərildi: ${itemNames}` : "Mətbəxə göndərildi"
-      }));
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Sifariş göndərildi",
+          waiterName,
+          details: itemNames
+            ? `Göndərildi: ${itemNames}`
+            : "Mətbəxə göndərildi",
+        }),
+      );
 
       return response.data;
     } catch (err) {
@@ -38,27 +56,45 @@ export const sendOrdersItems = createAsyncThunk(
   },
 );
 
-
 export const updateDiscountOnOrders = createAsyncThunk(
   "pos/discount",
-  async ({ orderId, discountValue, discountType, oldDiscountValue, oldDiscountType, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      discountValue,
+      discountType,
+      oldDiscountValue,
+      oldDiscountType,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
-      const response = await axios.patch(
-        `/orders-items/${orderId}/discount`,
-        { discountValue, discountType },
-      );
+      const response = await axios.patch(`/orders-items/${orderId}/discount`, {
+        discountValue,
+        discountType,
+      });
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      const oldValue = oldDiscountValue ? `${oldDiscountValue} ${oldDiscountType === 'percent' ? '%' : '₼'}` : '0';
-      const newValue = `${discountValue} ${discountType === 'percent' ? '%' : '₼'}`;
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Endirim dəyişildi",
-        waiterName,
-        details: `${oldValue}-dən ${newValue}-ə dəyişdi`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      const oldValue = oldDiscountValue
+        ? `${oldDiscountValue} ${oldDiscountType === "percent" ? "%" : "₼"}`
+        : "0";
+      const newValue = `${discountValue} ${discountType === "percent" ? "%" : "₼"}`;
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Endirim dəyişildi",
+          waiterName,
+          details: `${oldValue}-dən ${newValue}-ə dəyişdi`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -69,7 +105,17 @@ export const updateDiscountOnOrders = createAsyncThunk(
 
 export const updateServiceFeeOnOrders = createAsyncThunk(
   "pos/serviceFee",
-  async ({ orderId, serviceValue, feeType, oldServiceValue, oldFeeType, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      serviceValue,
+      feeType,
+      oldServiceValue,
+      oldFeeType,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/service-fee`,
@@ -78,15 +124,24 @@ export const updateServiceFeeOnOrders = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      const oldValue = oldServiceValue ? `${oldServiceValue} ${oldFeeType === 'percent' ? '%' : '₼'}` : '0';
-      const newValue = `${serviceValue} ${feeType === 'percent' ? '%' : '₼'}`;
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Servis haqqı dəyişildi",
-        waiterName,
-        details: `${oldValue}-dən ${newValue}-ə dəyişdi`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      const oldValue = oldServiceValue
+        ? `${oldServiceValue} ${oldFeeType === "percent" ? "%" : "₼"}`
+        : "0";
+      const newValue = `${serviceValue} ${feeType === "percent" ? "%" : "₼"}`;
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Servis haqqı dəyişildi",
+          waiterName,
+          details: `${oldValue}-dən ${newValue}-ə dəyişdi`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -97,22 +152,31 @@ export const updateServiceFeeOnOrders = createAsyncThunk(
 
 export const reopenOrder = createAsyncThunk(
   "orders/reopen",
-  async ({ orderId, reasonId, reasonName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    { orderId, reasonId, reasonName, waiterName: passedWaiterName },
+    thunkAPI,
+  ) => {
     try {
-      const response = await axios.patch(
-        `/orders/${orderId}/reopen`,
-        { reasonId }
-      );
+      const response = await axios.patch(`/orders/${orderId}/reopen`, {
+        reasonId,
+      });
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Çek yenidən açıldı",
-        waiterName,
-        details: `Bağlı çek yenidən açıldı. Səbəb: ${reasonName || 'Göstərilməyib'}`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Çek yenidən açıldı",
+          waiterName,
+          details: `Bağlı çek yenidən açıldı. Səbəb: ${reasonName || "Göstərilməyib"}`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -123,7 +187,19 @@ export const reopenOrder = createAsyncThunk(
 
 export const updateTableOrders = createAsyncThunk(
   "orders/updateTable",
-  async ({ orderId, newTableId, currentHallId, oldTableName, newTableName, oldHallName, newHallName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      newTableId,
+      currentHallId,
+      oldTableName,
+      newTableName,
+      oldHallName,
+      newHallName,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/update-table`,
@@ -132,13 +208,20 @@ export const updateTableOrders = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Masa dəyişildi",
-        waiterName,
-        details: `Masa dəyişdirildi: [${oldHallName || '?'}] ${oldTableName || '?'} ➔ [${newHallName || '?'}] ${newTableName || '?'}`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Masa dəyişildi",
+          waiterName,
+          details: `Masa dəyişdirildi: [${oldHallName || "?"}] ${oldTableName || "?"} ➔ [${newHallName || "?"}] ${newTableName || "?"}`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -149,7 +232,18 @@ export const updateTableOrders = createAsyncThunk(
 
 export const deleteOrderItem = createAsyncThunk(
   "orders/delete-item",
-  async ({ orderId, itemId, reasonId, qty, productName, reasonName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      itemId,
+      reasonId,
+      qty,
+      productName,
+      reasonName,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.post(
         `/orders-items/${orderId}/delete-item`,
@@ -158,14 +252,21 @@ export const deleteOrderItem = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
       const qtyText = qty ? `${qty} ədəd` : "Bütün";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Məhsul silindi",
-        waiterName,
-        details: `${qtyText} ${productName || 'Məhsul'} - ${reasonName || 'Səbəb yoxdur'}`
-      }));
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Məhsul silindi",
+          waiterName,
+          details: `${qtyText} ${productName || "Məhsul"} - ${reasonName || "Səbəb yoxdur"}`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -184,22 +285,31 @@ export const batchDeleteOrderItems = createAsyncThunk(
       );
       // items already contains waste/wasteComment fields — backend handles them
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
       const grouped = {};
-      items.forEach(d => {
-        const name = d.name || 'Məhsul';
+      items.forEach((d) => {
+        const name = d.name || "Məhsul";
         const qty = Number(d.qty || d.originalQty || 1);
         grouped[name] = (grouped[name] || 0) + qty;
       });
-      const detailsText = Object.entries(grouped).length > 0
-        ? Object.entries(grouped).map(([name, qty]) => `${qty} x ${name}`).join(", ")
-        : `${items.length} məhsul silindi`;
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Məhsullar silindi",
-        waiterName,
-        details: detailsText
-      }));
+      const detailsText =
+        Object.entries(grouped).length > 0
+          ? Object.entries(grouped)
+              .map(([name, qty]) => `${qty} x ${name}`)
+              .join(", ")
+          : `${items.length} məhsul silindi`;
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Məhsullar silindi",
+          waiterName,
+          details: detailsText,
+        }),
+      );
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
@@ -209,7 +319,18 @@ export const batchDeleteOrderItems = createAsyncThunk(
 
 export const mergeChecks = createAsyncThunk(
   "orders/merge-check",
-  async ({ currentOrderId, newOrderId, currentCheckId, newCheckId, currentTotal, newTotal, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      currentOrderId,
+      newOrderId,
+      currentCheckId,
+      newCheckId,
+      currentTotal,
+      newTotal,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${currentOrderId}/merge-orders`,
@@ -218,13 +339,20 @@ export const mergeChecks = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId: currentOrderId,
-        action: "Çeklər birləşdirildi",
-        waiterName,
-        details: `Çek #${currentCheckId} (${currentTotal || 0}₼) + Çek #${newCheckId} (${newTotal || 0}₼) = ${(Number(currentTotal || 0) + Number(newTotal || 0)).toFixed(2)}₼`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId: currentOrderId,
+          action: "Çeklər birləşdirildi",
+          waiterName,
+          details: `Çek #${currentCheckId} (${currentTotal || 0}₼) + Çek #${newCheckId} (${newTotal || 0}₼) = ${(Number(currentTotal || 0) + Number(newTotal || 0)).toFixed(2)}₼`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -235,7 +363,18 @@ export const mergeChecks = createAsyncThunk(
 
 export const changeSaleType = createAsyncThunk(
   "orders/change-saletype",
-  async ({ orderId, saleType, tableId, hallId, oldTypeName, newTypeName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      saleType,
+      tableId,
+      hallId,
+      oldTypeName,
+      newTypeName,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/change-saletype`,
@@ -244,13 +383,20 @@ export const changeSaleType = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Satış növü dəyişildi",
-        waiterName,
-        details: `Növ dəyişdirildi: ${oldTypeName || '?'} ➔ ${newTypeName || '?'}`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Satış növü dəyişildi",
+          waiterName,
+          details: `Növ dəyişdirildi: ${oldTypeName || "?"} ➔ ${newTypeName || "?"}`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -261,7 +407,16 @@ export const changeSaleType = createAsyncThunk(
 
 export const changeWaiter = createAsyncThunk(
   "orders/waiters",
-  async ({ orderId, waiterId, oldWaiterName, newWaiterName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      waiterId,
+      oldWaiterName,
+      newWaiterName,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/update-waiter`,
@@ -270,13 +425,20 @@ export const changeWaiter = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Ofisiant dəyişildi",
-        waiterName,
-        details: `Məsul şəxs: ${oldWaiterName || '?'} ➔ ${newWaiterName || '?'}`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Ofisiant dəyişildi",
+          waiterName,
+          details: `Məsul şəxs: ${oldWaiterName || "?"} ➔ ${newWaiterName || "?"}`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -302,7 +464,10 @@ export const updateGuestCountOrder = createAsyncThunk(
 
 export const splitOrder = createAsyncThunk(
   "orders/split",
-  async ({ data, profileId, profile, hallData, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    { data, profileId, profile, hallData, waiterName: passedWaiterName },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.post(
         `/orders-items/${profileId}/split-order`,
@@ -311,14 +476,28 @@ export const splitOrder = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
 
       const sourceOrderId = data?.orderId || profileId;
       const items = data?.items || [];
-      const itemNames = items.map(i => `${i.qty} ədəd (${i.name || 'ID:' + i.id})`).join(', ');
-      const destTable = data?.table?.name || data?.table?.number || '';
-      const destHall = data?.table?.hall_name || '';
-      const salesType = data?.salesType === 'dine_in' ? 'Yerində' : data?.salesType === 'takeaway' ? 'Gəl götür' : data?.salesType === 'delivery' ? 'Çatdırılma' : data?.salesType;
+      const itemNames = items
+        .map((i) => `${i.qty} ədəd (${i.name || "ID:" + i.id})`)
+        .join(", ");
+      const destTable = data?.table?.name || data?.table?.number || "";
+      const destHall = data?.table?.hall_name || "";
+      const salesType =
+        data?.salesType === "dine_in"
+          ? "Yerində"
+          : data?.salesType === "takeaway"
+            ? "Gəl götür"
+            : data?.salesType === "delivery"
+              ? "Çatdırılma"
+              : data?.salesType;
 
       let details = `Köçürüldü: ${itemNames}`;
       if (destTable) {
@@ -328,21 +507,25 @@ export const splitOrder = createAsyncThunk(
       }
 
       // Log to source order
-      thunkAPI.dispatch(saveLog({
-        orderId: sourceOrderId,
-        action: "Məhsul köçürüldü",
-        waiterName,
-        details
-      }));
+      thunkAPI.dispatch(
+        saveLog({
+          orderId: sourceOrderId,
+          action: "Məhsul köçürüldü",
+          waiterName,
+          details,
+        }),
+      );
 
       // Log to destination order
       if (response.data?.data?.newOrder?.uuid) {
-        thunkAPI.dispatch(saveLog({
-          orderId: response.data.data.newOrder.uuid,
-          action: "Məhsul qəbul edildi",
-          waiterName,
-          details: `Köçürmədən gəldi: ${itemNames}`
-        }));
+        thunkAPI.dispatch(
+          saveLog({
+            orderId: response.data.data.newOrder.uuid,
+            action: "Məhsul qəbul edildi",
+            waiterName,
+            details: `Köçürmədən gəldi: ${itemNames}`,
+          }),
+        );
       }
 
       return response.data;
@@ -354,7 +537,10 @@ export const splitOrder = createAsyncThunk(
 
 export const assignCustomerToOrder = createAsyncThunk(
   "orders/assign-customer",
-  async ({ orderId, customerId, customerName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    { orderId, customerId, customerName, waiterName: passedWaiterName },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/assign-customer`,
@@ -363,13 +549,18 @@ export const assignCustomerToOrder = createAsyncThunk(
 
       // Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: customerId ? "Müştəri təyin edildi" : "Müştəri silindi",
-        waiterName,
-        details: customerName || '-'
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: customerId ? "Müştəri təyin edildi" : "Müştəri silindi",
+          waiterName,
+          details: customerName || "-",
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -380,22 +571,42 @@ export const assignCustomerToOrder = createAsyncThunk(
 
 export const giftItem = createAsyncThunk(
   "orders/gift",
-  async ({ orderId, itemId, allIds, qty, isGift, productName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      itemId,
+      allIds,
+      qty,
+      isGift,
+      productName,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
-      const response = await axios.post(
-        `/orders-items/${orderId}/gift-item`,
-        { itemId, allIds, qty, isGift },
-      );
+      const response = await axios.post(`/orders-items/${orderId}/gift-item`, {
+        itemId,
+        allIds,
+        qty,
+        isGift,
+      });
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: isGift ? "Hədiyyə verildi" : "Hədiyyə ləğv edildi",
-        waiterName,
-        details: `${productName || 'Məhsul'} - ${qty} ədəd`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: isGift ? "Hədiyyə verildi" : "Hədiyyə ləğv edildi",
+          waiterName,
+          details: `${productName || "Məhsul"} - ${qty} ədəd`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -406,7 +617,18 @@ export const giftItem = createAsyncThunk(
 
 export const updateItemDiscount = createAsyncThunk(
   "orders/itemDiscount",
-  async ({ orderId, itemId, productId, discountValue, discountType, productName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      itemId,
+      productId,
+      discountValue,
+      discountType,
+      productName,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       if (!orderId || !itemId) {
         throw new Error("Sifariş və ya məhsul ID-si tapılmadı");
@@ -423,21 +645,31 @@ export const updateItemDiscount = createAsyncThunk(
           discountType,
           discount_value: parseFloat(discountValue) || 0,
           discount_type: discountType,
-          discount_percentage: discountType === 'percent' ? parseFloat(discountValue) : 0,
-          discount_amount: discountType === 'amount' ? parseFloat(discountValue) : 0,
+          discount_percentage:
+            discountType === "percent" ? parseFloat(discountValue) : 0,
+          discount_amount:
+            discountType === "amount" ? parseFloat(discountValue) : 0,
         },
       );
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      const discountText = discountType === 'percent' ? `${discountValue}%` : `${discountValue}₼`;
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Məhsula endirim",
-        waiterName,
-        details: `${productName || 'Məhsul'} - ${discountText}`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      const discountText =
+        discountType === "percent" ? `${discountValue}%` : `${discountValue}₼`;
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Məhsula endirim",
+          waiterName,
+          details: `${productName || "Məhsul"} - ${discountText}`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -448,7 +680,18 @@ export const updateItemDiscount = createAsyncThunk(
 
 export const deleteCheck = createAsyncThunk(
   "orders/deleteCheck",
-  async ({ orderId, reason, reasonText, waiterName: passedWaiterName, forceDestroy = false, waste = false, wasteComment = "" }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      reason,
+      reasonText,
+      waiterName: passedWaiterName,
+      forceDestroy = false,
+      waste = false,
+      wasteComment = "",
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/delete-check`,
@@ -457,13 +700,20 @@ export const deleteCheck = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Çek silindi",
-        waiterName,
-        details: `Səbəb: ${reasonText || reason}`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Çek silindi",
+          waiterName,
+          details: `Səbəb: ${reasonText || reason}`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -474,7 +724,17 @@ export const deleteCheck = createAsyncThunk(
 
 export const updateItemPrice = createAsyncThunk(
   "orders/updateItemPrice",
-  async ({ orderId, itemId, newPrice, oldPrice, productName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      itemId,
+      newPrice,
+      oldPrice,
+      productName,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/update-price`,
@@ -483,13 +743,20 @@ export const updateItemPrice = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Qiymət dəyişdirildi",
-        waiterName,
-        details: `${productName || 'Məhsul'}: ${oldPrice}₼-dən ${newPrice}₼-ə dəyişdi`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Qiymət dəyişdirildi",
+          waiterName,
+          details: `${productName || "Məhsul"}: ${oldPrice}₼-dən ${newPrice}₼-ə dəyişdi`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -500,7 +767,17 @@ export const updateItemPrice = createAsyncThunk(
 
 export const updateItemCount = createAsyncThunk(
   "orders/updateItemCount",
-  async ({ orderId, itemId, newCount, oldCount, productName, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      itemId,
+      newCount,
+      oldCount,
+      productName,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/update-count`,
@@ -509,13 +786,20 @@ export const updateItemCount = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Miqdar dəyişdirildi",
-        waiterName,
-        details: `${productName || 'Məhsul'}: ${oldCount}-dən ${newCount}-ə dəyişdi`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Miqdar dəyişdirildi",
+          waiterName,
+          details: `${productName || "Məhsul"}: ${oldCount}-dən ${newCount}-ə dəyişdi`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -526,33 +810,61 @@ export const updateItemCount = createAsyncThunk(
 
 export const closeOrder = createAsyncThunk(
   "orders/close",
-  async ({ orderId, payments, status, profileId, waiterId, note, is_tax, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      payments,
+      status,
+      profileId,
+      waiterId,
+      note,
+      is_tax,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
-      const response = await axios.post(
-        `/orders-items/${orderId}/close`,
-        { payments, status, profileId, waiterId, note, is_tax },
-      );
+      const response = await axios.post(`/orders-items/${orderId}/close`, {
+        payments,
+        status,
+        profileId,
+        waiterId,
+        note,
+        is_tax,
+      });
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
 
-      const isUnpaid = payments.some(p => p.without_payment_method_id);
-      const paymentDetails = payments.map(p => {
-        const methodPrefix = p.name || (p.without_payment_method_id ? "Ödənişsiz" : (p.type || 'Ödəniş'));
-        return `${methodPrefix}: ${p.amount} ₼`;
-      }).join(', ');
+      const isUnpaid = payments.some((p) => p.without_payment_method_id);
+      const paymentDetails = payments
+        .map((p) => {
+          const methodPrefix =
+            p.name ||
+            (p.without_payment_method_id ? "Ödənişsiz" : p.type || "Ödəniş");
+          return `${methodPrefix}: ${p.amount} ₼`;
+        })
+        .join(", ");
 
       let detailsParts = [];
       if (paymentDetails) detailsParts.push(paymentDetails);
-      if (note && String(note).trim()) detailsParts.push(`Qeyd: ${String(note).trim()}`);
+      if (note && String(note).trim())
+        detailsParts.push(`Qeyd: ${String(note).trim()}`);
 
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: isUnpaid ? "Ödənişsiz bağlandı" : "Ödəniş edildi",
-        waiterName,
-        details: detailsParts.join(" | ") || "Sifariş bağlandı"
-      }));
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: isUnpaid ? "Ödənişsiz bağlandı" : "Ödəniş edildi",
+          waiterName,
+          details: detailsParts.join(" | ") || "Sifariş bağlandı",
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -565,24 +877,25 @@ export const fetchLogs = createAsyncThunk(
   "orders/fetchLogs",
   async (orderId, thunkAPI) => {
     try {
-      const response = await axios.get(
-        `/orders-items/${orderId}/logs`
-      );
+      const response = await axios.get(`/orders-items/${orderId}/logs`);
       // Map snake_case to camelCase for consistent filtering
-      return response.data.map(log => ({
+      return response.data.map((log) => ({
         ...log,
         orderId: log.order_id,
-        waiterName: log.waiter_name
+        waiterName: log.waiter_name,
       }));
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
     }
-  }
+  },
 );
 
 export const saveLog = createAsyncThunk(
   "orders/saveLog",
-  async ({ orderId, action, waiterName, details, profileId: profileIdArg }, thunkAPI) => {
+  async (
+    { orderId, action, waiterName, details, profileId: profileIdArg },
+    thunkAPI,
+  ) => {
     try {
       const state = thunkAPI.getState();
       // Login API: { data: { profile: { id, is_whatsapp_notify, ... } } } — profileId = profile.id
@@ -593,7 +906,9 @@ export const saveLog = createAsyncThunk(
 
       if (profileId == null && typeof window !== "undefined") {
         try {
-          const ar = JSON.parse(window.localStorage.getItem("authResult") || "{}");
+          const ar = JSON.parse(
+            window.localStorage.getItem("authResult") || "{}",
+          );
           profileId = ar?.data?.profile?.id ?? ar?.profile?.id ?? profileId;
         } catch {
           /* ignore */
@@ -611,7 +926,9 @@ export const saveLog = createAsyncThunk(
       let terminalIdForLog = terminalSnap?.terminal_id ?? terminalSnap?.id;
       if (terminalIdForLog == null && typeof window !== "undefined") {
         try {
-          const ar = JSON.parse(window.localStorage.getItem("authResult") || "{}");
+          const ar = JSON.parse(
+            window.localStorage.getItem("authResult") || "{}",
+          );
           const t = ar?.data?.terminal ?? ar?.terminal;
           terminalIdForLog = t?.terminal_id ?? t?.id ?? terminalIdForLog;
         } catch {
@@ -619,34 +936,36 @@ export const saveLog = createAsyncThunk(
         }
       }
 
-      const response = await axios.post(
-        `/orders-items/${orderId}/logs`,
-        {
-          action,
-          waiterName,
-          details,
-          // Profil API-də `id` adlanır; backend hər ikisini qəbul edir
-          id: profileId ?? undefined,
-          profileId: profileId ?? undefined,
-          is_whatsapp_notify: profileSnap?.is_whatsapp_notify,
-          whatsapp_chat_number: profileSnap?.whatsapp_chat_number,
-          restaurant_name: profileSnap?.restaurant_name,
-          terminal_id: terminalIdForLog,
-        },
-      );
+      const response = await axios.post(`/orders-items/${orderId}/logs`, {
+        action,
+        waiterName,
+        details,
+        // Profil API-də `id` adlanır; backend hər ikisini qəbul edir
+        id: profileId ?? undefined,
+        profileId: profileId ?? undefined,
+        is_whatsapp_notify: profileSnap?.is_whatsapp_notify,
+        whatsapp_chat_number: profileSnap?.whatsapp_chat_number,
+        restaurant_name: profileSnap?.restaurant_name,
+        terminal_id: terminalIdForLog,
+      });
       if (typeof console !== "undefined" && console.info) {
-        console.info("[POS][Jurnal] serverə yazıldı:", action, "| orderId:", String(orderId).slice(0, 13));
+        console.info(
+          "[POS][Jurnal] serverə yazıldı:",
+          action,
+          "| orderId:",
+          String(orderId).slice(0, 13),
+        );
       }
       // Map snake_case to camelCase
       return {
         ...response.data,
         orderId: response.data.order_id,
-        waiterName: response.data.waiter_name
+        waiterName: response.data.waiter_name,
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
     }
-  }
+  },
 );
 
 export const updateLockChecK = createAsyncThunk(
@@ -660,18 +979,30 @@ export const updateLockChecK = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
       try {
-        await thunkAPI.dispatch(
-          saveLog({
-            orderId,
-            action: status ? "Qəbz kilidləndi" : "Qəbz açıldı",
-            waiterName,
-            details: status ? "Çek üzərində əməliyyatlar dayandırıldı" : "Çek yenidən aktiv edildi",
-          }),
-        ).unwrap();
+        await thunkAPI
+          .dispatch(
+            saveLog({
+              orderId,
+              action: status ? "Qəbz kilidləndi" : "Qəbz açıldı",
+              waiterName,
+              details: status
+                ? "Çek üzərində əməliyyatlar dayandırıldı"
+                : "Çek yenidən aktiv edildi",
+            }),
+          )
+          .unwrap();
       } catch (logErr) {
-        console.error("[OrderLog] Kilid sonrası jurnal xətası:", logErr?.message || logErr);
+        console.error(
+          "[OrderLog] Kilid sonrası jurnal xətası:",
+          logErr?.message || logErr,
+        );
       }
 
       return response.data;
@@ -707,13 +1038,20 @@ export const updateComments = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Şərh yazıldı",
-        waiterName,
-        details: comments ? `Şərh: ${comments}` : "Şərh silindi"
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Şərh yazıldı",
+          waiterName,
+          details: comments ? `Şərh: ${comments}` : "Şərh silindi",
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -732,13 +1070,20 @@ export const deleteOrderItems = createAsyncThunk(
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Qəbz təmizləndi",
-        waiterName,
-        details: "Bütün sifarişlər silindi"
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Qəbz təmizləndi",
+          waiterName,
+          details: "Bütün sifarişlər silindi",
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -749,24 +1094,40 @@ export const deleteOrderItems = createAsyncThunk(
 
 export const updateDepositOnOrders = createAsyncThunk(
   "orders/updateDeposit",
-  async ({ orderId, depositValue, depositType, oldDepositValue, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    {
+      orderId,
+      depositValue,
+      depositType,
+      oldDepositValue,
+      waiterName: passedWaiterName,
+    },
+    thunkAPI,
+  ) => {
     try {
-      const response = await axios.patch(
-        `/orders-items/${orderId}/deposit`,
-        { depositValue, depositType },
-      );
+      const response = await axios.patch(`/orders-items/${orderId}/deposit`, {
+        depositValue,
+        depositType,
+      });
 
       // Persistent Log
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      const oldValue = oldDepositValue ? `${oldDepositValue} ₼` : '0 ₼';
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+      const oldValue = oldDepositValue ? `${oldDepositValue} ₼` : "0 ₼";
       const newValue = `${depositValue} ₼`;
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Depozit dəyişildi",
-        waiterName,
-        details: `${oldValue}-dən ${newValue}-ə dəyişdi`
-      }));
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Depozit dəyişildi",
+          waiterName,
+          details: `${oldValue}-dən ${newValue}-ə dəyişdi`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
@@ -775,100 +1136,131 @@ export const updateDepositOnOrders = createAsyncThunk(
   },
 );
 
-
 export const incrementPrintCount = createAsyncThunk(
   "orders/incrementPrintCount",
   async ({ orderId, waiterName }, thunkAPI) => {
     try {
       const response = await axios.post(
-        `/orders-items/${orderId}/increment-print-count`
+        `/orders-items/${orderId}/increment-print-count`,
       );
 
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Ön çap çıxarıldı",
-        waiterName,
-        details: "Müştəri çeki çap edildi"
-      }));
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Ön çap çıxarıldı",
+          waiterName,
+          details: "Müştəri çeki çap edildi",
+        }),
+      );
 
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
     }
-  }
+  },
 );
-
 
 export const startTimer = createAsyncThunk(
   "orders/startTimer",
   async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
     try {
-      const response = await axios.patch(`/orders-items/${orderId}/timer-start`);
-      
+      const response = await axios.patch(
+        `/orders-items/${orderId}/timer-start`,
+      );
+
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Taymer başladıldı",
-        waiterName,
-        details: "Taymer saymağa başladı"
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Taymer başladıldı",
+          waiterName,
+          details: "Taymer saymağa başladı",
+        }),
+      );
 
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
     }
-  }
+  },
 );
 
 export const stopTimer = createAsyncThunk(
   "orders/stopTimer",
-  async ({ orderId, elapsedSeconds, clockStr, waiterName: passedWaiterName }, thunkAPI) => {
+  async (
+    { orderId, elapsedSeconds, clockStr, waiterName: passedWaiterName },
+    thunkAPI,
+  ) => {
     try {
-      const response = await axios.patch(`/orders-items/${orderId}/timer-stop`, {
-        elapsedSeconds,
-        clockStr,
-      });
+      const response = await axios.patch(
+        `/orders-items/${orderId}/timer-stop`,
+        {
+          elapsedSeconds,
+          clockStr,
+        },
+      );
 
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Taymer dayandırıldı",
-        waiterName,
-        details: `Vaxt: ${clockStr || "00:00:00"}`
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Taymer dayandırıldı",
+          waiterName,
+          details: `Vaxt: ${clockStr || "00:00:00"}`,
+        }),
+      );
 
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
     }
-  }
+  },
 );
 
 export const resetTimer = createAsyncThunk(
   "orders/resetTimer",
   async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
     try {
-      const response = await axios.patch(`/orders-items/${orderId}/timer-reset`);
+      const response = await axios.patch(
+        `/orders-items/${orderId}/timer-reset`,
+      );
 
       const state = thunkAPI.getState();
-      const waiterName = passedWaiterName || state.WaitersSlice?.loginedWaiter?.data?.name || state.WaitersSlice?.loginedWaiter?.name || state.LoginSlice?.loginedProfileData?.data?.profile?.name || "Naməlum";
-      
-      thunkAPI.dispatch(saveLog({
-        orderId,
-        action: "Taymer sıfırlandı",
-        waiterName,
-        details: "Taymer vaxtı 00:00:00 edildi"
-      }));
+      const waiterName =
+        passedWaiterName ||
+        state.WaitersSlice?.loginedWaiter?.data?.name ||
+        state.WaitersSlice?.loginedWaiter?.name ||
+        state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
+        "Naməlum";
+
+      thunkAPI.dispatch(
+        saveLog({
+          orderId,
+          action: "Taymer sıfırlandı",
+          waiterName,
+          details: "Taymer vaxtı 00:00:00 edildi",
+        }),
+      );
 
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data);
     }
-  }
+  },
 );
 
 export const OrderSlice = createSlice({
@@ -905,15 +1297,21 @@ export const OrderSlice = createSlice({
     },
     removeAllProductsById: (state, action) => {
       const productId = Number(action.payload);
-      state.products = state.products.filter(p => Number(p.id || p.product_id) !== productId);
+      state.products = state.products.filter(
+        (p) => Number(p.id || p.product_id) !== productId,
+      );
       if (state.sentProducts) {
-        state.sentProducts = state.sentProducts.filter(p => Number(p.id || p.product_id) !== productId);
+        state.sentProducts = state.sentProducts.filter(
+          (p) => Number(p.id || p.product_id) !== productId,
+        );
       }
     },
     removeProductByIdAndPrice: (state, action) => {
       const { product_id, price } = action.payload;
       const idx = state.products.findIndex(
-        p => Number(p.id || p.product_id) === Number(product_id) && Number(p.price) === Number(price)
+        (p) =>
+          Number(p.id || p.product_id) === Number(product_id) &&
+          Number(p.price) === Number(price),
       );
       if (idx !== -1) state.products.splice(idx, 1);
     },
@@ -944,18 +1342,25 @@ export const OrderSlice = createSlice({
 
       const pid = Number(productId);
       const existing =
-        state.products.find(p => Number(p.id || p.product_id) === pid) ||
-        state.sentProducts?.find(p => Number(p.id || p.product_id) === pid);
-      state.products = state.products.filter(p => Number(p.id || p.product_id) !== pid);
+        state.products.find((p) => Number(p.id || p.product_id) === pid) ||
+        state.sentProducts?.find((p) => Number(p.id || p.product_id) === pid);
+      state.products = state.products.filter(
+        (p) => Number(p.id || p.product_id) !== pid,
+      );
       if (state.sentProducts) {
-        state.sentProducts = state.sentProducts.filter(p => Number(p.id || p.product_id) !== pid);
+        state.sentProducts = state.sentProducts.filter(
+          (p) => Number(p.id || p.product_id) !== pid,
+        );
       }
       if (newQty > 0 && existing) {
         state.products.push({
           ...existing,
           quantity: newQty,
           newOrder: newQty,
-          price: price !== undefined ? parseFloat(price) : parseFloat(existing.price || 0)
+          price:
+            price !== undefined
+              ? parseFloat(price)
+              : parseFloat(existing.price || 0),
         });
       }
     },
@@ -984,7 +1389,7 @@ export const OrderSlice = createSlice({
             ? normalizedQuantity
             : 1,
         newOrder: 1,
-        price: parseFloat(incomingProduct.price)
+        price: parseFloat(incomingProduct.price),
       });
     },
 
@@ -1004,7 +1409,7 @@ export const OrderSlice = createSlice({
     updateCount: (state, action) => {
       const { productId, count, price, name } = action.payload;
       const existingProductIndex = state.products.findIndex(
-        (product) => product.id === productId
+        (product) => product.id === productId,
       );
 
       if (existingProductIndex !== -1) {
@@ -1037,11 +1442,14 @@ export const OrderSlice = createSlice({
       // payload: { orderId, action, waiterName, details }
       const newLog = {
         id: Date.now(),
-        time: new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' }),
-        ...action.payload
+        time: new Date().toLocaleTimeString("az-AZ", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        ...action.payload,
       };
       state.orderLogs.push(newLog);
-    }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -1095,13 +1503,15 @@ export const OrderSlice = createSlice({
       .addCase(deleteOrderItem.fulfilled, (state, action) => {
         if (state.pendingDeletions) {
           const { itemId } = action.meta.arg;
-          state.pendingDeletions = state.pendingDeletions.filter(item => Number(item.itemId) !== Number(itemId));
+          state.pendingDeletions = state.pendingDeletions.filter(
+            (item) => Number(item.itemId) !== Number(itemId),
+          );
         }
       })
       .addCase(batchDeleteOrderItems.fulfilled, (state, action) => {
         const deletedIds = action.payload?.deletedItems || [];
         state.pendingDeletions = state.pendingDeletions.filter(
-          item => !deletedIds.includes(Number(item.itemId))
+          (item) => !deletedIds.includes(Number(item.itemId)),
         );
       })
       .addCase(batchDeleteOrderItems.rejected, (state) => {
@@ -1141,7 +1551,10 @@ export const OrderSlice = createSlice({
         // No local log push - handled by thunk saveLog
       })
       .addCase(incrementPrintCount.fulfilled, (state, action) => {
-        if (state.currentOrder && state.currentOrder.uuid === action.meta.arg.orderId) {
+        if (
+          state.currentOrder &&
+          state.currentOrder.uuid === action.meta.arg.orderId
+        ) {
           state.currentOrder.print_count = action.payload.print_count;
         }
       });
@@ -1161,9 +1574,7 @@ export const {
   addPendingDeletion,
   clearPendingDeletions,
   addLog,
-  menuData
+  menuData,
 } = OrderSlice.actions;
 
 export default OrderSlice.reducer;
-
-
