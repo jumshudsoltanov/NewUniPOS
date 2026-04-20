@@ -89,10 +89,23 @@ const getGeneralCategories = async (passedProfileId) => {
       }
 
       if (generalCategories.length > 0) {
-        const updateKeys = Object.keys(generalCategories[0]).filter(
-          (key) => GeneralCategoriesModel.rawAttributes[key],
+        const existingOrders = await GeneralCategoriesModel.findAll({
+          attributes: ["id", "ordering"],
+          where: { id: generalCategories.map((g) => g.id) },
+          raw: true,
+        });
+        const orderMap = {};
+        existingOrders.forEach((r) => {
+          if (r.ordering != null) orderMap[r.id] = r.ordering;
+        });
+        const generalCategoriesWithOrder = generalCategories.map((g) => ({
+          ...g,
+          ordering: orderMap[g.id] != null ? orderMap[g.id] : (g.ordering ?? 0),
+        }));
+        const updateKeys = Object.keys(generalCategoriesWithOrder[0]).filter(
+          (key) => GeneralCategoriesModel.rawAttributes[key] && key !== "ordering",
         );
-        await GeneralCategoriesModel.bulkCreate(generalCategories, {
+        await GeneralCategoriesModel.bulkCreate(generalCategoriesWithOrder, {
           updateOnDuplicate: updateKeys,
         });
       }
@@ -146,10 +159,23 @@ const getCategories = async (passedProfileId) => {
       }
 
       if (categories.length > 0) {
-        const updateKeys = Object.keys(categories[0]).filter(
-          (key) => CategoriesModel.rawAttributes[key],
+        const existingOrders = await CategoriesModel.findAll({
+          attributes: ["id", "ordering"],
+          where: { id: categories.map((c) => c.id) },
+          raw: true,
+        });
+        const orderMap = {};
+        existingOrders.forEach((r) => {
+          if (r.ordering != null) orderMap[r.id] = r.ordering;
+        });
+        const categoriesWithOrder = categories.map((c) => ({
+          ...c,
+          ordering: orderMap[c.id] != null ? orderMap[c.id] : (c.ordering ?? 0),
+        }));
+        const updateKeys = Object.keys(categoriesWithOrder[0]).filter(
+          (key) => CategoriesModel.rawAttributes[key] && key !== "ordering",
         );
-        await CategoriesModel.bulkCreate(categories, {
+        await CategoriesModel.bulkCreate(categoriesWithOrder, {
           updateOnDuplicate: updateKeys,
         });
       }

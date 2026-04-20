@@ -173,7 +173,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
        try {
            const { data } = await apiConfig.post("/sync/auto-diagnose-ghosts");
            if (data?.success) {
-               toast.success(`Təmizləndi: ${data.fixedGhosts} ghost çək silindi.`);
+               let msg = `Təmizləndi: ${data.fixedGhosts || 0} ghost çek ləğv edildi.`;
+               if (data.stuckPushed) msg += ` ${data.stuckPushed} ədəd silinmiş çek serverə qaytarıldı.`;
+               toast.success(msg);
                loadStuckOrders();
            } else {
                toast.error(data?.message || "Xəta baş verdi");
@@ -184,6 +186,20 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
            setAutoFixGhostsLoading(false);
        }
   };
+
+  const handleRetrySync = async (uuid) => {
+       try {
+           const { data } = await apiConfig.post(`/sync/force-sync-order/${uuid}`);
+           if (data.success) {
+               toast.success("Çek yenidən göndərildi");
+               loadStuckOrders();
+           } else {
+               toast.error(data.message || "Xəta baş verdi");
+           }
+       } catch (e) {
+           toast.error("Şəbəkə xətası");
+       }
+   };
 
   const handleForceRetryAll = async () => {
        setSyncTroubleshootLoading(true);
@@ -1214,7 +1230,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
         ) : view === "syncCheck" ? (
           <div className="discount-body pin-advanced-sync-body pin-invisible-scroll" style={{ maxHeight: "70vh", overflowY: "auto", padding: "10px" }}>
             <p className="wa-settings-hint" style={{ marginBottom: "20px", fontSize: "14px", color: "#555" }}>
-               Sisteminizi admin panellə sinxronizasiya anomaliyalarından (həm gecikən, həm də boş qalan çəklərdən) tam avtomatik təmizləyin.
+               Sisteminizi admin panellə sinxronizasiya anomaliyalarından (həm gecikən, həm də boş qalan çeklərdən) tam avtomatik təmizləyin.
             </p>
             
             {/* Auto Fix Card */}
@@ -1228,7 +1244,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                    <h3 style={{ fontSize: "16px", fontWeight: "600", margin: 0, color: "#1e293b" }}>Tam Avtomatik Həllər</h3>
                </div>
                <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "20px", lineHeight: 1.5 }}>
-                 Bu funksiya POS sisteminizlə server arasında fərqləri hər iki tərəfli (Push/Pull) yoxlayır. Əgər serverdə sizdə olmayan "ghost" çəklər varsa, və ya burada gecikib getməyən çəklər varsa, hər ikisini eyni anda tapıb təmizləyir.
+                 Bu funksiya POS sisteminizlə server arasında fərqləri hər iki tərəfli (Push/Pull) yoxlayır. Əgər serverdə sizdə olmayan "ghost" çeklər varsa, və ya burada gecikib getməyən çeklər varsa, hər ikisini eyni anda tapıb təmizləyir.
                </p>
                <button 
                   type="button" 
@@ -1263,18 +1279,27 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                 ) : stuckOrders.length === 0 ? (
                   <div style={{fontSize: "14px", color:"#10b981", display: "flex", alignItems: "center", gap: "6px"}}>
                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                     Yerli yaddaşda ləngiyən və ya xətalı çək yoxdur.
+                     Yerli yaddaşda ləngiyən və ya xətalı çek yoxdur.
                   </div>
                 ) : (
                   <div style={{ maxHeight: "180px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }} className="pin-invisible-scroll">
                      {stuckOrders.map(o => (
-                        <div key={o.uuid} style={{ padding: "12px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "13px", background: "white", color: "#334155" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                                <strong>UUID: <span style={{ fontWeight: "normal", color: "#64748b" }}>{o.uuid.split("-")[0]}...</span></strong>
-                                <span style={{ color: o.is_deleted ? '#ef4444' : o.status === 1 ? '#053796' : '#10b981', fontWeight: "600" }}>{o.is_deleted ? "Silinib" : o.status === 1 ? "Açıqdır" : o.status === 2 ? "Ödənilib" : "Bağlanıb"}</span>
+                        <div key={o.uuid} style={{ padding: "12px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "13px", background: "white", color: "#334155", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                                    <strong>UUID: <span style={{ fontWeight: "normal", color: "#64748b" }}>{o.uuid.split("-")[0]}...</span></strong>
+                                    <span style={{ color: o.is_deleted ? '#ef4444' : o.status === 1 ? '#053796' : '#10b981', fontWeight: "600" }}>{o.is_deleted ? "Silinib" : o.status === 1 ? "Açıqdır" : o.status === 2 ? "Ödənilib" : "Bağlanıb"}</span>
+                                </div>
+                                <div style={{ color: "#64748b", fontSize: "12px", marginBottom: "4px" }}>Masa: {o.table_name || 'Yoxdur'} | Say: {o.item_count} | {new Date(o.updated_at).toLocaleString("az-AZ")}</div>
+                                <div style={{ fontSize: "12px", color: o.is_synced === 2 ? '#f59e0b' : '#ef4444' }}>{o.is_synced === 2 ? "• Gecikdiği üçün atlanıb (v2)" : "• Sinxronizasiya xətası"}</div>
                             </div>
-                            <div style={{ color: "#64748b", fontSize: "12px", marginBottom: "4px" }}>Masa: {o.table_name || 'Yoxdur'} | Say: {o.item_count} | {new Date(o.updated_at).toLocaleString("az-AZ")}</div>
-                            <div style={{ fontSize: "12px", color: o.is_synced === 2 ? '#f59e0b' : '#ef4444' }}>{o.is_synced === 2 ? "• Gecikdiği üçün atlanıb (v2)" : "• Sinxronizasiya xətası"}</div>
+                            <button 
+                                type="button" 
+                                onClick={() => handleRetrySync(o.uuid)}
+                                style={{ marginLeft: "10px", padding: "8px 12px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", color: "#053796" }}
+                             >
+                                Yenidən göndər
+                             </button>
                         </div>
                      ))}
                   </div>
@@ -1288,7 +1313,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                </summary>
                <div style={{ padding: "20px", borderTop: "1px solid #e2e8f0" }}>
                  <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "15px", lineHeight: 1.5 }}>
-                   Əgər avtomatik sistem nədənsə serveri təmizləyə bilməzsə (Server API xətası), Admin paneldən tapdığınız çək ID-sini (və ya UUID) məcburi bağlamaq/silmək üçün bura yazın.
+                   Əgər avtomatik sistem nədənsə serveri təmizləyə bilməzsə (Server API xətası), Admin paneldən tapdığınız çek ID-sini (və ya UUID) məcburi bağlamaq/silmək üçün bura yazın.
                  </p>
                  <div style={{ display: "flex", gap: "10px" }}>
                      <input 

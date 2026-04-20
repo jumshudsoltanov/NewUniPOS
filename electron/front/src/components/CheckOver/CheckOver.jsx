@@ -475,12 +475,12 @@ const CheckOver = () => {
                                     }
                                 } else {
                                     const errDetails = results.map(r => r.error).filter(Boolean).join('; ') || 'Vergi çeki kəsilə bilmədi';
-                                    addNotification('Fiskal Çək Xətası', errDetails, { category: 'system', type: 'error' });
+                                    addNotification('Fiskal Çek Xətası', errDetails, { category: 'system', type: 'error' });
                                 }
                             }).catch(taxErr => {
                                 console.error('Tax sale error:', taxErr);
                                 const errMsg = taxErr.response?.data?.message || taxErr.message;
-                                addNotification('Fiskal Çək Xətası', errMsg, { category: 'system', type: 'error' });
+                                addNotification('Fiskal Çek Xətası', errMsg, { category: 'system', type: 'error' });
                             });
 
                             // Proceed without waiting for taxResult

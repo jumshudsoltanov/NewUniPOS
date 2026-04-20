@@ -15,38 +15,25 @@ const getReportData = async (req, res) => {
     const { startDate, startTime, endDate, endTime, terminal, reportType, showTransactions } = req.query;
 
     try {
-        // Use strings for SQLite compatibility if needed, but Date objects are usually fine if handled correctly.
-        // Ensure we are working with the correct date range.
+        // String tarix müqayisəsi — Date obyektləri timezone problemi yaradır
         const startStr = `${startDate} ${startTime}:00`;
         const endStr = `${endDate} ${endTime}:00`;
-        // Date obyektlərini istifadə et — Sequelize timezone-a görə düzgün çevirir
-        const startDateObj = new Date(startStr);
-        const endDateObj = new Date(endStr);
 
-        console.log(`Generating report from ${startStr} to ${endStr}`);
+        let baseWhere = { profile_id: profileId };
+        if (terminal && terminal !== "all") baseWhere.terminal_id = terminal;
 
-        let baseWhere = {
-            profile_id: profileId
-        };
-
-        if (terminal && terminal !== "all") {
-            baseWhere.terminal_id = terminal;
-        }
-
-        // For most reports (closed orders), we should filter by end_date
+        // Bağlı sifarişlər — end_date ilə (admin paneli kimi)
         let closedWhere = {
             ...baseWhere,
             status: 2,
-            end_date: {
-                [Op.between]: [startDateObj, endDateObj],
-            },
+            end_date: { [Op.gte]: startStr, [Op.lte]: endStr },
         };
 
         let data = [];
 
         switch (reportType) {
             case "simple":
-                data = await getSimpleReport(profileId, baseWhere, startDateObj, endDateObj, showTransactions === 'true');
+                data = await getSimpleReport(profileId, baseWhere, startStr, endStr);
                 break;
             case "products":
                 data = await getProductsReport(closedWhere);
@@ -71,13 +58,13 @@ const getReportData = async (req, res) => {
                 data = await getCategoryReport(closedWhere);
                 break;
             case "refunds":
-                data = await getRefundsReport(baseWhere, startDateObj, endDateObj);
+                data = await getRefundsReport(baseWhere, startStr, endStr);
                 break;
             case "gifted_products":
                 data = await getGiftedProductsReport(closedWhere);
                 break;
             case "financial":
-                data = await getFinancialReport(baseWhere, startDateObj, endDateObj);
+                data = await getFinancialReport(baseWhere, startStr, endStr);
                 break;
             case "inventory":
                 data = [];
@@ -96,265 +83,194 @@ const getReportData = async (req, res) => {
     }
 };
 
-const getSimpleReport = async (profileId, baseWhere, start, end, showTransactions) => {
+const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
     const TagsModel = require("../model/TagsModel");
-    const [profile, closedOrders, returnedOrders, deletedOrders, deletedItems, openOrders] = await Promise.all([
-        // 0. Profile (tax percent)
+
+    const closedWhere = { ...baseWhere, status: 2, end_date: { [Op.gte]: startStr, [Op.lte]: endStr } };
+    const openWhere = { ...baseWhere, status: 1, start_date: { [Op.gte]: startStr, [Op.lte]: endStr } };
+    // Admin paneli kimi: silinmiş/geri qaytarılmış sifarişlər start_date ilə filterlənirir
+    const deletedWhere = { ...baseWhere, status: { [Op.in]: [0, 3] }, start_date: { [Op.gte]: startStr, [Op.lte]: endStr } };
+
+    const [
+        profile,
+        closedAgg,       // Cəm, endirim, xidmət, qonaq — SQL-də hesablanır
+        openAgg,         // Açıq sifarişlər
+        deletedAgg,      // Silinmiş/geri qaytarılmış
+        giftItems,       // İkram məhsulları
+        payments,        // Ödənişlər
+        closedTagOrders, // Etiket hesablaması üçün bağlı sifarişlər
+    ] = await Promise.all([
+        // 0. Profil (vergi faizi)
         LoginModel.findOne({ where: { id: profileId }, attributes: ['id', 'tax_percent'] }),
 
-        // 1. Fetch Closed Orders — only gift items loaded (not all items)
+        // 1. Bağlı sifarişlər — SQL-də aggregate (sürətli)
         OrdersModel.findAll({
-            where: {
-                ...baseWhere,
-                status: 2,
-                end_date: { [Op.between]: [start, end] }
-            },
-            attributes: ['id', 'total', 'amount', 'rate_per_minute', 'discount', 'service_charge', 'guest_count', 'is_tax', 'tags'],
-            include: [
-                {
-                    model: OrderPaymentsModel,
-                    as: 'order_payments',
-                    required: false,
-                    attributes: ['id', 'paid', 'name', 'without_payment_method_id'],
-                    include: [
-                        { model: PaymentMethodsModel, as: 'payment_method', required: false, attributes: ['name'] },
-                        { model: TagsModel, as: 'tag', required: false, attributes: ['name'] }
-                    ]
-                },
-                {
-                    model: OrdersItemsModel,
-                    as: 'orders_items',
-                    where: { is_gift: 1 },
-                    required: false,
-                    attributes: ['count', 'price', 'original_price', 'modifiers', 'is_gift'],
-                    include: [{ model: ProductsModel, as: 'product', required: false, attributes: ['price'] }]
-                }
-            ]
+            where: closedWhere,
+            attributes: [
+                [fn('SUM', col('amount')), 'sum_amount'],
+                [fn('SUM', col('rate_per_minute')), 'sum_timer'],
+                [fn('SUM', col('discount')), 'sum_discount'],
+                [fn('SUM', col('service_charge')), 'sum_service'],
+                [fn('SUM', col('total')), 'sum_total'],
+                [fn('SUM', col('guest_count')), 'sum_guests'],
+                [fn('SUM', col('is_tax')), 'sum_is_tax'],
+                [fn('COUNT', col('id')), 'cnt'],
+            ],
+            raw: true,
         }),
 
-        // 2. Fetch Returned Orders separately
+        // 2. Açıq sifarişlər — SQL aggregate
         OrdersModel.findAll({
-            where: {
-                ...baseWhere,
-                status: 3,
-                is_return: 1,
-                updated_at: { [Op.between]: [start, end] }
-            },
-            attributes: ['id', 'total', 'amount', 'tags'],
-            include: [{ model: TagsModel, as: 'delete_reason', attributes: ['name'] }],
-            paranoid: false
+            where: openWhere,
+            attributes: [
+                [fn('COUNT', col('id')), 'cnt'],
+                [fn('SUM', col('total')), 'sum_total'],
+            ],
+            raw: true,
         }),
 
-        // 3. Fetch Deleted Orders
+        // 3. Silinmiş/geri qaytarılmış — SQL aggregate (admin paneli kimi start_date ilə)
         OrdersModel.findAll({
-            where: {
-                ...baseWhere,
-                status: 3,
-                is_delete_reason_id: { [Op.not]: null },
-                [Op.or]: [{ is_return: null }, { is_return: 0 }],
-                updated_at: { [Op.between]: [start, end] }
-            },
-            attributes: ['id', 'total', 'amount', 'tags'],
-            include: [{ model: TagsModel, as: 'delete_reason', attributes: ['name'] }],
-            paranoid: false
+            where: deletedWhere,
+            attributes: [
+                [fn('SUM', col('total')), 'sum_total'],
+                [fn('SUM', col('amount')), 'sum_amount'],
+            ],
+            paranoid: false,
+            raw: true,
         }),
 
-        // 4. Fetch Deleted Items (Soft-deleted)
+        // 4. İkram məhsulları — yalnız lazımi sahələr
         OrdersItemsModel.findAll({
-            where: {
-                profile_id: profileId,
-                deleted_at: { [Op.between]: [start, end] },
-                is_delete_reason_id: { [Op.not]: null }
-            },
-            attributes: ['count', 'price'],
-            include: [{ model: TagsModel, as: 'delete_reason', attributes: ['name'] }],
-            paranoid: false
+            include: [{
+                model: OrdersModel, as: 'order', attributes: [], where: closedWhere, required: true,
+            }, {
+                model: ProductsModel, as: 'product', required: false, attributes: ['price'],
+            }],
+            where: { is_gift: 1 },
+            attributes: ['count', 'price', 'original_price', 'modifiers'],
+            raw: false,
         }),
 
-        // 5. Fetch Open Orders
+        // 5. Ödənişlər — bağlı sifarişlərə aid (OrderPayments→Orders alias yoxdur, default 'OrdersModel')
+        OrderPaymentsModel.findAll({
+            include: [{
+                model: OrdersModel, attributes: [], where: closedWhere, required: true,
+            }, {
+                model: PaymentMethodsModel, as: 'payment_method', required: false, attributes: ['name'],
+            }, {
+                model: TagsModel, as: 'tag', required: false, attributes: ['name'],
+            }],
+            attributes: ['id', 'paid', 'name', 'without_payment_method_id'],
+            raw: false,
+        }),
+
+        // 6. Etiket hesablaması üçün bağlı sifarişlər (tags sahəsi + order_payments tags)
         OrdersModel.findAll({
-            where: {
-                ...baseWhere,
-                status: 1,
-                start_date: { [Op.between]: [start, end] }
-            },
-            attributes: ['id', 'total']
-        })
+            where: closedWhere,
+            attributes: ['id', 'total', 'tags'],
+            include: [{
+                model: OrderPaymentsModel, as: 'order_payments', required: false,
+                attributes: ['without_payment_method_id'],
+                include: [{ model: TagsModel, as: 'tag', required: false, attributes: ['name'] }],
+            }],
+        }),
     ]);
 
     const taxPercent = parseFloat(profile?.tax_percent || 0);
+    const aggRow = closedAgg[0] || {};
+    const openRow = openAgg[0] || {};
+    const delRow = deletedAgg[0] || {};
 
-    let summary = {
-        total_amount: 0,
-        total_discount: 0,
-        total_service: 0,
-        total_gift: 0,
-        total_refund: 0,
-        total_deleted: 0,
-        total_tax: 0,
-        net_total: 0,
-        guest_count: 0,
-        open_orders_count: 0,
-        open_orders_total: 0,
-        total_paid: 0,       // ödənişli bağlamaların cəmi
-        total_unpaid: 0,     // ödənişsiz bağlamaların cəmi
-        payments: {},        // normal ödənişlər (Nağd, Nağdsız bank kartı və s.)
-        unpaid_payments: {}, // ödənişsiz bağlamalar (without_payment_method_id > 0)
-        tags: {}
-    };
+    // Vergi hesablaması — hər sifarişdə is_tax ilə dəqiq olmur SQL-də, ona görə bağlı sifarişlər üzərindən hesablayırıq
+    // Sadə hal: tax = total * taxPercent / (100 + taxPercent) yalnız is_tax > 0 olan sifarişlər üçün
+    // Bu aggregatda əlçatımlıdır: sum_is_tax > 0 olanlar üçün ortalama nisbəti
+    // Daha dəqiq hesab üçün ayrı sorğu — ancaq ümumi hesabat üçün bu kifayətdir
+    let total_tax = 0;
+    if (taxPercent > 0 && parseFloat(aggRow.sum_is_tax || 0) > 0) {
+        // is_tax > 0 olan sifarişlər üzrə tax hesablamaq üçün ayrı sorğu
+        const taxOrders = await OrdersModel.findAll({
+            where: { ...closedWhere, is_tax: { [Op.gt]: 0 } },
+            attributes: ['total', 'is_tax'],
+            raw: true,
+        });
+        taxOrders.forEach(o => {
+            const t = parseFloat(o.total || 0);
+            const flag = parseFloat(o.is_tax || 0);
+            const pct = flag > 1 ? flag : taxPercent;
+            if (pct > 0) total_tax += t * pct / (100 + pct);
+        });
+    }
 
-    openOrders.forEach(order => {
-        summary.open_orders_count += 1;
-        summary.open_orders_total += parseFloat(order.total || 0);
+    // İkram cəmi
+    let total_gift = 0;
+    giftItems.forEach(item => {
+        const itemCount = parseFloat(item.count || 0);
+        const itemPrice = parseFloat(item.price || 0);
+        const origPrice = parseFloat(item.original_price || 0);
+        const productPrice = parseFloat(item.product?.price || 0);
+        const nominalPrice = itemPrice > 0 ? itemPrice : (origPrice > 0 ? origPrice : productPrice);
+        let modifiersTotal = 0;
+        try {
+            const mods = Array.isArray(item.modifiers) ? item.modifiers : (typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : []);
+            modifiersTotal = mods.reduce((s, m) => s + parseFloat(m.price || 0) * parseFloat(m.count || 1), 0);
+        } catch (_) {}
+        total_gift += itemCount * (nominalPrice + modifiersTotal);
     });
 
-    // Process Closed Orders
-    closedOrders.forEach(order => {
-        // order.amount — bağlananda məhsul cəmi; timer məbləği rate_per_minute-da (onCloseOrder amount-a daxil edilmir)
-        const itemsSub = parseFloat(order.amount || 0) || 0;
-        const timerSub = parseFloat(order.rate_per_minute || 0) || 0;
-        summary.total_amount += itemsSub + timerSub;
-        summary.total_discount += parseFloat(order.discount || 0);
-        summary.total_service += parseFloat(order.service_charge || 0);
+    // Ödəniş metodları
+    const paymentsMap = {};
+    const unpaidMap = {};
+    let total_paid = 0, total_unpaid = 0;
+    payments.forEach(p => {
+        const amount = parseFloat(p.paid || 0);
+        if (p.without_payment_method_id && p.without_payment_method_id > 0) {
+            const name = p.name || p.tag?.name || 'Ödənişsiz';
+            unpaidMap[name] = (unpaidMap[name] || 0) + amount;
+            total_unpaid += amount;
+        } else {
+            const name = p.name || p.payment_method?.name || 'Nağd';
+            paymentsMap[name] = (paymentsMap[name] || 0) + amount;
+            total_paid += amount;
+        }
+    });
+
+    // Etiketlər
+    const tags = {};
+    closedTagOrders.forEach(order => {
         const orderTotal = parseFloat(order.total || 0);
-        summary.net_total += orderTotal;
-        summary.guest_count += parseInt(order.guest_count || 0);
-
-        // Tax calculation: inclusive VAT = total * taxPercent / (100 + taxPercent)
-        let isTaxFlag = parseFloat(order.is_tax || 0);
-        if (isTaxFlag > 0) {
-            let currentTaxPercent = isTaxFlag > 1 ? isTaxFlag : taxPercent;
-            if (currentTaxPercent > 0) {
-                summary.total_tax += orderTotal * currentTaxPercent / (100 + currentTaxPercent);
-            }
+        const orderTags = new Set();
+        if (order.tags) {
+            order.tags.split(',').map(t => t.trim()).filter(t => t).forEach(t => orderTags.add(t));
         }
-
-        // Calculate Gifts within these orders (is_gift: 1, "1", true)
-        // İkram üçün qiymət 0 ola bilər — nominal dəyər: original_price, product.price və ya item.price
-        if (order.orders_items) {
-            order.orders_items.forEach(item => {
-                const isGift = Number(item.is_gift) === 1 || item.is_gift === true;
-                if (isGift) {
-                    const itemCount = parseFloat(item.count || 0);
-                    const itemPrice = parseFloat(item.price || 0);
-                    const origPrice = parseFloat(item.original_price || 0);
-                    const productPrice = parseFloat(item.product?.price || 0);
-                    const nominalPrice = itemPrice > 0 ? itemPrice : (origPrice > 0 ? origPrice : productPrice);
-
-                    let modifiersTotal = 0;
-                    try {
-                        const mods = Array.isArray(item.modifiers) ? item.modifiers : (typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : []);
-                        modifiersTotal = mods.reduce((s, m) => s + (parseFloat(m.price || 0) * parseFloat(m.count || 1)), 0);
-                    } catch (_) {}
-
-                    summary.total_gift += itemCount * (nominalPrice + modifiersTotal);
-                }
-            });
-        }
-
-        // Payments summary — normal vs ödənişsiz ayrı
         if (order.order_payments) {
-            order.order_payments.forEach(p => {
-                const amount = parseFloat(p.paid || 0);
-                if (p.without_payment_method_id && p.without_payment_method_id > 0) {
-                    // Ödənişsiz bağlama — ayrı bölmə
-                    const methodName = p.name || p.tag?.name || 'Ödənişsiz';
-                    summary.unpaid_payments[methodName] = (summary.unpaid_payments[methodName] || 0) + amount;
-                    summary.total_unpaid += amount;
-                } else {
-                    // Normal ödəniş
-                    const methodName = p.name || p.payment_method?.name || 'Nağd';
-                    summary.payments[methodName] = (summary.payments[methodName] || 0) + amount;
-                    summary.total_paid += amount;
-                }
-            });
+            order.order_payments.forEach(p => { if (p.tag?.name) orderTags.add(p.tag.name); });
         }
-
-        // Tags summary
-        let orderTags = [];
-        // 1. From order.tags field
-        if (order.tags) {
-            orderTags = orderTags.concat(order.tags.split(',').map(t => t.trim()).filter(t => t));
-        }
-        // 2. From order_payments tags (without_payment_method_id)
-        if (order.order_payments) {
-            order.order_payments.forEach(p => {
-                if (p.tag && p.tag.name) {
-                    orderTags.push(p.tag.name);
-                }
-            });
-        }
-
-        // Aggregate unique tags for this order
-        const uniqueTags = [...new Set(orderTags)];
-        uniqueTags.forEach(tagName => {
-            if (!summary.tags[tagName]) {
-                summary.tags[tagName] = { count: 0, total: 0 };
-            }
-            summary.tags[tagName].count += 1;
-            summary.tags[tagName].total += parseFloat(order.total || 0);
+        orderTags.forEach(tagName => {
+            if (!tags[tagName]) tags[tagName] = { count: 0, total: 0 };
+            tags[tagName].count += 1;
+            tags[tagName].total += orderTotal;
         });
     });
 
-    // Process Returned Orders for the refund line and tags
-    returnedOrders.forEach(order => {
-        const orderVal = parseFloat(order.total || order.amount || 0);
-        summary.total_refund += orderVal;
-
-        let orderTags = [];
-        if (order.tags) {
-            orderTags = orderTags.concat(order.tags.split(',').map(t => t.trim()).filter(t => t));
-        }
-        if (order.delete_reason && order.delete_reason.name) {
-            orderTags.push(order.delete_reason.name);
-        }
-
-        const uniqueTags = [...new Set(orderTags)];
-        uniqueTags.forEach(tagName => {
-            if (!summary.tags[tagName]) {
-                summary.tags[tagName] = { count: 0, total: 0 };
-            }
-            summary.tags[tagName].count += 1;
-            summary.tags[tagName].total += orderVal;
-        });
-    });
-
-    // Process Deleted Orders (manager permission) and tags
-    deletedOrders.forEach(order => {
-        const orderVal = parseFloat(order.total || order.amount || 0);
-        summary.total_deleted += orderVal;
-
-        let orderTags = [];
-        if (order.tags) {
-            orderTags = orderTags.concat(order.tags.split(',').map(t => t.trim()).filter(t => t));
-        }
-        if (order.delete_reason && order.delete_reason.name) {
-            orderTags.push(order.delete_reason.name);
-        }
-
-        const uniqueTags = [...new Set(orderTags)];
-        uniqueTags.forEach(tagName => {
-            if (!summary.tags[tagName]) {
-                summary.tags[tagName] = { count: 0, total: 0 };
-            }
-            summary.tags[tagName].count += 1;
-            summary.tags[tagName].total += orderVal;
-        });
-    });
-
-    // Process Deleted Items tags
-    deletedItems.forEach(item => {
-        if (item.delete_reason && item.delete_reason.name) {
-            const tagName = item.delete_reason.name;
-            if (!summary.tags[tagName]) {
-                summary.tags[tagName] = { count: 0, total: 0 };
-            }
-            summary.tags[tagName].count += 1;
-            summary.tags[tagName].total += (parseFloat(item.count || 0) * parseFloat(item.price || 0));
-        }
-    });
-
-    return summary;
+    return {
+        total_amount: parseFloat(aggRow.sum_amount || 0) + parseFloat(aggRow.sum_timer || 0),
+        total_discount: parseFloat(aggRow.sum_discount || 0),
+        total_service: parseFloat(aggRow.sum_service || 0),
+        total_gift,
+        total_refund: parseFloat(delRow.sum_total || delRow.sum_amount || 0),
+        total_deleted: 0, // admin paneli kimi ayrı göstərilmir, refund-a daxildir
+        total_tax,
+        net_total: parseFloat(aggRow.sum_total || 0),
+        guest_count: parseInt(aggRow.sum_guests || 0),
+        open_orders_count: parseInt(openRow.cnt || 0),
+        open_orders_total: parseFloat(openRow.sum_total || 0),
+        total_paid,
+        total_unpaid,
+        payments: paymentsMap,
+        unpaid_payments: unpaidMap,
+        tags,
+    };
 };
 
 /** Sətir məbləği: say × (qiymət + modifierlər) — kateqoriya/məhsul cəmləri ilə uyğun */
@@ -376,45 +292,45 @@ const lineItemTotalForReport = (item) => {
 };
 
 const getProductsReport = async (whereClause) => {
-    const orders = await OrdersModel.findAll({
-        where: whereClause,
-        attributes: ['id'],
-        include: [{
-            model: OrdersItemsModel,
-            as: 'orders_items',
-            attributes: ['product_id', 'count', 'price', 'original_price', 'modifiers', 'is_gift'],
-            include: [{ model: ProductsModel, as: 'product', attributes: ['id', 'name'] }]
-        }]
+    const items = await OrdersItemsModel.findAll({
+        attributes: ['product_id', 'count', 'price', 'original_price', 'modifiers', 'is_gift'],
+        include: [
+            {
+                model: OrdersModel,
+                as: 'order',
+                attributes: [],
+                where: whereClause,
+                required: true,
+            },
+            { model: ProductsModel, as: 'product', attributes: ['id', 'name'], required: false }
+        ],
+        raw: false,
     });
 
     let productsMap = {};
 
-    orders.forEach(order => {
-        if (order.orders_items) {
-            order.orders_items.forEach(item => {
-                const productId = item.product_id;
-                const isGift = Number(item.is_gift) === 1 || item.is_gift === true;
-                const itemCount = parseFloat(item.count || 0);
-                const itemPrice = parseFloat(item.price || 0);
-                const nominalPrice = itemPrice > 0 ? itemPrice : parseFloat(item.original_price || 0);
+    items.forEach(item => {
+        const productId = item.product_id;
+        const isGift = Number(item.is_gift) === 1 || item.is_gift === true;
+        const itemCount = parseFloat(item.count || 0);
+        const itemPrice = parseFloat(item.price || 0);
+        const nominalPrice = itemPrice > 0 ? itemPrice : parseFloat(item.original_price || 0);
 
-                if (!productsMap[productId]) {
-                    productsMap[productId] = {
-                        name: item.product?.name || 'Naməlum',
-                        quantity: 0,
-                        quantity_gift: 0,
-                        total: 0,
-                        total_gift: 0
-                    };
-                }
-                productsMap[productId].quantity += itemCount;
-                if (isGift) {
-                    productsMap[productId].quantity_gift += itemCount;
-                    productsMap[productId].total_gift += itemCount * nominalPrice;
-                } else {
-                    productsMap[productId].total += lineItemTotalForReport(item);
-                }
-            });
+        if (!productsMap[productId]) {
+            productsMap[productId] = {
+                name: item.product?.name || 'Naməlum',
+                quantity: 0,
+                quantity_gift: 0,
+                total: 0,
+                total_gift: 0
+            };
+        }
+        productsMap[productId].quantity += itemCount;
+        if (isGift) {
+            productsMap[productId].quantity_gift += itemCount;
+            productsMap[productId].total_gift += itemCount * nominalPrice;
+        } else {
+            productsMap[productId].total += lineItemTotalForReport(item);
         }
     });
 
@@ -454,56 +370,48 @@ const getEmployeeReport = async (whereClause) => {
 };
 
 const getCategoryReport = async (whereClause) => {
-    const orders = await OrdersModel.findAll({
-        where: whereClause,
-        attributes: ['id'],
-        include: [{
-            model: OrdersItemsModel,
-            as: 'orders_items',
-            attributes: ['product_id', 'count', 'price', 'modifiers', 'name'],
-            include: [{
+    const items = await OrdersItemsModel.findAll({
+        attributes: ['product_id', 'count', 'price', 'modifiers'],
+        include: [
+            {
+                model: OrdersModel,
+                as: 'order',
+                attributes: [],
+                where: whereClause,
+                required: true,
+            },
+            {
                 model: ProductsModel,
                 as: 'product',
                 attributes: ['id', 'name'],
-                include: [{ model: CategoriesModel, as: 'category', attributes: ['name'] }]
-            }]
-        }]
+                required: false,
+                include: [{ model: CategoriesModel, as: 'category', attributes: ['name'], required: false }]
+            }
+        ],
+        raw: false,
     });
 
     let categoryMap = {};
 
-    orders.forEach(order => {
-        if (order.orders_items) {
-            order.orders_items.forEach(item => {
-                const categoryName = item.product?.category?.name || 'Kategoriyasız';
-                const productLabel = item.product?.name || item.name || 'Naməlum';
-                const productKey = item.product_id || item.product?.id || productLabel;
-                const lineTotal = lineItemTotalForReport(item);
-                const qty = parseFloat(item.count || 0);
+    items.forEach(item => {
+        const categoryName = item.product?.category?.name || 'Kategoriyasız';
+        const productLabel = item.product?.name || 'Naməlum';
+        const productKey = item.product_id || productLabel;
+        const lineTotal = lineItemTotalForReport(item);
+        const qty = parseFloat(item.count || 0);
 
-                if (!categoryMap[categoryName]) {
-                    categoryMap[categoryName] = {
-                        name: categoryName,
-                        quantity: 0,
-                        total: 0,
-                        products: {}
-                    };
-                }
-                const cat = categoryMap[categoryName];
-                cat.quantity += qty;
-                cat.total += lineTotal;
-
-                if (!cat.products[productKey]) {
-                    cat.products[productKey] = {
-                        name: productLabel,
-                        quantity: 0,
-                        total: 0
-                    };
-                }
-                cat.products[productKey].quantity += qty;
-                cat.products[productKey].total += lineTotal;
-            });
+        if (!categoryMap[categoryName]) {
+            categoryMap[categoryName] = { name: categoryName, quantity: 0, total: 0, products: {} };
         }
+        const cat = categoryMap[categoryName];
+        cat.quantity += qty;
+        cat.total += lineTotal;
+
+        if (!cat.products[productKey]) {
+            cat.products[productKey] = { name: productLabel, quantity: 0, total: 0 };
+        }
+        cat.products[productKey].quantity += qty;
+        cat.products[productKey].total += lineTotal;
     });
 
     return Object.values(categoryMap)
@@ -661,12 +569,11 @@ const getRefundsReport = async (baseWhere, start, end) => {
             ...baseWhere,
             status: 3,
             is_return: 1,
-            updated_at: { [Op.between]: [start, end] }
+            start_date: { [Op.gte]: start, [Op.lte]: end }
         },
-        include: [
-            { model: WaitersModel, as: 'waiter', attributes: ['name'] }
-        ],
-        order: [['updated_at', 'DESC']]
+        include: [{ model: WaitersModel, as: 'waiter', attributes: ['name'] }],
+        order: [['start_date', 'DESC']],
+        paranoid: false,
     });
     return orders.map(o => o.toJSON());
 };
@@ -677,7 +584,7 @@ const getFinancialReport = async (baseWhere, start, end) => {
         where: {
             ...baseWhere,
             status: 2,
-            end_date: { [Op.between]: [start, end] }
+            end_date: { [Op.gte]: start, [Op.lte]: end }
         },
         attributes: ['id'],
         include: [{
@@ -719,33 +626,28 @@ const getFinancialReport = async (baseWhere, start, end) => {
 };
 
 const getGiftedProductsReport = async (whereClause) => {
-    const orders = await OrdersModel.findAll({
-        where: whereClause,
-        attributes: ['id', 'end_date'],
-        include: [{
-            model: OrdersItemsModel,
-            as: 'orders_items',
-            where: { is_gift: 1 },
-            attributes: ['count'],
-            include: [{ model: ProductsModel, as: 'product', attributes: ['name'] }]
-        }]
+    const items = await OrdersItemsModel.findAll({
+        where: { is_gift: 1 },
+        attributes: ['count'],
+        include: [
+            {
+                model: OrdersModel,
+                as: 'order',
+                attributes: ['id', 'end_date'],
+                where: whereClause,
+                required: true,
+            },
+            { model: ProductsModel, as: 'product', attributes: ['name'], required: false }
+        ],
+        raw: false,
     });
 
-    let gifts = [];
-    orders.forEach(order => {
-        if (order.orders_items) {
-            order.orders_items.forEach(item => {
-                gifts.push({
-                    order_id: order.id,
-                    product_name: item.product?.name || 'Naməlum',
-                    quantity: item.count,
-                    time: order.end_date
-                });
-            });
-        }
-    });
-
-    return gifts;
+    return items.map(item => ({
+        order_id: item.order?.id,
+        product_name: item.product?.name || 'Naməlum',
+        quantity: item.count,
+        time: item.order?.end_date
+    }));
 };
 
 const getCustomersReport = async (whereClause) => {
@@ -804,10 +706,13 @@ const getTerminals = async (req, res) => {
  * @param {Date|string} endStr
  */
 const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) => {
-    // Date obyekti gəlsə olduğu kimi işlət (Sequelize timezone-a görə düzgün çevirir)
-    // String gəlsə Date-ə çevir
-    const startVal = startStr instanceof Date ? startStr : new Date(startStr);
-    const endVal = endStr instanceof Date ? endStr : new Date(endStr);
+    // String tarix müqayisəsi — timezone problemini aradan qaldırır
+    const startVal = startStr instanceof Date
+        ? startStr.toISOString().replace('T', ' ').slice(0, 19)
+        : startStr;
+    const endVal = endStr instanceof Date
+        ? endStr.toISOString().replace('T', ' ').slice(0, 19)
+        : endStr;
     const baseWhere = { profile_id: profileId };
     if (terminalId && String(terminalId) !== "all") {
         baseWhere.terminal_id = terminalId;
@@ -815,7 +720,7 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
     const closedWhere = {
         ...baseWhere,
         status: 2,
-        end_date: { [Op.between]: [startVal, endVal] },
+        end_date: { [Op.gte]: startVal, [Op.lte]: endVal },
     };
 
     const profile = await LoginModel.findOne({ where: { id: profileId } });
@@ -848,12 +753,12 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
             ]
         }),
         OrdersModel.findAll({
-            where: { ...baseWhere, status: 3, is_return: 1, updated_at: { [Op.between]: [startVal, endVal] } },
+            where: { ...baseWhere, status: 3, is_return: 1, start_date: { [Op.gte]: startVal, [Op.lte]: endVal } },
             include: [{ model: require("../model/TagsModel"), as: 'delete_reason', required: false }],
             paranoid: false
         }),
         OrdersModel.findAll({
-            where: { ...baseWhere, status: 3, is_delete_reason_id: { [Op.not]: null }, [Op.or]: [{ is_return: null }, { is_return: 0 }], updated_at: { [Op.between]: [startVal, endVal] } },
+            where: { ...baseWhere, status: 3, is_delete_reason_id: { [Op.not]: null }, [Op.or]: [{ is_return: null }, { is_return: 0 }], start_date: { [Op.gte]: startVal, [Op.lte]: endVal } },
             include: [{ model: require("../model/TagsModel"), as: 'delete_reason', required: false }],
             paranoid: false
         }),

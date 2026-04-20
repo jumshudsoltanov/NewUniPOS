@@ -867,6 +867,7 @@ router.post("/sync/auto-diagnose-ghosts", async (req, res) => {
     }
 
     // Step 4: Close ghost orders on server
+    let fixedGhosts = 0;
     if (ghostRemoteOrders.length > 0) {
         const payload = {
             profile_id: currentProfileId,
@@ -875,9 +876,35 @@ router.post("/sync/auto-diagnose-ghosts", async (req, res) => {
             force_overwrite: true
         };
         await SyncService.sendToAdmin(payload);
+        fixedGhosts = ghostRemoteOrders.length;
     }
     
-    // Check locally stuck again
+    // Step 5: (New) Posda olub Adminde (Serverdə) olmayan çəkləri tap və yenidən göndər
+    const localActiveOrders = await OrdersModel.findAll({
+        where: { status: 1, deleted_at: null },
+        paranoid: false
+    });
+
+    let stuckMissingChecked = 0;
+    for (const lo of localActiveOrders) {
+        const isMissingOnServer = !remoteActiveOrders.some(ro => ro.uuid === lo.uuid);
+        if (isMissingOnServer) {
+            // It's open locally, but server doesn't have it open.
+            // We force it to reset and push
+            await OrdersModel.update(
+                { is_synced: 0 },
+                { where: { id: lo.id }, paranoid: false }
+            );
+            stuckMissingChecked++;
+        }
+    }
+
+    if (stuckMissingChecked > 0) {
+        SyncService._retryCounts.clear();
+        await SyncService.syncPendingOrders(); // Force wait until done
+    }
+
+    // Step 6: Check locally stuck again
     const pendingDetails = await OrdersModel.count({
         where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }] },
         paranoid: false
@@ -886,9 +913,32 @@ router.post("/sync/auto-diagnose-ghosts", async (req, res) => {
     res.json({ 
         success: true, 
         message: "Avtomatik təmizlənmə tamamlandı.", 
-        fixedGhosts: ghostRemoteOrders.length,
+        fixedGhosts: fixedGhosts,
+        stuckPushed: stuckMissingChecked,
         remainingStuck: pendingDetails
     });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// Yeni: Tək çeki məcburi yenidən göndər
+router.post("/sync/force-sync-order/:uuid", async (req, res) => {
+  try {
+    const { uuid } = req.params;
+    const SyncService = require("../services/SyncService");
+    
+    // Statusu sıfırla ki, sistem onu yeni kimi görsün
+    await OrdersModel.update(
+      { is_synced: 0 },
+      { where: { uuid }, paranoid: false }
+    );
+    
+    // Dərhal göndərməyə çalış
+    SyncService._retryCounts.delete(uuid);
+    await SyncService.triggerSync(uuid);
+    
+    res.json({ success: true, message: "Çək yenidən növbəyə alındı və göndərildi." });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }
