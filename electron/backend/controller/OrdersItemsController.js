@@ -36,6 +36,15 @@ const sendWasteToAdmin = async (profileId, wasteItems) => {
   console.error("[WASTE] All endpoints failed — waste not recorded in anbar");
 };
 
+// Immediate best-effort sync for critical state transitions (close/delete/reopen/merge).
+const syncNowAndQueue = async (orderIds = []) => {
+  const uniqueIds = [...new Set((orderIds || []).filter(Boolean))];
+  if (!uniqueIds.length) return;
+
+  await Promise.allSettled(uniqueIds.map((id) => SyncService.triggerSync(id)));
+  uniqueIds.forEach((id) => SyncService.queueSync(id));
+};
+
 /**
  * Helper to attach live timer status to an order object for responses.
  */
@@ -695,12 +704,10 @@ const onDeleteOrderItems = async (req, res) => {
       { where: { uuid: orderId } },
     );
 
-    res
-      .status(200)
-      .json({
-        message: "delete all items",
-        data: { uuid: orderId, status: nextStatus, orders_items: [] },
-      });
+    res.status(200).json({
+      message: "delete all items",
+      data: { uuid: orderId, status: nextStatus, orders_items: [] },
+    });
 
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
@@ -784,21 +791,25 @@ const onMergeChecks = async (req, res) => {
     // Cəm: məhsullar + taymer (masa/məhsul saatlığı) — köçürmə ilə eyni məntiq
     await recalculateOrderTotalsWithTimer(currentOrderId, transaction);
 
-    // Close the merged (old) order: status=3 so admin knows it's gone, then soft-delete
+    // Close the merged (old) order with status=3 and keep row for reliable sync/update on admin
     await OrdersModel.update(
-      { status: 3, amount: 0, total: 0, end_date: new Date(), is_synced: 0 },
+      {
+        status: 3,
+        amount: 0,
+        total: 0,
+        end_date: new Date(),
+        is_active_timer: 0,
+        is_timer_status: 0,
+        is_synced: 0,
+      },
       { where: { uuid: newOrderId }, transaction },
     );
-    await OrdersModel.destroy({
-      where: { uuid: newOrderId },
-      transaction,
-    });
 
     // Commit
     await transaction.commit();
 
-    SyncService.queueSync(currentOrderId);
-    SyncService.queueSync(newOrderId); // Send status=3 to admin so it no longer shows as AÇIQ
+    // Try to sync both orders immediately; if any call fails, keep them in queue for retry loop
+    await syncNowAndQueue([currentOrderId, newOrderId]);
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: currentOrderId },
@@ -1556,46 +1567,26 @@ const onDeleteCheck = async (req, res) => {
 
     if (forceDestroy) {
       const serverItemCount = orderItems.length;
-      if (serverItemCount > 0) {
-        console.warn(
-          `[DELETE_CHECK_GUARD] forceDestroy blocked — order ${orderId} has ${serverItemCount} items on server. Converting to soft-delete.`,
-        );
-        await OrdersModel.update(
-          {
-            status: 3,
-            end_date: new Date(),
-            is_delete_reason_id: reason,
-            is_synced: 0,
-          },
-          { where: { uuid: orderId } },
-        );
-        SyncService.queueSync(orderId);
-        if (getIo()) getIo().emit("table_updated", { orderId });
-        return res.status(200).json({ message: "success", guarded: true });
-      }
-      await OrdersItemsModel.destroy({
-        where: { order_id: orderId },
-        force: true,
-      });
-      await OrderPaymentsModel.destroy({
-        where: { order_id: orderId },
-        force: true,
-      });
-      await OrdersModel.destroy({ where: { uuid: orderId }, force: true });
-    } else {
-      await OrdersModel.update(
-        {
-          status: 3,
-          end_date: new Date(),
-          is_delete_reason_id: reason,
-          is_synced: 0,
-        },
-        { where: { uuid: orderId } },
+      console.warn(
+        `[DELETE_CHECK_GUARD] forceDestroy converted to soft-delete for reliable admin sync. order=${orderId}, items=${serverItemCount}`,
       );
-      SyncService.queueSync(orderId);
     }
 
+    await OrdersModel.update(
+      {
+        status: 3,
+        end_date: new Date(),
+        is_delete_reason_id: reason,
+        is_synced: 0,
+      },
+      { where: { uuid: orderId } },
+    );
+
     if (getIo()) getIo().emit("table_updated", { orderId });
+
+    syncNowAndQueue([orderId]).catch((e) =>
+      console.warn(`[DELETE_CHECK_SYNC] ${orderId}: ${e?.message || e}`),
+    );
 
     // Anbar əməliyyatı — arxa planda
     if (orderItems.length > 0 && ord?.profile_id) {
@@ -1764,7 +1755,9 @@ const onCloseOrder = async (req, res) => {
     res.status(200).json({ message: "success" });
 
     // Trigger sync in background (non-blocking)
-    SyncService.queueSync(orderId);
+    syncNowAndQueue([orderId]).catch((e) =>
+      console.warn(`[CLOSE_SYNC] ${orderId}: ${e?.message || e}`),
+    );
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
   } catch (error) {
@@ -1820,7 +1813,9 @@ const onUpdateDepositOrder = async (req, res) => {
       { where: { uuid: orderId } },
     );
 
-    SyncService.queueSync(orderId);
+    syncNowAndQueue([orderId]).catch((e) =>
+      console.warn(`[DEPOSIT_SYNC] ${orderId}: ${e?.message || e}`),
+    );
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1879,7 +1874,9 @@ const onReopenOrder = async (req, res) => {
       },
       { where: { uuid: orderId } },
     );
-    SyncService.queueSync(orderId);
+    syncNowAndQueue([orderId]).catch((e) =>
+      console.warn(`[REOPEN_SYNC] ${orderId}: ${e?.message || e}`),
+    );
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -1913,7 +1910,9 @@ const onReturnCheck = async (req, res) => {
       },
       { where: { uuid: orderId } },
     );
-    SyncService.queueSync(orderId);
+    syncNowAndQueue([orderId]).catch((e) =>
+      console.warn(`[RETURN_SYNC] ${orderId}: ${e?.message || e}`),
+    );
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
@@ -3018,15 +3017,15 @@ module.exports = {
 
       await transaction.commit();
 
-      res
-        .status(200)
-        .json({
-          uuid: orderId,
-          success: true,
-          deletedItems: items.map((i) => i.itemId),
-        });
+      res.status(200).json({
+        uuid: orderId,
+        success: true,
+        deletedItems: items.map((i) => i.itemId),
+      });
 
-      SyncService.queueSync(orderId);
+      syncNowAndQueue([orderId]).catch((e) =>
+        console.warn(`[BATCH_DELETE_SYNC] ${orderId}: ${e?.message || e}`),
+      );
       const { getIo } = require("../socket/MasterServer");
       if (getIo()) getIo().emit("table_updated", { orderId });
 

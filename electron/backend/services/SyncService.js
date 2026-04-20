@@ -18,7 +18,11 @@ const ADMIN_API_FALLBACK_URL = "http://46.224.8.157:35627/api/sync";
 // minVersion TLSv1 required: server uses older TLS, Node.js v24+ defaults to TLS 1.2 minimum
 const syncAxios = axios.create({
   httpAgent: new http.Agent({ keepAlive: false }),
-  httpsAgent: new https.Agent({ keepAlive: false, rejectUnauthorized: false, minVersion: 'TLSv1' }),
+  httpsAgent: new https.Agent({
+    keepAlive: false,
+    rejectUnauthorized: false,
+    minVersion: "TLSv1",
+  }),
 });
 
 /** Bir sifariş üçün maks. gözləmə — donmuş HTTP/socket üçün */
@@ -280,15 +284,12 @@ class SyncService {
         }),
       ]);
 
-      const isDeleted = !!(order.deletedAt || order.deleted_at || order.get?.('deletedAt') || order.get?.('deleted_at'));
-      if (items.length === 0 && order.status !== 2 && order.status !== 3 && !isDeleted) {
-        await OrdersModel.update(
-          { is_synced: 1 },
-          { where: { uuid: orderId }, paranoid: false },
-        );
-        this._retryCounts.delete(orderId);
-        return;
-      }
+      const isDeleted = !!(
+        order.deletedAt ||
+        order.deleted_at ||
+        order.get?.("deletedAt") ||
+        order.get?.("deleted_at")
+      );
 
       const table = order.table_id
         ? await TablesModel.findOne({ where: { id: order.table_id } })
@@ -361,16 +362,23 @@ class SyncService {
             await this.sendToAdmin({ ...payload, force_overwrite: true });
           } catch (retryErr) {
             if (retryErr.isAlreadySynced) {
-              console.log(
-                `[SYNC_409_OK] Order ${orderId} admin-da, synced qeyd olundu.`,
+              const isOrderOpen = Number(order.status) === 1 && !isDeleted;
+              if (isOrderOpen) {
+                console.log(
+                  `[SYNC_409_OK] Order ${orderId} admin-da, open state unchanged. Marking synced.`,
+                );
+                await OrdersModel.update(
+                  { is_synced: 1 },
+                  { where: { uuid: orderId }, paranoid: false },
+                ).catch(() => {});
+                this._retryCounts.delete(orderId);
+                this.lastSyncTime = new Date();
+                return;
+              }
+
+              throw new Error(
+                `409 conflict on non-open order (${orderId}); keeping pending for retry`,
               );
-              await OrdersModel.update(
-                { is_synced: 1 },
-                { where: { uuid: orderId }, paranoid: false },
-              ).catch(() => {});
-              this._retryCounts.delete(orderId);
-              this.lastSyncTime = new Date();
-              return;
             }
             throw retryErr;
           }
@@ -411,16 +419,36 @@ class SyncService {
     } catch (error) {
       console.error(`[SYNC_FAIL] ${orderId}: ${error.message}`);
       if (error.isAlreadySynced) {
-        // Admin already has this data (409 Conflict) — mark as synced locally
-        console.log(
-          `[SYNC_ALREADY] Order ${orderId} already on admin, marking synced.`,
+        // 409 may be safe only for open orders; for closed/deleted orders we must retry
+        const latest = await OrdersModel.findOne({
+          where: { uuid: orderId },
+          paranoid: false,
+          attributes: ["status", "deleted_at"],
+        }).catch(() => null);
+        const latestIsDeleted = !!(
+          latest?.get?.("deleted_at") || latest?.get?.("deletedAt")
         );
-        await OrdersModel.update(
-          { is_synced: 1 },
-          { where: { uuid: orderId }, paranoid: false },
-        ).catch(() => {});
-        this._retryCounts.delete(orderId);
-        return;
+        const latestStatus = Number(latest?.status);
+
+        if (latestStatus === 1 && !latestIsDeleted) {
+          console.log(
+            `[SYNC_ALREADY] Order ${orderId} already on admin, open state unchanged. Marking synced.`,
+          );
+          await OrdersModel.update(
+            { is_synced: 1 },
+            { where: { uuid: orderId }, paranoid: false },
+          ).catch(() => {});
+          this._retryCounts.delete(orderId);
+          return;
+        }
+
+        this.recordSyncFailure(
+          orderId,
+          new Error(
+            `409 conflict on closed/deleted order ${orderId}; retry required`,
+          ),
+        );
+        throw error;
       }
       this.recordSyncFailure(orderId, error);
       if (error.isValidationError) {
@@ -595,55 +623,66 @@ class SyncService {
     const payloadSize = JSON.stringify(payload).length;
     const orderCount = payload.orders?.length || 0;
     const itemCount = payload.items?.length || 0;
-    console.log(`[SYNC_SEND] Sending: ${orderCount} orders, ${itemCount} items, payload size: ${(payloadSize / 1024).toFixed(1)}KB`);
+    console.log(
+      `[SYNC_SEND] Sending: ${orderCount} orders, ${itemCount} items, payload size: ${(payloadSize / 1024).toFixed(1)}KB`,
+    );
 
     // Try both URLs in parallel, use whichever responds first
     try {
       await Promise.any(
-        urls.map(url =>
-          syncAxios.post(url, payload, { timeout: 30000 }).then(res => {
-            // 2xx = success
-            if (res.status >= 200 && res.status < 300) {
-              console.log(`[SYNC_SEND] Success via ${url}, status: ${res.status}`);
-              return true;
-            }
-            throw new Error(`Unexpected status ${res.status}`);
-          }).catch(error => {
-            const status = error.response?.status;
+        urls.map((url) =>
+          syncAxios
+            .post(url, payload, { timeout: 30000 })
+            .then((res) => {
+              // 2xx = success
+              if (res.status >= 200 && res.status < 300) {
+                console.log(
+                  `[SYNC_SEND] Success via ${url}, status: ${res.status}`,
+                );
+                return true;
+              }
+              throw new Error(`Unexpected status ${res.status}`);
+            })
+            .catch((error) => {
+              const status = error.response?.status;
 
-            // 409 Conflict = data already exists on admin → treat as success
-            if (status === 409) {
-              const alreadyErr = new Error(`Admin already has this order (409)`);
-              alreadyErr.isAlreadySynced = true;
-              throw alreadyErr;
-            }
+              // 409 Conflict = data already exists on admin → treat as success
+              if (status === 409) {
+                const alreadyErr = new Error(
+                  `Admin already has this order (409)`,
+                );
+                alreadyErr.isAlreadySynced = true;
+                throw alreadyErr;
+              }
 
-            // 400/422 = permanent data error, don't retry
-            if (status === 400 || status === 422) {
-              const validationErr = new Error(
-                `Admin API Validation Error: ${status} - ${JSON.stringify(error.response?.data)}`
+              // 400/422 = permanent data error, don't retry
+              if (status === 400 || status === 422) {
+                const validationErr = new Error(
+                  `Admin API Validation Error: ${status} - ${JSON.stringify(error.response?.data)}`,
+                );
+                validationErr.isValidationError = true;
+                throw validationErr;
+              }
+
+              // Everything else (404, 5xx, network) = retryable
+              lastError = error;
+              console.warn(
+                `[SYNC_URL_FAIL] ${url} (${status || error.code}): ${error.message}`,
               );
-              validationErr.isValidationError = true;
-              throw validationErr;
-            }
-
-            // Everything else (404, 5xx, network) = retryable
-            lastError = error;
-            console.warn(`[SYNC_URL_FAIL] ${url} (${status || error.code}): ${error.message}`);
-            throw error;
-          })
-        )
+              throw error;
+            }),
+        ),
       );
       return true;
     } catch (aggregateError) {
       const errors = aggregateError?.errors || [];
 
       // If any URL said "already synced" → treat as success
-      const alreadySynced = errors.find(e => e?.isAlreadySynced);
+      const alreadySynced = errors.find((e) => e?.isAlreadySynced);
       if (alreadySynced) throw alreadySynced;
 
       // If any URL returned a permanent validation error → skip forever
-      const validationErr = errors.find(e => e?.isValidationError);
+      const validationErr = errors.find((e) => e?.isValidationError);
       if (validationErr) throw validationErr;
 
       throw lastError || new Error("All sync endpoints failed");
