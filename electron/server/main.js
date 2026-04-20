@@ -1512,7 +1512,7 @@ ipcMain.handle("get-disk-info", async () => {
       'wmic logicaldisk where DeviceID="C:" get FreeSpace,Size /format:list',
       (error, stdout) => {
         if (error) {
-          console.error("OS Disk Error:", error);
+          // console.error("OS Disk Error:", error); // Sessizləşdirildi
           resolve({ used: 0, total: 0, free: 0 });
           return;
         }

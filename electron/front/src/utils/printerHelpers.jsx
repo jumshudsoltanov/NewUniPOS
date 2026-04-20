@@ -288,6 +288,31 @@ export const processAndPrintOrders = async (
             printerObj.usb_name.trim() &&
             printerObj.usb_name !== "RASTER"
           );
+          const isComDel = _connType1 === "com";
+          const delPrinterSettings = printerObj ? {
+              encoding: printerObj.encoding || "utf8",
+              copies: printerObj.copies || 1,
+              darkness: printerObj.darkness || 5,
+              cut_mode: printerObj.cut_mode || "full",
+              trailing_space: printerObj.trailing_space || 0,
+              receipt_header: printerObj.receipt_header || null,
+              receipt_footer: printerObj.receipt_footer || null,
+              bold_header: printerObj.bold_header || 0,
+              double_height_header: printerObj.double_height_header || 0,
+              sound_notify: printerObj.sound_notify || 0,
+              cash_drawer: printerObj.cash_drawer || 0,
+              open_drawer_without_print: printerObj.open_drawer_without_print || 0,
+              paper_size: printerObj.paper_size || "80",
+              font_family: printerObj.font_family || "Arial",
+              usb_name: isComDel ? null : (printerObj.usb_name && printerObj.usb_name !== "RASTER" ? printerObj.usb_name : null),
+              fast_print: printerObj.fast_print ? 1 : 0,
+              print_logo: printerObj.print_logo != null ? Number(printerObj.print_logo) : 1,
+              rotate_180: printerObj.rotate_180 ? 1 : 0,
+              baud_rate: printerObj.baud_rate || "9600",
+              connection_type: _connType1 || null,
+              com_port: isComDel ? printerObj.usb_name || null : null,
+          } : {};
+          const safeDelSettings = JSON.parse(JSON.stringify(delPrinterSettings));
           const delegatePayload =
             isNet && printerObj?.ip && !hasUsb
               ? {
@@ -295,8 +320,9 @@ export const processAndPrintOrders = async (
                   printerName: "",
                   printerIp: printerObj.ip,
                   printerPort: printerObj.port || 9100,
+                  printerSettings: safeDelSettings,
                 }
-              : { html, printerName: printerObj?.usb_name || printerName };
+              : { html, printerName: printerObj?.usb_name || printerName, printerSettings: safeDelSettings };
           console.warn(
             `[PRINTER] Mərkəzi mətbəx çapı Slave-dən Master-a göndərilir`,
           );

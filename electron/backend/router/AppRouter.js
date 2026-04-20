@@ -744,4 +744,154 @@ router.post("/sync/clear-stuck", async (req, res) => {
   }
 });
 
+// POST /sync/force-delete-remote — allows the user to forcefully delete/close a ghost check on the central server
+router.post("/sync/force-delete-remote", async (req, res) => {
+  try {
+    const { remoteId } = req.body;
+    if (!remoteId) {
+      return res.status(400).json({ success: false, message: "ID və ya UUID tələb olunur" });
+    }
+    const SyncService = require("../services/SyncService");
+    const currentProfileId = await SyncService.getCurrentProfileId();
+    if (!currentProfileId) {
+       return res.status(400).json({ success: false, message: "Profile tapılmadı" });
+    }
+    const payload = {
+      profile_id: currentProfileId,
+      orders: [
+        {
+          uuid: remoteId,
+          id: /^\d+$/.test(remoteId) ? Number(remoteId) : undefined,
+          status: 3,
+          amount: 0,
+          total: 0,
+          deleted_at: new Date().toISOString()
+        }
+      ],
+      items: [],
+      deleted_items: [],
+      logs: [],
+      payments: [],
+      table_groups: [],
+      tables: []
+    };
+    
+    // Explicitly add force_overwrite to override server conflicts
+    await SyncService.sendToAdmin({ ...payload, force_overwrite: true });
+    
+    res.json({ success: true, message: "Əmr serverə göndərildi (Silindi/Bağlandı)" });
+  } catch (e) {
+    if (e.isAlreadySynced || (e.message && e.message.includes("409"))) {
+        res.json({ success: true, message: "Server artıq bu çeki silinmiş/bağlı hesab edir (409)" });
+        return;
+    }
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// POST /sync/auto-diagnose-ghosts — fetches remote active orders and resolves any ghost checks or pushes stuck checks
+router.post("/sync/auto-diagnose-ghosts", async (req, res) => {
+  try {
+    const { Op } = require("sequelize");
+    const axios = require("axios");
+    const SyncService = require("../services/SyncService");
+    const OrdersModel = require("../model/OrdersModel");
+
+    let currentProfileId = await SyncService.getCurrentProfileId();
+    if (!currentProfileId) {
+       // On slave terminals, LoginModel might be empty, so we fallback to reading profile_id from local orders
+       const latestOrder = await OrdersModel.findOne({ order: [["id", "DESC"]], paranoid: false });
+       if (latestOrder && latestOrder.profile_id) {
+           currentProfileId = latestOrder.profile_id;
+       } else {
+           return res.status(400).json({ success: false, message: "Profile tapılmadı (Kassa məlumatı yoxdur)" });
+       }
+    }
+
+    // Step 1: Push all stuck local orders to make sure server receives our latest state first
+    await OrdersModel.update(
+      { is_synced: 0 },
+      { where: { is_synced: 2 }, paranoid: false }
+    );
+    SyncService._retryCounts.clear();
+    await SyncService.syncPendingOrders(); // Force wait until done
+
+    // Step 2: Fetch remote active checks
+    const ADMIN_API_URL = "https://api.unipos.tech/api";
+    // We try both https and fallback IP, but let's just use the logic SyncService uses
+    const urls = [
+      `https://api.unipos.tech/api/pos/active-orders?profile_id=${currentProfileId}`,
+      `http://46.224.8.157:35627/api/pos/active-orders?profile_id=${currentProfileId}`
+    ];
+
+    let remoteActiveOrders = null;
+    for (const url of urls) {
+      try {
+        const response = await axios.get(url, { timeout: 10000 });
+        if (response.data && response.data.success) {
+          remoteActiveOrders = response.data.activeOrders;
+          break;
+        }
+      } catch (err) {
+        // Continue to the next fallback url
+      }
+    }
+
+    if (!remoteActiveOrders) {
+       return res.status(502).json({ success: false, message: "Serverlə əlaqə yaradıla bilmədi və ya API mövcud deyil." });
+    }
+
+    // Step 3: Compare remote vs local
+    // Find remote active ones
+    const ghostRemoteOrders = [];
+    for (const remoteOrder of remoteActiveOrders) {
+        const localOrder = await OrdersModel.findOne({
+            where: { uuid: remoteOrder.uuid },
+            paranoid: false
+        });
+
+        // If it doesn't exist locally at all OR is not active locally (deleted or closed)
+        const isLocallyMissing = !localOrder;
+        const isLocallyClosed = localOrder && (localOrder.status !== 1 || localOrder.deleted_at || localOrder.deletedAt);
+
+        if (isLocallyMissing || isLocallyClosed) {
+            ghostRemoteOrders.push({
+                uuid: remoteOrder.uuid,
+                id: remoteOrder.pos_id,
+                status: 3,
+                amount: 0,
+                total: 0,
+                deleted_at: new Date().toISOString() // Force delete on remote
+            });
+        }
+    }
+
+    // Step 4: Close ghost orders on server
+    if (ghostRemoteOrders.length > 0) {
+        const payload = {
+            profile_id: currentProfileId,
+            orders: ghostRemoteOrders,
+            items: [], deleted_items: [], logs: [], payments: [], table_groups: [], tables: [],
+            force_overwrite: true
+        };
+        await SyncService.sendToAdmin(payload);
+    }
+    
+    // Check locally stuck again
+    const pendingDetails = await OrdersModel.count({
+        where: { [Op.or]: [{ is_synced: 0 }, { is_synced: null }, { is_synced: 2 }] },
+        paranoid: false
+    });
+
+    res.json({ 
+        success: true, 
+        message: "Avtomatik təmizlənmə tamamlandı.", 
+        fixedGhosts: ghostRemoteOrders.length,
+        remainingStuck: pendingDetails
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 module.exports = router;

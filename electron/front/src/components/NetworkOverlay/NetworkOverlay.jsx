@@ -122,34 +122,7 @@ const NetworkOverlay = () => {
         }
     };
 
-    useEffect(() => {
-        if (!overlayActive) {
-            hasAutoScanned.current = false;
-            return;
-        }
-        if (!showIpConfigModal) return;
-        if (!checkIsSlaveTerminal() || !window.electronAPI?.scanMaster || hasAutoScanned.current) return;
-        hasAutoScanned.current = true;
-        const runScan = async () => {
-            setIsScanning(true);
-            try {
-                const foundIp = await window.electronAPI.scanMaster();
-                if (foundIp) {
-                    setStaticIpInput(foundIp);
-                    if (window.electronAPI?.setStaticMasterIp) {
-                        await window.electronAPI.setStaticMasterIp(foundIp);
-                    }
-                    await initNetwork(false, false);
-                    window.location.reload();
-                }
-            } catch (e) {
-                console.error("Scan error:", e);
-            } finally {
-                setIsScanning(false);
-            }
-        };
-        runScan();
-    }, [overlayActive, showIpConfigModal]);
+
 
     const handleConnect = async () => {
         const ip = staticIpInput.trim();

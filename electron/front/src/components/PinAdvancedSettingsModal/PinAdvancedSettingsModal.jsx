@@ -132,6 +132,71 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
   const [resettingDb, setResettingDb] = useState(false);
 
+  const [syncTroubleshootLoading, setSyncTroubleshootLoading] = useState(false);
+  const [stuckOrders, setStuckOrders] = useState([]);
+  const [remoteCheckId, setRemoteCheckId] = useState("");
+  const [forcingRemote, setForcingRemote] = useState(false);
+  const [autoFixGhostsLoading, setAutoFixGhostsLoading] = useState(false);
+
+  const loadStuckOrders = async () => {
+     setSyncTroubleshootLoading(true);
+     try {
+       const { data } = await apiConfig.get("/sync/pending-details");
+       setStuckOrders(data?.orders || []);
+     } catch (err) {
+       toast.error("Gecikən/xətalı çeklər yüklənə bilmədi");
+     } finally {
+       setSyncTroubleshootLoading(false);
+     }
+  };
+
+  const handleForceRemoteDelete = async () => {
+      if (!remoteCheckId.trim()) return toast.warning("ID və ya UUID daxil edin");
+      setForcingRemote(true);
+      try {
+         const { data } = await apiConfig.post("/sync/force-delete-remote", { remoteId: remoteCheckId.trim() });
+         if (data?.success) {
+            toast.success(data.message || "Bağlanma əmri göndərildi");
+            setRemoteCheckId("");
+         } else {
+            toast.error(data?.message || "Xəta baş verdi");
+         }
+      } catch (err) {
+         toast.error(err?.response?.data?.message || err?.message || "Xəta baş verdi");
+      } finally {
+         setForcingRemote(false);
+      }
+  };
+
+  const handleAutoFixGhosts = async () => {
+       setAutoFixGhostsLoading(true);
+       try {
+           const { data } = await apiConfig.post("/sync/auto-diagnose-ghosts");
+           if (data?.success) {
+               toast.success(`Təmizləndi: ${data.fixedGhosts} ghost çək silindi.`);
+               loadStuckOrders();
+           } else {
+               toast.error(data?.message || "Xəta baş verdi");
+           }
+       } catch (err) {
+           toast.error(err?.response?.data?.message || err?.message || "Serverlə əlaqə yaradıla bilmədi.");
+       } finally {
+           setAutoFixGhostsLoading(false);
+       }
+  };
+
+  const handleForceRetryAll = async () => {
+       setSyncTroubleshootLoading(true);
+       try {
+           await apiConfig.post("/sync/force-now");
+           toast.success("Məcburi sinxronizasiya başladıldı");
+           setTimeout(loadStuckOrders, 2000); // 2s saniyəlik gözləmə
+       } catch (err) {
+           toast.error("Xəta baş verdi");
+           setSyncTroubleshootLoading(false);
+       }
+  };
+
   // WhatsApp
   const [waLoading, setWaLoading] = useState(false);
   const [waSaving, setWaSaving] = useState(false);
@@ -186,6 +251,12 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       }).catch(() => {});
     }
   }, [show]);
+
+  useEffect(() => {
+    if (view === "syncCheck") {
+      loadStuckOrders();
+    }
+  }, [view]);
 
   // Update event listeners
   useEffect(() => {
@@ -490,8 +561,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     view === "categoryView" ? "Kateqoriya görünüşü" :
     view === "receiptDesign" ? "Çek dizaynı" :
     view === "systemUsers" ? "Sistem istifadəçiləri" :
-    view === "changePin" ? "Şifrəni dəyiş" :
-    view === "operationNames" ? "Əməliyyat adları" : "Ayarlar";
+    view === "operationNames" ? "Əməliyyat adları" : 
+    view === "syncCheck" ? "Sinroxnizasiya Diaqnostikası" : "Ayarlar";
 
   return (
     <Modal
@@ -499,7 +570,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       onHide={handleModalHide}
       centered
       animation={false}
-      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" ? " pin-advanced-catview-wide" : ""}${view === "receiptDesign" ? " pin-advanced-receipt-wide" : ""}${view === "systemUsers" ? " pin-advanced-sysusers-wide" : ""}${view === "operationNames" ? " pin-advanced-opnames-wide" : ""}`}
+      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" ? " pin-advanced-catview-wide" : ""}${view === "receiptDesign" ? " pin-advanced-receipt-wide" : ""}${view === "systemUsers" ? " pin-advanced-sysusers-wide" : ""}${view === "operationNames" ? " pin-advanced-opnames-wide" : ""}${view === "syncCheck" ? " pin-advanced-wa-wide" : ""}`}
       contentClassName="custom-modal-content"
     >
       <div className="discount-modal-container">
@@ -537,6 +608,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
               ) : view === "operationNames" ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="17" y1="10" x2="3" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="21" y1="14" x2="3" y2="14" /><line x1="17" y1="18" x2="3" y2="18" />
+                </svg>
+              ) : view === "syncCheck" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e01b24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9-9a9 9 0 0 0-9 9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1136,6 +1211,112 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             </div>
           </div>
 
+        ) : view === "syncCheck" ? (
+          <div className="discount-body pin-advanced-sync-body pin-invisible-scroll" style={{ maxHeight: "70vh", overflowY: "auto", padding: "10px" }}>
+            <p className="wa-settings-hint" style={{ marginBottom: "20px", fontSize: "14px", color: "#555" }}>
+               Sisteminizi admin panellə sinxronizasiya anomaliyalarından (həm gecikən, həm də boş qalan çəklərdən) tam avtomatik təmizləyin.
+            </p>
+            
+            {/* Auto Fix Card */}
+            <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                   <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#ebf4ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#053796" }}>
+                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                       </svg>
+                   </div>
+                   <h3 style={{ fontSize: "16px", fontWeight: "600", margin: 0, color: "#1e293b" }}>Tam Avtomatik Həllər</h3>
+               </div>
+               <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "20px", lineHeight: 1.5 }}>
+                 Bu funksiya POS sisteminizlə server arasında fərqləri hər iki tərəfli (Push/Pull) yoxlayır. Əgər serverdə sizdə olmayan "ghost" çəklər varsa, və ya burada gecikib getməyən çəklər varsa, hər ikisini eyni anda tapıb təmizləyir.
+               </p>
+               <button 
+                  type="button" 
+                  style={{ width: "100%", padding: "14px", fontSize: "15px", fontWeight: "600", color: "#fff", background: "linear-gradient(135deg, #053796, #2563eb)", border: "none", borderRadius: "8px", cursor: "pointer", transition: "opacity 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: autoFixGhostsLoading ? 0.7 : 1 }} 
+                  onClick={handleAutoFixGhosts} 
+                  disabled={autoFixGhostsLoading}
+               >
+                  {autoFixGhostsLoading ? (
+                     <span>Avtomatik analiz edilir və təmizlənir...</span>
+                  ) : (
+                     <>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9-9a9 9 0 0 0-9 9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
+                        Bütün sistem problemlərini avtomatik həll et
+                     </>
+                  )}
+               </button>
+            </div>
+
+            {/* Local Stuck Orders Info */}
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                   <span style={{ fontSize: "15px", fontWeight: "600", color: "#334155" }}>
+                       Lokalda olan gecikən/xətalı çeklər <span style={{ background: "#e2e8f0", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>{stuckOrders.length}</span>
+                   </span>
+                   <button type="button" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", border: "1px solid #cbd5e1", color: "#475569", borderRadius: "6px", background: "white", fontSize: "13px", fontWeight: "500", cursor: "pointer" }} onClick={loadStuckOrders} disabled={syncTroubleshootLoading}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncTroubleshootLoading ? "spin-icon" : ""}><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.44l5.58 5.58"/></svg> Yenilə
+                   </button>
+                </div>
+                
+                {syncTroubleshootLoading ? (
+                  <div style={{fontSize: "13px", color:"#64748b"}}>Məlumatlar yoxlanılır...</div>
+                ) : stuckOrders.length === 0 ? (
+                  <div style={{fontSize: "14px", color:"#10b981", display: "flex", alignItems: "center", gap: "6px"}}>
+                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                     Yerli yaddaşda ləngiyən və ya xətalı çək yoxdur.
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: "180px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }} className="pin-invisible-scroll">
+                     {stuckOrders.map(o => (
+                        <div key={o.uuid} style={{ padding: "12px", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "13px", background: "white", color: "#334155" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                                <strong>UUID: <span style={{ fontWeight: "normal", color: "#64748b" }}>{o.uuid.split("-")[0]}...</span></strong>
+                                <span style={{ color: o.is_deleted ? '#ef4444' : o.status === 1 ? '#053796' : '#10b981', fontWeight: "600" }}>{o.is_deleted ? "Silinib" : o.status === 1 ? "Açıqdır" : o.status === 2 ? "Ödənilib" : "Bağlanıb"}</span>
+                            </div>
+                            <div style={{ color: "#64748b", fontSize: "12px", marginBottom: "4px" }}>Masa: {o.table_name || 'Yoxdur'} | Say: {o.item_count} | {new Date(o.updated_at).toLocaleString("az-AZ")}</div>
+                            <div style={{ fontSize: "12px", color: o.is_synced === 2 ? '#f59e0b' : '#ef4444' }}>{o.is_synced === 2 ? "• Gecikdiği üçün atlanıb (v2)" : "• Sinxronizasiya xətası"}</div>
+                        </div>
+                     ))}
+                  </div>
+                )}
+            </div>
+
+            {/* Manual Edit Accordeon */}
+            <details style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", overflow: "hidden" }}>
+               <summary style={{ fontSize: "14px", fontWeight: "600", color: "#475569", cursor: "pointer", outline: "none", padding: "16px", background: "#f8fafc", userSelect: "none" }}>
+                  🛠️ Əllə müdaxilə (Çətin hallar üçündür)
+               </summary>
+               <div style={{ padding: "20px", borderTop: "1px solid #e2e8f0" }}>
+                 <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "15px", lineHeight: 1.5 }}>
+                   Əgər avtomatik sistem nədənsə serveri təmizləyə bilməzsə (Server API xətası), Admin paneldən tapdığınız çək ID-sini (və ya UUID) məcburi bağlamaq/silmək üçün bura yazın.
+                 </p>
+                 <div style={{ display: "flex", gap: "10px" }}>
+                     <input 
+                        type="text" 
+                        value={remoteCheckId}
+                        onChange={e => setRemoteCheckId(e.target.value)}
+                        placeholder="ID daxil edin (məs: 1682)"
+                        style={{ padding: "12px", border: "1px solid #cbd5e1", borderRadius: "8px", flex: 1, outline: "none", fontSize: "14px" }}
+                        disabled={forcingRemote}
+                     />
+                     <button type="button" style={{ padding: "12px 20px", background: "#334155", color: "white", fontWeight: "600", border: "none", borderRadius: "8px", cursor: "pointer", transition: "0.2s" }} onClick={handleForceRemoteDelete} disabled={forcingRemote || !remoteCheckId.trim()}>
+                        {forcingRemote ? "Gözləyin..." : "Məcburi Bağla"}
+                     </button>
+                 </div>
+               </div>
+            </details>
+
+            <div className="wa-settings-actions" style={{ marginTop: "24px" }}>
+              <button 
+                type="button" 
+                style={{ width: "100%", padding: "14px", fontSize: "15px", fontWeight: "600", color: "#475569", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "8px", cursor: "pointer" }}
+                onClick={() => setView("main")}
+              >
+                Geri qayıt
+              </button>
+            </div>
+          </div>
+
         ) : (
           /* ── Əsas menyu ── */
           <div className="discount-body pin-advanced-settings-body">
@@ -1205,6 +1386,15 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                   </svg>
                 </span>
                 <span className="settings-menu-item-label">Əməliyyat adları</span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={() => setView("syncCheck")}>
+                <span className="settings-menu-item-icon" style={{ color: "#e01b24" }}>
+                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                     <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9-9a9 9 0 0 0-9 9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+                   </svg>
+                </span>
+                <span className="settings-menu-item-label" style={{ color: "#e01b24", fontWeight: "600" }}>Sync Diaqnostika</span>
               </button>
 
               <button type="button" className="settings-menu-item danger" onClick={() => { onClose(); onExitTerminal?.(); }}>

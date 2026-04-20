@@ -558,7 +558,7 @@ const CustomerReceipt = ({
                             Endirim ({discountInfo.percent}%)
                         </span>
                         <span style={styles.colTotal}>
-                            -{discountInfo.amount.toFixed(2)} ₼
+                            {discountInfo.amount.toFixed(2)} ₼
                         </span>
                     </div>
                 )}
@@ -577,7 +577,7 @@ const CustomerReceipt = ({
                 {deposit > 0 && (
                     <div style={styles.summaryRow}>
                         <span style={{ flex: 1 }}>Depozit</span>
-                        <span style={styles.colTotal}>-{deposit.toFixed(2)} ₼</span>
+                        <span style={styles.colTotal}>{deposit.toFixed(2)} ₼</span>
                     </div>
                 )}
 
@@ -590,7 +590,7 @@ const CustomerReceipt = ({
             <div style={styles.total}>
                 <span style={{ flex: 1 }}>YEKUN</span>
                 <span style={styles.colTotal}>
-                    {(Math.max(0, subtotal - discountInfo.amount - deposit) + serviceInfo.amount).toFixed(2)} ₼
+                    {Math.max(0, (Math.max(0, subtotal - discountInfo.amount - deposit) + serviceInfo.amount)).toFixed(2)} ₼
                 </span>
             </div>
 
@@ -632,7 +632,7 @@ const CustomerReceipt = ({
                     {(checkData?.change !== undefined) && (
                         <div style={styles.summaryRow}>
                             <span style={{ flex: 1 }}>QALIQ</span>
-                            <span>{parseFloat(checkData.change || 0).toFixed(2)} ₼</span>
+                            <span>{Math.max(0, parseFloat(checkData.change || 0)).toFixed(2)} ₼</span>
                         </div>
                     )}
                 </div>
