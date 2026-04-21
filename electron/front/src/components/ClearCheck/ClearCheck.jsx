@@ -76,6 +76,7 @@ const ClearCheck = ({ show, onClose, order }) => {
               typeName: displaySaleType,
               checkData: order,
               isDecrease: true,
+              profileData: loginedProfileData,
             },
             menuDataWithCategories,
           );

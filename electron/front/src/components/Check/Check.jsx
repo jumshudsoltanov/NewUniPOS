@@ -499,7 +499,8 @@ const Check = () => {
               terminalInfo: loginedProfileData?.data?.terminal || {},
               typeName: displaySaleType,
               checkData: currentOrder,
-              isDecrease: true
+              isDecrease: true,
+              profileData: loginedProfileData,
             },
             menuDataWithCategories
           ).catch(printError => console.error("Deletion Printing Error:", printError));
@@ -579,7 +580,8 @@ const Check = () => {
           terminalInfo: loginedProfileData?.data?.terminal || {},
           typeName: displaySaleType,
           checkData: currentOrder,
-          isDecrease: false
+          isDecrease: false,
+          profileData: loginedProfileData,
         };
 
         // 1. Regular items print (Kitchen/Product)
@@ -1168,7 +1170,8 @@ const Check = () => {
                 terminalInfo: loginedProfileData?.data?.terminal || {},
                 typeName: getSaleTypeNameTemp(currentOrder?.sale_type, currentOrder?.sale_type_name),
                 checkData: currentOrder,
-                isDecrease: true
+                isDecrease: true,
+                profileData: loginedProfileData,
               },
               menuDataWithCategories || menuDataWithCategoriesObj
             );
