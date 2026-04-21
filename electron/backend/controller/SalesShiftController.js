@@ -171,23 +171,29 @@ const getLiveSummary = async (req, res) => {
   try {
     const where = { profile_id: profileId, status: "open" };
     if (shiftUuid) where.uuid = shiftUuid;
+    // ÖNƏMLİ: ən ERKƏN açılan növbəni götür (ASC) — beləcə bütün
+    // terminalların sifarişləri tarix aralığına daxil olur.
+    // DESC istifadəsində slave master-dan sonra növbə açarsa,
+    // master-ın əvvəlki sifarişləri (məs. 400 AZN) itirdi.
     const shift = await SalesShiftsModel.findOne({
       where,
-      order: [["opened_at", "DESC"]],
+      order: [["opened_at", "ASC"]],
     });
     if (!shift) {
       return res.status(200).json({ message: "success", data: null });
     }
     const startDate = new Date(shift.opened_at);
     const endDate = new Date();
+    // Lokal vaxt formatında göndər — UTC çevrilməsi tarix aralığını
+    // 4 saat sürüşdürərək son sifarişləri itirir.
     const startStr = fmt(startDate);
     const endStr = fmt(endDate);
     // terminal_id filtri yox — bütün terminalların sifarişləri göstərilsin
     const summary = await getShiftSummaryForRange(
       profileId,
       null,
-      startDate,
-      endDate,
+      startStr,
+      endStr,
     );
     return res.status(200).json({
       message: "success",
@@ -211,14 +217,16 @@ const closeShift = async (req, res) => {
     }
     const startDate = new Date(shift.opened_at);
     const endDate = new Date();
+    // Lokal vaxt formatında göndər — UTC çevrilməsi tarix aralığını
+    // 4 saat sürüşdürərək son sifarişləri itirir.
     const startStr = fmt(startDate);
     const endStr = fmt(endDate);
     // terminal_id filtri yox — bütün terminalların sifarişləri göstərilsin
     const summary = await getShiftSummaryForRange(
       profileId,
       null,
-      startDate,
-      endDate,
+      startStr,
+      endStr,
     );
     const snapshot = {
       closedAt: endStr,
