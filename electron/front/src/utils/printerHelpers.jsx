@@ -304,7 +304,7 @@ export const processAndPrintOrders = async (
               open_drawer_without_print: printerObj.open_drawer_without_print || 0,
               paper_size: printerObj.paper_size || "80",
               font_family: printerObj.font_family || "Arial",
-              usb_name: isComDel ? null : (printerObj.usb_name && printerObj.usb_name !== "RASTER" ? printerObj.usb_name : null),
+              usb_name: isComDel ? null : (printerObj.usb_name && printerObj.usb_name !== "RASTER" ? printerObj.usb_name : (printerObj.local_name || printerObj.name || null)),
               fast_print: printerObj.fast_print ? 1 : 0,
               print_logo: printerObj.print_logo != null ? Number(printerObj.print_logo) : 1,
               rotate_180: printerObj.rotate_180 ? 1 : 0,
@@ -313,6 +313,9 @@ export const processAndPrintOrders = async (
               com_port: isComDel ? printerObj.usb_name || null : null,
           } : {};
           const safeDelSettings = JSON.parse(JSON.stringify(delPrinterSettings));
+          const resolvedDelUsbName = printerObj?.usb_name && printerObj.usb_name !== "RASTER"
+            ? printerObj.usb_name
+            : (printerObj?.local_name || printerObj?.name || printerName);
           const delegatePayload =
             isNet && printerObj?.ip && !hasUsb
               ? {
@@ -322,7 +325,7 @@ export const processAndPrintOrders = async (
                   printerPort: printerObj.port || 9100,
                   printerSettings: safeDelSettings,
                 }
-              : { html, printerName: printerObj?.usb_name || printerName, printerSettings: safeDelSettings };
+              : { html, printerName: resolvedDelUsbName, printerSettings: safeDelSettings };
           console.warn(
             `[PRINTER] Mərkəzi mətbəx çapı Slave-dən Master-a göndərilir`,
           );
@@ -387,11 +390,14 @@ export const processAndPrintOrders = async (
             printerObj.usb_name.trim() &&
             printerObj.usb_name !== "RASTER"
           );
-        const targetPrinter = isCom2
-          ? printerObj?.usb_name || ""
-          : printerObj?.usb_name && printerObj.usb_name !== "RASTER"
+        // printerName — printer_details-dan alınmış display adı (həmişə dolu)
+        // usb_name konfiqurasiya edilməyibsə local_name → name → printerName sıra ilə istifadə et
+        const resolvedUsbName = isCom2
+          ? (printerObj?.usb_name || printerName || "")
+          : (printerObj?.usb_name && printerObj.usb_name !== "RASTER")
             ? printerObj.usb_name
-            : "";
+            : (printerObj?.local_name || printerObj?.name || printerName || "");
+        const targetPrinter = resolvedUsbName;
         const printerSettings = printerObj
           ? {
               encoding: printerObj.encoding || "utf8",
@@ -411,9 +417,7 @@ export const processAndPrintOrders = async (
               font_family: printerObj.font_family || "Arial",
               usb_name: isCom2
                 ? null
-                : printerObj.usb_name && printerObj.usb_name !== "RASTER"
-                  ? printerObj.usb_name
-                  : null,
+                : resolvedUsbName || null,
               fast_print: printerObj.fast_print ? 1 : 0,
               print_logo:
                 printerObj.print_logo != null

@@ -288,7 +288,10 @@ function createWindow() {
     mainWindow.setKiosk(true);
   }
 
+  global.mainWindow = mainWindow;
+
   mainWindow.on("closed", () => {
+    global.mainWindow = null;
     mainWindow = null;
     if (customerWindow && !customerWindow.isDestroyed()) {
       customerWindow.close();

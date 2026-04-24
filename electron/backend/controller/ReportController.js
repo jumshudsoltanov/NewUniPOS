@@ -706,160 +706,168 @@ const getTerminals = async (req, res) => {
  * @param {Date|string} endStr
  */
 const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) => {
-    // String tarix müqayisəsi — timezone problemini aradan qaldırır
-    const startVal = startStr instanceof Date
-        ? startStr.toISOString().replace('T', ' ').slice(0, 19)
-        : startStr;
-    const endVal = endStr instanceof Date
-        ? endStr.toISOString().replace('T', ' ').slice(0, 19)
-        : endStr;
+    const TagsModel = require("../model/TagsModel");
+
+    // String tarix müqayisəsi — Date obyektlərini lokal vaxt sətrinə çevir
+    const fmt = (d) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    };
+    const startVal = startStr instanceof Date ? fmt(startStr) : startStr;
+    const endVal   = endStr   instanceof Date ? fmt(endStr)   : endStr;
+
     const baseWhere = { profile_id: profileId };
     if (terminalId && String(terminalId) !== "all") {
         baseWhere.terminal_id = terminalId;
     }
-    const closedWhere = {
-        ...baseWhere,
-        status: 2,
-        end_date: { [Op.gte]: startVal, [Op.lte]: endVal },
-    };
+    const closedWhere = { ...baseWhere, status: 2, end_date: { [Op.gte]: startVal, [Op.lte]: endVal } };
+    const returnedWhere = { ...baseWhere, status: 3, is_return: 1, start_date: { [Op.gte]: startVal, [Op.lte]: endVal } };
+    const deletedWhere  = { ...baseWhere, status: 3, is_delete_reason_id: { [Op.not]: null }, [Op.or]: [{ is_return: null }, { is_return: 0 }], start_date: { [Op.gte]: startVal, [Op.lte]: endVal } };
 
-    const profile = await LoginModel.findOne({ where: { id: profileId } });
-    const taxPercent = parseFloat(profile?.tax_percent || 0);
-
-    const [byEmployee, bySaleMethod, byCategory, checksCount, grossSum, closedOrders, returnedOrders, deletedOrders] = await Promise.all([
+    const [
+        profile,
+        byEmployee,
+        bySaleMethod,
+        byCategory,
+        closedAgg,
+        taxOrders,
+        giftItems,
+        payments,
+        closedTagOrders,
+        returnedAgg,
+        deletedAgg,
+    ] = await Promise.all([
+        LoginModel.findOne({ where: { id: profileId }, attributes: ['id', 'tax_percent'] }),
         getEmployeeReport(closedWhere),
         getSaleMethodReport(closedWhere),
         getCategoryReport(closedWhere),
-        OrdersModel.count({ where: closedWhere }),
-        OrdersModel.sum("total", { where: closedWhere }),
+
+        // Bağlı sifarişlər — SQL aggregate (sürətli)
         OrdersModel.findAll({
             where: closedWhere,
+            attributes: [
+                [fn('SUM', col('amount')), 'sum_amount'],
+                [fn('SUM', col('rate_per_minute')), 'sum_timer'],
+                [fn('SUM', col('discount')), 'sum_discount'],
+                [fn('SUM', col('service_charge')), 'sum_service'],
+                [fn('SUM', col('delivery_fee')), 'sum_delivery'],
+                [fn('SUM', col('total')), 'sum_total'],
+                [fn('SUM', col('guest_count')), 'sum_guests'],
+                [fn('SUM', col('is_tax')), 'sum_is_tax'],
+                [fn('COUNT', col('id')), 'cnt'],
+            ],
+            raw: true,
+        }),
+
+        // Vergi hesablaması üçün yalnız is_tax > 0 olan sifarişlər
+        OrdersModel.findAll({
+            where: { ...closedWhere, is_tax: { [Op.gt]: 0 } },
+            attributes: ['total', 'is_tax'],
+            raw: true,
+        }),
+
+        // İkram məhsulları
+        OrdersItemsModel.findAll({
+            include: [{ model: OrdersModel, as: 'order', attributes: [], where: closedWhere, required: true },
+                      { model: ProductsModel, as: 'product', required: false, attributes: ['price'] }],
+            where: { is_gift: 1 },
+            attributes: ['count', 'price', 'original_price', 'modifiers'],
+            raw: false,
+        }),
+
+        // Ödənişlər — OrderPaymentsModel→OrdersModel alias yoxdur
+        OrderPaymentsModel.findAll({
             include: [
-                {
-                    model: OrderPaymentsModel,
-                    as: 'order_payments',
-                    required: false,
-                    include: [
-                        { model: PaymentMethodsModel, as: 'payment_method', required: false },
-                        { model: require("../model/TagsModel"), as: 'tag', required: false }
-                    ]
-                },
-                {
-                    model: OrdersItemsModel,
-                    as: 'orders_items',
-                    required: false,
-                    include: [{ model: ProductsModel, as: 'product', required: false }]
-                }
-            ]
+                { model: OrdersModel, attributes: [], where: closedWhere, required: true },
+                { model: PaymentMethodsModel, as: 'payment_method', required: false, attributes: ['name'] },
+                { model: TagsModel, as: 'tag', required: false, attributes: ['name'] },
+            ],
+            attributes: ['id', 'paid', 'name', 'without_payment_method_id'],
+            raw: false,
         }),
+
+        // Etiket hesablaması üçün bağlı sifarişlər
         OrdersModel.findAll({
-            where: { ...baseWhere, status: 3, is_return: 1, start_date: { [Op.gte]: startVal, [Op.lte]: endVal } },
-            include: [{ model: require("../model/TagsModel"), as: 'delete_reason', required: false }],
-            paranoid: false
+            where: closedWhere,
+            attributes: ['id', 'total', 'tags'],
+            include: [{
+                model: OrderPaymentsModel, as: 'order_payments', required: false,
+                attributes: ['without_payment_method_id'],
+                include: [{ model: TagsModel, as: 'tag', required: false, attributes: ['name'] }],
+            }],
         }),
+
+        // Geri qaytarılmış sifarişlər — aggregate
         OrdersModel.findAll({
-            where: { ...baseWhere, status: 3, is_delete_reason_id: { [Op.not]: null }, [Op.or]: [{ is_return: null }, { is_return: 0 }], start_date: { [Op.gte]: startVal, [Op.lte]: endVal } },
-            include: [{ model: require("../model/TagsModel"), as: 'delete_reason', required: false }],
-            paranoid: false
+            where: returnedWhere,
+            attributes: [[fn('SUM', col('total')), 'sum_total']],
+            paranoid: false,
+            raw: true,
+        }),
+
+        // Silinmiş sifarişlər — aggregate
+        OrdersModel.findAll({
+            where: deletedWhere,
+            attributes: [[fn('SUM', col('total')), 'sum_total']],
+            paranoid: false,
+            raw: true,
         }),
     ]);
 
-    const payments = {};
+    const taxPercent = parseFloat(profile?.tax_percent || 0);
+    const aggRow = closedAgg[0] || {};
+
+    let total_tax = 0;
+    if (taxPercent > 0) {
+        taxOrders.forEach(o => {
+            const t = parseFloat(o.total || 0);
+            const flag = parseFloat(o.is_tax || 0);
+            const pct = flag > 1 ? flag : taxPercent;
+            if (pct > 0) total_tax += t * pct / (100 + pct);
+        });
+    }
+
+    let total_gift = 0;
+    giftItems.forEach(item => {
+        const qty = parseFloat(item.count || 0);
+        const price = parseFloat(item.price || 0);
+        const orig = parseFloat(item.original_price || 0);
+        const prodPrice = parseFloat(item.product?.price || 0);
+        const nominal = price > 0 ? price : (orig > 0 ? orig : prodPrice);
+        let mods = 0;
+        try {
+            const ms = Array.isArray(item.modifiers) ? item.modifiers : (typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : []);
+            mods = ms.reduce((s, m) => s + parseFloat(m.price || 0) * parseFloat(m.count || 1), 0);
+        } catch (_) {}
+        total_gift += qty * (nominal + mods);
+    });
+
+    const paymentsMap = {};
     const unpaid_payments = {};
-    const tags = {};
-    let total_amount = 0, total_discount = 0, total_service = 0, total_gift = 0;
-    let total_tax = 0, net_total = 0, guest_count = 0;
     let total_paid = 0, total_unpaid = 0;
-    let delivery_fee = 0;
+    payments.forEach(p => {
+        const amount = parseFloat(p.paid || 0);
+        if (p.without_payment_method_id && p.without_payment_method_id > 0) {
+            const name = p.name || p.tag?.name || 'Ödənişsiz';
+            unpaid_payments[name] = (unpaid_payments[name] || 0) + amount;
+            total_unpaid += amount;
+        } else {
+            const name = p.name || p.payment_method?.name || 'Nağd';
+            paymentsMap[name] = (paymentsMap[name] || 0) + amount;
+            total_paid += amount;
+        }
+    });
 
-    closedOrders.forEach(order => {
-        const itemsSub = parseFloat(order.amount || 0) || 0;
-        const timerSub = parseFloat(order.rate_per_minute || 0) || 0;
-        total_amount += itemsSub + timerSub;
-        total_discount += parseFloat(order.discount || 0);
-        total_service += parseFloat(order.service_charge || 0);
-        delivery_fee += parseFloat(order.delivery_fee || 0);
-        guest_count += parseInt(order.guest_count || 0);
+    const tags = {};
+    closedTagOrders.forEach(order => {
         const orderTotal = parseFloat(order.total || 0);
-        net_total += orderTotal;
-
-        let isTaxFlag = parseFloat(order.is_tax || 0);
-        if (isTaxFlag > 0) {
-            let currentTaxPercent = isTaxFlag > 1 ? isTaxFlag : taxPercent;
-            if (currentTaxPercent > 0) {
-                total_tax += orderTotal * currentTaxPercent / (100 + currentTaxPercent);
-            }
-        }
-
-        if (order.orders_items) {
-            order.orders_items.forEach(item => {
-                const isGift = Number(item.is_gift) === 1 || item.is_gift === true;
-                if (isGift) {
-                    const itemCount = parseFloat(item.count || 0);
-                    const itemPrice = parseFloat(item.price || 0);
-                    const origPrice = parseFloat(item.original_price || 0);
-                    const productPrice = parseFloat(item.product?.price || 0);
-                    const nominalPrice = itemPrice > 0 ? itemPrice : (origPrice > 0 ? origPrice : productPrice);
-                    let modifiersTotal = 0;
-                    try {
-                        const mods = Array.isArray(item.modifiers) ? item.modifiers : (typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : []);
-                        modifiersTotal = mods.reduce((s, m) => s + (parseFloat(m.price || 0) * parseFloat(m.count || 1)), 0);
-                    } catch (_) {}
-                    total_gift += itemCount * (nominalPrice + modifiersTotal);
-                }
-            });
-        }
-
-        if (order.order_payments) {
-            order.order_payments.forEach(p => {
-                const amount = parseFloat(p.paid || 0);
-                if (p.without_payment_method_id && p.without_payment_method_id > 0) {
-                    const name = p.name || p.tag?.name || 'Ödənişsiz';
-                    unpaid_payments[name] = (unpaid_payments[name] || 0) + amount;
-                    total_unpaid += amount;
-                } else {
-                    const name = p.name || p.payment_method?.name || 'Nağd';
-                    payments[name] = (payments[name] || 0) + amount;
-                    total_paid += amount;
-                }
-            });
-        }
-
-        let orderTags = [];
-        if (order.tags) orderTags = order.tags.split(',').map(t => t.trim()).filter(t => t);
-        if (order.order_payments) {
-            order.order_payments.forEach(p => { if (p.tag?.name) orderTags.push(p.tag.name); });
-        }
-        [...new Set(orderTags)].forEach(tagName => {
+        const orderTags = new Set();
+        if (order.tags) order.tags.split(',').map(t => t.trim()).filter(Boolean).forEach(t => orderTags.add(t));
+        if (order.order_payments) order.order_payments.forEach(p => { if (p.tag?.name) orderTags.add(p.tag.name); });
+        orderTags.forEach(tagName => {
             if (!tags[tagName]) tags[tagName] = { count: 0, total: 0 };
             tags[tagName].count += 1;
-            tags[tagName].total += parseFloat(order.total || 0);
-        });
-    });
-
-    let total_refund = 0;
-    returnedOrders.forEach(order => {
-        total_refund += parseFloat(order.total || order.amount || 0);
-        let orderTags = [];
-        if (order.tags) orderTags = order.tags.split(',').map(t => t.trim()).filter(t => t);
-        if (order.delete_reason?.name) orderTags.push(order.delete_reason.name);
-        [...new Set(orderTags)].forEach(tagName => {
-            if (!tags[tagName]) tags[tagName] = { count: 0, total: 0 };
-            tags[tagName].count += 1;
-            tags[tagName].total += parseFloat(order.total || order.amount || 0);
-        });
-    });
-
-    let total_deleted = 0;
-    deletedOrders.forEach(order => {
-        total_deleted += parseFloat(order.total || order.amount || 0);
-        let orderTags = [];
-        if (order.tags) orderTags = order.tags.split(',').map(t => t.trim()).filter(t => t);
-        if (order.delete_reason?.name) orderTags.push(order.delete_reason.name);
-        [...new Set(orderTags)].forEach(tagName => {
-            if (!tags[tagName]) tags[tagName] = { count: 0, total: 0 };
-            tags[tagName].count += 1;
-            tags[tagName].total += parseFloat(order.total || order.amount || 0);
+            tags[tagName].total += orderTotal;
         });
     });
 
@@ -867,23 +875,23 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
         byEmployee,
         bySaleMethod,
         byCategory,
-        checksCount: checksCount || 0,
-        grossTotal: parseFloat(grossSum || 0),
-        payments,
+        checksCount: parseInt(aggRow.cnt || 0),
+        grossTotal: parseFloat(aggRow.sum_total || 0),
+        payments: paymentsMap,
         unpaid_payments,
         tags,
-        total_amount,
-        total_discount,
-        total_service,
+        total_amount: parseFloat(aggRow.sum_amount || 0) + parseFloat(aggRow.sum_timer || 0),
+        total_discount: parseFloat(aggRow.sum_discount || 0),
+        total_service: parseFloat(aggRow.sum_service || 0),
         total_gift,
-        total_refund,
-        total_deleted,
+        total_refund: parseFloat(returnedAgg[0]?.sum_total || 0),
+        total_deleted: parseFloat(deletedAgg[0]?.sum_total || 0),
         total_tax,
-        net_total,
-        guest_count,
+        net_total: parseFloat(aggRow.sum_total || 0),
+        guest_count: parseInt(aggRow.sum_guests || 0),
         total_paid,
         total_unpaid,
-        delivery_fee,
+        delivery_fee: parseFloat(aggRow.sum_delivery || 0),
     };
 };
 

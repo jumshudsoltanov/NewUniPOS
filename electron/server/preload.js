@@ -37,4 +37,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
     checkForUpdatesNow: () => ipcRenderer.invoke("check-for-updates-now"),
     getGithubReleases: () => ipcRenderer.invoke("get-github-releases"),
     listComPorts: () => ipcRenderer.invoke("list-com-ports"),
+    onModifierGroupsUpdated: (callback) => ipcRenderer.on("modifier-groups-updated", (event, data) => callback(data)),
 });

@@ -38,6 +38,24 @@ const MenuSlice = createSlice({
     menuDataWithCategories: {},
   },
   reducers: {
+    updateProductModifierGroups: (state, action) => {
+      const { productId, modifier_groups } = action.payload;
+      const updateInCats = (cats) => {
+        if (!Array.isArray(cats)) return;
+        for (const cat of cats) {
+          if (!Array.isArray(cat.products)) continue;
+          const idx = cat.products.findIndex(p => p.id === productId);
+          if (idx !== -1) {
+            cat.products[idx] = { ...cat.products[idx], modifier_groups };
+          }
+        }
+      };
+      updateInCats(state.menuDataWithCategories?.data);
+      const genCats = state.menuDataWithGeneralCategories?.data;
+      if (Array.isArray(genCats)) {
+        for (const gc of genCats) updateInCats(gc.categories);
+      }
+    },
     applyProductOrdering: (state, action) => {
       const { categoryId, orderedIds } = action.payload;
       if (!state.menuDataWithCategories?.data) return;
@@ -156,5 +174,5 @@ const MenuSlice = createSlice({
   },
 });
 
-export const { applyProductOrdering } = MenuSlice.actions;
+export const { applyProductOrdering, updateProductModifierGroups } = MenuSlice.actions;
 export default MenuSlice.reducer;

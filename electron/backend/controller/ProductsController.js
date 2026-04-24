@@ -77,6 +77,10 @@ exports.updateModifierGroups = async (req, res) => {
             { where: { id: Number(id) } }
         );
         console.log(`[MODIFIER] Product ${id} updated, rows: ${rowsUpdated}, value length: ${value.length}`);
+        try {
+            const parsed = JSON.parse(value);
+            global.mainWindow?.webContents?.send('modifier-groups-updated', { productId: Number(id), modifier_groups: parsed });
+        } catch (_) {}
         res.status(200).json({ message: "ok", rowsUpdated });
     } catch (error) {
         console.error("Update Modifier Groups Error:", error.message);

@@ -14,7 +14,7 @@ import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "./redux/S
 import { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } from "./redux/Slices/SyncSlice";
 import { getTableGroups } from "./redux/Slices/TablesSlice";
 import { getActiveOrders } from "./redux/Slices/BooksSlice";
-import { menuWithCategories, menuWithGeneralCategories } from "./redux/Slices/MenuSlice";
+import { menuWithCategories, menuWithGeneralCategories, updateProductModifierGroups } from "./redux/Slices/MenuSlice";
 import { tickTimer as tickBooks } from "./redux/Slices/BooksSlice";
 import { tickTimer as tickTables } from "./redux/Slices/TablesSlice";
 import { HashRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
@@ -62,6 +62,13 @@ function AppContent() {
         sessionStorage.setItem("unipos_instance_label", "default");
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    if (!window.electronAPI?.onModifierGroupsUpdated) return;
+    window.electronAPI.onModifierGroupsUpdated(({ productId, modifier_groups }) => {
+      dispatch(updateProductModifierGroups({ productId, modifier_groups }));
+    });
   }, []);
 
   // Refs - re-render olmadan state saxlamaq üçün
