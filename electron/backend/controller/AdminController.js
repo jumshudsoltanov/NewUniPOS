@@ -118,6 +118,7 @@ const getWhatsappSettings = async (req, res) => {
       ok: true,
       denyActions: config.denyActions,
       denyPrefixes: config.denyPrefixes,
+      blockEmptyCheckDelete: config.blockEmptyCheckDelete || false,
       defaultDenyActions: whatsappConfig.DEFAULT_DENY_ACTIONS,
       defaultDenyPrefixes: whatsappConfig.DEFAULT_DENY_PREFIXES,
     });
@@ -129,8 +130,8 @@ const getWhatsappSettings = async (req, res) => {
 
 const saveWhatsappSettings = async (req, res) => {
   try {
-    const { denyActions, denyPrefixes } = req.body;
-    const saved = await whatsappConfig.writeConfig({ denyActions, denyPrefixes });
+    const { denyActions, denyPrefixes, blockEmptyCheckDelete } = req.body;
+    const saved = await whatsappConfig.writeConfig({ denyActions, denyPrefixes, blockEmptyCheckDelete: blockEmptyCheckDelete === true });
     await whatsappConfig.reloadCache();
     return res.json({ ok: true, ...saved });
   } catch (err) {

@@ -2,6 +2,10 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../utils/apiConfig";
 import { getTableGroups } from "./TablesSlice";
 import { getActiveOrders } from "./BooksSlice";
+import {
+  menuWithCategories,
+  updateProductModifierGroups,
+} from "./MenuSlice";
 
 export const sendOrdersItems = createAsyncThunk(
   "pos/orders",
@@ -1557,7 +1561,61 @@ export const OrderSlice = createSlice({
         ) {
           state.currentOrder.print_count = action.payload.print_count;
         }
-      });
+      })
+      .addCase(menuWithCategories.fulfilled, (state, action) => {
+        const categories = action.payload?.data || [];
+        let products = [];
+        categories.forEach((cat) => {
+          if (cat.products) products = products.concat(cat.products);
+        });
+        state.menu = products;
+      })
+      .addCase(updateProductModifierGroups, (state, action) => {
+        const { productId, modifier_groups } = action.payload;
+        const idx = state.menu.findIndex(
+          (p) => Number(p.id) === Number(productId),
+        );
+        if (idx !== -1) {
+          state.menu[idx] = { ...state.menu[idx], modifier_groups };
+        }
+      })
+      .addMatcher(
+        (action) => action.type === "products/update/fulfilled",
+        (state, action) => {
+          const updatedProduct = action.payload?.data || action.payload;
+          if (!updatedProduct?.id) return;
+          const idx = state.menu.findIndex(
+            (p) => Number(p.id) === Number(updatedProduct.id),
+          );
+          if (idx !== -1) {
+            state.menu[idx] = { ...state.menu[idx], ...updatedProduct };
+          }
+        },
+      )
+      .addMatcher(
+        (action) => action.type === "products/delete/fulfilled",
+        (state, action) => {
+          const deletedId = action.payload;
+          if (!deletedId) return;
+          state.menu = state.menu.filter(
+            (p) => Number(p.id) !== Number(deletedId),
+          );
+        },
+      )
+      .addMatcher(
+        (action) => action.type === "products/add/fulfilled",
+        (state, action) => {
+          const newProduct = action.payload?.data || action.payload;
+          if (!newProduct?.id) return;
+          if (
+            !state.menu.find(
+              (p) => Number(p.id) === Number(newProduct.id),
+            )
+          ) {
+            state.menu.push(newProduct);
+          }
+        },
+      );
   },
 });
 

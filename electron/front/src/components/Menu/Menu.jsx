@@ -124,7 +124,7 @@ const Menu = ({
   const longPressTriggered = useRef(false);
   const lastProductClickTime = useRef(0); // ikili məhsul əlavəsinin qarşısını alır
 
-  // Fetch Data - Only if not already present
+  // Fetch Data - Only if not already present (çek ekranında yeniləmə Check.jsx-də id dəyişəndə edilir)
   useEffect(() => {
     const getMenu = async () => {
       const hasData =

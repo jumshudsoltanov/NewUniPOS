@@ -12,6 +12,11 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault.jpg";
 import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
+import {
+  findCatalogProduct,
+  getDisplayProductName,
+  resolveModifiersForDisplay,
+} from "../../utils/orderItemDisplayHelpers";
 
 const CheckMain = ({ orders, table }) => {
   const dispatch = useDispatch(); // Add dispatch
@@ -74,12 +79,12 @@ const CheckMain = ({ orders, table }) => {
             existing.comment = [...new Set(existing.commentsList.filter(Boolean))].join(", ");
           }
         } else {
-          const menuItem = menu.find((item) => item.id === prodId);
+          const menuItem = findCatalogProduct(menu, prodId);
           const comment = orderItem.comment || '';
           groupedMap.set(key, {
             ...orderItem,
             product_id: prodId,
-            name: menuItem?.name || orderItem.product?.name || orderItem.product_name || "Məhsul",
+            name: getDisplayProductName(orderItem, menuItem),
             count: Number(orderItem.count),
             savedQuantity: Number(orderItem.count),
             localQuantity: 0,
@@ -285,10 +290,11 @@ const CheckMain = ({ orders, table }) => {
         <div className="order-list-container">
           {allItems.length > 0 &&
             allItems.map((item, index) => {
-              const productInfo = menu.find(m => m.id === item.product_id);
+              const productInfo = findCatalogProduct(menu, item.product_id);
               const isNoDiscount = (item.no_discount === 1 || productInfo?.no_discount === 1);
               const originalPrice = Number(productInfo?.price || item.price || 0);
               const currentPrice = Number(item.price || 0);
+              const displayProductName = getDisplayProductName(item, productInfo);
 
               // Modifiers
               let modifiers = [];
@@ -299,6 +305,7 @@ const CheckMain = ({ orders, table }) => {
                   modifiers = JSON.parse(item.modifiers || '[]');
                 }
               } catch (e) { /* ignore */ }
+              modifiers = resolveModifiersForDisplay(modifiers, productInfo);
 
               const modifiersTotal = modifiers.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
               const totalAmount = ((currentPrice + modifiersTotal) * Number(item.count)).toFixed(2);
@@ -324,7 +331,7 @@ const CheckMain = ({ orders, table }) => {
                 >
                   <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                     <div className="d-flex align-items-center flex-wrap gap-1">
-                      <span className="fw-semibold">{item.name}</span>
+                      <span className="fw-semibold">{displayProductName}</span>
                       {item.isDeleted && (
                         <span className="pending-delete-badge full" title="Silinəcək">
                           <i className="bi bi-trash3-fill"></i>

@@ -16,6 +16,7 @@ import {
   cancelEditMode,
   saveEditMode,
   setTempTableLayout,
+  clearHallLayout,
   loadLayoutsFromAdmin,
 } from "../../redux/Slices/TablesSlice";
 import { toast } from "sonner";
@@ -53,6 +54,16 @@ const Tables = () => {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
 
+  // Bulk edit panel state (stored as strings so user can freely type/clear)
+  const [bulkW, setBulkW] = useState("200");
+  const [bulkH, setBulkH] = useState("200");
+
+  // Single table selection state
+  const dragMoveRef = useRef(false);
+  const [selectedEditTableId, setSelectedEditTableId] = useState(null);
+  const [singleW, setSingleW] = useState("200");
+  const [singleH, setSingleH] = useState("200");
+
   // Custom Layout Interaction State
   const containerRef = useRef(null);
   const [transitionsEnabled, setTransitionsEnabled] = useState(false);
@@ -71,6 +82,26 @@ const Tables = () => {
     const timer = setTimeout(() => setTransitionsEnabled(true), 100);
     return () => clearTimeout(timer);
   }, [currentHallId]);
+
+  // Clear single selection when edit mode ends
+  useEffect(() => {
+    if (!isTableEditMode) setSelectedEditTableId(null);
+  }, [isTableEditMode]);
+
+  // Sync singleW/singleH when a table is selected in edit mode
+  useEffect(() => {
+    if (!selectedEditTableId) return;
+    const hallLayouts = tempTableLayouts[String(currentHallId)] || tableLayouts[String(currentHallId)] || {};
+    const tbl = currentTables.find((t) => t.id === selectedEditTableId);
+    const defLayout = generatedLayout[selectedEditTableId] || { x: 20, y: 20 };
+    const existing = hallLayouts[String(selectedEditTableId)] || defLayout;
+    const isRect = tbl?.shape_type === "rectangle";
+    const rawW = existing.w;
+    const rawH = existing.h;
+    setSingleW(String(rawW && rawW >= 150 ? rawW : 200));
+    setSingleH(String(rawH && rawH >= 150 ? rawH : (isRect ? 300 : 200)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEditTableId]);
 
   // Load layouts from admin API once on mount, then refresh table groups to get latest shape_type
   useEffect(() => {
@@ -463,6 +494,10 @@ const Tables = () => {
         const dx = clientX - interactionState.startX;
         const dy = clientY - interactionState.startY;
 
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+          dragMoveRef.current = true;
+        }
+
         const newX = interactionState.initialLeft + dx;
         const newY = interactionState.initialTop + dy;
 
@@ -483,6 +518,10 @@ const Tables = () => {
       } else if (interactionState.type === "resize") {
         const dx = clientX - interactionState.startX;
         const dy = clientY - interactionState.startY;
+
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+          dragMoveRef.current = true;
+        }
 
         const newW = Math.max(100, interactionState.initialWidth + dx);
         const newH = Math.max(100, interactionState.initialHeight + dy);
@@ -506,6 +545,10 @@ const Tables = () => {
 
     const handleEnd = () => {
       if (interactionState.type) {
+        if (!dragMoveRef.current && interactionState.type === "drag" && interactionState.tableId) {
+          setSelectedEditTableId(interactionState.tableId);
+        }
+        dragMoveRef.current = false;
         setInteractionState({ type: null, tableId: null });
       }
     };
@@ -579,6 +622,88 @@ const Tables = () => {
     setDragOverIndex(null);
   };
 
+  const handleApplySingleSize = () => {
+    if (!selectedEditTableId) return;
+    const w = parseInt(singleW, 10) || 200;
+    const h = parseInt(singleH, 10) || 200;
+    const hallLayouts = tempTableLayouts[String(currentHallId)] || {};
+    const defLayout = generatedLayout[selectedEditTableId] || { x: 20, y: 20 };
+    const existing = hallLayouts[String(selectedEditTableId)] || defLayout;
+    dispatch(
+      setTempTableLayout({
+        hallId: currentHallId,
+        layout: {
+          [String(selectedEditTableId)]: {
+            x: existing.x ?? defLayout.x,
+            y: existing.y ?? defLayout.y,
+            rotation: existing.rotation || 0,
+            w,
+            h,
+          },
+        },
+      }),
+    );
+  };
+
+  const handleApplyBulkSize = () => {
+    const w = parseInt(bulkW, 10) || 200;
+    const h = parseInt(bulkH, 10) || 200;
+    const hallLayouts = tempTableLayouts[String(currentHallId)] || {};
+    const layoutUpdates = {};
+    currentTables.forEach((table) => {
+      const defaultLayout = generatedLayout[table.id] || { x: 20, y: 20 };
+      const existing = hallLayouts[String(table.id)] || defaultLayout;
+      layoutUpdates[String(table.id)] = {
+        x: existing.x ?? defaultLayout.x,
+        y: existing.y ?? defaultLayout.y,
+        rotation: existing.rotation || 0,
+        w,
+        h,
+      };
+    });
+    dispatch(setTempTableLayout({ hallId: currentHallId, layout: layoutUpdates }));
+  };
+
+  const handleAutoArrange = () => {
+    const containerW = containerRef.current?.offsetWidth || window.innerWidth;
+    const vw = window.innerWidth;
+    let cols = 2;
+    if (vw >= 1200) cols = 5;
+    else if (vw >= 992) cols = 4;
+    else if (vw >= 768) cols = 3;
+    else if (vw >= 576) cols = 3;
+
+    const colWidth = containerW / cols;
+    const layoutUpdates = {};
+    let currentY = 20;
+    let rowMaxH = 0;
+
+    currentTables.forEach((table, index) => {
+      const col = index % cols;
+      const isRect = table.shape_type === "rectangle";
+      const tH = isRect ? 300 : 200;
+      const tW = 200;
+
+      if (col === 0 && index !== 0) {
+        currentY += rowMaxH + 20;
+        rowMaxH = 0;
+      }
+      rowMaxH = Math.max(rowMaxH, tH);
+
+      const offsetX = Math.max(0, (colWidth - tW) / 2);
+      layoutUpdates[String(table.id)] = {
+        x: col * colWidth + offsetX,
+        y: currentY,
+        w: tW,
+        h: tH,
+        rotation: 0,
+      };
+    });
+
+    dispatch(setTempTableLayout({ hallId: currentHallId, layout: layoutUpdates }));
+    dispatch(setTempTableOrder({ hallId: currentHallId, order: currentTables.map((t) => t.id) }));
+  };
+
   if (currentTables.length === 0) {
     if (isTablesLoading) {
       return <Container className="mt-4" />;
@@ -632,13 +757,14 @@ const Tables = () => {
               const posW = rawW && rawW >= 150 ? rawW : defaultW;
               const posH = rawH && rawH >= 150 ? rawH : defaultH;
 
+              const isSelected = isTableEditMode && selectedEditTableId === table.id;
               const style = {
                 position: "absolute",
                 left: layout.x,
                 top: layout.y,
                 width: posW,
                 height: posH,
-                zIndex: interactionState.tableId === table.id ? 100 : 1,
+                zIndex: interactionState.tableId === table.id ? 100 : isSelected ? 50 : 1,
                 cursor: isTableEditMode ? "move" : "default",
                 transform: rotation ? `rotate(${rotation}deg)` : undefined,
                 transformOrigin: "center center",
@@ -646,6 +772,8 @@ const Tables = () => {
                   !transitionsEnabled || interactionState.tableId === table.id
                     ? "none"
                     : "all 0.2s ease",
+                outline: isSelected ? "3px solid #053796" : undefined,
+                borderRadius: isSelected ? "10px" : undefined,
               };
 
               return (
@@ -835,6 +963,176 @@ const Tables = () => {
               </Col>
             ))}
           </Row>
+        )}
+
+        {/* Bulk Edit Panel */}
+        {isTableEditMode && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: "20px",
+              left: "20px",
+              zIndex: 1000,
+              background: "white",
+              borderRadius: "14px",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
+              padding: "14px 16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              minWidth: "210px",
+            }}
+          >
+            {selectedEditTableId ? (
+              <>
+                <div style={{ fontWeight: 700, fontSize: "13px", color: "#374151" }}>
+                  <i className="bi bi-cursor-fill me-1" style={{ color: "#053796" }}></i>
+                  {currentTables.find((t) => t.id === selectedEditTableId)?.name || "Seçilmiş masa"}
+                </div>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>En (px)</div>
+                    <input
+                      type="number"
+                      value={singleW}
+                      onChange={(e) => setSingleW(e.target.value)}
+                      min={100}
+                      max={600}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      style={{
+                        width: "100%",
+                        padding: "5px 8px",
+                        borderRadius: "8px",
+                        border: "1px solid #053796",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>Hündürlük (px)</div>
+                    <input
+                      type="number"
+                      value={singleH}
+                      onChange={(e) => setSingleH(e.target.value)}
+                      min={100}
+                      max={600}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      style={{
+                        width: "100%",
+                        padding: "5px 8px",
+                        borderRadius: "8px",
+                        border: "1px solid #053796",
+                        fontSize: "13px",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                </div>
+                <button
+                  className="btn btn-sm"
+                  onClick={handleApplySingleSize}
+                  style={{
+                    background: "#053796",
+                    color: "white",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    padding: "6px 10px",
+                  }}
+                >
+                  <i className="bi bi-check-lg me-1"></i>
+                  Tətbiq et
+                </button>
+                <div style={{ borderTop: "1px solid #e5e7eb", margin: "2px 0" }} />
+              </>
+            ) : (
+              <div style={{ fontSize: "12px", color: "#9ca3af", textAlign: "center" }}>
+                Masanı seçmək üçün tıklayın
+              </div>
+            )}
+            <div style={{ fontWeight: 700, fontSize: "13px", color: "#053796" }}>
+              <i className="bi bi-grid-3x3-gap-fill me-1"></i>
+              Toplu tənzimləmə
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>En (px)</div>
+                <input
+                  type="number"
+                  value={bulkW}
+                  onChange={(e) => setBulkW(e.target.value)}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    width: "100%",
+                    padding: "5px 8px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "13px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>Hündürlük (px)</div>
+                <input
+                  type="number"
+                  value={bulkH}
+                  onChange={(e) => setBulkH(e.target.value)}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{
+                    width: "100%",
+                    padding: "5px 8px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    fontSize: "13px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+            <button
+              className="btn btn-sm"
+              onClick={handleApplyBulkSize}
+              style={{
+                background: "#053796",
+                color: "white",
+                borderRadius: "8px",
+                fontSize: "13px",
+                padding: "6px 10px",
+              }}
+            >
+              <i className="bi bi-arrows-fullscreen me-1"></i>
+              Hamısına tətbiq et
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={handleAutoArrange}
+              style={{
+                background: "#059669",
+                color: "white",
+                borderRadius: "8px",
+                fontSize: "13px",
+                padding: "6px 10px",
+              }}
+            >
+              <i className="bi bi-layout-wtf me-1"></i>
+              Avtomatik sırala
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={() => dispatch(clearHallLayout(currentHallId))}
+              style={{
+                background: "#dc2626",
+                color: "white",
+                borderRadius: "8px",
+                fontSize: "13px",
+                padding: "6px 10px",
+              }}
+            >
+              <i className="bi bi-arrow-counterclockwise me-1"></i>
+              Hamısını sıfırla
+            </button>
+          </div>
         )}
 
         {/* Floating Edit Button / Save Bar */}

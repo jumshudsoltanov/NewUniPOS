@@ -271,9 +271,10 @@ const getProducts = async (passedProfileId) => {
     if (modResult.status === "fulfilled") {
       const groups = modResult.value.data?.data || [];
       groups.forEach((group) => {
-        if (!group.product_id) return;
-        if (!modifierMap[group.product_id]) modifierMap[group.product_id] = [];
-        modifierMap[group.product_id].push({
+        const gid = Number(group.product_id);
+        if (!Number.isFinite(gid)) return;
+        if (!modifierMap[gid]) modifierMap[gid] = [];
+        modifierMap[gid].push({
           id: group.id,
           name: group.name,
           selection_type: group.selection_type || "multiple",
@@ -319,7 +320,13 @@ const getProducts = async (passedProfileId) => {
     if (sourceProducts.length > 0) {
       const products = sourceProducts.map((p) => {
         Object.keys(p).forEach((k) => {
-          if (p[k] === undefined) p[k] = k === "printer_id" ? null : 0;
+          if (p[k] === undefined) {
+            if (k === "printer_id" || k === "modifier_groups" || k === "ingredient") {
+              p[k] = null;
+            } else {
+              p[k] = 0;
+            }
+          }
         });
         // V2 əlavələri (köhnə cloud sahələri üçün fallback)
         if (printerMap[p.id]) p.printer_id = printerMap[p.id];
@@ -345,7 +352,11 @@ const getProducts = async (passedProfileId) => {
         if (colorMap[p.id]) p.color = colorMap[p.id];
         if (hourlyPriceMap[p.id] != null) p.hourly_price = hourlyPriceMap[p.id];
         if (freeCountMap[p.id] != null) p.free_count = freeCountMap[p.id];
-        if (modifierMap[p.id]) p.modifier_groups = modifierMap[p.id];
+        // /modifiers API-də bu məhsul üçün qrup varsa ondan istifadə et; yoxdursa V1/V3-dən gələn JSON terkib saxlanılır
+        const pidNum = Number(p.id);
+        if (Number.isFinite(pidNum) && Object.prototype.hasOwnProperty.call(modifierMap, pidNum)) {
+          p.modifier_groups = modifierMap[pidNum];
+        }
         return p;
       });
 
@@ -387,18 +398,17 @@ const getProducts = async (passedProfileId) => {
           updateOnDuplicate: updateKeys,
         });
 
-        // modifier_groups JSON kimi ayrıca update et — bulkCreate JSON field-i düzgün saxlamır
-        const modifierUpdates = productsWithOrder.filter(
-          (p) => p.modifier_groups != null,
-        );
-        for (const p of modifierUpdates) {
-          const value =
-            typeof p.modifier_groups === "string"
-              ? p.modifier_groups
-              : JSON.stringify(p.modifier_groups);
+        // modifier_groups JSON — bulkCreate bu sahəni etibarlı yeniləmir; yalnız API-dən açıq gələndə yaz (undefined = DB-dəki köhnə saxlanılır)
+        for (const p of productsWithOrder) {
+          if (p.modifier_groups === undefined) continue;
+          let value = null;
+          const mg = p.modifier_groups;
+          if (mg !== null && mg !== "") {
+            value = typeof mg === "string" ? mg : JSON.stringify(mg);
+          }
           await ProductsModel.update(
             { modifier_groups: value },
-            { where: { id: p.id } },
+            { where: { id: p.id, profile_id } },
           );
         }
       }

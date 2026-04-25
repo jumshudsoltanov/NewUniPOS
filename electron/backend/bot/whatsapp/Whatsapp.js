@@ -27,7 +27,7 @@ function getWpbotUser() {
   return process.env.WPBOT_USER || DEFAULT_WPBOT_USER;
 }
 
-const { isActionDenied } = require("./whatsappConfig");
+const { isActionDenied, isBlockEmptyCheckDelete } = require("./whatsappConfig");
 
 /**
  * @param {string} [action]
@@ -305,6 +305,19 @@ async function notifyOrderLogWhatsapp({
   const chatNumber = waNumberBody != null && String(waNumberBody).trim() !== ""
     ? String(waNumberBody).trim()
     : profile?.whatsapp_chat_number != null ? String(profile.whatsapp_chat_number).trim() : "";
+
+  // Boş çek silinəndə bütün bildirişləri blokla (WhatsApp + Push)
+  if (action === "Çek silindi" && isBlockEmptyCheckDelete()) {
+    try {
+      const itemCount = await getOrdersItemsModel().count({ where: { order_id: orderId }, paranoid: false });
+      if (itemCount === 0) {
+        console.log("[WhatsApp] Boş çek silindi — bildiriş bloklandı (orderId:", orderId, ")");
+        return;
+      }
+    } catch (e) {
+      console.warn("[WhatsApp] Boş çek yoxlaması xətası:", e.message);
+    }
+  }
 
   if (waOn && chatNumber && !shouldSkipWhatsapp(action)) {
     try {

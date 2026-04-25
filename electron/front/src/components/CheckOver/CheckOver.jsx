@@ -63,6 +63,7 @@ const CheckOver = () => {
 
     const { books } = useSelector((state) => state.BooksSlice);
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const { menu: menuCatalog } = useSelector((state) => state.OrderSlice);
 
     // taxPrint default false (sonulu) - yalnız ödəniş metodu seçəndə is_tax varsa yansın
     const { paymentMethods } = useSelector((state) => state.PaymentMethodsSlice);
@@ -528,7 +529,8 @@ const CheckOver = () => {
                     },
                     tableName: receiptTableName,
                     hallName: receiptHallName,
-                    waiterName
+                    waiterName,
+                    menuCatalog,
                 }, loginedProfileData, { dispatch, loginedWaiter }).catch(err => {
                     console.error("Background print failed:", err);
                 });

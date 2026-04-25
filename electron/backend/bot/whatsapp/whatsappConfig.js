@@ -40,12 +40,13 @@ async function readConfig() {
       const parsed = JSON.parse(row.value);
       const denyActions = Array.isArray(parsed.denyActions) ? parsed.denyActions : DEFAULT_DENY_ACTIONS;
       const denyPrefixes = Array.isArray(parsed.denyPrefixes) ? parsed.denyPrefixes : DEFAULT_DENY_PREFIXES;
+      const blockEmptyCheckDelete = parsed.blockEmptyCheckDelete === true;
       // Yalnız DB-də heç olmamış yeni action-ları əlavə et
       // User-in söndürdüklərinə toxunma
       const dbSet = new Set(denyActions);
       const toAdd = NEWLY_ADDED_DENY_ACTIONS.filter(a => !dbSet.has(a));
       const merged = toAdd.length > 0 ? [...denyActions, ...toAdd] : denyActions;
-      return { denyActions: merged, denyPrefixes };
+      return { denyActions: merged, denyPrefixes, blockEmptyCheckDelete };
     }
   } catch (err) {
     console.error("[WhatsApp Config] readConfig DB error:", err.message);
@@ -57,6 +58,7 @@ async function writeConfig(settings) {
   const data = {
     denyActions: Array.isArray(settings.denyActions) ? settings.denyActions : DEFAULT_DENY_ACTIONS,
     denyPrefixes: Array.isArray(settings.denyPrefixes) ? settings.denyPrefixes : DEFAULT_DENY_PREFIXES,
+    blockEmptyCheckDelete: settings.blockEmptyCheckDelete === true,
   };
   const json = JSON.stringify(data);
   const existing = await AppSettingsModel.findOne({ where: { key: SETTINGS_KEY } });
@@ -79,6 +81,11 @@ async function _refreshCache() {
 // Kick off initial cache load (non-blocking)
 _refreshCache().catch(() => {});
 
+function isBlockEmptyCheckDelete() {
+  const config = _cache || _defaults();
+  return config.blockEmptyCheckDelete === true;
+}
+
 function isActionDenied(action) {
   if (!action || typeof action !== "string") return true;
   const a = action.trim();
@@ -99,6 +106,7 @@ module.exports = {
   readConfig,
   writeConfig,
   isActionDenied,
+  isBlockEmptyCheckDelete,
   reloadCache,
   DEFAULT_DENY_ACTIONS,
   DEFAULT_DENY_PREFIXES,

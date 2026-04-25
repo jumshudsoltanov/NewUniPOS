@@ -46,6 +46,10 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const isDisplayRoute = location.pathname.startsWith('/customer') ||
+    location.pathname.startsWith('/kitchen') ||
+    location.pathname.startsWith('/kds');
+
   const authResultRedux = useSelector((state) => state.LoginSlice.loginedProfileData);
 
   /* İki ayrı POS instansı üçün kassa printer seçimi: main proses `--unipos-instance=...` */
@@ -73,12 +77,13 @@ function AppContent() {
 
   // Refs - re-render olmadan state saxlamaq üçün
   const initStarted = useRef(false);
-  const [showInitialLoading, setShowInitialLoading] = useState(true);
+  const [showInitialLoading, setShowInitialLoading] = useState(!isDisplayRoute);
 
   // Arxa planda blok yoxlaması — POS-u yormadan periodik olaraq serverdən yoxlayır
   // Yalnız is_pos_block dəyişəndə və ya abunəlik bitəndə /blocked-ə yönləndirir
   useEffect(() => {
     if (showInitialLoading) return;
+    if (isDisplayRoute) return;
 
     // Lokal (keşdən) blok yoxlaması — anında, şəbəkə gözləmədən
     const checkLocalBlock = () => {
@@ -127,6 +132,7 @@ function AppContent() {
   }, [showInitialLoading, dispatch, navigate, location.pathname, authResultRedux]);
 
   useEffect(() => {
+    if (isDisplayRoute) return;
     if (window.electronAPI && window.electronAPI.onBackendLog) {
       window.electronAPI.onBackendLog(() => {});
     }
@@ -202,6 +208,7 @@ function AppContent() {
   const isSocketConnected = useSelector((state) => state.SyncSlice.isSocketConnected);
 
   useEffect(() => {
+    if (isDisplayRoute) return;
     const socket = getSocket();
     const shouldListenToDelegatedPrints = isMasterTerminal;
 
@@ -251,6 +258,7 @@ function AppContent() {
 
   // Pin yeniləmə: digər terminal (Master/Slave) yeniləyəndə bu terminal da məlumatı yeniləsin
   useEffect(() => {
+    if (isDisplayRoute) return;
     const socket = getSocket();
     if (!socket) return;
     const authResult = authResultRedux?.data ? authResultRedux : (() => {
@@ -282,6 +290,7 @@ function AppContent() {
   }, [showSyncedBadge, dispatch]);
 
   useEffect(() => {
+    if (isDisplayRoute) { setShowInitialLoading(false); return; }
     // Əgər artıq init başlayıbsa, bir daha başlama
     if (initStarted.current) return;
     initStarted.current = true;
@@ -415,6 +424,7 @@ function AppContent() {
   // Preload Check komponenti — Pin/Tables/Checks açılanda arxa planda yüklə (yeni sifariş tez açılsın)
   useEffect(() => {
     if (showInitialLoading) return;
+    if (isDisplayRoute) return;
     const t = setTimeout(preloadCheck, 800);
     return () => clearTimeout(t);
   }, [showInitialLoading]);

@@ -30,7 +30,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const [taxLoading, setTaxLoading] = useState(false);
     const [showTaxResendModal, setShowTaxResendModal] = useState(false);
     const [taxLocalNames, setTaxLocalNames] = useState({});
-    const { orderLogs = [] } = useSelector((state) => state.OrderSlice);
+    const { orderLogs = [], menu: menuCatalog } = useSelector((state) => state.OrderSlice);
 
     useEffect(() => {
         const stored = localStorage.getItem("tax_local_names");
@@ -175,7 +175,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             },
             tableName: order.table?.name || "Masa",
             hallName: order.table?.hall?.name || "",
-            waiterName: waiterName
+            waiterName: waiterName,
+            menuCatalog,
         };
 
         try {

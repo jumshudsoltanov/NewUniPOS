@@ -218,6 +218,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   const [waSaving, setWaSaving] = useState(false);
   const [denyActions, setDenyActions] = useState([]);
   const [denyPrefixes, setDenyPrefixes] = useState([]);
+  const [blockEmptyCheckDelete, setBlockEmptyCheckDelete] = useState(false);
 
   // Updates
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(true);
@@ -378,6 +379,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       if (data?.ok) {
         setDenyActions(data.denyActions || []);
         setDenyPrefixes(data.denyPrefixes || []);
+        setBlockEmptyCheckDelete(data.blockEmptyCheckDelete === true);
       } else {
         toast.error("WhatsApp ayarları yüklənə bilmədi: " + (data?.message || "Naməlum xəta"));
       }
@@ -401,7 +403,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   const handleSaveWhatsapp = async () => {
     setWaSaving(true);
     try {
-      const { data } = await apiConfig.post("/admin/whatsapp-settings", { denyActions, denyPrefixes });
+      const { data } = await apiConfig.post("/admin/whatsapp-settings", { denyActions, denyPrefixes, blockEmptyCheckDelete });
       if (data?.ok) { toast.success("WhatsApp ayarları saxlanıldı"); setView("main"); }
       else toast.error(data?.message || "Saxlama xətası");
     } catch (err) {
@@ -677,6 +679,18 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
               <>
                 <p className="wa-settings-hint">Aktiv olan əməliyyatlar WhatsApp-a göndəriləcək.</p>
                 <div className="wa-settings-list">
+                  <div
+                    className={`wa-settings-row ${blockEmptyCheckDelete ? "wa-on" : "wa-off"}`}
+                    onClick={() => setBlockEmptyCheckDelete(v => !v)}
+                    style={{ cursor: "pointer", borderBottom: "2px solid #e5e7eb", marginBottom: 4 }}
+                  >
+                    <span className="wa-settings-label" style={{ pointerEvents: "none" }}>
+                      Boş çek silinəndə bildiriş blokla
+                    </span>
+                    <div className={`wa-toggle ${blockEmptyCheckDelete ? "wa-toggle-on" : ""}`} style={{ pointerEvents: "none" }}>
+                      <div className="wa-toggle-thumb" />
+                    </div>
+                  </div>
                   {ALL_ACTIONS.map((item) => {
                     const enabled = !isActionDenied(item.key, denyActions, denyPrefixes);
                     return (

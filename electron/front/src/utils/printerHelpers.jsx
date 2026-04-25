@@ -599,6 +599,7 @@ export const printCustomerReceipt = async (
     profileData: profileData,
     tableName: orderData.tableName,
     hallName: orderData.hallName,
+    menuCatalog: orderData.menuCatalog,
   };
 
   flushSync(() => {

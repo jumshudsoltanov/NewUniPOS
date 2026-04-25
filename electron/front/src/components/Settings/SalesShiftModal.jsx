@@ -425,6 +425,8 @@ const SalesShiftModal = ({ show, onHide }) => {
     const profile = useSelector((state) => state.LoginSlice?.loginedProfileData?.data?.profile);
     const terminalInfo = useSelector((state) => state.LoginSlice?.loginedProfileData?.data?.terminal) || {};
     const waiter = useSelector((state) => state.WaitersSlice?.loginedWaiter?.data);
+    // Waiter yoxdursa (admin/manager rejimi) — tam icazə; waiter varsa — onun icazəsini yoxla
+    const canSeeShiftHistory = !waiter || Number(waiter.can_see_shift_history) === 1;
     const profileId = profile?.id;
     const terminalId = terminalInfo?.terminal_id || null;
 
@@ -488,13 +490,13 @@ const SalesShiftModal = ({ show, onHide }) => {
 
     const fetchHistory = useCallback(async (from, to) => {
         if (!profileId) return;
-        if (Number(waiter?.can_see_shift_history) !== 1) return;
+        if (!canSeeShiftHistory) return;
         const params = { limit: 80 };
         if (from) params.from = from;
         if (to) params.to = to;
         const res = await apiConfig.get(`/sales-shifts/${profileId}/history`, { params });
         setHistory(Array.isArray(res.data?.data) ? res.data.data : []);
-    }, [profileId, waiter?.can_see_shift_history]);
+    }, [profileId, canSeeShiftHistory]);
 
     const refreshAll = useCallback(async () => {
         if (!profileId) return;
@@ -1061,7 +1063,7 @@ const SalesShiftModal = ({ show, onHide }) => {
     );
 
     const historyBody =
-        Number(waiter?.can_see_shift_history) !== 1 ? (
+        !canSeeShiftHistory ? (
             <div className="sales-shift-empty-right">
                 <i className="bi bi-lock-fill me-2" aria-hidden />
                 İcazəniz yoxdur

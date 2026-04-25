@@ -197,6 +197,13 @@ const Check = () => {
     return null;
   });
 
+  useEffect(() => {
+    const profileId = loginedProfileData?.data?.profile?.id;
+    if (!profileId || !id) return;
+    dispatch(menuWithCategories(profileId));
+    dispatch(menuWithGeneralCategories(profileId));
+  }, [dispatch, loginedProfileData?.data?.profile?.id, id]);
+
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const newOrderBtnRef = useRef(null);
 
@@ -1674,7 +1681,8 @@ const Check = () => {
                             },
                             tableName: currentTable?.name,
                             hallName: currentHall?.name,
-                            waiterName
+                            waiterName,
+                            menuCatalog: menu,
                           }, loginedProfileData, { dispatch, loginedWaiter, autoLockCheckAfterPrint: true });
 
                           if (result.success) {

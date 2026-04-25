@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import {
+  menuWithCategories,
+  menuWithGeneralCategories,
+} from "../../redux/Slices/MenuSlice";
 import { authPos, setLoginData } from "../../redux/Slices/LoginSlice";
 import { toast } from "sonner";
 import apiConfig from "../../utils/apiConfig";
@@ -111,6 +115,8 @@ const Settings = () => {
       await Promise.all([
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
+        dispatch(menuWithCategories(profileId)).unwrap(),
+        dispatch(menuWithGeneralCategories(profileId)).unwrap(),
       ]);
 
       if (!isOnline) {

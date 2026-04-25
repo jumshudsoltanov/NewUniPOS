@@ -1,5 +1,10 @@
 import React from "react";
 import QRCode from "react-qr-code";
+import {
+    findCatalogProduct,
+    getDisplayProductName,
+    resolveModifiersForDisplay,
+} from "../../utils/orderItemDisplayHelpers";
 
 const CustomerReceipt = ({
     orderedItems,
@@ -8,6 +13,7 @@ const CustomerReceipt = ({
     tableName,
     hallName,
     previewSettings,
+    menuCatalog,
 }) => {
     const terminalInfo = profileData?.data?.terminal || {};
     const filialName = profileData?.data?.profile?.restaurant_name ||
@@ -215,10 +221,6 @@ const CustomerReceipt = ({
         }
     };
 
-    const isPaid = checkData?.payments &&
-        checkData.payments.length > 0 &&
-        checkData.payments.reduce((sum, p) => sum + Number(p.amount || 0), 0) >= checkData.total;
-
     const payments = checkData?.payments || [];
 
     const getSaleTypeName = (type, typeName) => {
@@ -256,8 +258,7 @@ const CustomerReceipt = ({
         return p % 1 === 0 ? p.toFixed(0) : p.toFixed(1);
     };
 
-    const deposit = Number(checkData?.deposit || 0);
-    const maxDiscountAmount = Math.max(0, subtotal - deposit);
+    const maxDiscountAmount = subtotal;
 
     // Helper to extract financial values safely
     const getDiscountInfo = () => {
@@ -270,7 +271,7 @@ const CustomerReceipt = ({
         } else {
             rawAmount = value;
         }
-        // Cap discount so it never exceeds (subtotal - deposit)
+        // Endirim cəmdən (subtotal) artıq olmasın
         const amount = Math.min(rawAmount, maxDiscountAmount);
         return {
             amount,
@@ -302,6 +303,21 @@ const CustomerReceipt = ({
 
     const discountInfo = getDiscountInfo();
     const serviceInfo = getServiceInfo();
+
+    // Use stored total (already correct: max(subtotal-discount+service, deposit)+delivery)
+    const displayTotal = checkData?.total != null
+        ? Number(checkData.total)
+        : Math.max(0, subtotal - discountInfo.amount + serviceInfo.amount);
+
+    // Ödəniş sətirləri: server/bağlanışdakı real məbləğlər (yekun artıq max(məhsul, depozit)+çatdırılma ilə düzdür; depoziti burada çıxma).
+    const totalPaymentsSum = payments.reduce((sum, p) => sum + Number(p.paidAmount || p.amount || 0), 0);
+    const isPaid = payments.length > 0 && totalPaymentsSum + 1e-6 >= displayTotal;
+    const displayPaymentRows = payments
+        .map((p) => ({
+            ...p,
+            _displayAmount: Number(p.paidAmount || p.amount || 0),
+        }))
+        .filter((p) => p._displayAmount > 0.001);
 
     return (
         <div style={styles.receipt}>
@@ -449,13 +465,15 @@ const CustomerReceipt = ({
                     // Group identical items (same name + price + modifiers + comment + is_gift)
                     const groupedMap = new Map();
                     filtered.forEach(item => {
-                        const name = item.product_name || item.name || item.product?.name || "Naməlum";
+                        const cat = findCatalogProduct(menuCatalog, item.product_id || item.id);
+                        const name = getDisplayProductName(item, cat) || "Naməlum";
                         const price = Number(item.price || 0);
                         const isGift = Number(item.is_gift || 0) === 1;
                         const comment = item.comment || '';
                         let mods = item.modifiers;
                         if (typeof mods === 'string') { try { mods = JSON.parse(mods); } catch (e) { mods = []; } }
                         if (!Array.isArray(mods)) mods = [];
+                        mods = resolveModifiersForDisplay(mods, cat);
                         const modsKey = mods.map(m => `${m.name}:${m.price}:${m.count}`).sort().join('|');
                         const key = `${name}__${price}__${isGift}__${modsKey}__${comment}`;
 
@@ -472,16 +490,19 @@ const CustomerReceipt = ({
                     }));
 
                     return grouped.map((item, i) => {
+                        const rowCat = findCatalogProduct(menuCatalog, item.product_id || item.id);
+                        let rowMods = Array.isArray(item.modifiers)
+                            ? item.modifiers
+                            : typeof item.modifiers === "string"
+                                ? (() => { try { return JSON.parse(item.modifiers || "[]"); } catch { return []; } })()
+                                : [];
+                        rowMods = resolveModifiersForDisplay(rowMods, rowCat);
                         const params = {
-                            name: item.product_name || item.name || item.product?.name || "Naməlum",
+                            name: getDisplayProductName(item, rowCat) || "Naməlum",
                             quantity: Number(item.quantity || item.count || 0),
                             price: Number(item.price || 0),
                             is_gift: Number(item.is_gift || 0) === 1,
-                            modifiers: Array.isArray(item.modifiers)
-                                ? item.modifiers
-                                : typeof item.modifiers === "string"
-                                    ? JSON.parse(item.modifiers || "[]")
-                                    : []
+                            modifiers: rowMods,
                         };
 
                         return (
@@ -574,13 +595,6 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
-                {deposit > 0 && (
-                    <div style={styles.summaryRow}>
-                        <span style={{ flex: 1 }}>Depozit</span>
-                        <span style={styles.colTotal}>{deposit.toFixed(2)} ₼</span>
-                    </div>
-                )}
-
                 {checkData?.note && (
                     <div style={styles.note}>Qeyd: {checkData.note}</div>
                 )}
@@ -590,7 +604,7 @@ const CustomerReceipt = ({
             <div style={styles.total}>
                 <span style={{ flex: 1 }}>YEKUN</span>
                 <span style={styles.colTotal}>
-                    {Math.max(0, (Math.max(0, subtotal - discountInfo.amount - deposit) + serviceInfo.amount)).toFixed(2)} ₼
+                    {displayTotal.toFixed(2)} ₼
                 </span>
             </div>
 
@@ -610,13 +624,13 @@ const CustomerReceipt = ({
                         Ödəniş üsulları:
                     </div>
 
-                    {payments.map((pay, idx) => (
+                    {displayPaymentRows.map((pay, idx) => (
                         <div key={idx} style={styles.summaryRow}>
                             <span style={{ flex: 1 }}>
                                 {pay.paymentMethodName || pay.name || pay.method_name || "Nağd"}
                             </span>
                             <span>
-                                {parseFloat(pay.paidAmount || pay.amount || 0).toFixed(2)} ₼
+                                {pay._displayAmount.toFixed(2)} ₼
                             </span>
                         </div>
                     ))}
@@ -641,7 +655,7 @@ const CustomerReceipt = ({
             {/* ÖDƏNİLİB STATUS */}
             {isPaid && (
                 <div style={styles.statusBox}>
-                    <span style={styles.statusText}>ÖDƏNİLİB</span>
+                    <span style={styles.statusText}>ÖDƏNİLİB — {displayTotal.toFixed(2)} ₼</span>
                 </div>
             )}
 

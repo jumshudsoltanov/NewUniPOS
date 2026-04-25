@@ -106,6 +106,11 @@ const TablesSlice = createSlice({
         ...layout
       };
     },
+    clearHallLayout: (state, action) => {
+      const hallId = String(action.payload);
+      state.tempTableLayouts[hallId] = {};
+      state.tableLayouts[hallId] = {};
+    },
     removeOrderOptimistic: (state, action) => {
       const orderId = action.payload;
       if (!orderId || !state.tableGroups?.data) return;
@@ -441,6 +446,7 @@ export const {
   setTempHallOrder,
   setTempTableOrder,
   setTempTableLayout,
+  clearHallLayout,
   tickTimer,
   removeOrderOptimistic: tablesRemoveOrderOptimistic,
   addOrderToTableOptimistic,

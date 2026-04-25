@@ -32,6 +32,11 @@ import {
   orderEditLockedToast,
 } from "../../utils/checkEditLock";
 import { checkShiftGuard } from "../../utils/shiftGuard";
+import {
+  findCatalogProduct,
+  getDisplayProductName,
+  resolveModifiersForDisplay,
+} from "../../utils/orderItemDisplayHelpers";
 
 const CheckBottom = ({
   orders,
@@ -103,16 +108,25 @@ const CheckBottom = ({
     if (orders?.orders_items) {
       orders.orders_items.forEach((item) => {
         const key = `${item.product_id || item.id}-${parseFloat(item.price || 0).toFixed(2)}-${JSON.stringify(item.modifiers || [])}`;
+        const cat = findCatalogProduct(menu, item.product_id || item.id);
+        let mods = item.modifiers || [];
+        if (typeof mods === "string") {
+          try {
+            mods = JSON.parse(mods || "[]");
+          } catch {
+            mods = [];
+          }
+        }
+        mods = resolveModifiersForDisplay(Array.isArray(mods) ? mods : [], cat);
         if (groupedMap.has(key)) {
           groupedMap.get(key).qty += Number(item.count || item.quantity || 1);
         } else {
           groupedMap.set(key, {
-            name:
-              item.name || item.product_name || item.product?.name || "Məhsul",
+            name: getDisplayProductName(item, cat),
             price: item.price,
             qty: Number(item.count || item.quantity || 1),
             unit: item.unit || "əd.",
-            modifiers: item.modifiers || [],
+            modifiers: mods,
             discount: item.discount || 0,
             is_discount_percent: item.is_discount_percent || 0,
           });
@@ -124,16 +138,25 @@ const CheckBottom = ({
     if (products) {
       products.forEach((item) => {
         const key = `${item.product_id || item.id}-${parseFloat(item.price || 0).toFixed(2)}-${JSON.stringify(item.modifiers || [])}`;
+        const cat = findCatalogProduct(menu, item.product_id || item.id);
+        let mods = item.modifiers || [];
+        if (typeof mods === "string") {
+          try {
+            mods = JSON.parse(mods || "[]");
+          } catch {
+            mods = [];
+          }
+        }
+        mods = resolveModifiersForDisplay(Array.isArray(mods) ? mods : [], cat);
         if (groupedMap.has(key)) {
           groupedMap.get(key).qty += Number(item.count || item.quantity || 1);
         } else {
           groupedMap.set(key, {
-            name:
-              item.name || item.product_name || item.product?.name || "Məhsul",
+            name: getDisplayProductName(item, cat),
             price: item.price,
             qty: Number(item.count || item.quantity || 1),
             unit: item.unit || "əd.",
-            modifiers: item.modifiers || [],
+            modifiers: mods,
             discount: item.discount || 0,
             is_discount_percent: item.is_discount_percent || 0,
           });
@@ -180,7 +203,7 @@ const CheckBottom = ({
         });
       }
     };
-  }, [orders, products, sentProducts, pendingDeletions]);
+  }, [orders, products, sentProducts, pendingDeletions, menu]);
 
   // Çek bağlama (CheckOver): master/slave fərqi yoxdur — yalnız cannot_close_check: 1 = bağlamaq olar, 0 = olmaz
   const canCloseCheck = Number(loginedWaiter?.data?.cannot_close_check) === 1;
