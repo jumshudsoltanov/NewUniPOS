@@ -441,6 +441,10 @@ class SunmiService {
         return this._request(this._base('getPeriodicZReport', { startDate: formattedStart, endDate: formattedEnd }));
     }
 
+    async getOperationHistory(startDate, endDate) {
+        return this.getPeriodicReport(startDate, endDate);
+    }
+
     async printLastCheque() {
         return this._request(this._base('printLastCheque'));
     }

@@ -264,6 +264,10 @@ class OneClickService {
         return this._request('POST', '/kas_periodic_z', { beginDate: startDate, endDate });
     }
 
+    async getOperationHistory(startDate, endDate) {
+        return this.getPeriodicReport(startDate, endDate);
+    }
+
     async getLastDocument() {
         await this._ensureToken();
         return this._request('GET', '/kas_lastDocument');

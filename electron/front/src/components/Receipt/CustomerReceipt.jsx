@@ -5,6 +5,7 @@ import {
     getDisplayProductName,
     resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
+import { getCustomerFacingServiceFeeLabel } from "../../utils/posOperationNames";
 
 const CustomerReceipt = ({
     orderedItems,
@@ -42,7 +43,7 @@ const CustomerReceipt = ({
         "https://unipos.tech";
 
     if (!checkData || !orderedItems)
-        return <div style={styles.receipt}>Yüklənir...</div>;
+        return <div style={{ padding: "16px", fontFamily: "sans-serif" }}>Yüklənir...</div>;
 
     const formatLocalDate = (dateStr) => {
         if (!dateStr) return "—";
@@ -67,12 +68,35 @@ const CustomerReceipt = ({
     try {
         localSettings = JSON.parse(localStorage.getItem("pos_receipt_settings"))?.customer || {};
     } catch(e) {}
-    if (previewSettings) localSettings = previewSettings;
+    const isReceiptPreview =
+        previewSettings != null && typeof previewSettings === "object";
+    if (isReceiptPreview) localSettings = previewSettings;
 
-    const baseFont = Number(localSettings.fontSizeOffset !== undefined ? localSettings.fontSizeOffset : (terminalInfo?.customer_receipt || profileData?.data?.customer_receipt || profileData?.data?.profile?.customer_receipt || 0));
+    const profileReceiptBump = Number(
+        terminalInfo?.customer_receipt ??
+            profileData?.data?.customer_receipt ??
+            profileData?.data?.profile?.customer_receipt ??
+            0,
+    );
+
+    let baseFont;
+    if (isReceiptPreview) {
+        baseFont = Math.round(Number(previewSettings.fontSizeOffset ?? 0));
+    } else if (
+        localSettings.fontSizeOffset !== undefined &&
+        localSettings.fontSizeOffset !== null &&
+        String(localSettings.fontSizeOffset).trim() !== ""
+    ) {
+        baseFont = Math.round(Number(localSettings.fontSizeOffset));
+    } else {
+        baseFont = Math.round(Number(profileReceiptBump));
+    }
+    if (!Number.isFinite(baseFont)) baseFont = 0;
+
+    /** fontSizeOffset (-5…5) — hər addım üçün daha görünən fərq (çap + önizləmə). */
     const fs = (baseSize) => {
-        if (baseFont === 0) return `${baseSize}px`;
-        return `${baseSize + (baseFont * 2)}px`;
+        const extra = baseFont * 4;
+        return `${Math.max(4, baseSize + extra)}px`;
     };
 
     const isVisible = (key, defaultVal = true) => {
@@ -587,7 +611,7 @@ const CustomerReceipt = ({
                 {serviceInfo.amount > 0 && (
                     <div style={styles.summaryRow}>
                         <span style={{ flex: 1 }}>
-                            Xidmət haqqı ({serviceInfo.percent}%)
+                            {getCustomerFacingServiceFeeLabel()} ({serviceInfo.percent}%)
                         </span>
                         <span style={styles.colTotal}>
                             {serviceInfo.amount.toFixed(2)} ₼

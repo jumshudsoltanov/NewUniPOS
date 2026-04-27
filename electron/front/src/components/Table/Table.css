@@ -135,17 +135,18 @@
 
 /* Masa üzərində çoxlu çek yazısı */
 .table-multi-checks-badge {
-  margin-top: 6px;
-  font-size: 14px;
-  font-weight: 700;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
   color: #5b21b6;
   background: rgba(124, 58, 237, 0.15);
-  padding: 8px 12px;
+  padding: 5px 10px;
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(124, 58, 237, 0.3);
+  line-height: 1.2;
 }
 
 .table-surface.free {
@@ -261,75 +262,69 @@
   bottom: 40px;
 }
 
-/* Billiard Table - Small Elegant Pockets */
-/* Corner pockets - small dark circles tucked into corners */
-.seat-billiard-top-left {
-  width: 14px;
-  height: 14px;
-  top: 2px;
-  left: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #111 50%, #3d2817 100%);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-  z-index: 12;
-}
-
-.seat-billiard-top-right {
-  width: 14px;
-  height: 14px;
-  top: 2px;
-  right: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #111 50%, #3d2817 100%);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-  z-index: 12;
-}
-
-.seat-billiard-bottom-left {
-  width: 14px;
-  height: 14px;
-  bottom: 2px;
-  left: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #111 50%, #3d2817 100%);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-  z-index: 12;
-}
-
-.seat-billiard-bottom-right {
-  width: 14px;
-  height: 14px;
-  bottom: 2px;
-  right: 6px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #111 50%, #3d2817 100%);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-  z-index: 12;
-}
-
-/* Center pockets on long edges (top & bottom) */
-.seat-billiard-top-center {
+/* Bilyar ciblər — açıq boşqab, incə boz xətt; mərkəzdə üfüqi "pill" (modal/BİLYARD kart stili) */
+.seat.seat-billiard-top-left,
+.seat.seat-billiard-top-right,
+.seat.seat-billiard-bottom-left,
+.seat.seat-billiard-bottom-right {
   width: 12px;
   height: 12px;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1.5px solid rgba(203, 213, 225, 0.88) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  z-index: 12;
+  box-sizing: border-box;
+}
+
+.seat.seat-billiard-top-left {
+  top: 3px;
+  left: 5px;
+}
+
+.seat.seat-billiard-top-right {
+  top: 3px;
+  right: 5px;
+}
+
+.seat.seat-billiard-bottom-left {
+  bottom: 3px;
+  left: 5px;
+}
+
+.seat.seat-billiard-bottom-right {
+  bottom: 3px;
+  right: 5px;
+}
+
+/* Uzun kənar mərkəzi cib — stadium / pill */
+.seat.seat-billiard-top-center,
+.seat.seat-billiard-bottom-center {
+  width: 24px;
+  height: 6px;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1.5px solid rgba(203, 213, 225, 0.9) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  z-index: 12;
+  box-sizing: border-box;
+  transform: translateX(-50%);
+}
+
+.seat.seat-billiard-top-center {
   top: 1px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, #111 50%, #3d2817 100%);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-  z-index: 12;
 }
 
-.seat-billiard-bottom-center {
-  width: 12px;
-  height: 12px;
+.seat.seat-billiard-bottom-center {
   bottom: 1px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, #111 50%, #3d2817 100%);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9);
-  z-index: 12;
 }
 
 /* Inner Table Content Styles */
@@ -354,44 +349,54 @@
 }
 
 .table-round .table-name {
-  font-size: 14px;
+  font-size: 13px;
   margin: 0;
 }
 
 .table-round .table-amount {
-  font-size: 16px;
+  font-size: 15px;
   margin: 1px 0 3px 0;
 }
 
 .table-round .table-waiter-info {
-  font-size: 13px;
+  font-size: 12px;
   gap: 4px;
 }
 
 .table-round .table-multi-checks-badge {
   margin-top: 2px;
   padding: 4px 8px;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .table-round .table-timer-info {
-  font-size: 0.78rem !important;
+  font-size: 10px !important;
   margin-top: 2px !important;
   padding: 1px 6px !important;
 }
 
+/* Taymer — kompakt, rem əvəzinə sabit ölçü (kafel/150% miqyasda partlamasın) */
+.table-surface .table-timer-info {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  line-height: 1.2;
+  padding: 2px 6px;
+}
+
 .table-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1e3a8a;
   margin: 0;
+  line-height: 1.2;
 }
 
 .table-amount {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #1e3a8a;
-  margin: 5px 0 10px 0;
+  margin: 3px 0 8px 0;
+  line-height: 1.15;
 }
 
 .table-waiter-info {
@@ -400,7 +405,7 @@
   justify-content: center;
   gap: 6px;
   color: #1e40af;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -479,13 +484,12 @@
     /* Full height for rectangle wrapper */
   }
 
-  /* Make table textual content slightly smaller */
   .table-name {
     font-size: 14px;
   }
 
   .table-amount {
-    font-size: 16px;
+    font-size: 15px;
   }
 }
 
@@ -571,15 +575,13 @@
     gap: 2px;
   }
 
-  /* High-Visibility Typography */
+  /* Masa kartı tiplər — oxunaqlı, kompakt (həddindən böyük/çirkin ağır çəki yox) */
   .table-name {
-    font-size: 14px !important;
-    font-weight: 800 !important;
-    /* Extra bold for visibility */
+    font-size: 13px !important;
+    font-weight: 700 !important;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.35px;
     color: #374151 !important;
-    /* Darker text */
     margin-bottom: 2px !important;
   }
 
@@ -589,19 +591,18 @@
   }
 
   .table-amount {
-    font-size: 18px !important;
-    font-weight: 900 !important;
-    /* Heavy font for price */
-    color: #000000 !important;
-    /* Pure black for maximum contrast */
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    color: #111827 !important;
     margin: 0 !important;
+    line-height: 1.15;
   }
 
   .table-waiter-info {
     font-size: 12px !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
     color: #374151 !important;
-    margin-top: 5px !important;
+    margin-top: 4px !important;
   }
 
   .table-surface.occupied .table-waiter-info {
@@ -714,16 +715,42 @@
   border-radius: 10%;
 }
 
-.resizable-mode .table-billiard {
-  width: 80%;
-  height: 55%;
-  border-radius: 12%;
+/* Bilyar — vahid mənzərə nisbəti (220×130); faiz en/hündürlük bəzən sınır, aspect-ratio stabil saxlayır */
+.resizable-mode .table-surface.table-billiard {
+  width: min(95%, 100%);
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 220 / 130;
+  max-height: 56%;
+  border-radius: 12px;
+  box-sizing: border-box;
+  flex: 0 0 auto;
 }
 
-.resizable-mode .table-billiard {
-  width: 80%;
-  height: 50%;
-  border-radius: 12%;
+/* Kanvas (admin layout) — masa böyüdükcə mətn eyni qalır, vizual balans üçün bir qədər kiçik */
+.resizable-mode .table-name {
+  font-size: 13px;
+}
+
+.resizable-mode .table-amount {
+  font-size: 15px;
+  margin: 2px 0 5px;
+}
+
+.resizable-mode .table-waiter-info {
+  font-size: 12px;
+}
+
+.resizable-mode .table-multi-checks-badge {
+  font-size: 11px;
+  padding: 4px 8px;
+  margin-top: 3px;
+}
+
+.resizable-mode .table-timer-info {
+  font-size: 10px !important;
+  margin-top: 3px !important;
+  padding: 1px 5px !important;
 }
 
 .resizable-mode .seat-top {
@@ -776,18 +803,26 @@
   bottom: 15%;
 }
 
-.resizable-mode .seat-billiard-top-left,
-.resizable-mode .seat-billiard-top-right {
-  width: 18px;
-  height: 18px;
-  top: 5%;
+.resizable-mode .seat.seat-billiard-top-left,
+.resizable-mode .seat.seat-billiard-top-right {
+  width: 14px;
+  height: 14px;
+  top: 4%;
 }
 
-.resizable-mode .seat-billiard-bottom-left,
-.resizable-mode .seat-billiard-bottom-right {
-  width: 18px;
-  height: 18px;
-  bottom: 5%;
+.resizable-mode .seat.seat-billiard-bottom-left,
+.resizable-mode .seat.seat-billiard-bottom-right {
+  width: 14px;
+  height: 14px;
+  bottom: 4%;
+}
+
+.resizable-mode .seat.seat-billiard-top-center,
+.resizable-mode .seat.seat-billiard-bottom-center {
+  width: 28px;
+  height: 7px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .resizable-mode .seat-billiard-left,

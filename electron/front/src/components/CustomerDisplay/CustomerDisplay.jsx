@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 import "./CustomerDisplay.css";
 import uniposLogo from "../../assets/images/unipos_logo.png";
 import CD_BG from "../../assets/images/PinContainerImagesDefault.jpg";
+import { getCustomerFacingServiceFeeLabel } from "../../utils/posOperationNames";
 
 const CustomerDisplay = () => {
     const [orderData, setOrderData] = useState({ items: [], total: 0, received: 0, change: 0 });
@@ -324,7 +325,7 @@ const CustomerDisplay = () => {
 
                     {totals.serviceCharge > 0 && (
                         <div className="cd-total-row">
-                            <span>Xidmət haqqı:</span>
+                            <span>{getCustomerFacingServiceFeeLabel()}:</span>
                             <span>{totals.serviceCharge.toFixed(2)} ₼</span>
                         </div>
                     )}

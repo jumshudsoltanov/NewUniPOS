@@ -1,6 +1,7 @@
 const OmnitechService = require('./OmnitechService');
 const SunmiService = require('./SunmiService');
 const OneClickService = require('./OneClickService');
+const DataPayService = require('./DataPayService');
 
 const serviceInstances = {};
 
@@ -27,6 +28,8 @@ function getTaxService(taxConfig) {
         service = new SunmiService(taxConfig);
     } else if (type.includes('oneclick') || type.includes('vizar')) {
         service = new OneClickService(taxConfig);
+    } else if (type.includes('datapay')) {
+        service = new DataPayService(taxConfig);
     } else {
         console.warn(`[TAX] Unknown tax device type: ${taxConfig.tax_cash_type}`);
         return null;
@@ -75,6 +78,17 @@ function filterSaleItemsForTax(items) {
     });
 }
 
+/** Şəbəkə səhvlərində (ECONNREFUSED və s.) istifadəçiyə səbəbi qısaca izah. */
+function formatTaxConnectionError(message, config) {
+    const msg = String(message || '');
+    if (!/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ENETUNREACH|EHOSTUNREACH|ECONNRESET|socket hang up|ECONNABORTED/i.test(msg)) {
+        return msg;
+    }
+    const port = config && config.port_addr != null && String(config.port_addr) !== '' ? String(config.port_addr) : '2222';
+    const host = config && config.ip_addr ? `${config.ip_addr}:${port}` : 'vergi cihazı';
+    return `${msg} — “${host}” ünvanına qoşulmaq mümkün olmadı (port açıq deyil, səhv IP və ya cihazda servis deaktiv ola bilər; DATAPAY üçün adətən 2222). Ödəniş üsulu (nağd/nağdsız) bu xətanı yaratmır.`;
+}
+
 async function processSale(taxConfigs, saleData) {
     console.log('[TAX] ProcessSale Payments:', JSON.stringify(saleData.payments));
 
@@ -102,7 +116,7 @@ async function processSale(taxConfigs, saleData) {
             return { success: true, config, data: result };
         } catch (error) {
             console.error(`[TAX] Sale failed for ${config.tax_cash_type} (${config.ip_addr}):`, error.message);
-            return { success: false, config, error: error.message };
+            return { success: false, config, error: formatTaxConnectionError(error.message, config) };
         }
     });
 
@@ -137,7 +151,7 @@ async function processMoneyBack(taxConfigs, moneyBackData) {
             return { success: true, config, data: result };
         } catch (error) {
             console.error(`[TAX] MoneyBack failed for ${config.tax_cash_type}:`, error.message);
-            return { success: false, config, error: error.message };
+            return { success: false, config, error: formatTaxConnectionError(error.message, config) };
         }
     });
 

@@ -173,7 +173,8 @@ const Check = () => {
           (ao.print_count || 0) !== (bo.print_count || 0) ||
           ao.sale_type !== bo.sale_type ||
           ao.table_id !== bo.table_id ||
-          ao.hall_id !== bo.hall_id
+          ao.hall_id !== bo.hall_id ||
+          ao.waiter_id !== bo.waiter_id
         ) return false;
       }
       return true;

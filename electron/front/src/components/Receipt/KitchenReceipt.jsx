@@ -81,10 +81,30 @@ const KitchenReceipt = ({
     try {
         localSettings = JSON.parse(localStorage.getItem("pos_receipt_settings"))?.kitchen || {};
     } catch(e) {}
-    if (previewSettings) localSettings = previewSettings;
+    const isReceiptPreview =
+        previewSettings != null && typeof previewSettings === "object";
+    if (isReceiptPreview) localSettings = previewSettings;
 
-    const baseFont = Number(localSettings.fontSizeOffset !== undefined ? localSettings.fontSizeOffset : (terminalInfo?.kitchen_receipt || checkData?.kitchen_receipt || 0));
-    const fs = (n) => `${n + baseFont}px`;
+    const profileKitchenBump = Number(
+        terminalInfo?.kitchen_receipt ?? checkData?.kitchen_receipt ?? 0,
+    );
+
+    let baseFont;
+    if (isReceiptPreview) {
+        baseFont = Math.round(Number(previewSettings.fontSizeOffset ?? 0));
+    } else if (
+        localSettings.fontSizeOffset !== undefined &&
+        localSettings.fontSizeOffset !== null &&
+        String(localSettings.fontSizeOffset).trim() !== ""
+    ) {
+        baseFont = Math.round(Number(localSettings.fontSizeOffset));
+    } else {
+        baseFont = Math.round(Number(profileKitchenBump));
+    }
+    if (!Number.isFinite(baseFont)) baseFont = 0;
+
+    /** fontSizeOffset — müştəri çeki ilə oxşar görünən addım (əvvəl +1px/addım idi). */
+    const fs = (n) => `${Math.max(4, n + baseFont * 3)}px`;
 
     const isVisible = (key, defaultVal = true) => {
         if (localSettings[key] !== undefined) return localSettings[key];

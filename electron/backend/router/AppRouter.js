@@ -415,8 +415,18 @@ router.post("/tax/login", async (req, res) => {
     }
     res.json(result);
   } catch (e) {
-    console.error("[TAX] Login error:", e.message);
-    res.status(500).json({ message: e.message });
+    const msg = e.message || "Login failed";
+    console.error("[TAX] Login error:", msg);
+    const isNetworkish = /əlaqəsi:|ECONN|ETIMEDOUT|ENOTFOUND|EHOST|getaddrinfo|Network Error/i.test(
+      msg,
+    );
+    if (
+      !isNetworkish &&
+      /^\[(DATAPAY|SUNMI|OMNITECH|ONECLICK)\]/i.test(msg)
+    ) {
+      return res.status(400).json({ message: msg });
+    }
+    res.status(500).json({ message: msg });
   }
 });
 

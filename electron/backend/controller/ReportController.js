@@ -88,14 +88,23 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
 
     const closedWhere = { ...baseWhere, status: 2, end_date: { [Op.gte]: startStr, [Op.lte]: endStr } };
     const openWhere = { ...baseWhere, status: 1, start_date: { [Op.gte]: startStr, [Op.lte]: endStr } };
-    // Admin paneli kimi: silinmiş/geri qaytarılmış sifarişlər start_date ilə filterlənirir
-    const deletedWhere = { ...baseWhere, status: { [Op.in]: [0, 3] }, start_date: { [Op.gte]: startStr, [Op.lte]: endStr } };
+    // Geri qaytarma (is_return=1) və silinmə ayrı — getShiftSummaryForRange ilə eyni məntiq
+    const dateOnStart = { [Op.gte]: startStr, [Op.lte]: endStr };
+    const returnedWhere = { ...baseWhere, status: 3, is_return: 1, start_date: dateOnStart };
+    const deletedOnlyWhere = {
+        ...baseWhere,
+        status: 3,
+        is_delete_reason_id: { [Op.not]: null },
+        [Op.or]: [{ is_return: null }, { is_return: 0 }],
+        start_date: dateOnStart,
+    };
+    const voidStatus0Where = { ...baseWhere, status: 0, start_date: dateOnStart };
 
     const [
         profile,
         closedAgg,       // Cəm, endirim, xidmət, qonaq — SQL-də hesablanır
         openAgg,         // Açıq sifarişlər
-        deletedAgg,      // Silinmiş/geri qaytarılmış
+        refundAndDeletedAgg, // { returned, deletedOnly, status0 } — ayrıca cəmlər
         giftItems,       // İkram məhsulları
         payments,        // Ödənişlər
         closedTagOrders, // Etiket hesablaması üçün bağlı sifarişlər
@@ -129,16 +138,38 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
             raw: true,
         }),
 
-        // 3. Silinmiş/geri qaytarılmış — SQL aggregate (admin paneli kimi start_date ilə)
-        OrdersModel.findAll({
-            where: deletedWhere,
-            attributes: [
-                [fn('SUM', col('total')), 'sum_total'],
-                [fn('SUM', col('amount')), 'sum_amount'],
-            ],
-            paranoid: false,
-            raw: true,
-        }),
+        // 3. Geri qaytarma (is_return=1) və çek silinməsi ayrı sütunlar üçün ayrı aggregate
+        (async () => {
+            const sumAttrs = [
+                [fn("SUM", col("total")), "sum_total"],
+                [fn("SUM", col("amount")), "sum_amount"],
+            ];
+            const [returnedRows, deletedOnlyRows, status0Rows] = await Promise.all([
+                OrdersModel.findAll({
+                    where: returnedWhere,
+                    attributes: sumAttrs,
+                    paranoid: false,
+                    raw: true,
+                }),
+                OrdersModel.findAll({
+                    where: deletedOnlyWhere,
+                    attributes: sumAttrs,
+                    paranoid: false,
+                    raw: true,
+                }),
+                OrdersModel.findAll({
+                    where: voidStatus0Where,
+                    attributes: sumAttrs,
+                    paranoid: false,
+                    raw: true,
+                }),
+            ]);
+            return {
+                returnedRow: returnedRows[0] || {},
+                deletedOnlyRow: deletedOnlyRows[0] || {},
+                status0Row: status0Rows[0] || {},
+            };
+        })(),
 
         // 4. İkram məhsulları — yalnız lazımi sahələr
         OrdersItemsModel.findAll({
@@ -180,7 +211,9 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
     const taxPercent = parseFloat(profile?.tax_percent || 0);
     const aggRow = closedAgg[0] || {};
     const openRow = openAgg[0] || {};
-    const delRow = deletedAgg[0] || {};
+    const retRow = refundAndDeletedAgg.returnedRow || {};
+    const delOnlyRow = refundAndDeletedAgg.deletedOnlyRow || {};
+    const void0Row = refundAndDeletedAgg.status0Row || {};
 
     // Vergi hesablaması — hər sifarişdə is_tax ilə dəqiq olmur SQL-də, ona görə bağlı sifarişlər üzərindən hesablayırıq
     // Sadə hal: tax = total * taxPercent / (100 + taxPercent) yalnız is_tax > 0 olan sifarişlər üçün
@@ -258,8 +291,10 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
         total_discount: parseFloat(aggRow.sum_discount || 0),
         total_service: parseFloat(aggRow.sum_service || 0),
         total_gift,
-        total_refund: parseFloat(delRow.sum_total || delRow.sum_amount || 0),
-        total_deleted: 0, // admin paneli kimi ayrı göstərilmir, refund-a daxildir
+        total_refund: parseFloat(retRow.sum_total || retRow.sum_amount || 0),
+        total_deleted:
+            parseFloat(delOnlyRow.sum_total || delOnlyRow.sum_amount || 0) +
+            parseFloat(void0Row.sum_total || void0Row.sum_amount || 0),
         total_tax,
         net_total: parseFloat(aggRow.sum_total || 0),
         guest_count: parseInt(aggRow.sum_guests || 0),

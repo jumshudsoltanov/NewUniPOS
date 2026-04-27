@@ -14,9 +14,25 @@ import { toast } from "sonner";
 import axios from "axios";
 import apiConfig, { getSocket, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
-import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
+import { getModifiersTotalPerUnit, mapOrderPaymentForTax } from "../../utils/orderItemLineTotal";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
+
+/**
+ * Profildə bəzən yalnız "Nağd" üçün is_tax=1, "Bank"/kart üçün 0 qalır — vergi çeki checkbox-i yanmır, /tax/sale getmir.
+ * Nağdsız/kart/köçürmə üsulunu fiskal üçün aktiv sayırıq (qarserver yenə manual söndürə bilər).
+ */
+function paymentMethodLooksCashless(m) {
+    if (!m) return false;
+    const t = String(m.type != null ? m.type : "").toLowerCase();
+    const n = String(m.name != null ? m.name : "").toLowerCase();
+    if (n.includes("nağdsız") || n.includes("nagdsiz") || n.includes("nəğdsiz")) return true;
+    if (t === "nağdsız" || t === "nagdsiz" || t === "nəğdsiz" || t === "card" || t === "bank" || t === "pos" || t === "terminal" || t === "kart") {
+        return true;
+    }
+    if (n.includes("kart") || n.includes("карт") || n.includes("bank") || n.includes("pos") || n.includes("terminal")) return true;
+    return false;
+}
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -199,9 +215,9 @@ const CheckOver = () => {
         }
     }, [currentOrder?.is_tax, loginedWaiter?.data?.can_see_tax]);
 
-    // Ödəniş metodu seçəndə: əgər seçilənlər arasında is_tax olan varsa, vergi checkbox yansın (yalnız can_see_tax=1 olan garson üçün)
+    // Ödəniş metodu seçəndə: is_tax=1 və ya nağdsız/kart (profildə bəzən yalnız nağd üçün is_tax açıq qalır) — vergi checkbox yansın
     useEffect(() => {
-        if (Number(loginedWaiter?.data?.can_see_tax) === 1 && viewMode === "PAYMENT" && selectedMethods.some(m => Number(m.is_tax) === 1)) {
+        if (Number(loginedWaiter?.data?.can_see_tax) === 1 && viewMode === "PAYMENT" && (selectedMethods.some(m => Number(m.is_tax) === 1) || selectedMethods.some(paymentMethodLooksCashless))) {
             setTaxPrint(true);
         }
     }, [viewMode, selectedMethods, loginedWaiter?.data?.can_see_tax]);
@@ -441,16 +457,54 @@ const CheckOver = () => {
                             toast.warning('Fiskal çek üçün məhsul siyahısı boşdur — göndərilmədi.');
                         } else {
                             // Call tax sale API in the background (as requested: do not wait for fiscal device)
+                            let paymentsForTax;
+                            try {
+                                paymentsForTax = payments.map((m) =>
+                                    mapOrderPaymentForTax({
+                                        payment_method_id: m?.payment_method_id,
+                                        without_payment_method_id: m?.without_payment_method_id,
+                                        payment_method: { name: m?.name, type: m?.type },
+                                        paid: m?.amount,
+                                    })
+                                );
+                            } catch (mapErr) {
+                                console.error('Fiskal ödəniş xəritəsi:', mapErr);
+                                paymentsForTax = payments;
+                            }
+                            const isCardOrBankTaxPayment = paymentsForTax.some((p) => {
+                                const name = String(p?.name || '').toLowerCase();
+                                const type = String(p?.type || '').toLowerCase();
+                                return (
+                                    type === 'nağdsız' ||
+                                    type === 'nagdsiz' ||
+                                    type === 'nəğdsiz' ||
+                                    type === 'card' ||
+                                    type === 'bank' ||
+                                    type === 'cashless' ||
+                                    name.includes('bank') ||
+                                    name.includes('kart') ||
+                                    name.includes('card')
+                                );
+                            });
+                            const taxOrderTotal = Number(calcTotal.sumTotal) || 0;
+                            const minCardTaxAmount = 0; // DATAPAY üçün minimumu cihaz özü idarə etsin.
+                            if (isCardOrBankTaxPayment && taxOrderTotal > 0 && taxOrderTotal < minCardTaxAmount) {
+                                const msg = 'DATAPAY kart/bank fiskal çeki üçün məbləğ çox kiçikdir. Minimum 0.10 AZN ilə test edin.';
+                                toast.warning(msg);
+                                addNotification('Fiskal Çek Xətası', msg, { category: 'system', type: 'warning' });
+                                return;
+                            }
                             apiConfig.post('/tax/sale', {
                                 taxConfigs: taxConfigsToUse,
                                 saleData: {
                                     items: saleItems,
-                                    payments,
+                                    payments: paymentsForTax,
                                     cashierName: waiterName,
                                     orderId: currentOrder?.id || id,
                                     serviceFee: Number(calcTotal.serviceAmount) || 0,
-                                    discountAmount: Number(calcTotal.discountAmount) || 0,
-                                    deliveryFee: Number(currentOrder?.delivery_fee) || 0
+                                    ...(Number(calcTotal.discountAmount) > 0 ? { discountAmount: Number(calcTotal.discountAmount) } : {}),
+                                    deliveryFee: Number(currentOrder?.delivery_fee) || 0,
+                                    orderTotal: taxOrderTotal
                                 }
                             }, { timeout: TAX_HTTP_TIMEOUT_MS }).then(taxResult => {
                                 const results = taxResult.data?.results || [];
@@ -476,16 +530,21 @@ const CheckOver = () => {
                                     }
                                 } else {
                                     const errDetails = results.map(r => r.error).filter(Boolean).join('; ') || 'Vergi çeki kəsilə bilmədi';
-                                    addNotification('Fiskal Çek Xətası', errDetails, { category: 'system', type: 'error' });
+                                    const isConn = /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ENETUNREACH/i.test(errDetails);
+                                    const shortMsg = isConn
+                                        ? 'Vergi cihazı (DATAPAY) şəbəkədə əlçatmazdır. IP, port 2222 və cihazda servis işlədiyini yoxlayın.'
+                                        : errDetails;
+                                    addNotification('Fiskal Çek Xətası', shortMsg, { category: 'system', type: 'error' });
                                 }
                             }).catch(taxErr => {
                                 console.error('Tax sale error:', taxErr);
                                 const errMsg = taxErr.response?.data?.message || taxErr.message;
-                                addNotification('Fiskal Çek Xətası', errMsg, { category: 'system', type: 'error' });
+                                const isConn = /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ENETUNREACH/i.test(String(errMsg));
+                                const shortMsg = isConn
+                                    ? 'Vergi cihazı (DATAPAY) şəbəkədə əlçatmazdır. IP, port 2222 və cihazda servis işlədiyini yoxlayın.'
+                                    : errMsg;
+                                addNotification('Fiskal Çek Xətası', shortMsg, { category: 'system', type: 'error' });
                             });
-
-                            // Proceed without waiting for taxResult
-                            toast.info('Vergi çeki arxa planda kəsilir...');
                         }
                     } catch (taxErr) {
                         console.error('Tax sale error:', taxErr);

@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useEffect } from "react";
 import { getWaitersList } from "../../redux/Slices/WaitersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { changeWaiter } from "../../redux/Slices/OrdersSlice";
 
 const WaitersModal = ({ show, onClose, order }) => {
@@ -39,29 +39,39 @@ const WaitersModal = ({ show, onClose, order }) => {
 
 
   const handleClickUpdateWaiter = async () => {
+    if (!selectedWaiterId) return;
     try {
-      onClose(false)
+      const newWaiter = filteredWaiters.find(w => w.id === selectedWaiterId);
       const oldWaiterName = order?.waiter?.name || 'Naməlum';
-      const newWaiterName = filteredWaiters.find(w => w.id === selectedWaiterId)?.name || 'Naməlum';
+      const newWaiterName = newWaiter?.name || 'Naməlum';
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 
-      const res = await dispatch(changeWaiter({
+      // Optimistic update: UI-ni dərhal yenilə
+      dispatch(updateOrderOptimisticId({
+        uuid: order.uuid,
+        newOrderData: {
+          waiter_id: selectedWaiterId,
+          waiter: { id: selectedWaiterId, name: newWaiterName },
+        },
+      }));
+
+      onClose(false);
+      setSelectedWaiterId(null);
+
+      await dispatch(changeWaiter({
         orderId: order.uuid,
         waiterId: selectedWaiterId,
         oldWaiterName,
         newWaiterName,
-        waiterName
-      })).unwrap()
-      if (res.length !== 0) {
-        const profileId = loginedProfileData?.data?.profile?.id;
-        dispatch(getTableGroups(profileId));
-        dispatch(getActiveOrders({ profileId, silentRefresh: true }));
-      }
-      setSelectedWaiterId(null)
-    } catch (error) {
-      console.error("ChangeWaiter", error)
-    }
+        waiterName,
+      })).unwrap();
 
+      const profileId = loginedProfileData?.data?.profile?.id;
+      dispatch(getTableGroups(profileId));
+      dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+    } catch (error) {
+      console.error("ChangeWaiter", error);
+    }
   }
 
   return (

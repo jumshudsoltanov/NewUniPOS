@@ -165,52 +165,65 @@
 .shape-billiard {
     width: 60px;
     height: 36px;
-    border-radius: 8px;
+    border-radius: 10px;
     background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
-    border: 3px solid #4e342e;
-    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(78, 52, 46, 0.95);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.25);
 }
 
-/* Billiard pocket dots - dark holes like real pockets */
+/* Bilyar ciblər — incə açıq xətt, künc halqa + mərkəz pill (zaldakı masalarla eyni dil) */
 .seat-dot {
     position: absolute;
-    width: 8px;
-    height: 8px;
-    background: radial-gradient(circle, #000 40%, #2c1810 100%);
+    box-sizing: border-box;
+}
+
+.seat-dot:not(.seat-top-center):not(.seat-bottom-center) {
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1.2px solid rgba(203, 213, 225, 0.92);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
 }
 
 .seat-dot.seat-top-left {
-    top: -3px;
-    left: -2px;
+    top: -2px;
+    left: -1px;
 }
 
 .seat-dot.seat-top-right {
-    top: -3px;
-    right: -2px;
+    top: -2px;
+    right: -1px;
 }
 
 .seat-dot.seat-bottom-left {
-    bottom: -3px;
-    left: -2px;
+    bottom: -2px;
+    left: -1px;
 }
 
 .seat-dot.seat-bottom-right {
-    bottom: -3px;
-    right: -2px;
+    bottom: -2px;
+    right: -1px;
+}
+
+.seat-dot.seat-top-center,
+.seat-dot.seat-bottom-center {
+    width: 12px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1.2px solid rgba(203, 213, 225, 0.92);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .seat-dot.seat-top-center {
-    top: -4px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: -3px;
 }
 
 .seat-dot.seat-bottom-center {
-    bottom: -4px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: -3px;
 }
 
 .shape-name {

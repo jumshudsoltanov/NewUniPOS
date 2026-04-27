@@ -40,6 +40,7 @@ import { preloadCheck } from "./utils/preloadCheck";
 import { isPaymentExpired, isPosBlocked } from "./utils/dateHelpers";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
+import { usePosIdleToPin } from "./hooks/usePosIdleToPin";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -78,6 +79,8 @@ function AppContent() {
   // Refs - re-render olmadan state saxlamaq üçün
   const initStarted = useRef(false);
   const [showInitialLoading, setShowInitialLoading] = useState(!isDisplayRoute);
+
+  usePosIdleToPin({ disabled: isDisplayRoute || showInitialLoading });
 
   // Arxa planda blok yoxlaması — POS-u yormadan periodik olaraq serverdən yoxlayır
   // Yalnız is_pos_block dəyişəndə və ya abunəlik bitəndə /blocked-ə yönləndirir

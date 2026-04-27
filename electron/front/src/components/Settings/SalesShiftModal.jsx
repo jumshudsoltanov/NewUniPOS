@@ -837,6 +837,10 @@ const SalesShiftModal = ({ show, onHide }) => {
                             <span>Cəm məbləğ</span>
                             <span>{money(summary.grossTotal)} ₼</span>
                         </div>
+                        <div className="ssm-info-row ssm-total-row" style={{ borderTop: '1px dashed #e2e8f0', marginTop: 4, paddingTop: 4 }}>
+                            <span>Çeklərin cəmi (yekun)</span>
+                            <span>{money(summary.net_total)} ₼</span>
+                        </div>
                     </div>
 
                     {/* Satış hesabatı */}

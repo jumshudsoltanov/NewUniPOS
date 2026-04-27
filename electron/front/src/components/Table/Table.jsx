@@ -1,12 +1,13 @@
 
 import React from "react";
 import "./Table.css";
-import { useParams } from "react-router-dom";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { computeOrderCardMeta } from "../../utils/orderDisplayTotal";
+import { normalizeTableShape } from "../../utils/tableShape";
 
 const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }) => {
-  const { name, shape_type, orders } = table || {};
+  const { name, orders } = table || {};
+  const shape_type = normalizeTableShape(table?.shape_type);
 
   const hasOrders = React.useMemo(() => orders && orders.length > 0, [orders]);
 
@@ -154,17 +155,14 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
             })() && (
               <div className="table-timer-info" style={{
                 color: shape_type === 'billiard' ? '#FFFFFF' : '#053796',
-                fontSize: '0.9rem',
-                fontWeight: '700',
-                marginTop: '6px',
+                marginTop: '4px',
                 background: shape_type === 'billiard' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(5, 55, 150, 0.05)',
-                padding: '2px 8px',
                 borderRadius: '4px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 textShadow: shape_type === 'billiard' ? '0 1px 3px rgba(0,0,0,0.5)' : 'none'
               }}>
-                <i className={`bi bi-clock${orders?.[0]?.is_timer_status == 1 ? '-fill' : ''} me-1`} style={{ fontSize: '0.8rem', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.6 }}></i>
+                <i className={`bi bi-clock${orders?.[0]?.is_timer_status == 1 ? '-fill' : ''} me-1`} style={{ fontSize: '11px', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.6 }}></i>
                 <span style={{ fontVariantNumeric: 'tabular-nums', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.8 }}>{orders?.[0]?.is_timer_clock || "00:00:00"}</span>
               </div>
             )}

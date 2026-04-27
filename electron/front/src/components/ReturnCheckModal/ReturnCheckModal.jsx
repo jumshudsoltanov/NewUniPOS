@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import axios from "../../utils/apiConfig";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
+import { buildFiscalLineItemsFromOrderItems, mapOrderPaymentForTax, computeFiscalCheckTotalsFromOrder } from "../../utils/orderItemLineTotal";
 import "./ReturnCheckModal.css";
 
 const TAX_HTTP_TIMEOUT_MS = 180000;
@@ -95,19 +96,13 @@ const ReturnCheckModal = ({ show, onClose }) => {
             if (targetConfig) {
                 setTaxLoading(true);
                 try {
-                    const items = (order.orders_items || [])
-                        .filter(item => Number(item.count ?? item.quantity ?? 0) > 0)
-                        .map(item => ({
-                            ...item,
-                            name: item.product?.name || 'Məhsul',
-                            count: Number(item.count ?? item.quantity ?? 1),
-                            price: item.price || 0
-                        }));
-                    const payments = (order.order_payments || []).map(p => ({
-                        name: p.payment_method?.name || 'Nağd',
-                        type: p.payment_method?.type || 'cash',
-                        amount: p.paid
-                    }));
+                    const items = buildFiscalLineItemsFromOrderItems(order);
+                    const payments = (order.order_payments || []).map(mapOrderPaymentForTax);
+                    const ft = computeFiscalCheckTotalsFromOrder(order);
+                    const orderTotalFiscal =
+                        order.total != null && order.total !== "" && !Number.isNaN(Number(order.total)) && Number(order.total) > 0
+                            ? Number(order.total)
+                            : ft.sumTotal;
 
                     const mbResult = await axios.post('/tax/money-back', {
                         taxConfigs: [targetConfig],
@@ -118,7 +113,11 @@ const ReturnCheckModal = ({ show, onClose }) => {
                             parentFiscalId: order.fiscal_id,
                             documentNumber: String(order.fiscal_doc_number || order.id || ''),
                             shortDocId: order.fiscal_short_id || '',
-                            orderId: order.uuid || order.id
+                            orderId: order.uuid || order.id,
+                            serviceFee: ft.serviceAmount,
+                            ...(Number(ft.discountAmount) > 0 ? { discountAmount: ft.discountAmount } : {}),
+                            deliveryFee: ft.deliveryFee,
+                            orderTotal: orderTotalFiscal
                         }
                     }, { timeout: TAX_HTTP_TIMEOUT_MS });
 

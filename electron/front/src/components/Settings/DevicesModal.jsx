@@ -453,6 +453,15 @@ const DevicesModal = ({ show, onHide }) => {
     const [posKeyboardEnabled, setPosKeyboardEnabled] = useState(() => {
         try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
     });
+    const [posAutoLockEnabled, setPosAutoLockEnabled] = useState(() => {
+        try { return localStorage.getItem("pos_auto_lock_enabled") === "1"; } catch { return false; }
+    });
+    const [posAutoLockSeconds, setPosAutoLockSeconds] = useState(() => {
+        try {
+            const s = localStorage.getItem("pos_auto_lock_seconds");
+            return s && String(s).trim() !== "" ? String(parseInt(s, 10) || 120) : "120";
+        } catch { return "120"; }
+    });
     const [screens, setScreens] = useState([]);
     const [customerDisplay, setCustomerDisplay] = useState({
         active: false,
@@ -515,6 +524,31 @@ const DevicesModal = ({ show, onHide }) => {
         } catch {
             toast.error("Yadda saxlanmadı");
         }
+    };
+
+    const persistPosAutoLock = (enabled, secondsStr) => {
+        try {
+            localStorage.setItem("pos_auto_lock_enabled", enabled ? "1" : "0");
+            const n = parseInt(String(secondsStr || "0").trim(), 10);
+            const sec = !Number.isNaN(n) && n >= 1 ? Math.min(Math.max(n, 5), 48 * 3600) : 120;
+            localStorage.setItem("pos_auto_lock_seconds", String(sec));
+            setPosAutoLockSeconds(String(sec));
+            window.dispatchEvent(new Event("unipos_pos_auto_lock_update"));
+        } catch (e) {
+            console.warn("pos_auto_lock:", e);
+        }
+    };
+
+    const handleTogglePosAutoLock = () => {
+        const next = !posAutoLockEnabled;
+        setPosAutoLockEnabled(next);
+        persistPosAutoLock(next, posAutoLockSeconds);
+        toast.success(next ? "Avto bloklama AKTİV" : "Avto bloklama DEAKTİV");
+    };
+
+    const handlePosAutoLockSecondsBlur = () => {
+        if (!posAutoLockEnabled) return;
+        persistPosAutoLock(true, posAutoLockSeconds);
     };
 
     useEffect(() => {
@@ -886,11 +920,20 @@ const DevicesModal = ({ show, onHide }) => {
         setTaxDeviceLoading(index, true);
         try {
             const result = await localApi.post('/tax/login', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
-            if (result.data?.access_token || result.data?.data?.access_token) {
+            const d = result.data;
+            // DATAPAY: accessToken (camelCase); digər cihazlar: access_token (snake) və ya d.data
+            const hasToken = !!(
+                d && (
+                    (d.accessToken != null && d.accessToken !== '') ||
+                    (d.access_token != null && d.access_token !== '') ||
+                    (d.data && (d.data.accessToken != null || d.data.access_token != null))
+                )
+            );
+            if (hasToken) {
                 toast.success(`${tax.tax_cash_type} — Login uğurlu`);
                 handleShiftStatus(tax, index);
             } else {
-                toast.error('Login u\u011Fursuz: ' + (result.data?.message || ''));
+                toast.error('Login u\u011Fursuz: ' + (d?.message || ''));
             }
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -962,6 +1005,10 @@ const DevicesModal = ({ show, onHide }) => {
     };
 
     const handlePeriodicReport = async (tax, index) => {
+        if (!reportStart.date || !reportEnd.date) {
+            toast.warning('D\u00f6vri hesabat \u00fc\u00e7\u00fcn \u201cBu tarixd\u0259n\u201d v\u0259 \u201cBu tarix\u0259 q\u0259d\u0259r\u201d t\u0259r\u0259zi se\u00e7in');
+            return;
+        }
         setTaxDeviceLoading(index, true);
         try {
             const bDate = reportStart.date ? `${reportStart.date}T${reportStart.time}:00` : "";
@@ -988,6 +1035,10 @@ const DevicesModal = ({ show, onHide }) => {
     };
 
     const handleOperationHistory = async (tax, index) => {
+        if (!reportStart.date || !reportEnd.date) {
+            toast.warning('Tarix\u00e7\u0259 \u00fc\u00e7\u00fcn \u201cBu tarixd\u0259n\u201d v\u0259 \u201cBu tarix\u0259 q\u0259d\u0259r\u201d t\u0259r\u0259zi doldurun');
+            return;
+        }
         setTaxDeviceLoading(index, true);
         try {
             const bDate = reportStart.date ? `${reportStart.date}T${reportStart.time}:00` : "";
@@ -1002,7 +1053,7 @@ const DevicesModal = ({ show, onHide }) => {
             if (errCode !== 0) {
                 toast.error('Tarix\u00e7\u0259 x\u0259tas\u0131: ' + (result.data?.error_message || `code ${errCode}`));
             } else {
-                toast.success('\u018fm\u0259liyyat tarix\u00e7\u0259si \u00e7ap edildi');
+                toast.success('Se\u00E7ilmi\u015F tarix \u00FCzr\u0259 \u0259m\u0259liyyat siyah\u0131s\u0131 cihaza g\u00F6nd\u0259rildi (fiskal cihaz \u00E7ap ed\u0259 bil\u0259r)');
             }
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -1323,6 +1374,42 @@ const DevicesModal = ({ show, onHide }) => {
                                             <div className="switch-handle"></div>
                                         </div>
                                     </div>
+                                    <div className="settings-toggle-row">
+                                        <div className="settings-toggle-icon"><i className="bi bi-shield-lock"></i></div>
+                                        <div className="settings-toggle-text">
+                                            <span className="settings-toggle-label">Avto bloklama (PIN)</span>
+                                            <span className="settings-toggle-desc">Müddət ərzində ekranda əməliyyat olmasa avtomatik PIN səhifəsinə keçir (masa, check, tənzimləmələr).</span>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${posAutoLockEnabled ? "active" : ""}`}
+                                            onClick={handleTogglePosAutoLock}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+                                    {posAutoLockEnabled && (
+                                        <div className="printer-form-group" style={{ marginTop: 4 }}>
+                                            <label>Gözləmə (saniyə)</label>
+                                            <input
+                                                type="number"
+                                                className="printer-input"
+                                                min={5}
+                                                max={172800}
+                                                step={1}
+                                                value={posAutoLockSeconds}
+                                                onChange={(e) => setPosAutoLockSeconds(e.target.value)}
+                                                onBlur={handlePosAutoLockSecondsBlur}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.target.blur();
+                                                    }
+                                                }}
+                                            />
+                                            <span style={{ display: "block", marginTop: 6, fontSize: "12px", color: "#64748b" }}>
+                                                Minimum 5 saniyə. Fəaliyyətsizlikdən sonra /pin açılır.
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {printers.filter((p) => Number(p.is_cashier) === 1).length >= 2 && (
@@ -1539,10 +1626,10 @@ const DevicesModal = ({ show, onHide }) => {
                                                             </div>
                                                         </div>
                                                         <div style={{ display: 'flex', gap: '12px' }}>
-                                                            <button onClick={() => handleOperationHistory(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 2, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                                                            <button type="button" title="Yuxarıdakı tarix aralığında fiskal cihazdan bütün əməliyyatların siyahısı (DATAPAY: dövri hesabat, çap ola bilər)" onClick={() => handleOperationHistory(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 2, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
                                                                 Əməliyyat tarixçəsi
                                                             </button>
-                                                            <button onClick={() => handlePeriodicReport(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 1, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                                                            <button type="button" title="Eyni tarix aralığında d\u00F6vri (Z) hesabat \u2014 cihazdan" onClick={() => handlePeriodicReport(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 1, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
                                                                 Hesabat
                                                             </button>
                                                         </div>

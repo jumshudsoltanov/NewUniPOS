@@ -405,7 +405,7 @@ const CheckMain = ({ orders, table }) => {
 
                   <div className="col-qty d-flex justify-content-center align-items-center">
                     <div className="d-flex align-items-center gap-1">
-                      <span className="fw-bold">{item.count}</span>
+                      <span className="fw-bold">{Number(item.count).toFixed(2)}</span>
                       <span className="text-muted" style={{ fontSize: '0.8rem' }}>x</span>
 
                       {isGift ? (

@@ -4,10 +4,25 @@ export const addNotification = (title, message, options = {}) => {
     printerName = null,
     category = "info",
     type = "info",
+    dedupeKey = null,
+    dedupeTtlMs = 180000,
   } = options;
   const notifications = JSON.parse(
     localStorage.getItem("pos_notifications") || "[]",
   );
+  if (dedupeKey) {
+    const now = Date.now();
+    const ttl = Number(dedupeTtlMs) > 0 ? Number(dedupeTtlMs) : 180000;
+    const hasRecent = notifications.some(
+      (n) =>
+        n.dedupeKey === dedupeKey &&
+        n.id != null &&
+        now - n.id < ttl,
+    );
+    if (hasRecent) {
+      return;
+    }
+  }
   const now = Date.now();
   const lastId = Number(
     localStorage.getItem("pos_notifications_last_id") || "0",
@@ -28,6 +43,7 @@ export const addNotification = (title, message, options = {}) => {
     fullDate: new Date().toLocaleString("az-AZ"),
     status: "new", // new, old
     type, // error, info, success, warning
+    ...(dedupeKey != null && dedupeKey !== "" ? { dedupeKey } : {}),
   };
   notifications.unshift(newNotif);
   localStorage.setItem("pos_notifications", JSON.stringify(notifications));

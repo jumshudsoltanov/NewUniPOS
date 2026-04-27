@@ -11,6 +11,20 @@ import { DEFAULT_OPERATION_NAMES } from "../Operations/OperationsModal";
 
 const DEFAULT_SECRET_PASSWORD = "2507";
 
+const DEFAULT_POS_RECEIPT_SETTINGS = {
+  customer: { fontSizeOffset: 0, paperWidth: 80 },
+  kitchen: { fontSizeOffset: 0, paperWidth: 80 },
+};
+
+function normalizePosReceiptSettings(raw) {
+  const cIn = raw?.customer && typeof raw.customer === "object" ? raw.customer : {};
+  const kIn = raw?.kitchen && typeof raw.kitchen === "object" ? raw.kitchen : {};
+  return {
+    customer: { ...DEFAULT_POS_RECEIPT_SETTINGS.customer, ...cIn },
+    kitchen: { ...DEFAULT_POS_RECEIPT_SETTINGS.kitchen, ...kIn },
+  };
+}
+
 const ALL_ACTIONS = [
   { key: "prefix:Yeni sifariş yaradıldı", label: "Yeni çek açıldı" },
   { key: "Çek bağlandı", label: "Çek bağlandı" },
@@ -92,12 +106,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   const [receiptSettings, setReceiptSettings] = useState(() => {
      try {
        const saved = JSON.parse(localStorage.getItem("pos_receipt_settings"));
-       return saved || {
-         customer: { fontSizeOffset: 0, paperWidth: 80 },
-         kitchen: { fontSizeOffset: 0, paperWidth: 80 }
-       };
+       return normalizePosReceiptSettings(saved || {});
      } catch(e) {
-       return { customer: { fontSizeOffset: 0, paperWidth: 80 }, kitchen: { fontSizeOffset: 0, paperWidth: 80 }};
+       return normalizePosReceiptSettings({});
      }
   });
 
@@ -260,7 +271,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       setHideImages(localStorage.getItem("pos_hide_images") === "true");
       try {
         const savedReceipt = JSON.parse(localStorage.getItem("pos_receipt_settings"));
-        if (savedReceipt) setReceiptSettings(savedReceipt);
+        if (savedReceipt) setReceiptSettings(normalizePosReceiptSettings(savedReceipt));
       } catch(e) {}
       // Load current settings PIN
       apiConfig.get("/admin/settings-pin").then(({ data }) => {
@@ -1052,11 +1063,35 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                  <div style={{ padding: '8px 12px', background: '#053796', color: '#fff', borderRadius: '6px', fontSize: '13px', fontWeight: '600', marginBottom: '15px' }}>
                      Cari Çek Ölçüsü: {(receiptSettings[receiptType]?.paperWidth || 80) === 80 ? '80mm' : '58mm'} ⨉ Təxmini {previewHeightPx ? (((previewHeightPx / ((receiptSettings[receiptType]?.paperWidth || 80) === 80 ? 310 : 210)) * (receiptSettings[receiptType]?.paperWidth || 80)) / 10).toFixed(1) : 0} cm
                  </div>
-                 <div ref={previewRef} style={{ width: (receiptSettings[receiptType]?.paperWidth || 80) === 80 ? '310px' : '220px', minHeight: 'min-content', backgroundColor: '#fff', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', padding: '20px 10px', transition: 'width 0.3s ease, margin 0.3s ease', borderRadius: '4px', marginBottom: '20px' }}>
+                 <div
+                   ref={previewRef}
+                   className="pin-adv-receipt-preview-sandbox"
+                   style={{
+                     width: (receiptSettings[receiptType]?.paperWidth || 80) === 80 ? "310px" : "220px",
+                     minHeight: "min-content",
+                     backgroundColor: "#fff",
+                     boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+                     padding: "20px 10px",
+                     transition: "width 0.3s ease, margin 0.3s ease",
+                     borderRadius: "4px",
+                     marginBottom: "20px",
+                     fontSize: "initial",
+                     lineHeight: "normal",
+                   }}
+                 >
                     {receiptType === "customer" ? (
-                       <CustomerReceipt {...mockCustomerProps} previewSettings={receiptSettings.customer} />
+                       <CustomerReceipt
+                         key={`cr-${receiptSettings.customer?.fontSizeOffset ?? 0}-${receiptSettings.customer?.paperWidth ?? 80}-${receiptSettings.customer?.fontFamily ?? ""}`}
+                         {...mockCustomerProps}
+                         menuCatalog={[]}
+                         previewSettings={receiptSettings.customer}
+                       />
                     ) : (
-                       <KitchenReceipt {...mockKitchenProps} previewSettings={receiptSettings.kitchen} />
+                       <KitchenReceipt
+                         key={`kr-${receiptSettings.kitchen?.fontSizeOffset ?? 0}-${receiptSettings.kitchen?.paperWidth ?? 80}-${receiptSettings.kitchen?.fontFamily ?? ""}`}
+                         {...mockKitchenProps}
+                         previewSettings={receiptSettings.kitchen}
+                       />
                     )}
                  </div>
               </div>

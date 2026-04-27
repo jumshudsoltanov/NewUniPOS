@@ -23,7 +23,16 @@ import { toast } from "sonner";
 import { getSocket } from "../../utils/apiConfig";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { checkShiftGuard } from "../../utils/shiftGuard";
+import { normalizeTableShape } from "../../utils/tableShape";
 import axios from "../../utils/apiConfig";
+
+/** Kanvas (layout) üçün forma əsaslı default en/hünd. — bilyar eni geniş, alçaq */
+const defaultSizeForTableShape = (rawShape) => {
+  const s = normalizeTableShape(rawShape);
+  if (s === "rectangle") return { w: 200, h: 300 };
+  if (s === "billiard") return { w: 280, h: 180 };
+  return { w: 200, h: 200 };
+};
 
 const Tables = () => {
   const {
@@ -95,11 +104,11 @@ const Tables = () => {
     const tbl = currentTables.find((t) => t.id === selectedEditTableId);
     const defLayout = generatedLayout[selectedEditTableId] || { x: 20, y: 20 };
     const existing = hallLayouts[String(selectedEditTableId)] || defLayout;
-    const isRect = tbl?.shape_type === "rectangle";
+    const defSz = defaultSizeForTableShape(tbl?.shape_type);
     const rawW = existing.w;
     const rawH = existing.h;
-    setSingleW(String(rawW && rawW >= 150 ? rawW : 200));
-    setSingleH(String(rawH && rawH >= 150 ? rawH : (isRect ? 300 : 200)));
+    setSingleW(String(rawW && rawW >= 150 ? rawW : defSz.w));
+    setSingleH(String(rawH && rawH >= 150 ? rawH : defSz.h));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEditTableId]);
 
@@ -211,8 +220,7 @@ const Tables = () => {
 
     currentTables.forEach((table, index) => {
       const col = index % cols;
-      const isRect = table.shape_type === "rectangle";
-      const h = isRect ? 300 : 200;
+      const h = defaultSizeForTableShape(table.shape_type).h;
 
       if (col === 0 && index !== 0) {
         currentY += rowMaxH + 20;
@@ -458,9 +466,7 @@ const Tables = () => {
     const defaultLayout = generatedLayout[table.id] || { x: 0, y: 0 };
     const layout = activeLayouts?.[String(table.id)] || defaultLayout;
 
-    const isRect = table.shape_type === "rectangle";
-    const defaultW = 200;
-    const defaultH = isRect ? 300 : 200;
+    const { w: defaultW, h: defaultH } = defaultSizeForTableShape(table.shape_type);
 
     // Ignore admin small sizes (< 150px), use POS defaults
     const currentW = layout.w && layout.w >= 150 ? layout.w : defaultW;
@@ -680,9 +686,7 @@ const Tables = () => {
 
     currentTables.forEach((table, index) => {
       const col = index % cols;
-      const isRect = table.shape_type === "rectangle";
-      const tH = isRect ? 300 : 200;
-      const tW = 200;
+      const { w: tW, h: tH } = defaultSizeForTableShape(table.shape_type);
 
       if (col === 0 && index !== 0) {
         currentY += rowMaxH + 20;
@@ -745,10 +749,9 @@ const Tables = () => {
               };
               const layout = activeLayouts?.[String(table.id)] || defaultLayout;
 
-              const isRect = table.shape_type === "rectangle";
-              // POS default sizes per shape
-              const defaultW = isRect ? 200 : 200;
-              const defaultH = isRect ? 300 : 200;
+              const { w: defaultW, h: defaultH } = defaultSizeForTableShape(
+                table.shape_type,
+              );
               const rotation = layout.rotation || 0;
 
               // Ignore admin small sizes (< 150px), use POS shape-based defaults

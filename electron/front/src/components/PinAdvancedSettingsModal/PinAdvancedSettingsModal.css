@@ -741,6 +741,13 @@
     max-width: 800px !important;
 }
 
+/* Çek önizləməsi: modal gövdəsinin şrift irsiyyətindən çıxmaq */
+.pin-adv-receipt-preview-sandbox {
+    isolation: isolate;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 /* Invisible custom scrollbar */
 .pin-invisible-scroll {
     overflow-y: auto;

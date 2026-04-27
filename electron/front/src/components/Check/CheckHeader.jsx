@@ -212,11 +212,20 @@ const CheckHeader = ({
                 table?.name ||
                 orders?.table_name ||
                 orders?.table?.name;
-              if (
+              const tagLine = String(
+                liveOrder?.tags ?? orders?.tags ?? "",
+              ).trim();
+              const mainLine =
                 isDineIn &&
                 (effectiveTableName || effectiveHallName || orders?.table_id)
-              ) {
-                return (
+                  ? effectiveTableName || "Masa"
+                  : effectiveSaleType === "delivery"
+                    ? "Çatdırılma"
+                    : effectiveSaleType === "takeaway"
+                      ? "Gəl götür"
+                      : "Yeni Sifariş";
+              return (
+                <>
                   <span
                     className="header-order-id"
                     style={{
@@ -226,26 +235,22 @@ const CheckHeader = ({
                       display: "block",
                     }}
                   >
-                    {effectiveTableName || "Masa"}
+                    {mainLine}
                   </span>
-                );
-              }
-              return (
-                <span
-                  className="header-order-id"
-                  style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    display: "block",
-                  }}
-                >
-                  {effectiveSaleType === "delivery"
-                    ? "Çatdırılma"
-                    : effectiveSaleType === "takeaway"
-                      ? "Gəl götür"
-                      : "Yeni Sifariş"}
-                </span>
+                  {tagLine ? (
+                    <span
+                      className="header-subtitle"
+                      title={tagLine}
+                      style={{
+                        display: "block",
+                        marginTop: "2px",
+                        opacity: 0.92,
+                      }}
+                    >
+                      {tagLine}
+                    </span>
+                  ) : null}
+                </>
               );
             })()}
           </div>

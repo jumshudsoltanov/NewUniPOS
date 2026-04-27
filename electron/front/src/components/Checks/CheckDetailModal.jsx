@@ -13,7 +13,7 @@ import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import apiConfig, { TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
-import { sumOrderItemsLinesTotal, getOrderItemLineTotal } from "../../utils/orderItemLineTotal";
+import { sumOrderItemsLinesTotal, getOrderItemLineTotal, buildFiscalLineItemsFromOrderItems, mapOrderPaymentForTax, computeFiscalCheckTotalsFromOrder } from "../../utils/orderItemLineTotal";
 
 const getTaxConfigId = (c) => c?.id ?? (c?.ip_addr && c?.port_addr
     ? Math.abs((c.ip_addr + ':' + c.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
@@ -225,19 +225,13 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         setTaxLoading(true);
         try {
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-            const items = (order.orders_items || [])
-                .filter((item) => Number(item.count ?? item.quantity ?? 0) > 0)
-                .map(item => ({
-                    ...item,
-                    name: item.product?.name || 'Məhsul',
-                    count: Number(item.count ?? item.quantity ?? 1),
-                    price: item.price || 0
-                }));
-            const payments = (order.order_payments || []).map(p => ({
-                name: p.payment_method?.name || 'Nağd',
-                type: p.payment_method?.type || 'cash',
-                amount: p.paid
-            }));
+            const items = buildFiscalLineItemsFromOrderItems(order);
+            const payments = (order.order_payments || []).map(mapOrderPaymentForTax);
+            const ft = computeFiscalCheckTotalsFromOrder(order);
+            const orderTotalFiscal =
+                order.total != null && order.total !== "" && !Number.isNaN(Number(order.total)) && Number(order.total) > 0
+                    ? Number(order.total)
+                    : ft.sumTotal;
             const result = await apiConfig.post('/tax/money-back', {
                 taxConfigs: configsToSend,
                 moneyBackData: {
@@ -247,7 +241,11 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     parentFiscalId: order.fiscal_id || '',
                     documentNumber: String(order.fiscal_doc_number || order.id || ''),
                     shortDocId: order.fiscal_short_id || '',
-                    orderId: order.uuid || order.id
+                    orderId: order.uuid || order.id,
+                    serviceFee: ft.serviceAmount,
+                    ...(Number(ft.discountAmount) > 0 ? { discountAmount: ft.discountAmount } : {}),
+                    deliveryFee: ft.deliveryFee,
+                    orderTotal: orderTotalFiscal
                 }
             }, { timeout: TAX_HTTP_TIMEOUT_MS });
             if (result.data?.success) {
@@ -325,43 +323,31 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
     /** Təkrar satış üçün məhsul/ödəniş siyahısı */
     const getResendSaleItemsAndPayments = () => {
-        const items = (order.orders_items || [])
-            .filter((item) => Number(item.count ?? item.quantity ?? 0) > 0)
-            .map((item) => ({
-                ...item,
-                name: item.product?.name || item.name || "Məhsul",
-                count: Number(item.count ?? item.quantity ?? 1),
-                price: item.price || 0,
-            }));
+        const items = buildFiscalLineItemsFromOrderItems(order);
         if (items.length === 0) {
             toast.error("Fiskal satış üçün məhsul siyahısı boşdur.");
             return null;
         }
-        const payments = (order.order_payments || []).map((p) => ({
-            payment_method_id: p.payment_method_id,
-            without_payment_method_id: p.without_payment_method_id,
-            name: p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Nağd"),
-            type: p.payment_method?.type || "cash",
-            amount: p.paid,
-        }));
+        const payments = (order.order_payments || []).map(mapOrderPaymentForTax);
         if (payments.length === 0) {
             toast.error("Ödəniş məlumatı yoxdur — fiskal satış göndərilmədi.");
             return null;
         }
-        // Servis haqqı və endirim hesabla
-        const itemsTotal = items.reduce((s, i) => s + Number(i.count) * Number(i.price), 0);
-        const discountValue = Number(order.discount_value || order.discount || 0);
-        const discountType = order.discount_type || "percent";
-        const discountAmount = discountValue > 0
-            ? (discountType === "percent" ? (itemsTotal * discountValue) / 100 : discountValue)
-            : 0;
-        const serviceValue = Number(order.service_value || 0);
-        const serviceType = order.service_type || "percent";
-        const serviceFee = serviceValue > 0
-            ? (serviceType === "percent" ? (itemsTotal * serviceValue) / 100 : serviceValue)
-            : Number(order.service_charge || 0);
+        const ft = computeFiscalCheckTotalsFromOrder(order);
+        const deliveryFeeN = ft.deliveryFee;
+        const orderTotal =
+            order.total != null && order.total !== "" && !Number.isNaN(Number(order.total)) && Number(order.total) > 0
+                ? Number(order.total)
+                : ft.sumTotal;
 
-        return { items, payments, serviceFee, discountAmount, deliveryFee: Number(order.delivery_fee || 0) };
+        return {
+            items,
+            payments,
+            serviceFee: ft.serviceAmount,
+            ...(Number(ft.discountAmount) > 0 ? { discountAmount: ft.discountAmount } : {}),
+            deliveryFee: deliveryFeeN,
+            orderTotal
+        };
     };
 
     /** Birdən çox vergi kassası: modal; tək kassa: birbaşa göndəriş */
@@ -383,7 +369,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
         const data = getResendSaleItemsAndPayments();
         if (!data) return;
-        const { items, payments, serviceFee, discountAmount, deliveryFee } = data;
+        const { items, payments, serviceFee, discountAmount, deliveryFee, orderTotal } = data;
 
         if (order.fiscal_id) {
             const ok = window.confirm(
@@ -405,8 +391,9 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                         cashierName: waiterName,
                         orderId: order.id,
                         serviceFee: serviceFee || 0,
-                        discountAmount: discountAmount || 0,
+                        ...(Number(discountAmount) > 0 ? { discountAmount: Number(discountAmount) } : {}),
                         deliveryFee: deliveryFee || 0,
+                        orderTotal: orderTotal != null && orderTotal !== "" ? Number(orderTotal) : 0,
                     },
                 },
                 { timeout: TAX_HTTP_TIMEOUT_MS }
