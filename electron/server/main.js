@@ -965,12 +965,26 @@ ipcMain.handle(
       new Promise((resolve) => {
         const net = require("net");
         const sock = net.connect(Number(port) || 9100, ip, () => {
-          sock.write(buf, () => {
-            sock.end();
-            resolve({ success: true });
-          });
+          // Böyük bufferləri parça-parça göndər — printer buffer overflow olmasın
+          const CHUNK = 4096;
+          let offset = 0;
+          const writeNext = () => {
+            if (offset >= buf.length) {
+              sock.end();
+              return resolve({ success: true });
+            }
+            const chunk = buf.slice(offset, offset + CHUNK);
+            offset += CHUNK;
+            const canContinue = sock.write(chunk);
+            if (canContinue) {
+              writeNext();
+            } else {
+              sock.once("drain", writeNext);
+            }
+          };
+          writeNext();
         });
-        sock.setTimeout(8000);
+        sock.setTimeout(30000);
         sock.on("error", (e) => resolve({ success: false, error: e.message }));
         sock.on("timeout", () => {
           sock.destroy();
@@ -1037,7 +1051,7 @@ ipcMain.handle(
       let rasterWindow = new BrowserWindow({
         show: false,
         width: receiptWidthPx,
-        height: 1200,
+        height: 16000,
         useContentSize: true,
         webPreferences: {
           nodeIntegration: false,
@@ -1127,51 +1141,121 @@ ipcMain.handle(
         });
       `);
 
+      // DPR-i 1-ə sıfırla — Windows display scaling (125%/150%) capture-ı pozmasın
+      rasterWindow.webContents.setZoomFactor(1);
+
       const wrapInfo = await rasterWindow.webContents.executeJavaScript(`
         (function() {
           var wrap = document.getElementById('zoom-wrap');
           var outer = document.getElementById('zoom-outer');
           var rect = wrap.getBoundingClientRect();
           var zoomed = Math.ceil(rect.height);
-          // outer-ın hündürlüyünü vizual hündürlüyə bərabər et ki capturePage kəsməsin
+          // Document hündürlüyünü kontent hündürlüyünə set et
           outer.style.height = (zoomed + 60) + 'px';
           document.body.style.height = (zoomed + 60) + 'px';
           document.documentElement.style.height = (zoomed + 60) + 'px';
-          return { height: zoomed, raw: wrap.scrollHeight };
+          // Scroll-u sıfırla
+          window.scrollTo(0, 0);
+          return { height: zoomed, raw: wrap.scrollHeight, dpr: window.devicePixelRatio || 1 };
         })();
       `);
 
-      console.log(`[RASTER] H-Detect: LogicH=${wrapInfo.raw}, VisualH=${wrapInfo.height}`);
+      console.log(`[RASTER] H-Detect: LogicH=${wrapInfo.raw}, VisualH=${wrapInfo.height}, DPR=${wrapInfo.dpr}`);
 
-      const captureH = wrapInfo.height + 60;
-      /** Chromium/Electron bitmap ~8192px-dən çox olduqda capturePage üfüqi «kəsilir» — uzun müştəri çeki iki yerə düşür */
-      const MAX_VIEWPORT_H = 7200;
+      let captureH = wrapInfo.height + 60;
+
+      /** Chromium/Electron bitmap ~8192px-dən çox olduqda capturePage GPU limiti ilə kəsilə bilər */
+      const MAX_SLICE_H = 7200;
 
       let normalizedImage;
 
-      if (captureH <= MAX_VIEWPORT_H) {
+      if (captureH <= MAX_SLICE_H) {
+        // ── TƏK PARÇA CAPTURE ──
         rasterWindow.setContentSize(receiptWidthPx, captureH);
+        await new Promise((r) => setTimeout(r, 500));
+
+        // Scroll-u sıfırla və hündürlükləri yenilə
+        await rasterWindow.webContents.executeJavaScript(`
+          (function() {
+            var outer = document.getElementById('zoom-outer');
+            outer.style.height = '${captureH}px';
+            document.body.style.height = '${captureH}px';
+            document.documentElement.style.height = '${captureH}px';
+            document.body.style.overflow = 'hidden';
+            window.scrollTo(0, 0);
+          })();
+        `);
         await new Promise((r) => setTimeout(r, 400));
-        const capturedImage = await rasterWindow.webContents.capturePage();
+
+        // Tam sahəni capture et — explicit rect ilə, tam əmin olmaq üçün
+        const capturedImage = await rasterWindow.webContents.capturePage({
+          x: 0,
+          y: 0,
+          width: receiptWidthPx,
+          height: captureH,
+        });
         normalizedImage = capturedImage.resize({ width: receiptWidthPx });
+        console.log(`[RASTER] Tək parça: captureH=${captureH}, imgSize=${normalizedImage.getSize().width}x${normalizedImage.getSize().height}`);
       } else {
+        // ── ÇOXPARÇALI CAPTURE ──
+        // Viewport-u sabit saxla, resize etmə, yalnız scroll et.
         console.log(
-          `[RASTER] Çox uzun çek (${captureH}px) — çoxparçalı capture (viewport≤${MAX_VIEWPORT_H}px)`,
+          `[RASTER] Çox uzun çek (${captureH}px) — çoxparçalı capture (sabit viewport=${MAX_SLICE_H}px)`,
         );
+
+        rasterWindow.setContentSize(receiptWidthPx, MAX_SLICE_H);
+        await new Promise((r) => setTimeout(r, 400));
+
+        // Document hündürlüyünü tam captureH-ya set et ki scroll işləsin
+        await rasterWindow.webContents.executeJavaScript(`
+          (function() {
+            var outer = document.getElementById('zoom-outer');
+            outer.style.height = '${captureH}px';
+            document.body.style.height = '${captureH}px';
+            document.documentElement.style.height = '${captureH}px';
+            window.scrollTo(0, 0);
+          })();
+        `);
+        await new Promise((r) => setTimeout(r, 400));
+
         const slices = [];
         let scrollY = 0;
         while (scrollY < captureH) {
-          const viewH = Math.min(MAX_VIEWPORT_H, captureH - scrollY);
+          // Scroll et — viewport resize YOX
           await rasterWindow.webContents.executeJavaScript(`
             window.scrollTo(0, ${scrollY});
           `);
-          rasterWindow.setContentSize(receiptWidthPx, viewH);
-          await new Promise((r) => setTimeout(r, 320));
-          const capturedSlice = await rasterWindow.webContents.capturePage();
-          slices.push(capturedSlice.resize({ width: receiptWidthPx }));
-          scrollY += viewH;
+          await new Promise((r) => setTimeout(r, 400));
+
+          const rawSlice = await rasterWindow.webContents.capturePage({
+            x: 0,
+            y: 0,
+            width: receiptWidthPx,
+            height: Math.min(MAX_SLICE_H, captureH - scrollY),
+          });
+          const resizedSlice = rawSlice.resize({ width: receiptWidthPx });
+
+          const remainingH = captureH - scrollY;
+          if (remainingH < MAX_SLICE_H) {
+            // Son parça: yalnız qalan kontenti saxla
+            const sliceSize = resizedSlice.getSize();
+            const cropH = Math.max(1, Math.ceil(remainingH * sliceSize.height / MAX_SLICE_H));
+            const cropped = resizedSlice.crop({
+              x: 0,
+              y: 0,
+              width: sliceSize.width,
+              height: Math.min(cropH, sliceSize.height),
+            });
+            slices.push(cropped);
+            console.log(`[RASTER] Son parça: scrollY=${scrollY}, remainingH=${remainingH}, cropH=${cropH}`);
+          } else {
+            slices.push(resizedSlice);
+          }
+
+          scrollY += MAX_SLICE_H;
         }
         normalizedImage = concatNativeImagesVertically(slices);
+        console.log(`[RASTER] ${slices.length} parça birləşdirildi, total=${normalizedImage.getSize().height}px`);
       }
 
       if (!rasterWindow.isDestroyed()) rasterWindow.close();
@@ -1208,7 +1292,9 @@ ipcMain.handle(
       const trimmedH = Math.min(imgH, lastBlackRow + 10); // 10px əlavə boşluq qalsın
       console.log(`[RASTER] Trim: OriginalH=${imgH}, TrimmedH=${trimmedH}`);
 
-      const CHUNK_ROWS = 80;
+      // Kiçik chunk: bəzi printerlər böyük GS v0 raster bloklarını buffer overflow edir
+      // və kağızı ortadan kəsir. 24 sətir × 72 bayt = 1728 bayt — bütün printerlərə uyğun.
+      const CHUNK_ROWS = 24;
       for (let rowStart = 0; rowStart < trimmedH; rowStart += CHUNK_ROWS) {
         const rowsToProcess = Math.min(CHUNK_ROWS, trimmedH - rowStart);
         const header = Buffer.from([
@@ -1265,6 +1351,17 @@ ipcMain.handle(
       }
 
       const singleJobBuffer = Buffer.concat([...parts, ...finalCutParts]);
+      console.log(`[RASTER] Final buffer: ${singleJobBuffer.length} bytes, imgH=${imgH}, trimmedH=${trimmedH}, chunks=${Math.ceil(trimmedH / CHUNK_ROWS)}`);
+
+      // Debug: capture edilən şəkli faylda saxla (diaqnostika üçün)
+      try {
+        const debugPath = require('path').join(require('os').tmpdir(), 'unipos_last_receipt.png');
+        require('fs').writeFileSync(debugPath, normalizedImage.toPNG());
+        console.log(`[RASTER-DEBUG] Capture şəkli saxlanıldı: ${debugPath}`);
+      } catch (dbgErr) {
+        console.warn('[RASTER-DEBUG] Şəkil saxlanmadı:', dbgErr.message);
+      }
+
       const copies = s.copies ? Number(s.copies) : 1;
       if (copies <= 1) return singleJobBuffer;
 
@@ -1343,7 +1440,7 @@ ipcMain.handle(
       x: -9999,
       y: -9999,
       width: driverContentPx,
-      height: 4000,
+      height: 16000,
       ...browserWindowIconFields(),
       webPreferences: {
         nodeIntegration: true,
@@ -1413,15 +1510,54 @@ ipcMain.handle(
       const scaledH = Math.ceil(rawH * ${driverScale.toFixed(6)});
       const bufEl = document.querySelector('.receipt-cut-buffer');
       const bufH = bufEl ? bufEl.offsetHeight : 0;
-      // outer-ın hündürlüyünü vizual hündürlüyə bərabər et ki kəsilməsin
-      if (outerEl) outerEl.style.height = (scaledH + bufH + 40) + 'px';
-      document.body.style.minHeight = (scaledH + bufH + 40) + 'px';
-      const hmm = Math.ceil((scaledH + bufH) * 25.4 / 96) + 15;
-      const s = document.createElement('style');
+      // VACIB: rawH istifadə et (scaledH deyil!) — transform:scale layout-u dəyişmir,
+      // Electron print zamanı layout hündürlüyünə baxır, scaledH kiçik olduğu üçün kəsilir.
+      var pageH = Math.max(rawH, scaledH) + bufH + 60;
+      if (outerEl) outerEl.style.height = pageH + 'px';
+      document.body.style.height = pageH + 'px';
+      document.body.style.minHeight = pageH + 'px';
+      document.documentElement.style.height = pageH + 'px';
+      document.body.style.overflow = 'visible';
+      var hmm = Math.ceil(pageH * 25.4 / 96) + 20;
+      var s = document.createElement('style');
       s.textContent = '@page { size: ${pageWidthMm}mm ' + hmm + 'mm; margin: 0; }';
       document.head.appendChild(s);
+      console.log('[DRIVER] rawH=' + rawH + ', scaledH=' + scaledH + ', pageH=' + pageH + ', hmm=' + hmm + 'mm');
       hmm;
     `);
+
+      // ── DİNAMİK REZİZE: pəncərəni dəqiq kontent hündürlüyünə gətir ──
+      const driverActualPx = Math.ceil(contentHeight * 96 / 25.4);
+      if (driverActualPx > 16000) {
+        printWindow.setContentSize(driverContentPx, driverActualPx + 100);
+        await new Promise((r) => setTimeout(r, 400));
+
+        // Yenidən ölçüb @page-i yenilə
+        await printWindow.webContents.executeJavaScript(`
+          (function() {
+            var wrapEl = document.getElementById('driver-wrap');
+            var outerEl = document.getElementById('driver-outer');
+            var rawH = wrapEl ? wrapEl.scrollHeight : document.body.scrollHeight;
+            var scaledH = Math.ceil(rawH * ${driverScale.toFixed(6)});
+            var bufEl = document.querySelector('.receipt-cut-buffer');
+            var bufH = bufEl ? bufEl.offsetHeight : 0;
+            var pageH = Math.max(rawH, scaledH) + bufH + 60;
+            if (outerEl) outerEl.style.height = pageH + 'px';
+            document.body.style.height = pageH + 'px';
+            document.body.style.minHeight = pageH + 'px';
+            document.documentElement.style.height = pageH + 'px';
+            var hmm = Math.ceil(pageH * 25.4 / 96) + 20;
+            var existingPageStyle = document.querySelector('style[data-receipt-page]');
+            if (existingPageStyle) existingPageStyle.remove();
+            var s = document.createElement('style');
+            s.setAttribute('data-receipt-page', '1');
+            s.textContent = '@page { size: ${pageWidthMm}mm ' + hmm + 'mm; margin: 0; }';
+            document.head.appendChild(s);
+          })();
+        `);
+        await new Promise((r) => setTimeout(r, 200));
+        console.log('[DRIVER] Uzun çek: pəncərə dinamik resize edildi — ' + driverActualPx + 'px');
+      }
 
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
