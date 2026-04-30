@@ -15,7 +15,7 @@ class OmnitechService {
             console.log(`[OMNITECH REQUEST]`, JSON.stringify(data));
             const response = await axios.post(this.baseUrl, data, {
                 headers: { 'Content-Type': 'application/json' },
-                timeout: 30000
+                timeout: 120000
             });
             const result = response.data;
             console.log(`[OMNITECH RESPONSE]`, JSON.stringify(result));
@@ -220,22 +220,78 @@ class OmnitechService {
         });
     }
 
-    _isCashlessPayment(p) {
-        const name = (p.name || '').toLowerCase();
-        const type = (p.type || '').toLowerCase();
-        return type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
-            name.includes('kart') || name.includes('card') || name.includes('cashless') ||
-            name.includes('nağdsız') || name.includes('bank');
+    /**
+     * "Nağd"/"Nağdsız" və digər AZ/EN ödəniş adlarını ASCII-yə normallaşdır.
+     * mapOrderPaymentForTax ilə eyni məntiqi saxlayırıq.
+     */
+    _normalizePaymentLabel(s) {
+        if (s == null || s === '') return '';
+        return String(s)
+            .normalize('NFC')
+            .toLowerCase()
+            .replace(/ə/g, 'e')
+            .replace(/ı/g, 'i')
+            .replace(/ğ/g, 'g')
+            .replace(/ö/g, 'o')
+            .replace(/ü/g, 'u')
+            .replace(/ş/g, 's')
+            .replace(/ç/g, 'c')
+            .trim();
     }
 
-    // check_type: 1
-    async createSale({ items, payments, cashierName, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0 }) {
-        // Always re-login before sale — Omnitech token expires after navigation
-        this.accessToken = null;
-        const token = await this._ensureToken();
-        const vatPercent = this.taxPercent;
+    /**
+     * Ödənişin nağdsız (cashless/card) olub-olmadığını müəyyən et.
+     * Prioritet: type sahəsi → ad sahəsi.
+     * "Nağd"  → false (nağd)
+     * "Nağdsız" → true  (nağdsız/card)
+     * "nagdsiz" → true  (mapOrderPaymentForTax çıxışı)
+     */
+    _isCashlessPayment(p) {
+        const nameRaw = String(p?.name ?? '');
+        const typeRaw = p?.type != null && p.type !== '' ? String(p.type) : '';
+        const t = this._normalizePaymentLabel(typeRaw); // "nagdsiz", "cash", "card"…
+        const n = this._normalizePaymentLabel(nameRaw); // "nagdsiz", "nagd"…
 
-        // Build base items — endirim mütənasib şəkildə hər itemə bölünür
+        // ── 1. TYPE sahəsi (ən etibarlı) ────────────────────────────────────
+        // Açıq nağd tipi → dərhal false (nağdsız yoxlamalarının önündə olmalıdır)
+        if (t === 'nagd' || t === 'negd' || t === 'cash') return false;
+
+        // Açıq nağdsız/card tipi
+        if (
+            t === 'nagdsiz' || t === 'negdsiz' ||
+            t === 'cashless' || t === 'card' || t === 'bank' ||
+            t === 'pos' || t === 'terminal' || t === 'kart' || t === 'kredit'
+        ) return true;
+
+        // ── 2. AD sahəsi (type boş və ya tanınmırsa) ────────────────────────
+        if (n.includes('nagdsiz') || n.includes('negdsiz')) return true;
+        if (
+            n.includes('kart') || n.includes('visa') ||
+            n.includes('mastercard') || n.includes('mir') ||
+            n.includes('ameria') || n.includes('pos') || n.includes('terminal')
+        ) return true;
+
+        return false;
+    }
+
+    _vatAmountsFromOmniItems(omniItems) {
+        const vatMap = {};
+        omniItems.forEach(i => {
+            const pct = i.itemVatPercent;
+            vatMap[pct] = (vatMap[pct] || 0) + i.itemSum;
+        });
+        return Object.entries(vatMap).map(([pct, sum]) => ({
+            vatPercent: Number(pct),
+            vatSum: Number(sum.toFixed(2))
+        }));
+    }
+
+    /**
+     * Satış və geri qaytarma üçün eyni sətir quruluşu (endirim, servis, çatdırılma) —
+     * money_back orijinal createDocument(sale) ilə uyğun olmalıdır.
+     */
+    _buildOmniSaleItemsPayload(items, discountAmount, serviceFee, deliveryFee) {
+        const vatPercent = this.taxPercent;
         const rawItemsTotal = items.reduce((acc, item) => {
             const qty = Number(item.count || item.quantity || 1);
             const price = Number(item.price || 0);
@@ -251,13 +307,11 @@ class OmnitechService {
             const price = Number(item.price || 0);
             const lineTotal = qty * price;
 
-            // Endirimi bu item-ə mütənasib paylayırıq
             let itemDiscount = 0;
             if (discAmt > 0 && rawItemsTotal > 0) {
                 itemDiscount = Number(((discAmt * lineTotal) / rawItemsTotal).toFixed(2));
             }
 
-            // itemPrice — endirimli vahid qiymət; itemSum = itemPrice * qty
             const discountedLineTotal = Number((lineTotal - itemDiscount).toFixed(2));
             const discountedPrice = qty > 0 ? Number((discountedLineTotal / qty).toFixed(2)) : 0;
 
@@ -274,7 +328,6 @@ class OmnitechService {
             };
         });
 
-        // Servis haqqı — ayrıca item kimi əlavə edilir
         if (svcFee > 0) {
             omniItems.push({
                 itemName: 'Servis haqqi',
@@ -289,7 +342,6 @@ class OmnitechService {
             });
         }
 
-        // Çatdırılma haqqı — ayrıca item kimi əlavə edilir
         if (dlvFee > 0) {
             omniItems.push({
                 itemName: 'Catdirilma haqqi',
@@ -304,19 +356,23 @@ class OmnitechService {
             });
         }
 
-        // sum = ∑items(itemSum) — Omnitech API tələbi
         const totalSum = Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+        const vatAmounts = this._vatAmountsFromOmniItems(omniItems);
+        return { omniItems, totalSum, vatAmounts };
+    }
 
-        // vatAmounts — itemVatPercent-ə görə qruplaşdırılmış cəm
-        const vatMap = {};
-        omniItems.forEach(i => {
-            const pct = i.itemVatPercent;
-            vatMap[pct] = (vatMap[pct] || 0) + i.itemSum;
-        });
-        const vatAmounts = Object.entries(vatMap).map(([pct, sum]) => ({
-            vatPercent: Number(pct),
-            vatSum: Number(sum.toFixed(2))
-        }));
+    // check_type: 1
+    async createSale({ items, payments, cashierName, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0 }) {
+        // Always re-login before sale — Omnitech token expires after navigation
+        this.accessToken = null;
+        const token = await this._ensureToken();
+
+        const { omniItems, totalSum, vatAmounts } = this._buildOmniSaleItemsPayload(
+            items,
+            discountAmount,
+            serviceFee,
+            deliveryFee
+        );
 
         let cashSum = 0;
         let cashlessSum = 0;
@@ -380,19 +436,41 @@ class OmnitechService {
         return this._request({ requestData });
     }
 
-    // check_type: 100
-    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId }) {
-        if (!parentFiscalId) {
+    // check_type: 100 — sorğu gövdəsi satış (check_type 1) ilə eyni səviyyəli olmalıdır: int_ref + receiptDetails
+    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal, orderId }) {
+        const parentId = String(parentFiscalId || '').trim();
+        if (!parentId) {
             throw new Error('parentFiscalId (fiscal_id) boşdur — orijinal satışın fiskal ID-si lazımdır');
         }
 
         // Always re-login before money_back — Omnitech token expires after navigation
         this.accessToken = null;
         const token = await this._ensureToken();
-        const vatPercent = this.taxPercent;
 
-        // Faktiki ödənilmiş məbləği payments-dən hesabla
-        // (servis haqqı + endirim artıq payments-in içindədir)
+        const discAmt = Number(discountAmount) || 0;
+        const svcFee = Number(serviceFee) || 0;
+        const dlvFee = Number(deliveryFee) || 0;
+
+        let { omniItems, totalSum, vatAmounts: vatAmountsMb } = this._buildOmniSaleItemsPayload(
+            items,
+            discAmt,
+            svcFee,
+            dlvFee
+        );
+
+        const otRaw = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : NaN;
+        if (!Number.isNaN(otRaw) && otRaw > 0 && omniItems.length > 0) {
+            const diff = Number((otRaw - totalSum).toFixed(2));
+            if (Math.abs(diff) >= 0.01) {
+                const last = omniItems[omniItems.length - 1];
+                last.itemSum = Number((last.itemSum + diff).toFixed(2));
+                const q = Number(last.itemQuantity) || 0;
+                last.itemPrice = q > 0 ? Number((last.itemSum / q).toFixed(2)) : last.itemPrice;
+                totalSum = Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+                vatAmountsMb = this._vatAmountsFromOmniItems(omniItems);
+            }
+        }
+
         let cashSum = 0;
         let cashlessSum = 0;
         if (payments && payments.length > 0) {
@@ -408,76 +486,29 @@ class OmnitechService {
         cashSum = Number(cashSum.toFixed(2));
         cashlessSum = Number(cashlessSum.toFixed(2));
 
-        // Faktiki ödənilmiş ümumi məbləğ (servis haqqı/endirim daxil)
-        const actualTotal = Number((cashSum + cashlessSum).toFixed(2));
-
-        // Item-lərin xam cəmi (servis haqqı/endirim yoxdur)
-        const rawItemsTotal = items.reduce((acc, item) => {
-            const qty = Number(item.count || item.quantity || 1);
-            const price = Number(item.price || 0);
-            return acc + qty * price;
-        }, 0);
-
-        // Item-ləri scale edərək faktiki məbləğə uyğunlaşdır
-        // Omnitech: sum = ∑items(itemSum), əgər uyğun gəlməsə rədd edir
-        const scaleFactor = rawItemsTotal > 0 ? actualTotal / rawItemsTotal : 1;
-
-        const omniItems = items.map((item, idx) => {
-            const qty = Number(item.count || item.quantity || 1);
-            const price = Number(item.price || 0);
-            const rawLineTotal = qty * price;
-            // Proporsional olaraq scale edilmiş cəm
-            const scaledSum = Number((rawLineTotal * scaleFactor).toFixed(2));
-            const scaledPrice = qty > 0 ? Number((scaledSum / qty).toFixed(2)) : 0;
-            return {
-                _idx: idx,
-                itemName: this._azToLatin(item.product?.name || item.name || 'Mahsul').substring(0, 64),
-                itemCodeType: 0,
-                itemCode: String(item.product_id || item.id || '0'),
-                itemQuantityType: 0,
-                itemQuantity: Number(qty.toFixed(3)),
-                itemPrice: scaledPrice,
-                itemSum: scaledSum,
-                itemVatPercent: vatPercent,
-                discount: 0
-            };
-        });
-
-        // Yuvarlama fərqini son item-ə əlavə et ki sum = actualTotal olsun
-        const scaledItemsTotal = Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
-        const roundingDiff = Number((actualTotal - scaledItemsTotal).toFixed(2));
-        if (omniItems.length > 0 && Math.abs(roundingDiff) > 0) {
-            const last = omniItems[omniItems.length - 1];
-            last.itemSum = Number((last.itemSum + roundingDiff).toFixed(2));
-            last.itemPrice = last.itemQuantity > 0
-                ? Number((last.itemSum / last.itemQuantity).toFixed(2))
-                : last.itemPrice;
-        }
-
-        // _idx köməkçi sahəsini sil
-        omniItems.forEach(i => delete i._idx);
-
-        const totalSum = actualTotal > 0 ? actualTotal
-            : Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
-
-        // payments boşdursa default olaraq nağd
         if (cashSum === 0 && cashlessSum === 0) {
-            cashSum = totalSum;
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
+        } else {
+            const paySum = Number((cashSum + cashlessSum).toFixed(2));
+            if (paySum > 0 && Math.abs(paySum - totalSum) > 0.02) {
+                cashSum = Number((cashSum * totalSum / paySum).toFixed(2));
+            }
+        }
+        // Həmişə sum = cashSum + cashlessSum (yuvarlama sapması — cihaz rədd edir)
+        cashlessSum = Number((totalSum - cashSum).toFixed(2));
+        if (cashlessSum < 0) {
+            cashlessSum = 0;
+            cashSum = Number(totalSum.toFixed(2));
+        }
+        if (cashSum > totalSum + 0.01) {
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
         }
 
-        // vatAmounts — itemVatPercent-ə görə qruplaşdırılmış cəm
-        const vatMapMb = {};
-        omniItems.forEach(i => {
-            const pct = i.itemVatPercent;
-            vatMapMb[pct] = (vatMapMb[pct] || 0) + i.itemSum;
-        });
-        const vatAmountsMb = Object.entries(vatMapMb).map(([pct, sum]) => ({
-            vatPercent: Number(pct),
-            vatSum: Number(sum.toFixed(2))
-        }));
-
-        const docNumInt = parseInt(documentNumber, 10) || 0;
-        const shortId = String(shortDocId || '').substring(0, 12);
+        const docNumInt = parseInt(String(documentNumber || '').replace(/\D/g, ''), 10) || 0;
+        const shortId = String(shortDocId || '').trim().substring(0, 32);
+        const refundDocNum = String(documentNumber || '').trim();
 
         const parameters = {
             doc_type: 'money_back',
@@ -488,12 +519,12 @@ class OmnitechService {
                 cashlessSum,
                 creditSum: 0,
                 currency: 'AZN',
-                incomingSum: 0,
+                incomingSum: cashSum > 0 ? cashSum : 0,
                 items: omniItems,
                 lastOperationAtUtc: '',
-                parentDocument: String(parentFiscalId || ''),
+                parentDocument: parentId,
                 prepaymentSum: 0,
-                refund_document_number: String(documentNumber || ''),
+                refund_document_number: refundDocNum,
                 refund_short_document_id: shortId,
                 sum: totalSum,
                 vatAmounts: vatAmountsMb
@@ -507,13 +538,15 @@ class OmnitechService {
         return this._request({
             requestData: {
                 access_token: token,
+                int_ref: String(orderId || parentId || Date.now()),
                 tokenData: {
                     operationId: 'createDocument',
                     parameters,
                     version: 1
                 },
                 checkData: { check_type: 100 }
-            }
+            },
+            receiptDetails: []
         });
     }
 

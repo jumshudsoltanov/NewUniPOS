@@ -230,6 +230,33 @@ const BooksSlice = createSlice({
       state.error = action.payload;
     });
 
+    // Optimistic service fee update — servis haqqı dərhal hesablansın
+    builder.addCase("pos/serviceFee/pending", (state, action) => {
+      const { orderId, serviceValue, feeType } = action.meta.arg;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        ordersList[idx] = {
+          ...ordersList[idx],
+          service_value: serviceValue,
+          service_type: feeType,
+        };
+      }
+    });
+
+    // Service fee fulfilled — server tam hesablanmış service_charge ilə qaytarır
+    builder.addCase("pos/serviceFee/fulfilled", (state, action) => {
+      const updatedOrder = action.payload;
+      if (!updatedOrder?.uuid) return;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(updatedOrder.uuid));
+      if (idx !== -1) {
+        ordersList[idx] = { ...ordersList[idx], ...updatedOrder };
+      }
+    });
+
     // Optimistic discount update — discount dərhal hesablansın
     builder.addCase("pos/discount/pending", (state, action) => {
       const { orderId, discountValue, discountType } = action.meta.arg;

@@ -693,7 +693,6 @@ const CustomerReceipt = ({
 
                 <div style={styles.thanks}>
                     <div style={styles.thankText}>{customFooterText}</div>
-                    <div style={styles.link}>unipos.tech</div>
                 </div>
             </div>
         </div>

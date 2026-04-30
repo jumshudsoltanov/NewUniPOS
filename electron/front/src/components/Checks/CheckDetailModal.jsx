@@ -19,6 +19,15 @@ const getTaxConfigId = (c) => c?.id ?? (c?.ip_addr && c?.port_addr
     ? Math.abs((c.ip_addr + ':' + c.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
     : null);
 
+/** Çekdəki tax_cash_id ilə profil taxes sətri: API bəzən string, bəzən number qaytarır */
+const taxConfigRowMatchesOrderCashId = (c, orderTaxCashId) => {
+    if (c == null || orderTaxCashId == null || orderTaxCashId === "") return false;
+    const candidates = [c.id, c.tax_cash_id, getTaxConfigId(c)].filter((v) => v != null && v !== "");
+    return candidates.some(
+        (k) => Number(k) === Number(orderTaxCashId) || String(k) === String(orderTaxCashId),
+    );
+};
+
 const CheckDetailModal = ({ show, onClose, order }) => {
     const dispatch = useDispatch();
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -215,7 +224,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         }
 
         // Yalnız orijinal satışın edildiyi cihaza göndər – digər kassalar müstəqil qalır
-        const targetConfig = taxConfigs.find(c => getTaxConfigId(c) === order.tax_cash_id);
+        const targetConfig = taxConfigs.find((c) => taxConfigRowMatchesOrderCashId(c, order.tax_cash_id));
         if (!targetConfig) {
             toast.error('Bu çekin vergi kassası tapılmadı. Geri qaytarma yalnız orijinal kassaya göndərilə bilər.');
             return;
@@ -279,7 +288,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const handleTaxReceiptCopy = async () => {
         if (taxLoading || !order || taxConfigs.length === 0) return;
 
-        const targetConfig = taxConfigs.find(c => getTaxConfigId(c) === order.tax_cash_id);
+        const targetConfig = taxConfigs.find((c) => taxConfigRowMatchesOrderCashId(c, order.tax_cash_id));
         if (!targetConfig) {
             toast.error('Bu çekin vergi kassası tapılmadı. Təkrar çap yalnız orijinal kassadan edilə bilər.');
             return;

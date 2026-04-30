@@ -33,8 +33,28 @@ export function sumOrderItemsLinesTotal(ordersItems) {
 }
 
 /**
- * Sifariş ödənişi → fiskal API üçün: type bəzən "Nağd" və ya boş; ad əsasında nağd / nağdsız ayrısı.
- * "nağd" sözü "nağdsız"ın alt mətni kimi yoxlanmır — əvvəlcə "nağdsız" açar sözləri.
+ * Ödəniş tipini normallaşdır: "Nağd"/"Nağdsız" birinci prioritet;
+ * type sahəsi əsas götürülür, ad isə yalnız fallback kimi istifadə olunur.
+ */
+function _normPayType(s) {
+  if (s == null || s === "") return "";
+  return String(s)
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/ə/g, "e")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ö/g, "o")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ç/g, "c")
+    .trim();
+}
+
+/**
+ * Sifariş ödənişi → fiskal API üçün.
+ * Prioritet: type sahəsi → ad sahəsi.
+ * "Nağd" = cash, "Nağdsız" = cashless (card).
  */
 export function mapOrderPaymentForTax(p) {
   if (p == null) {
@@ -50,46 +70,44 @@ export function mapOrderPaymentForTax(p) {
           ? safeStr(p.name)
           : "",
   ).trim();
-  const n = name.toLowerCase();
+  const n = _normPayType(name);
   const typeRaw =
     p?.payment_method?.type != null ? p.payment_method.type : p?.type;
-  const t = String(typeRaw != null && typeRaw !== "" ? typeRaw : "").toLowerCase();
+  const t = _normPayType(typeRaw != null && typeRaw !== "" ? typeRaw : "");
   const amount = Number(p.paid != null ? p.paid : p.amount) || 0;
 
   let outType = "cash";
-  if (n.includes("nağdsız") || n.includes("nagdsiz") || n.includes("nəğdsiz")) {
-    outType = "nağdsız";
+
+  // ── 1. TYPE sahəsi əsasında (ən etibarlı mənbə) ──────────────────────────
+  if (t === "nagd" || t === "negd" || t === "cash") {
+    // "Nağd" → nağd
+    outType = "cash";
   } else if (
-    t === "nağdsız" ||
-    t === "nagdsiz" ||
-    t === "nəğdsiz" ||
-    t === "card" ||
-    t === "bank" ||
-    t === "pos" ||
-    t === "terminal" ||
-    t === "kart" ||
-    n.includes("kart") ||
-    n.includes("карт") ||
-    n.includes("pos") ||
-    n.includes("terminal") ||
-    n.includes("visa") ||
-    n.includes("mastercard") ||
-    n.includes("master") ||
-    n.includes("mir") ||
-    n.includes("ameria")
+    t === "nagdsiz" || t === "negdsiz" ||
+    t === "cashless" || t === "card" || t === "bank" ||
+    t === "pos" || t === "terminal" || t === "kart" || t === "kredit"
   ) {
-    outType = "nağdsız";
-  } else if (t === "kredit" || t === "credit" || (n.includes("kredit") && !/kart|карт|pos|terminal/i.test(n))) {
-    outType = "kredit";
-  } else if (t === "cash" || t === "nagd" || t === "nəğd" || t === "nağd" || n === "nağd") {
-    outType = "cash";
-  } else if (!typeRaw || typeRaw === "") {
-    outType = "cash";
-  } else {
-    outType = t || "cash";
+    // "Nağdsız" / card / bank / pos → nağdsız
+    outType = t === "kredit" ? "kredit" : "nagdsiz";
   }
 
-  const displayName = name || (outType === "nağdsız" ? "Nağdsız" : outType === "kredit" ? "Kredit" : "Nağd");
+  // ── 2. AD sahəsi əsasında (type boş və ya tanınmırsa) ───────────────────
+  else if (n.includes("nagdsiz") || n.includes("negdsiz")) {
+    outType = "nagdsiz";
+  } else if (
+    n.includes("kart") || n.includes("visa") || n.includes("mastercard") ||
+    n.includes("master") || n.includes("mir") || n.includes("ameria") ||
+    n.includes("pos") || n.includes("terminal") || n.includes("kart")
+  ) {
+    outType = "nagdsiz";
+  } else if (n.includes("kredit") && !/kart|pos|terminal/i.test(n)) {
+    outType = "kredit";
+  } else {
+    // boş və ya tanınmayan → nağd (default)
+    outType = "cash";
+  }
+
+  const displayName = name || (outType === "nagdsiz" ? "Nağdsız" : outType === "kredit" ? "Kredit" : "Nağd");
   return {
     payment_method_id: p.payment_method_id,
     without_payment_method_id: p.without_payment_method_id,

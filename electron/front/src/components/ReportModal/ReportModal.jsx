@@ -152,24 +152,24 @@ const ReportModal = ({ show, onClose }) => {
         const html = `
             <style>
                 * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', 'Courier', monospace; color: #000 !important; }
-                .report-view { width: 100%; max-width: 80mm; padding: 0 3mm; font-size: ${fs(12)}; }
+                .report-view { width: 100%; max-width: 80mm; padding: 0 3mm; font-size: ${fs(14)}; line-height: 1.35; }
                 .report-data-header { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; text-align: left; }
-                .report-data-info p { font-size: ${fs(11)}; margin-bottom: 4px; font-weight: 700; }
+                .report-data-info p { font-size: ${fs(13)}; margin-bottom: 4px; font-weight: 700; line-height: 1.35; }
                 .report-data-info p span { font-weight: bold; margin-right: 5px; }
                 .report-data-time { margin-top: 6px; }
-                .report-data-time span { font-size: ${fs(11)}; font-weight: 700; }
-                .section-title { font-weight: 900; font-size: ${fs(12)}; border-bottom: 1px solid #000; padding-bottom: 4px; margin: 12px 0 8px; text-transform: uppercase; text-align: center; }
+                .report-data-time span { font-size: ${fs(13)}; font-weight: 700; }
+                .section-title { font-weight: 900; font-size: ${fs(14)}; border-bottom: 1px solid #000; padding-bottom: 4px; margin: 12px 0 8px; text-transform: uppercase; text-align: center; line-height: 1.3; }
                 .receipt-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #666; align-items: center; }
-                .receipt-row > span:first-child { font-size: ${fs(11)}; font-weight: 700; }
+                .receipt-row > span:first-child { font-size: ${fs(13)}; font-weight: 700; }
                 .receipt-row .dots { display: none; }
-                .receipt-row .value { font-size: ${fs(11)}; font-weight: 700; }
+                .receipt-row .value { font-size: ${fs(13)}; font-weight: 700; }
                 .total-line { border-top: 2px solid #000; border-bottom: 2px double #000; margin-top: 8px; padding: 6px 0; }
-                .total-line > span:first-child { font-size: ${fs(12)} !important; font-weight: 900 !important; text-transform: uppercase; }
-                .total-line .value { font-size: ${fs(13)} !important; font-weight: 900 !important; }
+                .total-line > span:first-child { font-size: ${fs(14)} !important; font-weight: 900 !important; text-transform: uppercase; }
+                .total-line .value { font-size: ${fs(15)} !important; font-weight: 900 !important; }
                 .report-details-section { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #000; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: ${fs(11)}; }
-                th { border-bottom: 1px solid #000; padding: 4px 2px; font-size: ${fs(11)}; font-weight: 700; text-align: left; text-transform: uppercase; }
-                td { border-bottom: 1px dashed #666; padding: 4px 2px; font-size: ${fs(11)}; font-weight: 700; word-break: break-word; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: ${fs(13)}; }
+                th { border-bottom: 1px solid #000; padding: 4px 2px; font-size: ${fs(13)}; font-weight: 700; text-align: left; text-transform: uppercase; line-height: 1.25; }
+                td { border-bottom: 1px dashed #666; padding: 4px 2px; font-size: ${fs(13)}; font-weight: 700; word-break: break-word; line-height: 1.35; }
                 .text-end { text-align: right; }
                 .text-center { text-align: center; }
                 .alert { display: none; }

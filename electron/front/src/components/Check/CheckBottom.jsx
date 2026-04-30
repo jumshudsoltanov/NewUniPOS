@@ -361,7 +361,9 @@ const CheckBottom = ({
     const depositAmount = Number(orders?.deposit || 0);
     const subtotalAfterDiscount = total - discountAmount;
 
-    const serviceValue = Number(orders?.service_value || 0);
+    const serviceValueRaw = orders?.service_value;
+    const hasExplicitServiceValue = serviceValueRaw !== null && serviceValueRaw !== undefined;
+    const serviceValue = Number(serviceValueRaw || 0);
     const serviceType = orders?.service_type || "percent";
     let serviceAmount = 0;
 
@@ -376,8 +378,8 @@ const CheckBottom = ({
     if (serviceAmount === 0 && Number(orders?.service_charge) > 0) {
       serviceAmount = Number(orders.service_charge);
     }
-    // Fallback: hall default service fee
-    if (serviceAmount === 0 && Number(hall?.service_fee) > 0) {
+    // Fallback: hall default service fee — only if service_value was never explicitly set
+    if (serviceAmount === 0 && !hasExplicitServiceValue && Number(hall?.service_fee) > 0) {
       serviceAmount = (totalForService * Number(hall.service_fee)) / 100;
     }
     serviceAmount = normalizeMoney(serviceAmount);

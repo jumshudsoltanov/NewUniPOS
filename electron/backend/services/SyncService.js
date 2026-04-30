@@ -11,8 +11,16 @@ const TablesModel = require("../model/TablesModel");
 const WaitersModel = require("../model/WaitersModel");
 const LoginModel = require("../model/LoginModel");
 
-const ADMIN_API_URL = "https://api.unipos.tech/api/sync";
-const ADMIN_API_FALLBACK_URL = "http://46.224.8.157:35627/api/sync";
+/**
+ * Çek sync ünvanları — IP serverdə çox vaxt /api/pos/... prefiksi olur; köhnə /api/sync 404 qaytarır.
+ * Cloud-da da marşrut dəyişəndə əlavə varianta keçirik.
+ */
+const ADMIN_SYNC_URLS = [
+  "https://api.unipos.tech/api/sync",
+  "https://api.unipos.tech/api/pos/sync",
+  "http://46.224.8.157:35627/api/pos/sync",
+  "http://46.224.8.157:35627/api/sync",
+];
 
 // Fresh connection for each sync request — avoids stale/dead socket reuse
 // minVersion TLSv1 required: server uses older TLS, Node.js v24+ defaults to TLS 1.2 minimum
@@ -25,12 +33,23 @@ const syncAxios = axios.create({
   }),
 });
 
-/** Bir sifariş üçün maks. gözləmə — donmuş HTTP/socket üçün */
-const SYNC_ORDER_TIMEOUT_MS = 35000;
-/** Hər dövrdə maks. sifariş sayı — uzun bloklamanın qarşısını alır */
-const SYNC_BATCH_LIMIT = 15;
-/** finally çağrılmırsa (nadir) — dövrün maks. müddətindən böyük olmalıdır */
-const SYNC_WATCHDOG_MS = SYNC_BATCH_LIMIT * SYNC_ORDER_TIMEOUT_MS + 30000;
+/**
+ * Admin sync POST — böyük çek (çox orders_items, log) və yavaş şəbəkədə 30s yetmir.
+ * Əvvəl: "timeout of 30000ms exceeded"
+ */
+const SYNC_HTTP_POST_TIMEOUT_MS = 120000;
+/** Çox böyük payload üçün sendToAdmin içində maks. POST müddəti */
+const SYNC_HTTP_POST_TIMEOUT_MAX_MS = 240000;
+/**
+ * triggerSync üzrə _withTimeout — ən böyük POST + DB üçün kifayət etməlidir
+ * (əks halda axios bitməmiş kəsilir).
+ */
+const SYNC_ORDER_TIMEOUT_MS = SYNC_HTTP_POST_TIMEOUT_MAX_MS + 35000;
+/** Hər dövrdə işlənən pending sifariş sayı (ardıcıllıqla göndərilir) */
+const SYNC_BATCH_LIMIT = 8;
+/** finally çağrılmırsa (nadir) — ardıcıllıq: batch × order timeout + marja */
+const SYNC_WATCHDOG_MS =
+  SYNC_BATCH_LIMIT * SYNC_ORDER_TIMEOUT_MS + 120000;
 
 class SyncService {
   constructor() {
@@ -266,7 +285,7 @@ class SyncService {
         }
       }
 
-      const [items, logs, payments] = await Promise.all([
+      const [items, logs, payments, profileRow] = await Promise.all([
         OrdersItemsModel.findAll({
           where: { order_id: order.uuid },
           paranoid: false,
@@ -281,6 +300,10 @@ class SyncService {
           where: { order_id: order.uuid },
           paranoid: false,
           attributes: { include: ["deleted_at"] },
+        }),
+        LoginModel.findOne({
+          where: { id: profileId },
+          attributes: ["id", "username", "restaurant_name", "parent_id"],
         }),
       ]);
 
@@ -299,8 +322,46 @@ class SyncService {
         ? await TableGroupsModel.findOne({ where: { id: table.hall_id } })
         : null;
 
+      /** Admin paneldə «hansi filialdan» üçün — sync qəbul edən API saxlayıb göstərə bilər */
+      const branch_context = (() => {
+        if (!profileRow) return null;
+        const plainProf = profileRow.get
+          ? profileRow.get({ plain: true })
+          : profileRow;
+        const un = plainProf.username
+          ? String(plainProf.username).trim()
+          : "";
+        const rn = plainProf.restaurant_name
+          ? String(plainProf.restaurant_name).trim()
+          : "";
+        const tid = order.get("terminal_id")
+          ? String(order.get("terminal_id")).trim()
+          : "";
+        const hall = tableGroup?.name ? String(tableGroup.name).trim() : "";
+        const tbl = table?.name ? String(table.name).trim() : "";
+        const salePlace =
+          hall || tbl ? [hall, tbl].filter(Boolean).join("-") : "";
+        const parts = [];
+        if (rn) parts.push(rn);
+        if (un) parts.push(`@${un}`);
+        if (tid) parts.push(`Term:${tid}`);
+        if (salePlace) parts.push(salePlace);
+        return {
+          profile_id: plainProf.id,
+          profile_username: un || null,
+          restaurant_name: rn || null,
+          parent_id:
+            plainProf.parent_id != null ? plainProf.parent_id : null,
+          terminal_id: tid || null,
+          hall_name: hall || null,
+          table_name: tbl || null,
+          display_label: parts.length ? parts.join(" · ") : null,
+        };
+      })();
+
       const payload = {
         profile_id: profileId,
+        ...(branch_context ? { branch_context } : {}),
         orders: [
           (() => {
             const plain = order.get({ plain: true });
@@ -530,24 +591,24 @@ class SyncService {
         `[SYNC_LOOP] Found ${pendingOrders.length} pending orders. Processing...`,
       );
 
-      const syncTasks = pendingOrders
-        .filter((order) => !this._currentlySyncing.has(order.uuid))
-        .map((order) => {
-          this._currentlySyncing.add(order.uuid);
-          return this._withTimeout(
+      const toSync = pendingOrders.filter(
+        (order) => !this._currentlySyncing.has(order.uuid),
+      );
+
+      for (const order of toSync) {
+        this._currentlySyncing.add(order.uuid);
+        try {
+          await this._withTimeout(
             this.triggerSync(order.uuid),
             SYNC_ORDER_TIMEOUT_MS,
             `triggerSync(${order.uuid?.slice?.(0, 8) || order.uuid})`,
-          )
-            .catch((e) => {
-              console.warn(`[SYNC_LOOP_SKIP] ${order.uuid}: ${e.message}`);
-            })
-            .finally(() => {
-              this._currentlySyncing.delete(order.uuid);
-            });
-        });
-
-      await Promise.allSettled(syncTasks);
+          );
+        } catch (e) {
+          console.warn(`[SYNC_LOOP_SKIP] ${order.uuid}: ${e.message}`);
+        } finally {
+          this._currentlySyncing.delete(order.uuid);
+        }
+      }
 
       console.log("[SYNC_LOOP] Cycle complete.");
     } catch (error) {
@@ -616,77 +677,63 @@ class SyncService {
   }
 
   async sendToAdmin(payload) {
-    const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
-    let lastError = null;
-
     // Log payload size for debugging
     const payloadSize = JSON.stringify(payload).length;
     const orderCount = payload.orders?.length || 0;
     const itemCount = payload.items?.length || 0;
+    const postTimeoutMs = (() => {
+      const kb = payloadSize / 1024;
+      if (kb <= 200) return SYNC_HTTP_POST_TIMEOUT_MS;
+      return Math.min(
+        SYNC_HTTP_POST_TIMEOUT_MAX_MS,
+        SYNC_HTTP_POST_TIMEOUT_MS + Math.floor((kb - 200) * 400),
+      );
+    })();
+
     console.log(
-      `[SYNC_SEND] Sending: ${orderCount} orders, ${itemCount} items, payload size: ${(payloadSize / 1024).toFixed(1)}KB`,
+      `[SYNC_SEND] Sending: ${orderCount} orders, ${itemCount} items, payload size: ${(payloadSize / 1024).toFixed(1)}KB, timeout ${postTimeoutMs}ms`,
     );
 
-    // Try both URLs in parallel, use whichever responds first
-    try {
-      await Promise.any(
-        urls.map((url) =>
-          syncAxios
-            .post(url, payload, { timeout: 30000 })
-            .then((res) => {
-              // 2xx = success
-              if (res.status >= 200 && res.status < 300) {
-                console.log(
-                  `[SYNC_SEND] Success via ${url}, status: ${res.status}`,
-                );
-                return true;
-              }
-              throw new Error(`Unexpected status ${res.status}`);
-            })
-            .catch((error) => {
-              const status = error.response?.status;
+    /** 504/502 — gateway overload; əvvəl bir URL, sonra fallback (Promise.any ikiqat yükləyirdi) */
+    let lastError = null;
+    for (const url of ADMIN_SYNC_URLS) {
+      try {
+        const res = await syncAxios.post(url, payload, {
+          timeout: postTimeoutMs,
+        });
+        if (res.status >= 200 && res.status < 300) {
+          console.log(
+            `[SYNC_SEND] Success via ${url}, status: ${res.status}`,
+          );
+          return true;
+        }
+        lastError = new Error(`Unexpected status ${res.status}`);
+        console.warn(`[SYNC_URL_FAIL] ${url}: ${lastError.message}`);
+      } catch (error) {
+        const status = error.response?.status;
 
-              // 409 Conflict = data already exists on admin → treat as success
-              if (status === 409) {
-                const alreadyErr = new Error(
-                  `Admin already has this order (409)`,
-                );
-                alreadyErr.isAlreadySynced = true;
-                throw alreadyErr;
-              }
+        if (status === 409) {
+          const alreadyErr = new Error(`Admin already has this order (409)`);
+          alreadyErr.isAlreadySynced = true;
+          throw alreadyErr;
+        }
 
-              // 400/422 = permanent data error, don't retry
-              if (status === 400 || status === 422) {
-                const validationErr = new Error(
-                  `Admin API Validation Error: ${status} - ${JSON.stringify(error.response?.data)}`,
-                );
-                validationErr.isValidationError = true;
-                throw validationErr;
-              }
+        if (status === 400 || status === 422) {
+          const validationErr = new Error(
+            `Admin API Validation Error: ${status} - ${JSON.stringify(error.response?.data)}`,
+          );
+          validationErr.isValidationError = true;
+          throw validationErr;
+        }
 
-              // Everything else (404, 5xx, network) = retryable
-              lastError = error;
-              console.warn(
-                `[SYNC_URL_FAIL] ${url} (${status || error.code}): ${error.message}`,
-              );
-              throw error;
-            }),
-        ),
-      );
-      return true;
-    } catch (aggregateError) {
-      const errors = aggregateError?.errors || [];
-
-      // If any URL said "already synced" → treat as success
-      const alreadySynced = errors.find((e) => e?.isAlreadySynced);
-      if (alreadySynced) throw alreadySynced;
-
-      // If any URL returned a permanent validation error → skip forever
-      const validationErr = errors.find((e) => e?.isValidationError);
-      if (validationErr) throw validationErr;
-
-      throw lastError || new Error("All sync endpoints failed");
+        lastError = error;
+        console.warn(
+          `[SYNC_URL_FAIL] ${url} (${status || error.code}): ${error.message}`,
+        );
+      }
     }
+
+    throw lastError || new Error("All sync endpoints failed");
   }
 }
 

@@ -92,7 +92,13 @@ const ReturnCheckModal = ({ show, onClose }) => {
 
         // 1. Fiskal geri qaytarma — fiskal_id varsa və cihaz tapılırsa
         if (order?.fiscal_id && taxConfigs.length > 0) {
-            const targetConfig = taxConfigs.find(c => (c?.id ?? c?.tax_cash_id ?? null) === order.tax_cash_id);
+            const oid = order.tax_cash_id;
+            const targetConfig = taxConfigs.find((c) => {
+                if (oid == null || oid === "") return false;
+                const cid = c?.id ?? c?.tax_cash_id;
+                if (cid == null) return false;
+                return Number(cid) === Number(oid) || String(cid) === String(oid);
+            });
             if (targetConfig) {
                 setTaxLoading(true);
                 try {

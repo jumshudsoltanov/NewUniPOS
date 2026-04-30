@@ -18,22 +18,6 @@ import { getModifiersTotalPerUnit, mapOrderPaymentForTax } from "../../utils/ord
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 
-/**
- * Profildə bəzən yalnız "Nağd" üçün is_tax=1, "Bank"/kart üçün 0 qalır — vergi çeki checkbox-i yanmır, /tax/sale getmir.
- * Nağdsız/kart/köçürmə üsulunu fiskal üçün aktiv sayırıq (qarserver yenə manual söndürə bilər).
- */
-function paymentMethodLooksCashless(m) {
-    if (!m) return false;
-    const t = String(m.type != null ? m.type : "").toLowerCase();
-    const n = String(m.name != null ? m.name : "").toLowerCase();
-    if (n.includes("nağdsız") || n.includes("nagdsiz") || n.includes("nəğdsiz")) return true;
-    if (t === "nağdsız" || t === "nagdsiz" || t === "nəğdsiz" || t === "card" || t === "bank" || t === "pos" || t === "terminal" || t === "kart") {
-        return true;
-    }
-    if (n.includes("kart") || n.includes("карт") || n.includes("bank") || n.includes("pos") || n.includes("terminal")) return true;
-    return false;
-}
-
 const CheckOver = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
@@ -208,16 +192,10 @@ const CheckOver = () => {
         };
     }, [currentOrder]);
 
-    // Əgər əvvəlcədən çekdə vergi qeyd olunubsa, taxPrint yansın (yalnız can_see_tax=1 olan garson üçün)
+    // is_tax=1 olan ödəniş üsulu seçiləndə vergi çekini yandır (söndürmə — yalnız əl ilə)
     useEffect(() => {
-        if (Number(loginedWaiter?.data?.can_see_tax) === 1 && currentOrder && Number(currentOrder.is_tax) > 0) {
-            setTaxPrint(true);
-        }
-    }, [currentOrder?.is_tax, loginedWaiter?.data?.can_see_tax]);
-
-    // Ödəniş metodu seçəndə: is_tax=1 və ya nağdsız/kart (profildə bəzən yalnız nağd üçün is_tax açıq qalır) — vergi checkbox yansın
-    useEffect(() => {
-        if (Number(loginedWaiter?.data?.can_see_tax) === 1 && viewMode === "PAYMENT" && (selectedMethods.some(m => Number(m.is_tax) === 1) || selectedMethods.some(paymentMethodLooksCashless))) {
+        if (Number(loginedWaiter?.data?.can_see_tax) !== 1 || viewMode !== "PAYMENT") return;
+        if (selectedMethods.some(m => Number(m.is_tax) === 1)) {
             setTaxPrint(true);
         }
     }, [viewMode, selectedMethods, loginedWaiter?.data?.can_see_tax]);
@@ -472,18 +450,12 @@ const CheckOver = () => {
                                 paymentsForTax = payments;
                             }
                             const isCardOrBankTaxPayment = paymentsForTax.some((p) => {
-                                const name = String(p?.name || '').toLowerCase();
                                 const type = String(p?.type || '').toLowerCase();
                                 return (
-                                    type === 'nağdsız' ||
                                     type === 'nagdsiz' ||
-                                    type === 'nəğdsiz' ||
-                                    type === 'card' ||
-                                    type === 'bank' ||
                                     type === 'cashless' ||
-                                    name.includes('bank') ||
-                                    name.includes('kart') ||
-                                    name.includes('card')
+                                    type === 'card' ||
+                                    type === 'bank'
                                 );
                             });
                             const taxOrderTotal = Number(calcTotal.sumTotal) || 0;

@@ -920,6 +920,38 @@ function createKitchenWindow(screenId) {
   });
 }
 
+/**
+ * Uzun raster çek: capturePage() bir sətirdə ~8k px-dən çox hündürlükdə GPU limiti ilə kəsilə bilər.
+ * Hissə-hissə çəkib şaquli birləşdiririk — vahid kağız, bir kəsilmə.
+ */
+function concatNativeImagesVertically(images) {
+  if (!images || images.length === 0) {
+    throw new Error("concatNativeImagesVertically: boş şəkil siyahısı");
+  }
+  const w = images[0].getSize().width;
+  let totalH = 0;
+  for (const img of images) {
+    totalH += img.getSize().height;
+  }
+  const buf = Buffer.alloc(w * totalH * 4);
+  let off = 0;
+  for (const img of images) {
+    const bmp = img.toBitmap();
+    bmp.copy(buf, off);
+    off += bmp.length;
+  }
+  if (off !== buf.length) {
+    log.warn(
+      `[RASTER] Bitmap birləşmə uzunluğu fərqi: yazılan=${off}, gözlənilən=${buf.length}`,
+    );
+  }
+  return nativeImage.createFromBitmap(buf, {
+    width: w,
+    height: totalH,
+    scaleFactor: 1,
+  });
+}
+
 ipcMain.handle(
   "print-receipt",
   async (
@@ -1045,6 +1077,8 @@ ipcMain.handle(
           font-family: ${fontFamily}, sans-serif;
           color: black !important;
           width: ${receiptWidthPx}px;
+          overflow-x: hidden;
+          overflow-y: auto;
           -webkit-print-color-adjust: exact;
         }
         #zoom-outer {
@@ -1109,17 +1143,40 @@ ipcMain.handle(
 
       console.log(`[RASTER] H-Detect: LogicH=${wrapInfo.raw}, VisualH=${wrapInfo.height}`);
 
-      // Hündürlük tənzimlənməsi
       const captureH = wrapInfo.height + 60;
-      rasterWindow.setContentSize(receiptWidthPx, captureH);
-      await new Promise(r => setTimeout(r, 400));
+      /** Chromium/Electron bitmap ~8192px-dən çox olduqda capturePage üfüqi «kəsilir» — uzun müştəri çeki iki yerə düşür */
+      const MAX_VIEWPORT_H = 7200;
 
-      const capturedImage = await rasterWindow.webContents.capturePage();
+      let normalizedImage;
+
+      if (captureH <= MAX_VIEWPORT_H) {
+        rasterWindow.setContentSize(receiptWidthPx, captureH);
+        await new Promise((r) => setTimeout(r, 400));
+        const capturedImage = await rasterWindow.webContents.capturePage();
+        normalizedImage = capturedImage.resize({ width: receiptWidthPx });
+      } else {
+        console.log(
+          `[RASTER] Çox uzun çek (${captureH}px) — çoxparçalı capture (viewport≤${MAX_VIEWPORT_H}px)`,
+        );
+        const slices = [];
+        let scrollY = 0;
+        while (scrollY < captureH) {
+          const viewH = Math.min(MAX_VIEWPORT_H, captureH - scrollY);
+          await rasterWindow.webContents.executeJavaScript(`
+            window.scrollTo(0, ${scrollY});
+          `);
+          rasterWindow.setContentSize(receiptWidthPx, viewH);
+          await new Promise((r) => setTimeout(r, 320));
+          const capturedSlice = await rasterWindow.webContents.capturePage();
+          slices.push(capturedSlice.resize({ width: receiptWidthPx }));
+          scrollY += viewH;
+        }
+        normalizedImage = concatNativeImagesVertically(slices);
+      }
+
       if (!rasterWindow.isDestroyed()) rasterWindow.close();
       rasterWindow = null;
 
-      // Resizing captured image to exact printer width (handles High DPI systems)
-      const normalizedImage = capturedImage.resize({ width: receiptWidthPx });
       const bmp = normalizedImage.toBitmap();
       const imgSize = normalizedImage.getSize();
       const imgW = imgSize.width;
