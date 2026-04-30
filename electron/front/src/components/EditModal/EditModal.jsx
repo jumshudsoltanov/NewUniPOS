@@ -490,7 +490,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                         // No DB items at all — just close
                         onClose();
                       } else {
-                        // DB items still remain — open reason modal for those
+                        // DB items still remain — icazə yoxla
+                        if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
+                          toast.error("Yalnız yeni əlavə edilmiş məhsullar silindi. Göndərilmiş məhsulları silmək icazəniz yoxdur!");
+                          onClose();
+                          return;
+                        }
                         onOpenDeleteModal('full', { ...product, localQuantity: 0, isNew: false, count: product.savedQuantity });
                       }
                     } else {
