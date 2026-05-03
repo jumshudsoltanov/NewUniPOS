@@ -687,14 +687,32 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                           Math.abs(resolvedBase - Number(product.price || 0)) >
                           0.0001
                         ) {
-                          await dispatch(updateItemPrice({
-                            orderId: orders.uuid,
-                            itemId: product.id,
-                            newPrice: resolvedBaseStr,
-                            oldPrice: product.price,
-                            productName: product.name,
-                            waiterName
-                          })).unwrap();
+                          const rawLineIds =
+                            Array.isArray(product.allIds) && product.allIds.length > 0
+                              ? product.allIds
+                              : product.id != null
+                                ? [product.id]
+                                : product.firstId != null
+                                  ? [product.firstId]
+                                  : [];
+                          const seenLineIds = new Set();
+                          const lineIdsForPrice = [];
+                          rawLineIds.forEach((lid) => {
+                            const n = Number(lid);
+                            if (!Number.isFinite(n) || seenLineIds.has(n)) return;
+                            seenLineIds.add(n);
+                            lineIdsForPrice.push(n);
+                          });
+                          for (let li = 0; li < lineIdsForPrice.length; li += 1) {
+                            await dispatch(updateItemPrice({
+                              orderId: orders.uuid,
+                              itemId: lineIdsForPrice[li],
+                              newPrice: resolvedBaseStr,
+                              oldPrice: product.price,
+                              productName: product.name,
+                              waiterName
+                            })).unwrap();
+                          }
                         }
 
                         // Quantity change stays local - will be sent via "Göndər" button
