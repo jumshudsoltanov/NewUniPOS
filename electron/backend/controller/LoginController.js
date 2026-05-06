@@ -194,9 +194,16 @@ const getLogin = async (req, res) => {
       ) {
         const cloudProfile = response.data.data.profile;
         const stored = storedProfile.toJSON();
+        // Cloud-dan idarə olunan sahələr local DB tərəfindən override edilməməlidir
         const {
           is_pos_block: _sb,
           next_payment_date: _npd,
+          tax_type: _tt,
+          tax_percent: _tp,
+          tax_merchant: _tm,
+          tax_cash_type: _tct,
+          ip_addr: _ia,
+          port_addr: _pa,
           ...storedRest
         } = stored;
         const blockFromCloud = isPosBlocked(cloudProfile.is_pos_block);
@@ -210,6 +217,13 @@ const getLogin = async (req, res) => {
         response.data.data.profile = {
           ...cloudProfile,
           ...storedRest,
+          // Vergi və cihaz sahələri həmişə cloud-dan gəlir
+          tax_type: cloudProfile.tax_type,
+          tax_percent: cloudProfile.tax_percent,
+          tax_merchant: cloudProfile.tax_merchant,
+          tax_cash_type: cloudProfile.tax_cash_type,
+          ip_addr: cloudProfile.ip_addr,
+          port_addr: cloudProfile.port_addr,
           is_pos_block:
             blockFromCloud || blockFromStored
               ? 1

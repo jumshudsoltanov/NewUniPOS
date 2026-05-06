@@ -185,12 +185,16 @@ const Login = () => {
       const data = await dispatch(authPos(profileData)).unwrap();
 
       try {
-        localStorage.setItem("profile", JSON.stringify(profileData));
+        const profileDataToSave = {
+          ...profileData,
+          tax_type: data?.data?.profile?.tax_type ?? null,
+        };
+        localStorage.setItem("profile", JSON.stringify(profileDataToSave));
         localStorage.setItem("authResult", JSON.stringify(data));
 
         const existingProfiles = JSON.parse(localStorage.getItem("authProfiles") || "[]");
         const filtered = existingProfiles.filter(p => !(p.profile.username === profileData.username && p.profile.terminalId === profileData.terminalId));
-        filtered.push({ profile: profileData, authResult: data });
+        filtered.push({ profile: profileDataToSave, authResult: data });
         localStorage.setItem("authProfiles", JSON.stringify(filtered));
       } catch (storageErr) {
         console.warn("Storage save failed (non-fatal):", storageErr);

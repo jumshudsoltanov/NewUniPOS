@@ -506,6 +506,11 @@ router.post("/tax/sale", async (req, res) => {
         message: "Vergi konfiqurasiyası tapılmadı",
       });
     }
+    if (saleData && Array.isArray(saleData.items)) {
+      saleData.items.forEach((it, i) => {
+        console.log(`[TAX/sale items] item[${i}] "${it.name}": vatType=${it.vatType}, tax_type=${it.tax_type}`);
+      });
+    }
     const results = await TaxManager.processSale(configs, saleData);
     const anySuccess = results.some((r) => r.success);
     res.json({ success: anySuccess, results });
@@ -549,6 +554,70 @@ router.post("/tax/reprint-error", async (req, res) => {
     res.json(result);
   } catch (e) {
     res.status(500).json({ message: e.message });
+  }
+});
+
+// ─── Bank kart əməliyyatları (DATAPAY) ───────────────────────────────────────
+
+router.post("/tax/bank-card/failed", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
+    if (typeof service.getFailedBankCardTransactions !== "function")
+      return res.status(400).json({ message: "Bu cihaz bank kart əməliyyatlarını dəstəkləmir" });
+    const result = await service.getFailedBankCardTransactions();
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.post("/tax/bank-card/all", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
+    if (typeof service.getAllBankCardTransactions !== "function")
+      return res.status(400).json({ message: "Bu cihaz bank kart əməliyyatlarını dəstəkləmir" });
+    const result = await service.getAllBankCardTransactions();
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.post("/tax/bank-card/rollback", async (req, res) => {
+  try {
+    const { taxConfig } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
+    if (typeof service.rollbackFailedBankCardTransaction !== "function")
+      return res.status(400).json({ message: "Bu cihaz bank kart əməliyyatlarını dəstəkləmir" });
+    const result = await service.rollbackFailedBankCardTransaction();
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.post("/tax/bank-card/execute", async (req, res) => {
+  try {
+    const { taxConfig, transactionId } = req.body;
+    const service = TaxManager.getTaxService(taxConfig);
+    if (!service)
+      return res.status(400).json({ message: "Tax device not supported" });
+    if (typeof service.executeFailedBankCardTransaction !== "function")
+      return res.status(400).json({ message: "Bu cihaz bank kart əməliyyatlarını dəstəkləmir" });
+    if (transactionId == null)
+      return res.status(400).json({ message: "transactionId tələb olunur" });
+    const result = await service.executeFailedBankCardTransaction(transactionId);
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
   }
 });
 

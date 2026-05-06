@@ -418,19 +418,26 @@ const CheckOver = () => {
                 const taxConfigsToUse = resolveTaxConfigsForSale(allTaxConfigs, selectedTaxForPrint);
 
                 if (taxConfigsToUse.length > 0) {
-                    try {
-                        const saleItems = (currentOrder?.orders_items || [])
-                            .filter((item) => Number(item.count ?? item.quantity ?? 0) > 0)
-                            .map((item) => {
-                                const unitBase = Number(item.price || 0);
-                                const unitWithMods = unitBase + getModifiersTotalPerUnit(item);
-                                return {
-                                    ...item,
-                                    name: item.product?.name || item.name || 'Məhsul',
-                                    count: Number(item.count ?? item.quantity ?? 1),
-                                    price: unitWithMods
-                                };
-                            });
+                            try {
+                                const reduxTaxType = loginedProfileData?.data?.profile?.tax_type;
+                                const localTaxType = (() => { try { return JSON.parse(localStorage.getItem("profile") || "{}")?.tax_type; } catch { return null; } })();
+                                const profileTaxType = reduxTaxType ?? localTaxType;
+                                console.log('[TAX vatType] redux tax_type:', reduxTaxType, '| localStorage tax_type:', localTaxType, '| used vatType:', profileTaxType);
+                                const saleItems = (currentOrder?.orders_items || [])
+                                    .filter((item) => Number(item.count ?? item.quantity ?? 0) > 0)
+                                    .map((item) => {
+                                        const unitBase = Number(item.price || 0);
+                                        const unitWithMods = unitBase + getModifiersTotalPerUnit(item);
+                                        return {
+                                            ...item,
+                                            name: item.product?.name || item.name || 'Məhsul',
+                                            count: Number(item.count ?? item.quantity ?? 1),
+                                            price: unitWithMods,
+                                            ...(profileTaxType != null && profileTaxType !== ''
+                                                ? { vatType: Number(profileTaxType) }
+                                                : {}),
+                                        };
+                                    });
                         if (saleItems.length === 0) {
                             toast.warning('Fiskal çek üçün məhsul siyahısı boşdur — göndərilmədi.');
                         } else {

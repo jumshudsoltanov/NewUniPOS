@@ -102,7 +102,15 @@ const ReturnCheckModal = ({ show, onClose }) => {
             if (targetConfig) {
                 setTaxLoading(true);
                 try {
-                    const items = buildFiscalLineItemsFromOrderItems(order);
+                    const profileTaxType = loginedProfileData?.data?.profile?.tax_type
+                        ?? (() => { try { return JSON.parse(localStorage.getItem("profile") || "{}")?.tax_type; } catch { return null; } })();
+                    const rawItems = buildFiscalLineItemsFromOrderItems(order);
+                    const items = rawItems.map((item) => {
+                        if (profileTaxType != null && profileTaxType !== '') {
+                            return { ...item, vatType: Number(profileTaxType) };
+                        }
+                        return item;
+                    });
                     const payments = (order.order_payments || []).map(mapOrderPaymentForTax);
                     const ft = computeFiscalCheckTotalsFromOrder(order);
                     const orderTotalFiscal =

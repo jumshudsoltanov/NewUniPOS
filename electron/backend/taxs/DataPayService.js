@@ -27,10 +27,11 @@ class DataPayService {
     constructor(config) {
         let host = DataPayService._normalizeDeviceHost(config.ip_addr);
         let port = Number(config.port_addr) || DEFAULT_PORT;
-        const ipv4WithPort = /^(\d{1,3}\.){3}\d{1,3}:(\d{1,5})$/.exec(host);
-        if (ipv4WithPort) {
-            host = ipv4WithPort[1];
-            const fromHost = Number(ipv4WithPort[2]);
+        // IPv4:port formatı: "192.168.1.100:2222" — lastIndexOf ilə düzgün ayır
+        const colonIdx = /^(\d{1,3}\.){3}\d{1,3}:\d{1,5}$/.test(host) ? host.lastIndexOf(':') : -1;
+        if (colonIdx > 0) {
+            const fromHost = Number(host.substring(colonIdx + 1));
+            host = host.substring(0, colonIdx);
             const pcfg = config.port_addr;
             if (pcfg == null || String(pcfg).trim() === '' || !Number.isFinite(Number(pcfg)) || Number(pcfg) === 0) {
                 port = fromHost || port;
@@ -49,18 +50,26 @@ class DataPayService {
         this.forceCardAsCash = Number(
             config.datapay_force_card_as_cash != null ? config.datapay_force_card_as_cash : 0,
         ) === 1;
+        /** «1» olarsa satış gövdəsində cashlessSum yazılır. Default 1 — DATAPAY standart formatı cashlessSum tələb edir. */
+        this.datapaySendCashlessSum = Number(
+            config.datapay_send_cashless_sum != null ? config.datapay_send_cashless_sum : 1,
+        ) === 1;
+        // SVC/DLV sətri bu məbləğdən kiçikdirsə son məhsula birləşdirilir (0.01 ₼ xidmət ayrıca sətirdə kod 50 verə bilər).
+        this.datapayMergeFeeBelow = Number(config.datapay_merge_fee_below) > 0
+            ? Number(config.datapay_merge_fee_below)
+            : 0.05;
+        // tax_type profil → sətir vatType (0,1,2,3). null olduqda tax_percent-ə görə avtomatik (0 və ya 2).
+        this.taxType = config.tax_type != null ? Number(config.tax_type) : null;
         this.cashierDefault = 'Kassir';
         this.accessToken = null;
         /** Tək TCP kanalı — ara-bir "socket hang up" / yeni qoşulmaları azaltmaq üçün */
         this._httpAgent = new http.Agent({ keepAlive: true, keepAliveMsecs: 10000, maxSockets: 1 });
-        // DATAPAY üçün VAT tipi DB-dən gələn tax_percent ilə idarə olunur (Omnitech kimi).
-        // tax_type sahəsi burada istifadə edilmir.
         this._requestChain = Promise.resolve();
     }
 
     _enqueueRequest(fn) {
         const p = this._requestChain.then(() => fn());
-        this._requestChain = p.catch(() => {});
+        this._requestChain = p.catch(() => { });
         return p;
     }
 
@@ -94,11 +103,18 @@ class DataPayService {
         const c = data?.code != null ? data.code : data?.Code;
         const m = data?.message != null ? data.message : data?.Message;
         const msg = String(m || '');
-        if (
-            String(c) === '50' &&
-            /CANCELLED_BY_USER_OR_USER_TIMEOUT|Bank əməliyyatı|bank/i.test(msg)
-        ) {
-            return 'Kart ödənişi DATAPAY cihazında tamamlanmadı: istifadəçi ləğv etdi və ya bank ekranında vaxt bitdi (kod: 50)';
+        if (String(c) === '50') {
+            if (/CANCELLED_BY_USER_OR_USER_TIMEOUT|ləğv|cancel/i.test(msg)) {
+                return 'Kart ödənişi DATAPAY cihazında tamamlanmadı: istifadəçi ləğv etdi və ya bank ekranında vaxt bitdi (kod: 50)';
+            }
+            if (/bank|kart|card|terminal/i.test(msg)) {
+                return `Kart/bank əməliyyatı xətası — DATAPAY cihazında ödəniş tamamlanmadı. ${msg} (kod: 50)`;
+            }
+            if (/məbləğlər düzgün deyil/i.test(msg)) {
+                return `${msg} (kod: 50) — kiçik xidmət sətiri və ya alış qiyməti 0 bəzi cihazlarda rədd olunur; POS fiskal göndəricisi məhsula hopdurma və minimum alış tətbiq edir — proqramı restart edib təkrar sınayın.`;
+            }
+            // Ümumi kod 50: daxili xəta (məbləğ uyğunsuzluğu, format xətası, s.d.)
+            return `DATAPAY daxili xəta (kod: 50): ${msg || 'Bilinməyən xəta — ödəniş məbləğlərini yoxlayın'}`;
         }
         if (c == null) return m || 'Xəta';
         return `${m || 'Xəta'} (kod: ${c})`;
@@ -107,6 +123,12 @@ class DataPayService {
     _logDatapayPayload(label, body) {
         try {
             console.log(`[DATAPAY ${label}]`, JSON.stringify(body, null, 2));
+            if (body && Array.isArray(body.items)) {
+                body.items.forEach((it, i) => {
+                    const usedFrom = this.taxType != null ? 'device config' : (it.vatType != null ? 'item' : 'tax_percent fallback');
+                    console.log(`[DATAPAY vatType] item[${i}] "${it.name}": vatType=${it.vatType} (taxType config=${this.taxType}, source=${usedFrom})`);
+                });
+            }
         } catch (e) {
             console.log(`[DATAPAY ${label}]`, body);
         }
@@ -114,7 +136,9 @@ class DataPayService {
 
     _isDatapayAmountMismatchError(error) {
         const msg = String(error && error.message ? error.message : error || '');
-        return /kod:\s*50|code:\s*50|\(50\)/i.test(msg) && /məbləğlər düzgün deyil|meblegler duzgun deyil|amount/i.test(msg);
+        // DATAPAY kod 50 = "Daxili xəta" — həmişə payload uyğunsuzluğu (məbləğ, format, s.d.)
+        // Əlavə mesaj şərti olmadan bütün kod 50 xətalarını tutaq
+        return /kod:\s*50|code:\s*50|\(50\)/i.test(msg);
     }
 
     _uniqueDatapayBodies(bodies) {
@@ -161,7 +185,7 @@ class DataPayService {
         if (allCash) {
             return this._uniqueDatapayBodies([
                 body,
-                { ...base, cashSum: s, cashlessSum: 0, cardSum: 0 },
+                { ...base, cashSum: s, cardSum: 0 },
             ]);
         }
         return [body];
@@ -169,6 +193,9 @@ class DataPayService {
 
     async _postDatapaySaleWithAmountFallback(path, body, payments, label) {
         if (this._hasCardPayment(payments)) {
+            // Token olmadan kart sorğusu 401 ilə dərhal rədd edilər (retryLogin=false olduğundan avtomatik login olmaz).
+            // Göndərməzdən əvvəl tokeni yoxla/al — kart terminalı bu POST cavabı gəlməmiş pul çəkmir.
+            await this._ensureToken();
             this._logDatapayPayload(`${label} BODY`, body);
             // Kart/bank əməliyyatı pul çəkə bilər; timeout/network/amount xətasında belə eyni satışı avtomatik təkrar POST etmə.
             return this._request('POST', path, { body, noNetworkRetry: true }, false);
@@ -221,11 +248,10 @@ class DataPayService {
     }
 
     /**
-     * DATAPAY API payment formula:
-     *   cashSum + cashlessSum + creditSum + prepaymentSum + bonusSum = sum
-     *   cardSum <= cashlessSum  (informational: card terminal portion of cashlessSum)
-     * cashlessSum is the total non-cash channel (includes bank transfers AND card terminal).
-     * cardSum is a reporting sub-field (how much of cashlessSum went through a card terminal).
+     * DATAPAY /sale/create üçün Postman-da əsasən tutulan düstur:
+     *   cashSum + cardSum + creditSum + prepaymentSum + bonusSum = sum
+     * Başqa modellərdə cashlessSum çıxarıla bilər; bəzi firmverlər cashlessSum ilə cardSum-u eyni vaxtda ikiqat qəbul edir (kod 50).
+     * cashlessSum yalnız datapay_send_cashless_sum=1 olanda əlavə edilir.
      */
 
     /**
@@ -298,9 +324,11 @@ class DataPayService {
                 }
                 if (response.status >= 400) {
                     const msg = this._isApiErrorBody(data) ? this._apiErrorMessage(data) : `HTTP ${response.status}`;
+                    console.error('[DATAPAY RAW ERROR RESPONSE]', JSON.stringify({ status: response.status, data }));
                     throw new Error(`[DATAPAY] ${msg}`);
                 }
                 if (this._isApiErrorBody(data)) {
+                    console.error('[DATAPAY RAW ERROR RESPONSE]', JSON.stringify({ status: response.status, data }));
                     throw new Error(`[DATAPAY] ${this._apiErrorMessage(data)}`);
                 }
                 return data;
@@ -435,14 +463,45 @@ class DataPayService {
     }
 
     _getVatTypeForItem() {
-        // tax_percent-ə görə DATAPAY vatType müəyyənləşir:
-        // 0%   → 0 (ƏDV-siz)
-        // ≤4%  → 3 (Sadələşdirilmiş Vergi: 2%, 4%)
-        // >4%  → 2 (ƏDV: 10%, 18% və s.)
-        const p = Number(this.taxPercent);
-        if (!(p > 0)) return 0;
-        if (p <= 4) return 3;
-        return 2;
+        if (this.taxType != null && !Number.isNaN(Number(this.taxType))) {
+            return Number(this.taxType);
+        }
+        return 0;
+    }
+
+    /**
+     * POS-dan göndərilən sətirin vat növü.
+     * Prioritet: 1) device config tax_type (this.taxType), 2) item.vatType / item.tax_type, 3) default 0.
+     */
+    _vatTypeForSourceItem(item) {
+        if (this.taxType != null && !Number.isNaN(Number(this.taxType))) {
+            return Number(this.taxType);
+        }
+        if (!item || typeof item !== 'object') return 0;
+        const raw = item.vatType != null ? item.vatType : item.tax_type;
+        if (raw != null && raw !== '') {
+            const vt = Number(raw);
+            if (!Number.isNaN(vt)) return vt;
+        }
+        return 0;
+    }
+
+    /** Xidmət/çatdırılma sətirləri üçün: device config-dən, yoxdursa 0 */
+    _feeLineVatTypeFromSourceItems(_sourceItems) {
+        return this._getVatTypeForItem();
+    }
+
+    /**
+     * Göndərilən vatType-ı olduğu kimi saxlayır — yalnız NaN olduqda 0.
+     * (Konkret nömrəni məhdudlaşdırmaq istəmirik — istifadəçi özü bildiyi formada göndərir.)
+     */
+    _coerceDatapaySaleItemsVatTypeForApi(saleItems) {
+        if (!Array.isArray(saleItems)) return;
+        for (const ln of saleItems) {
+            if (!ln) continue;
+            const vt = Number(ln.vatType);
+            ln.vatType = Number.isNaN(vt) ? 0 : vt;
+        }
     }
 
     _getVatRatePercent(vatType) {
@@ -469,28 +528,29 @@ class DataPayService {
 
     _computeVatTotals(lines) {
         const items = Array.isArray(lines) ? lines : [];
-        let vatSum = 0;
-        let vatFreeSum = 0;
-        let vat = 0;
+        let vatCents = 0;
+        let freeCents = 0;
         for (const ln of items) {
-            const lineSum = this._round2(Number(ln && ln.sum != null ? ln.sum : 0));
+            const lineCents = Math.round(this._round2(Number(ln && ln.sum != null ? ln.sum : 0)) * 100);
             const vt = Number(ln && ln.vatType != null ? ln.vatType : 0);
-            // DATAPAY validasiyası: vatSum = sum(item.sum) where item.vatType > 0
-            //                       vatFreeSum = sum(item.sum) where item.vatType == 0
-            // vatType=1,2,3 → vatSum (hamısı "vergiyə cəlb olunan")
-            // vatType=0     → vatFreeSum (tamamilə vergi-siz)
-            // vat (ƏDV məbləği) = yalnız vatType=1 və vatType=2 üçün hesablanır;
-            //   vatType=3 (Sadələşdirilmiş Vergi) ƏDV deyil → vat=0, cihaz daxili hesablar.
-            if (vt > 0) {
-                vatSum = this._round2(vatSum + lineSum);
-                if (vt === 1 || vt === 2) {
-                    vat = this._round2(vat + this._lineVatAmountFromGross(lineSum, vt));
-                }
+            // DATAPAY document-səviyyəli validasiya:
+            //   vatSum     = vatType=1,2,3 (ƏDV-li və Sadələşdirilmiş Vergi) məbləğlərin cəmi
+            //   vatFreeSum = vatType=0 (ƏDV-siz) məbləğlərin cəmi
+            //
+            // vatType=0 → ƏDV-siz              → vatFreeSum
+            // vatType=1 → 0% ƏDV               → vatSum
+            // vatType=2 → 18% ƏDV              → vatSum
+            // vatType=3 → Sadələşdirilmiş (2%) → vatSum
+            if (vt === 1 || vt === 2 || vt === 3) {
+                vatCents += lineCents;
             } else {
-                vatFreeSum = this._round2(vatFreeSum + lineSum);
+                freeCents += lineCents;
             }
         }
-        return { vatSum, vatFreeSum, vat };
+        return {
+            vatSum: this._round2(vatCents / 100),
+            vatFreeSum: this._round2(freeCents / 100),
+        };
     }
 
     _isCashless(name, type) {
@@ -545,11 +605,10 @@ class DataPayService {
     }
 
     _buildLineItems(sourceItems) {
-        const vatT = this._getVatTypeForItem();
         return sourceItems.map((item) => {
             const quantity = Number(item.count ?? item.quantity ?? 1);
             const salePrice = Number(item.price || 0);
-            return this._dataPayItemLineFromUnitPrice(item, quantity, salePrice, vatT);
+            return this._dataPayItemLineFromUnitPrice(item, quantity, salePrice, this._vatTypeForSourceItem(item));
         });
     }
 
@@ -564,20 +623,20 @@ class DataPayService {
         const q = Number(quantity) || 0;
         const sp = Number(unitSalePrice) || 0;
         const lineSum = Number((q * sp).toFixed(2));
-        const pur = Number((item.purchase_price != null ? item.purchase_price : 0) || 0);
+        const purRaw = Number((item.purchase_price != null ? item.purchase_price : 0) || 0);
+        const pur = purRaw > 0 ? purRaw : 0;
         const code = String(item.barcode != null && item.barcode !== '' ? item.barcode : item.code || item.product_id || item.id || '0');
         const ct = codeType != null ? codeType : this._datapayCodeTypeFor(code, 0);
-        // item.vatSum: DATAPAY cihazı sum(item.vatSum) == document.vatSum yoxlayır.
-        // vatType > 0 (1,2,3) → item.vatSum = item.sum (vergiyə cəlb olunur)
-        // vatType = 0         → item.vatSum = 0 (vergi-siz)
         return {
             name: (item.name || (item.product && item.product.name) || 'Məhsul').substring(0, 256),
             code,
             quantity: Number(q.toFixed(3)),
             salePrice: Number(sp.toFixed(2)),
+            originalSalePrice: Number(sp.toFixed(2)),
             purchasePrice: Number(pur.toFixed(2)),
+            originalPurchasePrice: Number(pur.toFixed(2)),
+            discountPercentage: 0,
             sum: lineSum,
-            vatSum: vatT > 0 ? lineSum : 0,
             vatType: vatT,
             unitType: 0,
             codeType: ct,
@@ -588,20 +647,54 @@ class DataPayService {
         return Number(Number(x).toFixed(2));
     }
 
+    /** Sətir məbləğlərini 2 onluq + quantity×salePrice sinxron — JSON-da 0.30000000004 kimi dəyərlər kod 50 verir. */
+    _normalizeDatapaySaleLineMonetaryFields(saleItems) {
+        if (!Array.isArray(saleItems)) return;
+        for (const ln of saleItems) {
+            if (!ln) continue;
+            ln.quantity = Number(Number(ln.quantity || 0).toFixed(3));
+            if (ln.salePrice != null) ln.salePrice = this._round2(ln.salePrice);
+            if (ln.originalSalePrice != null) ln.originalSalePrice = this._round2(ln.originalSalePrice);
+            if (ln.purchasePrice != null) ln.purchasePrice = this._round2(ln.purchasePrice);
+            if (ln.originalPurchasePrice != null) ln.originalPurchasePrice = this._round2(ln.originalPurchasePrice);
+            if (ln.sum != null) ln.sum = this._round2(ln.sum);
+            this._syncDataPayLinePriceQuantitySum(ln);
+        }
+    }
+
+    /**
+     * Cihaz: sum === vatSum + vatFreeSum (ümumi məbləğ uyğunluğu). Üzən nöqtə toplamasından 1 qəpik sürüşəndə
+     * qalığı vatFreeSum-a əlavə edir (ƏDV-siz hissə daha tez-tez olur).
+     */
+    _reconcileDatapayVatTotalsToDocumentSum(docSum, vatTotals) {
+        const t = this._round2(docSum);
+        let vs = this._round2(vatTotals?.vatSum ?? 0);
+        let vf = this._round2(vatTotals?.vatFreeSum ?? 0);
+        const d = this._round2(t - this._round2(vs + vf));
+        if (d !== 0 && d !== -0) {
+            if (vf >= vs) {
+                vf = this._round2(vf + d);
+            } else {
+                vs = this._round2(vs + d);
+            }
+        }
+        return { vatSum: vs, vatFreeSum: vf };
+    }
+
     /**
      * DATAPAY: body.sum == items[].sum cəmi (2 onluq) — fərq kod 50 verir. Heç vaxt orderTotal-dan birbaşa
      * götürmə; həmişə sətir cəmlərinin yekunu (hizalama sətrləri dəyişdikdən sonra).
+     * Qəpik tam sayı ilə toplama — JS-də 0.1+0.01≠0.11 problemi olmasın.
      */
     _datapayLineItemsDocumentSum(saleItems) {
         if (!Array.isArray(saleItems)) {
             return 0;
         }
-        return this._round2(
-            saleItems.reduce(
-                (a, b) => a + this._round2(Number(b && b.sum != null ? b.sum : 0)),
-                0,
-            ),
-        );
+        let cents = 0;
+        for (const b of saleItems) {
+            cents += Math.round(this._round2(Number(b && b.sum != null ? b.sum : 0)) * 100);
+        }
+        return this._round2(cents / 100);
     }
 
     /**
@@ -649,10 +742,8 @@ class DataPayService {
         const chk = this._round2(q * line.salePrice);
         if (chk !== s) {
             line.sum = chk;
-            s = chk;
         }
-        const vt = Number(line.vatType != null ? line.vatType : 0);
-        line.vatSum = vt > 0 ? s : 0;
+        // vatSum item-lərdə göndərilmir (DATAPAY API doc-a görə)
     }
 
     /**
@@ -662,9 +753,7 @@ class DataPayService {
     _alignFiscalLinesToOrderTotal(saleItems, orderTotal) {
         const t = this._round2(orderTotal);
         if (!(t > 0) || !Array.isArray(saleItems) || saleItems.length === 0) {
-            return this._round2(
-                (saleItems || []).reduce((a, b) => a + (b && b.sum != null ? Number(b.sum) : 0), 0),
-            );
+            return this._datapayLineItemsDocumentSum(saleItems || []);
         }
         let svcIdx = -1;
         let dlvIdx = -1;
@@ -689,7 +778,6 @@ class DataPayService {
                     const lp = saleItems[lastProdIdx];
                     const nsum = this._round2(Math.max(0, this._round2(Number(lp.sum || 0)) + newSvc));
                     lp.sum = nsum;
-                    lp.vatSum = Number(lp.vatType) > 0 ? nsum : 0;
                     this._syncDataPayLinePriceQuantitySum(lp);
                     pSum = 0;
                     for (let j = 0; j < saleItems.length; j += 1) {
@@ -706,15 +794,14 @@ class DataPayService {
                 const sl = saleItems[svcIdx];
                 sl.sum = this._round2(newSvc);
                 sl.salePrice = this._round2(sl.sum);
-                sl.vatSum = Number(sl.vatType) > 0 ? sl.sum : 0;
             }
-            return this._round2(saleItems.reduce((a, b) => a + Number(b && b.sum != null ? b.sum : 0), 0));
+            return this._datapayLineItemsDocumentSum(saleItems);
         }
 
         if (lastProdIdx < 0) {
-            return this._round2(saleItems.reduce((a, b) => a + Number(b && b.sum != null ? b.sum : 0), 0));
+            return this._datapayLineItemsDocumentSum(saleItems);
         }
-        const cur = this._round2(saleItems.reduce((a, b) => a + Number(b && b.sum != null ? b.sum : 0), 0));
+        const cur = this._datapayLineItemsDocumentSum(saleItems);
         const diff = this._round2(t - cur);
         if (Number.isNaN(diff) || Math.abs(diff) < 0.0001) {
             return cur;
@@ -729,34 +816,67 @@ class DataPayService {
             return cur;
         }
         line.sum = newSum;
-        line.vatSum = Number(line.vatType) > 0 ? newSum : 0;
         this._syncDataPayLinePriceQuantitySum(line);
-        return this._round2(saleItems.reduce((a, b) => a + Number(b && b.sum != null ? b.sum : 0), 0));
+        return this._datapayLineItemsDocumentSum(saleItems);
     }
 
     _dataPayServiceLine(name, code, unitPrice, vatT) {
         const p = Number(unitPrice) || 0;
         if (p <= 0) return null;
         const pRounded = Number(p.toFixed(2));
+        const purS = Number((pRounded * 0.5).toFixed(2)) || 0.01;
         return {
             name: String(name).substring(0, 256),
             code: String(code),
             quantity: 1,
             salePrice: pRounded,
-            purchasePrice: 0,
+            originalSalePrice: pRounded,
+            purchasePrice: purS,
+            originalPurchasePrice: purS,
+            discountPercentage: 0,
             sum: pRounded,
-            vatSum: Number(vatT) > 0 ? pRounded : 0,
             vatType: vatT,
             unitType: 0,
-            codeType: 3,
+            // Postman satış nümunələrində codeType 0/1/2; 3 xidmət üçün sənəddə yoxdur — kod 50 riski
+            codeType: 0,
         };
+    }
+
+    /**
+     * Çox kiçik SVC/DLV sətirlərini son real məhsula hopdurur — cihaz ayrıca 0.01–0.04 ₼ xidmət sətirini rədd edəndə.
+     */
+    _mergeDatapaySmallFeeLinesIntoLastProduct(saleItems) {
+        const minF = this.datapayMergeFeeBelow != null && this.datapayMergeFeeBelow > 0
+            ? this._round2(this.datapayMergeFeeBelow)
+            : 0.05;
+        if (!Array.isArray(saleItems) || !(minF > 0)) return;
+        for (const feeCode of ['DLV', 'SVC']) {
+            let idx = -1;
+            for (let i = 0; i < saleItems.length; i += 1) {
+                if (String(saleItems[i].code) === feeCode) idx = i;
+            }
+            if (idx < 0) continue;
+            const feeLn = saleItems[idx];
+            const feeSum = this._round2(Number(feeLn && feeLn.sum != null ? feeLn.sum : 0));
+            if (!(feeSum > 0) || feeSum >= minF) continue;
+            let tgt = -1;
+            for (let j = saleItems.length - 1; j >= 0; j -= 1) {
+                const c = String(saleItems[j].code != null ? saleItems[j].code : '');
+                if (c !== 'SVC' && c !== 'DLV') tgt = j;
+            }
+            if (tgt < 0) continue;
+            const ln = saleItems[tgt];
+            ln.sum = this._round2(this._round2(Number(ln.sum || 0)) + feeSum);
+            this._syncDataPayLinePriceQuantitySum(ln);
+            saleItems.splice(idx, 1);
+        }
     }
 
     /**
      * Endirim məhsul sətrlərinə (Omnitech ilə eyni), xidmət + çatdırılma ayrıca sətir.
      */
     _buildDatapaySaleItemsWithAdjustments(sourceItems, discountAmount, serviceFee, deliveryFee) {
-        const vatT = this._getVatTypeForItem();
+        const feeVatT = this._feeLineVatTypeFromSourceItems(sourceItems);
         const discAmt = Math.max(0, Number(discountAmount) || 0);
         const lineGrossCents = sourceItems.map((item) => {
             const qty = Number(item.count ?? item.quantity ?? 1);
@@ -772,15 +892,14 @@ class DataPayService {
             const netC = Math.max(0, lineGrossCents[i] - (distDisc[i] || 0));
             const discountedLineTotal = this._round2(netC / 100);
             const unitPrice = qty > 0 ? this._round2(discountedLineTotal / qty) : 0;
-            const li = this._dataPayItemLineFromUnitPrice(item, qty, unitPrice, vatT);
+            const li = this._dataPayItemLineFromUnitPrice(item, qty, unitPrice, this._vatTypeForSourceItem(item));
             li.sum = this._round2(netC / 100);
-            li.vatSum = vatT > 0 ? li.sum : 0;
             this._syncDataPayLinePriceQuantitySum(li);
             lines.push(li);
         }
-        const svc = this._dataPayServiceLine('Xidmət haqqı', 'SVC', serviceFee, vatT);
+        const svc = this._dataPayServiceLine('Xidmət haqqı', 'SVC', serviceFee, feeVatT);
         if (svc) lines.push(svc);
-        const dlv = this._dataPayServiceLine('Çatdırılma haqqı', 'DLV', deliveryFee, vatT);
+        const dlv = this._dataPayServiceLine('Çatdırılma haqqı', 'DLV', deliveryFee, feeVatT);
         if (dlv) lines.push(dlv);
         const total = Number(lines.reduce((a, b) => a + b.sum, 0).toFixed(2));
         return { lines, total };
@@ -789,199 +908,210 @@ class DataPayService {
     _splitPayments(payments, itemsSum) {
         const round2 = (x) => this._round2(x);
         let cashSum = 0;
-        let cashlessSum = 0;
+        let cardSum = 0;   // nəğd kart/bank terminal (DATAPAY API: cardSum)
         let creditSum = 0;
+        let prepaymentSum = 0;
+        let bonusSum = 0;
         if (payments && payments.length > 0) {
             for (const p of payments) {
                 const a = round2(p.amount || 0);
-                if (!this._isCashless(p.name, p.type)) {
-                    cashSum += a;
-                    continue;
-                }
                 if (this._isCreditChannel(p.name, p.type)) {
                     creditSum += a;
+                } else if (this._isCashless(p.name, p.type)) {
+                    // Kart/bank → cardSum; cashlessSum yalnız datapay_send_cashless_sum=1 olanda gövdədə
+                    cardSum += a;
                 } else {
-                    // Kart və bank ödənişləri hər ikisi cashlessSum-a yazılır.
-                    // cardSum DATAPAY-da ayrıca toplanır — kod 50 verməmək üçün 0 saxlanır.
-                    cashlessSum += a;
+                    cashSum += a;
                 }
             }
         } else {
             cashSum = itemsSum;
         }
-        let paid = round2(cashSum + cashlessSum + creditSum);
+        // Formula: cashSum + cardSum + creditSum + prepaymentSum + bonusSum = sum
+        let paid = round2(cashSum + cardSum + creditSum + prepaymentSum + bonusSum);
         if (paid < itemsSum) {
             const d = round2(itemsSum - paid);
-            if (cashlessSum > 0) {
-                cashlessSum = round2(cashlessSum + d);
+            if (cardSum > 0) {
+                cardSum = round2(cardSum + d);
             } else if (creditSum > 0) {
                 creditSum = round2(creditSum + d);
             } else {
                 cashSum = round2(cashSum + d);
             }
-            paid = round2(cashSum + cashlessSum + creditSum);
+            paid = round2(cashSum + cardSum + creditSum + prepaymentSum + bonusSum);
         }
-        const paidSum2 = round2(cashSum + cashlessSum + creditSum);
+        const paidSum2 = round2(cashSum + cardSum + creditSum + prepaymentSum + bonusSum);
         const restSum = round2(Math.max(0, paidSum2 - itemsSum));
-        return {
-            cashSum, cardSum: 0, cashlessSum, creditSum, paidSum: paidSum2, restSum,
-            prepaymentSum: 0, bonusSum: 0,
-        };
+        return { cashSum, cardSum, creditSum, prepaymentSum, bonusSum, paidSum: paidSum2, restSum };
     }
 
     /**
      * Ödəniş kanal məbləğlərini DATAPAY formatına uyğunlaşdırır.
-     * DATAPAY: cashlessSum = tam nağdsız, cardSum = kart terminal hissəsi (sub-field).
-     * payments — orijinal saleData (amount sahəsi).
+     * DATAPAY /sale/create: cashSum + cardSum + creditSum + prepaymentSum + bonusSum = sum.
      */
     _reconcileDatapayPaymentBuckets(payments, documentSum, split) {
         const s = this._round2(documentSum);
-        if (!(s > 0)) {
-            return split;
-        }
+        if (!(s > 0)) return split;
         const r2 = (x) => this._round2(x);
         const pmtList = Array.isArray(payments) ? payments : [];
-        const allCashless = pmtList.length > 0 && pmtList.every((p) => this._isCashless(p.name, p.type));
         const hasCredit = pmtList.some((p) => this._isCreditChannel(p.name, p.type));
-        /**
-         * Tam nağd və ya nağd olmayan (kredit yox) ödəniş: cihaz tez-tez
-         * əsas səbətlərin cəmi = sum, paidSum = sum, restSum = 0 tələb edir; POS-dan gələn qismən artıq/əskik məbləğ kod 50 verir.
-         */
-        if (allCashless && !hasCredit) {
-            return {
-                cashSum: 0,
-                cashlessSum: s,
-                cardSum: 0,
-                creditSum: 0,
-                paidSum: s,
-                restSum: 0,
-                prepaymentSum: 0,
-                bonusSum: 0,
-            };
-        }
+        const allCashless = pmtList.length > 0 && pmtList.every((p) => this._isCashless(p.name, p.type));
         const allCash = pmtList.length > 0 && pmtList.every((p) => !this._isCashless(p.name, p.type));
-        if (allCash) {
-            return {
-                cashSum: s,
-                cardSum: 0,
-                cashlessSum: 0,
-                creditSum: 0,
-                paidSum: s,
-                restSum: 0,
-                prepaymentSum: 0,
-                bonusSum: 0,
-            };
+
+        // Tam kart/nəğdsız: dəqiq ödənişdə cardSum = sum; artıq ödəniləndə (qalıq) Postman kimi paidSum/restSum saxlanılmalıdır —
+        // əks halda terminal faktiki məbləği çəkir, API isə sum-a endirilmiş cardSum göndərir → kod 50 «məbləğlər düzgün deyil».
+        if (allCashless && !hasCredit) {
+            const paidT = r2(split.paidSum != null ? split.paidSum : r2(split.cardSum + split.cashSum + split.creditSum + split.prepaymentSum + split.bonusSum));
+            const restT = r2(split.restSum != null ? split.restSum : Math.max(0, paidT - s));
+            const net = r2(paidT - restT);
+            if (r2(paidT) >= s && Math.abs(net - s) < 0.005) {
+                return {
+                    cashSum: 0,
+                    cardSum: r2(split.cardSum),
+                    creditSum: 0,
+                    prepaymentSum: r2(split.prepaymentSum || 0),
+                    bonusSum: r2(split.bonusSum || 0),
+                    paidSum: paidT,
+                    restSum: r2(Math.max(0, paidT - s)),
+                };
+            }
+            return { cashSum: 0, cardSum: s, creditSum: 0, prepaymentSum: 0, bonusSum: 0, paidSum: s, restSum: 0 };
         }
+        // Tam nağd: eyni məntiq (nağd üstü / qalıq)
+        if (allCash) {
+            const paidT = r2(split.paidSum != null ? split.paidSum : r2(split.cashSum + split.cardSum + split.creditSum + split.prepaymentSum + split.bonusSum));
+            const restT = r2(split.restSum != null ? split.restSum : Math.max(0, paidT - s));
+            const net = r2(paidT - restT);
+            if (r2(paidT) >= s && Math.abs(net - s) < 0.005) {
+                return {
+                    cashSum: r2(split.cashSum),
+                    cardSum: 0,
+                    creditSum: 0,
+                    prepaymentSum: r2(split.prepaymentSum || 0),
+                    bonusSum: r2(split.bonusSum || 0),
+                    paidSum: paidT,
+                    restSum: r2(Math.max(0, paidT - s)),
+                };
+            }
+            return { cashSum: s, cardSum: 0, creditSum: 0, prepaymentSum: 0, bonusSum: 0, paidSum: s, restSum: 0 };
+        }
+        // Qarışıq: split-dən gələn dəyərləri istifadə et, sum ilə uyğunlaşdır
         const cashSum0 = r2(split.cashSum);
         const cardSum0 = r2(split.cardSum);
-        const cless0 = r2(split.cashlessSum);
         const cred0 = r2(split.creditSum);
-        let paidSum0 = r2(cashSum0 + cardSum0 + cless0 + cred0);
-        if (paidSum0 < s) {
-            const d = r2(s - paidSum0);
-            if (cardSum0 > 0) {
-                return {
-                    ...split,
-                    cardSum: r2(cardSum0 + d),
-                    paidSum: s,
-                    restSum: r2(Math.max(0, r2(paidSum0 + d) - s)),
-                };
-            }
-            if (cless0 > 0) {
-                return {
-                    ...split,
-                    cashlessSum: r2(cless0 + d),
-                    paidSum: s,
-                    restSum: r2(Math.max(0, r2(paidSum0 + d) - s)),
-                };
-            }
-            if (cred0 > 0) {
-                return {
-                    ...split,
-                    creditSum: r2(cred0 + d),
-                    paidSum: s,
-                    restSum: r2(Math.max(0, r2(paidSum0 + d) - s)),
-                };
-            }
-            return {
-                ...split,
-                cashSum: r2(cashSum0 + d),
-                paidSum: s,
-                restSum: r2(Math.max(0, r2(paidSum0 + d) - s)),
-            };
+        const prep0 = r2(split.prepaymentSum || 0);
+        const bon0  = r2(split.bonusSum || 0);
+        let paid0 = r2(cashSum0 + cardSum0 + cred0 + prep0 + bon0);
+        if (paid0 < s) {
+            const d = r2(s - paid0);
+            if (cardSum0 > 0) return { ...split, cardSum: r2(cardSum0 + d), paidSum: s, restSum: 0 };
+            if (cred0 > 0)    return { ...split, creditSum: r2(cred0 + d), paidSum: s, restSum: 0 };
+            return { ...split, cashSum: r2(cashSum0 + d), paidSum: s, restSum: 0 };
         }
-        return {
-            ...split,
-            paidSum: paidSum0,
-            restSum: r2(Math.max(0, paidSum0 - s)),
-        };
+        return { ...split, paidSum: paid0, restSum: r2(Math.max(0, paid0 - s)) };
     }
 
     /**
-     * DATAPAY kod 50-dən qorunma:
-     * - cashSum + cashlessSum + creditSum + prepaymentSum + bonusSum = sum (DATAPAY formula)
-     * - cashlessSum = tam nağdsız məbləğ (bank + kart terminal birlikdə)
-     * - cardSum = yalnız kart terminalından keçən hissə (cashlessSum ≤, informational)
-     * - paidSum/restSum məcburi şəkildə yekunla uyğunlaşdırılır
+     * DATAPAY ödəniş ümumləşdirməsi: cashSum + cardSum + creditSum + prepaymentSum + bonusSum = sum.
+     * cashlessSum yalnız konfiqdə datapay_send_cashless_sum=1 olanda əlavə edilir.
      */
     _normalizeDatapayPaymentTotals(documentSum, buckets, payments) {
         const s = this._round2(documentSum);
         const out = {
-            cashSum: this._round2(buckets?.cashSum || 0),
-            cashlessSum: this._round2(buckets?.cashlessSum || 0),
-            cardSum: this._round2(buckets?.cardSum || 0),
-            creditSum: this._round2(buckets?.creditSum || 0),
-            prepaymentSum: this._round2(buckets?.prepaymentSum || 0),
-            bonusSum: this._round2(buckets?.bonusSum || 0),
-            paidSum: this._round2(buckets?.paidSum || 0),
-            restSum: this._round2(buckets?.restSum || 0),
+            cashSum:      this._round2(buckets?.cashSum || 0),
+            cardSum:      this._round2(buckets?.cardSum || 0),
+            creditSum:    this._round2(buckets?.creditSum || 0),
+            prepaymentSum:this._round2(buckets?.prepaymentSum || 0),
+            bonusSum:     this._round2(buckets?.bonusSum || 0),
+            paidSum:      this._round2(buckets?.paidSum || 0),
+            restSum:      this._round2(buckets?.restSum || 0),
         };
-        if (!(s > 0)) {
+        if (!(s > 0)) return out;
+
+        const pmtList = Array.isArray(payments) ? payments : [];
+        const hasCashless = pmtList.some((p) => this._isCashless(p.name, p.type) && !this._isCreditChannel(p.name, p.type));
+
+        // forceCardAsCash: kart ödənişi fiskal səv. nəğd kimi yaz
+        if (hasCashless && this.forceCardAsCash) {
+            return { cashSum: s, cardSum: 0, creditSum: 0, prepaymentSum: 0, bonusSum: 0, paidSum: s, restSum: 0 };
+        }
+
+        // Artıq ödənilən / qalıqlı satış: paidSum−restSum = sum olduqda kanal məbləğlərini sıxışdırma.
+        // Həm kart, həm də nağd ödənişdə qüvvədədir (müştəri 420 verib, 400-lük məhsul, 20 qalıq).
+        const tenderPre = this._round2(out.cashSum + out.cardSum + out.creditSum + out.prepaymentSum + out.bonusSum);
+        const netPre = this._round2(out.paidSum - out.restSum);
+        const hasOverpayment = (this._round2(out.restSum) > 0 || this._round2(out.paidSum) > s)
+            && Math.abs(netPre - s) < 0.005
+            && Math.abs(tenderPre - out.paidSum) < 0.005;
+        // Kart artıq ödəniş: ödəniş məbləğlərini olduğu kimi saxla
+        const hasTenderMismatchFix = hasCashless && !this.forceCardAsCash && hasOverpayment;
+        if (hasTenderMismatchFix) {
+            return out;
+        }
+        // Nağd artıq ödəniş: cashSum = sum (API formula), paidSum/restSum-u mühafizə et
+        if (!hasCashless && !this.forceCardAsCash && hasOverpayment) {
+            // DATAPAY API: cashSum + cardSum + ... = sum (artıq ödənilən məbləğ paidSum/restSum-da saxlanılır)
+            out.cashSum = s;
+            out.cardSum = 0;
+            // paidSum / restSum — buckets-dən gəldiyi kimi saxla (qalıq məlumatını itirmə)
             return out;
         }
 
-        const pmtList = Array.isArray(payments) ? payments : [];
-        const hasExplicitCard = pmtList.some((p) => this._isCardChannel(p.name, p.type));
-        const hasCashless = pmtList.some((p) => this._isCashless(p.name, p.type) && !this._isCreditChannel(p.name, p.type));
-        const hasCredit = pmtList.some((p) => this._isCreditChannel(p.name, p.type));
-
-        if (hasCashless && this.forceCardAsCash) {
-            return {
-                cashSum: s,
-                cashlessSum: 0,
-                cardSum: 0,
-                creditSum: 0,
-                prepaymentSum: 0,
-                bonusSum: 0,
-                paidSum: s,
-                restSum: 0,
-            };
-        }
-
-        // DATAPAY formula: cashSum + cashlessSum + creditSum + prepaymentSum + bonusSum = sum
-        // cashlessSum = total non-cash amount (bank transfer + card — bütün nağdsız)
-        // cardSum     = ALWAYS 0: cihaz cardSum-u ayrıca toplayır, ikisi birlikdə kod 50 verir.
-        //               Həm kart, həm bank ödənişləri üçün yalnız cashlessSum istifadə edilir.
+        // Kart ödənişi varsa cardSum = qalan məbləğ (cashSum + creditSum + prepaymentSum + bonusSum-dan sonra)
         if (hasCashless) {
-            const nonCashless = this._round2(out.cashSum + out.creditSum + out.prepaymentSum + out.bonusSum);
-            const target = this._round2(Math.max(0, s - nonCashless));
-            out.cashlessSum = target;
-            out.cardSum = 0;
+            const nonCard = this._round2(out.cashSum + out.creditSum + out.prepaymentSum + out.bonusSum);
+            out.cardSum = this._round2(Math.max(0, s - nonCard));
         }
 
-        // Əsas doğrulama cəmi: cash + cashless + credit + prepayment + bonus = sum.
-        const baseWithoutCash = this._round2(
-            out.cashlessSum + out.creditSum + out.prepaymentSum + out.bonusSum,
-        );
-        out.cashSum = this._round2(Math.max(0, s - baseWithoutCash));
-        const channelsTotal = this._round2(out.cashSum + out.cashlessSum + out.creditSum + out.prepaymentSum + out.bonusSum);
-        out.paidSum = channelsTotal;
-        out.restSum = this._round2(Math.max(0, channelsTotal - s));
+        // Formula yoxlanması: cashSum = qalan (card + credit + prepayment + bonus-dan sonra)
+        const nonCash = this._round2(out.cardSum + out.creditSum + out.prepaymentSum + out.bonusSum);
+        out.cashSum = this._round2(Math.max(0, s - nonCash));
+        const total = this._round2(out.cashSum + out.cardSum + out.creditSum + out.prepaymentSum + out.bonusSum);
+        out.paidSum = total;
+        // DATAPAY: cashless (kart) ödənişdə restSum = paidSum (referans formatı)
+        out.restSum = hasCashless ? total : this._round2(Math.max(0, total - s));
         return out;
     }
 
-    async createSale({ items, payments, cashierName, orderId: _orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
+    /**
+     * cashlessSum: yalnız datapay_send_cashless_sum=1 və kart nağdsız kanal kimi qeyd olunanda.
+     */
+    _datapayCashlessSumForBody(payF) {
+        if (!this.datapaySendCashlessSum) return undefined;
+        if (this.forceCardAsCash) return 0;
+        return this._round2(payF?.cardSum || 0);
+    }
+
+    async createSale({ items, payments, cashierName, orderId: _orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal, dataPayExactBody = null, datapayExactBody = null }) {
         void _orderId;
+        // Növbə yoxlaması (ensureShiftOpen) uğursuz olsa token olmaya bilər — satışdan əvvəl mütləq yoxla.
+        await this._ensureToken();
+        const rawExact = dataPayExactBody != null ? dataPayExactBody : datapayExactBody;
+        if (rawExact != null && typeof rawExact === 'object' && !Array.isArray(rawExact) && Array.isArray(rawExact.items) && rawExact.items.length > 0) {
+            const body = JSON.parse(JSON.stringify(rawExact));
+            const lineSumExact = this._datapayLineItemsDocumentSum(body.items);
+            let docSumExact = Number(body.sum);
+            const hasExplicitSum = body.sum != null && body.sum !== '' && Number.isFinite(docSumExact) && docSumExact > 0;
+            if (!hasExplicitSum) {
+                docSumExact = lineSumExact;
+                if (lineSumExact > 0) {
+                    body.sum = lineSumExact;
+                }
+            }
+            if (!(docSumExact > 0)) {
+                throw new Error('[DATAPAY] dataPayExactBody: sum düzgün deyil və ya 0-dır');
+            }
+            this._assertDatapayCardMinAmount(payments, docSumExact);
+            this._logDatapayPayload('SALE EXACT BODY', body);
+            const data = await this._postDatapaySaleWithAmountFallback('/sale/create', body, payments, 'SALE');
+            return {
+                long_id: data.documentId || data.document_id || '',
+                short_id: data.shortDocumentId || data.short_document_id || '',
+                document_number: data.documentNumber != null ? data.documentNumber : data.document_number,
+                message: 'OK',
+                data,
+            };
+        }
         const source = this._filterPositiveQtyItems(items);
         if (source.length === 0) {
             throw new Error('[DATAPAY] Fiskal satış üçün məhsul yoxdur');
@@ -992,11 +1122,14 @@ class DataPayService {
             serviceFee,
             deliveryFee,
         );
+        this._mergeDatapaySmallFeeLinesIntoLastProduct(saleItems);
         const otRaw = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : null;
         const useAlign = otRaw != null && !Number.isNaN(otRaw) && otRaw > 0;
         if (useAlign) {
             this._alignFiscalLinesToOrderTotal(saleItems, otRaw);
         }
+        this._coerceDatapaySaleItemsVatTypeForApi(saleItems);
+        this._normalizeDatapaySaleLineMonetaryFields(saleItems);
         const docSum = this._datapayLineItemsDocumentSum(saleItems);
         if (!(docSum > 0)) {
             throw new Error('[DATAPAY] Sənəd cəmi 0 ola bilməz');
@@ -1006,19 +1139,23 @@ class DataPayService {
         const payF0 = this._reconcileDatapayPaymentBuckets(payments, docSum, pay);
         const payF = this._normalizeDatapayPaymentTotals(docSum, payF0, payments);
         const cName = (cashierName != null && String(cashierName) !== '' ? String(cashierName) : this.cashierDefault).substring(0, 128);
+        const vatFields = this._reconcileDatapayVatTotalsToDocumentSum(docSum, this._computeVatTotals(saleItems));
+        const cashlessPayload = this._datapayCashlessSumForBody(payF);
 
+        // Postman /sale/create formatı: cashSum + cardSum + prepaymentSum + creditSum = sum
         const body = {
             sum: docSum,
             cashierName: cName,
             cashSum: payF.cashSum,
-            cashlessSum: payF.cashlessSum,
             cardSum: payF.cardSum,
+            ...(cashlessPayload !== undefined ? { cashlessSum: cashlessPayload } : {}),
             prepaymentSum: payF.prepaymentSum,
-            bonusSum: payF.bonusSum,
             creditSum: payF.creditSum,
-            ...this._computeVatTotals(saleItems),
+            ...vatFields,
             paidSum: payF.paidSum,
             restSum: payF.restSum,
+            discountPercentage: 0,
+            originalSum: docSum,
             items: saleItems,
         };
 
@@ -1032,8 +1169,41 @@ class DataPayService {
         };
     }
 
-    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber: _dn, shortDocId: _sd, orderId: _oid, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
+    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber: _dn, shortDocId: _sd, orderId: _oid, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal, dataPayExactBody = null, datapayExactBody = null }) {
         void _dn; void _sd; void _oid;
+        await this._ensureToken();
+        const rawExactMb = dataPayExactBody != null ? dataPayExactBody : datapayExactBody;
+        if (rawExactMb != null && typeof rawExactMb === 'object' && !Array.isArray(rawExactMb) && Array.isArray(rawExactMb.items) && rawExactMb.items.length > 0) {
+            const body = JSON.parse(JSON.stringify(rawExactMb));
+            if ((!body.parentDocumentId || String(body.parentDocumentId).trim().length < 4) && parentFiscalId) {
+                body.parentDocumentId = String(parentFiscalId).trim();
+            }
+            if (!body.parentDocumentId || String(body.parentDocumentId).trim().length < 4) {
+                throw new Error('[DATAPAY] dataPayExactBody: parentDocumentId lazımdır');
+            }
+            const lineSumMb = this._datapayLineItemsDocumentSum(body.items);
+            let docSumMb = Number(body.sum);
+            const hasExplicitSumMb = body.sum != null && body.sum !== '' && Number.isFinite(docSumMb) && docSumMb > 0;
+            if (!hasExplicitSumMb) {
+                docSumMb = lineSumMb;
+                if (lineSumMb > 0) {
+                    body.sum = lineSumMb;
+                }
+            }
+            if (!(docSumMb > 0)) {
+                throw new Error('[DATAPAY] dataPayExactBody (geri qaytarma): sum düzgün deyil və ya 0-dır');
+            }
+            this._assertDatapayCardMinAmount(payments, docSumMb);
+            this._logDatapayPayload('SALE RETURN EXACT BODY', body);
+            const data = await this._postDatapaySaleWithAmountFallback('/salereturn/create', body, payments, 'SALE RETURN');
+            return {
+                long_id: data.documentId || data.document_id || '',
+                short_id: data.shortDocumentId || data.short_document_id || '',
+                document_number: data.documentNumber != null ? data.documentNumber : data.document_number,
+                message: 'OK',
+                data,
+            };
+        }
         const source = this._filterPositiveQtyItems(items);
         if (source.length === 0) {
             throw new Error('[DATAPAY] Geri qaytarma üçün məhsul yoxdur');
@@ -1047,11 +1217,14 @@ class DataPayService {
             serviceFee,
             deliveryFee,
         );
+        this._mergeDatapaySmallFeeLinesIntoLastProduct(saleItems);
         const otRaw = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : null;
         const useAlign = otRaw != null && !Number.isNaN(otRaw) && otRaw > 0;
         if (useAlign) {
             this._alignFiscalLinesToOrderTotal(saleItems, otRaw);
         }
+        this._coerceDatapaySaleItemsVatTypeForApi(saleItems);
+        this._normalizeDatapaySaleLineMonetaryFields(saleItems);
         const docSum = this._datapayLineItemsDocumentSum(saleItems);
         if (!(docSum > 0)) {
             throw new Error('[DATAPAY] Geri qaytarma sənəd cəmi 0 ola bilməz');
@@ -1060,19 +1233,22 @@ class DataPayService {
         const payF0 = this._reconcileDatapayPaymentBuckets(payments, docSum, pay);
         const payF = this._normalizeDatapayPaymentTotals(docSum, payF0, payments);
         const cName = (cashierName != null && String(cashierName) !== '' ? String(cashierName) : this.cashierDefault).substring(0, 128);
+        const vatFields = this._reconcileDatapayVatTotalsToDocumentSum(docSum, this._computeVatTotals(saleItems));
+        const cashlessPayloadMb = this._datapayCashlessSumForBody(payF);
+        // Postman /salereturn/create formatı
         const body = {
             parentDocumentId: String(parentFiscalId).trim(),
             sum: docSum,
-            cashierName: cName,
             cashSum: payF.cashSum,
-            cashlessSum: payF.cashlessSum,
             cardSum: payF.cardSum,
+            ...(cashlessPayloadMb !== undefined ? { cashlessSum: cashlessPayloadMb } : {}),
             prepaymentSum: payF.prepaymentSum,
-            bonusSum: payF.bonusSum,
             creditSum: payF.creditSum,
-            ...this._computeVatTotals(saleItems),
+            ...vatFields,
             paidSum: payF.paidSum,
             restSum: payF.restSum,
+            discountPercentage: 0,
+            originalSum: docSum,
             items: saleItems,
         };
         const data = await this._postDatapaySaleWithAmountFallback('/salereturn/create', body, payments, 'SALE RETURN');
@@ -1126,6 +1302,55 @@ class DataPayService {
         if (t.includes('T') && (t.endsWith('Z') || t.includes('+'))) return t;
         if (t.includes('T')) return `${t}Z`;
         return new Date(s).toISOString();
+    }
+
+    // ─── Bank kart əməliyyatları (DATAPAY API: /bank-card-transaction/*) ─────────
+
+    /**
+     * Uğursuz (tamamlanmamış) bank kart tranzaksiyalarını əldə edir.
+     * GET /bank-card-transaction/failed
+     * Nəticə: uğursuz tranzaksiyaların siyahısı (id, məbləğ, tarix, s.d.)
+     */
+
+    async getFailedBankCardTransactions() {
+        await this._ensureToken();
+        return this._request('GET', '/bank-card-transaction/failed', {});
+    }
+
+    /**
+     * Bütün bank kart tranzaksiyalarını əldə edir.
+     * GET /bank-card-transaction/all
+     */
+
+    async getAllBankCardTransactions() {
+        await this._ensureToken();
+        return this._request('GET', '/bank-card-transaction/all', {});
+    }
+
+    /**
+     * Uğursuz tranzaksiyanı geri ödəyir (rollback).
+     * POST /bank-card-transaction/rollback
+     * Parametr yoxdur — cihaz sonuncu uğursuz tranzaksiyanı geri qaytarır.
+     */
+
+    async rollbackFailedBankCardTransaction() {
+        await this._ensureToken();
+        return this._request('POST', '/bank-card-transaction/rollback', { body: {} });
+    }
+
+    /**
+     * Uğursuz tranzaksiyanı token-ə göndərir (yenidən icra edir).
+     * POST /bank-card-transaction/execute
+     * @param {number|string} transactionId - uğursuz tranzaksiyanın id-si
+     */
+    async executeFailedBankCardTransaction(transactionId) {
+        if (transactionId == null) {
+            throw new Error('[DATAPAY] executeFailedBankCardTransaction: transactionId lazımdır');
+        }
+        await this._ensureToken();
+        return this._request('POST', '/bank-card-transaction/execute', {
+            body: { id: Number(transactionId) },
+        });
     }
 }
 

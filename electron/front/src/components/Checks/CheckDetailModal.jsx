@@ -234,7 +234,15 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         setTaxLoading(true);
         try {
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-            const items = buildFiscalLineItemsFromOrderItems(order);
+            const profileTaxType = loginedProfileData?.data?.profile?.tax_type
+                ?? (() => { try { return JSON.parse(localStorage.getItem("profile") || "{}")?.tax_type; } catch { return null; } })();
+            const rawItems = buildFiscalLineItemsFromOrderItems(order);
+            const items = rawItems.map((item) => {
+                if (profileTaxType != null && profileTaxType !== '') {
+                    return { ...item, vatType: Number(profileTaxType) };
+                }
+                return item;
+            });
             const payments = (order.order_payments || []).map(mapOrderPaymentForTax);
             const ft = computeFiscalCheckTotalsFromOrder(order);
             const orderTotalFiscal =
@@ -332,10 +340,18 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
     /** Təkrar satış üçün məhsul/ödəniş siyahısı */
     const getResendSaleItemsAndPayments = () => {
-        const items = buildFiscalLineItemsFromOrderItems(order);
-        if (items.length === 0) {
-            toast.error("Fiskal satış üçün məhsul siyahısı boşdur.");
-            return null;
+            const profileTaxType = loginedProfileData?.data?.profile?.tax_type
+                ?? (() => { try { return JSON.parse(localStorage.getItem("profile") || "{}")?.tax_type; } catch { return null; } })();
+            const rawItems = buildFiscalLineItemsFromOrderItems(order);
+            const items = rawItems.map((item) => {
+                if (profileTaxType != null && profileTaxType !== '') {
+                    return { ...item, vatType: Number(profileTaxType) };
+                }
+                return item;
+            });
+            if (items.length === 0) {
+                toast.error("Fiskal satış üçün məhsul siyahısı boşdur.");
+                return null;
         }
         const payments = (order.order_payments || []).map(mapOrderPaymentForTax);
         if (payments.length === 0) {
