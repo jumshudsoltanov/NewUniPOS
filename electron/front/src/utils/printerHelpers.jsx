@@ -219,32 +219,51 @@ export const processAndPrintOrders = async (
         if (!groupItems || groupItems.length === 0) continue;
 
         const container = document.createElement("div");
-        container.style.position = "absolute";
-        container.style.top = "0px";
-        container.style.left = "-9999px";
-        container.style.width = "330px";
+        Object.assign(container.style, {
+          position: "fixed",
+          left: "-10000px",
+          top: "0",
+          width: "330px",
+          visibility: "hidden",
+          pointerEvents: "none",
+          zIndex: "-1",
+        });
         document.body.appendChild(container);
 
         const root = ReactDOM.createRoot(container);
-        flushSync(() => {
-          root.render(
-            <KitchenReceipt
-              orderedItems={groupItems}
-              table={orderData.table}
-              waiter={orderData.waiter}
-              hallName={orderData.hallName}
-              orderId={orderData.orderId}
-              terminalInfo={orderData.terminalInfo}
-              typeName={orderData.typeName}
-              checkData={orderData.checkData}
-              isDecrease={orderData.isDecrease}
-            />,
-          );
-        });
+        let html;
+        try {
+          flushSync(() => {
+            root.render(
+              <KitchenReceipt
+                orderedItems={groupItems}
+                table={orderData.table}
+                waiter={orderData.waiter}
+                hallName={orderData.hallName}
+                orderId={orderData.orderId}
+                terminalInfo={orderData.terminalInfo}
+                typeName={orderData.typeName}
+                checkData={orderData.checkData}
+                isDecrease={orderData.isDecrease}
+              />,
+            );
+          });
 
-        const html = container.innerHTML;
-        root.unmount();
-        document.body.removeChild(container);
+          html = container.innerHTML;
+        } finally {
+          try {
+            root.unmount();
+          } catch (_) {
+            /* ignore */
+          }
+          if (container.parentNode) {
+            try {
+              container.parentNode.removeChild(container);
+            } catch (_) {
+              /* ignore */
+            }
+          }
+        }
 
         const profile = getProfileForPrinting(
           orderData.profileData,
@@ -317,6 +336,8 @@ export const processAndPrintOrders = async (
               baud_rate: printerObj.baud_rate || "9600",
               connection_type: _connType1 || null,
               com_port: isComDel ? printerObj.usb_name || null : null,
+              printer_label:
+                printerObj?.local_name || printerObj?.name || printerName || "",
           } : {};
           const safeDelSettings = JSON.parse(JSON.stringify(delPrinterSettings));
           const resolvedDelUsbName = printerObj?.usb_name && printerObj.usb_name !== "RASTER"
@@ -433,6 +454,8 @@ export const processAndPrintOrders = async (
               baud_rate: printerObj.baud_rate || "9600",
               connection_type: _connType2 || null,
               com_port: isCom2 ? printerObj.usb_name || null : null,
+              printer_label:
+                printerObj.local_name || printerObj.name || printerName || "",
             }
           : {};
         const safeSettings = JSON.parse(JSON.stringify(printerSettings));
@@ -591,10 +614,15 @@ export const printCustomerReceipt = async (
   }
 
   const container = document.createElement("div");
-  container.style.position = "absolute";
-  container.style.top = "0px";
-  container.style.left = "-9999px";
-  container.style.width = "330px";
+  Object.assign(container.style, {
+    position: "fixed",
+    left: "-10000px",
+    top: "0",
+    width: "330px",
+    visibility: "hidden",
+    pointerEvents: "none",
+    zIndex: "-1",
+  });
   document.body.appendChild(container);
 
   const root = ReactDOM.createRoot(container);
@@ -608,11 +636,11 @@ export const printCustomerReceipt = async (
     menuCatalog: orderData.menuCatalog,
   };
 
-  flushSync(() => {
-    root.render(<CustomerReceipt {...receiptProps} />);
-  });
-
   try {
+    flushSync(() => {
+      root.render(<CustomerReceipt {...receiptProps} />);
+    });
+
     const html = container.innerHTML;
 
     const profile = getProfileForPrinting(
@@ -670,6 +698,7 @@ export const printCustomerReceipt = async (
             baud_rate: printer.baud_rate || "9600",
             connection_type: connType || null,
             com_port: isCom ? printer.usb_name || null : null,
+            printer_label: printer?.local_name || printer?.name || "",
           }
         : {};
       const safeSettings = JSON.parse(JSON.stringify(printerSettings));
@@ -810,7 +839,17 @@ export const printCustomerReceipt = async (
     ).catch(() => {});
     return { success: false, error: error.message };
   } finally {
-    root.unmount();
-    document.body.removeChild(container);
+    try {
+      root.unmount();
+    } catch (_) {
+      /* ignore */
+    }
+    if (container.parentNode) {
+      try {
+        container.parentNode.removeChild(container);
+      } catch (_) {
+        /* ignore */
+      }
+    }
   }
 };

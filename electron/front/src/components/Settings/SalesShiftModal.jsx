@@ -568,6 +568,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                 print_logo: cashierPrinter.print_logo != null ? Number(cashierPrinter.print_logo) : 1,
                 rotate_180: cashierPrinter.rotate_180 ? 1 : 0,
                 usb_name: hasUsbName ? cashierPrinter.usb_name : null,
+                printer_label: cashierPrinter.local_name || cashierPrinter.name || "",
             };
 
             let payload;

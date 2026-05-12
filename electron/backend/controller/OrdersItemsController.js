@@ -10,6 +10,7 @@ const MaxCheckService = require("../services/MaxCheckService");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 const ProductsModel = require("../model/ProductsModel");
 const { serviceableItemsSum } = require("../utils/orderServiceFeeBase");
+const { sumOrderItemsLineTotal } = require("../utils/orderItemLineTotal");
 const axios = require("axios");
 
 const WASTE_API_URL = "https://api.unipos.tech/api/pos/write-off";
@@ -56,10 +57,7 @@ const attachLiveTimerToOrder = (order) => {
     order.dataValues.rate_per_minute = liveStatus.charge;
     order.dataValues.is_timer_clock = liveStatus.clockStr;
 
-    const itemsTotal = (order.orders_items || []).reduce(
-      (sum, it) => sum + parseFloat(it.count) * parseFloat(it.price),
-      0,
-    );
+    const itemsTotal = sumOrderItemsLineTotal(order.orders_items || []);
     const newTotal = itemsTotal + liveStatus.charge;
 
     let discount = parseFloat(order.discount || 0);
@@ -96,7 +94,7 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
   const tx = transaction || undefined;
   const listOfProducts = await OrdersItemsModel.findAll({
     where: { order_id: orderId },
-    attributes: ["count", "price"],
+    attributes: ["count", "price", "modifiers"],
     include: [
       {
         model: ProductsModel,
@@ -134,11 +132,7 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
   const orderPlain = currentOrder.get({ plain: true });
   orderPlain.orders_items = itemsPlain;
 
-  const itemsSum = itemsPlain.reduce((sum, item) => {
-    const qty = parseFloat(item.count) || 0;
-    const prc = parseFloat(item.price) || 0;
-    return sum + qty * prc;
-  }, 0);
+  const itemsSum = sumOrderItemsLineTotal(itemsPlain);
 
   const serviceFeeBase = serviceableItemsSum(listOfProducts);
 
@@ -222,7 +216,7 @@ const sendOrdersItemsToDb = async (req, res) => {
     const [listOfProducts, orderRow] = await Promise.all([
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
-        attributes: ["count", "price", "product_id"],
+        attributes: ["count", "price", "product_id", "modifiers"],
         include: [
           {
             model: ProductsModel,
@@ -314,11 +308,7 @@ const sendOrdersItemsToDb = async (req, res) => {
     const effHourly = TimerService.getEffectiveHourlyPrice(orderPlain);
     const liveTimer = TimerService.calculateLiveStatus(currentOrder, effHourly);
 
-    const itemsTotal = listOfProducts.reduce((sum, item) => {
-      const qty = parseFloat(item.count) || 0;
-      const prc = parseFloat(item.price) || 0;
-      return sum + qty * prc;
-    }, 0);
+    const itemsTotal = sumOrderItemsLineTotal(listOfProducts);
 
     const serviceFeeBase = serviceableItemsSum(listOfProducts);
 
@@ -1286,18 +1276,14 @@ const onGiftItem = async (req, res) => {
     // Recalculate Totals (Robust)
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
-      attributes: ["count", "price"],
+      attributes: ["count", "price", "modifiers"],
       include: [
         { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
       ],
       transaction,
     });
 
-    const total = allItems.reduce((sum, item) => {
-      const qty = parseFloat(item.count) || 0;
-      const prc = parseFloat(item.price) || 0;
-      return sum + qty * prc;
-    }, 0);
+    const total = sumOrderItemsLineTotal(allItems);
 
     const serviceFeeBaseMerge = serviceableItemsSum(allItems);
 
@@ -1441,18 +1427,14 @@ const onUpdateItemDiscount = async (req, res) => {
     // Fetch ALL items to sum standard 'price' * 'count'
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
-      attributes: ["count", "price"],
+      attributes: ["count", "price", "modifiers"],
       include: [
         { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
       ],
       transaction,
     });
 
-    const total = allItems.reduce((sum, item) => {
-      const qty = parseFloat(item.count) || 0;
-      const prc = parseFloat(item.price) || 0;
-      return sum + qty * prc;
-    }, 0);
+    const total = sumOrderItemsLineTotal(allItems);
 
     const serviceFeeBaseGift = serviceableItemsSum(allItems);
 
@@ -1678,10 +1660,7 @@ const onCloseOrder = async (req, res) => {
       ],
       transaction,
     });
-    const subtotal = items.reduce(
-      (sum, it) => sum + Number(it.count) * Number(it.price),
-      0,
-    );
+    const subtotal = sumOrderItemsLineTotal(items);
     const serviceFeeBaseClose = serviceableItemsSum(items);
     const finalTimerCharge =
       timerUpdate.rate_per_minute !== undefined
@@ -1970,18 +1949,14 @@ const onDeleteItemWithReason = async (req, res) => {
     // Recalculate totals
     const allItems = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
-      attributes: ["count", "price"],
+      attributes: ["count", "price", "modifiers"],
       include: [
         { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
       ],
       transaction,
     });
 
-    const total = allItems.reduce((sum, it) => {
-      const q = parseFloat(it.count) || 0;
-      const p = parseFloat(it.price) || 0;
-      return sum + q * p;
-    }, 0);
+    const total = sumOrderItemsLineTotal(allItems);
 
     const serviceFeeBaseDel = serviceableItemsSum(allItems);
 
@@ -2082,18 +2057,14 @@ const onUpdateItemPrice = async (req, res) => {
     // 1. Get all items to sum up
     const listOfProducts = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
-      attributes: ["count", "price"],
+      attributes: ["count", "price", "modifiers"],
       include: [
         { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
       ],
     });
 
     // 2. Calculate raw total
-    const total = listOfProducts.reduce((sum, item) => {
-      const qty = parseFloat(item.count) || 0;
-      const prc = parseFloat(item.price) || 0;
-      return sum + qty * prc;
-    }, 0);
+    const total = sumOrderItemsLineTotal(listOfProducts);
 
     const serviceFeeBasePrice = serviceableItemsSum(listOfProducts);
 
@@ -2224,17 +2195,13 @@ const onUpdateItemCount = async (req, res) => {
     // Recalculate Order Total
     const listOfProducts = await OrdersItemsModel.findAll({
       where: { order_id: orderId },
-      attributes: ["count", "price"],
+      attributes: ["count", "price", "modifiers"],
       include: [
         { model: ProductsModel, as: "product", attributes: ["no_service_fee"] },
       ],
     });
 
-    const total = listOfProducts.reduce((sum, it) => {
-      const qty = parseFloat(it.count) || 0;
-      const prc = parseFloat(it.price) || 0;
-      return sum + qty * prc;
-    }, 0);
+    const total = sumOrderItemsLineTotal(listOfProducts);
 
     const serviceFeeBaseCount = serviceableItemsSum(listOfProducts);
 
@@ -2403,7 +2370,7 @@ const onAssignCourier = async (req, res) => {
     if (ord) {
       const items = await OrdersItemsModel.findAll({
         where: { order_id: orderId },
-        attributes: ["count", "price"],
+        attributes: ["count", "price", "modifiers"],
         include: [
           {
             model: ProductsModel,
@@ -2414,11 +2381,7 @@ const onAssignCourier = async (req, res) => {
       });
 
       const subtotal =
-        items.reduce((sum, it) => {
-          return (
-            sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0)
-          );
-        }, 0) + Number(ord.rate_per_minute || 0);
+        sumOrderItemsLineTotal(items) + Number(ord.rate_per_minute || 0);
 
       const serviceFeeBaseCourier = serviceableItemsSum(items);
 
@@ -2672,7 +2635,7 @@ const onStopTimer = async (req, res) => {
     const [listOfProducts, currentOrder] = await Promise.all([
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
-        attributes: ["count", "price"],
+        attributes: ["count", "price", "modifiers"],
         include: [
           {
             model: ProductsModel,
@@ -2696,11 +2659,8 @@ const onStopTimer = async (req, res) => {
     ]);
 
     const total =
-      listOfProducts.reduce((sum, item) => {
-        const qty = parseFloat(item.count) || 0;
-        const prc = parseFloat(item.price) || 0;
-        return sum + qty * prc;
-      }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
+      sumOrderItemsLineTotal(listOfProducts) +
+      (parseFloat(currentOrder?.rate_per_minute) || 0);
 
     const serviceFeeBaseStop = serviceableItemsSum(listOfProducts);
 
@@ -2786,7 +2746,7 @@ const onResetTimer = async (req, res) => {
     const [listOfProducts, currentOrder] = await Promise.all([
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
-        attributes: ["count", "price"],
+        attributes: ["count", "price", "modifiers"],
         include: [
           {
             model: ProductsModel,
@@ -2810,11 +2770,8 @@ const onResetTimer = async (req, res) => {
     ]);
 
     const total =
-      listOfProducts.reduce((sum, item) => {
-        const qty = parseFloat(item.count) || 0;
-        const prc = parseFloat(item.price) || 0;
-        return sum + qty * prc;
-      }, 0) + (parseFloat(currentOrder?.rate_per_minute) || 0);
+      sumOrderItemsLineTotal(listOfProducts) +
+      (parseFloat(currentOrder?.rate_per_minute) || 0);
 
     const serviceFeeBaseReset = serviceableItemsSum(listOfProducts);
 
@@ -2960,7 +2917,7 @@ module.exports = {
       // Recalculate totals once
       const allItems = await OrdersItemsModel.findAll({
         where: { order_id: orderId },
-        attributes: ["count", "price"],
+        attributes: ["count", "price", "modifiers"],
         include: [
           {
             model: ProductsModel,
@@ -2977,12 +2934,7 @@ module.exports = {
       });
       const timerCharge = parseFloat(ord?.rate_per_minute || 0);
 
-      const total =
-        allItems.reduce((sum, it) => {
-          return (
-            sum + (parseFloat(it.count) || 0) * (parseFloat(it.price) || 0)
-          );
-        }, 0) + timerCharge;
+      const total = sumOrderItemsLineTotal(allItems) + timerCharge;
 
       const serviceFeeBaseBatch = serviceableItemsSum(allItems);
 

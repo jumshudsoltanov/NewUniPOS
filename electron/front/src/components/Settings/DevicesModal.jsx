@@ -726,7 +726,13 @@ const DevicesModal = ({ show, onHide }) => {
                         <p style="margin: 5px 0; font-size: 12px;">Sistem uğurla qoşuldu</p>
                     </div>
                 `;
-                await window.electronAPI.printReceipt({ html: testHtml, printerName: printerIp ? "" : printerName, printerIp: printerIp || "", printerPort: printerPort || 9100 });
+                await window.electronAPI.printReceipt({
+                    html: testHtml,
+                    printerName: printerIp ? "" : printerName,
+                    printerIp: printerIp || "",
+                    printerPort: printerPort || 9100,
+                    printerSettings: { printer_label: printerName || "" },
+                });
                 toast.success("Test çapı göndərildi");
             }
         } catch (error) {

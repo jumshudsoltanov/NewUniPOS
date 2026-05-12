@@ -337,7 +337,7 @@ const getProductsReport = async (whereClause) => {
                 where: whereClause,
                 required: true,
             },
-            { model: ProductsModel, as: 'product', attributes: ['id', 'name'], required: false }
+            { model: ProductsModel, as: 'product', attributes: ['id', 'name', 'price'], required: false }
         ],
         raw: false,
     });
@@ -349,7 +349,9 @@ const getProductsReport = async (whereClause) => {
         const isGift = Number(item.is_gift) === 1 || item.is_gift === true;
         const itemCount = parseFloat(item.count || 0);
         const itemPrice = parseFloat(item.price || 0);
-        const nominalPrice = itemPrice > 0 ? itemPrice : parseFloat(item.original_price || 0);
+        const origPrice = parseFloat(item.original_price || 0);
+        const productPrice = parseFloat(item.product?.price || 0);
+        const nominalPrice = itemPrice > 0 ? itemPrice : (origPrice > 0 ? origPrice : productPrice);
 
         if (!productsMap[productId]) {
             productsMap[productId] = {
@@ -362,8 +364,19 @@ const getProductsReport = async (whereClause) => {
         }
         productsMap[productId].quantity += itemCount;
         if (isGift) {
+            let modifiersTotalGift = 0;
+            try {
+                let mods = item.modifiers;
+                if (typeof mods === "string") mods = JSON.parse(mods || "[]");
+                if (Array.isArray(mods)) {
+                    modifiersTotalGift = mods.reduce(
+                        (s, m) => s + parseFloat(m.price || 0) * parseFloat(m.count || 1),
+                        0
+                    );
+                }
+            } catch (_) { /* ignore */ }
             productsMap[productId].quantity_gift += itemCount;
-            productsMap[productId].total_gift += itemCount * nominalPrice;
+            productsMap[productId].total_gift += itemCount * (nominalPrice + modifiersTotalGift);
         } else {
             productsMap[productId].total += lineItemTotalForReport(item);
         }

@@ -7,6 +7,7 @@ const OrderPaymentsModel = require("../model/OrderPaymentsModel");
 const TimerService = require("../services/TimerService");
 const { Op } = require("sequelize");
 const { serviceableItemsSum } = require("../utils/orderServiceFeeBase");
+const { sumOrderItemsLineTotal } = require("../utils/orderItemLineTotal");
 
 const getAllActiveOrders = async (req, res) => {
   const { profileId } = req.params;
@@ -63,7 +64,7 @@ const getAllActiveOrders = async (req, res) => {
         order.dataValues.rate_per_minute = liveStatus.charge;
         order.dataValues.is_timer_clock = liveStatus.clockStr;
         
-        const itemsTotal = (order.orders_items || []).reduce((sum, it) => sum + (parseFloat(it.count) * parseFloat(it.price)), 0);
+        const itemsTotal = sumOrderItemsLineTotal(order.orders_items || []);
         const newTotal = itemsTotal + liveStatus.charge;
         
         let discount = parseFloat(order.discount || 0);
@@ -257,7 +258,7 @@ const getOrderById = async (req, res) => {
         order.dataValues.is_timer_clock = liveStatus.clockStr;
         
         // Also update total in response
-        const itemsTotal = (order.orders_items || []).reduce((sum, it) => sum + (parseFloat(it.count) * parseFloat(it.price)), 0);
+        const itemsTotal = sumOrderItemsLineTotal(order.orders_items || []);
         const newTotal = itemsTotal + liveStatus.charge;
         
         // Handle discounts/service fees if needed

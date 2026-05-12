@@ -3,18 +3,7 @@
  * products.no_service_fee === 1 olanlar xaric (front CheckBottom ilə uyğun).
  */
 
-function getCountPrice(item) {
-  if (item && typeof item.get === "function") {
-    return {
-      count: parseFloat(item.get("count")) || 0,
-      price: parseFloat(item.get("price")) || 0,
-    };
-  }
-  return {
-    count: parseFloat(item.count) || 0,
-    price: parseFloat(item.price) || 0,
-  };
-}
+const { orderItemLineTotal } = require("./orderItemLineTotal");
 
 function getProductNoServiceFee(item) {
   const p = item && (item.product || item.Product);
@@ -29,8 +18,7 @@ function getProductNoServiceFee(item) {
 }
 
 function lineTotal(item) {
-  const { count, price } = getCountPrice(item);
-  return count * price;
+  return orderItemLineTotal(item);
 }
 
 /**

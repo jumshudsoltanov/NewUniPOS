@@ -20,6 +20,27 @@ autoUpdater.logger.transports.file.level = "debug";
 autoUpdater.autoInstallOnAppQuit = true;
 log.info("UniPOS Desktop Application is starting...");
 
+/**
+ * Windows: crash log-da `launch-failed` + **exitCode 18** — renderer Chromium sandbox-da
+ * işə düşmür; çox vaxt "Run as Administrator" və ya AppLocker/endpoint təhlükəsizliyi ilə
+ * uyğunsuzluqdur. Mənbə: https://github.com/electron/electron/issues/49167
+ * Tövsiyə: UniPOS-u mümkün olduqca **adminsiz** işlədin. GPU sandbox söndürməsi bir çox
+ * maşınlarda bəs edir; bəzi hallarda ortam dəyişəni `UNIPOS_NO_SANDBOX=1` və ya işəsalma
+ * arqumenti `--unipos-no-sandbox` (tam `no-sandbox` — yalnız zərurətdə).
+ */
+if (process.platform === "win32") {
+  app.commandLine.appendSwitch("disable-gpu-sandbox");
+  if (
+    String(process.env.UNIPOS_NO_SANDBOX || "").trim() === "1" ||
+    process.argv.includes("--unipos-no-sandbox")
+  ) {
+    app.commandLine.appendSwitch("no-sandbox");
+    log.warn(
+      "[SANDBOX] no-sandbox aktivdir (UNIPOS_NO_SANDBOX=1 və ya --unipos-no-sandbox)",
+    );
+  }
+}
+
 Menu.setApplicationMenu(null);
 
 
@@ -198,7 +219,16 @@ function attachDevToolsIcon(browserWindow) {
 }
 
 // --- GLOBAL CRASH REPORTER ---
-const crashLogPath = path.join(app.getPath("userData"), "UniPOS_Crash_Log.txt");
+function getCrashLogPrimaryPath() {
+  try {
+    return path.join(app.getPath("userData"), "UniPOS_Crash_Log.txt");
+  } catch (_e) {
+    return path.join(os.tmpdir(), "UniPOS_Crash_Log.txt");
+  }
+}
+
+const CRASH_TMP_LOG = path.join(os.tmpdir(), "UniPOS_Crash_Log.txt");
+const MAX_ERR_LOG_CHARS = 12000;
 
 function logErrorToFile(errorType, errorObj) {
   try {
@@ -209,13 +239,16 @@ function logErrorToFile(errorType, errorObj) {
     } else {
       errorDetails = String(errorObj);
     }
+    if (errorDetails.length > MAX_ERR_LOG_CHARS) {
+      errorDetails =
+        errorDetails.slice(0, MAX_ERR_LOG_CHARS) +
+        "\n…(qısaldıldı, tam mətn faylda əvvəlki qədər olmayıb)\n";
+    }
     const logMessage = `\n[${timestamp}] [${errorType}]\n${errorDetails}\n-----------------------------------\n`;
-    fs.appendFileSync(crashLogPath, logMessage, "utf8");
-    fs.appendFileSync(
-      path.join(os.tmpdir(), "UniPOS_Crash_Log.txt"),
-      logMessage,
-      "utf8",
-    );
+    fs.appendFileSync(getCrashLogPrimaryPath(), logMessage, "utf8");
+    fs.appendFileSync(CRASH_TMP_LOG, logMessage, "utf8");
+    const oneLine = errorDetails.replace(/\s+/g, " ").slice(0, 2000);
+    log.error(`[CRASH_LOG] ${errorType}: ${oneLine}`);
   } catch (e) {
     console.error("LOGGERS FAILURE", e);
   }
@@ -229,6 +262,74 @@ process.on("uncaughtException", (error) => {
 process.on("unhandledRejection", (reason, promise) => {
   logErrorToFile("unhandledRejection", reason);
 });
+
+/** Renderer qəfil çökəndə əsas prosesdə qalmaq; çox uzun/OS xətaları üçün faylda iz + məhdud reload. */
+function attachRendererRecovery(browserWindow, label) {
+  if (!browserWindow || browserWindow.webContents?.isDestroyed?.()) return;
+  const wc = browserWindow.webContents;
+  let reloadBurst = [];
+
+  wc.on("render-process-gone", (_event, details) => {
+    const msg = `[${label}] reason=${details?.reason ?? "?"} exitCode=${details?.exitCode ?? "n/a"}`;
+    logErrorToFile("render-process-gone", msg);
+    log.warn("[RENDER_DOWN]", msg);
+    if (
+      details?.exitCode === 18 &&
+      String(details?.reason || "").toLowerCase().includes("launch")
+    ) {
+      log.warn(
+        "[RENDER_DOWN] exitCode 18: Windows-da Admin rejimi və ya sandbox toqquşması ola bilər — proqramı adminsiz işlədin; davam edərsə UNIPOS_NO_SANDBOX=1 və ya --unipos-no-sandbox (main.js şərhlərinə baxın).",
+      );
+    }
+    try {
+      _event.preventDefault();
+    } catch (_e) {
+      /* Electron versiyası dəstəkləməyə bilər */
+    }
+    const now = Date.now();
+    reloadBurst = reloadBurst.filter((t) => now - t < 60000);
+    if (reloadBurst.length >= 4) {
+      log.error(
+        "[RENDER_DOWN] Çox sayda yenidən yükləmə — avtomatik bərpa dayandırıldı:",
+        label,
+      );
+      return;
+    }
+    reloadBurst.push(now);
+    setTimeout(() => {
+      try {
+        if (browserWindow && !browserWindow.isDestroyed()) {
+          browserWindow.reload();
+        }
+      } catch (re) {
+        log.warn("[RENDER_DOWN] reload xətası:", re?.message);
+      }
+    }, 500);
+  });
+
+  wc.on("unresponsive", () => {
+    log.warn("[RENDER] unresponsive:", label);
+  });
+
+  wc.on("responsive", () => {
+    log.info("[RENDER] responsive:", label);
+  });
+}
+
+if (typeof app?.on === "function") {
+  app.on("child-process-gone", (_event, details) => {
+    const payload = [
+      details?.type,
+      details?.reason,
+      details?.exitCode,
+      details?.serviceName,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    logErrorToFile("child-process-gone", payload || String(details || ""));
+    log.warn("[CHILD_PROC_GONE]", details);
+  });
+}
 // -----------------------------
 
 // --- Single Instance Lock ---
@@ -266,6 +367,7 @@ function createWindow() {
   });
 
   attachDevToolsIcon(mainWindow);
+  attachRendererRecovery(mainWindow, "cashier");
 
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173/");
@@ -451,6 +553,7 @@ function createWindow() {
     });
 
     attachDevToolsIcon(customerWindow);
+    attachRendererRecovery(customerWindow, "customer-display");
 
     if (isDev) {
       customerWindow.loadURL("http://localhost:5173/#/customer");
@@ -817,6 +920,7 @@ ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
   });
 
   attachDevToolsIcon(customerWindow);
+  attachRendererRecovery(customerWindow, "customer-display");
 
   if (isDev) {
     customerWindow.loadURL("http://localhost:5173/#/customer");
@@ -867,6 +971,7 @@ ipcMain.handle("toggle-kitchen-display", (event, { active, screenId }) => {
   });
 
   attachDevToolsIcon(kitchenWindow);
+  attachRendererRecovery(kitchenWindow, "kitchen-display");
 
   if (isDev) {
     kitchenWindow.loadURL("http://localhost:5173/#/kitchen-display");
@@ -905,6 +1010,7 @@ function createKitchenWindow(screenId) {
   });
 
   attachDevToolsIcon(kitchenWindow);
+  attachRendererRecovery(kitchenWindow, "kitchen-display");
 
   if (isDev) {
     kitchenWindow.loadURL("http://localhost:5173/#/kitchen-display");
@@ -918,6 +1024,69 @@ function createKitchenWindow(screenId) {
   kitchenWindow.on("closed", () => {
     kitchenWindow = null;
   });
+}
+
+/**
+ * ZJ və bəzi şəbəkə ESC/POS printerlər:
+ * – Kiçik raster blokları (buffer)
+ * – Kəsmədən əvvəl daha çox boş sətir
+ * – 80mm üçün raster eni: **576** nöqtə (203 dpi standart; 640 bəzi ZJ-da sətirin solunu kəsər,
+ *   sağda boş sahə yaradaraq məzmunun dartılmış görünməsinə gətirir — baxılış foto).
+ * – leftInsetPx: çap başlığının mexaniki “ölü zonasından” qaçmaq üçün ağ sahə (~20–28px tipikdir).
+ * Şəbəkə rejimində printerSettings.printer_label istifadə olunur (printerName boş ola bilər).
+ */
+function getEscPosRasterCompat(printerName, settings) {
+  const paperSize = String(settings?.paper_size || "80");
+  const L = String(
+    printerName || (settings && settings.printer_label) || "",
+  ).toUpperCase();
+  // Tam Windows/USB ad nümunələri: "ZJ-80", "ZJ80", "ZJ 80" və s.; L artıq UPPERCASE-dir.
+  const zj =
+    /ZJ[- ]?80\b/.test(L) ||
+    L.includes("ZJ-80") ||
+    L.includes("ZJ80") ||
+    L.includes("ZJ-") ||
+    L.includes(" ZJ") ||
+    L.startsWith("ZJ") ||
+    /^ZJ-?\d/.test(L) ||
+    L.includes("ZJIANG") ||
+    L.includes("ZHIJIANG") ||
+    L.includes("ZHONGQI") ||
+    L.includes("ZQ-") ||
+    L.includes("ZQ58") ||
+    L.includes("ZQ80") ||
+    L.includes("ZJPRINT");
+  if (!zj) {
+    return {
+      chunkRows: 24,
+      cutFeedLines: 6,
+      trailingExtraLines: 0,
+      receiptWidthPx: null,
+      leftInsetPx: 0,
+      rightInsetPx: 0,
+    };
+  }
+  log.info(
+    `[RASTER] ESC/POS uyğunlaşdırma (ZJ / oxşar): "${String(printerName || settings?.printer_label || "").slice(0, 64)}"`,
+  );
+  if (paperSize === "58") {
+    return {
+      chunkRows: 8,
+      cutFeedLines: 12,
+      trailingExtraLines: 10,
+      receiptWidthPx: 384,
+      leftInsetPx: 14,
+      rightInsetPx: 0,
+    };
+  }
+  return {
+    chunkRows: 8,
+    cutFeedLines: 12,
+    trailingExtraLines: 10,
+    receiptWidthPx: 576,
+    leftInsetPx: 24,
+    rightInsetPx: 0,
+  };
 }
 
 /**
@@ -1042,14 +1211,43 @@ ipcMain.handle(
       });
 
     const paperSize = settings.paper_size || "80";
-    const receiptWidthPx = paperSize === "58" ? 384 : 576;
+    const rasterSizeCompat = getEscPosRasterCompat(
+      printerName || settings.printer_label || "",
+      settings,
+    );
+    let receiptWidthPx = paperSize === "58" ? 384 : 576;
+    if (rasterSizeCompat.receiptWidthPx != null) {
+      receiptWidthPx = rasterSizeCompat.receiptWidthPx;
+      log.info(
+        `[RASTER] Kağız ${paperSize}mm — seçilmiş raster eni: ${receiptWidthPx}px`,
+      );
+    }
     const contentBaseWidth = 330; // Orijinal ölçüyə qaytarıldı (330px)
-    const zoomLevel = receiptWidthPx / contentBaseWidth;
 
-    const renderHtmlToRasterBuffer = async (htmlContent, s) => {
-      console.log(`[RASTER] Çap başlayır: ${receiptWidthPx}px (Base: ${contentBaseWidth})`);
+    const renderHtmlToRasterBuffer = async (htmlContent, s, rasterPrinterLabel = "") => {
+      const compat = getEscPosRasterCompat(rasterPrinterLabel, s);
+      const CHUNK_ROWS = compat.chunkRows;
+      const leftInsetPx = Math.max(
+        0,
+        Number(compat.leftInsetPx ?? 0) || 0,
+      );
+      const rightInsetPx = Math.max(
+        0,
+        Number(compat.rightInsetPx ?? 0) || 0,
+      );
+      const usableW = Math.max(
+        96,
+        receiptWidthPx - leftInsetPx - rightInsetPx,
+      );
+      const zoomLevel = usableW / contentBaseWidth;
+
+      console.log(
+        `[RASTER] Çap başlayır: ${receiptWidthPx}px (base ${contentBaseWidth}), inset L/R=${leftInsetPx}/${rightInsetPx}, usableW=${usableW}, zoom=${zoomLevel.toFixed(4)}, chunkRows=${CHUNK_ROWS}`,
+      );
       let rasterWindow = new BrowserWindow({
         show: false,
+        skipTaskbar: true,
+        focusable: false,
         width: receiptWidthPx,
         height: 16000,
         useContentSize: true,
@@ -1097,6 +1295,9 @@ ipcMain.handle(
         }
         #zoom-outer {
           width: ${receiptWidthPx}px;
+          padding-left: ${leftInsetPx}px;
+          padding-right: ${rightInsetPx}px;
+          box-sizing: border-box;
           background: white !important;
         }
         #zoom-wrap {
@@ -1293,8 +1494,7 @@ ipcMain.handle(
       console.log(`[RASTER] Trim: OriginalH=${imgH}, TrimmedH=${trimmedH}`);
 
       // Kiçik chunk: bəzi printerlər böyük GS v0 raster bloklarını buffer overflow edir
-      // və kağızı ortadan kəsir. 24 sətir × 72 bayt = 1728 bayt — bütün printerlərə uyğun.
-      const CHUNK_ROWS = 24;
+      // və kağızı ortadan kəsir. ZJ üçün chunkRows daha kiçik (getEscPosRasterCompat).
       for (let rowStart = 0; rowStart < trimmedH; rowStart += CHUNK_ROWS) {
         const rowsToProcess = Math.min(CHUNK_ROWS, trimmedH - rowStart);
         const header = Buffer.from([
@@ -1323,8 +1523,9 @@ ipcMain.handle(
       }
 
       parts.push(Buffer.from([ESC, 0x33, 0x1e]));
-      const tSpace = s.trailing_space ? Number(s.trailing_space) : 6;
-      parts.push(Buffer.from([ESC, 0x64, tSpace]));
+      const baseTrail = s.trailing_space ? Number(s.trailing_space) : 6;
+      const tSpace = baseTrail + compat.trailingExtraLines;
+      parts.push(Buffer.from([ESC, 0x64, Math.min(255, tSpace)]));
 
       const finalCutParts = [];
 
@@ -1341,12 +1542,13 @@ ipcMain.handle(
         finalCutParts.push(Buffer.from([ESC, 0x70, 0x01, 0x19, 0xfa])); // XPrinter Drawer 2
       }
 
+      const feedBeforeCut = Math.min(255, compat.cutFeedLines);
       const cut = s.cut_mode || "full";
       if (cut === "partial") {
-        finalCutParts.push(Buffer.from([ESC, 0x64, 0x06])); // Feed 6 lines before cut
+        finalCutParts.push(Buffer.from([ESC, 0x64, feedBeforeCut]));
         finalCutParts.push(Buffer.from([GS, 0x56, 0x01])); // GS V 1 — partial cut
       } else if (cut !== "none") {
-        finalCutParts.push(Buffer.from([ESC, 0x64, 0x06])); // Feed 6 lines before cut
+        finalCutParts.push(Buffer.from([ESC, 0x64, feedBeforeCut]));
         finalCutParts.push(Buffer.from([GS, 0x56, 0x00])); // GS V 0 — full cut
       }
 
@@ -1391,7 +1593,11 @@ ipcMain.handle(
 
     if (isDirectPrinter) {
       try {
-        const rasterBuf = await renderHtmlToRasterBuffer(html, settings);
+        const rasterBuf = await renderHtmlToRasterBuffer(
+          html,
+          settings,
+          printerName || settings.printer_label || "",
+        );
 
         // COM port adını al: settings.com_port üstünlüklüdür, sonra printerName
         const comPortName = settings.com_port ||
@@ -1437,6 +1643,8 @@ ipcMain.handle(
 
     let printWindow = new BrowserWindow({
       show: false,
+      skipTaskbar: true,
+      focusable: false,
       x: -9999,
       y: -9999,
       width: driverContentPx,

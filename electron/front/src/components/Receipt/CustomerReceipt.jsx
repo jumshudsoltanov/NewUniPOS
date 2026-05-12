@@ -328,10 +328,24 @@ const CustomerReceipt = ({
     const discountInfo = getDiscountInfo();
     const serviceInfo = getServiceInfo();
 
-    // Use stored total (already correct: max(subtotal-discount+service, deposit)+delivery)
-    const displayTotal = checkData?.total != null
-        ? Number(checkData.total)
-        : Math.max(0, subtotal - discountInfo.amount + serviceInfo.amount);
+    /** CheckBottom ilə uyğun: yekun həmişə qəbzdəki məhsul cəmindən — silinən/miqdar azaldılanda DB-dəki total gec yenilənə bilər */
+    const normalizeMoney = (value) => {
+        const n = Number(value || 0);
+        const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+        return Math.abs(rounded) < 0.005 ? 0 : rounded;
+    };
+
+    const depositAmount = normalizeMoney(Number(checkData?.deposit || 0));
+    const deliveryFee = normalizeMoney(Number(checkData?.delivery_fee || 0));
+    const discountAmt = normalizeMoney(discountInfo.amount);
+    const serviceAmount = normalizeMoney(serviceInfo.amount);
+
+    let subtotalAfterDiscount = normalizeMoney(subtotal - discountAmt);
+    if (subtotalAfterDiscount < 0) subtotalAfterDiscount = 0;
+
+    const displayTotal = normalizeMoney(
+        Math.max(subtotalAfterDiscount, depositAmount) + serviceAmount + deliveryFee,
+    );
 
     // Ödəniş sətirləri: server/bağlanışdakı real məbləğlər (yekun artıq max(məhsul, depozit)+çatdırılma ilə düzdür; depoziti burada çıxma).
     const totalPaymentsSum = payments.reduce((sum, p) => sum + Number(p.paidAmount || p.amount || 0), 0);
