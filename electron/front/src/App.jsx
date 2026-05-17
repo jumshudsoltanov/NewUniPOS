@@ -38,6 +38,7 @@ import Settings from "./components/Settings/Settings";
 import { initNetwork, getSocket, onSocketStatusChange } from "./utils/apiConfig";
 import { preloadCheck } from "./utils/preloadCheck";
 import { isPaymentExpired, isPosBlocked } from "./utils/dateHelpers";
+import { mergeBlockedLoginPayload } from "./utils/authResultMerge";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
 import { usePosIdleToPin } from "./hooks/usePosIdleToPin";
@@ -67,6 +68,24 @@ function AppContent() {
         sessionStorage.setItem("unipos_instance_label", "default");
       }
     })();
+  }, []);
+
+  /* Vakum/Touch skrol tənzimləməsi */
+  useEffect(() => {
+    const applyTouchScroll = (enabled) => {
+      if (enabled) document.body.classList.add("touch-scroll-active");
+      else document.body.classList.remove("touch-scroll-active");
+    };
+
+    // İlkin yükləmə
+    const isEnabled = localStorage.getItem("pos_touch_scroll") === "true";
+    applyTouchScroll(isEnabled);
+
+    // Dinamik dəyişiklikləri dinləyirik
+    const handleChanged = (e) => applyTouchScroll(e.detail.enabled);
+    window.addEventListener("touchScrollSettingsChanged", handleChanged);
+    
+    return () => window.removeEventListener("touchScrollSettingsChanged", handleChanged);
   }, []);
 
   useEffect(() => {
@@ -118,8 +137,13 @@ function AppContent() {
       } catch (err) {
         // Server xətası — POS-u bloklama, sadəcə lokal keşdən yoxla
         if (err?.data?.isBlocked) {
-          localStorage.setItem("authResult", JSON.stringify(err.data));
-          dispatch(setLoginData(err.data));
+          let prevSnapshot = null;
+          try {
+            prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
+          } catch {}
+          const merged = mergeBlockedLoginPayload(err.data, prevSnapshot);
+          localStorage.setItem("authResult", JSON.stringify(merged));
+          dispatch(setLoginData(merged));
           navigate("/blocked", { replace: true });
         }
       }
@@ -404,8 +428,13 @@ function AppContent() {
             } catch (err) {
               console.error("[AUTH] Background auth check failed:", err);
               if (err?.data?.isBlocked) {
-                localStorage.setItem("authResult", JSON.stringify(err.data));
-                dispatch(setLoginData(err.data));
+                let prevSnapshot = null;
+                try {
+                  prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
+                } catch {}
+                const merged = mergeBlockedLoginPayload(err.data, prevSnapshot);
+                localStorage.setItem("authResult", JSON.stringify(merged));
+                dispatch(setLoginData(merged));
                 navigate("/blocked", { replace: true });
               }
               // Şəbəkə xətası — POS-u bloklama, istifadəçi davam etsin

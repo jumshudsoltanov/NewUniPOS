@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Navigate } from "react-router-dom";
 import { authPos, setLoginData } from "../../redux/Slices/LoginSlice";
 import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
+import { mergeBlockedLoginPayload } from "../../utils/authResultMerge";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
@@ -226,9 +227,14 @@ const Login = () => {
       console.error("Manual login failed:", err);
       
       if (err?.data?.isBlocked) {
+        let prevSnapshot = null;
+        try {
+          prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
+        } catch {}
+        const merged = mergeBlockedLoginPayload(err.data, prevSnapshot);
         localStorage.setItem("profile", JSON.stringify(profileData));
-        localStorage.setItem("authResult", JSON.stringify(err.data));
-        dispatch(setLoginData(err.data));
+        localStorage.setItem("authResult", JSON.stringify(merged));
+        dispatch(setLoginData(merged));
         navigate("/blocked");
         return;
       }

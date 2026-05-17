@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.2.38",
+  "version": "2.2.54",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -72,14 +72,16 @@
         }
       ],
       "icon": "electron/static/images/logo-build.ico",
-      "requestedExecutionLevel": "asInvoker",
+      "requestedExecutionLevel": "requireAdministrator",
       "verifyUpdateCodeSignature": false,
-      "publisherName": "UniPOS LLC",
+      "publisherName": "UniPOS MMC",
       "signDlls": false,
       "sign": null
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "runAfterFinish": true,

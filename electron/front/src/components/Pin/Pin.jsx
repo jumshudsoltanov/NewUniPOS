@@ -501,18 +501,23 @@ const Pin = () => {
       if (e.target?.closest?.(".modal")) return;
 
       const digit = digitFromEvent(e);
-      if (digit) {
+      const isSymbol = e.key && e.key.length === 1 && !digit;
+
+      if (digit || isSymbol) {
         e.preventDefault();
         clearPinTimerOnly();
-        keyboardBufferRef.current += digit;
+        keyboardBufferRef.current += (digit || e.key);
         const buf = keyboardBufferRef.current;
-        if (buf.length <= PIN_LENGTH) {
+
+        // PIN nöqtələri üçün yalnız rəqəmləri göstər, simvollar gəlirsə (kart) PIN dots-u təmizlə
+        if (/^\d+$/.test(buf) && buf.length <= PIN_LENGTH) {
           setPin(buf);
           setIsError(false);
         } else {
-          setPin("");
+          setPin(""); // Simvollar gəlirsə (kart oxunursa) vizual PIN-i sıfırla
         }
-        if (buf.length === PIN_LENGTH) {
+
+        if (buf.length === PIN_LENGTH && /^\d+$/.test(buf)) {
           keyboardPinTimerRef.current = setTimeout(() => {
             if (keyboardBufferRef.current.length === PIN_LENGTH) {
               const p = keyboardBufferRef.current;

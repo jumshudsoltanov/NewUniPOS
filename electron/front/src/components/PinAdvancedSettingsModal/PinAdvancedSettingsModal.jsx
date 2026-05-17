@@ -140,6 +140,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   const [hideImages, setHideImages] = useState(
     () => localStorage.getItem("pos_hide_images") === "true"
   );
+  const [touchScrollEnabled, setTouchScrollEnabled] = useState(
+    () => localStorage.getItem("pos_touch_scroll") === "true"
+  );
 
   const [resettingDb, setResettingDb] = useState(false);
 
@@ -269,6 +272,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       setCardFontSize(parseFloat(localStorage.getItem("pos_card_font_size") || "0.8"));
       setProductViewMode(localStorage.getItem("pos_product_view_mode") || "card");
       setHideImages(localStorage.getItem("pos_hide_images") === "true");
+      setTouchScrollEnabled(localStorage.getItem("pos_touch_scroll") === "true");
       try {
         const savedReceipt = JSON.parse(localStorage.getItem("pos_receipt_settings"));
         if (savedReceipt) setReceiptSettings(normalizePosReceiptSettings(savedReceipt));
@@ -543,6 +547,19 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     setView("main");
   };
 
+  const handleSaveTouchScroll = () => {
+    localStorage.setItem("pos_touch_scroll", String(touchScrollEnabled));
+    window.dispatchEvent(new CustomEvent("touchScrollSettingsChanged", {
+      detail: { enabled: touchScrollEnabled }
+    }));
+    // Qlobal class tətbiq edirik
+    if (touchScrollEnabled) document.body.classList.add("touch-scroll-active");
+    else document.body.classList.remove("touch-scroll-active");
+    
+    toast.success("Skrol ayarları saxlanıldı");
+    setView("main");
+  };
+
   const handleSaveReceiptDesign = () => {
      localStorage.setItem("pos_receipt_settings", JSON.stringify(receiptSettings));
      toast.success("Çek dizayn ayarları saxlanıldı");
@@ -591,6 +608,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     view === "receiptDesign" ? "Çek dizaynı" :
     view === "systemUsers" ? "Sistem istifadəçiləri" :
     view === "operationNames" ? "Əməliyyat adları" : 
+    view === "touchScroll" ? "Skrol ayarları" :
     view === "syncCheck" ? "Sinroxnizasiya Diaqnostikası" : "Ayarlar";
 
   return (
@@ -641,6 +659,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
               ) : view === "syncCheck" ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e01b24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9-9a9 9 0 0 0-9 9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
+                </svg>
+              ) : view === "touchScroll" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1391,6 +1413,32 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             </div>
           </div>
 
+        ) : view === "touchScroll" ? (
+          <div className="discount-body pin-adv-catview-body">
+            <p className="pin-adv-catview-hint">Vakum və toxunuşlu ekranlar üçün skrol tənzimləmələri</p>
+
+            <div className="pin-adv-catview-section">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Görünən Skrolbarlar</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Skrol barlarını həmişə görünən və daha enli et (Vakum ekranlar üçün)</div>
+                </div>
+                <div
+                  className={`wa-toggle ${touchScrollEnabled ? "wa-toggle-on" : ""}`}
+                  onClick={() => setTouchScrollEnabled(v => !v)}
+                  style={{ cursor: "pointer", flexShrink: 0 }}
+                >
+                  <div className="wa-toggle-thumb" />
+                </div>
+              </div>
+            </div>
+
+            <div className="wa-settings-actions" style={{ marginTop: "16px" }}>
+              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+              <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveTouchScroll}>Yadda saxla</button>
+            </div>
+          </div>
+
         ) : (
           /* ── Əsas menyu ── */
           <div className="discount-body pin-advanced-settings-body">
@@ -1460,6 +1508,15 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                   </svg>
                 </span>
                 <span className="settings-menu-item-label">Əməliyyat adları</span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={() => setView("touchScroll")}>
+                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Skrol ayarları</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("syncCheck")}>

@@ -254,10 +254,19 @@ const getLogin = async (req, res) => {
       } catch (e) {
         console.error("[LOGIN] Block state save error:", e.message);
       }
+      // authResult tam strukturla qalmalıdır (terminal is_master / is_master_slave_active) —
+      // əks halda frontend initNetwork masterı slave kimi başladır.
+      const cloudRoot = response.data && typeof response.data === "object" ? response.data : {};
+      const cloudInner =
+        cloudRoot.data && typeof cloudRoot.data === "object" ? cloudRoot.data : {};
       return res.status(403).json({
+        ...cloudRoot,
         message: "Müəssisə bloklanıb",
         isBlocked: true,
-        data: { profile: blockedProfile },
+        data: {
+          ...cloudInner,
+          profile: blockedProfile,
+        },
       });
     }
 
@@ -283,7 +292,14 @@ const getLogin = async (req, res) => {
             return res.status(403).json({
               message: "Müəssisə bloklanıb",
               isBlocked: true,
-              data: { profile: { ...p, is_pos_block: 1 } },
+              data: {
+                profile: { ...p, is_pos_block: 1 },
+                terminal: {
+                  is_master: p.is_master == 1 ? 1 : 0,
+                  is_master_slave_active:
+                    p.is_master_slave_active == 1 ? 1 : 0,
+                },
+              },
             });
           }
         }

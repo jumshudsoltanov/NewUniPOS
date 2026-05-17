@@ -28,17 +28,18 @@ log.info("UniPOS Desktop Application is starting...");
  * maşınlarda bəs edir; bəzi hallarda ortam dəyişəni `UNIPOS_NO_SANDBOX=1` və ya işəsalma
  * arqumenti `--unipos-no-sandbox` (tam `no-sandbox` — yalnız zərurətdə).
  */
+app.disableHardwareAcceleration();
+
 if (process.platform === "win32") {
+  app.commandLine.appendSwitch("no-sandbox");
+  app.commandLine.appendSwitch("disable-gpu");
   app.commandLine.appendSwitch("disable-gpu-sandbox");
-  if (
-    String(process.env.UNIPOS_NO_SANDBOX || "").trim() === "1" ||
-    process.argv.includes("--unipos-no-sandbox")
-  ) {
-    app.commandLine.appendSwitch("no-sandbox");
-    log.warn(
-      "[SANDBOX] no-sandbox aktivdir (UNIPOS_NO_SANDBOX=1 və ya --unipos-no-sandbox)",
-    );
-  }
+  app.commandLine.appendSwitch("disable-software-rasterizer");
+  app.commandLine.appendSwitch("js-flags", "--max-old-space-size=1024");
+  app.commandLine.appendSwitch("renderer-process-limit", "3");
+  app.commandLine.appendSwitch("disable-features", "NetworkServiceSandbox,NetworkServiceInProcess");
+  app.commandLine.appendSwitch("disable-http-cache");
+  log.warn("[STARTUP] Stabillik rejimi aktiv: no-sandbox, no-GPU, NetworkServiceSandbox disabled");
 }
 
 Menu.setApplicationMenu(null);
@@ -1737,34 +1738,39 @@ ipcMain.handle(
       // ── DİNAMİK REZİZE: pəncərəni dəqiq kontent hündürlüyünə gətir ──
       const driverActualPx = Math.ceil(contentHeight * 96 / 25.4);
       if (driverActualPx > 16000) {
-        printWindow.setContentSize(driverContentPx, driverActualPx + 100);
-        await new Promise((r) => setTimeout(r, 400));
-
-        // Yenidən ölçüb @page-i yenilə
-        await printWindow.webContents.executeJavaScript(`
-          (function() {
-            var wrapEl = document.getElementById('driver-wrap');
-            var outerEl = document.getElementById('driver-outer');
-            var rawH = wrapEl ? wrapEl.scrollHeight : document.body.scrollHeight;
-            var scaledH = Math.ceil(rawH * ${driverScale.toFixed(6)});
-            var bufEl = document.querySelector('.receipt-cut-buffer');
-            var bufH = bufEl ? bufEl.offsetHeight : 0;
-            var pageH = Math.max(rawH, scaledH) + bufH + 60;
-            if (outerEl) outerEl.style.height = pageH + 'px';
-            document.body.style.height = pageH + 'px';
-            document.body.style.minHeight = pageH + 'px';
-            document.documentElement.style.height = pageH + 'px';
-            var hmm = Math.ceil(pageH * 25.4 / 96) + 20;
-            var existingPageStyle = document.querySelector('style[data-receipt-page]');
-            if (existingPageStyle) existingPageStyle.remove();
-            var s = document.createElement('style');
-            s.setAttribute('data-receipt-page', '1');
-            s.textContent = '@page { size: ${pageWidthMm}mm ' + hmm + 'mm; margin: 0; }';
-            document.head.appendChild(s);
-          })();
-        `);
-        await new Promise((r) => setTimeout(r, 200));
-        console.log('[DRIVER] Uzun çek: pəncərə dinamik resize edildi — ' + driverActualPx + 'px');
+        try {
+          const safeHeight = Math.min(driverActualPx + 100, 16300); // 16384 is Windows GDI limit, capping at 16300
+          printWindow.setContentSize(driverContentPx, safeHeight);
+          await new Promise((r) => setTimeout(r, 400));
+          
+          // Yenidən ölçüb @page-i yenilə
+          await printWindow.webContents.executeJavaScript(`
+            (function() {
+              var wrapEl = document.getElementById('driver-wrap');
+              var outerEl = document.getElementById('driver-outer');
+              var rawH = wrapEl ? wrapEl.scrollHeight : document.body.scrollHeight;
+              var scaledH = Math.ceil(rawH * ${driverScale.toFixed(6)});
+              var bufEl = document.querySelector('.receipt-cut-buffer');
+              var bufH = bufEl ? bufEl.offsetHeight : 0;
+              var pageH = Math.max(rawH, scaledH) + bufH + 60;
+              if (outerEl) outerEl.style.height = pageH + 'px';
+              document.body.style.height = pageH + 'px';
+              document.body.style.minHeight = pageH + 'px';
+              document.documentElement.style.height = pageH + 'px';
+              var hmm = Math.ceil(pageH * 25.4 / 96) + 20;
+              var existingPageStyle = document.querySelector('style[data-receipt-page]');
+              if (existingPageStyle) existingPageStyle.remove();
+              var s = document.createElement('style');
+              s.setAttribute('data-receipt-page', '1');
+              s.textContent = '@page { size: ${pageWidthMm}mm ' + hmm + 'mm; margin: 0; }';
+              document.head.appendChild(s);
+            })();
+          `);
+          await new Promise((r) => setTimeout(r, 200));
+          console.log('[DRIVER] Uzun çek: pəncərə dinamik resize edildi — ' + driverActualPx + 'px (safe: ' + safeHeight + 'px)');
+        } catch (e) {
+          console.error("Dinamik resize xətası (hesabat çox uzundur):", e);
+        }
       }
 
       await new Promise((resolve, reject) => {

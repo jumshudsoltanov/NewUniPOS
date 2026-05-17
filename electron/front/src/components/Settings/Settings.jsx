@@ -11,6 +11,7 @@ import { authPos, setLoginData } from "../../redux/Slices/LoginSlice";
 import { toast } from "sonner";
 import apiConfig from "../../utils/apiConfig";
 import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
+import { mergeBlockedLoginPayload } from "../../utils/authResultMerge";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
@@ -153,8 +154,13 @@ const Settings = () => {
 
       if (error?.data?.isBlocked) {
         toast.dismiss(toastId);
-        localStorage.setItem("authResult", JSON.stringify(error.data));
-        dispatch(setLoginData(error.data));
+        let prevSnapshot = null;
+        try {
+          prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
+        } catch {}
+        const merged = mergeBlockedLoginPayload(error.data, prevSnapshot);
+        localStorage.setItem("authResult", JSON.stringify(merged));
+        dispatch(setLoginData(merged));
         navigate("/blocked");
         return;
       }

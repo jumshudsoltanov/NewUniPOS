@@ -51,7 +51,17 @@ const getPrinters = async (passedProfileId) => {
                         p.port = local.port || p.port || null;
                         p.connection_type = local.connection_type || p.connection_type || 'network';
                         p.usb_name = local.usb_name || p.usb_name || null;
-                        p.local_name = local.local_name || p.local_name || null;
+                        // Admin paneldəki dəyişikliklər lokala da axsın:
+                        // admin-də local_name / name varsa, admin qalib gəlir.
+                        // Yalnız admin tərəfi boşdursa, köhnə lokal dəyəri saxlayırıq.
+                        const apiLocalName = (p.local_name != null && String(p.local_name).trim() !== "")
+                            ? p.local_name
+                            : null;
+                        p.local_name = apiLocalName || local.local_name || null;
+                        const apiName = (p.name != null && String(p.name).trim() !== "")
+                            ? p.name
+                            : null;
+                        p.name = apiName || local.name || null;
                         p.paper_width = local.paper_width ?? p.paper_width ?? 48;
                         p.trailing_space = local.trailing_space ?? p.trailing_space ?? 0;
                         p.sound_notify = local.sound_notify ?? p.sound_notify ?? 0;
@@ -102,11 +112,14 @@ const getPrinters = async (passedProfileId) => {
                 for (const p of v3Printers) {
                     if (!p.id || !p.name) continue;
                     const existingLocal = existing.find(e => e.id === p.id);
+                    const apiV3LocalName = (p.local_name != null && String(p.local_name).trim() !== "")
+                        ? p.local_name
+                        : null;
                     const record = {
                         id: p.id,
                         profile_id,
                         name: p.name,
-                        local_name: existingLocal?.local_name || p.local_name || p.name,
+                        local_name: apiV3LocalName || existingLocal?.local_name || p.name,
                         ip: existingLocal?.ip || null,
                         port: existingLocal?.port || null,
                         connection_type: existingLocal?.connection_type || 'network',

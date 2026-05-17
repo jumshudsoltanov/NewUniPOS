@@ -32,3 +32,34 @@ ul li {
   border-radius: 6px !important;
   overflow: hidden !important;
 }
+
+/* Touch Scroll Settings - Vakum və toxunuşlu ekranlar üçün */
+body.touch-scroll-active * {
+  scrollbar-width: auto !important; /* Firefox */
+}
+
+body.touch-scroll-active ::-webkit-scrollbar {
+  width: 14px !important;
+  height: 14px !important;
+  display: block !important;
+}
+
+body.touch-scroll-active ::-webkit-scrollbar-track {
+  background: #f1f1f5 !important;
+  border-radius: 10px !important;
+}
+
+body.touch-scroll-active ::-webkit-scrollbar-thumb {
+  background: #053796 !important;
+  border-radius: 10px !important;
+  border: 2px solid #f1f1f5 !important;
+}
+
+body.touch-scroll-active ::-webkit-scrollbar-thumb:active {
+  background: #032566 !important;
+}
+
+/* Skrol olan bütün elementlərdə toxunuş dəstəyini məcburi edirik */
+body.touch-scroll-active * {
+  -webkit-overflow-scrolling: touch !important;
+}

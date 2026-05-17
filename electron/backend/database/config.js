@@ -33,10 +33,11 @@ db.connect = async () => {
     await db.sequelize.authenticate();
     console.log("Connected");
   } catch (error) {
-    console.error("Database Error:", error ? (error.message || error.toString()) : "Naməlum xəta");
+    console.error(
+      "Database Error:",
+      error ? error.message || error.toString() : "Naməlum xəta",
+    );
   }
 };
-
-
 
 module.exports = db;

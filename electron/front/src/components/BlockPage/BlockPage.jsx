@@ -8,6 +8,7 @@ import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slice
 import { toast } from "sonner";
 import DefaultLogo from "../../assets/images/unipos_logo.png";
 import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
+import { mergeBlockedLoginPayload } from "../../utils/authResultMerge";
 import "./BlockPage.css";
 
 const formatDate = (dateStr) => {
@@ -109,8 +110,13 @@ const BlockPage = () => {
         } catch (error) {
             console.error("Refresh error:", error);
             if (error?.data?.isBlocked) {
-                localStorage.setItem("authResult", JSON.stringify(error.data));
-                dispatch(setLoginData(error.data));
+                let prevSnapshot = null;
+                try {
+                    prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
+                } catch {}
+                const merged = mergeBlockedLoginPayload(error.data, prevSnapshot);
+                localStorage.setItem("authResult", JSON.stringify(merged));
+                dispatch(setLoginData(merged));
                 toast.error("POS hələ də bloklanmış vəziyyətdədir.");
             } else {
                 toast.error(error?.data?.message || "Yeniləmə zamanı xəta baş verdi");
