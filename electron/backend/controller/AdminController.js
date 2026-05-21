@@ -3,6 +3,7 @@ const db = require("../database/config");
 const whatsappConfig = require("../bot/whatsapp/whatsappConfig");
 const WaitersModel = require("../model/WaitersModel");
 const AppSettingsModel = require("../model/AppSettingsModel");
+const { normalizeDigits } = require("../utils/normalizeDigits");
 
 const ALL_PERMISSIONS = {
   can_edit_all_checks: 1,
@@ -156,7 +157,7 @@ const getSystemUsers = async (req, res) => {
 
 const createSystemUser = async (req, res) => {
   try {
-    const { profile_id, name, pin } = req.body;
+    const { profile_id, name, pin, card_id } = req.body;
     if (!profile_id || !name || !pin) {
       return res.status(400).json({ ok: false, message: "profile_id, name və pin tələb olunur" });
     }
@@ -165,13 +166,19 @@ const createSystemUser = async (req, res) => {
     }
     const existing = await WaitersModel.findOne({ where: { profile_id: Number(profile_id), pin: String(pin) } });
     if (existing) return res.status(400).json({ ok: false, message: "Bu PIN artıq istifadə olunur" });
+    const cardDigits = normalizeDigits(card_id);
+    if (cardDigits && cardDigits !== "0") {
+      const sameProfileUsers = await WaitersModel.findAll({ where: { profile_id: Number(profile_id) } });
+      const existingCard = sameProfileUsers.find((u) => normalizeDigits(u?.card_id) === cardDigits);
+      if (existingCard) return res.status(400).json({ ok: false, message: "Bu kart artiq istifade olunur" });
+    }
     const user = await WaitersModel.create({
       profile_id: Number(profile_id),
       name: String(name),
       pin: String(pin),
       username: String(name).toLowerCase().replace(/\s+/g, "_"),
       password: "0",
-      card_id: "0",
+      card_id: cardDigits || "0",
       is_local: 1,
       ...ALL_PERMISSIONS,
     });
@@ -184,7 +191,7 @@ const createSystemUser = async (req, res) => {
 const updateSystemUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, pin } = req.body;
+    const { name, pin, card_id } = req.body;
     const user = await WaitersModel.findByPk(Number(id));
     if (!user) return res.status(404).json({ ok: false, message: "İstifadəçi tapılmadı" });
     const updates = { ...ALL_PERMISSIONS };
@@ -198,6 +205,19 @@ const updateSystemUser = async (req, res) => {
         return res.status(400).json({ ok: false, message: "Bu PIN artıq istifadə olunur" });
       }
       updates.pin = String(pin);
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, "card_id")) {
+      const cardDigits = normalizeDigits(card_id);
+      if (cardDigits && cardDigits !== "0") {
+        const sameProfileUsers = await WaitersModel.findAll({ where: { profile_id: user.profile_id } });
+        const existingCard = sameProfileUsers.find(
+          (u) => u.id !== Number(id) && normalizeDigits(u?.card_id) === cardDigits,
+        );
+        if (existingCard) {
+          return res.status(400).json({ ok: false, message: "Bu kart artiq istifade olunur" });
+        }
+      }
+      updates.card_id = cardDigits || "0";
     }
     await user.update(updates);
     return res.json({ ok: true, data: user });

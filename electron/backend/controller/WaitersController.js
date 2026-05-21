@@ -1,4 +1,5 @@
 const WaitersModel = require("../model/WaitersModel");
+const { normalizeDigits } = require("../utils/normalizeDigits");
 
 /**
  * PIN və ya card_id ilə ofisiant — profile_id mütləq (təhlükəsizlik + düzgün filial)
@@ -19,18 +20,25 @@ const resolveWaiterLogin = async (req, res) => {
     }
 
     const cardTrim = card_id != null ? String(card_id).trim() : "";
+    const cardDigits = normalizeDigits(cardTrim);
     const pinTrim = pin != null ? String(pin).trim() : "";
 
-    const where = { profile_id: pid };
+    let waiter = null;
     if (cardTrim !== "") {
-      where.card_id = cardTrim;
+      if (cardDigits !== "" && cardDigits !== "0") {
+        waiter = await WaitersModel.findOne({ where: { profile_id: pid, card_id: cardDigits } });
+
+        if (!waiter) {
+          const waiters = await WaitersModel.findAll({ where: { profile_id: pid } });
+          waiter = waiters.find((w) => normalizeDigits(w?.card_id) === cardDigits) || null;
+        }
+      }
     } else if (pinTrim !== "") {
-      where.pin = pinTrim;
+      waiter = await WaitersModel.findOne({ where: { profile_id: pid, pin: pinTrim } });
     } else {
       return res.status(400).json({ message: "false", data: "pin or card_id required" });
     }
 
-    const waiter = await WaitersModel.findOne({ where });
     if (!waiter) {
       return res.status(200).json({ message: "false", data: "waiter not found" });
     }

@@ -20,6 +20,7 @@ import BrandsModal from "../BrandsModal/BrandsModal";
 import apiConfig from "../../utils/apiConfig";
 import { getSocket } from "../../utils/apiConfig";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
+import { normalizeCardId } from "../../utils/cardId";
 
 const PIN_LENGTH = 4;
 
@@ -425,13 +426,22 @@ const Pin = () => {
   const handleCardLogin = useCallback(
     async (cardId) => {
       try {
+        const normalizedCardId = normalizeCardId(cardId);
+        if (!normalizedCardId) {
+          setIsError(true);
+          setTimeout(() => {
+            setIsError(false);
+            setPin("");
+          }, 500);
+          return;
+        }
         const profileId = activeProfileData?.data?.profile?.id;
         if (!profileId) {
           toast.error("Profil məlumatı yoxdur.");
           return;
         }
         const waiterResult = await dispatch(
-          resolveWaiter({ profileId, cardId }),
+          resolveWaiter({ profileId, cardId: normalizedCardId }),
         ).unwrap();
         await completeWaiterLogin(waiterResult);
       } catch (error) {
@@ -508,10 +518,11 @@ const Pin = () => {
         clearPinTimerOnly();
         keyboardBufferRef.current += (digit || e.key);
         const buf = keyboardBufferRef.current;
+        const digitsOnly = normalizeCardId(buf);
 
         // PIN nöqtələri üçün yalnız rəqəmləri göstər, simvollar gəlirsə (kart) PIN dots-u təmizlə
-        if (/^\d+$/.test(buf) && buf.length <= PIN_LENGTH) {
-          setPin(buf);
+        if (digitsOnly && digitsOnly.length <= PIN_LENGTH) {
+          setPin(digitsOnly);
           setIsError(false);
         } else {
           setPin(""); // Simvollar gəlirsə (kart oxunursa) vizual PIN-i sıfırla
@@ -536,7 +547,8 @@ const Pin = () => {
         clearPinTimerOnly();
         keyboardBufferRef.current = keyboardBufferRef.current.slice(0, -1);
         const buf = keyboardBufferRef.current;
-        setPin(buf.length <= PIN_LENGTH ? buf : "");
+        const digitsOnly = normalizeCardId(buf);
+        setPin(digitsOnly.length <= PIN_LENGTH ? digitsOnly : "");
         setIsError(false);
         return;
       }
@@ -545,11 +557,14 @@ const Pin = () => {
         e.preventDefault();
         clearPinTimerOnly();
         const raw = keyboardBufferRef.current.trim();
+        const digitsOnly = normalizeCardId(raw);
         keyboardBufferRef.current = "";
         setPin("");
         if (!raw) return;
-        if (raw.length === PIN_LENGTH && /^\d+$/.test(raw)) {
-          handlePinSubmit(raw);
+        if (raw === digitsOnly && digitsOnly.length === PIN_LENGTH) {
+          handlePinSubmit(digitsOnly);
+        } else if (digitsOnly) {
+          handleCardLogin(digitsOnly);
         } else {
           handleCardLogin(raw);
         }

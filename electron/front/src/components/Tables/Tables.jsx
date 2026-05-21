@@ -18,6 +18,9 @@ import {
   setTempTableLayout,
   clearHallLayout,
   loadLayoutsFromAdmin,
+  loadLocalLayouts,
+  saveTableLayouts,
+  updateLocalLayoutsFromServer,
 } from "../../redux/Slices/TablesSlice";
 import { toast } from "sonner";
 import { getSocket } from "../../utils/apiConfig";
@@ -115,6 +118,7 @@ const Tables = () => {
   // Load layouts from admin API once on mount, then refresh table groups to get latest shape_type
   useEffect(() => {
     if (_tProfileId) {
+      dispatch(loadLocalLayouts());
       dispatch(loadLayoutsFromAdmin(_tProfileId)).then(() => {
         dispatch(getTableGroups(_tProfileId));
       });
@@ -281,10 +285,16 @@ const Tables = () => {
       }
     };
 
+    const handleLocalLayoutsUpdated = (layouts) => {
+      dispatch(updateLocalLayoutsFromServer(layouts));
+    };
+
     socket.on("table_updated", handleTableUpdated);
+    socket.on("local_layouts_updated", handleLocalLayoutsUpdated);
 
     return () => {
       socket.off("table_updated", handleTableUpdated);
+      socket.off("local_layouts_updated", handleLocalLayoutsUpdated);
     };
   }, [dispatch, loginedProfileData]);
 
@@ -1161,7 +1171,7 @@ const Tables = () => {
               </button>
               <button
                 className="btn btn-success d-flex align-items-center gap-2 shadow-lg"
-                onClick={() => dispatch(saveEditMode())}
+                onClick={() => dispatch(saveTableLayouts())}
                 style={{ borderRadius: "50px", padding: "10px 20px" }}
               >
                 <i className="bi bi-check-lg"></i>

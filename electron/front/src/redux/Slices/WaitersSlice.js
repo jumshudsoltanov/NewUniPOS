@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "../../utils/apiConfig";
+import { normalizeCardId } from "../../utils/cardId";
 
 export const getWaiter = createAsyncThunk("pos/waiter", async (pin) => {
   const response = await axios.get(
@@ -18,7 +19,7 @@ export const resolveWaiter = createAsyncThunk(
         return thunkAPI.rejectWithValue({ message: "profile_id required" });
       }
       const params = new URLSearchParams({ profile_id: String(profileId) });
-      const c = cardId != null ? String(cardId).trim() : "";
+      const c = cardId != null ? normalizeCardId(cardId) : "";
       if (c !== "") {
         params.set("card_id", c);
       } else if (pin != null && String(pin).trim() !== "") {

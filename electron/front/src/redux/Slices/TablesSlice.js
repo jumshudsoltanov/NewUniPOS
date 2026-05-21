@@ -19,6 +19,31 @@ export const loadLayoutsFromAdmin = createAsyncThunk(
   }
 );
 
+export const loadLocalLayouts = createAsyncThunk(
+  "tables/loadLocalLayouts",
+  async (_, thunkAPI) => {
+    try {
+      const res = await axios.get("/tables-layouts/local");
+      return res.data?.data || {};
+    } catch {
+      return {};
+    }
+  }
+);
+
+export const saveTableLayouts = createAsyncThunk(
+  "tables/saveTableLayouts",
+  async (_, thunkAPI) => {
+    thunkAPI.dispatch(saveEditMode());
+    const state = thunkAPI.getState().TablesSlice;
+    try {
+      await axios.post("/tables-layouts/local", { layouts: state.localTableLayouts });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+);
+
 
 export const getTableGroups = createAsyncThunk(
   "tables/getTableGroups",
@@ -47,10 +72,15 @@ const TablesSlice = createSlice({
     deletedOrderIds: [],
     hallOrder: JSON.parse(localStorage.getItem("pos_hall_order") || "[]"),
     tableOrder: JSON.parse(localStorage.getItem("pos_table_orders") || "{}"),
+    adminTableLayouts: {},
+    localTableLayouts: (() => {
+      try {
+        return JSON.parse(localStorage.getItem("pos_local_table_layouts") || "{}");
+      } catch { return {}; }
+    })(),
     tableLayouts: (() => {
       try {
         const raw = JSON.parse(localStorage.getItem("pos_table_layouts") || "{}");
-        // Normalize hall keys and table keys to strings
         const out = {};
         Object.entries(raw).forEach(([hallId, layout]) => {
           const norm = {};
@@ -83,13 +113,46 @@ const TablesSlice = createSlice({
       state.isTableEditMode = false;
       state.hallOrder = [...state.tempHallOrder];
       state.tableOrder = { ...state.tempTableOrder };
-      state.tableLayouts = { ...state.tempTableLayouts };
+      state.localTableLayouts = { ...state.tempTableLayouts };
+
+      const merged = {};
+      Object.keys(state.adminTableLayouts || {}).forEach(hallId => {
+        merged[hallId] = { ...(state.adminTableLayouts[hallId] || {}) };
+      });
+      Object.keys(state.localTableLayouts || {}).forEach(hallId => {
+        if (!merged[hallId]) merged[hallId] = {};
+        Object.keys(state.localTableLayouts[hallId]).forEach(tableId => {
+          merged[hallId][tableId] = state.localTableLayouts[hallId][tableId];
+        });
+      });
+      state.tableLayouts = merged;
+
       localStorage.setItem("pos_hall_order", JSON.stringify(state.hallOrder));
       localStorage.setItem("pos_table_orders", JSON.stringify(state.tableOrder));
+      localStorage.setItem("pos_local_table_layouts", JSON.stringify(state.localTableLayouts));
       localStorage.setItem("pos_table_layouts", JSON.stringify(state.tableLayouts));
+      
       state.tempHallOrder = [];
       state.tempTableOrder = {};
       state.tempTableLayouts = {};
+    },
+    updateLocalLayoutsFromServer: (state, action) => {
+      state.localTableLayouts = action.payload || {};
+      
+      const merged = {};
+      Object.keys(state.adminTableLayouts || {}).forEach(hallId => {
+        merged[hallId] = { ...(state.adminTableLayouts[hallId] || {}) };
+      });
+      Object.keys(state.localTableLayouts || {}).forEach(hallId => {
+        if (!merged[hallId]) merged[hallId] = {};
+        Object.keys(state.localTableLayouts[hallId]).forEach(tableId => {
+          merged[hallId][tableId] = state.localTableLayouts[hallId][tableId];
+        });
+      });
+      state.tableLayouts = merged;
+
+      localStorage.setItem("pos_table_layouts", JSON.stringify(state.tableLayouts));
+      localStorage.setItem("pos_local_table_layouts", JSON.stringify(state.localTableLayouts));
     },
     setTempHallOrder: (state, action) => {
       state.tempHallOrder = action.payload;
@@ -109,7 +172,9 @@ const TablesSlice = createSlice({
     clearHallLayout: (state, action) => {
       const hallId = String(action.payload);
       state.tempTableLayouts[hallId] = {};
-      state.tableLayouts[hallId] = {};
+      if (state.localTableLayouts[hallId]) {
+        delete state.localTableLayouts[hallId];
+      }
     },
     removeOrderOptimistic: (state, action) => {
       const orderId = action.payload;
@@ -219,15 +284,48 @@ const TablesSlice = createSlice({
         Object.entries(hallLayout).forEach(([k, v]) => { out[String(k)] = v; });
         return out;
       };
-      const merged = {};
+      const adminMerged = {};
       Object.entries(adminLayouts).forEach(([hallId, layout]) => {
         if (layout && Object.keys(layout).length > 0) {
-          merged[String(hallId)] = normalize(layout);
+          adminMerged[String(hallId)] = normalize(layout);
         }
       });
-      state.tableLayouts = merged;
+      state.adminTableLayouts = adminMerged;
+
+      const finalMerged = {};
+      Object.keys(state.adminTableLayouts || {}).forEach(hallId => {
+        finalMerged[hallId] = { ...(state.adminTableLayouts[hallId] || {}) };
+      });
+      Object.keys(state.localTableLayouts || {}).forEach(hallId => {
+        if (!finalMerged[hallId]) finalMerged[hallId] = {};
+        Object.keys(state.localTableLayouts[hallId]).forEach(tableId => {
+          finalMerged[hallId][tableId] = state.localTableLayouts[hallId][tableId];
+        });
+      });
+
+      state.tableLayouts = finalMerged;
       state.tempTableLayouts = {};
-      localStorage.setItem("pos_table_layouts", JSON.stringify(merged));
+      localStorage.setItem("pos_table_layouts", JSON.stringify(finalMerged));
+    });
+
+    builder.addCase(loadLocalLayouts.fulfilled, (state, action) => {
+      const localLayouts = action.payload || {};
+      state.localTableLayouts = localLayouts;
+      localStorage.setItem("pos_local_table_layouts", JSON.stringify(localLayouts));
+      
+      const finalMerged = {};
+      Object.keys(state.adminTableLayouts || {}).forEach(hallId => {
+        finalMerged[hallId] = { ...(state.adminTableLayouts[hallId] || {}) };
+      });
+      Object.keys(state.localTableLayouts || {}).forEach(hallId => {
+        if (!finalMerged[hallId]) finalMerged[hallId] = {};
+        Object.keys(state.localTableLayouts[hallId]).forEach(tableId => {
+          finalMerged[hallId][tableId] = state.localTableLayouts[hallId][tableId];
+        });
+      });
+      
+      state.tableLayouts = finalMerged;
+      localStorage.setItem("pos_table_layouts", JSON.stringify(finalMerged));
     });
 
     builder.addCase(getTableGroups.pending, (state) => {
@@ -450,7 +548,8 @@ export const {
   tickTimer,
   removeOrderOptimistic: tablesRemoveOrderOptimistic,
   addOrderToTableOptimistic,
-  clearDeletedOrderId
+  clearDeletedOrderId,
+  updateLocalLayoutsFromServer
 } = TablesSlice.actions;
 export { tablesRemoveOrderOptimistic as removeOrderOptimisticFromTables };
 export default TablesSlice.reducer;

@@ -2,6 +2,7 @@ const axios = require("axios");
 const LoginModel = require("../model/LoginModel");
 const WaitersModel = require("../model/WaitersModel");
 const { Op } = require("sequelize");
+const { normalizeDigits } = require("../utils/normalizeDigits");
 
 const profileData = async () => {
   const profile = await LoginModel.findOne({ attributes: ["id"], raw: true });
@@ -23,6 +24,7 @@ const getWaitersList = async (passedProfileId) => {
           if (w[k] === undefined) w[k] = 0;
         });
         w.profile_id = profile_id;
+        w.card_id = normalizeDigits(w.card_id) || "0";
         return w;
       });
 
@@ -43,7 +45,7 @@ const getWaitersList = async (passedProfileId) => {
             if (!v2) return;
             modelFields.forEach((field) => {
               if (v2[field] !== undefined && v2[field] !== null) {
-                w[field] = v2[field];
+                w[field] = field === "card_id" ? (normalizeDigits(v2[field]) || "0") : v2[field];
               }
             });
           });

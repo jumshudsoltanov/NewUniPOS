@@ -4,6 +4,7 @@ const OrdersModel = require("../model/OrdersModel");
 const WaitersModel = require("../model/WaitersModel");
 const OrdersItemsModel = require("../model/OrdersItemsModel");
 const ProductsModel = require("../model/ProductsModel");
+const AppSettingsModel = require("../model/AppSettingsModel");
 
 /** Kombo/modifikator — masa kartı cəmi ilə çek içi uyğun olsun */
 function ordersItemLineTotal(it) {
@@ -138,4 +139,46 @@ const updateTable = async (req, res) => {
   }
 };
 
-module.exports = { getTables, updateTable };
+const getLocalTableLayouts = async (req, res) => {
+  try {
+    const row = await AppSettingsModel.findOne({ where: { key: "pos_local_table_layouts" } });
+    let layouts = {};
+    if (row && row.value) {
+      try {
+        layouts = JSON.parse(row.value);
+      } catch (e) {}
+    }
+    return res.status(200).json({ message: "success", data: layouts });
+  } catch (error) {
+    console.error("Get Local Table Layouts Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const saveLocalTableLayouts = async (req, res) => {
+  try {
+    const { layouts } = req.body;
+    if (!layouts) return res.status(400).json({ message: "Layouts required" });
+
+    const str = JSON.stringify(layouts);
+    const [row, created] = await AppSettingsModel.findOrCreate({
+      where: { key: "pos_local_table_layouts" },
+      defaults: { value: str }
+    });
+    if (!created) {
+      await row.update({ value: str });
+    }
+
+    const { getIo } = require("../socket/MasterServer");
+    if (getIo()) {
+      getIo().emit("local_layouts_updated", layouts);
+    }
+
+    return res.status(200).json({ message: "success" });
+  } catch (error) {
+    console.error("Save Local Table Layouts Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+module.exports = { getTables, updateTable, getLocalTableLayouts, saveLocalTableLayouts };

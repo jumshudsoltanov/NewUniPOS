@@ -35,6 +35,8 @@ router.get("/waiters/resolve", WaitersController.resolveWaiterLogin);
 router.get("/waiters/:pin", WaitersController.getWaiterInfo);
 router.get("/tables/:profileId", TablesController.getTables);
 router.put("/tables/:id", TablesController.updateTable);
+router.get("/tables-layouts/local", TablesController.getLocalTableLayouts);
+router.post("/tables-layouts/local", TablesController.saveLocalTableLayouts);
 router.get("/pos/printers/:profileId", PrintersController.getPrinters);
 router.put("/printers/:id", PrintersController.updatePrinter);
 router.post("/printers/test-print", PrintersController.testPrint);
