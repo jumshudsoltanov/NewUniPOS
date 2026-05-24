@@ -233,17 +233,18 @@ const Settings = () => {
         Number(loginedWaiter?.data?.can_view_archived_checks) === 1 ||
         Number(loginedWaiter?.data?.can_edit_all_checks) === 1,
       onClick: () => navigate("/checks"),
+      hideOnMobile: true,
     },
     {
       id: "devices",
       label: "Cihazlar",
       icon: <i className="bi bi-laptop"></i>,
       highlight: true,
+      hideOnMobile: true,
       onClick: () => setShowDevicesModal(true),
       permission:
         Number(loginedWaiter?.data?.can_access_settings) === 1 &&
         Number(loginedWaiter?.data?.can_see_device) === 1,
-      hideOnMobile: true,
     },
     {
       id: "masterip",
@@ -309,6 +310,21 @@ const Settings = () => {
             <i className="bi bi-arrow-left"></i>
           </button>
           <h1 className="settings-page-title">Kontrol panel</h1>
+          {Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 && (
+            <span style={{
+              background: '#F59E0B',
+              color: '#fff',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              marginLeft: '8px'
+            }}>
+              OTEL
+            </span>
+          )}
           {appVersion && (
             <span className="settings-version-badge">v{appVersion}</span>
           )}

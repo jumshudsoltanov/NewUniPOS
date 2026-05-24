@@ -128,6 +128,10 @@ const LoginModel = db.sequelize.define(
     },
     kitchen_display_screen_id: DataTypes.TEXT,
     mobile_token: DataTypes.TEXT,
+    is_hotel_mode: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
   },
   {
     modelName: "LoginModel",

@@ -304,6 +304,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     const { getPaymentMethods } = require("../data/PaymentMethodsData");
     const { getTags } = require("../data/TagsData");
     const { getSalesTypes } = require("../data/SalesTypesData");
+    const { getRooms } = require("../data/RoomsData");
     const ProductsModel = require("../model/ProductsModel");
     const CategoriesModel = require("../model/CategoriesModel");
     const GeneralCategoriesModel = require("../model/GeneralCategoriesModel");
@@ -313,6 +314,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
     const TagsModel = require("../model/TagsModel");
     const PaymentMethodsModel = require("../model/PaymentMethodsModel");
     const PrintersModel = require("../model/PrintersModel");
+    const RoomModel = require("../model/RoomModel");
     const OrdersModel = require("../model/OrdersModel");
     const SalesTypesModal = require("../model/SalesTypesModal");
 
@@ -327,6 +329,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
         getWaitersList(profileId),
         getTableGroups(profileId),
         getTables(profileId),
+        getRooms(profileId),
         getGeneralCategories(profileId),
         getCategories(profileId),
         getProducts(profileId),
@@ -349,6 +352,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
       paymentMethods,
       printers,
       salesTypes,
+      rooms,
       activeChecks,
     ] = await Promise.all([
       ProductsModel.count(w),
@@ -361,6 +365,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
       PaymentMethodsModel.count(w),
       PrintersModel.count(w),
       SalesTypesModal.count(w),
+      RoomModel.count(w),
       OrdersModel.count({ where: { profile_id: profileId, status: 1 } }),
     ]);
 
@@ -378,6 +383,7 @@ router.post("/sync/refresh/:profileId", async (req, res) => {
         paymentMethods,
         printers,
         salesTypes,
+        rooms,
         activeChecks,
       },
     });
@@ -1024,5 +1030,20 @@ router.post("/sync/force-sync-order/:uuid", async (req, res) => {
     res.status(500).json({ success: false, message: e.message });
   }
 });
+
+// Hotel mode routes (Otaq, rezervasiya, folio)
+const HotelController = require("../controller/HotelController");
+router.get("/rooms/:profileId", HotelController.getRooms);
+router.get("/rooms/:profileId/summary", HotelController.getRoomSummary);
+router.get("/room-groups/:profileId", HotelController.getRoomGroups);
+router.get("/bookings/:profileId", HotelController.getBookings);
+router.get("/folios/:profileId", HotelController.getFolios);
+router.post("/bookings", HotelController.createBooking);
+router.patch("/rooms/:id/status", HotelController.updateRoomStatus);
+router.put("/bookings/:id", HotelController.updateBooking);
+router.patch("/bookings/:id/status", HotelController.updateBookingStatus);
+router.delete("/bookings/:id", HotelController.deleteBooking);
+router.post("/bookings/:id/send-whatsapp", HotelController.sendBookingWhatsapp);
+router.patch("/folios/:roomId/balance", HotelController.updateFolioBalance);
 
 module.exports = router;

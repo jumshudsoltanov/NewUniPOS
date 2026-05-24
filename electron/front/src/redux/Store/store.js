@@ -12,6 +12,7 @@ import CustomersSlice from "../Slices/CustomersSlice";
 import CouriersSlice from "../Slices/CouriersSlice";
 import ProductSlice from "../Slices/ProductSlice";
 import SyncSlice from "../Slices/SyncSlice";
+import HotelSlice from "../Slices/HotelSlice";
 
 export default configureStore({
   reducer: {
@@ -28,5 +29,6 @@ export default configureStore({
     CouriersSlice: CouriersSlice,
     ProductSlice: ProductSlice,
     SyncSlice: SyncSlice,
+    HotelSlice: HotelSlice,
   },
 });

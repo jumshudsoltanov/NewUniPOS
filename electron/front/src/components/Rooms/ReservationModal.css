@@ -1,0 +1,147 @@
+/* Reservation Modal — matching original brand colors */
+.reservation-modal .modal-content {
+  border: none;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.reservation-modal .reservation-header {
+  background-color: #053796;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: none;
+}
+
+.reservation-modal .reservation-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reservation-modal .reservation-header-icon {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+}
+
+.reservation-modal .reservation-header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.reservation-modal .reservation-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reservation-modal .reservation-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.reservation-modal .reservation-body {
+  padding: 20px;
+  background: #fff;
+}
+
+.reservation-modal .form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.reservation-modal .form-label .required {
+  color: #EF4444;
+}
+
+.reservation-modal .form-control,
+.reservation-modal .form-select {
+  border-radius: 6px;
+  border: 1px solid #D1D5DB;
+  padding: 9px 12px;
+  font-size: 14px;
+  width: 100%;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+
+.reservation-modal .form-control:focus,
+.reservation-modal .form-select:focus {
+  border-color: #053796;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(5, 55, 150, 0.1);
+}
+
+.reservation-modal textarea.form-control {
+  resize: none;
+}
+
+.reservation-modal .reservation-footer {
+  padding: 14px 20px;
+  border-top: 1px solid #E5E7EB;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #fff;
+}
+
+.reservation-modal .btn-cancel {
+  padding: 9px 20px;
+  border-radius: 6px;
+  border: 1px solid #D1D5DB;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #374151;
+  transition: all 0.15s;
+}
+
+.reservation-modal .btn-cancel:hover {
+  background: #F3F4F6;
+}
+
+.reservation-modal .btn-submit {
+  padding: 9px 24px;
+  border-radius: 6px;
+  border: none;
+  background: #053796;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.reservation-modal .btn-submit:hover:not(:disabled) {
+  background: #042d7a;
+}
+
+.reservation-modal .btn-submit:disabled {
+  background: #93b4f5;
+  cursor: not-allowed;
+}

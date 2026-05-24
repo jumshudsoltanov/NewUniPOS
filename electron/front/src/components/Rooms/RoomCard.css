@@ -1,0 +1,425 @@
+/* ====================================== */
+/* Room Card — matching Tables design      */
+/* ====================================== */
+
+.room-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+  height: 230px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+/* Surface — matches .table-square visual language, taller for check-in/out */
+.room-surface {
+  width: 140px;
+  height: 175px;
+  background: #fff;
+  box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.18);
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+}
+
+/* Status colors — matching Tables status scheme */
+.room-surface.free {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+}
+
+.room-surface.occupied {
+  background: #bfdbfe !important;
+  border: 1.5px solid #2563eb;
+}
+
+.room-surface.pending {
+  background: #c4b5fd !important;
+  border: 2px solid #6d28d9;
+}
+
+.room-surface.other {
+  background: #fecaca !important;
+  border: 1.5px solid #dc2626;
+}
+
+/* Status dot — matching table .status-dot */
+.room-status-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.room-status-dot.available { background: #10B981; }
+.room-status-dot.occupied { background: #2563eb; }
+.room-status-dot.cleaning,
+.room-status-dot.pending { background: #6d28d9; }
+.room-status-dot.maintenance,
+.room-status-dot.other { background: #dc2626; }
+
+/* Center content */
+.room-content {
+  text-align: center;
+  width: 100%;
+  padding: 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+/* Room number — matching .table-name */
+.room-number {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.room-surface.occupied .room-number { color: #1e3a8a; }
+.room-surface.pending .room-number { color: #5b21b6; }
+.room-surface.other .room-number { color: #991b1b; }
+
+/* Room type / floor */
+.room-detail {
+  font-size: 10px;
+  font-weight: 500;
+  color: #9CA3AF;
+  margin: 2px 0 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Guest name */
+.room-guest {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #1e40af;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 3px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.room-guest i { font-size: 10px; }
+.room-surface.occupied .room-guest { color: #1d4ed8; }
+.room-surface.pending .room-guest { color: #6d28d9; }
+.room-surface.other .room-guest { color: #b91c1c; }
+
+/* Check-in / Check-out dates */
+.room-check-dates {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  margin-top: 3px;
+  width: 100%;
+}
+
+.room-check-item {
+  font-size: 9px;
+  font-weight: 600;
+  color: #4B5563;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.3;
+}
+
+.room-check-item i {
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+.room-surface.occupied .room-check-item { color: #1e40af; }
+.room-surface.pending .room-check-item { color: #5b21b6; }
+.room-surface.other .room-check-item { color: #991b1b; }
+
+/* Nights */
+.room-nights {
+  font-size: 9px;
+  color: #6B7280;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-weight: 500;
+}
+
+.room-nights i { font-size: 8px; }
+
+/* Balance */
+.room-balance {
+  margin-top: 3px;
+  padding: 1px 6px;
+  background: #FEF3C7;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #D97706;
+  display: inline-block;
+  line-height: 1.5;
+}
+
+/* Sub-status */
+.room-sub-status {
+  font-size: 10px;
+  font-weight: 500;
+  color: #6B7280;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+/* Badge top-left */
+.room-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.room-surface.free .room-badge { background: #ECFDF5; color: #065F46; }
+.room-surface.occupied .room-badge { background: #DBEAFE; color: #1e40af; }
+.room-surface.pending .room-badge { background: #EDE9FE; color: #5b21b6; }
+.room-surface.other .room-badge { background: #FEE2E2; color: #991B1B; }
+
+/* Status Action Button */
+.room-status-action {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  width: 26px;
+  height: 26px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.15s;
+  color: #6B7280;
+  font-size: 12px;
+  border: 1px solid #E5E7EB;
+}
+
+.room-status-action:hover {
+  background: #F3F4F6;
+  transform: scale(1.1);
+  color: #053796;
+  border-color: #053796;
+}
+
+/* Status Menu */
+.room-status-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99;
+}
+
+.room-status-menu {
+  position: absolute;
+  bottom: 22px;
+  right: -5px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  z-index: 100;
+  min-width: 150px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.room-status-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  transition: background 0.1s;
+  width: 100%;
+  text-align: left;
+}
+
+.room-status-option:hover { background: #F3F4F6; }
+
+.room-status-option.active {
+  background: #EFF6FF;
+  color: #1E3A8A;
+  font-weight: 600;
+}
+
+.room-status-option i {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+
+.room-status-option .ms-auto {
+  margin-left: auto;
+  color: #053796;
+  font-size: 13px;
+}
+
+/* Medium desktop: like Tables scale */
+@media (min-width: 992px) and (max-width: 1299px) {
+  .room-wrapper {
+    transform: scale(0.88);
+    margin: -16px -12px !important;
+    width: 200px;
+    height: 230px;
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991.98px) {
+  .room-wrapper {
+    transform: scale(0.75);
+    margin: -32px -25px !important;
+    width: 200px;
+    height: 230px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 767.98px) {
+  .room-wrapper {
+    width: 100%;
+    height: 120px;
+    max-width: none;
+    transform: none !important;
+    margin: 0 !important;
+  }
+
+  .room-surface {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 10px 6px !important;
+    border: 2px solid #d1d5db !important;
+    background: #ffffff !important;
+    transition: transform 0.1s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .room-surface:active {
+    transform: scale(0.96);
+    background-color: #f3f4f6 !important;
+  }
+
+  .room-surface.occupied {
+    background: #bfdbfe !important;
+    border: 2px solid #2563eb !important;
+  }
+
+  .room-surface.pending {
+    background: #c4b5fd !important;
+    border: 2px solid #6d28d9 !important;
+  }
+
+  .room-surface.other {
+    background: #fecaca !important;
+    border: 2px solid #dc2626 !important;
+  }
+
+  .room-surface.free {
+    background: #ffffff !important;
+    border: 2px solid #9ca3af !important;
+  }
+
+  .room-content {
+    text-align: center !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1px;
+  }
+
+  .room-number {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    color: #374151 !important;
+    margin-bottom: 2px !important;
+  }
+
+  .room-surface.occupied .room-number { color: #1e3a8a !important; }
+  .room-surface.pending .room-number { color: #5b21b6 !important; }
+  .room-surface.other .room-number { color: #991b1b !important; }
+
+  .room-balance {
+    font-size: 11px !important;
+    padding: 1px 6px;
+  }
+
+  .room-guest {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    margin-top: 2px !important;
+  }
+
+  .room-surface.occupied .room-guest,
+  .room-surface.pending .room-guest,
+  .room-surface.other .room-guest {
+    color: inherit !important;
+  }
+
+  .room-detail {
+    font-size: 9px !important;
+    margin: 1px 0;
+  }
+
+  .room-status-dot,
+  .room-badge,
+  .room-status-action { display: none !important; }
+}

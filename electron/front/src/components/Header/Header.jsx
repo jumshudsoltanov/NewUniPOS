@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import "./Header.css";
 import { Col, Row, Container } from "react-bootstrap";
 import { Link } from "react-router-dom";
@@ -21,9 +21,12 @@ import SalesShiftStatusPill from "../common/SalesShiftStatusPill";
 import SalesShiftModal from "../Settings/SalesShiftModal";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 import { toast } from "sonner";
+import { setSelectedRoomGroupId, setSelectedFloor, setSelectedRoomType, setSearchText, clearFilters, fetchRoomGroups } from "../../redux/Slices/HotelSlice";
+import BookingsModal from "../Rooms/BookingsModal";
 
 const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNewOrder }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { rooms, roomGroups, selectedRoomGroupId, selectedFloor, selectedRoomType, searchText } = useSelector((state) => state.HotelSlice);
   const {
     tableGroups,
     currentHallId,
@@ -39,6 +42,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false); // This was duplicated, keeping the one that's used
   const [showSalesShiftModal, setShowSalesShiftModal] = useState(false);
+  const [showBookingsModal, setShowBookingsModal] = useState(false);
   const prevSyncedCountRef = useRef(0);
   const newOrderBtnRef = useRef(null);
 
@@ -144,6 +148,13 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
     setDragOverHallIndex(null);
   };
 
+  // Fetch room groups when hotel mode
+  useEffect(() => {
+    if (Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 && _hProfileId) {
+      dispatch(fetchRoomGroups(_hProfileId));
+    }
+  }, [dispatch, _hProfileId]);
+
   // Clock state
   const [showClock, setShowClock] = useState(() => {
     return localStorage.getItem("showHeaderClock") === "true";
@@ -241,6 +252,21 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
   }, []);
 
 
+  // Compute filter options from rooms for hotel mode
+  const roomFloors = useMemo(() => {
+    const set = new Set();
+    rooms.forEach((r) => { if (r.floor) set.add(r.floor); });
+    return Array.from(set).sort((a, b) => a - b);
+  }, [rooms]);
+
+  const roomTypeList = useMemo(() => {
+    const set = new Set();
+    rooms.forEach((r) => { if (r.room_type) set.add(r.room_type); });
+    return Array.from(set);
+  }, [rooms]);
+
+  const activeFilterCount = [selectedFloor, selectedRoomType, selectedRoomGroupId, searchText].filter(Boolean).length;
+
   // Format time as HH:MM:SS
   const formatTime = (date) => {
     return date.toLocaleTimeString("az-AZ", {
@@ -294,30 +320,54 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
               </div>
             ) : (
               <div className="d-flex align-items-center gap-2">
-                <ul className="hallsTab">
-                {orderedHalls.map((hall, index) => (
-                  <li
-                    key={hall.id}
-                    className={`hall-btn ${activeHall === hall.id ? "active" : ""} ${isTableEditMode ? "drag-mode" : ""} ${isTableEditMode && draggedHallIndex === index ? "dragging" : ""} ${isTableEditMode && dragOverHallIndex === index ? "drag-over" : ""}`}
-                    onClick={() => !isTableEditMode && setActiveHall(hall.id)}
-                    draggable={isTableEditMode}
-                    onDragStart={(e) => handleHallDragStart(e, index)}
-                    onDragOver={(e) => handleHallDragOver(e, index)}
-                    onDrop={(e) => handleHallDrop(e, index)}
-                    onDragEnd={handleHallDragEnd}
-                    onTouchStart={() => handleHallTouchStart(index)}
-                    onTouchMove={handleHallTouchMove}
-                    onTouchEnd={handleHallTouchEnd}
-                    style={{
-                      cursor: isTableEditMode ? 'grab' : 'pointer',
-                      opacity: isTableEditMode && draggedHallIndex === index ? 0.5 : 1
-                    }}
-                  >
-                    {hall.name}
-                    {isTableEditMode && <i className="bi bi-grip-vertical ms-2 opacity-50"></i>}
-                  </li>
-                ))}
-              </ul>
+                {Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 ? (
+                  <ul className="hallsTab">
+                    <li
+                      className={`hall-btn ${selectedRoomGroupId === null ? "active" : ""}`}
+                      onClick={() => dispatch(setSelectedRoomGroupId(null))}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      Hamısı
+                    </li>
+                    {[...roomGroups]
+                      .sort((a, b) => (a.ordering ?? 999) - (b.ordering ?? 999))
+                      .map((group) => (
+                        <li
+                          key={group.id}
+                          className={`hall-btn ${selectedRoomGroupId === group.id ? "active" : ""}`}
+                          onClick={() => dispatch(setSelectedRoomGroupId(group.id))}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {group.name}
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <ul className="hallsTab">
+                  {orderedHalls.map((hall, index) => (
+                    <li
+                      key={hall.id}
+                      className={`hall-btn ${activeHall === hall.id ? "active" : ""} ${isTableEditMode ? "drag-mode" : ""} ${isTableEditMode && draggedHallIndex === index ? "dragging" : ""} ${isTableEditMode && dragOverHallIndex === index ? "drag-over" : ""}`}
+                      onClick={() => !isTableEditMode && setActiveHall(hall.id)}
+                      draggable={isTableEditMode}
+                      onDragStart={(e) => handleHallDragStart(e, index)}
+                      onDragOver={(e) => handleHallDragOver(e, index)}
+                      onDrop={(e) => handleHallDrop(e, index)}
+                      onDragEnd={handleHallDragEnd}
+                      onTouchStart={() => handleHallTouchStart(index)}
+                      onTouchMove={handleHallTouchMove}
+                      onTouchEnd={handleHallTouchEnd}
+                      style={{
+                        cursor: isTableEditMode ? 'grab' : 'pointer',
+                        opacity: isTableEditMode && draggedHallIndex === index ? 0.5 : 1
+                      }}
+                    >
+                      {hall.name}
+                      {isTableEditMode && <i className="bi bi-grip-vertical ms-2 opacity-50"></i>}
+                    </li>
+                  ))}
+                </ul>
+                )}
               </div>
             )}
           </Col>
@@ -422,6 +472,29 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
 
           <Col lg={6} md={6} className="headerLeftBox h-100 d-none d-md-block">
             <div className="right-tools-container h-100 d-flex align-items-center justify-content-end">
+              {Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 ? (
+                <>
+                  <div className="tools-divider"></div>
+                  <button
+                    className="create-order-btn small-btn hotel-header-btn"
+                    onClick={() => setShowBookingsModal(true)}
+                    title="Rezervasiyalar">
+                    <i className="bi bi-journal-text" style={{ fontSize: "16px" }}></i>
+                    <span className="d-none d-xl-inline">Rezervasiyalar</span>
+                  </button>
+
+                  <div className="tools-divider"></div>
+                  <button
+                    className="create-order-btn small-btn hotel-header-btn"
+                    style={{ opacity: 0.65 }}
+                    title="Hesabat (hazırlanır)"
+                  >
+                    <i className="bi bi-graph-up" style={{ fontSize: "16px" }}></i>
+                    <span className="d-none d-xl-inline">Hesabat</span>
+                  </button>
+                </>
+              ) : (
+                <>
               {Number(loginedWaiter?.data?.can_create_order) === 1 && (
                 <>
                   <div className="tools-divider"></div>
@@ -498,6 +571,8 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                     </svg>
                     <span className="count-badge text-white" style={{ background: "#A5B4FC" }}>{books?.data?.length || 0}</span>
                   </div>
+                </>
+              )}
                 </>
               )}
 
@@ -652,10 +727,31 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
         </Row>
       </Container>
 
-      {/* MOBILE FOOTER (Visible only on mobile, hidden if showBack is active to prevent overlap) */}
+      {/* MOBILE ROOM GROUP / HALL TABS (moved up from footer) */}
       {!showBack && (
-        <div className="mobile-footer d-flex d-md-none">
-          {tableGroups &&
+        <div className="mobile-tabs-bar d-flex d-md-none">
+          {Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 ? (
+            <>
+              <button
+                className={`mobile-tab-btn ${selectedRoomGroupId === null ? "active" : ""}`}
+                onClick={() => dispatch(setSelectedRoomGroupId(null))}
+              >
+                Hamısı
+              </button>
+              {[...roomGroups]
+                .sort((a, b) => (a.ordering ?? 999) - (b.ordering ?? 999))
+                .map((group) => (
+                <button
+                  key={group.id}
+                  className={`mobile-tab-btn ${selectedRoomGroupId === group.id ? "active" : ""}`}
+                  onClick={() => dispatch(setSelectedRoomGroupId(group.id))}
+                >
+                  {group.name}
+                </button>
+              ))}
+            </>
+          ) : (
+            tableGroups &&
             tableGroups?.data?.map((hall, index) => (
               <button
                 key={index}
@@ -664,7 +760,76 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
               >
                 {hall.name}
               </button>
-            ))}
+            ))
+          )}
+        </div>
+      )}
+
+      {/* HOTEL FILTER STRIP — shown on tables page in hotel mode */}
+      {Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 && isTablesPage && (
+        <div className="hotel-filter-strip">
+          <div className="hotel-filter-inner">
+            {/* Floor */}
+            {roomFloors.length > 0 && (
+              <select
+                value={selectedFloor ?? ""}
+                onChange={(e) => dispatch(setSelectedFloor(e.target.value ? Number(e.target.value) : null))}
+                className="hotel-filter-select"
+              >
+                <option value="">Mərtəbə</option>
+                {roomFloors.map((f) => (
+                  <option key={f} value={f}>{f}. mərtəbə</option>
+                ))}
+              </select>
+            )}
+
+            {/* Room Type */}
+            {roomTypeList.length > 0 && (
+              <select
+                value={selectedRoomType ?? ""}
+                onChange={(e) => dispatch(setSelectedRoomType(e.target.value || null))}
+                className="hotel-filter-select"
+              >
+                <option value="">Tip</option>
+                {roomTypeList.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Search */}
+            <div className="hotel-filter-search">
+              <i className="bi bi-search hotel-filter-search-icon"></i>
+              <input
+                type="text"
+                placeholder="Otaq nömrəsi və ya qonaq..."
+                value={searchText}
+                onChange={(e) => dispatch(setSearchText(e.target.value))}
+                className="hotel-filter-input"
+              />
+            </div>
+
+            {/* Clear */}
+            {activeFilterCount > 0 && (
+              <button className="hotel-filter-clear" onClick={() => dispatch(clearFilters())}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            )}
+
+            {/* Legend */}
+            <div className="hotel-filter-legend">
+              <span className="hotel-legend-item"><span className="hotel-legend-dot" style={{ background: "#10B981" }}></span>Boş</span>
+              <span className="hotel-legend-item"><span className="hotel-legend-dot" style={{ background: "#F59E0B" }}></span>Dolu</span>
+              <span className="hotel-legend-item"><span className="hotel-legend-dot" style={{ background: "#3B82F6" }}></span>Təmizlənir</span>
+              <span className="hotel-legend-item"><span className="hotel-legend-dot" style={{ background: "#EF4444" }}></span>Təmirdə</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE FOOTER (only for restaurant mode add button) */}
+      {!showBack && Number(loginedProfileData?.data?.profile?.is_hotel_mode) !== 1 && (
+        <div className="mobile-footer d-flex d-md-none">
           {Number(loginedWaiter?.data?.can_create_order) === 1 && (
             <button
               className="mobile-add-btn"
@@ -717,6 +882,11 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
       <SalesShiftModal
         show={showSalesShiftModal}
         onHide={() => setShowSalesShiftModal(false)}
+      />
+      <BookingsModal
+        show={showBookingsModal}
+        onHide={() => setShowBookingsModal(false)}
+        profileId={_hProfileId}
       />
     </>
   );

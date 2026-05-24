@@ -17,6 +17,7 @@ import { addNotification } from "../../utils/notificationService";
 import { getModifiersTotalPerUnit, mapOrderPaymentForTax } from "../../utils/orderItemLineTotal";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
+import RoomChargeModal from "../RoomChargeModal/RoomChargeModal";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -42,6 +43,9 @@ const CheckOver = () => {
 
     const [showTaxSelectionModal, setShowTaxSelectionModal] = useState(false);
     const [taxLocalNames, setTaxLocalNames] = useState({});
+
+    const [showRoomCharge, setShowRoomCharge] = useState(false);
+    const [roomChargeMethod, setRoomChargeMethod] = useState(null);
 
     // Virtual Keyboard logic
     const [activeInputMode, setActiveInputMode] = useState(null); // 'comment' or 'split-0', 'split-1'
@@ -200,7 +204,29 @@ const CheckOver = () => {
         }
     }, [viewMode, selectedMethods, loginedWaiter?.data?.can_see_tax]);
 
+    const isHotelMode = Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1;
+
+    const handleRoomCharge = (room) => {
+        const method = {
+            id: `room_${room.id}`,
+            name: `Otağa Yaz - ${room.room_number}`,
+            type: 'room',
+            amount: calcTotal.sumTotal,
+            is_tax: 0,
+            is_split: 0,
+            room_id: room.id,
+            room_number: room.room_number,
+        };
+        setSelectedMethods([method]);
+        setShowRoomCharge(false);
+        setRoomChargeMethod(method);
+    };
+
     const handleMethodSelect = (method) => {
+        // Clear room charge if a regular method is selected
+        if (roomChargeMethod) {
+            setRoomChargeMethod(null);
+        }
         const isAlreadySelected = selectedMethods.find(m => m.id === method.id);
 
         if (isAlreadySelected) {
@@ -322,7 +348,9 @@ const CheckOver = () => {
             return;
         }
         if (viewMode === "PAYMENT") {
-            const paid = Number(calcValue || totalPaidInMethods || 0);
+            const paid = roomChargeMethod
+                ? Number(totalPaidInMethods)
+                : Number(calcValue || totalPaidInMethods || 0);
             const toPay = Number(calcTotal.sumTotal);
             if (paid < toPay) {
                 toast.error(`Ödəniş çatışmır! ${(toPay - paid).toFixed(2)} ₼ əskikdir`);
@@ -360,7 +388,8 @@ const CheckOver = () => {
                 payment_method_id: m.id,
                 name: m.name,
                 type: m.type,
-                amount: m.amount || (selectedMethods.length === 1 ? calcTotal.sumTotal : 0)
+                amount: m.amount || (selectedMethods.length === 1 ? calcTotal.sumTotal : 0),
+                ...(m.room_id ? { room_id: m.room_id, room_number: m.room_number } : {})
             }));
         } else {
             // Unpaid mode
@@ -693,6 +722,39 @@ const CheckOver = () => {
                                     })}
                                 </div>
 
+                                {isHotelMode && (
+                                    <div
+                                        className="payment-method-item room-charge-btn"
+                                        style={{
+                                            border: roomChargeMethod ? '2px solid #F59E0B' : undefined,
+                                            background: roomChargeMethod ? '#FFFBEB' : undefined,
+                                            cursor: 'pointer'
+                                        }}
+                                        onClick={() => setShowRoomCharge(true)}
+                                    >
+                                        <div className="d-flex align-items-center gap-3">
+                                            <div className={`custom-selection-indicator ${roomChargeMethod ? 'selected' : ''}`}>
+                                                {roomChargeMethod && <i className="bi bi-check-lg"></i>}
+                                            </div>
+                                            <span className="method-name">
+                                                <i className="bi bi-building me-2"></i>
+                                                Otağa Yaz
+                                            </span>
+                                        </div>
+                                        {roomChargeMethod && (
+                                            <div className="method-right-content">
+                                                <div className="method-amount">
+                                                    <span style={{ fontSize: '12px', color: '#F59E0B', marginRight: '8px' }}>
+                                                        {roomChargeMethod.room_number}
+                                                    </span>
+                                                    <span>{roomChargeMethod.amount || calcTotal.sumTotal}</span>
+                                                    <span className="symbol">₼</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {loginedProfileData?.data?.taxes?.length > 0 && Number(loginedWaiter?.data?.can_see_tax) === 1 && (
                                     <div
                                         className="print-toggle-section mt-3 pt-3 d-flex justify-content-between align-items-center clickable-row"
@@ -913,6 +975,13 @@ const CheckOver = () => {
                     </div>
                 </div>
             </Modal>
+
+            <RoomChargeModal
+                show={showRoomCharge}
+                onHide={() => setShowRoomCharge(false)}
+                onSelect={handleRoomCharge}
+                profileId={loginedProfileData?.data?.profile?.id}
+            />
 
             {posKeyboardEnabled && activeInputMode && (
                 <VirtualKeyboard

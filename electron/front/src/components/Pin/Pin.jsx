@@ -815,6 +815,23 @@ const Pin = () => {
                 <span className="terminalBranch">
                   Filial: <strong>{profileInfo?.username || "Main"}</strong>
                 </span>
+                {Number(profileInfo?.is_hotel_mode) === 1 && (
+                  <span className="terminalDivider">•</span>
+                )}
+                {Number(profileInfo?.is_hotel_mode) === 1 && (
+                  <span style={{
+                    background: '#F59E0B',
+                    color: '#fff',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                  }}>
+                    OTEL
+                  </span>
+                )}
               </div>
             </div>
           </Col>

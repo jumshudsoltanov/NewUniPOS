@@ -35,6 +35,7 @@ import CheckOver from "./components/CheckOver/CheckOver";
 const CustomerDisplay = lazy(() => import('./components/CustomerDisplay/CustomerDisplay'));
 const KitchenDisplay = lazy(() => import('./components/Kitchen/KitchenDisplay'));
 import Settings from "./components/Settings/Settings";
+import Rooms from "./components/Rooms/Rooms";
 import { initNetwork, getSocket, onSocketStatusChange } from "./utils/apiConfig";
 import { preloadCheck } from "./utils/preloadCheck";
 import { isPaymentExpired, isPosBlocked } from "./utils/dateHelpers";
@@ -477,6 +478,13 @@ function AppContent() {
     );
   }
 
+  // Hotel mode: show Rooms instead of Tables
+  function TablesOrRooms() {
+    const isHotelMode = Number(authResultRedux?.data?.profile?.is_hotel_mode) === 1;
+    if (isHotelMode) return <Rooms />;
+    return <Tables />;
+  }
+
   return (
     <>
       <Toastify />
@@ -492,8 +500,8 @@ function AppContent() {
         <Route path="/kitchen" element={<KitchenDisplay />} />
 
         <Route element={<Layout />}>
-          <Route path="/tables" element={<Tables />} />
-          <Route path="/tables/:id" element={<Tables />} />
+          <Route path="/tables" element={<TablesOrRooms />} />
+          <Route path="/tables/:id" element={<TablesOrRooms />} />
           <Route path="/checks" element={<Checks />} />
         </Route>
 

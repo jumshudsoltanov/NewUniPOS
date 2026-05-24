@@ -33,6 +33,7 @@ const {
 } = require("./data/ProductsData");
 const { getPaymentMethods } = require("./data/PaymentMethodsData");
 const { getTags } = require("./data/TagsData");
+const { getRooms } = require("./data/RoomsData");
 const { getSalesTypes } = require("./data/SalesTypesData");
 const PrintersModel = require("./model/PrintersModel");
 const SalesShiftsModel = require("./model/SalesShiftsModel");
@@ -349,6 +350,7 @@ const InsertData = async (profileId) => {
     { name: "Tags", fn: () => getTags(profileId) },
     { name: "PaymentMethods", fn: () => getPaymentMethods(profileId) },
     { name: "SalesTypes", fn: () => getSalesTypes(profileId) },
+    { name: "Rooms", fn: () => getRooms(profileId) },
     { name: "Printers", fn: () => getPrinters(profileId) },
   ];
   for (const task of tasks) {
