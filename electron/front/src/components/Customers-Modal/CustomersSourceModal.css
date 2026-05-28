@@ -1,6 +1,22 @@
+/* Hide scrollbar but keep scroll functionality */
+.customers-source-modal ::-webkit-scrollbar {
+    display: none;
+}
+
+.customers-source-modal * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 /* Base Modal Styles */
 .customers-source-modal .modal-dialog {
-    max-width: 950px;
+    max-width: 1200px;
+    max-height: 95vh;
+    margin: 2vh auto;
+}
+
+.customers-source-modal .modal-dialog.modal-xl {
+    max-width: 1200px;
 }
 
 .customers-source-modal .modal-content {
@@ -8,6 +24,7 @@
     border: none;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    max-height: 95vh;
 }
 
 .customers-source-modal-header {
@@ -57,8 +74,10 @@
     padding: 0;
     display: flex;
     background: white;
-    min-height: 540px;
-    max-height: 80vh;
+    flex: 1;
+    min-height: 560px;
+    max-height: 82vh;
+    overflow: hidden;
 }
 
 /* Sidebar Styling */
@@ -167,6 +186,7 @@
     padding: 0;
     background: white;
     overflow-y: auto;
+    min-height: 0;
 }
 
 .form-grid {
@@ -402,6 +422,7 @@
     flex-direction: column;
     background: white;
     overflow-y: auto;
+    min-height: 0;
 }
 
 /* Details Top Header - with Tətbiq et + 3 dots */

@@ -6,6 +6,23 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 }
 
+.reservation-modal .modal-dialog {
+  max-height: 95vh;
+  margin: 2vh auto;
+  width: auto;
+  max-width: 500px;
+}
+
+.reservation-modal .modal-dialog .modal-content {
+  max-height: 95vh;
+}
+
+.reservation-modal .modal-content-wrapper {
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .reservation-modal .reservation-header {
   background-color: #053796;
   padding: 16px 20px;
@@ -61,6 +78,9 @@
 .reservation-modal .reservation-body {
   padding: 20px;
   background: #fff;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .reservation-modal .form-label {
@@ -142,6 +162,87 @@
 }
 
 .reservation-modal .btn-submit:disabled {
+  background: #93b4f5;
+  cursor: not-allowed;
+}
+
+/* ── Action Toggle ── */
+.rm-action-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.rm-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border: 1.5px solid #D1D5DB;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7280;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rm-action-btn:hover {
+  border-color: #9CA3AF;
+  color: #374151;
+}
+.rm-action-btn.active {
+  border-color: #053796;
+  background: #EFF6FF;
+  color: #053796;
+}
+.rm-action-btn i {
+  font-size: 14px;
+}
+
+/* ── Price Summary ── */
+.rm-price-summary {
+  background: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.rm-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: #166534;
+}
+
+.rm-price-total {
+  font-size: 16px;
+  font-weight: 700;
+  color: #053796;
+}
+
+/* ── Check-in Button ── */
+.reservation-modal .btn-checkin {
+  padding: 9px 24px;
+  border-radius: 6px;
+  border: none;
+  background: #059669;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s;
+}
+.reservation-modal .btn-checkin:hover:not(:disabled) {
+  background: #047857;
+}
+.reservation-modal .btn-checkin:disabled {
   background: #93b4f5;
   cursor: not-allowed;
 }

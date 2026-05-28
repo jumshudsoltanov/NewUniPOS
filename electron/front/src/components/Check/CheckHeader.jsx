@@ -212,9 +212,6 @@ const CheckHeader = ({
                 table?.name ||
                 orders?.table_name ||
                 orders?.table?.name;
-              const tagLine = String(
-                liveOrder?.tags ?? orders?.tags ?? "",
-              ).trim();
               const mainLine =
                 isDineIn &&
                 (effectiveTableName || effectiveHallName || orders?.table_id)
@@ -225,32 +222,7 @@ const CheckHeader = ({
                       ? "Gəl götür"
                       : "Yeni Sifariş";
               return (
-                <>
-                  <span
-                    className="header-order-id"
-                    style={{
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      display: "block",
-                    }}
-                  >
-                    {mainLine}
-                  </span>
-                  {tagLine ? (
-                    <span
-                      className="header-subtitle"
-                      title={tagLine}
-                      style={{
-                        display: "block",
-                        marginTop: "2px",
-                        opacity: 0.92,
-                      }}
-                    >
-                      {tagLine}
-                    </span>
-                  ) : null}
-                </>
+                <span className="header-title">{mainLine}</span>
               );
             })()}
           </div>
@@ -266,7 +238,7 @@ const CheckHeader = ({
         <div className="header-right-section">
           <span className="header-check-id">
             {orders?.id
-              ? `#${orders.id} / #${orders.id}`
+              ? `#${orders.id}`
               : orders?.uuid
                 ? "Yeni sifariş"
                 : "Yüklənir..."}

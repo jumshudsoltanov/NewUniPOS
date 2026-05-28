@@ -199,7 +199,6 @@ const Check = () => {
   }, [isHotelMode, hotelRoomId, rooms]);
 
   // Hotel actions state
-  const [showHotelModal, setShowHotelModal] = useState(false);
   const [depositValue, setDepositValue] = useState("0");
   const [showDepositKeypad, setShowDepositKeypad] = useState(false);
   const [isUpdatingDeposit, setIsUpdatingDeposit] = useState(false);
@@ -1539,44 +1538,8 @@ const Check = () => {
 
   const isMobile = window.innerWidth < 992;
 
-  const showHcTopbar = isHotelMode && hotelRoom;
   return (
     <Container fluid className={`p-0 overflow-hidden ${isMobile || isHotelMode ? "d-flex flex-column" : ""} ${isMobile ? "vh-100" : "h-100"}`}>
-      {showHcTopbar ? (
-        <div className="hc-topbar">
-          <div className="hc-topbar-left">
-            <button className="hc-back-btn" onClick={() => navigate(-1)}>
-              <i className="bi bi-chevron-left"></i>
-            </button>
-            <span className="hc-room-badge">Otaq</span>
-            <span className="hc-room-number">{hotelRoom?.room_number || "?"}</span>
-            {hotelRoom?.room_type && <span className="hc-room-meta"><i className="bi bi-door-open"></i>{hotelRoom.room_type}</span>}
-            {hotelRoom?.floor && <span className="hc-room-meta"><i className="bi bi-layers"></i>{hotelRoom.floor}. mərtəbə</span>}
-          </div>
-          <div className="hc-topbar-right">
-            <span className="hc-topbar-guest">
-              <i className="bi bi-person-fill"></i>{hotelRoom?.guest_name || ""}
-            </span>
-            <button className="hc-topbar-btn" onClick={handleHotelOpenWhatsApp} disabled={isSendingWhatsapp || !hotelRoom?.guest_phone || !hotelRoom?.booking_id} title="WhatsApp">
-              <i className="bi bi-whatsapp"></i>
-            </button>
-            <button className="hc-topbar-btn" onClick={handleHotelPrintReceipt} disabled={!window.electronAPI?.printReceipt} title="Qəbz çap et">
-              <i className="bi bi-printer"></i>
-            </button>
-            <button className="hc-topbar-btn" onClick={() => setShowHotelModal(true)} title="Otaq detalları">
-              <i className="bi bi-info-circle"></i>
-            </button>
-            <span className="hc-status-pill">Dolu</span>
-            <span className="hc-balance-pill">{(Number(hotelRoom?.folio_balance) || 0).toFixed(2)} ₼</span>
-          </div>
-        </div>
-      ) : null}
-      {isHotelMode && hotelRoom && countdownText ? (
-        <div className={`hc-countdown ${new Date(hotelRoom.check_out) <= new Date() ? "hc-countdown-expired" : ""}`}>
-          <i className="bi bi-clock"></i>
-          {countdownText}
-        </div>
-      ) : null}
       <Row className={`g-0 ${isMobile || isHotelMode ? "flex-grow-1" : "h-100"}`} style={isHotelMode ? { minHeight: 0 } : undefined}>
         <Col
           md={12}
@@ -1886,16 +1849,6 @@ const Check = () => {
                   </div>
                 )}
 
-                {isHotelMode && hotelRoom && (
-                  <div className="sidebar-icon" onClick={() => setShowHotelModal(true)} title="Otaq detalları">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#343434" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 22V2h2v18h18v2H2z"/>
-                      <path d="M6 12V6h10v2H8v4H6z"/>
-                      <path d="M8 18v-4h12v4H8z"/>
-                      <path d="M14 14v4M10 14v4"/>
-                    </svg>
-                  </div>
-                )}
               </div>
 
               <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
@@ -2106,18 +2059,16 @@ const Check = () => {
               className="check-content flex-grow-1 d-flex flex-column h-100 position-relative"
               style={{ backgroundColor: "#EBF2FE" }}
             >
-              {isHotelMode && hotelRoom ? null : (
-                <CheckHeader
-                  isSidebarOpen={isSidebarOpen}
-                  toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                  orders={currentOrder}
-                  table={currentTable}
-                  hall={currentHall}
-                  selectedCustomer={selectedCustomer}
-                  activeTableCount={activeTableCount}
-                  onBeforeCreateOrder={autoSendIfNeeded}
-                />
-              )}
+              <CheckHeader
+                isSidebarOpen={isSidebarOpen}
+                toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                orders={currentOrder}
+                table={currentTable}
+                hall={currentHall}
+                selectedCustomer={selectedCustomer}
+                activeTableCount={activeTableCount}
+                onBeforeCreateOrder={autoSendIfNeeded}
+              />
 
               <CheckMain orders={currentOrder} table={currentTable} />
               <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} />
@@ -3060,161 +3011,6 @@ const Check = () => {
         productToEdit={productToEdit}
       />
 
-      {/* Hotel modal */}
-      <Modal show={showHotelModal} onHide={() => setShowHotelModal(false)} centered size="md">
-        <Modal.Header closeButton style={{ background: "#4f85f4", color: "#fff", borderBottom: "none", padding: "14px 18px" }}>
-          <Modal.Title style={{ fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", gap: "10px" }}>
-            <i className="bi bi-building"></i>
-            <span>Otaq {hotelRoom?.room_number || ""}</span>
-            {hotelRoom?.room_type && (
-              <span style={{ padding: "2px 8px", background: "rgba(255,255,255,0.2)", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>{hotelRoom.room_type}</span>
-            )}
-            {hotelRoom?.floor && (
-              <span style={{ fontSize: "12px", fontWeight: 500, color: "rgba(255,255,255,0.8)" }}>{hotelRoom.floor}. mərtəbə</span>
-            )}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ background: "#ebf2fe", padding: "20px" }}>
-          {hotelRoom && (
-            <Row className="g-3">
-              {/* Sol sütun — qonaq + tarixlər */}
-              <Col md={7}>
-                {/* Qonaq məlumatları */}
-                <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", marginBottom: "14px", overflow: "hidden" }}>
-                  <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <i className="bi bi-person-fill" style={{ color: "#4f85f4" }}></i> Qonaq məlumatları
-                  </div>
-                  <div style={{ padding: "12px 14px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#F9FAFB", borderRadius: "6px", marginBottom: "6px" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 500, color: "#6B7280" }}>Ad Soyad</span>
-                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#1F2937" }}>{hotelRoom.guest_name || "—"}</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#F9FAFB", borderRadius: "6px" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 500, color: "#6B7280" }}>Telefon</span>
-                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#053796" }}>{hotelRoom.guest_phone || "—"}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tarixlər */}
-                {(hotelRoom.check_in || hotelRoom.check_out) && (
-                  <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", overflow: "hidden" }}>
-                    <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <i className="bi bi-calendar3" style={{ color: "#4f85f4" }}></i> Rezervasiya
-                    </div>
-                    <div style={{ padding: "14px" }}>
-                      <Row className="g-3">
-                        <Col xs={6}>
-                          <div style={{ textAlign: "center", padding: "12px", background: "#F9FAFB", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                            <div style={{ fontSize: "16px", color: "#4f85f4", marginBottom: "4px" }}><i className="bi bi-box-arrow-in-right"></i></div>
-                            <div style={{ fontSize: "9px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: "4px" }}>Giriş</div>
-                            <div style={{ fontSize: "12px", fontWeight: 700, color: "#1F2937" }}>{hotelRoom.check_in ? new Date(hotelRoom.check_in).toLocaleString("az-AZ", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—"}</div>
-                          </div>
-                        </Col>
-                        <Col xs={6}>
-                          <div style={{ textAlign: "center", padding: "12px", background: "#F9FAFB", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                            <div style={{ fontSize: "16px", color: "#4f85f4", marginBottom: "4px" }}><i className="bi bi-box-arrow-right"></i></div>
-                            <div style={{ fontSize: "9px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: "4px" }}>Çıxış</div>
-                            <div style={{ fontSize: "12px", fontWeight: 700, color: "#1F2937" }}>{hotelRoom.check_out ? new Date(hotelRoom.check_out).toLocaleString("az-AZ", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—"}</div>
-                          </div>
-                        </Col>
-                      </Row>
-                      {(() => {
-                        if (!hotelRoom.check_in || !hotelRoom.check_out) return null;
-                        const d1 = new Date(hotelRoom.check_in), d2 = new Date(hotelRoom.check_out);
-                        const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
-                        if (diff <= 0) return null;
-                        return (
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", marginTop: "10px", fontSize: "11px", fontWeight: 600, color: "#6B7280", background: "#F3F4F6", padding: "6px 14px", borderRadius: "6px" }}>
-                            <i className="bi bi-moon-stars" style={{ color: "#4f85f4" }}></i> {diff} gecə
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
-              </Col>
-
-              {/* Sağ sütun — depozit + əməliyyatlar */}
-              <Col md={5}>
-                {/* Depozit */}
-                <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", marginBottom: "14px", overflow: "hidden" }}>
-                  <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <i className="bi bi-wallet2" style={{ color: "#4f85f4" }}></i> Depozit
-                  </div>
-                  <div style={{ padding: "14px" }}>
-                    {!showDepositKeypad ? (
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: "22px", fontWeight: 800, color: "#D97706" }}>{(Number(hotelRoom.folio_balance) || 0).toFixed(2)} ₼</span>
-                        <button style={{ padding: "7px 14px", border: "none", borderRadius: "6px", background: "#053796", color: "#fff", fontSize: "11px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "5px", boxShadow: "0 2px 6px rgba(5,55,150,0.15)" }}
-                          onClick={() => { setDepositValue(String(Number(hotelRoom.folio_balance || 0) > 0 ? Number(hotelRoom.folio_balance) : "0")); setShowDepositKeypad(true); }}>
-                          <i className="bi bi-pencil-fill"></i> Düzəliş et
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                        <div style={{ textAlign: "center", padding: "10px", background: "#fff", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "20px", fontWeight: 800, color: "#053796" }}>
-                          {depositValue || "0"} ₼
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "5px" }}>
-                          {[1,2,3,4,5,6,7,8,9].map(n => (
-                            <button key={n} style={{ padding: "12px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, color: "#1F2937", cursor: "pointer", textAlign: "center" }}
-                              onClick={() => handleDepositNum(n)}>{n}</button>
-                          ))}
-                          <button style={{ padding: "12px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, cursor: "pointer", textAlign: "center" }}
-                            onClick={() => handleDepositNum(".")}>.</button>
-                          <button style={{ padding: "12px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, cursor: "pointer", textAlign: "center" }}
-                            onClick={() => handleDepositNum(0)}>0</button>
-                          <button style={{ padding: "12px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, cursor: "pointer", textAlign: "center", color: "#EF4444" }}
-                            onClick={handleDepositBs}><i className="bi bi-backspace"></i></button>
-                        </div>
-                        <div style={{ display: "flex", gap: "6px" }}>
-                          <button style={{ padding: "8px 14px", border: "1px solid #FCA5A5", borderRadius: "6px", background: "#FEF2F2", color: "#DC2626", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
-                            onClick={() => { setShowDepositKeypad(false); handleDepositClear(); }}>
-                            <i className="bi bi-trash3"></i>
-                          </button>
-                          <button style={{ flex: 1, padding: "8px", border: "none", borderRadius: "6px", background: "#053796", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 2px 6px rgba(5,55,150,0.15)" }}
-                            onClick={handleDepositSave} disabled={isUpdatingDeposit}>
-                            {isUpdatingDeposit ? <><span className="spinner-border spinner-border-sm"></span> Göndərilir</> : <><i className="bi bi-check2"></i> Yadda saxla</>}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* WhatsApp */}
-                <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", marginBottom: "14px", overflow: "hidden" }}>
-                  <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <i className="bi bi-whatsapp" style={{ color: "#25D366" }}></i> Bildiriş
-                  </div>
-                  <div style={{ padding: "14px" }}>
-                    <p style={{ fontSize: "11px", color: "#6B7280", margin: "0 0 8px", lineHeight: "1.4" }}>Qonağa WhatsApp ilə xatırlatma göndər</p>
-                    <button style={{ width: "100%", padding: "9px", border: "none", borderRadius: "6px", background: "#25D366", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 2px 6px rgba(37,211,102,0.2)" }}
-                      onClick={handleHotelOpenWhatsApp} disabled={isSendingWhatsapp || !hotelRoom.guest_phone || !hotelRoom.booking_id}>
-                      {isSendingWhatsapp ? <><span className="spinner-border spinner-border-sm"></span> Göndərilir</> : <><i className="bi bi-whatsapp" style={{ fontSize: "16px" }}></i> WhatsApp ilə xatırlat</>}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Çap */}
-                <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", overflow: "hidden" }}>
-                  <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <i className="bi bi-printer" style={{ color: "#4f85f4" }}></i> Çap
-                  </div>
-                  <div style={{ padding: "14px" }}>
-                    <p style={{ fontSize: "11px", color: "#6B7280", margin: "0 0 8px", lineHeight: "1.4" }}>Müştəriyə qəbz çap et</p>
-                    <button style={{ width: "100%", padding: "9px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", color: "#374151", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
-                      onClick={handleHotelPrintReceipt}>
-                      <i className="bi bi-receipt" style={{ color: "#4f85f4", fontSize: "15px" }}></i> Qəbz çap et
-                    </button>
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          )}
-        </Modal.Body>
-      </Modal>
 
       {/* ── Hotel WhatsApp Modal ── */}
       <Modal show={showWhatsAppModal} onHide={() => setShowWhatsAppModal(false)} centered size="lg" dialogClassName="hc-wa-dialog">

@@ -4,9 +4,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchRooms } from "../../redux/Slices/HotelSlice";
+import { addOrderOptimistic } from "../../redux/Slices/BooksSlice";
+import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
+import { saveLog } from "../../redux/Slices/OrdersSlice";
 import RoomCard from "./RoomCard";
 import ReservationModal from "./ReservationModal";
-import RoomDetailModal from "./RoomDetailModal";
 import "./Rooms.css";
 
 const Rooms = () => {
@@ -19,8 +21,6 @@ const Rooms = () => {
 
   const profileId = loginedProfileData?.data?.profile?.id;
   const [showReservationModal, setShowReservationModal] = useState(false);
-  const [showRoomDetail, setShowRoomDetail] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState(null);
   const [preselectedRoom, setPreselectedRoom] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const isVisibleRef = useRef(true);
@@ -79,8 +79,8 @@ const Rooms = () => {
       );
     }
 
-    // Sırala: boş, dolu, təmizlənir, təmirdə
-    const statusOrder = { available: 0, occupied: 1, cleaning: 2, maintenance: 3 };
+    // Sırala: boş, dolu, bron, təmizlənir, təmirdə
+    const statusOrder = { available: 0, occupied: 1, reserved: 2, cleaning: 3, maintenance: 4 };
     const sorted = [...list].sort((a, b) => {
       const orderA = statusOrder[a.status] ?? 99;
       const orderB = statusOrder[b.status] ?? 99;
@@ -91,17 +91,81 @@ const Rooms = () => {
     return sorted;
   }, [rooms, selectedFloor, selectedRoomType, selectedRoomGroupId, searchText]);
 
+  const handleHotelOrderCreate = useCallback(
+    (room, guestNameOverride, depositAmount) => {
+      const waiterId = loginedWaiter?.data?.id;
+      const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
+      const profileIdVal = loginedProfileData?.data?.profile?.id;
+      if (!waiterId || !terminalId || !profileIdVal) {
+        toast.error("İstifadəçi məlumatları tapılmadı");
+        return null;
+      }
+
+      const generatedUuid = crypto.randomUUID();
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+      const optimisticOrder = {
+        uuid: generatedUuid,
+        id: null,
+        waiter_id: waiterId,
+        profile_id: profileIdVal,
+        terminal_id: terminalId,
+        sale_type: "dine_in",
+        sale_type_name: "Restoranda",
+        guest_count: 1,
+        status: 1,
+        is_selected: 1,
+        orders_items: [],
+        room_id: room.id,
+        room_number: room.room_number,
+        guest_name: guestNameOverride || room.guest_name,
+        folio_balance: depositAmount || room.folio_balance || 0,
+        amount: 0,
+        total: 0,
+        start_date: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        discount: 0,
+        service_value: 0,
+        waiter: { id: waiterId, name: waiterName },
+      };
+
+      dispatch(addOrderOptimistic(optimisticOrder));
+
+      dispatch(saveLog({
+        orderId: generatedUuid,
+        action: "Yeni otaq sifarişi yaradıldı",
+        waiterName,
+        details: `Otaq: ${room.room_number || ""}, Qonaq: ${room.guest_name || "—"}`,
+      }));
+
+      dispatch(saleNewOtherOrders({
+        waiterId,
+        terminalId,
+        profileId: profileIdVal,
+        sale_type: "dine_in",
+        status: 1,
+        is_selected: 1,
+        uuid: generatedUuid,
+      }));
+
+      return generatedUuid;
+    },
+    [loginedWaiter, loginedProfileData, dispatch]
+  );
+
   const handleRoomClick = useCallback(
     (room) => {
       if (!room) return;
 
       if (room.status === "occupied") {
-        setSelectedRoom(room);
-        setShowRoomDetail(true);
+        const uuid = handleHotelOrderCreate(room);
+        if (uuid) {
+          navigate(`/check/${uuid}?hotel=${room.id}`);
+        }
         return;
       }
 
-      if (room.status === "available") {
+      if (room.status === "available" || room.status === "reserved") {
         const waiterCanOrder = Number(loginedWaiter?.data?.can_create_order) === 1;
         if (!waiterCanOrder) {
           toast.error("İcazəniz yoxdur");
@@ -114,23 +178,30 @@ const Rooms = () => {
 
       const statusLabels = {
         cleaning: "Bu otaq təmizlənir",
+        reserved: "Bu otaq bron edilib",
         maintenance: "Bu otaq təmirdədir",
       };
       toast.info(statusLabels[room.status] || "Bu otaq mövcud deyil");
     },
-    [loginedWaiter, navigate]
+    [loginedWaiter, loginedProfileData, navigate, dispatch, handleHotelOrderCreate]
   );
 
-  const handleReservationCreated = () => {
+  const handleReservationCreated = (booking, actionType) => {
     setShowReservationModal(false);
     setPreselectedRoom(null);
     doFetchRooms();
-  };
 
-  const handleRoomDetailClose = () => {
-    setShowRoomDetail(false);
-    setSelectedRoom(null);
-    doFetchRooms(); // Depozit dəyişikliyi ola bilər, yenilə
+    if (actionType === "checkin" && booking?.room_id) {
+      const room = rooms.find((r) => Number(r.id) === Number(booking.room_id));
+      if (room) {
+        const guestName = booking.guest_name || room.guest_name;
+        const depositAmount = booking.deposit ? parseFloat(booking.deposit) : 0;
+        const uuid = handleHotelOrderCreate(room, guestName, depositAmount);
+        if (uuid) {
+          navigate(`/check/${uuid}?hotel=${room.id}`);
+        }
+      }
+    }
   };
 
   // Yüklənir
@@ -212,12 +283,6 @@ const Rooms = () => {
         }}
         preselectedRoom={preselectedRoom}
         onSuccess={handleReservationCreated}
-      />
-
-      <RoomDetailModal
-        show={showRoomDetail}
-        onHide={handleRoomDetailClose}
-        room={selectedRoom}
       />
     </>
   );

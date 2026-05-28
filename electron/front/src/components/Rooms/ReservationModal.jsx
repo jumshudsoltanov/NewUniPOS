@@ -14,12 +14,15 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
+  const [documentId, setDocumentId] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
+  const [deposit, setDeposit] = useState("");
   const [notes, setNotes] = useState("");
+  const [action, setAction] = useState("reserve");
 
   // Set defaults when modal opens
   useEffect(() => {
@@ -33,14 +36,21 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
     setGuestName("");
     setGuestPhone("");
+    setDocumentId("");
     setNotes("");
     setAdults(1);
     setChildren(0);
+    setDeposit("");
     setCheckIn(fmt(today));
     setCheckOut(fmt(tomorrow));
+    setAction("reserve");
 
     if (preselectedRoom) {
       setSelectedRoomId(String(preselectedRoom.id));
+      // If preselected room is reserved, default to check-in action
+      if (preselectedRoom.status === "reserved") {
+        setAction("checkin");
+      }
     } else {
       setSelectedRoomId("");
     }
@@ -50,13 +60,37 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
   const availableRooms = useMemo(() => {
     if (preselectedRoom) {
       return rooms.filter(
-        (r) => r.id === preselectedRoom.id || r.status === "available"
+        (r) => r.id === preselectedRoom.id || r.status === "available" || r.status === "reserved"
       );
     }
-    return rooms.filter((r) => r.status === "available");
+    return rooms.filter((r) => r.status === "available" || r.status === "reserved");
   }, [rooms, preselectedRoom]);
 
-  const handleSubmit = async () => {
+  // Seçilmiş otaq
+  const selectedRoom = useMemo(() => {
+    if (!selectedRoomId) return null;
+    return rooms.find((r) => String(r.id) === selectedRoomId) || null;
+  }, [rooms, selectedRoomId]);
+
+  // Gecə hesabı
+  const nights = useMemo(() => {
+    if (!checkIn || !checkOut) return 0;
+    const d1 = new Date(checkIn);
+    const d2 = new Date(checkOut);
+    const diff = d2.getTime() - d1.getTime();
+    if (diff <= 0) return 0;
+    return Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)));
+  }, [checkIn, checkOut]);
+
+  // Otaq qiyməti
+  const roomPrice = useMemo(() => {
+    return Number(selectedRoom?.price || 0);
+  }, [selectedRoom]);
+
+  // Cəmi
+  const totalPrice = nights * roomPrice;
+
+  const handleSubmit = async (actionType) => {
     if (!guestName.trim()) {
       toast.error("Qonaq adı daxil edin");
       return;
@@ -74,25 +108,31 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
       return;
     }
 
+    const isCheckin = actionType === "checkin";
+
     try {
-      await dispatch(
+      const result = await dispatch(
         createReservation({
           profile_id: profileId,
           room_id: Number(selectedRoomId),
           guest_name: guestName.trim(),
           guest_phone: guestPhone.trim(),
+          document_id: documentId.trim() || undefined,
           check_in: checkIn,
           check_out: checkOut,
           adults: Number(adults),
           children: Number(children),
+          deposit: deposit ? parseFloat(deposit) : undefined,
           notes: notes.trim(),
+          status: isCheckin ? "occupied" : "reserved",
         })
       ).unwrap();
 
-      toast.success("Rezervasiya uğurla yaradıldı!");
-      onSuccess?.();
+      toast.success(isCheckin ? "Giriş edildi!" : "Rezervasiya uğurla yaradıldı!");
+      const bookingData = result?.data || result;
+      onSuccess?.(bookingData, isCheckin ? "checkin" : "reserve");
     } catch (error) {
-      toast.error(error?.error || "Rezervasiya yaratmaq mümkün olmadı");
+      toast.error(error?.error || "Əməliyyat mümkün olmadı");
     }
   };
 
@@ -103,11 +143,11 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
         <div className="reservation-header">
           <div className="reservation-header-left">
             <div className="reservation-header-icon">
-              <i className="bi bi-calendar-check"></i>
+              <i className={`bi ${action === "checkin" ? "bi-box-arrow-in-right" : "bi-calendar-check"}`}></i>
             </div>
             <span className="reservation-header-title">
               {preselectedRoom
-                ? `Otaq ${preselectedRoom.room_number} - Rezervasiya`
+                ? `Otaq ${preselectedRoom.room_number} — ${action === "checkin" ? "Giriş" : "Rezervasiya"}`
                 : "Yeni rezervasiya"}
             </span>
           </div>
@@ -118,6 +158,24 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
         {/* Body */}
         <div className="reservation-body">
+          {/* Action Type Toggle */}
+          <div className="rm-action-toggle mb-3">
+            <button
+              className={`rm-action-btn ${action === "reserve" ? "active" : ""}`}
+              onClick={() => setAction("reserve")}
+            >
+              <i className="bi bi-calendar-check"></i>
+              Rezervasiya
+            </button>
+            <button
+              className={`rm-action-btn ${action === "checkin" ? "active" : ""}`}
+              onClick={() => setAction("checkin")}
+            >
+              <i className="bi bi-box-arrow-in-right"></i>
+              Check-in
+            </button>
+          </div>
+
           {/* Guest Name */}
           <div className="mb-3">
             <label className="form-label">
@@ -144,6 +202,21 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
             />
           </div>
 
+          {/* Document ID */}
+          <div className="mb-3">
+            <label className="form-label">
+              <i className="bi bi-card-text" style={{ marginRight: 4 }}></i>
+              Şəxsiyyət vəsiqəsi / FİN
+            </label>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="AZE AA1234567 və ya FİN kodu"
+              value={documentId}
+              onChange={(e) => setDocumentId(e.target.value)}
+            />
+          </div>
+
           {/* Room Selection */}
           <div className="mb-3">
             <label className="form-label">
@@ -157,8 +230,9 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
               <option value="">Otaq seçin</option>
               {availableRooms.map((r) => (
                 <option key={r.id} value={r.id}>
-                  Otaq {r.room_number} — {r.room_type || "Standard"} ({r.status === "available" ? "Boş" : "Dolu"})
-                  {r.price > 0 ? ` — ${r.price} ₼` : ""}
+                  Otaq {r.room_number} — {r.room_type || "Standard"}
+                  {r.status === "reserved" ? " (Bron)" : r.status === "available" ? " (Boş)" : ""}
+                  {r.price > 0 ? ` — ${r.price} ₼/gecə` : ""}
                 </option>
               ))}
             </select>
@@ -190,6 +264,23 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
             </div>
           </div>
 
+          {/* Price Summary */}
+          {nights > 0 && roomPrice > 0 ? (
+            <div className="rm-price-summary mb-3">
+              <div className="rm-price-row">
+                <span>{roomPrice.toFixed(2)} ₼ × {nights} gecə</span>
+                <span className="rm-price-total">{totalPrice.toFixed(2)} ₼</span>
+              </div>
+            </div>
+          ) : nights > 0 ? (
+            <div className="rm-price-summary mb-3">
+              <div className="rm-price-row">
+                <span>Cəmi: {nights} gecə</span>
+                <span className="rm-price-total">{nights} gecə</span>
+              </div>
+            </div>
+          ) : null}
+
           {/* Guests */}
           <div className="row mb-3">
             <div className="col-6">
@@ -216,6 +307,23 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
             </div>
           </div>
 
+          {/* Deposit */}
+          <div className="mb-3">
+            <label className="form-label">
+              <i className="bi bi-wallet2" style={{ marginRight: 4 }}></i>
+              Ödənilən beh / Depozit (₼)
+            </label>
+            <input
+              type="number"
+              className="form-control"
+              placeholder="0.00"
+              min={0}
+              step="0.01"
+              value={deposit}
+              onChange={(e) => setDeposit(e.target.value)}
+            />
+          </div>
+
           {/* Notes */}
           <div className="mb-3">
             <label className="form-label">Qeydlər</label>
@@ -234,9 +342,30 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           <button className="btn-cancel" onClick={onHide}>
             Ləğv et
           </button>
+
+          {action === "checkin" ? (
+            <button
+              className="btn-checkin"
+              onClick={() => handleSubmit("checkin")}
+              disabled={isCreatingReservation}
+            >
+              {isCreatingReservation ? (
+                <>
+                  <span className="spinner-border spinner-border-sm" role="status"></span>
+                  Göndərilir...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-box-arrow-in-right"></i>
+                  Giriş et
+                </>
+              )}
+            </button>
+          ) : null}
+
           <button
             className="btn-submit"
-            onClick={handleSubmit}
+            onClick={() => handleSubmit("reserve")}
             disabled={isCreatingReservation}
           >
             {isCreatingReservation ? (

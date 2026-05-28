@@ -2,56 +2,31 @@ import React, { useState } from "react";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
 import { updateRoomStatus } from "../../redux/Slices/HotelSlice";
-import "./RoomCard.css";
+import "../Table/Table.css";
 
-const statusConfig = {
-  available: { label: "Boş", cssClass: "free" },
-  occupied: { label: "Dolu", cssClass: "occupied" },
-  cleaning: { label: "Təmizlənir", cssClass: "pending" },
-  maintenance: { label: "Təmirdə", cssClass: "other" },
+const statusToTableClass = {
+  available: "free",
+  occupied: "occupied",
+  cleaning: "pending",
+  reserved: "reserved",
+  maintenance: "other-waiter-table",
 };
 
 const statusOptions = [
   { value: "available", label: "Boş", icon: "bi-check-circle", color: "#10B981" },
   { value: "occupied", label: "Dolu", icon: "bi-person-fill", color: "#F59E0B" },
-  { value: "cleaning", label: "Təmizlənir", icon: "bi-arrow-repeat", color: "#3B82F6" },
+  { value: "cleaning", label: "Təmizlənir", icon: "bi-arrow-repeat", color: "#D97706" },
+  { value: "reserved", label: "Bron", icon: "bi-calendar-check", color: "#8B5CF6" },
   { value: "maintenance", label: "Təmirdə", icon: "bi-tools", color: "#EF4444" },
 ];
-
-const formatDateTime = (dateStr) => {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const mins = String(d.getMinutes()).padStart(2, "0");
-  return { date: `${day}.${month}`, time: `${hours}:${mins}` };
-};
 
 const RoomCard = ({ room, onRoomClick }) => {
   const dispatch = useDispatch();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   const status = room.status || "available";
-  const cfg = statusConfig[status] || statusConfig.available;
-
-  const guestName = room.guest_name || "";
+  const tableStatus = statusToTableClass[status] || "free";
   const balance = Number(room.folio_balance || 0);
-  const roomType = room.room_type || "";
-  const floor = room.floor || "";
-
-  const checkIn = formatDateTime(room.check_in);
-  const checkOut = formatDateTime(room.check_out);
-
-  // Calculate nights
-  let nights = "";
-  if (room.check_in && room.check_out) {
-    const d1 = new Date(room.check_in);
-    const d2 = new Date(room.check_out);
-    const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
-    if (diff > 0) nights = `${diff} gecə`;
-  }
 
   const handleStatusChange = async (newStatus, e) => {
     e.stopPropagation();
@@ -65,82 +40,91 @@ const RoomCard = ({ room, onRoomClick }) => {
   };
 
   return (
-    <div
-      className="room-wrapper"
-      onClick={() => onRoomClick?.(room)}
-      style={{ cursor: "pointer" }}
-    >
-      <div className={`room-surface ${cfg.cssClass}`}>
+    <div className="table-wrapper wrapper-square" style={{ cursor: "pointer" }} onClick={() => onRoomClick?.(room)}>
+      <div className={`table-surface table-square ${tableStatus}`}>
         {/* Status Dot */}
-        <div className={`room-status-dot ${status}`}></div>
+        <div className={`status-dot ${status === "occupied" ? "has-orders" : ""}`}></div>
 
         {/* Center Content */}
-        <div className="room-content">
-          <h3 className={`room-number ${cfg.cssClass}`}>
+        <div className="table-content">
+          <h3 className={`table-name ${tableStatus}`}>
             {room.room_number || "?"}
           </h3>
+          <p className={`table-amount ${tableStatus}`}>
+            {balance.toFixed(2)} ₼
+          </p>
 
-          {roomType || floor ? (
-            <p className="room-detail">
-              {roomType}{roomType && floor ? " · " : ""}{floor ? `${floor}. mərtəbə` : ""}
-            </p>
-          ) : null}
-
-          {status === "occupied" && guestName ? (
-            <div className={`room-guest ${cfg.cssClass}`}>
+          {status === "occupied" && room.guest_name ? (
+            <div className={`table-waiter-info ${tableStatus}`}>
               <i className="bi bi-person-fill"></i>
-              <span>{guestName}</span>
+              <span>{room.guest_name}</span>
+            </div>
+          ) : status === "reserved" ? (
+            <div className={`table-waiter-info ${tableStatus}`}>
+              <i className="bi bi-calendar-check"></i>
+              <span>Bron</span>
+            </div>
+          ) : status !== "occupied" ? (
+            <div className={`table-waiter-info ${tableStatus}`}>
+              <i className="bi bi-info-circle"></i>
+              <span>{
+                status === "available" ? "Boş" :
+                status === "cleaning" ? "Təmizlənir" :
+                status === "maintenance" ? "Təmirdə" : status
+              }</span>
             </div>
           ) : null}
 
-          {/* Check-in / Check-out times */}
-          {status === "occupied" && (checkIn || checkOut) ? (
-            <div className="room-check-dates">
-              {checkIn ? (
-                <span className="room-check-item">
-                  <i className="bi bi-box-arrow-in-right"></i>
-                  {checkIn.date} {checkIn.time}
-                </span>
-              ) : null}
-              {checkOut ? (
-                <span className="room-check-item">
-                  <i className="bi bi-box-arrow-right"></i>
-                  {checkOut.date} {checkOut.time}
-                </span>
-              ) : null}
-            </div>
-          ) : null}
-
-          {nights ? (
-            <div className="room-nights">
-              <i className="bi bi-calendar3"></i>
-              <span>{nights}</span>
-            </div>
-          ) : null}
-
-          {balance > 0 ? (
-            <div className="room-balance">{balance.toFixed(2)} ₼</div>
-          ) : null}
-
-          {status === "cleaning" ? (
-            <div className="room-sub-status">
-              <i className="bi bi-arrow-repeat"></i> Təmizlənir
-            </div>
-          ) : null}
-
-          {status === "maintenance" ? (
-            <div className="room-sub-status">
-              <i className="bi bi-tools"></i> Təmirdə
+          {/* Check-out tarixi — yalnız dolu otaqlarda */}
+          {status === "occupied" && room.check_out ? (
+            <div style={{
+              fontSize: "10px",
+              fontWeight: 600,
+              color: "#1d4ed8",
+              marginTop: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "3px",
+            }}>
+              <i className="bi bi-box-arrow-right" style={{ fontSize: "9px" }}></i>
+              Çıxış: {new Date(room.check_out).toLocaleDateString("az-AZ", { day: "2-digit", month: "2-digit" })}
             </div>
           ) : null}
         </div>
 
-        {/* Badge */}
-        <div className="room-badge">{cfg.label}</div>
+        {/* Print Action */}
+        <div className="print-action">
+          <div className="notification-badge">0</div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+        </div>
 
-        {/* Status Change Button */}
+        {/* Status Change Gear */}
         <div
-          className="room-status-action"
+          style={{
+            position: "absolute",
+            bottom: "-8px",
+            left: "-8px",
+            width: "26px",
+            height: "26px",
+            background: "white",
+            borderRadius: "50%",
+            boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 20,
+            color: "#6B7280",
+            fontSize: "12px",
+            border: "1px solid #E5E7EB",
+            transition: "all 0.15s",
+          }}
+          className="room-status-trigger"
           onClick={(e) => {
             e.stopPropagation();
             setShowStatusMenu(!showStatusMenu);
@@ -154,20 +138,53 @@ const RoomCard = ({ room, onRoomClick }) => {
         {showStatusMenu && (
           <>
             <div
-              className="room-status-overlay"
+              style={{
+                position: "fixed",
+                top: 0, left: 0, right: 0, bottom: 0,
+                zIndex: 99,
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowStatusMenu(false);
               }}
             ></div>
             <div
-              className="room-status-menu"
+              style={{
+                position: "absolute",
+                bottom: "22px",
+                left: "-5px",
+                background: "white",
+                borderRadius: "8px",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
+                zIndex: 100,
+                minWidth: "150px",
+                padding: "4px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "2px",
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               {statusOptions.map((opt) => (
                 <button
                   key={opt.value}
-                  className={`room-status-option ${status === opt.value ? "active" : ""}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px 12px",
+                    border: "none",
+                    background: status === opt.value ? "#EFF6FF" : "transparent",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: status === opt.value ? 600 : 500,
+                    color: status === opt.value ? "#1E3A8A" : "#374151",
+                    width: "100%",
+                    textAlign: "left",
+                    transition: "background 0.1s",
+                  }}
+                  className="room-status-option-hover"
                   onClick={(e) => {
                     if (status !== opt.value) {
                       handleStatusChange(opt.value, e);
@@ -176,9 +193,11 @@ const RoomCard = ({ room, onRoomClick }) => {
                     }
                   }}
                 >
-                  <i className={`bi ${opt.icon}`} style={{ color: opt.color }}></i>
+                  <i className={`bi ${opt.icon}`} style={{ color: opt.color, fontSize: "14px", width: "18px", textAlign: "center" }}></i>
                   <span>{opt.label}</span>
-                  {status === opt.value && <i className="bi bi-check-lg ms-auto"></i>}
+                  {status === opt.value && (
+                    <i className="bi bi-check-lg" style={{ marginLeft: "auto", color: "#053796", fontSize: "13px" }}></i>
+                  )}
                 </button>
               ))}
             </div>
@@ -189,4 +208,4 @@ const RoomCard = ({ room, onRoomClick }) => {
   );
 };
 
-export default RoomCard;
+export default React.memo(RoomCard);

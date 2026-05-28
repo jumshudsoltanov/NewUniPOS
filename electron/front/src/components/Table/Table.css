@@ -103,8 +103,8 @@
 }
 
 .table-surface.pending {
-  background-color: #c4b5fd !important;
-  border: 2px solid #6d28d9;
+  background-color: #fde68a !important;
+  border: 2px solid #d97706;
 }
 
 .table-surface.my-table {
@@ -115,6 +115,12 @@
 .table-surface.other-waiter-table {
   background-color: #fecaca !important;
   border: 1.5px solid #dc2626;
+}
+
+/* Rezervasiya (bron) — bənövşəyi */
+.table-surface.reserved {
+  background-color: #c4b5fd !important;
+  border: 2px solid #7c3aed;
 }
 
 /* Çoxlu açıq çek (count > 1) — benovşeyi ton */
@@ -415,6 +421,10 @@
 }
 
 .table-surface.pending .table-waiter-info {
+  color: #92400e;
+}
+
+.table-surface.reserved .table-waiter-info {
   color: #6d28d9;
 }
 

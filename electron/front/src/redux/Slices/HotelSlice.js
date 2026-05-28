@@ -189,12 +189,17 @@ const HotelSlice = createSlice({
       })
       .addCase(createReservation.fulfilled, (state, action) => {
         state.isCreatingReservation = false;
-        // Set room status to occupied immediately
         const booking = action.payload?.data || action.payload;
         const roomId = booking?.room_id;
         if (roomId) {
           const room = state.rooms.find((r) => r.id === roomId);
-          if (room) room.status = "occupied";
+          if (room) {
+            // Use status from backend response or infer from payload
+            const newStatus = booking?.status || (action.meta?.arg?.status === "occupied" ? "occupied" : "reserved");
+            room.status = newStatus;
+            room.guest_name = booking?.guest_name || room.guest_name;
+            if (booking?.folio_balance !== undefined) room.folio_balance = booking.folio_balance;
+          }
         }
       })
       .addCase(createReservation.rejected, (state) => {
