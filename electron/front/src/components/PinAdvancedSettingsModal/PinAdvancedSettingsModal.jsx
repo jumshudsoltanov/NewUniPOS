@@ -589,7 +589,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   };
 
   const mockKitchenProps = {
-      checkData: { id: "1024", customerName: "Əli Əliyev" },
+      checkData: { id: "1024", customerName: "Əli Əliyev", guest_count: 3 },
       waiter: "Zaur",
       hallName: "Zal 1",
       table: "Masa 5",
@@ -1062,11 +1062,12 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                             { key: 'showHallTable', label: 'Zal/Masa' },
                             { key: 'showSaleType', label: 'Satış Tipi' },
                             { key: 'showCustomer', label: 'Müştəri Adı' },
+                            { key: 'showGuestCount', label: 'Qonaq Sayı' },
                             { key: 'showHeaderDate', label: 'Çap Tarixi' },
                          ].map(opt => (
                              <div key={opt.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                <span style={{ fontSize: '14px', fontWeight: '500', color: '#444' }}>{opt.label}</span>
-                               <div className={`wa-toggle ${(receiptSettings.kitchen[opt.key] ?? true) ? 'wa-toggle-on' : ''}`} onClick={() => updateReceiptSetting('kitchen', opt.key, !(receiptSettings.kitchen[opt.key] ?? true))} style={{ cursor: 'pointer', pointerEvents: 'auto' }}>
+                               <div className={`wa-toggle ${(receiptSettings.kitchen[opt.key] ?? (opt.key === 'showGuestCount' ? false : true)) ? 'wa-toggle-on' : ''}`} onClick={() => updateReceiptSetting('kitchen', opt.key, !(receiptSettings.kitchen[opt.key] ?? (opt.key === 'showGuestCount' ? false : true)))} style={{ cursor: 'pointer', pointerEvents: 'auto' }}>
                                   <div className="wa-toggle-thumb" />
                                </div>
                             </div>

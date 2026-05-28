@@ -116,6 +116,7 @@ const KitchenReceipt = ({
     const showHallTable = isVisible("showHallTable", true);
     const showSaleType = isVisible("showSaleType", true);
     const showCustomer = isVisible("showCustomer", true);
+    const showGuestCount = isVisible("showGuestCount", false);
     const showHeaderDate = isVisible("showHeaderDate", true);
     const customFooterText = localSettings.footerText !== undefined && localSettings.footerText !== "" ? localSettings.footerText : "Mətbəxə uğurlar!";
     const fontFamily = localSettings.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace";
@@ -255,6 +256,13 @@ const KitchenReceipt = ({
                         <span style={styles.value}>
                             {selectedCustomer?.name || checkData?.customerName}
                         </span>
+                    </div>
+                )}
+
+                {showGuestCount && checkData?.guest_count > 0 && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Qonaq sayı: </span>
+                        <span style={styles.value}>{checkData.guest_count}</span>
                     </div>
                 )}
             </div>

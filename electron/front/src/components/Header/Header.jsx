@@ -486,11 +486,10 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                   <div className="tools-divider"></div>
                   <button
                     className="create-order-btn small-btn hotel-header-btn"
-                    style={{ opacity: 0.65 }}
-                    title="Hesabat (hazırlanır)"
-                  >
-                    <i className="bi bi-graph-up" style={{ fontSize: "16px" }}></i>
-                    <span className="d-none d-xl-inline">Hesabat</span>
+                    onClick={() => navigate("/checks")}
+                    title="Çeklər">
+                    <i className="bi bi-receipt" style={{ fontSize: "16px" }}></i>
+                    <span className="d-none d-xl-inline">Çeklər</span>
                   </button>
                 </>
               ) : (
@@ -766,67 +765,6 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
       )}
 
       {/* HOTEL FILTER STRIP — shown on tables page in hotel mode */}
-      {Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 && isTablesPage && (
-        <div className="hotel-filter-strip">
-          <div className="hotel-filter-inner">
-            {/* Floor */}
-            {roomFloors.length > 0 && (
-              <select
-                value={selectedFloor ?? ""}
-                onChange={(e) => dispatch(setSelectedFloor(e.target.value ? Number(e.target.value) : null))}
-                className="hotel-filter-select"
-              >
-                <option value="">Mərtəbə</option>
-                {roomFloors.map((f) => (
-                  <option key={f} value={f}>{f}. mərtəbə</option>
-                ))}
-              </select>
-            )}
-
-            {/* Room Type */}
-            {roomTypeList.length > 0 && (
-              <select
-                value={selectedRoomType ?? ""}
-                onChange={(e) => dispatch(setSelectedRoomType(e.target.value || null))}
-                className="hotel-filter-select"
-              >
-                <option value="">Tip</option>
-                {roomTypeList.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            )}
-
-            {/* Search */}
-            <div className="hotel-filter-search">
-              <i className="bi bi-search hotel-filter-search-icon"></i>
-              <input
-                type="text"
-                placeholder="Otaq nömrəsi və ya qonaq..."
-                value={searchText}
-                onChange={(e) => dispatch(setSearchText(e.target.value))}
-                className="hotel-filter-input"
-              />
-            </div>
-
-            {/* Clear */}
-            {activeFilterCount > 0 && (
-              <button className="hotel-filter-clear" onClick={() => dispatch(clearFilters())}>
-                <i className="bi bi-x-lg"></i>
-              </button>
-            )}
-
-            {/* Legend */}
-            <div className="hotel-filter-legend">
-              <span className="hotel-legend-item"><span className="hotel-legend-dot" style={{ background: "#10B981" }}></span>Boş</span>
-              <span className="hotel-legend-item"><span className="hotel-legend-dot" style={{ background: "#F59E0B" }}></span>Dolu</span>
-              <span className="hotel-legend-item"><span className="hotel-legend-dot" style={{ background: "#3B82F6" }}></span>Təmizlənir</span>
-              <span className="hotel-legend-item"><span className="hotel-legend-dot" style={{ background: "#EF4444" }}></span>Təmirdə</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MOBILE FOOTER (only for restaurant mode add button) */}
       {!showBack && Number(loginedProfileData?.data?.profile?.is_hotel_mode) !== 1 && (
         <div className="mobile-footer d-flex d-md-none">

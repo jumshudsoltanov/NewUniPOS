@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState, useRef } from "react"
 import { Container, Col, Row, Modal } from "react-bootstrap";
 import "./Check.css";
 import "../Header/Header.css";
+import "./HotelCheck.css";
 import Menu from "../Menu/Menu";
 import CheckHeader from "./CheckHeader";
 import CheckMain from "./CheckMain";
@@ -33,8 +34,9 @@ import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscount
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
-import { printCustomerReceipt, processAndPrintOrders } from "../../utils/printerHelpers.jsx";
+import { printCustomerReceipt, processAndPrintOrders, resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
+import { fetchRooms, sendBookingWhatsapp, updateFolioBalance } from "../../redux/Slices/HotelSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 import OrderLogsModal from "./OrderLogsModal"; // Import Modal
@@ -186,6 +188,262 @@ const Check = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const tableId = searchParams.get("tableId");
+
+  // ── Hotel mode (detected from ?hotel=roomId search param) ──
+  const isHotelMode = searchParams.get("hotel") !== null;
+  const hotelRoomId = searchParams.get("hotel");
+  const { rooms, isSendingWhatsapp } = useSelector((state) => state.HotelSlice);
+  const hotelRoom = useMemo(() => {
+    if (!isHotelMode || !hotelRoomId) return null;
+    return rooms.find((r) => String(r.id) === hotelRoomId) || null;
+  }, [isHotelMode, hotelRoomId, rooms]);
+
+  // Hotel actions state
+  const [showHotelModal, setShowHotelModal] = useState(false);
+  const [depositValue, setDepositValue] = useState("0");
+  const [showDepositKeypad, setShowDepositKeypad] = useState(false);
+  const [isUpdatingDeposit, setIsUpdatingDeposit] = useState(false);
+
+  // WhatsApp modal state
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [waCustomMessage, setWaCustomMessage] = useState("");
+  const [waSendMode, setWaSendMode] = useState("now");
+  const [waScheduleTime, setWaScheduleTime] = useState("");
+  const [waAutoRemind, setWaAutoRemind] = useState(false);
+  const [waRemindHours, setWaRemindHours] = useState(2);
+  const [waReminderSent, setWaReminderSent] = useState(false);
+  const [waReminderType, setWaReminderType] = useState("info");
+  const [countdownText, setCountdownText] = useState("");
+
+  const buildDefaultMessage = useCallback((type) => {
+    if (!hotelRoom) return "";
+    const roomNumber = hotelRoom.room_number || "?";
+    const guestName = hotelRoom.guest_name || "qonaq";
+    const fmt = (d) => d ? new Date(d).toLocaleString("az-AZ", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+    if (type === "checkout") {
+      return [
+        `\u{1F514} ÇIXIŞ XATIRLATMASI \u{1F514}`,
+        ``,
+        `Hörmətli ${guestName},`,
+        `Otaq rezervasiyanızın çıxış vaxtı yaxınlaşır:`,
+        ``,
+        `Otaq: ${roomNumber}`,
+        hotelRoom.check_out ? `Çıxış: ${fmt(hotelRoom.check_out)}` : "",
+        ``,
+        `Zəhmət olmasa vaxtında çıxış etməyinizi xahiş edirik.`,
+        `Təşəkkür edirik!`,
+      ].filter(Boolean).join("\n");
+    }
+    return [
+      `\u{1F514} OTAQ XATIRLATMASI \u{1F514}`,
+      ``,
+      `Hörmətli ${guestName},`,
+      `Otaq rezervasiyanızın təfərrüatları:`,
+      ``,
+      `Otaq: ${roomNumber}`,
+      hotelRoom.check_in ? `Giriş: ${fmt(hotelRoom.check_in)}` : "",
+      hotelRoom.check_out ? `Çıxış: ${fmt(hotelRoom.check_out)}` : "",
+      ``,
+      `Xoş gəlmisiniz!`,
+    ].filter(Boolean).join("\n");
+  }, [hotelRoom]);
+
+  useEffect(() => {
+    if (isHotelMode && hotelRoom) {
+      const bal = Number(hotelRoom.folio_balance || 0);
+      setDepositValue(bal > 0 ? String(bal) : "0");
+    }
+  }, [isHotelMode, hotelRoom]);
+
+  // Fetch rooms if in hotel mode and empty
+  useEffect(() => {
+    const pid = loginedProfileData?.data?.profile?.id;
+    if (isHotelMode && pid && rooms.length === 0) {
+      dispatch(fetchRooms(pid));
+    }
+  }, [isHotelMode, loginedProfileData?.data?.profile?.id, rooms.length, dispatch]);
+
+  const hotelProfileId = loginedProfileData?.data?.profile?.id;
+
+  const handleHotelOpenWhatsApp = () => {
+    if (!hotelRoom) return;
+    if (!hotelRoom.guest_phone) { toast.error("Nömrə yoxdur"); return; }
+    if (!hotelRoom.booking_id) { toast.error("Rezervasiya ID yoxdur"); return; }
+    setWaReminderType("info");
+    setWaCustomMessage(buildDefaultMessage("info"));
+    setWaSendMode("now");
+    setWaScheduleTime("");
+    setShowWhatsAppModal(true);
+  };
+
+  const handleWASend = () => {
+    if (!hotelRoom) return;
+    const payload = {
+      bookingId: hotelRoom.booking_id,
+      profileId: hotelProfileId,
+      custom_message: waCustomMessage || undefined,
+      reminder_type: waReminderType === "checkout" ? "checkout_reminder" : "info",
+    };
+    if (waSendMode === "schedule" && waScheduleTime) {
+      payload.schedule_time = waScheduleTime;
+    }
+    dispatch(sendBookingWhatsapp(payload))
+      .unwrap()
+      .then((res) => {
+        if (res?.data?.scheduled) {
+          toast.success("WhatsApp təyin edildi");
+        } else {
+          toast.success("WhatsApp göndərildi");
+        }
+        setShowWhatsAppModal(false);
+      })
+      .catch((err) => toast.error(err?.error || "WhatsApp göndərilmədi"));
+  };
+
+  const handleSendCheckoutReminder = () => {
+    if (!hotelRoom) return;
+    dispatch(sendBookingWhatsapp({
+      bookingId: hotelRoom.booking_id,
+      profileId: hotelProfileId,
+      reminder_type: "checkout_reminder",
+    }))
+      .unwrap()
+      .then(() => {
+        toast.success("Çıxış xatırlatması göndərildi");
+        setWaReminderSent(true);
+      })
+      .catch((err) => toast.error(err?.error || "Xatırlatma göndərilmədi"));
+  };
+
+  // Check-out countdown and auto-reminder interval
+  useEffect(() => {
+    if (!isHotelMode || !hotelRoom?.check_out) return;
+    const updateCountdown = () => {
+      const now = new Date();
+      const co = new Date(hotelRoom.check_out);
+      const diffMs = co - now;
+      if (diffMs <= 0) {
+        setCountdownText("Çıxış vaxtı keçib");
+        return;
+      }
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      if (hours > 24) {
+        setCountdownText("");
+      } else if (hours > 0) {
+        setCountdownText(`Çıxışa ${hours} saat ${mins} dəq qaldı`);
+      } else {
+        setCountdownText(`Çıxışa ${mins} dəq qaldı`);
+      }
+      // Auto-reminder
+      if (waAutoRemind && !waReminderSent && diffMs > 0 && diffMs <= waRemindHours * 60 * 60 * 1000) {
+        dispatch(sendBookingWhatsapp({
+          bookingId: hotelRoom.booking_id,
+          profileId: hotelProfileId,
+          reminder_type: "checkout_reminder",
+        }))
+          .unwrap()
+          .then(() => setWaReminderSent(true))
+          .catch(() => {});
+      }
+    };
+    updateCountdown();
+    const iv = setInterval(updateCountdown, 60000);
+    return () => clearInterval(iv);
+  }, [isHotelMode, hotelRoom, waAutoRemind, waRemindHours, waReminderSent, hotelProfileId, dispatch]);
+
+  const handleDepositNum = (n) => {
+    setDepositValue((p) => (p === "0" && n !== "." ? String(n) : n === "." && p.includes(".") ? p : p + String(n)));
+  };
+  const handleDepositBs = () => setDepositValue((p) => (p.length > 1 ? p.slice(0, -1) : "0"));
+  const handleDepositClear = () => setDepositValue("0");
+
+  const handleDepositSave = async () => {
+    if (!hotelRoom) return;
+    const val = parseFloat(depositValue) || 0;
+    setIsUpdatingDeposit(true);
+    try {
+      await dispatch(updateFolioBalance({ roomId: hotelRoom.id, profileId: hotelProfileId, balance: val })).unwrap();
+      toast.success("Depozit yeniləndi");
+      setShowDepositKeypad(false);
+      dispatch(fetchRooms(hotelProfileId));
+    } catch { toast.error("Depozit yenilənə bilmədi"); }
+    finally { setIsUpdatingDeposit(false); }
+  };
+
+  const cashierPrinters = useMemo(() => {
+    return resolveCashierPrintersForPrint(loginedProfileData?.data?.printers || []);
+  }, [loginedProfileData]);
+
+  const handleHotelPrintReceipt = async () => {
+    if (!hotelRoom) return;
+    const printers = cashierPrinters;
+    if (!printers.length) { toast.error("Kassa printeri tapılmadı"); return; }
+    if (!window.electronAPI?.printReceipt) { toast.error("Çap sistemi mövcud deyil"); return; }
+
+    const d1 = hotelRoom.check_in ? new Date(hotelRoom.check_in) : null;
+    const d2 = hotelRoom.check_out ? new Date(hotelRoom.check_out) : null;
+    const nights = d1 && d2 ? Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) : 0;
+    const bal = Number(hotelRoom.folio_balance || 0);
+    const line = (a, b) => `<tr><td style="padding:4px 2px;border-bottom:1px dashed #666;font-size:12px;font-weight:600">${a}</td><td style="padding:4px 2px;border-bottom:1px dashed #666;font-size:12px;font-weight:600;text-align:right">${b}</td></tr>`;
+
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Qəbz</title></head><body style="font-family:'Arial',sans-serif;width:300px;margin:0 auto;padding:10px">
+  <div style="text-align:center;margin-bottom:12px">
+    <div style="font-size:16px;font-weight:700">QƏBZ</div>
+    <div style="font-size:10px;color:#666">Otaq Qəbzi</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+    ${line("Otaq", hotelRoom.room_number || "")}
+    ${line("Tip", hotelRoom.room_type || "—")}
+    ${line("Mərtəbə", hotelRoom.floor ? `${hotelRoom.floor}. mərtəbə` : "—")}
+    ${line("Qonaq", hotelRoom.guest_name || "—")}
+    ${line("Telefon", hotelRoom.guest_phone || "—")}
+  </table>
+  ${d1 || d2 ? `<table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">Tarixlər</td></tr>
+    ${d1 ? line("Giriş", `${String(d1.getDate()).padStart(2,"0")}.${String(d1.getMonth()+1).padStart(2,"0")}.${d1.getFullYear()}`) : ""}
+    ${d2 ? line("Çıxış", `${String(d2.getDate()).padStart(2,"0")}.${String(d2.getMonth()+1).padStart(2,"0")}.${d2.getFullYear()}`) : ""}
+    ${nights > 0 ? line("Gecə", `${nights}`) : ""}
+  </table>` : ""}
+  <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
+    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">Maliyyə</td></tr>
+    ${line("Depozit", `${bal.toFixed(2)} ₼`)}
+  </table>
+  <div style="border-top:2px solid #000;margin:8px 0"></div>
+  <div style="text-align:center;font-size:10px;color:#999;margin-top:8px">
+    ${new Date().toLocaleString("az-AZ")}<br>
+    Təşəkkür edirik!
+  </div>
+</body></html>`;
+
+    try {
+      for (const printer of printers) {
+        const connType = printer.connection_type;
+        const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!printer.ip);
+        const hasUsbName = !!(printer.usb_name && printer.usb_name.trim() && printer.usb_name !== "RASTER");
+        const ps = {
+          paper_size: printer.paper_size || "80", cut_mode: printer.cut_mode || "full",
+          sound_notify: printer.sound_notify || 0, cash_drawer: printer.cash_drawer || 0,
+          encoding: printer.encoding || "utf8", copies: printer.copies || 1,
+          darkness: printer.darkness || 5, trailing_space: printer.trailing_space || 0,
+          receipt_header: printer.receipt_header || null, receipt_footer: printer.receipt_footer || null,
+          bold_header: printer.bold_header || 0, double_height_header: printer.double_height_header || 0,
+          font_family: printer.font_family || "Arial", fast_print: printer.fast_print ? 1 : 0,
+          print_logo: printer.print_logo != null ? Number(printer.print_logo) : 1,
+          rotate_180: printer.rotate_180 ? 1 : 0, usb_name: hasUsbName ? printer.usb_name : null,
+          printer_label: printer.local_name || printer.name || "",
+        };
+        const payload = isNetwork && printer.ip && !hasUsbName
+          ? { html, printerName: "", printerIp: String(printer.ip), printerPort: Number(printer.port) || 9100, printerSettings: ps }
+          : { html, printerName: String(hasUsbName ? printer.usb_name : (printer.local_name || printer.name) || ""), printerSettings: ps };
+        await window.electronAPI.printReceipt(payload);
+      }
+      toast.success("Qəbz çap edildi");
+    } catch (err) {
+      toast.error("Çap xətası: " + (err.message || "Bilinməyən xəta"));
+    }
+  };
 
   // Live timer status for sidebar badge (reads directly from Redux, bypasses Check equality filter)
   const liveTimerStatus = useSelector((state) => {
@@ -1281,9 +1539,45 @@ const Check = () => {
 
   const isMobile = window.innerWidth < 992;
 
+  const showHcTopbar = isHotelMode && hotelRoom;
   return (
-    <Container fluid className={`p-0 overflow-hidden ${isMobile ? "vh-100 d-flex flex-column" : "h-100"}`}>
-      <Row className={`g-0 ${isMobile ? "flex-grow-1" : "h-100"}`}>
+    <Container fluid className={`p-0 overflow-hidden ${isMobile || isHotelMode ? "d-flex flex-column" : ""} ${isMobile ? "vh-100" : "h-100"}`}>
+      {showHcTopbar ? (
+        <div className="hc-topbar">
+          <div className="hc-topbar-left">
+            <button className="hc-back-btn" onClick={() => navigate(-1)}>
+              <i className="bi bi-chevron-left"></i>
+            </button>
+            <span className="hc-room-badge">Otaq</span>
+            <span className="hc-room-number">{hotelRoom?.room_number || "?"}</span>
+            {hotelRoom?.room_type && <span className="hc-room-meta"><i className="bi bi-door-open"></i>{hotelRoom.room_type}</span>}
+            {hotelRoom?.floor && <span className="hc-room-meta"><i className="bi bi-layers"></i>{hotelRoom.floor}. mərtəbə</span>}
+          </div>
+          <div className="hc-topbar-right">
+            <span className="hc-topbar-guest">
+              <i className="bi bi-person-fill"></i>{hotelRoom?.guest_name || ""}
+            </span>
+            <button className="hc-topbar-btn" onClick={handleHotelOpenWhatsApp} disabled={isSendingWhatsapp || !hotelRoom?.guest_phone || !hotelRoom?.booking_id} title="WhatsApp">
+              <i className="bi bi-whatsapp"></i>
+            </button>
+            <button className="hc-topbar-btn" onClick={handleHotelPrintReceipt} disabled={!window.electronAPI?.printReceipt} title="Qəbz çap et">
+              <i className="bi bi-printer"></i>
+            </button>
+            <button className="hc-topbar-btn" onClick={() => setShowHotelModal(true)} title="Otaq detalları">
+              <i className="bi bi-info-circle"></i>
+            </button>
+            <span className="hc-status-pill">Dolu</span>
+            <span className="hc-balance-pill">{(Number(hotelRoom?.folio_balance) || 0).toFixed(2)} ₼</span>
+          </div>
+        </div>
+      ) : null}
+      {isHotelMode && hotelRoom && countdownText ? (
+        <div className={`hc-countdown ${new Date(hotelRoom.check_out) <= new Date() ? "hc-countdown-expired" : ""}`}>
+          <i className="bi bi-clock"></i>
+          {countdownText}
+        </div>
+      ) : null}
+      <Row className={`g-0 ${isMobile || isHotelMode ? "flex-grow-1" : "h-100"}`} style={isHotelMode ? { minHeight: 0 } : undefined}>
         <Col
           md={12}
           lg={5}
@@ -1591,6 +1885,17 @@ const Check = () => {
                     </svg>
                   </div>
                 )}
+
+                {isHotelMode && hotelRoom && (
+                  <div className="sidebar-icon" onClick={() => setShowHotelModal(true)} title="Otaq detalları">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#343434" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 22V2h2v18h18v2H2z"/>
+                      <path d="M6 12V6h10v2H8v4H6z"/>
+                      <path d="M8 18v-4h12v4H8z"/>
+                      <path d="M14 14v4M10 14v4"/>
+                    </svg>
+                  </div>
+                )}
               </div>
 
               <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
@@ -1801,16 +2106,19 @@ const Check = () => {
               className="check-content flex-grow-1 d-flex flex-column h-100 position-relative"
               style={{ backgroundColor: "#EBF2FE" }}
             >
-              <CheckHeader
-                isSidebarOpen={isSidebarOpen}
-                toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                orders={currentOrder}
-                table={currentTable}
-                hall={currentHall}
-                selectedCustomer={selectedCustomer}
-                activeTableCount={activeTableCount}
-                onBeforeCreateOrder={autoSendIfNeeded}
-              />
+              {isHotelMode && hotelRoom ? null : (
+                <CheckHeader
+                  isSidebarOpen={isSidebarOpen}
+                  toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  orders={currentOrder}
+                  table={currentTable}
+                  hall={currentHall}
+                  selectedCustomer={selectedCustomer}
+                  activeTableCount={activeTableCount}
+                  onBeforeCreateOrder={autoSendIfNeeded}
+                />
+              )}
+
               <CheckMain orders={currentOrder} table={currentTable} />
               <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} />
               <TimerModal show={showTimerModal} onHide={() => setShowTimerModal(false)} order={currentOrder} table={currentTable} />
@@ -2751,6 +3059,309 @@ const Check = () => {
         }}
         productToEdit={productToEdit}
       />
+
+      {/* Hotel modal */}
+      <Modal show={showHotelModal} onHide={() => setShowHotelModal(false)} centered size="md">
+        <Modal.Header closeButton style={{ background: "#4f85f4", color: "#fff", borderBottom: "none", padding: "14px 18px" }}>
+          <Modal.Title style={{ fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", gap: "10px" }}>
+            <i className="bi bi-building"></i>
+            <span>Otaq {hotelRoom?.room_number || ""}</span>
+            {hotelRoom?.room_type && (
+              <span style={{ padding: "2px 8px", background: "rgba(255,255,255,0.2)", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>{hotelRoom.room_type}</span>
+            )}
+            {hotelRoom?.floor && (
+              <span style={{ fontSize: "12px", fontWeight: 500, color: "rgba(255,255,255,0.8)" }}>{hotelRoom.floor}. mərtəbə</span>
+            )}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ background: "#ebf2fe", padding: "20px" }}>
+          {hotelRoom && (
+            <Row className="g-3">
+              {/* Sol sütun — qonaq + tarixlər */}
+              <Col md={7}>
+                {/* Qonaq məlumatları */}
+                <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", marginBottom: "14px", overflow: "hidden" }}>
+                  <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <i className="bi bi-person-fill" style={{ color: "#4f85f4" }}></i> Qonaq məlumatları
+                  </div>
+                  <div style={{ padding: "12px 14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#F9FAFB", borderRadius: "6px", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 500, color: "#6B7280" }}>Ad Soyad</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#1F2937" }}>{hotelRoom.guest_name || "—"}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", background: "#F9FAFB", borderRadius: "6px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 500, color: "#6B7280" }}>Telefon</span>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#053796" }}>{hotelRoom.guest_phone || "—"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tarixlər */}
+                {(hotelRoom.check_in || hotelRoom.check_out) && (
+                  <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", overflow: "hidden" }}>
+                    <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <i className="bi bi-calendar3" style={{ color: "#4f85f4" }}></i> Rezervasiya
+                    </div>
+                    <div style={{ padding: "14px" }}>
+                      <Row className="g-3">
+                        <Col xs={6}>
+                          <div style={{ textAlign: "center", padding: "12px", background: "#F9FAFB", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                            <div style={{ fontSize: "16px", color: "#4f85f4", marginBottom: "4px" }}><i className="bi bi-box-arrow-in-right"></i></div>
+                            <div style={{ fontSize: "9px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: "4px" }}>Giriş</div>
+                            <div style={{ fontSize: "12px", fontWeight: 700, color: "#1F2937" }}>{hotelRoom.check_in ? new Date(hotelRoom.check_in).toLocaleString("az-AZ", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—"}</div>
+                          </div>
+                        </Col>
+                        <Col xs={6}>
+                          <div style={{ textAlign: "center", padding: "12px", background: "#F9FAFB", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                            <div style={{ fontSize: "16px", color: "#4f85f4", marginBottom: "4px" }}><i className="bi bi-box-arrow-right"></i></div>
+                            <div style={{ fontSize: "9px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: "4px" }}>Çıxış</div>
+                            <div style={{ fontSize: "12px", fontWeight: 700, color: "#1F2937" }}>{hotelRoom.check_out ? new Date(hotelRoom.check_out).toLocaleString("az-AZ", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—"}</div>
+                          </div>
+                        </Col>
+                      </Row>
+                      {(() => {
+                        if (!hotelRoom.check_in || !hotelRoom.check_out) return null;
+                        const d1 = new Date(hotelRoom.check_in), d2 = new Date(hotelRoom.check_out);
+                        const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+                        if (diff <= 0) return null;
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", marginTop: "10px", fontSize: "11px", fontWeight: 600, color: "#6B7280", background: "#F3F4F6", padding: "6px 14px", borderRadius: "6px" }}>
+                            <i className="bi bi-moon-stars" style={{ color: "#4f85f4" }}></i> {diff} gecə
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </Col>
+
+              {/* Sağ sütun — depozit + əməliyyatlar */}
+              <Col md={5}>
+                {/* Depozit */}
+                <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", marginBottom: "14px", overflow: "hidden" }}>
+                  <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <i className="bi bi-wallet2" style={{ color: "#4f85f4" }}></i> Depozit
+                  </div>
+                  <div style={{ padding: "14px" }}>
+                    {!showDepositKeypad ? (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: "22px", fontWeight: 800, color: "#D97706" }}>{(Number(hotelRoom.folio_balance) || 0).toFixed(2)} ₼</span>
+                        <button style={{ padding: "7px 14px", border: "none", borderRadius: "6px", background: "#053796", color: "#fff", fontSize: "11px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: "5px", boxShadow: "0 2px 6px rgba(5,55,150,0.15)" }}
+                          onClick={() => { setDepositValue(String(Number(hotelRoom.folio_balance || 0) > 0 ? Number(hotelRoom.folio_balance) : "0")); setShowDepositKeypad(true); }}>
+                          <i className="bi bi-pencil-fill"></i> Düzəliş et
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div style={{ textAlign: "center", padding: "10px", background: "#fff", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "20px", fontWeight: 800, color: "#053796" }}>
+                          {depositValue || "0"} ₼
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "5px" }}>
+                          {[1,2,3,4,5,6,7,8,9].map(n => (
+                            <button key={n} style={{ padding: "12px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, color: "#1F2937", cursor: "pointer", textAlign: "center" }}
+                              onClick={() => handleDepositNum(n)}>{n}</button>
+                          ))}
+                          <button style={{ padding: "12px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, cursor: "pointer", textAlign: "center" }}
+                            onClick={() => handleDepositNum(".")}>.</button>
+                          <button style={{ padding: "12px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, cursor: "pointer", textAlign: "center" }}
+                            onClick={() => handleDepositNum(0)}>0</button>
+                          <button style={{ padding: "12px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", fontSize: "16px", fontWeight: 600, cursor: "pointer", textAlign: "center", color: "#EF4444" }}
+                            onClick={handleDepositBs}><i className="bi bi-backspace"></i></button>
+                        </div>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button style={{ padding: "8px 14px", border: "1px solid #FCA5A5", borderRadius: "6px", background: "#FEF2F2", color: "#DC2626", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                            onClick={() => { setShowDepositKeypad(false); handleDepositClear(); }}>
+                            <i className="bi bi-trash3"></i>
+                          </button>
+                          <button style={{ flex: 1, padding: "8px", border: "none", borderRadius: "6px", background: "#053796", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 2px 6px rgba(5,55,150,0.15)" }}
+                            onClick={handleDepositSave} disabled={isUpdatingDeposit}>
+                            {isUpdatingDeposit ? <><span className="spinner-border spinner-border-sm"></span> Göndərilir</> : <><i className="bi bi-check2"></i> Yadda saxla</>}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* WhatsApp */}
+                <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", marginBottom: "14px", overflow: "hidden" }}>
+                  <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <i className="bi bi-whatsapp" style={{ color: "#25D366" }}></i> Bildiriş
+                  </div>
+                  <div style={{ padding: "14px" }}>
+                    <p style={{ fontSize: "11px", color: "#6B7280", margin: "0 0 8px", lineHeight: "1.4" }}>Qonağa WhatsApp ilə xatırlatma göndər</p>
+                    <button style={{ width: "100%", padding: "9px", border: "none", borderRadius: "6px", background: "#25D366", color: "#fff", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 2px 6px rgba(37,211,102,0.2)" }}
+                      onClick={handleHotelOpenWhatsApp} disabled={isSendingWhatsapp || !hotelRoom.guest_phone || !hotelRoom.booking_id}>
+                      {isSendingWhatsapp ? <><span className="spinner-border spinner-border-sm"></span> Göndərilir</> : <><i className="bi bi-whatsapp" style={{ fontSize: "16px" }}></i> WhatsApp ilə xatırlat</>}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Çap */}
+                <div style={{ background: "#fff", borderRadius: "8px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.08)", overflow: "hidden" }}>
+                  <div style={{ padding: "10px 14px", fontSize: "12px", fontWeight: 600, color: "#374151", background: "#F9FAFB", borderBottom: "1px solid #E5E7EB", display: "flex", alignItems: "center", gap: "6px" }}>
+                    <i className="bi bi-printer" style={{ color: "#4f85f4" }}></i> Çap
+                  </div>
+                  <div style={{ padding: "14px" }}>
+                    <p style={{ fontSize: "11px", color: "#6B7280", margin: "0 0 8px", lineHeight: "1.4" }}>Müştəriyə qəbz çap et</p>
+                    <button style={{ width: "100%", padding: "9px", border: "1px solid #D1D5DB", borderRadius: "6px", background: "#fff", color: "#374151", fontSize: "12px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
+                      onClick={handleHotelPrintReceipt}>
+                      <i className="bi bi-receipt" style={{ color: "#4f85f4", fontSize: "15px" }}></i> Qəbz çap et
+                    </button>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      {/* ── Hotel WhatsApp Modal ── */}
+      <Modal show={showWhatsAppModal} onHide={() => setShowWhatsAppModal(false)} centered size="lg" dialogClassName="hc-wa-dialog">
+        <div className="hc-wa-modal-wrap">
+          <div className="hc-wa-header">
+            <div className="hc-wa-header-left">
+              <div className="hc-wa-header-icon"><i className="bi bi-whatsapp"></i></div>
+              <div>
+                <div className="hc-wa-header-title">WhatsApp mesajı</div>
+                <div className="hc-wa-header-sub">{hotelRoom?.guest_name || "Qonaq"} · {hotelRoom?.guest_phone || "—"}</div>
+              </div>
+            </div>
+            <button className="hc-wa-close" onClick={() => setShowWhatsAppModal(false)}><i className="bi bi-x-lg"></i></button>
+          </div>
+
+          <div className="hc-wa-body">
+            <div className="hc-wa-recipient-bar">
+              <i className="bi bi-person-circle"></i>
+              <span><strong>{hotelRoom?.guest_name || "Qonaq"}</strong> — {hotelRoom?.guest_phone || "Nömrə yoxdur"}</span>
+              {hotelRoom?.room_number && <span className="hc-wa-room-badge">Otaq {hotelRoom.room_number}</span>}
+            </div>
+            <div className="hc-wa-templates">
+              <button className={`hc-wa-tpl-btn ${waReminderType !== "checkout" ? "active" : ""}`}
+                onClick={() => { setWaReminderType("info"); setWaCustomMessage(buildDefaultMessage("info")); }}>
+                <i className="bi bi-info-circle"></i> Məlumat
+              </button>
+              <button className={`hc-wa-tpl-btn ${waReminderType === "checkout" ? "active" : ""}`}
+                onClick={() => { setWaReminderType("checkout"); setWaCustomMessage(buildDefaultMessage("checkout")); }}>
+                <i className="bi bi-box-arrow-right"></i> Çıxış xatırlatması
+              </button>
+            </div>
+            <div className="hc-wa-editor">
+              <div className="hc-wa-editor-label">Mesaj mətni</div>
+              <textarea className="hc-wa-editor-area" rows="8" value={waCustomMessage}
+                onChange={(e) => setWaCustomMessage(e.target.value)}
+                placeholder="Mesaj mətni daxil edin..." />
+              <div className="hc-wa-char-count">{waCustomMessage.length} simvol</div>
+            </div>
+            <div className="hc-wa-delivery">
+              <div className="hc-wa-section-title">Göndərmə</div>
+              <div className="hc-wa-delivery-options">
+                <label className={`hc-wa-radio ${waSendMode === "now" ? "checked" : ""}`}>
+                  <input type="radio" name="waMode" checked={waSendMode === "now"} onChange={() => setWaSendMode("now")} />
+                  <div className="hc-wa-radio-content">
+                    <div className="hc-wa-radio-icon"><i className="bi bi-send-fill"></i></div>
+                    <div>
+                      <div className="hc-wa-radio-title">Dərhal göndər</div>
+                      <div className="hc-wa-radio-desc">Mesaj dərhal WhatsApp olaraq göndəriləcək</div>
+                    </div>
+                  </div>
+                </label>
+                <label className={`hc-wa-radio ${waSendMode === "schedule" ? "checked" : ""}`}>
+                  <input type="radio" name="waMode" checked={waSendMode === "schedule"}
+                    onChange={() => {
+                      if (!waScheduleTime) { const d = new Date(Date.now() + 3600000); setWaScheduleTime(d.toISOString().slice(0, 16)); }
+                      setWaSendMode("schedule");
+                    }} />
+                  <div className="hc-wa-radio-content">
+                    <div className="hc-wa-radio-icon"><i className="bi bi-calendar-clock"></i></div>
+                    <div>
+                      <div className="hc-wa-radio-title">Vaxt təyin et</div>
+                      <div className="hc-wa-radio-desc">Mesaj müəyyən edilmiş vaxtda göndəriləcək</div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+              {waSendMode === "schedule" && (
+                <div className="hc-wa-schedule-picker">
+                  <div className="hc-wa-sp-field">
+                    <label className="hc-wa-sp-label">Tarix</label>
+                    <input type="date" className="hc-wa-datetime" value={waScheduleTime ? waScheduleTime.slice(0, 10) : ""}
+                      onChange={(e) => { const time = waScheduleTime?.slice(11) || "12:00"; setWaScheduleTime(e.target.value + "T" + time); }}
+                      min={new Date().toISOString().slice(0, 10)} />
+                  </div>
+                  <div className="hc-wa-sp-field">
+                    <label className="hc-wa-sp-label">Saat</label>
+                    <input type="time" className="hc-wa-datetime" value={waScheduleTime ? waScheduleTime.slice(11) || "12:00" : "12:00"}
+                      onChange={(e) => { const date = waScheduleTime?.slice(0, 10) || new Date().toISOString().slice(0, 10); setWaScheduleTime(date + "T" + e.target.value); }} />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="hc-wa-auto-card">
+              <div className="hc-wa-auto-header">
+                <div className="hc-wa-auto-header-left">
+                  <i className="bi bi-bell-fill"></i>
+                  <div>
+                    <div className="hc-wa-auto-title">Avtomatik çıxış xatırlatması</div>
+                    <div className="hc-wa-auto-desc">Qonağın çıxış vaxtı yaxınlaşdıqda avtomatik bildiriş göndər</div>
+                  </div>
+                </div>
+                <label className="hc-wa-toggle">
+                  <input type="checkbox" checked={waAutoRemind} onChange={(e) => setWaAutoRemind(e.target.checked)} />
+                  <span className="hc-wa-toggle-slider"></span>
+                </label>
+              </div>
+              {waAutoRemind && (
+                <div className="hc-wa-auto-body">
+                  <div className="hc-wa-auto-row">
+                    <span className="hc-wa-auto-label">Çıxışa neçə saat qalmış bildiriş göndərilsin?</span>
+                    <div className="hc-wa-auto-controls">
+                      <select className="hc-wa-select" value={waRemindHours} onChange={(e) => setWaRemindHours(Number(e.target.value))}>
+                        <option value={1}>1 saat qalmış</option>
+                        <option value={2}>2 saat qalmış</option>
+                        <option value={3}>3 saat qalmış</option>
+                        <option value={6}>6 saat qalmış</option>
+                      </select>
+                      <button className="hc-wa-btn-remind" onClick={handleSendCheckoutReminder}
+                        disabled={isSendingWhatsapp || !hotelRoom?.guest_phone || waReminderSent}>
+                        <i className="bi bi-send"></i>
+                        {waReminderSent ? "Göndərildi" : "İndi göndər"}
+                      </button>
+                    </div>
+                  </div>
+                  {countdownText && (
+                    <div className="hc-wa-auto-countdown">
+                      <i className="bi bi-hourglass-split"></i> {countdownText}
+                    </div>
+                  )}
+                  {waReminderSent && (
+                    <div className="hc-wa-auto-success">
+                      <i className="bi bi-check-circle-fill"></i> Xatırlatma göndərildi
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="hc-wa-footer">
+            <button className="hc-wa-footer-btn hc-wa-footer-cancel" onClick={() => setShowWhatsAppModal(false)}>
+              <i className="bi bi-x"></i> İmtina
+            </button>
+            <button className="hc-wa-footer-btn hc-wa-footer-send" onClick={handleWASend}
+              disabled={isSendingWhatsapp || !waCustomMessage || (waSendMode === "schedule" && !waScheduleTime)}>
+              {isSendingWhatsapp ? (
+                <><span className="spinner-border spinner-border-sm"></span> Göndərilir...</>
+              ) : waSendMode === "schedule" ? (
+                <><i className="bi bi-calendar-check"></i> Təyin et</>
+              ) : (
+                <><i className="bi bi-send-fill"></i> Göndər</>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
     </Container >
   );
 };

@@ -333,6 +333,14 @@ let creaedtToTabel = async () => {
   } catch (e) {
     console.warn("[Schema] app_settings sync:", e?.message || e);
   }
+
+  /** scheduled_messages — cədvəl yoxdursa yarat */
+  try {
+    await require("./model/ScheduledMessageModel").sync();
+    console.log("[Schema] scheduled_messages cədvəli sinxronizə edildi");
+  } catch (e) {
+    console.warn("[Schema] scheduled_messages sync:", e?.message || e);
+  }
 };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -470,6 +478,10 @@ ipcMain.handle("re-evaluate-role", async () => {
 
   // Initial check
   await checkTerminalRole(server);
+
+  // Message scheduler for scheduled WhatsApp messages
+  const { startScheduler } = require("./services/MessageScheduler");
+  startScheduler();
 })();
 
 // Discovery Endpoint for TCP Sweeping

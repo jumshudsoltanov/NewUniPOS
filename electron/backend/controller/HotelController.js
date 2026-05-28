@@ -1,4 +1,5 @@
 const RoomModel = require("../model/RoomModel");
+const ScheduledMessageModel = require("../model/ScheduledMessageModel");
 const axios = require("axios");
 const { sendBulkMessage } = require("../bot/whatsapp/Whatsapp");
 
@@ -129,8 +130,27 @@ const HotelController = {
   getRoomGroups: async (req, res) => {
     try {
       const { profileId } = req.params;
-      const response = await apiGet("/room-groups", { profile_id: profileId });
-      res.json(response.data);
+      let groups = [];
+      try {
+        const response = await apiGet("/room-groups", { profile_id: profileId });
+        groups = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      } catch (e) {
+        console.warn("[HOTEL] Room groups API xətası, local fallback edilir:", e.message);
+      }
+      // Əgər API-dan nəticə gəlməyibsə, local rooms cədvəlindən qrupları çıxart
+      if (!Array.isArray(groups) || groups.length === 0) {
+        const rooms = await RoomModel.findAll({
+          where: { profile_id: profileId },
+          attributes: ["room_group_id"],
+          raw: true,
+        });
+        const seen = new Set();
+        groups = rooms
+          .map((r) => r.room_group_id)
+          .filter((id) => id != null && !seen.has(id) && seen.add(id))
+          .map((id) => ({ id, name: `Qrup ${id}` }));
+      }
+      res.json({ message: "success", data: groups });
     } catch (error) {
       console.error("[HOTEL] Room groups fetch error:", error.message);
       res.status(500).json({ error: error.message });
@@ -258,7 +278,7 @@ const HotelController = {
   sendBookingWhatsapp: async (req, res) => {
     try {
       const { id } = req.params;
-      const { profile_id } = req.body || {};
+      const { profile_id, custom_message, schedule_time, reminder_type } = req.body || {};
 
       // Booking-i admin API-dən çək
       let booking = null;
@@ -285,19 +305,64 @@ const HotelController = {
         return `${String(dt.getDate()).padStart(2, "0")}.${String(dt.getMonth() + 1).padStart(2, "0")}.${dt.getFullYear()} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
       };
 
-      const msg = [
-        `*🔔 OTAQ XATIRLATMASI 🔔*`,
-        ``,
-        `Hörmətli *${guest_name}*,`,
-        `Otaq rezervasiyanızın təfərrüatları:`,
-        ``,
-        `Otaq: *${roomNumber}*`,
-        `Giriş: ${fmtDateTime(check_in)}`,
-        `Çıxış: ${fmtDateTime(check_out)}`,
-        ``,
-        `Xoş gəlmisiniz!`,
-      ].join("\n");
+      // Əgər custom_message göndərilibsə, ondan istifadə et
+      let msg = custom_message;
+      if (!msg) {
+        // reminder_type-a görə mesaj şablonu seç
+        const lines =
+          reminder_type === "checkout_reminder"
+            ? [
+                `*🔔 ÇIXIŞ XATIRLATMASI 🔔*`,
+                ``,
+                `Hörmətli *${guest_name}*,`,
+                `Otaq rezervasiyanızın çıxış vaxtı yaxınlaşır:`,
+                ``,
+                `Otaq: *${roomNumber}*`,
+                `Çıxış: ${fmtDateTime(check_out)}`,
+                ``,
+                `Zəhmət olmasa vaxtında çıxış etməyinizi xahiş edirik.`,
+                `Təşəkkür edirik!`,
+              ]
+            : [
+                `*🔔 OTAQ XATIRLATMASI 🔔*`,
+                ``,
+                `Hörmətli *${guest_name}*,`,
+                `Otaq rezervasiyanızın təfərrüatları:`,
+                ``,
+                `Otaq: *${roomNumber}*`,
+                `Giriş: ${fmtDateTime(check_in)}`,
+                `Çıxış: ${fmtDateTime(check_out)}`,
+                ``,
+                `Xoş gəlmisiniz!`,
+              ];
+        msg = lines.join("\n");
+      }
 
+      // schedule_time gəlibsə, göndərməni təxirə sal
+      if (schedule_time) {
+        const scheduledAt = new Date(schedule_time);
+        if (isNaN(scheduledAt.getTime())) {
+          return res.status(400).json({ error: "Yanlış vaxt formatı" });
+        }
+
+        await ScheduledMessageModel.create({
+          phone: guest_phone,
+          message: msg,
+          profile_id: profile_id || null,
+          booking_id: id,
+          room_id: room_id || null,
+          scheduled_at: scheduledAt,
+          status: "pending",
+          type: reminder_type || "info",
+        });
+
+        return res.json({
+          message: "success",
+          data: { scheduled: true, scheduled_at: schedule_time, to: guest_phone },
+        });
+      }
+
+      // schedule_time yoxdursa, dərhal göndər
       await sendBulkMessage(guest_phone, msg);
 
       res.json({ message: "success", data: { sent: true, to: guest_phone } });

@@ -17,7 +17,7 @@ import { getActiveOrders } from "./redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories, updateProductModifierGroups } from "./redux/Slices/MenuSlice";
 import { tickTimer as tickBooks } from "./redux/Slices/BooksSlice";
 import { tickTimer as tickTables } from "./redux/Slices/TablesSlice";
-import { HashRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Login from "./components/Login/Login";
 import Layout from "./components/Layout/Layout";
 import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
@@ -507,6 +507,7 @@ function AppContent() {
 
         <Route path="/check/:id" element={<Check />} />
         <Route path="/closecheck/:id" element={<CheckOver />} />
+        <Route path="/room-folio/:roomId" element={<Navigate to="/tables" replace />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </>

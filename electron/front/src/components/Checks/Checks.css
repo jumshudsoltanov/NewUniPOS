@@ -547,6 +547,17 @@
     filter: invert(1);
 }
 
+/* Hotel checks cards */
+.hotel-check-card-hover:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+    transform: translateY(-2px);
+    border-color: #D1D5DB !important;
+}
+.hotel-check-card-hover:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+}
+
 .payment-method-tag {
     background: #e8f0fe;
     color: #053796;

@@ -60,7 +60,8 @@
       "Bash(curl -s -v \"https://api.unipos.tech/api/rooms?profile_id=1&limit=5\" -m 15)",
       "Bash(curl *)",
       "Bash(npx vite *)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(git checkout *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",
