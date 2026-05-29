@@ -55,6 +55,7 @@ const Menu = ({
   const [hideImages, setHideImages] = useState(
     () => localStorage.getItem("pos_hide_images") === "true",
   );
+
   const [isMobileViewport, setIsMobileViewport] = useState(
     () => window.innerWidth <= 767.98,
   );
@@ -97,6 +98,8 @@ const Menu = ({
     () => isOrderEditLocked(order),
     [order?.is_locked, order?.uuid],
   );
+
+  const barcodeScanEnabled = localStorage.getItem("pos_barcode_scan_enabled") === "true";
 
   // Drag state
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -702,6 +705,22 @@ const Menu = ({
                   >
                     {item.name}
                   </span>
+                  {barcodeScanEnabled && item.barcode && (
+                    <span style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      marginLeft: "6px",
+                      color: "#6b7280",
+                      fontSize: "11px",
+                      fontWeight: 500,
+                    }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 4h2v16H2zM6 4h1v16H6zM9 4h2v16H9zM13 4h1v16h-1zM16 4h1v16h-1zM20 4h2v16h-2zM22 4h-2v16h2z"/>
+                      </svg>
+                      {item.barcode}
+                    </span>
+                  )}
                   <span className="menu-list-item-price">
                     {effectivePrice.toFixed(2)} ₼
                   </span>
@@ -860,6 +879,14 @@ const Menu = ({
                         {item.name}
                       </span>
                     </div>
+                    {barcodeScanEnabled && item.barcode && (
+                      <div className="menu-card-barcode">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "3px" }}>
+                          <path d="M2 4h2v16H2zM6 4h1v16H6zM9 4h2v16H9zM13 4h1v16h-1zM16 4h1v16h-1zM20 4h2v16h-2zM22 4h-2v16h2z"/>
+                        </svg>
+                        {item.barcode}
+                      </div>
+                    )}
                   </div>
                 </Col>
               );

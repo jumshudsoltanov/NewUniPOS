@@ -3,6 +3,7 @@ const GeneralCategoriesModel = require("../model/GeneralCategoriesModel");
 const CategoriesModel = require("../model/CategoriesModel");
 const ProductsModel = require("../model/ProductsModel");
 const LoginModel = require("../model/LoginModel");
+const db = require("../database/config");
 const { Op } = require("sequelize");
 
 const profileData = async () => {
@@ -54,17 +55,60 @@ const getGeneralCategories = async (passedProfileId) => {
     const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
-    const response = await axios.get(
-      `http://46.224.8.157:35627/api/pos/general-categories/${profile_id}`,
-    );
+    // 1-ci mənbə: köhnə API (46.224.8.157:35627)
+    let rawData = null;
 
-    if (response.data && Array.isArray(response.data.data)) {
+    try {
+      const response = await axios.get(
+        `http://46.224.8.157:35627/api/pos/general-categories/${profile_id}`,
+      );
+      if (response.data && Array.isArray(response.data.data)) {
+        rawData = response.data.data;
+      }
+    } catch (v1Err) {
+      console.warn("General Categories V1 xətası:", v1Err.message);
+    }
+
+    // 2-ci mənbə (fallback): cloud API (api.unipos.tech)
+    if (!rawData || (Array.isArray(rawData) && rawData.length === 0)) {
+      try {
+        const cloudResp = await axios.get(
+          `https://api.unipos.tech/api/general-categories?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
+        );
+        const cloudItems = cloudResp.data?.items || cloudResp.data?.data || [];
+        if (Array.isArray(cloudItems) && cloudItems.length > 0) {
+          rawData = cloudItems;
+          console.log(`[GenCategories] Cloud API-dən ${rawData.length} general category gəldi`);
+        }
+      } catch (cloudErr) {
+        console.warn("General Categories Cloud API xətası:", cloudErr.message);
+      }
+    }
+
+    // 3-cü mənbə (fallback): local admin panel (localhost:8089)
+    if (!rawData || (Array.isArray(rawData) && rawData.length === 0)) {
+      try {
+        const localResp = await axios.get(
+          `http://localhost:8089/api/general-categories?profile_id=${profile_id}`,
+        );
+        if (Array.isArray(localResp.data)) {
+          rawData = localResp.data;
+          console.log(
+            `[GenCategories] Local admin-dən ${rawData.length} general category gəldi`,
+          );
+        }
+      } catch (localErr) {
+        console.warn("General Categories Local Admin xətası:", localErr.message);
+      }
+    }
+
+    if (rawData && Array.isArray(rawData)) {
       // Admin paneldən qoyulan rəngləri v2 API-dən çək
       const colorMap = await fetchColorsFromV2(
         `https://api.unipos.tech/api/general-categories?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
       );
 
-      const generalCategories = response.data.data.map((g) => {
+      const generalCategories = rawData.map((g) => {
         Object.keys(g).forEach((k) => {
           if (g[k] === undefined) g[k] = k === "printer_id" ? null : 0;
         });
@@ -122,11 +166,50 @@ const getCategories = async (passedProfileId) => {
     const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
-    const response = await axios.get(
-      `http://46.224.8.157:35627/api/pos/categories/${profile_id}`,
-    );
+    // 1-ci mənbə: köhnə API (46.224.8.157:35627)
+    let categoriesData = null;
 
-    const categoriesData = response.data.categories || response.data.data;
+    try {
+      const response = await axios.get(
+        `http://46.224.8.157:35627/api/pos/categories/${profile_id}`,
+      );
+      categoriesData = response.data.categories || response.data.data;
+    } catch (v1Err) {
+      console.warn("Categories V1 xətası:", v1Err.message);
+    }
+
+    // 2-ci mənbə (fallback): cloud API (api.unipos.tech)
+    if (!categoriesData || !Array.isArray(categoriesData) || categoriesData.length === 0) {
+      try {
+        const cloudResp = await axios.get(
+          `https://api.unipos.tech/api/categories?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
+        );
+        const cloudItems = cloudResp.data?.items || cloudResp.data?.data || [];
+        if (Array.isArray(cloudItems) && cloudItems.length > 0) {
+          categoriesData = cloudItems;
+          console.log(`[Categories] Cloud API-dən ${categoriesData.length} kategoriya gəldi`);
+        }
+      } catch (cloudErr) {
+        console.warn("Categories Cloud API xətası:", cloudErr.message);
+      }
+    }
+
+    // 3-cü mənbə (fallback): local admin panel (localhost:8089)
+    if (!categoriesData || !Array.isArray(categoriesData) || categoriesData.length === 0) {
+      try {
+        const localResp = await axios.get(
+          `http://localhost:8089/api/categories?profile_id=${profile_id}&limit=10000&page=1`,
+        );
+        if (localResp.data && Array.isArray(localResp.data.items)) {
+          categoriesData = localResp.data.items;
+          console.log(
+            `[Categories] Local admin-dən ${categoriesData.length} kategoriya gəldi`,
+          );
+        }
+      } catch (localErr) {
+        console.warn("Categories Local Admin xətası:", localErr.message);
+      }
+    }
 
     if (categoriesData && Array.isArray(categoriesData)) {
       // Admin paneldən qoyulan rəngləri v2 API-dən çək
@@ -182,6 +265,30 @@ const getCategories = async (passedProfileId) => {
 
       console.log("DB sync olundu: insert/update + silindi");
     }
+
+    // Orphan kateqoriyaları təmizlə: general_categorie_id = 1 qalıb amma
+    // id=1 olan general category yoxdursa → 0 et (ROOT view-da görsənsin)
+    try {
+      const [, fixMeta] = await db.sequelize.query(`
+        UPDATE categories
+        SET general_categorie_id = 0
+        WHERE profile_id = ?
+          AND general_categorie_id IS NOT NULL
+          AND general_categorie_id != 0
+          AND general_categorie_id NOT IN (
+            SELECT id FROM general_categories WHERE profile_id = ?
+          )
+      `, {
+        replacements: [profile_id, profile_id],
+        type: db.sequelize.QueryTypes.UPDATE,
+      });
+      const fixedCount = fixMeta?.affectedRows || 0;
+      if (fixedCount > 0) {
+        console.log(`[Categories] ${fixedCount} orphan kategoriya təmizləndi (general_categorie_id → 0)`);
+      }
+    } catch (cleanErr) {
+      console.warn("[Categories] Orphan cleanup xətası:", cleanErr.message);
+    }
   } catch (err) {
     console.error("Categories Error:", err);
   }
@@ -208,11 +315,12 @@ const getProducts = async (passedProfileId) => {
       console.warn("[ProductsData] V1 API xətası:", v1Result.reason?.message);
     }
 
-    // V2-dən printer_id, color, hourly_price, free_count çək
+    // V2-dən printer_id, color, hourly_price, free_count, barcode çək
     const printerMap = {};
     const colorMap = {};
     const hourlyPriceMap = {};
     const freeCountMap = {};
+    const barcodeMap = {};
     if (v2Result.status === "fulfilled") {
       const items = v2Result.value.data?.items || [];
       items.forEach((item) => {
@@ -227,6 +335,8 @@ const getProducts = async (passedProfileId) => {
           hourlyPriceMap[item.id] = item.hourly_price;
         if (item.free_count != null)
           freeCountMap[item.id] = Number(item.free_count) === 1 ? 1 : 0;
+        if (item.barcode)
+          barcodeMap[item.id] = item.barcode.toString();
       });
     } else {
       console.error("[ProductsData] V2 API xətası:", v2Result.reason?.message);
@@ -352,6 +462,7 @@ const getProducts = async (passedProfileId) => {
         if (colorMap[p.id]) p.color = colorMap[p.id];
         if (hourlyPriceMap[p.id] != null) p.hourly_price = hourlyPriceMap[p.id];
         if (freeCountMap[p.id] != null) p.free_count = freeCountMap[p.id];
+        if (barcodeMap[p.id] != null) p.barcode = barcodeMap[p.id];
         // /modifiers API-də bu məhsul üçün qrup varsa ondan istifadə et; yoxdursa V1/V3-dən gələn JSON terkib saxlanılır
         const pidNum = Number(p.id);
         if (Number.isFinite(pidNum) && Object.prototype.hasOwnProperty.call(modifierMap, pidNum)) {

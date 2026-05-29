@@ -30,7 +30,7 @@ import { getActiveOrders, removeOrderOptimistic, tickTimer, addOrderOptimistic, 
 import OtherChecks from "../OtherChecks/OtherChecks";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer, clearOrders } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer, clearOrders, addProducts } from "../../redux/Slices/OrdersSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
@@ -261,6 +261,54 @@ const Check = () => {
       dispatch(fetchRooms(pid));
     }
   }, [isHotelMode, loginedProfileData?.data?.profile?.id, rooms.length, dispatch]);
+
+  // ── Barkod skaner dinləyicisi ──
+  const barcodeBufferRef = useRef("");
+  const barcodeTimerRef = useRef(null);
+
+  useEffect(() => {
+    const barcodeScanEnabled = localStorage.getItem("pos_barcode_scan_enabled") === "true";
+    if (!barcodeScanEnabled) return;
+
+    // Bütün məhsulları menu data-dan düz bir yerə yığ
+    const allProducts = (menuDataWithCategories?.data || [])
+      .flatMap((cat) => cat.products || [])
+      .filter((p) => p && p.name);
+
+    const handleKeyDown = (e) => {
+      // Input və textarea fokuslanıbsa müdaxilə etmə
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable) return;
+
+      if (e.key === "Enter") {
+        const buf = barcodeBufferRef.current.trim();
+        if (buf.length > 0) {
+          const product = allProducts.find(
+            (p) => p.barcode && p.barcode.toString().trim() === buf
+          );
+          if (product) {
+            e.preventDefault();
+            dispatch(addProducts(product));
+            toast.success(`${product.name} check-ə əlavə edildi`);
+          }
+        }
+        barcodeBufferRef.current = "";
+        return;
+      }
+
+      // Yalnız çap olunan simvolları yığ
+      if (e.key.length === 1) {
+        barcodeBufferRef.current += e.key;
+        if (barcodeTimerRef.current) clearTimeout(barcodeTimerRef.current);
+        // Skaner sürətli yazır — 100ms-dən gec simvol gəlsə buffer təmizlənir
+        barcodeTimerRef.current = setTimeout(() => {
+          barcodeBufferRef.current = "";
+        }, 100);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [menuDataWithCategories, dispatch]);
 
   const hotelProfileId = loginedProfileData?.data?.profile?.id;
 

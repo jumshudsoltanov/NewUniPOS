@@ -117,6 +117,11 @@ const ProductsModel = db.sequelize.define(
       allowNull: true,
     },
 
+    barcode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+
     color: {
       type: DataTypes.STRING,
       allowNull: true,

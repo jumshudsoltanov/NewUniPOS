@@ -61,7 +61,8 @@
       "Bash(curl *)",
       "Bash(npx vite *)",
       "mcp__ide__getDiagnostics",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(claude *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",

@@ -77,7 +77,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   const [unlocked, setUnlocked] = useState(false);
   const [secretPassword, setSecretPassword] = useState(DEFAULT_SECRET_PASSWORD);
 
-  // view: "main" | "whatsapp" | "dbReset" | "updates" | "categoryView" | "receiptDesign" | "systemUsers" | "changePin"
+  // view: "main" | "settings" | "whatsapp" | "dbReset" | "updates" | "categoryView" | "receiptDesign" | "systemUsers" | "changePin"
   const [view, setView] = useState("main");
 
   // System Users
@@ -142,6 +142,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   );
   const [touchScrollEnabled, setTouchScrollEnabled] = useState(
     () => localStorage.getItem("pos_touch_scroll") === "true"
+  );
+
+  const [barcodeScanEnabled, setBarcodeScanEnabled] = useState(
+    () => localStorage.getItem("pos_barcode_scan_enabled") === "true"
   );
 
   const [resettingDb, setResettingDb] = useState(false);
@@ -609,6 +613,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     view === "systemUsers" ? "Sistem istifadəçiləri" :
     view === "operationNames" ? "Əməliyyat adları" : 
     view === "touchScroll" ? "Skrol ayarları" :
+    view === "settings" ? "Tənzimləmələr" :
     view === "syncCheck" ? "Sinroxnizasiya Diaqnostikası" : "Ayarlar";
 
   return (
@@ -1416,6 +1421,35 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             </div>
           </div>
 
+        ) : view === "settings" ? (
+          <div className="discount-body pin-adv-catview-body">
+            <p className="pin-adv-catview-hint">Barkod skaner və digər tənzimləmələr</p>
+
+            <div className="pin-adv-catview-section">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Barkod skan</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Barkod skaner ilə məhsul axtarışını aktiv et</div>
+                </div>
+                <div
+                  className={`wa-toggle ${barcodeScanEnabled ? "wa-toggle-on" : ""}`}
+                  onClick={() => {
+                    const newVal = !barcodeScanEnabled;
+                    setBarcodeScanEnabled(newVal);
+                    localStorage.setItem("pos_barcode_scan_enabled", newVal ? "true" : "false");
+                  }}
+                  style={{ cursor: "pointer", flexShrink: 0 }}
+                >
+                  <div className="wa-toggle-thumb" />
+                </div>
+              </div>
+            </div>
+
+            <div className="wa-settings-actions" style={{ marginTop: "16px" }}>
+              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+            </div>
+          </div>
+
         ) : view === "touchScroll" ? (
           <div className="discount-body pin-adv-catview-body">
             <p className="pin-adv-catview-hint">Vakum və toxunuşlu ekranlar üçün skrol tənzimləmələri</p>
@@ -1511,6 +1545,15 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                   </svg>
                 </span>
                 <span className="settings-menu-item-label">Əməliyyat adları</span>
+              </button>
+
+              <button type="button" className="settings-menu-item" onClick={() => setView("settings")}>
+                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                </span>
+                <span className="settings-menu-item-label">Tənzimləmələr</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("touchScroll")}>
