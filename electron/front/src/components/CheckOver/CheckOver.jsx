@@ -592,6 +592,8 @@ const CheckOver = () => {
                         paidAmount: paidValue,
                         change: changeValue,
                         customer_name: selectedCustomer?.name || currentOrder?.customer_name || "",
+                        customer_phone: selectedCustomer?.phone || currentOrder?.customer_phone || currentOrder?.customer?.phone || "",
+                        customer_address: selectedCustomer?.address || currentOrder?.customer_address || currentOrder?.customer?.address || "",
                         waiter_name: orderWaiter
                     },
                     tableName: receiptTableName,

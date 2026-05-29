@@ -110,6 +110,8 @@ const CustomerReceipt = ({
     const showPhone = isVisible("showPhone", true);
     const showCheckNumber = isVisible("showCheckNumber", true);
     const showCustomer = isVisible("showCustomer", true);
+    const showCustomerPhone = isVisible("showCustomerPhone", true);
+    const showCustomerAddress = isVisible("showCustomerAddress", true);
     const showTags = isVisible("showTags", true);
     const showHallTable = isVisible("showHallTable", true);
     const showDates = isVisible("showDates", true);
@@ -410,6 +412,20 @@ const CustomerReceipt = ({
                     <div style={styles.infoRow}>
                         <span style={styles.label}>Müştəri</span>
                         <span style={styles.value}>{checkData.customer_name || checkData.customerName || checkData.customer?.name || checkData.customer?.full_name}</span>
+                    </div>
+                )}
+
+                {showCustomerPhone && (checkData?.customerPhone || checkData?.customer_phone || checkData?.customer?.phone) && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Müşt. Tel</span>
+                        <span style={styles.value}>{checkData.customerPhone || checkData.customer_phone || checkData.customer?.phone}</span>
+                    </div>
+                )}
+
+                {showCustomerAddress && (checkData?.customerAddress || checkData?.customer_address || checkData?.customer?.address) && (
+                    <div style={styles.infoRow}>
+                        <span style={styles.label}>Müşt. Ünvan</span>
+                        <span style={styles.value}>{checkData.customerAddress || checkData.customer_address || checkData.customer?.address}</span>
                     </div>
                 )}
 

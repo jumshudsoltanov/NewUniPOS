@@ -578,7 +578,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
   const mockCustomerProps = {
       profileData: { data: { profile: { restaurant_name: "Nümunə Restoran", address: "Bakı ş., Nümunə küç.", phone: "0123456789" }, terminal: { qr_on_check: 0 } } },
-      checkData: { id: "1024", customerName: "Əli Əliyev", startDate: new Date().toISOString(), endDate: new Date().toISOString(), waiter_name: "Zaur", guest_count: 2, sale_type_name: "Restoranda" },
+      checkData: { id: "1024", customerName: "Əli Əliyev", customerPhone: "+994 55 555 55 55", customerAddress: "Bakı ş., Nizami küç. 15", startDate: new Date().toISOString(), endDate: new Date().toISOString(), waiter_name: "Zaur", guest_count: 2, sale_type_name: "Restoranda" },
       hallName: "Zal 1",
       tableName: "Masa 5",
       orderedItems: [
@@ -1038,6 +1038,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                             { key: 'showPhone', label: 'Əlaqə nömrəsi' },
                             { key: 'showCheckNumber', label: 'Çek Nömrəsi' },
                             { key: 'showCustomer', label: 'Müştəri Adı' },
+                            { key: 'showCustomerPhone', label: 'Müştəri Telefonu' },
+                            { key: 'showCustomerAddress', label: 'Müştəri Ünvanı' },
                             { key: 'showHallTable', label: 'Zal/Masa' },
                             { key: 'showDates', label: 'Açılma/Bağlanma Tarixi' },
                             { key: 'showPrintDate', label: 'Çap Tarixi' },
