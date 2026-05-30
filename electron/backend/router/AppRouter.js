@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const LoginController = require("../controller/LoginController");
+const PinController = require("../controller/PinController");
 const SalesController = require("../controller/SalesController");
 const WaitersController = require("../controller/WaitersController");
 const TablesController = require("../controller/TablesController");
@@ -28,6 +29,8 @@ router.delete("/admin/system-users/:id", AdminController.deleteSystemUser);
 router.get("/admin/settings-pin", AdminController.getSettingsPin);
 router.post("/admin/settings-pin", AdminController.saveSettingsPin);
 router.post("/login", LoginController.getLogin);
+router.post("/pin/send-code", PinController.sendVerificationCode);
+router.post("/pin/verify-code", PinController.verifyCode);
 router.get("/orders/:profileId/next-id", SalesController.getNextOrderId);
 router.post("/sale", SalesController.CreateNewOrders);
 router.post("/other-sale", SalesController.CreateNewOtherOrders);

@@ -9,7 +9,7 @@ import CustomerReceipt from "../Receipt/CustomerReceipt";
 import KitchenReceipt from "../Receipt/KitchenReceipt";
 import { DEFAULT_OPERATION_NAMES } from "../Operations/OperationsModal";
 
-const DEFAULT_SECRET_PASSWORD = "2507";
+const WHATSAPP_NUMBER = "994775012507";
 
 const DEFAULT_POS_RECEIPT_SETTINGS = {
   customer: { fontSizeOffset: 0, paperWidth: 80 },
@@ -71,13 +71,13 @@ function isActionDenied(key, denyActions, denyPrefixes) {
 }
 
 const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) => {
-  // Şifrə
-  const [passwordInput, setPasswordInput] = useState("");
-  const [passwordError, setPasswordError] = useState(false);
+  // WhatsApp verification
+  const [waState, setWaState] = useState("idle"); // "idle" | "sending" | "entering" | "verified" | "error"
+  const [waCode, setWaCode] = useState("");
+  const [waError, setWaError] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
-  const [secretPassword, setSecretPassword] = useState(DEFAULT_SECRET_PASSWORD);
 
-  // view: "main" | "settings" | "whatsapp" | "dbReset" | "updates" | "categoryView" | "receiptDesign" | "systemUsers" | "changePin"
+  // view: "main" | "settings" | "whatsapp" | "dbReset" | "updates" | "categoryView" | "receiptDesign" | "systemUsers"
   const [view, setView] = useState("main");
 
   // System Users
@@ -89,11 +89,6 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   const [suEditingId, setSuEditingId] = useState(null);
   const [suEditName, setSuEditName] = useState("");
   const [suEditPin, setSuEditPin] = useState("");
-
-  // Change settings PIN
-  const [cpNewPin, setCpNewPin] = useState("");
-  const [cpConfirmPin, setCpConfirmPin] = useState("");
-  const [cpSaving, setCpSaving] = useState(false);
 
   // Operation names
   const [operationNames, setOperationNames] = useState(() => {
@@ -146,6 +141,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
   const [barcodeScanEnabled, setBarcodeScanEnabled] = useState(
     () => localStorage.getItem("pos_barcode_scan_enabled") === "true"
+  );
+
+  const [autoPaymentEnabled, setAutoPaymentEnabled] = useState(
+    () => localStorage.getItem("pos_auto_payment_enabled") === "true"
   );
 
   const [resettingDb, setResettingDb] = useState(false);
@@ -252,8 +251,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
   useEffect(() => {
     if (!show) {
-      setPasswordInput("");
-      setPasswordError(false);
+      setWaState("idle");
+      setWaCode("");
+      setWaError(false);
       setUnlocked(false);
       setView("main");
       setUpdateCheckResult(null);
@@ -265,7 +265,6 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       setSystemUsers([]);
       setSuNewName(""); setSuNewPin("");
       setSuEditingId(null); setSuEditName(""); setSuEditPin("");
-      setCpNewPin(""); setCpConfirmPin("");
     } else {
       try {
         const saved = JSON.parse(localStorage.getItem("pos_operation_names") || "{}");
@@ -277,16 +276,26 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       setProductViewMode(localStorage.getItem("pos_product_view_mode") || "card");
       setHideImages(localStorage.getItem("pos_hide_images") === "true");
       setTouchScrollEnabled(localStorage.getItem("pos_touch_scroll") === "true");
+      setAutoPaymentEnabled(localStorage.getItem("pos_auto_payment_enabled") === "true");
       try {
         const savedReceipt = JSON.parse(localStorage.getItem("pos_receipt_settings"));
         if (savedReceipt) setReceiptSettings(normalizePosReceiptSettings(savedReceipt));
       } catch(e) {}
-      // Load current settings PIN
-      apiConfig.get("/admin/settings-pin").then(({ data }) => {
-        if (data?.ok && data.pin) setSecretPassword(data.pin);
-      }).catch(() => {});
+      // Send WhatsApp verification code on open
+      if (profileId) {
+        setWaState("sending");
+        apiConfig.post("/pin/send-code", { profileId })
+          .then(() => setWaState("entering"))
+          .catch(() => {
+            setWaState("error");
+            toast.error("WhatsApp təsdiq kodu göndərilmədi!");
+          });
+      } else {
+        setWaState("error");
+        toast.error("Profil tapılmadı");
+      }
     }
-  }, [show]);
+  }, [show, profileId]);
 
   useEffect(() => {
     if (view === "syncCheck") {
@@ -368,26 +377,47 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     }
   };
 
-  // Password numpad
-  const handlePasswordKey = (digit) => {
-    if (passwordInput.length >= secretPassword.length) return;
-    const next = passwordInput + digit;
-    setPasswordInput(next);
-    setPasswordError(false);
-    if (next.length === secretPassword.length) {
-      if (next === secretPassword) {
-        setUnlocked(true);
-        setPasswordInput("");
-      } else {
-        setPasswordError(true);
-        setTimeout(() => { setPasswordInput(""); setPasswordError(false); }, 700);
-      }
+  // ─── WhatsApp verification helpers ──────────────────────────────────────
+  const sendWaCode = useCallback(() => {
+    if (!profileId) return;
+    setWaState("sending");
+    setWaCode("");
+    setWaError(false);
+    apiConfig.post("/pin/send-code", { profileId })
+      .then(() => setWaState("entering"))
+      .catch(() => {
+        setWaState("error");
+        toast.error("Kod göndərilmədi!");
+      });
+  }, [profileId]);
+
+  const handleWaKey = (digit) => {
+    if (waCode.length >= 4) return;
+    const next = waCode + digit;
+    setWaCode(next);
+    setWaError(false);
+    if (next.length === 4) {
+      // Verify code
+      apiConfig.post("/pin/verify-code", { profileId, code: next })
+        .then(({ data }) => {
+          if (data?.success) {
+            setWaState("verified");
+            setWaCode("");
+            setTimeout(() => setUnlocked(true), 400);
+          }
+        })
+        .catch((err) => {
+          setWaError(true);
+          const msg = err.response?.data?.message;
+          if (msg) toast.error(msg);
+          setTimeout(() => { setWaCode(""); setWaError(false); }, 700);
+        });
     }
   };
 
-  const handlePasswordBackspace = () => {
-    setPasswordInput((p) => p.slice(0, -1));
-    setPasswordError(false);
+  const handleWaBackspace = () => {
+    setWaCode((p) => p.slice(0, -1));
+    setWaError(false);
   };
 
   // WhatsApp
@@ -491,23 +521,6 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     } catch (err) {
       toast.error("Silmə xətası");
     } finally { setSuSaving(false); }
-  };
-
-  const handleSaveSettingsPin = async () => {
-    if (!/^\d{4,6}$/.test(cpNewPin)) return toast.error("Yeni PIN 4-6 rəqəmli olmalıdır");
-    if (cpNewPin !== cpConfirmPin) return toast.error("PIN-lər uyğun gəlmir");
-    setCpSaving(true);
-    try {
-      const { data } = await apiConfig.post("/admin/settings-pin", { pin: cpNewPin });
-      if (data?.ok) {
-        setSecretPassword(cpNewPin);
-        toast.success("Şifrə dəyişdirildi");
-        setCpNewPin(""); setCpConfirmPin("");
-        setView("main");
-      } else toast.error(data?.message || "Xəta");
-    } catch (err) {
-      toast.error("Şifrə dəyişdirilə bilmədi");
-    } finally { setCpSaving(false); }
   };
 
   const handleOpenDevtools = async () => {
@@ -685,28 +698,56 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
           </button>
         </div>
 
-        {/* ── Şifrə ekranı ── */}
+        {/* ── WhatsApp verification ── */}
         {!unlocked ? (
           <div className="discount-body pin-adv-password-body">
-            <p className="pin-adv-password-hint">Şifrəni daxil edin</p>
-            <div className={`pin-adv-password-dots ${passwordError ? "pin-adv-password-error" : ""}`}>
-              {Array.from({ length: secretPassword.length }).map((_, i) => (
-                <span key={i} className={`pin-adv-dot ${i < passwordInput.length ? "filled" : ""}`} />
-              ))}
-            </div>
-            <div className="pin-adv-numpad">
-              {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`pin-adv-numpad-btn${k === "" ? " invisible" : ""}${k === "⌫" ? " backspace" : ""}`}
-                  onClick={() => k === "⌫" ? handlePasswordBackspace() : k !== "" ? handlePasswordKey(k) : null}
-                  disabled={k === ""}
-                >
-                  {k}
+            {waState === "sending" && (
+              <>
+                <div className="wa-modal-spinner"></div>
+                <p className="pin-adv-password-hint">WhatsApp təsdiq kodu göndərilir...</p>
+              </>
+            )}
+
+            {waState === "entering" && (
+              <>
+                <p className="pin-adv-password-hint">WhatsApp təsdiq kodunu daxil edin</p>
+                <div className={`pin-adv-password-dots ${waError ? "pin-adv-password-error" : ""}`}>
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <span key={i} className={`pin-adv-dot ${i < waCode.length ? "filled" : ""}`} />
+                  ))}
+                </div>
+                <div className="pin-adv-numpad">
+                  {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`pin-adv-numpad-btn${k === "" ? " invisible" : ""}${k === "⌫" ? " backspace" : ""}`}
+                      onClick={() => k === "⌫" ? handleWaBackspace() : k !== "" ? handleWaKey(k) : null}
+                      disabled={k === ""}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="wa-modal-resend" onClick={sendWaCode}>
+                  Kod gəlmədi?
                 </button>
-              ))}
-            </div>
+              </>
+            )}
+
+            {waState === "verified" && (
+              <p className="pin-adv-password-hint" style={{ color: "#16a34a" }}>✓ Kod təsdiqləndi, daxil olunur...</p>
+            )}
+
+            {waState === "error" && (
+              <>
+                <p className="pin-adv-password-hint" style={{ color: "#dc2626" }}>Kod göndərilmədi</p>
+                <button type="button" className="apply-btn" onClick={sendWaCode}
+                  style={{ width: "auto", padding: "10px 24px", fontSize: "14px" }}>
+                  Yenidən cəhd edin
+                </button>
+              </>
+            )}
           </div>
 
         ) : view === "whatsapp" ? (
@@ -1214,58 +1255,6 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             )}
           </div>
 
-        ) : view === "changePin" ? (
-          <div className="discount-body pin-adv-changepin-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "20px 16px" }}>
-            <p style={{ fontSize: "13px", color: "#64748b", margin: 0, textAlign: "center" }}>
-              {cpNewPin.length < 4 ? "Yeni şifrəni daxil edin" : "Şifrəni təkrar daxil edin"}
-            </p>
-
-            <div className={`pin-adv-password-dots${cpNewPin.length >= 4 && cpConfirmPin.length === cpNewPin.length && cpConfirmPin !== cpNewPin ? " pin-adv-password-error" : ""}`} style={{ marginBottom: "4px" }}>
-              {Array.from({ length: Math.max((cpNewPin.length < 4 ? cpNewPin : cpConfirmPin).length || 4, 4) }).map((_, i) => (
-                <span key={i} className={`pin-adv-dot ${i < (cpNewPin.length < 4 ? cpNewPin : cpConfirmPin).length ? "filled" : ""}`} />
-              ))}
-            </div>
-
-            {cpNewPin.length >= 4 && cpConfirmPin.length === cpNewPin.length && cpConfirmPin !== cpNewPin && (
-              <div style={{ color: "#dc2626", fontSize: "12px", marginTop: "-8px" }}>Şifrələr uyğun gəlmir</div>
-            )}
-
-            <div className="pin-adv-numpad">
-              {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`pin-adv-numpad-btn${k === "" ? " invisible" : ""}${k === "⌫" ? " backspace" : ""}`}
-                  onClick={() => {
-                    if (k === "⌫") {
-                      if (cpNewPin.length < 4) setCpNewPin(p => p.slice(0, -1));
-                      else setCpConfirmPin(p => p.slice(0, -1));
-                    } else if (k !== "") {
-                      if (cpNewPin.length < 4) { if (cpNewPin.length < 6) setCpNewPin(p => p + k); }
-                      else { if (cpConfirmPin.length < 6) setCpConfirmPin(p => p + k); }
-                    }
-                  }}
-                  disabled={k === "" || cpSaving}
-                >
-                  {k}
-                </button>
-              ))}
-            </div>
-
-            <div className="wa-settings-actions" style={{ width: "100%", marginTop: "4px" }}>
-              <button type="button" className="delete-all-btn wa-settings-cancel"
-                onClick={() => { if (cpNewPin.length >= 4) { setCpNewPin(""); setCpConfirmPin(""); } else { setView("main"); } }}
-                disabled={cpSaving}>
-                {cpNewPin.length >= 4 ? "Geri" : "İmtina"}
-              </button>
-              <button type="button" className="apply-btn wa-settings-save"
-                onClick={handleSaveSettingsPin}
-                disabled={cpSaving || cpNewPin.length < 4 || cpConfirmPin.length < 4 || cpNewPin !== cpConfirmPin}>
-                {cpSaving ? "Saxlanılır..." : "Şifrəni dəyiş"}
-              </button>
-            </div>
-          </div>
-
         ) : view === "operationNames" ? (
           <div className="discount-body pin-adv-opnames-body">
             <div className="pin-adv-opnames-hint">Əməliyyat düymələrinin adlarını özünüzə uyğun dəyişdirin</div>
@@ -1445,6 +1434,90 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
               </div>
             </div>
 
+            {/* POS Blok Ödəniş Üsulu */}
+            <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
+              <span className="pin-adv-catview-label" style={{ marginBottom: 6, display: "block" }}>
+                POS blok zamanı ödəniş üsulu
+              </span>
+              <div style={{ fontSize: "12px", color: "#888", marginBottom: 12, lineHeight: 1.4 }}>
+                POS bloklananda (abunəlik bitdikdə) ödəniş üsulunun necə seçiləcəyini təyin edin
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {/* SuperAdmin seçimi */}
+                <div
+                  onClick={() => {
+                    setAutoPaymentEnabled(false);
+                    localStorage.setItem("pos_auto_payment_enabled", "false");
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "12px 14px", borderRadius: 10, cursor: "pointer",
+                    background: !autoPaymentEnabled ? "#eef2ff" : "#fff",
+                    border: "1.5px solid",
+                    borderColor: !autoPaymentEnabled ? "#053796" : "#e5e7eb",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: "50%",
+                    border: "2px solid",
+                    borderColor: !autoPaymentEnabled ? "#053796" : "#d1d5db",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0,
+                  }}>
+                    {!autoPaymentEnabled && (
+                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#053796" }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: !autoPaymentEnabled ? "#053796" : "#374151" }}>
+                      SuperAdmin tənzimləməsi
+                    </div>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>
+                      Admin paneldən idarə olunur
+                    </div>
+                  </div>
+                </div>
+
+                {/* Avtomatik seçimi */}
+                <div
+                  onClick={() => {
+                    setAutoPaymentEnabled(true);
+                    localStorage.setItem("pos_auto_payment_enabled", "true");
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    padding: "12px 14px", borderRadius: 10, cursor: "pointer",
+                    background: autoPaymentEnabled ? "#eef2ff" : "#fff",
+                    border: "1.5px solid",
+                    borderColor: autoPaymentEnabled ? "#053796" : "#e5e7eb",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <div style={{
+                    width: 20, height: 20, borderRadius: "50%",
+                    border: "2px solid",
+                    borderColor: autoPaymentEnabled ? "#053796" : "#d1d5db",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    flexShrink: 0,
+                  }}>
+                    {autoPaymentEnabled && (
+                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#053796" }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: autoPaymentEnabled ? "#053796" : "#374151" }}>
+                      Avtomatik
+                    </div>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>
+                      Sistem tərəfindən avtomatik seçilsin
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="wa-settings-actions" style={{ marginTop: "16px" }}>
               <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
             </div>
@@ -1527,15 +1600,6 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                   </svg>
                 </span>
                 <span className="settings-menu-item-label">Sistem istifadəçiləri</span>
-              </button>
-
-              <button type="button" className="settings-menu-item" onClick={() => setView("changePin")}>
-                <span className="settings-menu-item-icon" style={{ color: "#053796" }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                </span>
-                <span className="settings-menu-item-label">Şifrəni dəyiş</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("operationNames")}>

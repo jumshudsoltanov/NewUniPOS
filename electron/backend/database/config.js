@@ -41,4 +41,3 @@ db.connect = async () => {
 };
 
 module.exports = db;
-

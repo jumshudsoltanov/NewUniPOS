@@ -760,3 +760,37 @@
     background: transparent;
     display: none;
 }
+
+/* ═══ WhatsApp verification spinner & resend ═══ */
+.wa-modal-spinner {
+    width: 36px;
+    height: 36px;
+    border: 4px solid #e5e7eb;
+    border-top: 4px solid #053796;
+    border-radius: 50%;
+    animation: waSpin 0.8s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes waSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.wa-modal-resend {
+    background: none;
+    border: none;
+    color: #4F85F4;
+    font-family: "Poppins", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 4px 8px;
+    transition: opacity 0.2s;
+}
+
+.wa-modal-resend:hover {
+    opacity: 0.75;
+}

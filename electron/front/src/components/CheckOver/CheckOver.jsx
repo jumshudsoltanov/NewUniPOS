@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Container, Col, Row, Form, Modal } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -16,6 +16,7 @@ import apiConfig, { getSocket, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig
 import { addNotification } from "../../utils/notificationService";
 import { getModifiersTotalPerUnit, mapOrderPaymentForTax } from "../../utils/orderItemLineTotal";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
+import { isPosBlocked, isPaymentExpired } from "../../utils/dateHelpers";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 import RoomChargeModal from "../RoomChargeModal/RoomChargeModal";
 
@@ -107,6 +108,28 @@ const CheckOver = () => {
 
         fetchData();
     }, [dispatch, loginedProfileData?.data?.profile?.id]);
+
+    // Auto-select payment method (only when POS is blocked + auto mode)
+    const autoSelectedRef = useRef(false);
+    useEffect(() => {
+        if (viewMode !== "PAYMENT" || autoSelectedRef.current || paymentMethods.length === 0) return;
+
+        // Yalnız POS blok vəziyyətində işləsin
+        const profile = loginedProfileData?.data?.profile;
+        if (!profile) return;
+        const isBlocked = isPosBlocked(profile.is_pos_block) || isPaymentExpired(profile.next_payment_date);
+        if (!isBlocked) return;
+
+        const autoEnabled = localStorage.getItem("pos_auto_payment_enabled") === "true";
+        if (!autoEnabled) return;
+
+        // İlk ödəniş üsulunu seç (adətən Nəğd)
+        const defaultMethod = paymentMethods[0];
+        if (defaultMethod) {
+            setSelectedMethods([{ ...defaultMethod, amount: calcTotal.sumTotal }]);
+            autoSelectedRef.current = true;
+        }
+    }, [viewMode, paymentMethods, calcTotal.sumTotal]);
 
     const currentOrder = useMemo(() => {
         if (!books?.data) return null;

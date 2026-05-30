@@ -62,7 +62,9 @@
       "Bash(npx vite *)",
       "mcp__ide__getDiagnostics",
       "Bash(git checkout *)",
-      "Bash(claude *)"
+      "Bash(claude *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Jumshud\\\\Desktop\\\\POS-ReDesing\" -Depth 1)",
+      "Bash(Select-Object Name, FullName, PSIsContainer)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",
