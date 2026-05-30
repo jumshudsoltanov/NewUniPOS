@@ -31,6 +31,7 @@ router.post("/admin/settings-pin", AdminController.saveSettingsPin);
 router.post("/login", LoginController.getLogin);
 router.post("/pin/send-code", PinController.sendVerificationCode);
 router.post("/pin/verify-code", PinController.verifyCode);
+router.post("/pin/payment-notification", PinController.sendPaymentNotification);
 router.get("/orders/:profileId/next-id", SalesController.getNextOrderId);
 router.post("/sale", SalesController.CreateNewOrders);
 router.post("/other-sale", SalesController.CreateNewOtherOrders);

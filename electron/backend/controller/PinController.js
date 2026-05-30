@@ -96,4 +96,29 @@ const verifyCode = async (req, res) => {
   }
 };
 
-module.exports = { sendVerificationCode, verifyCode };
+// ─── Payment notification (POS block) ────────────────────────────────────────
+
+const sendPaymentNotification = async (req, res) => {
+  try {
+    const { profileId } = req.body;
+    if (!profileId) {
+      return res.status(400).json({ success: false, message: "profileId required" });
+    }
+
+    // Get profile name
+    const LoginModel = require("../model/LoginModel");
+    const profile = await LoginModel.findByPk(Number(profileId), { paranoid: false }).catch(() => null);
+    const profileName = profile?.restaurant_name || profile?.username || "Naməlum";
+
+    const message = `🔔 *ÖDƏNİŞ BİLDİRİŞİ* 🔔\n\nMüəssisə: *${profileName}*\nStatus: *Ödəniş olundu*\n\nZəhmət olmasa yoxlayın və təsdiq edin.`;
+    await sendBulkMessage(WHATSAPP_NUMBER, message);
+
+    console.log(`[PinPaymentNotify] ✅ Notification sent for profile ${profileId} (${profileName})`);
+    res.json({ success: true, message: "Bildiriş göndərildi" });
+  } catch (error) {
+    console.error("[PinPaymentNotify] ❌ Error:", error.message);
+    res.status(500).json({ success: false, message: error.message || "Bildiriş göndərilmədi" });
+  }
+};
+
+module.exports = { sendVerificationCode, verifyCode, sendPaymentNotification };

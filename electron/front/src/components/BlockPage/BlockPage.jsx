@@ -7,6 +7,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories } from "../../redux/Slices/MenuSlice";
 import { toast } from "sonner";
 import DefaultLogo from "../../assets/images/unipos_logo.png";
+import apiConfig from "../../utils/apiConfig";
 import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import { mergeBlockedLoginPayload } from "../../utils/authResultMerge";
 import "./BlockPage.css";
@@ -126,6 +127,29 @@ const BlockPage = () => {
         }
     };
 
+    // ─── Auto payment (POS block) ────────────────────────────────────────
+    const autoPaymentEnabled = localStorage.getItem("pos_auto_payment_enabled") === "true";
+    const [paymentSent, setPaymentSent] = useState(false);
+    const [paymentSending, setPaymentSending] = useState(false);
+
+    const handlePaymentNotify = async () => {
+        setPaymentSending(true);
+        try {
+            const profileId = activeProfileData?.data?.profile?.id;
+            if (!profileId) {
+                toast.error("Profil tapılmadı");
+                return;
+            }
+            await apiConfig.post("/pin/payment-notification", { profileId });
+            setPaymentSent(true);
+            toast.success("Bildiriş göndərildi! Zəhmət olmasa telefonunuzu yoxlayın.");
+        } catch (err) {
+            toast.error(err?.response?.data?.message || "Bildiriş göndərilmədi");
+        } finally {
+            setPaymentSending(false);
+        }
+    };
+
     const handleQuitApp = () => {
         if (window.electronAPI?.quitApp) {
             window.electronAPI.quitApp();
@@ -179,6 +203,52 @@ const BlockPage = () => {
                         </>
                     )}
                 </div>
+
+                {/* Auto payment card section (yalnız Avtomatik rejim aktivdə) */}
+                {autoPaymentEnabled && !paymentSent && (
+                    <div className="block-payment-card">
+                        <div className="block-payment-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                                <line x1="1" y1="10" x2="23" y2="10" />
+                            </svg>
+                            <span>Kart ilə ödəniş</span>
+                        </div>
+                        <p className="block-payment-desc">
+                            Abunəlik ödənişini kart ilə həyata keçirin. Ödəniş edildikdən sonra
+                            "Ödədim" düyməsinə toxunun.
+                        </p>
+                        <button
+                            className="block-btn block-btn-pay"
+                            onClick={handlePaymentNotify}
+                            disabled={paymentSending}
+                        >
+                            {paymentSending ? (
+                                <>
+                                    <div className="spinner-border spinner-border-sm" role="status"></div>
+                                    <span>Göndərilir...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    <span>Ödədim</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                )}
+
+                {autoPaymentEnabled && paymentSent && (
+                    <div className="block-payment-sent">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                        <span>Bildiriş göndərildi. Təsdiq gözlənilir...</span>
+                    </div>
+                )}
 
                 <div className="block-actions">
                     <button
