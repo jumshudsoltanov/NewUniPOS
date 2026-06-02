@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchRooms } from "../../redux/Slices/HotelSlice";
-import { addOrderOptimistic } from "../../redux/Slices/BooksSlice";
+import { addOrderOptimistic, getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import RoomCard from "./RoomCard";
@@ -18,6 +18,7 @@ const Rooms = () => {
     useSelector((state) => state.HotelSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { books } = useSelector((state) => state.BooksSlice);
 
   const profileId = loginedProfileData?.data?.profile?.id;
   const [showReservationModal, setShowReservationModal] = useState(false);
@@ -35,6 +36,12 @@ const Rooms = () => {
     if (!profileId) return;
     doFetchRooms();
   }, [profileId, doFetchRooms, refreshKey]);
+
+  // Aktiv sifarişləri yüklə (otaqların mövcud çeklərini tapmaq üçün)
+  useEffect(() => {
+    if (!profileId) return;
+    dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+  }, [profileId, dispatch]);
 
   // 30 saniyədə bir avtomatik yenilə
   useEffect(() => {
@@ -56,6 +63,18 @@ const Rooms = () => {
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [doFetchRooms]);
+
+  // Hər otaq üçün aktiv çekin məbləğini tap (localStorage UUID -> books)
+  const roomCheckTotals = useMemo(() => {
+    const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
+    const uuidTotalMap = {};
+    booksList.forEach((o) => {
+      if (o.uuid) {
+        uuidTotalMap[String(o.uuid)] = Number(o.total || o.amount || 0);
+      }
+    });
+    return uuidTotalMap;
+  }, [books]);
 
   // Filtrlənmiş otaqlar
   const filteredRooms = useMemo(() => {
@@ -79,14 +98,10 @@ const Rooms = () => {
       );
     }
 
-    // Sırala: boş, dolu, bron, təmizlənir, təmirdə
-    const statusOrder = { available: 0, occupied: 1, reserved: 2, cleaning: 3, maintenance: 4 };
-    const sorted = [...list].sort((a, b) => {
-      const orderA = statusOrder[a.status] ?? 99;
-      const orderB = statusOrder[b.status] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      return String(a.room_number || "").localeCompare(String(b.room_number || ""), undefined, { numeric: true });
-    });
+    // Sırala: otaq nömrəsinə görə (yer dəyişməsin)
+    const sorted = [...list].sort((a, b) =>
+      String(a.room_number || "").localeCompare(String(b.room_number || ""), undefined, { numeric: true })
+    );
 
     return sorted;
   }, [rooms, selectedFloor, selectedRoomType, selectedRoomGroupId, searchText]);
@@ -158,8 +173,26 @@ const Rooms = () => {
       if (!room) return;
 
       if (room.status === "occupied") {
+        // localStorage-da saxlanmış çek UUID-ni yoxla
+        const savedUuid = localStorage.getItem(`hotel_room_order_${room.id}`);
+        if (savedUuid) {
+          // Əgər bağlanmış/silinmiş çekdirsə — təmizlə və yeni yarat
+          const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
+          const closedOrder = booksList.find(
+            (o) => String(o.uuid) === String(savedUuid) && Number(o.status) === 0
+          );
+          if (closedOrder) {
+            localStorage.removeItem(`hotel_room_order_${room.id}`);
+          } else {
+            navigate(`/check/${savedUuid}?hotel=${room.id}`);
+            return;
+          }
+        }
+
+        // Yoxdursa yeni çek yarat və UUID-ni yadda saxla
         const uuid = handleHotelOrderCreate(room);
         if (uuid) {
+          localStorage.setItem(`hotel_room_order_${room.id}`, uuid);
           navigate(`/check/${uuid}?hotel=${room.id}`);
         }
         return;
@@ -183,7 +216,7 @@ const Rooms = () => {
       };
       toast.info(statusLabels[room.status] || "Bu otaq mövcud deyil");
     },
-    [loginedWaiter, loginedProfileData, navigate, dispatch, handleHotelOrderCreate]
+    [loginedWaiter, loginedProfileData, navigate, dispatch, handleHotelOrderCreate, books]
   );
 
   const handleReservationCreated = (booking, actionType) => {
@@ -198,6 +231,7 @@ const Rooms = () => {
         const depositAmount = booking.deposit ? parseFloat(booking.deposit) : 0;
         const uuid = handleHotelOrderCreate(room, guestName, depositAmount);
         if (uuid) {
+          localStorage.setItem(`hotel_room_order_${room.id}`, uuid);
           navigate(`/check/${uuid}?hotel=${room.id}`);
         }
       }
@@ -257,7 +291,14 @@ const Rooms = () => {
                 key={room.id}
                 className="mb-3 d-flex justify-content-center"
               >
-                <RoomCard room={room} onRoomClick={handleRoomClick} />
+                <RoomCard
+                  room={room}
+                  onRoomClick={handleRoomClick}
+                  checkTotal={(() => {
+                    const saved = localStorage.getItem(`hotel_room_order_${room.id}`);
+                    return saved ? roomCheckTotals[String(saved)] || 0 : 0;
+                  })()}
+                />
               </Col>
             ))}
           </Row>

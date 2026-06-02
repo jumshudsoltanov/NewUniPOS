@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
-import axios from "axios";
 import apiConfig from "../../utils/apiConfig";
 
 const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
@@ -13,10 +12,10 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
     const fetchRooms = async () => {
       setLoading(true);
       try {
-        const res = await apiConfig.get(`/rooms/${profileId}`);
-        const data = Array.isArray(res.data) ? res.data : [];
-        // Filter only available/occupied rooms
-        setRooms(data.filter(r => r.status === "available" || r.status === "occupied"));
+        const res = await apiConfig.get(`/rooms/${profileId}/summary`);
+        const data = Array.isArray(res.data?.data || res.data) ? (res.data?.data || res.data) : [];
+        // Filter only occupied rooms
+        setRooms(data.filter(r => r.status === "occupied"));
       } catch (err) {
         console.error("Failed to fetch rooms:", err);
         setRooms([]);
@@ -32,78 +31,25 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
     const q = search.toLowerCase();
     return (
       String(r.room_number).toLowerCase().includes(q) ||
-      (r.notes || "").toLowerCase().includes(q)
+      (r.guest_name || "").toLowerCase().includes(q)
     );
   });
 
-  const statusLabels = {
-    available: "Boş",
-    occupied: "Dolu",
-    cleaning: "Təmizlənir",
-    maintenance: "Təmirdə",
-  };
-
-  const statusColors = {
-    available: "#10B981",
-    occupied: "#F59E0B",
-    cleaning: "#3B82F6",
-    maintenance: "#EF4444",
-  };
-
   return (
-    <Modal show={show} onHide={onHide} centered animation={false} size="lg">
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        overflow: "hidden",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.15)"
-      }}>
-        {/* Header */}
-        <div style={{
-          background: "linear-gradient(135deg, #F59E0B, #D97706)",
-          padding: "20px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{
-              width: "40px", height: "40px",
-              background: "rgba(255,255,255,0.2)",
-              borderRadius: "10px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "20px"
-            }}>
-              🏨
+    <Modal show={show} onHide={onHide} centered animation={false} size="lg" className="reservation-modal">
+      <div className="modal-content-wrapper">
+        {/* Header — reservation-modal style */}
+        <div className="reservation-header">
+          <div className="reservation-header-left">
+            <div className="reservation-header-icon">
+              <i className="bi bi-building"></i>
             </div>
-            <div>
-              <div style={{ color: "white", fontWeight: 700, fontSize: "16px" }}>
-                Otağa Yaz
-              </div>
-              <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "12px" }}>
-                Hesabı otaq nömrəsinə əlavə et
-              </div>
-            </div>
+            <span className="reservation-header-title">
+              Otağa Yaz
+            </span>
           </div>
-          <button
-            onClick={onHide}
-            style={{
-              background: "rgba(255,255,255,0.2)",
-              border: "none",
-              color: "white",
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "18px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}
-          >
-            ×
+          <button className="reservation-close-btn" onClick={onHide}>
+            <i className="bi bi-x-lg" style={{ fontSize: "13px" }}></i>
           </button>
         </div>
 
@@ -111,30 +57,33 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
         <div style={{ padding: "12px 16px", borderBottom: "1px solid #E5E7EB" }}>
           <input
             type="text"
-            placeholder="Otaq nömrəsi axtar..."
+            placeholder="Otaq nömrəsi və ya qonaq adı axtar..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="form-control"
             style={{
-              width: "100%",
-              padding: "10px 14px",
-              borderRadius: "8px",
+              borderRadius: "6px",
               border: "1px solid #D1D5DB",
+              padding: "9px 12px",
               fontSize: "14px",
-              outline: "none",
-              boxSizing: "border-box"
+              width: "100%",
             }}
           />
         </div>
 
-        {/* Room List */}
-        <div style={{ maxHeight: "350px", overflowY: "auto", padding: "8px" }}>
+        {/* Room List — reservation-body style */}
+        <div className="reservation-body" style={{ padding: "8px", maxHeight: "400px", overflowY: "auto" }}>
           {loading ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#9CA3AF" }}>
-              Yüklənir...
+              <div className="spinner-border spinner-border-sm text-primary" role="status" />
+              <p style={{ marginTop: "8px", fontSize: "13px" }}>Otaqlar yüklənir...</p>
             </div>
           ) : filteredRooms.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#9CA3AF" }}>
-              {search ? "Heç bir otaq tapılmadı" : "Aktiv otaq yoxdur"}
+              <i className="bi bi-building" style={{ fontSize: "32px", color: "#D1D5DB" }}></i>
+              <p style={{ marginTop: "8px", fontSize: "13px" }}>
+                {search ? "Heç bir otaq tapılmadı" : "Dolu otaq yoxdur"}
+              </p>
             </div>
           ) : (
             filteredRooms.map((room) => (
@@ -145,16 +94,17 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: "14px 16px",
-                  borderRadius: "10px",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
                   cursor: "pointer",
                   transition: "all 0.15s",
                   marginBottom: "4px",
                   border: "1px solid transparent",
                 }}
+                className="room-charge-item-hover"
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#FFF7ED";
-                  e.currentTarget.style.borderColor = "#FDE68A";
+                  e.currentTarget.style.background = "#EFF6FF";
+                  e.currentTarget.style.borderColor = "#BFDBFE";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "transparent";
@@ -164,14 +114,14 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                   <div style={{
                     width: "44px", height: "44px",
-                    background: "#FEF3C7",
+                    background: "#DBEAFE",
                     borderRadius: "10px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     fontWeight: 700,
                     fontSize: "16px",
-                    color: "#D97706"
+                    color: "#053796",
                   }}>
                     {room.room_number}
                   </div>
@@ -180,7 +130,12 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
                       Otaq {room.room_number}
                     </div>
                     <div style={{ fontSize: "12px", color: "#6B7280" }}>
-                      {room.room_type || "Standard"} · {room.floor ? `${room.floor}. mərtəbə` : ""}
+                      {room.guest_name ? (
+                        <span style={{ color: "#053796", fontWeight: 500 }}>{room.guest_name}</span>
+                      ) : (
+                        <span>Boş</span>
+                      )}
+                      {room.room_type ? ` · ${room.room_type}` : ""}
                     </div>
                   </div>
                 </div>
@@ -190,20 +145,27 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
                     borderRadius: "20px",
                     fontSize: "11px",
                     fontWeight: 600,
-                    background: `${statusColors[room.status] || "#6B7280"}15`,
-                    color: statusColors[room.status] || "#6B7280",
+                    background: "#FEF3C7",
+                    color: "#D97706",
                   }}>
-                    {statusLabels[room.status] || room.status}
+                    Dolu
                   </span>
-                  {room.price > 0 && (
+                  {room.folio_balance > 0 && (
                     <span style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
-                      {room.price} ₼
+                      {Number(room.folio_balance).toFixed(2)} ₼
                     </span>
                   )}
                 </div>
               </div>
             ))
           )}
+        </div>
+
+        {/* Footer — reservation-footer style */}
+        <div className="reservation-footer" style={{ justifyContent: "center" }}>
+          <button className="btn-cancel" onClick={onHide}>
+            Bağla
+          </button>
         </div>
       </div>
     </Modal>

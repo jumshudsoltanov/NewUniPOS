@@ -680,8 +680,20 @@ const Check = () => {
         console.error("Auto-send on exit failed:", e);
       }
     }
-    const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
+
     const opts = replace ? { replace: true } : undefined;
+
+    // Hotel mode: get rooms instead of tables
+    if (isHotelMode) {
+      if (!skipRefresh) {
+        const profileId = loginedProfileData?.data?.profile?.id;
+        if (profileId) dispatch(fetchRooms(profileId));
+      }
+      navigate("/tables", opts);
+      return;
+    }
+
+    const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
     if (isPacksOnly || location.state?.from === "/checks") {
       navigate("/checks", opts);
     } else {
@@ -787,6 +799,10 @@ const Check = () => {
         const profileId = loginedProfileData?.data?.profile?.id;
         if (profileId) {
           dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+          // Hotel mode: refresh rooms to show updated balance on room card
+          if (isHotelMode) {
+            dispatch(fetchRooms(profileId));
+          }
         }
 
         const deletedItemsForPrint = pendingDeletions.map(d => {
@@ -859,6 +875,10 @@ const Check = () => {
         const profileId = loginedProfileData?.data?.profile?.id;
         if (profileId) {
           dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+          // Hotel mode: refresh rooms to show updated balance on room card
+          if (isHotelMode) {
+            dispatch(fetchRooms(profileId));
+          }
         }
 
         const combinedForPrinting = [...productsWithComments];
@@ -952,7 +972,7 @@ const Check = () => {
     // Bu halda silmə — server-də artıq məhsullar var.
     const actualResultingItemCount = hadPendingProducts ? Math.max(resultingItemCount, 1) : resultingItemCount;
 
-    if (actualResultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
+    if (!isHotelMode && actualResultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const profileId = loginedProfileData?.data?.profile?.id;
       const isMasterSlaveActive = loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1;
@@ -1440,6 +1460,10 @@ const Check = () => {
 
     // 1. Instant navigation + optimistic state removal (UI instantly shows table as empty)
     const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
+    // Hotel mode: localStorage UUID-ni təmizlə ki, otağa təkrar girəndə silinmiş çek açılmasın
+    if (isHotelMode && hotelRoomId) {
+      localStorage.removeItem(`hotel_room_order_${hotelRoomId}`);
+    }
     navigate(isPacksOnly ? "/checks" : "/tables", { replace: true });
     dispatch(removeOrderOptimisticFromTables(orderId));
     dispatch(removeOrderOptimistic(orderId));
@@ -2118,6 +2142,8 @@ const Check = () => {
                 selectedCustomer={selectedCustomer}
                 activeTableCount={activeTableCount}
                 onBeforeCreateOrder={autoSendIfNeeded}
+                isHotelMode={isHotelMode}
+                hotelRoom={hotelRoom}
               />
 
               <CheckMain orders={currentOrder} table={currentTable} />

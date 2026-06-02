@@ -3,12 +3,14 @@ import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { createReservation, fetchRooms } from "../../redux/Slices/HotelSlice";
+import { createCustomerViaAdmin, fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
 import "./ReservationModal.css";
 
 const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
   const dispatch = useDispatch();
   const { rooms, isCreatingReservation } = useSelector((state) => state.HotelSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { customers } = useSelector((state) => state.CustomersSlice);
 
   const profileId = loginedProfileData?.data?.profile?.id;
 
@@ -16,6 +18,10 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
   const [guestPhone, setGuestPhone] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [adults, setAdults] = useState(1);
@@ -37,6 +43,8 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
     setGuestName("");
     setGuestPhone("");
     setDocumentId("");
+    setSelectedCustomerId(null);
+    setCustomerSearch("");
     setNotes("");
     setAdults(1);
     setChildren(0);
@@ -55,6 +63,53 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
       setSelectedRoomId("");
     }
   }, [show, preselectedRoom]);
+
+  // Filtered customers for search dropdown
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim() || !customers?.length) return [];
+    const q = customerSearch.toLowerCase();
+    return customers.filter(
+      (c) =>
+        (c.name || "").toLowerCase().includes(q) ||
+        (c.phone || "").toLowerCase().includes(q)
+    ).slice(0, 10);
+  }, [customerSearch, customers]);
+
+  const handleCustomerSelect = (customer) => {
+    setSelectedCustomerId(customer.id);
+    setGuestName(customer.name || "");
+    setGuestPhone(customer.phone || "");
+    setCustomerSearch(customer.name || "");
+    setShowCustomerDropdown(false);
+  };
+
+  const handleCreateCustomer = async () => {
+    const name = customerSearch.trim();
+    const phone = guestPhone.trim();
+    if (!name) {
+      toast.error("Müştəri yaratmaq üçün ad daxil edin");
+      return;
+    }
+    setIsCreatingCustomer(true);
+    try {
+      const result = await dispatch(createCustomerViaAdmin({
+        name,
+        phone: phone || undefined,
+      })).unwrap();
+      const newCustomer = result?.data || result;
+      if (newCustomer?.id) {
+        setSelectedCustomerId(newCustomer.id);
+        setGuestName(name);
+        toast.success("Müştəri yaradıldı!");
+        dispatch(fetchCustomersFromAdmin());
+        setShowCustomerDropdown(false);
+      }
+    } catch (err) {
+      toast.error(err?.error || "Müştəri yaradılmadı");
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
 
   // Available rooms for dropdown
   const availableRooms = useMemo(() => {
@@ -118,6 +173,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           guest_name: guestName.trim(),
           guest_phone: guestPhone.trim(),
           document_id: documentId.trim() || undefined,
+          customer_id: selectedCustomerId || undefined,
           check_in: checkIn,
           check_out: checkOut,
           adults: Number(adults),
@@ -137,7 +193,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
   };
 
   return (
-    <Modal show={show} onHide={onHide} centered animation={false} size="md" className="reservation-modal">
+    <Modal show={show} onHide={onHide} centered animation={false} size="lg" className="reservation-modal">
       <div className="modal-content-wrapper">
         {/* Header */}
         <div className="reservation-header">
@@ -176,6 +232,103 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
             </button>
           </div>
 
+          {/* Customer Search */}
+          <div className="mb-3">
+            <label className="form-label">
+              <i className="bi bi-person-fill" style={{ marginRight: 4 }}></i>
+              Müştəri seç
+            </label>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Ad və ya telefon nömrəsi ilə axtar..."
+                value={customerSearch}
+                onChange={(e) => {
+                  setCustomerSearch(e.target.value);
+                  setShowCustomerDropdown(true);
+                  if (selectedCustomerId) {
+                    setSelectedCustomerId(null);
+                    if (!e.target.value) {
+                      setGuestName("");
+                      setGuestPhone("");
+                    }
+                  }
+                }}
+                onFocus={() => setShowCustomerDropdown(true)}
+                onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+              />
+              {selectedCustomerId && customerSearch && (
+                <span
+                  style={{
+                    position: "absolute", right: "10px", top: "50%",
+                    transform: "translateY(-50%)",
+                    color: "#10B981", fontSize: "12px", fontWeight: 600,
+                    background: "#F0FDF4", padding: "4px 12px",
+                    borderRadius: "6px", display: "inline-flex", alignItems: "center", gap: "5px",
+                    pointerEvents: "none", lineHeight: 1,
+                  }}
+                >
+                  <i className="bi bi-check-circle-fill" style={{ fontSize: "12px" }}></i>
+                  seçildi
+                </span>
+              )}
+              {showCustomerDropdown && !selectedCustomerId && customerSearch.trim() && (
+                <div
+                  style={{
+                    position: "absolute", top: "100%", left: 0, right: 0,
+                    zIndex: 50, background: "#fff",
+                    border: "1px solid #D1D5DB", borderRadius: "6px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    maxHeight: "220px", overflowY: "auto",
+                  }}
+                >
+                  {filteredCustomers.map((c) => (
+                    <div
+                      key={c.id}
+                      onMouseDown={() => handleCustomerSelect(c)}
+                      style={{
+                        padding: "10px 12px", cursor: "pointer",
+                        borderBottom: "1px solid #F3F4F6",
+                        display: "flex", alignItems: "center", gap: "8px",
+                      }}
+                      className="rm-customer-option"
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#EFF6FF"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <i className="bi bi-person-circle" style={{ color: "#9CA3AF", fontSize: "18px" }}></i>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "13px", color: "#1F2937" }}>{c.name}</div>
+                        {c.phone && <div style={{ fontSize: "12px", color: "#6B7280" }}>{c.phone}</div>}
+                      </div>
+                    </div>
+                  ))}
+                  <div
+                    onMouseDown={handleCreateCustomer}
+                    style={{
+                      padding: "10px 12px", cursor: "pointer",
+                      borderTop: "1px solid #E5E7EB",
+                      display: "flex", alignItems: "center", gap: "8px",
+                      color: "#053796", fontWeight: 600, fontSize: "13px",
+                    }}
+                    className="rm-customer-option"
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#EFF6FF"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    {isCreatingCustomer ? (
+                      <><span className="spinner-border spinner-border-sm me-1" role="status"></span> Yaradılır...</>
+                    ) : (
+                      <>
+                        <i className="bi bi-plus-circle-fill" style={{ color: "#053796", fontSize: "16px" }}></i>
+                        <span>"{customerSearch}" — Yeni müştəri yarat</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Guest Name */}
           <div className="mb-3">
             <label className="form-label">
@@ -186,7 +339,10 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
               className="form-control"
               placeholder="Ad Soyad"
               value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
+              onChange={(e) => {
+                setGuestName(e.target.value);
+                if (selectedCustomerId) setSelectedCustomerId(null);
+              }}
             />
           </div>
 

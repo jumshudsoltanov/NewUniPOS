@@ -335,6 +335,17 @@
     font-weight: 600;
 }
 
+.checks-check-badge.checks-badge-room {
+    font-weight: 600;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 10px;
+    line-height: 1;
+}
+
 /* Check Info */
 .checks-check-info {
     display: flex;

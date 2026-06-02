@@ -19,6 +19,7 @@ import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { isPosBlocked, isPaymentExpired } from "../../utils/dateHelpers";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 import RoomChargeModal from "../RoomChargeModal/RoomChargeModal";
+import { updateFolioBalance, fetchRooms } from '../../redux/Slices/HotelSlice';
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -109,48 +110,10 @@ const CheckOver = () => {
         fetchData();
     }, [dispatch, loginedProfileData?.data?.profile?.id]);
 
-    // Auto-select payment method (only when POS is blocked + auto mode)
-    const autoSelectedRef = useRef(false);
-    useEffect(() => {
-        if (viewMode !== "PAYMENT" || autoSelectedRef.current || paymentMethods.length === 0) return;
-
-        // Yalnız POS blok vəziyyətində işləsin
-        const profile = loginedProfileData?.data?.profile;
-        if (!profile) return;
-        const isBlocked = isPosBlocked(profile.is_pos_block) || isPaymentExpired(profile.next_payment_date);
-        if (!isBlocked) return;
-
-        const autoEnabled = localStorage.getItem("pos_auto_payment_enabled") === "true";
-        if (!autoEnabled) return;
-
-        // İlk ödəniş üsulunu seç (adətən Nəğd)
-        const defaultMethod = paymentMethods[0];
-        if (defaultMethod) {
-            setSelectedMethods([{ ...defaultMethod, amount: calcTotal.sumTotal }]);
-            autoSelectedRef.current = true;
-        }
-    }, [viewMode, paymentMethods, calcTotal.sumTotal]);
-
     const currentOrder = useMemo(() => {
         if (!books?.data) return null;
         return books.data.find(o => o.uuid === id);
     }, [books, id]);
-
-    const selectedCustomer = useMemo(() => {
-        if (!currentOrder?.customer_id || !customers) return null;
-        return customers.find(c => c.id === currentOrder.customer_id);
-    }, [currentOrder?.customer_id, customers]);
-
-    // Çap üçün: zal/masa yalnız restoranda (dine_in) — takeaway/delivery və s. üçün göstərilmir
-    const receiptHallName = useMemo(() => {
-        if (currentOrder?.sale_type !== "dine_in") return "";
-        return currentOrder?.hall_name || currentOrder?.table?.hall?.name || "";
-    }, [currentOrder?.sale_type, currentOrder?.hall_name, currentOrder?.table?.hall?.name]);
-
-    const receiptTableName = useMemo(() => {
-        if (currentOrder?.sale_type !== "dine_in") return "";
-        return currentOrder?.table_name || currentOrder?.table?.name || "";
-    }, [currentOrder?.sale_type, currentOrder?.table_name, currentOrder?.table?.name]);
 
     const calcTotal = useMemo(() => {
         if (!currentOrder) return { total: 0, sumTotal: "0.00" };
@@ -219,6 +182,44 @@ const CheckOver = () => {
         };
     }, [currentOrder]);
 
+    // Auto-select payment method (only when POS is blocked + auto mode)
+    const autoSelectedRef = useRef(false);
+    useEffect(() => {
+        if (viewMode !== "PAYMENT" || autoSelectedRef.current || paymentMethods.length === 0) return;
+
+        // Yalnız POS blok vəziyyətində işləsin
+        const profile = loginedProfileData?.data?.profile;
+        if (!profile) return;
+        const isBlocked = isPosBlocked(profile.is_pos_block) || isPaymentExpired(profile.next_payment_date);
+        if (!isBlocked) return;
+
+        const autoEnabled = localStorage.getItem("pos_auto_payment_enabled") === "true";
+        if (!autoEnabled) return;
+
+        // İlk ödəniş üsulunu seç (adətən Nəğd)
+        const defaultMethod = paymentMethods[0];
+        if (defaultMethod) {
+            setSelectedMethods([{ ...defaultMethod, amount: calcTotal.sumTotal }]);
+            autoSelectedRef.current = true;
+        }
+    }, [viewMode, paymentMethods, calcTotal.sumTotal]);
+
+    const selectedCustomer = useMemo(() => {
+        if (!currentOrder?.customer_id || !customers) return null;
+        return customers.find(c => c.id === currentOrder.customer_id);
+    }, [currentOrder?.customer_id, customers]);
+
+    // Çap üçün: zal/masa yalnız restoranda (dine_in) — takeaway/delivery və s. üçün göstərilmir
+    const receiptHallName = useMemo(() => {
+        if (currentOrder?.sale_type !== "dine_in") return "";
+        return currentOrder?.hall_name || currentOrder?.table?.hall?.name || "";
+    }, [currentOrder?.sale_type, currentOrder?.hall_name, currentOrder?.table?.hall?.name]);
+
+    const receiptTableName = useMemo(() => {
+        if (currentOrder?.sale_type !== "dine_in") return "";
+        return currentOrder?.table_name || currentOrder?.table?.name || "";
+    }, [currentOrder?.sale_type, currentOrder?.table_name, currentOrder?.table?.name]);
+
     // is_tax=1 olan ödəniş üsulu seçiləndə vergi çekini yandır (söndürmə — yalnız əl ilə)
     useEffect(() => {
         if (Number(loginedWaiter?.data?.can_see_tax) !== 1 || viewMode !== "PAYMENT") return;
@@ -228,6 +229,7 @@ const CheckOver = () => {
     }, [viewMode, selectedMethods, loginedWaiter?.data?.can_see_tax]);
 
     const isHotelMode = Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1;
+    const { rooms: hotelRooms } = useSelector((state) => state.HotelSlice);
 
     const handleRoomCharge = (room) => {
         const method = {
@@ -454,6 +456,23 @@ const CheckOver = () => {
                 waiterName,
                 details: noteStr ? `Bağlandı. Qeyd: ${noteStr}` : "Sifariş müvəffəqiyyətlə bağlandı"
             }));
+
+            // Hotel room charge: update folio_balance
+            if (roomChargeMethod?.room_id && profileId) {
+                const checkTotal = Number(calcTotal.sumTotal || 0);
+                const roomData = hotelRooms.find(r => Number(r.id) === Number(roomChargeMethod.room_id));
+                const currentBalance = Number(roomData?.folio_balance || 0);
+                try {
+                    await dispatch(updateFolioBalance({
+                        roomId: roomChargeMethod.room_id,
+                        profileId,
+                        balance: currentBalance + checkTotal
+                    })).unwrap();
+                    dispatch(fetchRooms(profileId));
+                } catch (err) {
+                    console.error("Folio balance update error:", err);
+                }
+            }
 
             if (printCheck) {
                 dispatch(saveLog({
@@ -749,7 +768,7 @@ const CheckOver = () => {
 
                                 {isHotelMode && (
                                     <div
-                                        className="payment-method-item room-charge-btn"
+                                        className="payment-method-item room-charge-btn mt-3"
                                         style={{
                                             border: roomChargeMethod ? '2px solid #F59E0B' : undefined,
                                             background: roomChargeMethod ? '#FFFBEB' : undefined,
@@ -762,7 +781,6 @@ const CheckOver = () => {
                                                 {roomChargeMethod && <i className="bi bi-check-lg"></i>}
                                             </div>
                                             <span className="method-name">
-                                                <i className="bi bi-building me-2"></i>
                                                 Otağa Yaz
                                             </span>
                                         </div>

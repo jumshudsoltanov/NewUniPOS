@@ -10,7 +10,7 @@
   max-height: 95vh;
   margin: 2vh auto;
   width: auto;
-  max-width: 500px;
+  max-width: 800px;
 }
 
 .reservation-modal .modal-dialog .modal-content {
@@ -81,6 +81,11 @@
   overflow-y: auto;
   flex: 1;
   min-height: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.reservation-modal .reservation-body::-webkit-scrollbar {
+  display: none;
 }
 
 .reservation-modal .form-label {

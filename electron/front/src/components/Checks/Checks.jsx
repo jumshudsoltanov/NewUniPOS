@@ -14,7 +14,6 @@ import { getSocket } from "../../utils/apiConfig";
 import { fetchRooms } from "../../redux/Slices/HotelSlice";
 import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
-
 const getStatusColor = (status) => {
   switch (status) {
     case 1: return "#053796";
@@ -30,12 +29,17 @@ const formatTime = (startDate) => {
   return diffMins < 60 ? `${diffMins} dəq` : `${Math.floor(diffMins / 60)} Saat`;
 };
 
-const CheckListItem = React.memo(({ check, onClick }) => (
+const CheckListItem = React.memo(({ check, onClick, roomNumber }) => (
   <div className="checks-check-item" onClick={() => onClick(check)}>
     <div className="checks-check-left">
       <div className="checks-check-id-row">
         <span className="checks-status-dot" style={{ backgroundColor: getStatusColor(check.status) }}></span>
-        <span className="checks-check-id">#{check.id}</span>
+        <span className="checks-check-id">{check.id ? `#${check.id}` : "Yeni"}</span>
+        {roomNumber && (
+          <span className="checks-check-badge checks-badge-room" style={{ background: "#FEF3C7", color: "#D97706" }}>
+            <i className="bi bi-building" style={{ verticalAlign: "middle" }}></i>Otaq {roomNumber}
+          </span>
+        )}
         {check.status === 1 ? (
           <span className="checks-check-badge checks-badge-open">Açıq</span>
         ) : (
@@ -104,7 +108,7 @@ const Checks = () => {
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-  const { archivedBooks, status } = useSelector((state) => state.BooksSlice);
+  const { books, archivedBooks, status } = useSelector((state) => state.BooksSlice);
   const { waitersLists } = useSelector((state) => state.WaitersSlice);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
 
@@ -170,6 +174,8 @@ const Checks = () => {
       const waiterName =
         loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 
+      localStorage.setItem(`hotel_room_order_${room.id}`, generatedUuid);
+
       const optimisticOrder = {
         uuid: generatedUuid,
         id: null,
@@ -182,6 +188,8 @@ const Checks = () => {
         status: 1,
         is_selected: 1,
         orders_items: [],
+        room_id: room.id,
+        room_number: room.room_number,
         amount: 0,
         total: 0,
         start_date: new Date().toISOString(),
@@ -324,9 +332,19 @@ const Checks = () => {
   }, [activeTab, profileId, dispatch, selectedDate, debouncedSearchId, filterSaleType, filterWaiter, filterHall, filterTable]);
 
   const currentDisplayOrders = useMemo(() => {
-    let orders = activeTab === "open" ? openOrders : archivedBooks;
-    return orders;
-  }, [activeTab, openOrders, archivedBooks]);
+    if (activeTab !== "open") return archivedBooks;
+    // Serverden gelen elə plus Redux-dakı optimistik orderları birləşdir
+    const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
+    if (booksList.length === 0) return openOrders;
+
+    const merged = [...openOrders];
+    booksList.forEach((b) => {
+      if (b.status !== 0 && !merged.some((o) => String(o.uuid) === String(b.uuid))) {
+        merged.push(b);
+      }
+    });
+    return merged;
+  }, [activeTab, openOrders, archivedBooks, books]);
 
   const filteredDisplayOrders = useMemo(() => {
     let orders = currentDisplayOrders;
@@ -441,154 +459,7 @@ const Checks = () => {
 
   const monthNamesAz = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "İyun", "İyul", "Avqust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr"];
 
-  if (isHotelMode) {
-    return (
-      <Container fluid className="checks-container" style={{ background: "#ebf2fe" }}>
-        {/* Header */}
-        <div className="checks-nav-tabs">
-          <div className="checks-nav-tab active">
-            Dolu otaqlar ({occupiedRooms.length})
-          </div>
-        </div>
-
-        {/* Search */}
-        <div style={{ padding: "16px 24px 0", flexShrink: 0 }}>
-          <div style={{ position: "relative", maxWidth: 320 }}>
-            <i className="bi bi-search" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF", fontSize: 14 }}></i>
-            <input
-              type="text"
-              placeholder="Otaq nömrəsi və ya qonaq adı"
-              value={hotelSearch}
-              onChange={(e) => setHotelSearch(e.target.value)}
-              style={{
-                width: "100%", padding: "10px 14px 10px 36px", border: "1px solid #E5E7EB",
-                borderRadius: 8, fontSize: 13, outline: "none", background: "#fff",
-                boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Room Cards Grid */}
-        <div style={{ flex: 1, overflow: "auto", padding: "16px 24px 24px" }}>
-          {filteredOccupiedRooms.length === 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "#9CA3AF" }}>
-              <i className="bi bi-building" style={{ fontSize: 48, color: "#D1D5DB", marginBottom: 12 }}></i>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>Dolu otaq tapılmadı</p>
-            </div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-              {filteredOccupiedRooms.map((room) => {
-                const d1 = room.check_in ? new Date(room.check_in) : null;
-                const d2 = room.check_out ? new Date(room.check_out) : null;
-                const nights = d1 && d2 ? Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24))) : 0;
-                return (
-                  <div
-                    key={room.id}
-                    onClick={() => handleHotelRoomClick(room)}
-                    style={{
-                      background: "#fff", borderRadius: 10, border: "1px solid #E5E7EB",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)", cursor: "pointer",
-                      padding: 0, overflow: "hidden", transition: "all 0.15s",
-                    }}
-                    className="hotel-check-card-hover"
-                  >
-                    {/* Top bar */}
-                    <div style={{
-                      background: "#F59E0B", padding: "12px 16px",
-                      display: "flex", alignItems: "center", justifyContent: "space-between"
-                    }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ color: "#fff", fontSize: 11, fontWeight: 600, background: "rgba(0,0,0,0.15)", padding: "2px 8px", borderRadius: 4 }}>
-                          Otaq
-                        </span>
-                        <span style={{ color: "#fff", fontSize: 20, fontWeight: 800, letterSpacing: 0.5 }}>
-                          {room.room_number || "?"}
-                        </span>
-                      </div>
-                      <div style={{
-                        background: "rgba(0,0,0,0.15)", borderRadius: 6,
-                        padding: "4px 10px", textAlign: "right"
-                      }}>
-                        <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>Balans</div>
-                        <div style={{ color: "#fff", fontSize: 15, fontWeight: 700 }}>{(Number(room.folio_balance) || 0).toFixed(2)} ₼</div>
-                      </div>
-                    </div>
-
-                    {/* Body */}
-                    <div style={{ padding: "14px 16px" }}>
-                      {/* Guest */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                        <div style={{
-                          width: 32, height: 32, borderRadius: "50%", background: "#FEF3C7",
-                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
-                        }}>
-                          <i className="bi bi-person-fill" style={{ color: "#D97706", fontSize: 14 }}></i>
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: "#1F2937", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {room.guest_name || "Naməlum"}
-                          </div>
-                          {room.guest_phone && (
-                            <div style={{ fontSize: 11, color: "#053796", fontWeight: 600, marginTop: 1 }}>
-                              <i className="bi bi-telephone-fill" style={{ fontSize: 9, marginRight: 4 }}></i>
-                              {room.guest_phone}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Room type */}
-                      {room.room_type && (
-                        <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 10, fontWeight: 500 }}>
-                          <i className="bi bi-door-open" style={{ marginRight: 4 }}></i>
-                          {room.room_type}
-                        </div>
-                      )}
-
-                      {/* Dates */}
-                      {(d1 || d2) && (
-                        <div style={{ display: "flex", gap: 12, marginBottom: 8 }}>
-                          {d1 && (
-                            <div style={{ flex: 1, background: "#F9FAFB", borderRadius: 6, padding: "8px 10px", textAlign: "center", border: "1px solid #F3F4F6" }}>
-                              <div style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 2 }}>
-                                <i className="bi bi-box-arrow-in-right" style={{ marginRight: 3 }}></i>Giriş
-                              </div>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: "#1F2937" }}>
-                                {d1.toLocaleString("az-AZ", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                              </div>
-                            </div>
-                          )}
-                          {d2 && (
-                            <div style={{ flex: 1, background: "#F9FAFB", borderRadius: 6, padding: "8px 10px", textAlign: "center", border: "1px solid #F3F4F6" }}>
-                              <div style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 2 }}>
-                                <i className="bi bi-box-arrow-right" style={{ marginRight: 3 }}></i>Çıxış
-                              </div>
-                              <div style={{ fontSize: 11, fontWeight: 700, color: "#1F2937" }}>
-                                {d2.toLocaleString("az-AZ", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Nights */}
-                      {nights > 0 && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#6B7280", fontWeight: 600 }}>
-                          <i className="bi bi-moon" style={{ color: "#F59E0B", fontSize: 11 }}></i>
-                          {nights} gecə
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </Container>
-    );
-  }
+  // Hotel mode: normal checks listi göstər (restoran modulundakı kimi)
 
   return (
     <Container fluid className="checks-container">
@@ -728,10 +599,25 @@ const Checks = () => {
         ) : (
           filteredDisplayOrders.map((check, index) => {
             const showDateHeader = index === 0 || formatDateKey(filteredDisplayOrders[index - 1]?.start_date) !== formatDateKey(check?.start_date);
+            // Otaq nömrəsini tap: əvvəl check-dən, sonra localStorage-dan
+            let roomNumber = check.room_number || null;
+            if (!roomNumber && isHotelMode && check.uuid) {
+              try {
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key?.startsWith("hotel_room_order_") && localStorage.getItem(key) === String(check.uuid)) {
+                    const roomId = key.replace("hotel_room_order_", "");
+                    const room = occupiedRooms.find(r => String(r.id) === roomId);
+                    if (room) roomNumber = room.room_number;
+                    break;
+                  }
+                }
+              } catch (e) { /* ignore */ }
+            }
             return (
               <div key={check.id}>
                 {showDateHeader && <div className="checks-date-header">{formatDisplayDate(check?.start_date)}</div>}
-                <CheckListItem check={check} onClick={handleOrderClick} />
+                <CheckListItem check={check} onClick={handleOrderClick} roomNumber={roomNumber} />
               </div>
             );
           })

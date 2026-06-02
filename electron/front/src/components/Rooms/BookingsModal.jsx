@@ -39,13 +39,20 @@ const BookingsModal = ({ show, onHide, profileId }) => {
     setProcessingId(booking.id);
     setConfirmAction(null);
     try {
+      const pid = profileId;
       if (type === "cancel") {
         await dispatch(updateBookingStatus({ bookingId: booking.id, status: "cancelled" })).unwrap();
         toast.success("Rezervasiya ləğv edildi");
-        dispatch(fetchBookings(profileId));
+        if (pid) {
+          dispatch(fetchBookings(pid));
+          dispatch(fetchRooms(pid));
+        }
       } else if (type === "delete") {
         await dispatch(deleteBooking(booking.id)).unwrap();
         toast.success("Rezervasiya silindi");
+        if (pid) {
+          dispatch(fetchRooms(pid));
+        }
       }
     } catch (err) {
       toast.error(type === "cancel" ? "Ləğv etmək mümkün olmadı" : "Silmək mümkün olmadı");

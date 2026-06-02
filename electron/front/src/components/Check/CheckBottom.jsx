@@ -592,7 +592,7 @@ const CheckBottom = ({
                 </div>
               ) : (
                 <>
-                  <i className="bi bi-send"></i>
+                  <i className="bi bi-printer"></i>
                   <span>Göndər</span>
                   {totalChanges > 0 && (
                     <span className="new-items-badge">{totalChanges}</span>

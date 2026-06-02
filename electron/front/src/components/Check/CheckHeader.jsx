@@ -24,6 +24,8 @@ const CheckHeader = ({
   selectedCustomer,
   activeTableCount = 0,
   onBeforeCreateOrder,
+  isHotelMode,
+  hotelRoom,
 }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
@@ -212,9 +214,10 @@ const CheckHeader = ({
                 table?.name ||
                 orders?.table_name ||
                 orders?.table?.name;
-              const mainLine =
-                isDineIn &&
-                (effectiveTableName || effectiveHallName || orders?.table_id)
+              const mainLine = isHotelMode
+                ? `${hotelRoom?.room_number || orders?.room_number || "?"}`
+                : isDineIn &&
+                  (effectiveTableName || effectiveHallName || orders?.table_id)
                   ? effectiveTableName || "Masa"
                   : effectiveSaleType === "delivery"
                     ? "Çatdırılma"

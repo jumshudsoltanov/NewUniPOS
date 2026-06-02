@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { updateRoomStatus } from "../../redux/Slices/HotelSlice";
+import { updateRoomStatus, fetchRooms } from "../../redux/Slices/HotelSlice";
 import "../Table/Table.css";
 
 const statusToTableClass = {
@@ -20,13 +20,15 @@ const statusOptions = [
   { value: "maintenance", label: "Təmirdə", icon: "bi-tools", color: "#EF4444" },
 ];
 
-const RoomCard = ({ room, onRoomClick }) => {
+const RoomCard = ({ room, onRoomClick, checkTotal = 0 }) => {
   const dispatch = useDispatch();
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
   const status = room.status || "available";
   const tableStatus = statusToTableClass[status] || "free";
-  const balance = Number(room.folio_balance || 0);
+  // checkTotal varsa göstər, yoxdursa folio_balance (restoran modulundakı kimi)
+  const displayAmount = checkTotal > 0 ? checkTotal : Number(room.folio_balance || 0);
 
   const handleStatusChange = async (newStatus, e) => {
     e.stopPropagation();
@@ -34,6 +36,9 @@ const RoomCard = ({ room, onRoomClick }) => {
       await dispatch(updateRoomStatus({ roomId: room.id, status: newStatus })).unwrap();
       toast.success(`Otaq statusu "${statusOptions.find(s => s.value === newStatus)?.label}" olaraq dəyişdirildi`);
       setShowStatusMenu(false);
+      // Otaqları yenilə
+      const pid = loginedProfileData?.data?.profile?.id;
+      if (pid) dispatch(fetchRooms(pid));
     } catch (err) {
       toast.error("Status dəyişdirilmədi");
     }
@@ -51,7 +56,7 @@ const RoomCard = ({ room, onRoomClick }) => {
             {room.room_number || "?"}
           </h3>
           <p className={`table-amount ${tableStatus}`}>
-            {balance.toFixed(2)} ₼
+            {displayAmount.toFixed(2)} ₼
           </p>
 
           {status === "occupied" && room.guest_name ? (
@@ -151,13 +156,13 @@ const RoomCard = ({ room, onRoomClick }) => {
             <div
               style={{
                 position: "absolute",
-                bottom: "22px",
-                left: "-5px",
+                top: "100%",
+                left: "0",
                 background: "white",
                 borderRadius: "8px",
                 boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
                 zIndex: 100,
-                minWidth: "150px",
+                minWidth: "160px",
                 padding: "4px",
                 display: "flex",
                 flexDirection: "column",
