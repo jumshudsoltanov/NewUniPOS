@@ -2783,9 +2783,9 @@ try {
     console.error("Backend file not found:", backendPath);
   }
 } catch (err) {
-  console.error(
+  log.error(
     "Failed to start backend:",
-    err ? err.message || err.toString() : "Naməlum xəta",
+    err ? err.stack || err.message || err.toString() : "Naməlum xəta",
   );
 }
 

@@ -10,7 +10,7 @@ async function test() {
         form.append('audio', fs.createReadStream('dummy.webm'));
         form.append('menu', JSON.stringify([{id: 1, name: 'Test'}]));
 
-        const response = await axios.post('http://localhost:55667/api/voice-order', form, {
+        const response = await axios.post('http://127.0.0.1:55667/api/voice-order', form, {
             headers: form.getHeaders()
         });
         console.log("Success:", response.data);

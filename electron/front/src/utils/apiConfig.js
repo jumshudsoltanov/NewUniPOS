@@ -5,12 +5,12 @@ import { io } from "socket.io-client";
 export const TAX_HTTP_TIMEOUT_MS = 240000;
 
 const apiConfig = axios.create({
-    baseURL: "http://localhost:55667/api",
+    baseURL: "http://127.0.0.1:55667/api",
     timeout: 30000,
 });
 
 export const localApi = axios.create({
-    baseURL: "http://localhost:55667/api",
+    baseURL: "http://127.0.0.1:55667/api",
     timeout: 30000,
 });
 
@@ -158,7 +158,7 @@ export const initNetwork = async (forceLocal = false, disableSocket = false, dir
 
     // Fallback to local (only if forceLocal is true or it's genuinely the Electron Master)
     if (!disableSocket && (forceLocal || (window.electronAPI && !window.electronAPI.scanMaster))) {
-        socket = io("http://localhost:55667", {
+        socket = io("http://127.0.0.1:55667", {
             transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: Infinity,
@@ -178,7 +178,7 @@ export const initNetwork = async (forceLocal = false, disableSocket = false, dir
         socket = null;
     }
 
-    return { masterIp: forceLocal ? "localhost" : null, socket };
+    return { masterIp: forceLocal ? "127.0.0.1" : null, socket };
 };
 
 export const getSocket = () => socket;

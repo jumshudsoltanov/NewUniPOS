@@ -373,8 +373,8 @@ const InsertData = async (profileId) => {
   );
 };
 
-const server = app.listen(55667, "0.0.0.0", () => {
-  console.log("Express Server Is Running on 0.0.0.0:55667");
+const server = app.listen(55667, () => {
+  console.log("Express Server Is Running on port 55667");
 });
 
 server.on("error", (e) => {
