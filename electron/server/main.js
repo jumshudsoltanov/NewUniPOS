@@ -364,6 +364,7 @@ function createWindow() {
       preload: preloadPath,
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false, // file:// → http://localhost sorğularına icazə ver
     },
   });
 
@@ -550,6 +551,7 @@ function createWindow() {
         nodeIntegration: false,
         contextIsolation: true,
         preload: preloadPath,
+        webSecurity: false, // file:// → http://localhost sorğularına icazə ver
       },
     });
 
@@ -1350,6 +1352,7 @@ ipcMain.handle("toggle-kitchen-display", (event, { active, screenId }) => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
     },
   });
 
@@ -1389,6 +1392,7 @@ function createKitchenWindow(screenId) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
     },
   });
 

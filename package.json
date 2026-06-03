@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.2.60",
+  "version": "2.2.64",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -107,7 +107,11 @@
     "electron-log": "^4.4.8",
     "electron-updater": "^5.3.0",
     "express": "^4.21.2",
+    "formdata-node": "^6.0.3",
     "mariadb": "3.3.2",
+    "multer": "^2.1.1",
+    "node-fetch": "^2.7.0",
+    "openai": "^6.41.0",
     "png-to-ico": "^3.0.1",
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.3"

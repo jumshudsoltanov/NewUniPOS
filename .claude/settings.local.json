@@ -64,7 +64,11 @@
       "Bash(git checkout *)",
       "Bash(claude *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Jumshud\\\\Desktop\\\\POS-ReDesing\" -Depth 1)",
-      "Bash(Select-Object Name, FullName, PSIsContainer)"
+      "Bash(Select-Object Name, FullName, PSIsContainer)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3306\")",
+      "Bash(npx --yes asar list \"c:\\\\Users\\\\Jumshud\\\\Desktop\\\\POS-ReDesing\\\\dist\\\\win-unpacked\\\\resources\\\\app.asar\")",
+      "Bash(npx asar *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",
