@@ -779,13 +779,21 @@ export const updateItemCount = createAsyncThunk(
       oldCount,
       productName,
       waiterName: passedWaiterName,
+      modifiers,
+      comment,
+      skipQuantityLog = false,
     },
     thunkAPI,
   ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/update-count`,
-        { itemId, newCount },
+        {
+          itemId,
+          newCount,
+          ...(modifiers !== undefined ? { modifiers } : {}),
+          ...(comment !== undefined ? { comment } : {}),
+        },
       );
 
       // Persistent Log
@@ -796,14 +804,16 @@ export const updateItemCount = createAsyncThunk(
         state.WaitersSlice?.loginedWaiter?.name ||
         state.LoginSlice?.loginedProfileData?.data?.profile?.name ||
         "Naməlum";
-      thunkAPI.dispatch(
-        saveLog({
-          orderId,
-          action: "Miqdar dəyişdirildi",
-          waiterName,
-          details: `${productName || "Məhsul"}: ${oldCount}-dən ${newCount}-ə dəyişdi`,
-        }),
-      );
+      if (!skipQuantityLog && Number(oldCount) !== Number(newCount)) {
+        thunkAPI.dispatch(
+          saveLog({
+            orderId,
+            action: "Miqdar dəyişdirildi",
+            waiterName,
+            details: `${productName || "Məhsul"}: ${oldCount}-dən ${newCount}-ə dəyişdi`,
+          }),
+        );
+      }
 
       return response.data;
     } catch (error) {

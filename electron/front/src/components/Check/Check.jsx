@@ -68,6 +68,7 @@ import { usePrinterDiagnostics } from "../../hooks/usePrinterDiagnostics";
 const LOCAL_SYNC_URL = "/sync";
 const KITCHEN_PRINT_BLOCK_SETTING_KEY = "pos_kitchen_print_block";
 const KITCHEN_PRINT_ENABLED_KEY = "pos_kitchen_print_enabled";
+const AI_MODULE_ENABLED_KEY = "pos_ai_module_enabled";
 
 const readKitchenPrintEnabled = () => {
   try {
@@ -81,6 +82,14 @@ const readKitchenPrintEnabled = () => {
 const readKitchenPrintBlockSetting = () => {
   try {
     return localStorage.getItem(KITCHEN_PRINT_BLOCK_SETTING_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+const readAiModuleEnabled = () => {
+  try {
+    return localStorage.getItem(AI_MODULE_ENABLED_KEY) === "true";
   } catch {
     return false;
   }
@@ -230,6 +239,7 @@ const Check = () => {
   const [showKitchenPrintToggle, setShowKitchenPrintToggle] = useState(
     readKitchenPrintBlockSetting
   );
+  const [aiModuleEnabled, setAiModuleEnabled] = useState(readAiModuleEnabled);
 
   const [blockedPrinters, setBlockedPrinters] = useState(() => {
     try {
@@ -250,6 +260,24 @@ const Check = () => {
     return () => {
       window.removeEventListener("kitchenPrintBlockChanged", handleKitchenPrintBlockChange);
       window.removeEventListener("kitchenPrintBlockedChanged", handleBlockedPrinters);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleAiModuleChange = (event) => {
+      setAiModuleEnabled(Boolean(event.detail));
+    };
+    const handleAiModuleStorage = (event) => {
+      if (event.key === AI_MODULE_ENABLED_KEY) {
+        setAiModuleEnabled(event.newValue === "true");
+      }
+    };
+
+    window.addEventListener("aiModuleChanged", handleAiModuleChange);
+    window.addEventListener("storage", handleAiModuleStorage);
+    return () => {
+      window.removeEventListener("aiModuleChanged", handleAiModuleChange);
+      window.removeEventListener("storage", handleAiModuleStorage);
     };
   }, []);
 
@@ -2885,7 +2913,7 @@ const Check = () => {
                 onEditProduct={handleEditProductMemo}
                 onDeleteItem={handleDeleteItemMemo}
               />
-              <VoiceOrderButton />
+              {aiModuleEnabled && <VoiceOrderButton />}
               {isSearchExpanded && posKeyboardEnabled && (
                 <VirtualKeyboard
                   onKeyPress={(key) => setSearchText((prev) => prev + key)}

@@ -23,6 +23,7 @@ const upload = multer({ dest: 'uploads/' });
 // Routers lists
 router.get("/ping", (req, res) => res.json({ success: true }));
 router.post("/voice-order", upload.single("audio"), VoiceOrderController.processVoiceOrder);
+router.post("/tts", VoiceOrderController.textToSpeech);
 router.post("/admin/reset-local-database", AdminController.resetLocalDatabase);
 router.get("/admin/whatsapp-settings", AdminController.getWhatsappSettings);
 router.post("/admin/whatsapp-settings", AdminController.saveWhatsappSettings);

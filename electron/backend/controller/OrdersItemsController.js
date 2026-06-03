@@ -2170,7 +2170,7 @@ const onUpdateItemPrice = async (req, res) => {
 
 const onUpdateItemCount = async (req, res) => {
   const { orderId } = req.params;
-  const { itemId, newCount } = req.body;
+  const { itemId, newCount, modifiers, comment } = req.body;
 
   if (!orderId || !itemId || newCount === undefined) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -2189,6 +2189,14 @@ const onUpdateItemCount = async (req, res) => {
     }
 
     item.count = parseInt(newCount);
+    if (modifiers !== undefined) {
+      item.modifiers = Array.isArray(modifiers)
+        ? JSON.stringify(modifiers)
+        : modifiers || null;
+    }
+    if (comment !== undefined) {
+      item.comment = comment || null;
+    }
     item.kds_status = 0; // Reset for KDS
     await item.save();
 

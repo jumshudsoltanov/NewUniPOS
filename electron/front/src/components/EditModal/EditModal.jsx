@@ -45,8 +45,8 @@ const removeLocalProduct = (dispatch, product) => {
   }
 };
 
-const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
-  const [activeTab, setActiveTab] = useState("edit");
+const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialTab = "edit" }) => {
+  const [activeTab, setActiveTab] = useState(initialTab || "edit");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 576);
 
   useEffect(() => {
@@ -83,6 +83,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
   useEffect(() => {
     if (!show) setShowResetTimerConfirm(false);
   }, [show]);
+
+  useEffect(() => {
+    if (show) setActiveTab(initialTab || "edit");
+  }, [show, initialTab]);
 
   const { id: orderUuidFromUrl } = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);

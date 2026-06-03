@@ -155,6 +155,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     () => localStorage.getItem("pos_swipe_gestures_enabled") === "true"
   );
 
+  const [aiModuleEnabled, setAiModuleEnabled] = useState(
+    () => localStorage.getItem("pos_ai_module_enabled") === "true"
+  );
+
   const [resettingDb, setResettingDb] = useState(false);
 
   const [syncTroubleshootLoading, setSyncTroubleshootLoading] = useState(false);
@@ -1476,6 +1480,27 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     setSwipeGesturesEnabled(newVal);
                     localStorage.setItem("pos_swipe_gestures_enabled", newVal ? "true" : "false");
                     window.dispatchEvent(new CustomEvent("swipeGesturesChanged", { detail: newVal }));
+                  }}
+                  style={{ cursor: "pointer", flexShrink: 0 }}
+                >
+                  <div className="wa-toggle-thumb" />
+                </div>
+              </div>
+            </div>
+
+            <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>AI Modulu</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Sifariş ekranında səsli Aygün modulunu aktiv et</div>
+                </div>
+                <div
+                  className={`wa-toggle ${aiModuleEnabled ? "wa-toggle-on" : ""}`}
+                  onClick={() => {
+                    const newVal = !aiModuleEnabled;
+                    setAiModuleEnabled(newVal);
+                    localStorage.setItem("pos_ai_module_enabled", newVal ? "true" : "false");
+                    window.dispatchEvent(new CustomEvent("aiModuleChanged", { detail: newVal }));
                   }}
                   style={{ cursor: "pointer", flexShrink: 0 }}
                 >

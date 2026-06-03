@@ -12,6 +12,8 @@ import {
   removeLocalProductByFirstId,
   replaceProductQuantity,
   addProducts,
+  updateItemCount,
+  saveLog,
 } from "../../redux/Slices/OrdersSlice"; // Import action
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
@@ -27,10 +29,32 @@ import {
   resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
 
+const parseModifierList = (modifiers) => {
+  try {
+    if (Array.isArray(modifiers)) return modifiers;
+    if (typeof modifiers === "string") return JSON.parse(modifiers || "[]");
+  } catch {
+    return [];
+  }
+  return [];
+};
+
+const normalizeModifiersKey = (modifiers) =>
+  parseModifierList(modifiers)
+    .map((modifier) => ({
+      id: Number(modifier.id),
+      count: Number(modifier.count || modifier.quantity || 1),
+      price: Number(modifier.price || 0),
+    }))
+    .sort((a, b) => a.id - b.id)
+    .map((modifier) => `${modifier.id}:${modifier.count}:${modifier.price}`)
+    .join("|");
+
 const CheckMain = ({ orders, table }) => {
   const dispatch = useDispatch(); // Add dispatch
   const [editItemModal, setEditItemModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [editInitialTab, setEditInitialTab] = useState("edit");
 
   const [showModifierModal, setShowModifierModal] = useState(false);
   const [modifierProduct, setModifierProduct] = useState(null);
@@ -416,21 +440,32 @@ const CheckMain = ({ orders, table }) => {
     );
 
     if (hasGroups || (item.modifiers && item.modifiers.length > 0)) {
-      setModifierProduct({
-        ...(catalogProduct || item),
+      const editableModifierProduct = {
+        ...(catalogProduct || {}),
+        ...item,
+        id: item.product_id || catalogProduct?.id || item.id,
+        product_id: item.product_id || catalogProduct?.id || item.id,
+        name: getDisplayProductName(item, catalogProduct),
+        price: item.price ?? catalogProduct?.price ?? 0,
+        modifier_groups: catalogProduct?.modifier_groups ?? item.modifier_groups,
         modifiers: item.modifiers,
-        count: item.count,   // current qty in check for smart Sil button
-        isFromCheck: true
+        count: item.count,
+        quantity: item.count,
+        isFromCheck: true,
+      };
+      setModifierProduct({
+        ...editableModifierProduct,
       });
       setModifierCheckItem(item); // keep original check row for delete
       setShowModifierModal(true);
     } else {
+      setEditInitialTab("edit");
       setSelectedProduct(item);
       setEditItemModal(true);
     }
   };
 
-  const handleModifierConfirm = (productWithModifiers) => {
+  const handleModifierConfirm = async (productWithModifiers) => {
     if (orderEditLocked) {
       toast.error(orderEditLockedToast());
       return;
@@ -441,6 +476,73 @@ const CheckMain = ({ orders, table }) => {
       const qty = productWithModifiers.quantity;
       const newLocalQty = qty - savedQty;
       const pId = Number(modifierCheckItem.product_id || modifierCheckItem.id);
+      const newModifiers = productWithModifiers.modifiers || [];
+      const oldModifiersKey = normalizeModifiersKey(modifierCheckItem.modifiers);
+      const newModifiersKey = normalizeModifiersKey(newModifiers);
+      const modifiersChanged = oldModifiersKey !== newModifiersKey;
+      const savedLineIds = Array.from(new Set(
+        (Array.isArray(modifierCheckItem.allIds) && modifierCheckItem.allIds.length > 0
+          ? modifierCheckItem.allIds
+          : [modifierCheckItem.firstId || modifierCheckItem.id])
+          .map((lineId) => Number(lineId))
+          .filter((lineId) => Number.isFinite(lineId) && lineId < 999999999)
+      ));
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+
+      if (qty <= 0) {
+        if (modifierCheckItem.isNew && modifierCheckItem.localQuantity > 0) {
+          if (Number(modifierCheckItem.firstId) >= 999999999) {
+            dispatch(removeLocalProductByFirstId(modifierCheckItem.firstId));
+          } else {
+            dispatch(removeAllProductsById(pId));
+          }
+        }
+
+        if (savedQty <= 0) {
+          return;
+        }
+
+        const hasPermission = Number(loginedWaiter?.data?.can_delete_product) === 1;
+        if (!hasPermission) {
+          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+          return;
+        }
+
+        setDeleteActionType('full');
+        setProductToDelete({ ...modifierCheckItem, modifiers: modifierCheckItem.modifiers, localQuantity: 0, isNew: false, count: savedQty });
+        setQtyToReduce(savedQty);
+        setOpenDeleteProductModal(true);
+        return;
+      }
+
+      if (modifiersChanged && savedLineIds.length > 0 && orders?.uuid) {
+        try {
+          for (const lineId of savedLineIds) {
+            const row = orders?.orders_items?.find((orderItem) => Number(orderItem.id) === Number(lineId));
+            await dispatch(updateItemCount({
+              orderId: orders.uuid,
+              itemId: lineId,
+              newCount: Number(row?.count || modifierCheckItem.savedQuantity || modifierCheckItem.count || 1),
+              oldCount: Number(row?.count || modifierCheckItem.savedQuantity || modifierCheckItem.count || 1),
+              productName: modifierCheckItem.name,
+              waiterName,
+              modifiers: newModifiers,
+              comment: productWithModifiers.comment,
+              skipQuantityLog: true,
+            })).unwrap();
+          }
+          dispatch(saveLog({
+            orderId: orders.uuid,
+            action: "Modifikator dəyişdirildi",
+            waiterName,
+            details: modifierCheckItem.name || "Məhsul",
+          }));
+        } catch (error) {
+          console.error("Modifier update error:", error);
+          toast.error("Modifikatorları yadda saxlamaq mümkün olmadı");
+          return;
+        }
+      }
 
       if (modifierCheckItem.isNew && !modifierCheckItem.savedQuantity) {
         if (qty === 0) {
@@ -451,7 +553,7 @@ const CheckMain = ({ orders, table }) => {
             newQty: qty,
             price: productWithModifiers.price,
             firstId: modifierCheckItem.firstId,
-            modifiers: productWithModifiers.modifiers,
+            modifiers: newModifiers,
             comment: productWithModifiers.comment
           }));
         }
@@ -471,7 +573,7 @@ const CheckMain = ({ orders, table }) => {
 
         const dbReduction = Math.abs(newLocalQty);
         setDeleteActionType('partial');
-        setProductToDelete(modifierCheckItem);
+        setProductToDelete({ ...modifierCheckItem, modifiers: newModifiers, comment: productWithModifiers.comment });
         setQtyToReduce(dbReduction);
         setOpenDeleteProductModal(true);
       } else if (newLocalQty > 0) {
@@ -481,7 +583,7 @@ const CheckMain = ({ orders, table }) => {
             newQty: newLocalQty,
             price: productWithModifiers.price,
             firstId: modifierCheckItem.firstId,
-            modifiers: productWithModifiers.modifiers,
+            modifiers: newModifiers,
             comment: productWithModifiers.comment
           }));
         } else {
@@ -501,16 +603,34 @@ const CheckMain = ({ orders, table }) => {
             newQty: modifierCheckItem.localQuantity,
             price: productWithModifiers.price,
             firstId: modifierCheckItem.firstId,
-            modifiers: productWithModifiers.modifiers,
+            modifiers: newModifiers,
             comment: productWithModifiers.comment
           }));
         }
-        // For purely saved items with no local qty, modifiers can't be changed locally
-        // (would need a server API call)
+      }
+      const profileId = loginedProfileData?.data?.profile?.id;
+      if (modifiersChanged && profileId) {
+        dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+        dispatch(getTableGroups(profileId));
       }
     } else {
       dispatch(addProducts(productWithModifiers));
     }
+  };
+
+  const openModifierEditAction = (tab) => {
+    if (!modifierCheckItem) return;
+    setShowModifierModal(false);
+    setEditInitialTab(tab || "edit");
+    setSelectedProduct({
+      ...modifierCheckItem,
+      product_id: modifierCheckItem.product_id || modifierProduct?.product_id || modifierProduct?.id,
+      name: modifierProduct?.name || modifierCheckItem.name,
+      price: modifierCheckItem.price ?? modifierProduct?.price,
+      modifiers: modifierCheckItem.modifiers ?? modifierProduct?.modifiers,
+      modifier_groups: modifierProduct?.modifier_groups,
+    });
+    setEditItemModal(true);
   };
 
   let fallbackProfileData = null;
@@ -745,6 +865,7 @@ const CheckMain = ({ orders, table }) => {
           }}
           product={selectedProduct}
           orders={orders}
+          initialTab={editInitialTab}
           onOpenDeleteModal={(type, product, qty) => {
             setEditItemModal(false);
             setDeleteActionType(type);
@@ -761,6 +882,12 @@ const CheckMain = ({ orders, table }) => {
           onHide={() => setShowModifierModal(false)}
           product={modifierProduct}
           onConfirm={handleModifierConfirm}
+          onOpenEditAction={openModifierEditAction}
+          permissions={{
+            canTransfer: Number(loginedWaiter?.data?.can_transfer_product) === 1,
+            canGift: Number(loginedWaiter?.data?.can_give_treats) === 1,
+            canDiscount: Number(loginedWaiter?.data?.can_give_product_discount) === 1,
+          }}
           onDelete={(type, qty) => {
             const hasPermission = Number(loginedWaiter?.data?.can_delete_product) === 1;
             if (!hasPermission) {

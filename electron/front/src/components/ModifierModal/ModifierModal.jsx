@@ -3,13 +3,31 @@ import { Modal } from "react-bootstrap";
 import { toast } from "sonner";
 import "./ModifierModal.css";
 
-const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
+const ModifierModal = ({
+    show,
+    onHide,
+    product,
+    onConfirm,
+    onDelete,
+    onOpenEditAction,
+    permissions = {},
+}) => {
     // state: { groupId: { modifierId: quantity } }
     const [selections, setSelections] = useState({});
     const [errors, setErrors] = useState([]);
     const [activeGroupId, setActiveGroupId] = useState(null);
     const [activeItemId, setActiveItemId] = useState(null);
     const [qtyStr, setQtyStr] = useState("0");
+
+    const parseExistingModifiers = (modifiers) => {
+        try {
+            if (Array.isArray(modifiers)) return modifiers;
+            if (typeof modifiers === "string") return JSON.parse(modifiers || "[]");
+        } catch {
+            return [];
+        }
+        return [];
+    };
 
     // Helper to normalize group properties as they might vary from API/DB
     const normalizeGroup = (group) => {
@@ -24,15 +42,41 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
 
     const getModifierGroups = (prod) => {
         const groups = prod?.modifier_groups;
-        if (!groups) return [];
-        if (Array.isArray(groups)) return groups;
+        let parsedGroups = [];
+        if (Array.isArray(groups)) parsedGroups = groups;
         if (typeof groups === 'string') {
-            try { return JSON.parse(groups) || []; } catch { return []; }
+            try { parsedGroups = JSON.parse(groups) || []; } catch { parsedGroups = []; }
         }
-        if (typeof groups === 'object') {
-            return Object.values(groups);
+        if (groups && typeof groups === 'object') {
+            parsedGroups = Object.values(groups);
         }
-        return [];
+        if (parsedGroups.length > 0) return parsedGroups;
+
+        let existingModifiers = [];
+        try {
+            if (Array.isArray(prod?.modifiers)) {
+                existingModifiers = prod.modifiers;
+            } else if (typeof prod?.modifiers === "string") {
+                existingModifiers = JSON.parse(prod.modifiers || "[]");
+            }
+        } catch {
+            existingModifiers = [];
+        }
+        if (!existingModifiers.length) return [];
+        return [{
+            id: "__existing_modifiers__",
+            name: "Modifikatorlar",
+            selection_type: "multiple",
+            is_required: false,
+            items: existingModifiers.map((modifier) => ({
+                ...modifier,
+                id: modifier.id,
+                name: modifier.name,
+                price: modifier.price || 0,
+                quantity: modifier.count || modifier.quantity || 1,
+                is_existing_modifier: true,
+            })),
+        }];
     };
 
     const modifierGroups = useMemo(() => getModifierGroups(product), [product]);
@@ -43,10 +87,10 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
     }, [modifierGroups, activeGroupId]);
 
     useEffect(() => {
-        if (show && modifierGroups.length > 0) {
+        if (show) {
             // Set first group as active
-            const firstGroup = normalizeGroup(modifierGroups[0]);
-            setActiveGroupId(firstGroup.id);
+            const firstGroup = modifierGroups.length > 0 ? normalizeGroup(modifierGroups[0]) : null;
+            setActiveGroupId(firstGroup?.id || null);
             setActiveItemId(null);
             setQtyStr(String(product?.count || product?.quantity || 1));
 
@@ -68,9 +112,9 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                 if (group.items) {
                     group.items.forEach(item => {
                         if (product.isFromCheck) {
-                            const existing = existingModifiers.find(m => m.id === item.id);
+                            const existing = existingModifiers.find(m => String(m.id) === String(item.id));
                             if (existing && existing.count > 0) {
-                                initialSelections[group.id][item.id] = parseInt(existing.count);
+                                initialSelections[group.id][item.id] = parseInt(existing.count || existing.quantity || 1);
                             }
                         } else {
                             if (item.is_default) {
@@ -183,8 +227,8 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
     };
 
     const handleStepperChange = (delta) => {
-        const currentVal = parseFloat(qtyStr) || 1;
-        const newVal = Math.max(1, currentVal + delta);
+        const currentVal = Number.isFinite(parseFloat(qtyStr)) ? parseFloat(qtyStr) : 0;
+        const newVal = Math.max(0, currentVal + delta);
         setQtyStr(String(newVal));
     };
 
@@ -192,11 +236,11 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
         let next;
         if (val === "backspace") {
             next = qtyStr.slice(0, -1);
-            if (next === "" || next === "-") next = "1";
+            if (next === "" || next === "-") next = "0";
         } else if (val === ".") {
             next = qtyStr.includes(".") ? qtyStr : qtyStr + ".";
         } else {
-            next = qtyStr === "0" || qtyStr === "1" ? String(val) : qtyStr + val;
+            next = qtyStr === "0" ? String(val) : qtyStr + val;
         }
         setQtyStr(next);
     };
@@ -220,6 +264,17 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
     };
 
     const handleConfirm = () => {
+        const mainQty = Number.isFinite(parseFloat(qtyStr)) ? Math.max(0, parseFloat(qtyStr)) : 1;
+        if (mainQty <= 0) {
+            onConfirm({
+                ...product,
+                quantity: 0,
+                modifiers: parseExistingModifiers(product.modifiers),
+            });
+            onHide();
+            return;
+        }
+
         if (validateSelections()) {
             const formattedModifiers = [];
 
@@ -243,7 +298,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
 
             onConfirm({
                 ...product,
-                quantity: parseFloat(qtyStr) || 1,
+                quantity: mainQty,
                 modifiers: formattedModifiers,
             });
             onHide();
@@ -261,13 +316,14 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                 total += qty * parseFloat(item.price || 0);
             });
         });
-        const mainQty = parseFloat(qtyStr) || 1;
+        const mainQty = Number.isFinite(parseFloat(qtyStr)) ? Math.max(0, parseFloat(qtyStr)) : 1;
         return (total * mainQty).toFixed(2);
     };
 
     if (!product) return null;
 
     const normActiveGroup = normalizeGroup(activeGroup);
+    const hasQuickActions = Boolean(permissions.canTransfer || permissions.canGift || permissions.canDiscount);
 
     return (
         <Modal
@@ -318,26 +374,39 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                         })}
                     </div>
 
-                    <div className="sidebar-bottom">
-                        <button
-                            className="sidebar-btn-v2 btn-delete-v2"
-                            onClick={() => {
-                                if (product?.isFromCheck && onDelete) {
-                                    onDelete('qty_select');
-                                } else {
-                                    const cleared = {};
-                                    modifierGroups.forEach(g => { cleared[g.id] = {}; });
-                                    setSelections(cleared);
-                                    setActiveItemId(null);
-                                    setQtyStr("1");
-                                }
-                            }}
-                        >
-                            <i className="bi bi-trash3-fill"></i>
-                            <span>Sil</span>
-                        </button>
-                    </div>
                 </div>
+
+                {hasQuickActions && (
+                    <div className="modifier-v2-side-actions">
+                        {permissions.canTransfer && (
+                            <button
+                                className="modifier-v2-side-action-btn"
+                                onClick={() => onOpenEditAction?.("transfer")}
+                            >
+                                <i className="bi bi-arrow-left-right"></i>
+                                <span>Köçürmə</span>
+                            </button>
+                        )}
+                        {permissions.canGift && (
+                            <button
+                                className="modifier-v2-side-action-btn modifier-v2-side-action-btn--gift"
+                                onClick={() => onOpenEditAction?.("gift")}
+                            >
+                                <i className="bi bi-gift-fill"></i>
+                                <span>İkram</span>
+                            </button>
+                        )}
+                        {permissions.canDiscount && (
+                            <button
+                                className="modifier-v2-side-action-btn modifier-v2-side-action-btn--discount"
+                                onClick={() => onOpenEditAction?.("discount")}
+                            >
+                                <i className="bi bi-percent"></i>
+                                <span>Endirim</span>
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Middle Content */}
                 <div className="modifier-v2-main-content">
@@ -442,13 +511,13 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                     </div>
 
                     <button 
-                        className="save-action-v2-btn"
+                        className={`save-action-v2-btn ${(parseFloat(qtyStr) || 0) <= 0 ? "save-action-v2-btn--danger" : ""}`}
                         onClick={handleConfirm}
                     >
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="me-2">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
-                        Saxla
+                        {(parseFloat(qtyStr) || 0) <= 0 ? "Sil" : "Saxla"}
                     </button>
                 </div>
             </div>

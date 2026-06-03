@@ -72,7 +72,7 @@
     background-color: #4F85F4;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     flex-shrink: 0;
     position: relative;
     z-index: 2;
@@ -145,6 +145,49 @@
     border-bottom: none;
     border-top: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 0 !important;
+}
+
+.modifier-v2-side-actions {
+    width: 126px;
+    min-width: 126px;
+    background: #F4F7FE;
+    border-right: 1px solid #DDE7FB;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 10px;
+    flex-shrink: 0;
+}
+
+.modifier-v2-side-action-btn {
+    width: 100%;
+    height: 76px;
+    border: 1px solid #DDE7FB;
+    background: #FFFFFF;
+    color: #4F85F4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 8px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    border-radius: 0 !important;
+    box-shadow: 0 4px 10px rgba(79, 133, 244, 0.08);
+}
+
+.modifier-v2-side-action-btn i {
+    font-size: 1.45rem;
+}
+
+.modifier-v2-side-action-btn--gift {
+    color: #4F85F4;
+}
+
+.modifier-v2-side-action-btn--discount {
+    color: #4F85F4;
 }
 
 /* ─── Middle Content ─── */
@@ -454,6 +497,10 @@
     flex-shrink: 0;
 }
 
+.save-action-v2-btn--danger {
+    background-color: #EF4444;
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
     .modifier-modal-v2-modal-wrapper .modal-dialog,
@@ -479,6 +526,7 @@
         width: 100%;
         min-width: 100%;
         flex-direction: row;
+        justify-content: flex-start;
         height: 60px;
         min-height: 60px;
         overflow-x: auto;
@@ -487,6 +535,29 @@
 
     .modifier-v2-sidebar .sidebar-nav {
         flex-direction: row;
+    }
+
+    .modifier-v2-side-actions {
+        width: 100%;
+        min-width: 100%;
+        min-height: 62px;
+        flex-direction: row;
+        border-right: none;
+        border-top: 1px solid #DDE7FB;
+        border-bottom: 1px solid #DDE7FB;
+        padding: 8px;
+        overflow-x: auto;
+    }
+
+    .modifier-v2-side-action-btn {
+        min-width: 112px;
+        height: 46px;
+        flex-direction: row;
+        font-size: 12px;
+    }
+
+    .modifier-v2-side-action-btn i {
+        font-size: 1.1rem;
     }
 
     .sidebar-btn-v2 {
