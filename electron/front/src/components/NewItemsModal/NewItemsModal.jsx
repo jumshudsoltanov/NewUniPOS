@@ -19,6 +19,9 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
     const [tagsModalPortion, setTagsModalPortion] = useState(0);
     const [separatedItems, setSeparatedItems] = useState({});
     const [activeInput, setActiveInput] = useState(null); // { mergedIndex, portionIndex }
+    const [modComments, setModComments] = useState({}); // { "mergedIndex-modId": "comment" }
+    const [openModComments, setOpenModComments] = useState({}); // { "mergedIndex-modId": true }
+    const [tagsModalMod, setTagsModalMod] = useState(null); // { item, modId, modName }
     const posKeyboardEnabled = useMemo(() => {
         try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
     }, []);
@@ -239,13 +242,39 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
 
     const handleSendAndClose = () => {
         if (onSend) {
-            onSend(buildCommentsForSend());
+            // Build modifier comments map: { origIndex: { modId: comment } }
+            const modCommentsMap = {};
+            Object.entries(modComments).forEach(([key, comment]) => {
+                if (!comment) return;
+                // key format: "mergedIndex-mod-modId"
+                const parts = key.split('-mod-');
+                if (parts.length !== 2) return;
+                const mergedIndex = parseInt(parts[0]);
+                const modId = parts[1];
+                const item = mergedItems[mergedIndex];
+                if (!item) return;
+                const origIndices = item.originalIndices || [];
+                origIndices.forEach(origIdx => {
+                    if (!modCommentsMap[origIdx]) modCommentsMap[origIdx] = {};
+                    modCommentsMap[origIdx][modId] = comment;
+                });
+            });
+            onSend(buildCommentsForSend(), modCommentsMap);
         }
         setComments({});
         setOpenComments({});
         setSeparatedItems({});
         setTagsModalItem(null);
+        setModComments({});
+        setOpenModComments({});
+        setTagsModalMod(null);
         onClose();
+    };
+
+    const handleModTagSave = (tagName) => {
+        if (!tagsModalMod) return;
+        setModComments(prev => ({ ...prev, [tagsModalMod.modKey]: tagName }));
+        setTagsModalMod(null);
     };
 
     return (
@@ -327,6 +356,70 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                             </button>
                                         </div>
                                     </div>
+
+                                    {/* Modifier sub-items */}
+                                    {(() => {
+                                        let mods = item.modifiers || [];
+                                        if (typeof mods === 'string') {
+                                            try { mods = JSON.parse(mods || '[]'); } catch { mods = []; }
+                                        }
+                                        if (!Array.isArray(mods) || mods.length === 0) return null;
+                                        return (
+                                            <div className="modifier-sub-items">
+                                                {mods.map((mod, modIdx) => {
+                                                    const modKey = `${item.mergedIndex}-mod-${mod.id || modIdx}`;
+                                                    const modComment = modComments[modKey] || "";
+                                                    const isModEditing = openModComments[modKey];
+                                                    const hasModComment = modComment !== "";
+                                                    return (
+                                                        <div key={modKey} className="modifier-sub-row">
+                                                            <div className="modifier-sub-info">
+                                                                <span className="modifier-sub-dot"></span>
+                                                                <span className="modifier-sub-name">{mod.name}</span>
+                                                                <span className="modifier-sub-qty">x{mod.count || 1}</span>
+                                                                <div className="modifier-sub-actions">
+                                                                    <button
+                                                                        className="item-action-btn tag-btn mod-action-btn"
+                                                                        onClick={() => setTagsModalMod({ item, modId: mod.id || modIdx, modName: mod.name, modKey })}
+                                                                        title="Şərh seç"
+                                                                    >
+                                                                        <i className="bi bi-tag-fill"></i>
+                                                                    </button>
+                                                                    <button
+                                                                        className={`item-action-btn edit-btn mod-action-btn ${isModEditing ? 'active' : ''}`}
+                                                                        onClick={() => setOpenModComments(prev => ({ ...prev, [modKey]: !prev[modKey] }))}
+                                                                        title="Şərh yaz"
+                                                                    >
+                                                                        <i className="bi bi-pencil"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {hasModComment && !isModEditing && (
+                                                                <div
+                                                                    className="item-comment-display mod-comment-display"
+                                                                    onClick={() => setOpenModComments(prev => ({ ...prev, [modKey]: true }))}
+                                                                >
+                                                                    {modComment}
+                                                                </div>
+                                                            )}
+                                                            {isModEditing && (
+                                                                <div className="item-comment-section">
+                                                                    <textarea
+                                                                        className="item-comment-input"
+                                                                        value={modComment}
+                                                                        onChange={(e) => setModComments(prev => ({ ...prev, [modKey]: e.target.value }))}
+                                                                        placeholder={`${mod.name} üçün şərh`}
+                                                                        rows={1}
+                                                                        autoFocus
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
 
                                     {/* Single comment row (not separated or qty=1) */}
                                     {!showPortionRows && (() => {
@@ -504,6 +597,13 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
             item={tagsModalItem}
             portionIndex={tagsModalPortion}
             onSave={handleCommentTagSave}
+        />
+        <ProductCommentTagsModal
+            show={!!tagsModalMod}
+            onClose={() => setTagsModalMod(null)}
+            item={tagsModalMod?.item}
+            portionIndex={0}
+            onSave={(item, tagName) => handleModTagSave(tagName)}
         />
         </>
     );

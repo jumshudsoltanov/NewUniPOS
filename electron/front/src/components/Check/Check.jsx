@@ -28,6 +28,7 @@ import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups, removeOrderOptimisticFromTables, addOrderToTableOptimistic, clearDeletedOrderId } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders, removeOrderOptimistic, tickTimer, addOrderOptimistic, updateOrderOptimisticId, clearDeletedOrderIdBooks } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
+import VoiceOrderButton from "../VoiceOrderButton/VoiceOrderButton";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
 import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer, clearOrders, addProducts } from "../../redux/Slices/OrdersSlice";
@@ -44,6 +45,7 @@ import { getSocket } from "../../utils/apiConfig";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
 import CourierModal from "../CourierModal/CourierModal";
+import KitchenPrintBlockModal from "../KitchenPrintBlockModal/KitchenPrintBlockModal";
 import { assignCourierToOrder } from "../../redux/Slices/CouriersSlice";
 import {
   getEffectiveHourlyPrice,
@@ -229,12 +231,26 @@ const Check = () => {
     readKitchenPrintBlockSetting
   );
 
+  const [blockedPrinters, setBlockedPrinters] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("pos_blocked_printers")) || [];
+    } catch {
+      return [];
+    }
+  });
+
   useEffect(() => {
     const handleKitchenPrintBlockChange = (e) => {
       setShowKitchenPrintToggle(e.detail);
     };
+    const handleBlockedPrinters = (e) => setBlockedPrinters(e.detail);
+    
     window.addEventListener("kitchenPrintBlockChanged", handleKitchenPrintBlockChange);
-    return () => window.removeEventListener("kitchenPrintBlockChanged", handleKitchenPrintBlockChange);
+    window.addEventListener("kitchenPrintBlockedChanged", handleBlockedPrinters);
+    return () => {
+      window.removeEventListener("kitchenPrintBlockChanged", handleKitchenPrintBlockChange);
+      window.removeEventListener("kitchenPrintBlockedChanged", handleBlockedPrinters);
+    };
   }, []);
 
   const handleKitchenPrintToggle = useCallback(() => {
@@ -723,6 +739,7 @@ const Check = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showKitchenBlockModal, setShowKitchenBlockModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
@@ -791,7 +808,7 @@ const Check = () => {
     }
   };
 
-  const handleSendOrders = async (itemComments = {}) => {
+  const handleSendOrders = async (itemComments = {}, modCommentsMap = {}) => {
     try {
       if (isSendingRef.current) return;
       if (orderEditLocked) {
@@ -930,6 +947,27 @@ const Check = () => {
           const commentVal = itemComments[idx] !== undefined ? itemComments[idx] : p.comment;
           const qty = p.count || p.quantity || 1;
           const safePrice = Number.isFinite(parseFloat(p.price)) ? parseFloat(p.price) : 0;
+          
+          // Inject modifier comments if any
+          let modifiedModifiers = p.modifiers;
+          const modCommentsForItem = modCommentsMap[idx];
+          if (modCommentsForItem && modifiedModifiers) {
+            let mods = modifiedModifiers;
+            if (typeof mods === 'string') {
+              try { mods = JSON.parse(mods || '[]'); } catch { mods = []; }
+            }
+            if (Array.isArray(mods)) {
+              mods = mods.map(mod => {
+                const modComment = modCommentsForItem[String(mod.id)];
+                if (modComment) {
+                  return { ...mod, comment: modComment };
+                }
+                return mod;
+              });
+              modifiedModifiers = mods;
+            }
+          }
+          
           if (Array.isArray(commentVal) && commentVal.length > 1) {
             return commentVal.map((c, i) => ({
               ...p,
@@ -938,7 +976,8 @@ const Check = () => {
               category_id: categoryId,
               count: 1,
               quantity: 1,
-              comment: c || null
+              comment: c || null,
+              modifiers: modifiedModifiers,
             }));
           }
           const singleComment = Array.isArray(commentVal) ? (commentVal[0] ?? p.comment) : commentVal;
@@ -950,6 +989,7 @@ const Check = () => {
             comment: singleComment,
             count: qty,
             quantity: qty,
+            modifiers: modifiedModifiers,
           }];
         });
 
@@ -1007,21 +1047,19 @@ const Check = () => {
         };
 
         // 1. Regular items print (Kitchen/Product)
-        if (!showKitchenPrintToggle || printToKitchen) {
+        processAndPrintOrders(
+          combinedForPrinting,
+          printContext,
+          menuDataWithCategories
+        );
+
+        // 2. Standalone Modifier prints (e.g. Bar/Label)
+        if (standaloneModifiers.length > 0) {
           processAndPrintOrders(
-            combinedForPrinting,
+            standaloneModifiers,
             printContext,
             menuDataWithCategories
           );
-
-          // 2. Standalone Modifier prints (e.g. Bar/Label)
-          if (standaloneModifiers.length > 0) {
-            processAndPrintOrders(
-              standaloneModifiers,
-              printContext,
-              menuDataWithCategories
-            );
-          }
         }
       }
 
@@ -2016,8 +2054,8 @@ const Check = () => {
                 {showKitchenPrintToggle && (
                   <div
                     className="sidebar-icon"
-                    onClick={handleKitchenPrintToggle}
-                    title={printToKitchen ? "Mətbəxə çap AKTİV (üzərinə klikləyib bloka sala bilərsiniz)" : "Mətbəxə çap BLOKLANIB (üzərinə klikləyib aça bilərsiniz)"}
+                    onClick={() => setShowKitchenBlockModal(true)}
+                    title="Mətbəx printerlərini bloklamaq"
                   >
                     {/* Kitchen/pot icon */}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#343434" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2026,7 +2064,7 @@ const Check = () => {
                       <rect x="6" y="14" width="12" height="8" />
                     </svg>
                     {/* Status badge when blocked */}
-                    {!printToKitchen && (
+                    {blockedPrinters.length > 0 && (
                       <span
                         className="icon-badge"
                         style={{
@@ -2277,6 +2315,12 @@ const Check = () => {
               <CheckMain orders={currentOrder} table={currentTable} />
               <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} />
               <TimerModal show={showTimerModal} onHide={() => setShowTimerModal(false)} order={currentOrder} table={currentTable} />
+              {showKitchenBlockModal && (
+                <KitchenPrintBlockModal 
+                  show={showKitchenBlockModal} 
+                  onClose={() => setShowKitchenBlockModal(false)} 
+                />
+              )}
             </div>
           </div>
         </Col>
@@ -2557,10 +2601,11 @@ const Check = () => {
               <div className="header-right d-flex align-items-center gap-1">
                 {/* Search */}
                 {(!isMobile || !isSettingsOpen) && (
-                  <div
-                    className={`search-wrapper ${isSearchExpanded ? "expanded-modern" : ""}`}
-                    onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
-                  >
+                  <>
+                    <div
+                      className={`search-wrapper ${isSearchExpanded ? "expanded-modern" : ""}`}
+                      onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
+                    >
                     {!isSearchExpanded ? (
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -2611,6 +2656,7 @@ const Check = () => {
                       </div>
                     )}
                   </div>
+                  </>
                 )}
 
 
@@ -2839,6 +2885,7 @@ const Check = () => {
                 onEditProduct={handleEditProductMemo}
                 onDeleteItem={handleDeleteItemMemo}
               />
+              <VoiceOrderButton />
               {isSearchExpanded && posKeyboardEnabled && (
                 <VirtualKeyboard
                   onKeyPress={(key) => setSearchText((prev) => prev + key)}

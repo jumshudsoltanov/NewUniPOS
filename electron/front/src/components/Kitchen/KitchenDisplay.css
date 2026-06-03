@@ -1,10 +1,9 @@
 /* ═══════════════════════════════════════════════
-   KDS – Premium Light Theme (POS UI Match)
-   #053796, #EBF2FE, #4F85F4, #fff
+   KDS – Sharp POS UI Match
    ═══════════════════════════════════════════════ */
 
 .kds-container {
-    background: #f4f7f6; /* Softer, slightly grey/blue background */
+    background: #E5E7EB; /* POS gray background */
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -17,15 +16,15 @@
 /* ═══ HEADER ═══ */
 .kds-header {
     height: 60px;
-    background: #ffffff;
+    background: #053796; /* POS Top Bar Blue */
     padding: 0 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     z-index: 10;
-    border-bottom: 2px solid #ebf2fe;
+    border-bottom: none;
 }
 
 .kds-header-left {
@@ -38,37 +37,37 @@
     display: flex;
     align-items: center;
     height: 100%;
-    gap: 8px;
+    gap: 0px; /* Tabs stick together */
 }
 
 .kds-tab {
-    height: 40px;
-    padding: 0 20px;
+    height: 100%;
+    padding: 0 24px;
     border: none;
-    border-radius: 8px;
+    border-radius: 0;
     background: transparent;
-    color: #64748b;
+    color: #93C5FD;
     font-family: "Inter", sans-serif;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     position: relative;
     white-space: nowrap;
     transition: all 0.2s ease;
 }
 
 .kds-tab:hover {
-    background: #f1f5f9;
-    color: #053796;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
 }
 
 .kds-tab.active {
     color: #ffffff;
-    background: #053796;
-    box-shadow: 0 4px 10px rgba(5, 55, 150, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    border-bottom: 3px solid #ffffff;
 }
 
 .kds-tab-badge {
@@ -78,17 +77,17 @@
     min-width: 24px;
     height: 24px;
     padding: 0 8px;
-    border-radius: 12px;
+    border-radius: 0;
     font-size: 12px;
     font-weight: 700;
-    background: #e2e8f0;
-    color: #475569;
+    background: #1e3a8a;
+    color: #fff;
     transition: all 0.2s ease;
 }
 
 .kds-tab.active .kds-tab-badge {
-    background: rgba(255, 255, 255, 0.25);
-    color: #fff;
+    background: #ffffff;
+    color: #053796;
 }
 
 .kds-tab.has-late .kds-tab-badge.late {
@@ -112,11 +111,11 @@
 .kds-clock {
     font-size: 20px;
     font-weight: 800;
-    color: #053796;
+    color: #ffffff;
     letter-spacing: 0.5px;
     padding: 6px 16px;
-    background: #ebf2fe;
-    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0;
 }
 
 /* ═══ GRID ═══ */
@@ -124,8 +123,8 @@
     flex: 1;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 20px;
-    padding: 24px;
+    gap: 16px;
+    padding: 16px;
     overflow-y: auto;
     align-content: flex-start;
 }
@@ -140,43 +139,44 @@
 
 .kds-grid::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 99px;
+    border-radius: 0;
 }
 
 /* ═══ CARD ═══ */
 .kds-card {
     background: #ffffff;
-    border-radius: 12px;
+    border-radius: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #d1d5db;
 }
 
 .kds-card:hover {
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     transform: translateY(-2px);
+    border-color: #9ca3af;
 }
 
 .kds-card.urgent {
     border-color: #ef4444;
-    box-shadow: 0 0 0 1px #ef4444, 0 8px 30px rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 0 1px #ef4444, 0 8px 24px rgba(239, 68, 68, 0.15);
 }
 
 /* ═══ CARD HEADER ═══ */
 .kds-card-header {
     padding: 14px 18px;
-    background: #ebf2fe;
-    color: #053796;
-    border-bottom: 2px dashed #dce5ef;
+    background: #1e293b; /* POS Dark sidebar color */
+    color: #ffffff;
+    border-bottom: 2px solid #0f172a;
 }
 
 .kds-card.urgent .kds-card-header {
-    background: #fef2f2;
-    color: #b91c1c;
-    border-bottom-color: #fecaca;
+    background: #b91c1c;
+    color: #ffffff;
+    border-bottom-color: #7f1d1d;
 }
 
 .kds-card-title-row {
@@ -196,21 +196,21 @@
     font-size: 11px;
     font-weight: 700;
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.kds-sale-badge.dine_in { background: #4f85f4; color: #fff; }
+.kds-sale-badge.dine_in { background: #3b82f6; color: #fff; }
 .kds-sale-badge.takeaway { background: #f59e0b; color: #fff; }
 .kds-sale-badge.delivery { background: #8b5cf6; color: #fff; }
-.kds-sale-badge.bolt_food { background: #34d399; color: #064e3b; }
-.kds-sale-badge.uber_eats { background: #111111; color: #06c167; }
-.kds-sale-badge.wolt { background: #009de0; color: #fff; }
+.kds-sale-badge.bolt_food { background: #10b981; color: #064e3b; }
+.kds-sale-badge.uber_eats { background: #111111; color: #10b981; }
+.kds-sale-badge.wolt { background: #0ea5e9; color: #fff; }
 
 .kds-card-meta {
-    font-size: 12px;
-    color: #64748b;
+    font-size: 13px;
+    color: #94a3b8;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -218,7 +218,7 @@
 }
 
 .kds-card.urgent .kds-card-meta {
-    color: #ef4444;
+    color: #fca5a5;
 }
 
 .kds-meta-sep {
@@ -239,13 +239,26 @@
 
 .kds-cat-banner {
     padding: 8px 18px;
-    background: #f8fafc;
-    color: #475569;
-    font-size: 11px;
-    font-weight: 700;
+    background: #e2e8f0;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #cbd5e1;
+    border-top: 1px solid #cbd5e1;
+    display: flex;
+    justify-content: space-between;
+}
+
+.kds-cat-group:first-child .kds-cat-banner {
+    border-top: none;
+}
+
+.kds-cat-note {
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748b;
 }
 
 .kds-item {
@@ -253,10 +266,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
     gap: 12px;
     background: #fff;
-    transition: background 0.3s ease;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.kds-item:hover {
+    background: #f8fafc;
 }
 
 .kds-item:last-child {
@@ -265,17 +282,19 @@
 
 .kds-item.preparing {
     background: #f0fdf4; /* Very light green for preparing */
+    border-left: 4px solid #16a34a;
 }
 
 .kds-item.done {
-    opacity: 0.5;
-    background: #fafafa;
+    opacity: 0.6;
+    background: #f1f5f9;
+    border-left: 4px solid #94a3b8;
 }
 
 .kds-item-left {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: 14px;
     flex: 1;
     min-width: 0;
 }
@@ -283,20 +302,23 @@
 .kds-item-qty {
     font-size: 16px;
     font-weight: 900;
-    color: #053796;
-    background: #ebf2fe;
+    color: #ffffff;
+    background: #053796;
     width: 32px;
     height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: 0;
     flex-shrink: 0;
 }
 
 .kds-item.preparing .kds-item-qty {
-    color: #166534;
-    background: #dcfce7;
+    background: #16a34a;
+}
+
+.kds-item.done .kds-item-qty {
+    background: #94a3b8;
 }
 
 .kds-item-info {
@@ -307,21 +329,23 @@
 }
 
 .kds-item-name {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
-    color: #1e293b;
+    color: #0f172a;
     line-height: 1.4;
 }
 
 .kds-item-note {
     font-size: 12px;
-    color: #856404;
+    color: #92400e;
     margin-top: 4px;
-    background: #fff3cd;
-    padding: 2px 8px;
-    border-radius: 4px;
+    background: #fef3c7;
+    padding: 4px 8px;
+    border-radius: 0;
     display: inline-block;
     max-width: fit-content;
+    font-weight: 600;
+    border: 1px solid #fcd34d;
 }
 
 .kds-item-right {
@@ -333,8 +357,8 @@
 
 .kds-item-time {
     font-size: 12px;
-    font-weight: 600;
-    color: #94a3b8;
+    font-weight: 700;
+    color: #64748b;
 }
 
 /* ═══ STATUS BUTTONS ═══ */
@@ -347,17 +371,16 @@
     align-items: center;
     justify-content: center;
     outline: none;
+    border-radius: 0;
 }
 
 .kds-status-btn.start {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background: #fff;
-    color: #053796;
+    width: 40px;
+    height: 40px;
+    background: #e2e8f0;
+    color: #1e293b;
     font-size: 20px;
-    border: 2px solid #ebf2fe;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border: 1px solid #cbd5e1;
 }
 
 .kds-status-btn.start:hover {
@@ -367,46 +390,44 @@
 }
 
 .kds-status-btn.start:active {
-    transform: scale(0.95);
+    background: #1e3a8a;
 }
 
 .kds-status-btn.ready {
-    padding: 10px 20px;
-    border-radius: 8px;
-    background: #10b981;
+    padding: 10px 16px;
+    background: #16a34a;
     color: #fff;
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.5px;
-    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+    border: 1px solid #15803d;
 }
 
 .kds-status-btn.ready:hover {
-    background: #059669;
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    background: #15803d;
 }
 
 .kds-status-btn.ready:active {
-    transform: scale(0.95);
+    background: #166534;
 }
 
 .kds-done-check {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    background: #d1fae5;
-    color: #059669;
+    background: #e2e8f0;
+    color: #64748b;
     font-size: 20px;
+    border-radius: 0;
 }
 
 /* ═══ CARD FOOTER ═══ */
 .kds-card-footer {
     padding: 14px 18px;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
+    background: #f1f5f9;
+    border-top: 1px solid #cbd5e1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -414,14 +435,14 @@
 }
 
 .kds-card.urgent .kds-card-footer {
-    background: #fff5f5;
-    border-top-color: #fecaca;
+    background: #fef2f2;
+    border-top-color: #fca5a5;
 }
 
 .kds-complete-btn {
     flex: 1;
     padding: 14px;
-    border-radius: 8px;
+    border-radius: 0;
     border: none;
     background: #053796;
     color: #fff;
@@ -435,35 +456,32 @@
     justify-content: center;
     gap: 10px;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(5, 55, 150, 0.2);
 }
 
 .kds-complete-btn:hover {
-    background: #042d7a;
-    box-shadow: 0 6px 16px rgba(5, 55, 150, 0.3);
+    background: #1e3a8a;
 }
 
 .kds-complete-btn:active {
-    transform: scale(0.98);
+    background: #172554;
 }
 
 .kds-complete-btn.done {
-    background: #10b981;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    background: #16a34a;
 }
 
 .kds-complete-btn.done:hover {
-    background: #059669;
+    background: #15803d;
 }
 
 .kds-elapsed {
     font-size: 16px;
     font-weight: 800;
-    color: #053796;
-    background: #fff;
-    border: 2px solid #ebf2fe;
+    color: #1e293b;
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
     padding: 10px 16px;
-    border-radius: 8px;
+    border-radius: 0;
     font-variant-numeric: tabular-nums;
     min-width: 70px;
     text-align: center;
@@ -471,21 +489,21 @@
 
 .kds-elapsed.warning {
     color: #ea580c;
-    border-color: #fed7aa;
+    border-color: #f97316;
     background: #fff7ed;
 }
 
 .kds-elapsed.danger {
-    color: #dc2626;
-    border-color: #fecaca;
-    background: #fef2f2;
+    color: #ffffff;
+    border-color: #dc2626;
+    background: #dc2626;
     animation: pulse-danger 2s infinite;
 }
 
 @keyframes pulse-danger {
-    0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    0% { background: #dc2626; border-color: #dc2626; }
+    50% { background: #ef4444; border-color: #ef4444; }
+    100% { background: #dc2626; border-color: #dc2626; }
 }
 
 /* ═══ LOADER ═══ */
@@ -499,7 +517,7 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    border: 4px solid #ebf2fe;
+    border: 4px solid #cbd5e1;
     border-top-color: #053796;
     animation: kds-spin 1s linear infinite;
 }
@@ -522,13 +540,13 @@
 
 .kds-empty-state i {
     font-size: 72px;
-    color: #cbd5e1;
+    color: #94a3b8;
     margin-bottom: 20px;
 }
 
 .kds-empty-state h2 {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 22px;
+    font-weight: 800;
     color: #1e293b;
     margin-bottom: 8px;
 }

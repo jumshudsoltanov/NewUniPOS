@@ -48,7 +48,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
             const firstGroup = normalizeGroup(modifierGroups[0]);
             setActiveGroupId(firstGroup.id);
             setActiveItemId(null);
-            setQtyStr("0");
+            setQtyStr(String(product?.count || product?.quantity || 1));
 
             // Parse existing modifiers if any
             let existingModifiers = [];
@@ -93,21 +93,11 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
             if (selectedIds.length > 0) {
                 const firstId = selectedIds[0];
                 setActiveItemId(firstId);
-                setQtyStr(String(groupSel[firstId]));
             } else {
                 setActiveItemId(null);
-                setQtyStr("0");
             }
         }
     }, [activeGroupId, selections]);
-
-    // Sync selections changes to active item qtyStr
-    useEffect(() => {
-        if (activeGroupId && activeItemId) {
-            const currentQty = (selections[activeGroupId] || {})[activeItemId] || 0;
-            setQtyStr(String(currentQty));
-        }
-    }, [selections, activeGroupId, activeItemId]);
 
     // Sync quantity updates back to selections state
     const updateQuantity = (itemId, value) => {
@@ -125,109 +115,90 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
 
     const handleItemClick = (item) => {
         const group = normalizeGroup(activeGroup);
-        const currentQty = (selections[activeGroupId] || {})[item.id] || 0;
 
         setActiveItemId(item.id);
 
         if (group.selection_type === "single") {
-            // Single selection: clear others and set this one
-            setSelections(prev => ({
-                ...prev,
-                [activeGroupId]: { [item.id]: 1 }
-            }));
-            setQtyStr("1");
+            // Single selection: clear others, but if clicking the same item, increment
+            setSelections(prev => {
+                const groupSel = prev[activeGroupId] || {};
+                const actualQty = groupSel[item.id] || 0;
+                if (actualQty >= 1) {
+                    return {
+                        ...prev,
+                        [activeGroupId]: { [item.id]: actualQty + 1 }
+                    };
+                } else {
+                    return {
+                        ...prev,
+                        [activeGroupId]: { [item.id]: 1 }
+                    };
+                }
+            });
         } else {
-            if (currentQty > 0) {
-                // Already selected, just make active to edit quantity
-                setQtyStr(String(currentQty));
-            } else {
+            setSelections(prev => {
+                const currentGroupSelections = prev[activeGroupId] || {};
+                const actualQty = currentGroupSelections[item.id] || 0;
+                const newQty = actualQty + 1;
+                
                 // Check max selection limit
                 if (group.max_selection > 0) {
-                    const currentGroupSelections = selections[activeGroupId] || {};
                     const totalSelected = Object.values(currentGroupSelections).reduce((a, b) => a + b, 0);
                     if (totalSelected + 1 > group.max_selection) {
                         toast.error(`Maksimum ${group.max_selection} seçim edə bilərsiniz.`);
-                        return;
+                        return prev; // Return unchanged
                     }
                 }
-                // Select with quantity 1
-                setSelections(prev => ({
+                
+                return {
                     ...prev,
                     [activeGroupId]: {
-                        ...(prev[activeGroupId] || {}),
-                        [item.id]: 1
+                        ...currentGroupSelections,
+                        [item.id]: newQty
                     }
-                }));
-                setQtyStr("1");
-            }
+                };
+            });
         }
     };
 
     const handleItemRemove = (e, item) => {
         e.stopPropagation();
+        
         setSelections(prev => {
             const groupSel = { ...(prev[activeGroupId] || {}) };
-            delete groupSel[item.id];
+            const actualQty = groupSel[item.id] || 0;
+            
+            if (actualQty > 1) {
+                groupSel[item.id] = actualQty - 1;
+            } else {
+                delete groupSel[item.id];
+            }
             return { ...prev, [activeGroupId]: groupSel };
         });
-        if (activeItemId === item.id) {
+        
+        const currentQty = (selections[activeGroupId] || {})[item.id] || 0;
+        if (activeItemId === item.id && currentQty <= 1) {
             setActiveItemId(null);
-            setQtyStr("0");
         }
     };
 
     const handleStepperChange = (delta) => {
-        if (!activeItemId || !activeGroup) return;
-        const currentVal = parseFloat(qtyStr) || 0;
-        const newVal = Math.max(0, currentVal + delta);
-
-        const group = normalizeGroup(activeGroup);
-        if (delta > 0 && group.max_selection > 0 && group.selection_type !== 'single') {
-            const currentGroupSelections = selections[activeGroupId] || {};
-            const otherSelectedQty = Object.entries(currentGroupSelections)
-                .filter(([id]) => id !== activeItemId)
-                .reduce((sum, [_, q]) => sum + q, 0);
-            if (otherSelectedQty + newVal > group.max_selection) {
-                toast.error(`Maksimum ${group.max_selection} seçim edə bilərsiniz.`);
-                return;
-            }
-        }
-
+        const currentVal = parseFloat(qtyStr) || 1;
+        const newVal = Math.max(1, currentVal + delta);
         setQtyStr(String(newVal));
-        updateQuantity(activeItemId, newVal);
     };
 
     const handleKeypadPress = (val) => {
-        if (!activeItemId || !activeGroup) {
-            toast.error("Zəhmət olmasa əvvəlcə bir modifier seçin.");
-            return;
-        }
-
         let next;
         if (val === "backspace") {
             next = qtyStr.slice(0, -1);
-            if (next === "" || next === "-") next = "0";
+            if (next === "" || next === "-") next = "1";
         } else if (val === ".") {
             next = qtyStr.includes(".") ? qtyStr : qtyStr + ".";
         } else {
-            next = qtyStr === "0" ? String(val) : qtyStr + val;
+            next = qtyStr === "0" || qtyStr === "1" ? String(val) : qtyStr + val;
         }
-
-        const numVal = parseFloat(next) || 0;
-        const group = normalizeGroup(activeGroup);
-        if (group.max_selection > 0 && group.selection_type !== 'single') {
-            const currentGroupSelections = selections[activeGroupId] || {};
-            const otherSelectedQty = Object.entries(currentGroupSelections)
-                .filter(([id]) => id !== activeItemId)
-                .reduce((sum, [_, q]) => sum + q, 0);
-            if (otherSelectedQty + numVal > group.max_selection) {
-                toast.error(`Maksimum ${group.max_selection} seçim edə bilərsiniz.`);
-                return;
-            }
-        }
-
         setQtyStr(next);
-        updateQuantity(activeItemId, numVal);
     };
 
     const validateSelections = () => {
@@ -272,6 +243,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
 
             onConfirm({
                 ...product,
+                quantity: parseFloat(qtyStr) || 1,
                 modifiers: formattedModifiers,
             });
             onHide();
@@ -289,7 +261,8 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                 total += qty * parseFloat(item.price || 0);
             });
         });
-        return total.toFixed(2);
+        const mainQty = parseFloat(qtyStr) || 1;
+        return (total * mainQty).toFixed(2);
     };
 
     if (!product) return null;
@@ -356,7 +329,7 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                                     modifierGroups.forEach(g => { cleared[g.id] = {}; });
                                     setSelections(cleared);
                                     setActiveItemId(null);
-                                    setQtyStr("0");
+                                    setQtyStr("1");
                                 }
                             }}
                         >
@@ -433,7 +406,6 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                         <button 
                             className="stepper-btn-v2 btn-minus"
                             onClick={() => handleStepperChange(-1)}
-                            disabled={!activeItemId}
                         >
                             <i className="bi bi-dash"></i>
                         </button>
@@ -446,7 +418,6 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                         <button 
                             className="stepper-btn-v2 btn-plus"
                             onClick={() => handleStepperChange(1)}
-                            disabled={!activeItemId}
                         >
                             <i className="bi bi-plus-lg"></i>
                         </button>
@@ -458,7 +429,6 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                                 key={num}
                                 className="num-v2-key"
                                 onClick={() => handleKeypadPress(num)}
-                                disabled={!activeItemId}
                             >
                                 {num}
                             </button>
@@ -466,7 +436,6 @@ const ModifierModal = ({ show, onHide, product, onConfirm, onDelete }) => {
                         <button
                             className="num-v2-key btn-backspace"
                             onClick={() => handleKeypadPress("backspace")}
-                            disabled={!activeItemId}
                         >
                             <i className="bi bi-backspace"></i>
                         </button>

@@ -16,9 +16,13 @@ const ProductsController = require("../controller/ProductsController");
 const KitchenController = require("../controller/KitchenController");
 const OrderingController = require("../controller/OrderingController");
 const AdminController = require("../controller/AdminController");
+const VoiceOrderController = require("../controller/VoiceOrderController");
+const multer = require("multer");
+const upload = multer({ dest: 'uploads/' });
 
 // Routers lists
 router.get("/ping", (req, res) => res.json({ success: true }));
+router.post("/voice-order", upload.single("audio"), VoiceOrderController.processVoiceOrder);
 router.post("/admin/reset-local-database", AdminController.resetLocalDatabase);
 router.get("/admin/whatsapp-settings", AdminController.getWhatsappSettings);
 router.post("/admin/whatsapp-settings", AdminController.saveWhatsappSettings);

@@ -46,6 +46,7 @@ const CheckMain = ({ orders, table }) => {
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { id: orderIdParam } = useParams();
 
   // --- SWIPE GESTURE STATE ---
@@ -212,12 +213,12 @@ const CheckMain = ({ orders, table }) => {
         const prodId = Number(orderItem.product_id);
         const isGift = orderItem.is_gift ? 1 : 0;
         const price = parseFloat(orderItem.price || orderItem.amount || 0).toFixed(2);
-        const modifiersStr = typeof orderItem.modifiers === 'string' ? orderItem.modifiers : JSON.stringify(orderItem.modifiers || []);
-        const modObj = typeof orderItem.modifiers === 'string' ? JSON.parse(orderItem.modifiers || '[]') : (orderItem.modifiers || []);
         const isOwnSetPrice = orderItem.product?.own_set_price === 1 || orderItem.own_set_price === 1;
 
-        // Sort modifiers by id to ensure deterministic string matching for identical modifiers
-        const sortedMods = [...modObj].sort((a, b) => a.id - b.id);
+        const modObj = typeof orderItem.modifiers === 'string' ? JSON.parse(orderItem.modifiers || '[]') : (orderItem.modifiers || []);
+        const sortedMods = [...modObj]
+          .map(m => ({ id: m.id, count: m.count || m.quantity || 1 }))
+          .sort((a, b) => a.id - b.id);
         const normalizedModifiersStr = JSON.stringify(sortedMods);
 
         const uniqueKeyPart = isOwnSetPrice ? `-${orderItem.id}` : '';
@@ -281,7 +282,9 @@ const CheckMain = ({ orders, table }) => {
       try {
         modObj = typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : (item.modifiers || []);
       } catch (e) { }
-      const sortedMods = [...modObj].sort((a, b) => a.id - b.id);
+      const sortedMods = [...modObj]
+        .map(m => ({ id: m.id, count: m.count || m.quantity || 1 }))
+        .sort((a, b) => a.id - b.id);
       const normalizedModifiersStr = JSON.stringify(sortedMods);
 
       const isOwnSetPrice = item.own_set_price === 1;
@@ -432,7 +435,82 @@ const CheckMain = ({ orders, table }) => {
       toast.error(orderEditLockedToast());
       return;
     }
-    dispatch(addProducts(productWithModifiers));
+
+    if (modifierCheckItem) {
+      const savedQty = modifierCheckItem.savedQuantity || 0;
+      const qty = productWithModifiers.quantity;
+      const newLocalQty = qty - savedQty;
+      const pId = Number(modifierCheckItem.product_id || modifierCheckItem.id);
+
+      if (modifierCheckItem.isNew && !modifierCheckItem.savedQuantity) {
+        if (qty === 0) {
+          dispatch(removeAllProductsById(pId));
+        } else {
+          dispatch(replaceProductQuantity({
+            productId: pId,
+            newQty: qty,
+            price: productWithModifiers.price,
+            firstId: modifierCheckItem.firstId,
+            modifiers: productWithModifiers.modifiers,
+            comment: productWithModifiers.comment
+          }));
+        }
+        return;
+      }
+
+      if (newLocalQty < 0) {
+        const hasPermission = Number(loginedWaiter?.data?.can_delete_product) === 1;
+        if (!hasPermission) {
+          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+          return;
+        }
+
+        if (modifierCheckItem.isNew && modifierCheckItem.localQuantity > 0) {
+          dispatch(removeAllProductsById(pId));
+        }
+
+        const dbReduction = Math.abs(newLocalQty);
+        setDeleteActionType('partial');
+        setProductToDelete(modifierCheckItem);
+        setQtyToReduce(dbReduction);
+        setOpenDeleteProductModal(true);
+      } else if (newLocalQty > 0) {
+        if (modifierCheckItem.isNew && modifierCheckItem.localQuantity > 0) {
+          dispatch(replaceProductQuantity({
+            productId: pId,
+            newQty: newLocalQty,
+            price: productWithModifiers.price,
+            firstId: modifierCheckItem.firstId,
+            modifiers: productWithModifiers.modifiers,
+            comment: productWithModifiers.comment
+          }));
+        } else {
+          dispatch(addProducts({
+            ...productWithModifiers,
+            quantity: newLocalQty,
+            count: newLocalQty,
+            newOrder: newLocalQty
+          }));
+        }
+      } else {
+        // newLocalQty === 0: quantity didn't change, but modifiers may have changed
+        if (modifierCheckItem.isNew && modifierCheckItem.localQuantity > 0) {
+          // Update existing local product with new modifiers (keep same qty)
+          dispatch(replaceProductQuantity({
+            productId: pId,
+            newQty: modifierCheckItem.localQuantity,
+            price: productWithModifiers.price,
+            firstId: modifierCheckItem.firstId,
+            modifiers: productWithModifiers.modifiers,
+            comment: productWithModifiers.comment
+          }));
+        }
+        // For purely saved items with no local qty, modifiers can't be changed locally
+        // (would need a server API call)
+      }
+    } else {
+      dispatch(addProducts(productWithModifiers));
+    }
   };
 
   let fallbackProfileData = null;
@@ -684,6 +762,15 @@ const CheckMain = ({ orders, table }) => {
           product={modifierProduct}
           onConfirm={handleModifierConfirm}
           onDelete={(type, qty) => {
+            const hasPermission = Number(loginedWaiter?.data?.can_delete_product) === 1;
+            if (!hasPermission) {
+              const isPureLocal = modifierCheckItem?.isNew && (!modifierCheckItem?.savedQuantity || modifierCheckItem?.savedQuantity <= 0);
+              if (!isPureLocal) {
+                toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                return;
+              }
+            }
+
             if (type === 'qty_select') {
               setShowModifierModal(false);
               setOpenDeleteQtyModal(true);

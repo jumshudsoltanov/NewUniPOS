@@ -653,17 +653,22 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
                           ? Math.max(0, finiteTyped - modifiersTotalPerUnit)
                           : finiteTyped;
                       const resolvedBaseStr = resolvedBase.toFixed(2);
-
                       if (product.isNew && !product.savedQuantity) {
-                        // Pure local item — remove ALL copies and add ONE with the correct qty
+                        // Pure local item — update only THIS specific copy
                         if (qty === 0) {
-                          dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+                          dispatch(replaceProductQuantity({
+                            productId: Number(product.product_id || product.id),
+                            newQty: 0,
+                            firstId: product.firstId
+                          }));
                         } else {
                           dispatch(replaceProductQuantity({
                             productId: Number(product.product_id || product.id),
                             newQty: qty,
                             price: resolvedBaseStr,
-                            // No firstId: replaces ALL entries for this product
+                            firstId: product.firstId,
+                            modifiers: product.modifiers,
+                            comment: product.comment
                           }));
                         }
                         // Log quantity change for new items too
@@ -717,14 +722,38 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal }) => {
 
                         // Quantity change stays local - will be sent via "Göndər" button
                         if (newLocalQty > 0) {
-                          dispatch(updateCount({
-                            productId: Number(product.product_id || product.id),
-                            count: newLocalQty,
-                            price: resolvedBaseStr,
-                            name: product.name,
-                          }));
+                          if (product.isNew && product.localQuantity > 0) {
+                            dispatch(replaceProductQuantity({
+                              productId: Number(product.product_id || product.id),
+                              newQty: newLocalQty,
+                              price: resolvedBaseStr,
+                              firstId: product.firstId,
+                              modifiers: product.modifiers,
+                              comment: product.comment
+                            }));
+                          } else {
+                            const localItem = {
+                              ...product,
+                              quantity: newLocalQty,
+                              count: newLocalQty,
+                              isNew: true,
+                              savedQuantity: 0,
+                              localQuantity: newLocalQty,
+                              price: resolvedBaseStr,
+                            };
+                            dispatch(addProducts(localItem));
+                          }
                         } else {
-                          dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+                          if (product.isNew && product.localQuantity > 0) {
+                            // If it had local quantity but now local quantity is 0, we must remove the local item by firstId
+                            // replaceProductQuantity with newQty=0 could work, but currently we just replace.
+                            // Let's use replaceProductQuantity with 0.
+                            dispatch(replaceProductQuantity({
+                                productId: Number(product.product_id || product.id),
+                                newQty: 0,
+                                firstId: product.firstId
+                            }));
+                          }
                         }
                         // Log quantity change
                         if (qty !== (product.count || 0)) {

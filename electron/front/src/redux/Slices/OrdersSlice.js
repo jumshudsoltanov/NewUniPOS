@@ -1320,51 +1320,93 @@ export const OrderSlice = createSlice({
       if (idx !== -1) state.products.splice(idx, 1);
     },
     replaceProductQuantity: (state, action) => {
-      const { productId, newQty, price, firstId } = action.payload;
+      const { productId, newQty, price, firstId, modifiers, comment } = action.payload;
 
       if (firstId !== undefined && firstId >= 999999999) {
         const idx = firstId - 999999999;
         if (idx < state.products.length) {
           const p = state.products[idx];
-          p.quantity = newQty;
-          p.count = newQty;
-          p.newOrder = newQty;
-          if (price !== undefined) p.price = parseFloat(price);
+          if (newQty <= 0) {
+            state.products.splice(idx, 1);
+          } else {
+            p.quantity = newQty;
+            p.count = newQty;
+            p.newOrder = newQty;
+            if (price !== undefined) p.price = parseFloat(price);
+            if (modifiers !== undefined) p.modifiers = modifiers;
+            if (comment !== undefined) p.comment = comment;
+          }
           return;
         } else {
           const sentIdx = idx - state.products.length;
           if (state.sentProducts && sentIdx < state.sentProducts.length) {
             const sp = state.sentProducts[sentIdx];
-            sp.quantity = newQty;
-            sp.count = newQty;
-            sp.newOrder = newQty;
-            if (price !== undefined) sp.price = parseFloat(price);
+            if (newQty <= 0) {
+              state.sentProducts.splice(sentIdx, 1);
+            } else {
+              sp.quantity = newQty;
+              sp.count = newQty;
+              sp.newOrder = newQty;
+              if (price !== undefined) sp.price = parseFloat(price);
+              if (modifiers !== undefined) sp.modifiers = modifiers;
+              if (comment !== undefined) sp.comment = comment;
+            }
             return;
           }
         }
       }
 
+      // Fallback: find by productId
       const pid = Number(productId);
-      const existing =
-        state.products.find((p) => Number(p.id || p.product_id) === pid) ||
-        state.sentProducts?.find((p) => Number(p.id || p.product_id) === pid);
-      state.products = state.products.filter(
-        (p) => Number(p.id || p.product_id) !== pid,
-      );
-      if (state.sentProducts) {
-        state.sentProducts = state.sentProducts.filter(
-          (p) => Number(p.id || p.product_id) !== pid,
-        );
+      
+      // Try to find and update in-place first (for single entry)
+      const existingIdx = state.products.findIndex((p) => Number(p.id || p.product_id) === pid);
+      
+      if (existingIdx !== -1) {
+        if (newQty <= 0) {
+          state.products.splice(existingIdx, 1);
+        } else {
+          const p = state.products[existingIdx];
+          p.quantity = newQty;
+          p.count = newQty;
+          p.newOrder = newQty;
+          if (price !== undefined) p.price = parseFloat(price);
+          if (modifiers !== undefined) p.modifiers = modifiers;
+          if (comment !== undefined) p.comment = comment;
+        }
+        return;
       }
-      if (newQty > 0 && existing) {
+      
+      // Also check sentProducts
+      if (state.sentProducts) {
+        const sentIdx = state.sentProducts.findIndex((p) => Number(p.id || p.product_id) === pid);
+        if (sentIdx !== -1) {
+          if (newQty <= 0) {
+            state.sentProducts.splice(sentIdx, 1);
+          } else {
+            const sp = state.sentProducts[sentIdx];
+            sp.quantity = newQty;
+            sp.count = newQty;
+            sp.newOrder = newQty;
+            if (price !== undefined) sp.price = parseFloat(price);
+            if (modifiers !== undefined) sp.modifiers = modifiers;
+            if (comment !== undefined) sp.comment = comment;
+          }
+          return;
+        }
+      }
+      
+      // Product not found at all — push as new if qty > 0
+      if (newQty > 0) {
         state.products.push({
-          ...existing,
+          id: pid,
+          product_id: pid,
           quantity: newQty,
+          count: newQty,
           newOrder: newQty,
-          price:
-            price !== undefined
-              ? parseFloat(price)
-              : parseFloat(existing.price || 0),
+          price: price !== undefined ? parseFloat(price) : 0,
+          modifiers: modifiers || [],
+          comment: comment || '',
         });
       }
     },
@@ -1387,13 +1429,12 @@ export const OrderSlice = createSlice({
       const normalizedQuantity = Number(incomingProduct.quantity);
       const parsedPrice = parseFloat(incomingProduct.price);
 
+      const qty = Number.isFinite(normalizedQuantity) && normalizedQuantity > 0 ? normalizedQuantity : 1;
+
       state.products.push({
         ...incomingProduct,
-        quantity:
-          Number.isFinite(normalizedQuantity) && normalizedQuantity > 0
-            ? normalizedQuantity
-            : 1,
-        newOrder: 1,
+        quantity: qty,
+        newOrder: incomingProduct.newOrder !== undefined ? incomingProduct.newOrder : qty,
         price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
       });
     },
@@ -1422,6 +1463,7 @@ export const OrderSlice = createSlice({
           state.products.splice(existingProductIndex, 1);
         } else {
           state.products[existingProductIndex].quantity = count;
+          state.products[existingProductIndex].count = count;
           state.products[existingProductIndex].newOrder = count;
           if (price !== undefined) {
             state.products[existingProductIndex].price = parseFloat(price);
@@ -1434,6 +1476,7 @@ export const OrderSlice = createSlice({
           name: name || "Məhsul",
           price: parseFloat(price) || 0,
           quantity: count,
+          count: count,
           newOrder: count,
         });
       }

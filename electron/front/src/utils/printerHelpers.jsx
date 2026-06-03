@@ -162,6 +162,14 @@ export const processAndPrintOrders = async (
     return [];
   };
 
+  const blockedPrintersLS = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("pos_blocked_printers")) || [];
+    } catch {
+      return [];
+    }
+  })();
+
   for (const item of items) {
     let printers = item.printer_details || [];
     const catPrinters =
@@ -170,8 +178,12 @@ export const processAndPrintOrders = async (
         : [];
     if (printers.length === 0 && catPrinters.length > 0) printers = catPrinters;
 
+    if (blockedPrintersLS.length > 0) {
+      printers = printers.filter(p => !blockedPrintersLS.includes(p.id));
+    }
+
     if (printers.length === 0) {
-      console.warn(`❌ No printer found for item: ${item.name}`);
+      console.warn(`❌ No printer found for item: ${item.name} or printer is blocked`);
       continue;
     }
 

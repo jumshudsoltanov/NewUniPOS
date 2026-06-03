@@ -283,9 +283,6 @@ const KitchenDisplay = () => {
                                         <div key={category} className="kds-cat-group" data-cat-idx={catIdx % 6}>
                                             <div className="kds-cat-banner">
                                                 <span>{category}</span>
-                                                <span className="kds-cat-note">
-                                                    Yeməkləri heç birinə düz vurmayın
-                                                </span>
                                             </div>
                                             {items.map((item) => {
                                                 const isDone = item.kds_status === 2;

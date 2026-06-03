@@ -1,0 +1,77 @@
+.voice-order-btn {
+    position: absolute;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: #053796;
+    color: white;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(5, 55, 150, 0.3);
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.voice-order-btn:hover {
+    background: #042d7a;
+    transform: scale(1.05);
+}
+
+.voice-order-btn:active, .voice-order-btn.recording {
+    background: #dc3545;
+    box-shadow: 0 0 0 6px rgba(220, 53, 69, 0.2);
+    transform: scale(0.95);
+}
+
+.voice-order-btn.processing {
+    background: #6c757d;
+    cursor: not-allowed;
+    transform: scale(1);
+}
+
+.recording-waves {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    pointer-events: none;
+}
+
+.recording-waves .wave {
+    width: 3px;
+    height: 10px;
+    background: white;
+    border-radius: 3px;
+    animation: wave 1s ease-in-out infinite;
+}
+
+.recording-waves .wave:nth-child(2) {
+    animation-delay: 0.1s;
+    height: 16px;
+}
+
+.recording-waves .wave:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+@keyframes wave {
+    0%, 100% {
+        transform: scaleY(1);
+    }
+    50% {
+        transform: scaleY(2);
+    }
+}
