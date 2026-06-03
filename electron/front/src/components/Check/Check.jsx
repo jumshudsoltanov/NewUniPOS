@@ -59,10 +59,30 @@ import { addNotification } from "../../utils/notificationService";
 import StatusModal from "../StatusModal/StatusModal";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
+import { usePrinterDiagnostics } from "../../hooks/usePrinterDiagnostics";
 
 // Cloud API Base URL (Same as Admin)
 // Local Backend Sync URL
 const LOCAL_SYNC_URL = "/sync";
+const KITCHEN_PRINT_BLOCK_SETTING_KEY = "pos_kitchen_print_block";
+const KITCHEN_PRINT_ENABLED_KEY = "pos_kitchen_print_enabled";
+
+const readKitchenPrintEnabled = () => {
+  try {
+    const saved = localStorage.getItem(KITCHEN_PRINT_ENABLED_KEY);
+    return saved == null ? true : saved === "true";
+  } catch {
+    return true;
+  }
+};
+
+const readKitchenPrintBlockSetting = () => {
+  try {
+    return localStorage.getItem(KITCHEN_PRINT_BLOCK_SETTING_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
 
 import {
   menuWithGeneralCategories,
@@ -202,6 +222,53 @@ const Check = () => {
   const [depositValue, setDepositValue] = useState("0");
   const [showDepositKeypad, setShowDepositKeypad] = useState(false);
   const [isUpdatingDeposit, setIsUpdatingDeposit] = useState(false);
+
+  // Print to kitchen toggle
+  const [printToKitchen, setPrintToKitchen] = useState(readKitchenPrintEnabled);
+  const [showKitchenPrintToggle, setShowKitchenPrintToggle] = useState(
+    readKitchenPrintBlockSetting
+  );
+
+  useEffect(() => {
+    const handleKitchenPrintBlockChange = (e) => {
+      setShowKitchenPrintToggle(e.detail);
+    };
+    window.addEventListener("kitchenPrintBlockChanged", handleKitchenPrintBlockChange);
+    return () => window.removeEventListener("kitchenPrintBlockChanged", handleKitchenPrintBlockChange);
+  }, []);
+
+  const handleKitchenPrintToggle = useCallback(() => {
+    setPrintToKitchen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(KITCHEN_PRINT_ENABLED_KEY, next ? "true" : "false");
+      } catch (error) {
+        void error;
+      }
+      window.dispatchEvent(new CustomEvent("kitchenPrintStateChanged", { detail: next }));
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleKitchenPrintStateChange = (event) => {
+      if (typeof event.detail === "boolean") {
+        setPrintToKitchen(event.detail);
+      }
+    };
+    const handleKitchenPrintStorage = (event) => {
+      if (event.key === KITCHEN_PRINT_ENABLED_KEY) {
+        setPrintToKitchen(event.newValue == null ? true : event.newValue === "true");
+      }
+    };
+
+    window.addEventListener("kitchenPrintStateChanged", handleKitchenPrintStateChange);
+    window.addEventListener("storage", handleKitchenPrintStorage);
+    return () => {
+      window.removeEventListener("kitchenPrintStateChanged", handleKitchenPrintStateChange);
+      window.removeEventListener("storage", handleKitchenPrintStorage);
+    };
+  }, []);
 
   // WhatsApp modal state
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -421,6 +488,25 @@ const Check = () => {
   const cashierPrinters = useMemo(() => {
     return resolveCashierPrintersForPrint(loginedProfileData?.data?.printers || []);
   }, [loginedProfileData]);
+  const configuredPrinters = useMemo(
+    () => loginedProfileData?.data?.printers || [],
+    [loginedProfileData?.data?.printers],
+  );
+  const { summary: printerDiagnosticSummary } = usePrinterDiagnostics(configuredPrinters, {
+    enabled: configuredPrinters.length > 0,
+    intervalMs: 60000,
+    timeoutMs: 3500,
+  });
+  const printerDiagnosticBadgeClass =
+    printerDiagnosticSummary.status === "error"
+      ? "offline"
+      : printerDiagnosticSummary.status === "warning"
+        ? "warning"
+        : "";
+  const printerActionTitle =
+    printerDiagnosticSummary.problemCount > 0
+      ? `Çap et • ${printerDiagnosticSummary.label}`
+      : "Çap et";
 
   const handleHotelPrintReceipt = async () => {
     if (!hotelRoom) return;
@@ -843,9 +929,11 @@ const Check = () => {
           const { printers, categoryId } = getAllPrintersForItem(p);
           const commentVal = itemComments[idx] !== undefined ? itemComments[idx] : p.comment;
           const qty = p.count || p.quantity || 1;
+          const safePrice = Number.isFinite(parseFloat(p.price)) ? parseFloat(p.price) : 0;
           if (Array.isArray(commentVal) && commentVal.length > 1) {
             return commentVal.map((c, i) => ({
               ...p,
+              price: safePrice,
               printer_details: printers,
               category_id: categoryId,
               count: 1,
@@ -856,6 +944,7 @@ const Check = () => {
           const singleComment = Array.isArray(commentVal) ? (commentVal[0] ?? p.comment) : commentVal;
           return [{
             ...p,
+            price: safePrice,
             printer_details: printers,
             category_id: categoryId,
             comment: singleComment,
@@ -918,19 +1007,21 @@ const Check = () => {
         };
 
         // 1. Regular items print (Kitchen/Product)
-        processAndPrintOrders(
-          combinedForPrinting,
-          printContext,
-          menuDataWithCategories
-        );
-
-        // 2. Standalone Modifier prints (e.g. Bar/Label)
-        if (standaloneModifiers.length > 0) {
+        if (!showKitchenPrintToggle || printToKitchen) {
           processAndPrintOrders(
-            standaloneModifiers,
+            combinedForPrinting,
             printContext,
             menuDataWithCategories
           );
+
+          // 2. Standalone Modifier prints (e.g. Bar/Label)
+          if (standaloneModifiers.length > 0) {
+            processAndPrintOrders(
+              standaloneModifiers,
+              printContext,
+              menuDataWithCategories
+            );
+          }
         }
       }
 
@@ -1921,9 +2012,43 @@ const Check = () => {
                   </div>
                 )}
 
+                {/* Mətbəxə çap toggle */}
+                {showKitchenPrintToggle && (
+                  <div
+                    className="sidebar-icon"
+                    onClick={handleKitchenPrintToggle}
+                    title={printToKitchen ? "Mətbəxə çap AKTİV (üzərinə klikləyib bloka sala bilərsiniz)" : "Mətbəxə çap BLOKLANIB (üzərinə klikləyib aça bilərsiniz)"}
+                  >
+                    {/* Kitchen/pot icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#343434" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 6 2 18 2 18 9" />
+                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                      <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    {/* Status badge when blocked */}
+                    {!printToKitchen && (
+                      <span
+                        className="icon-badge"
+                        style={{
+                          background: '#ef4444',
+                          width: '14px',
+                          height: '14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                        }}
+                      >!</span>
+                    )}
+                  </div>
+                )}
+
               </div>
 
               <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
+
 
                 {Number(loginedWaiter?.data?.can_lock_check) === 1 && (
                   <div
@@ -1965,7 +2090,7 @@ const Check = () => {
                 {Number(loginedWaiter?.data?.can_print_before_close) === 1 && (
                   <div
                     className={`sidebar-icon position-relative ${isPrintingCheck ? "disabled" : ""}`}
-                    title="Çap et"
+                    title={printerActionTitle}
                     onClick={async () => {
                       if (isDragMode || isPrintingCheck) return;
                       if (orderEditLocked) {
@@ -2092,6 +2217,9 @@ const Check = () => {
                     )}
                     {!isPrintingCheck && (
                       <span className="icon-badge">{currentOrder?.print_count || 0}</span>
+                    )}
+                    {!isPrintingCheck && printerDiagnosticSummary.problemCount > 0 && (
+                      <span className={`printer-health-badge printer-health-badge--${printerDiagnosticBadgeClass}`}>!</span>
                     )}
                   </div>
                 )}
@@ -2305,7 +2433,7 @@ const Check = () => {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span className="d-none d-xl-inline">{loginedWaiter?.data?.name}</span>
+                  <span className="waiter-name-always">{loginedWaiter?.data?.name}</span>
                 </div>
               </div>
 
@@ -3239,4 +3367,3 @@ const Check = () => {
 };
 
 export default Check;
-

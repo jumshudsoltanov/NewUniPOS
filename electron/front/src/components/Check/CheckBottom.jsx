@@ -46,6 +46,8 @@ const CheckBottom = ({
   handleSendOrders,
   isSending,
   clearCheck,
+  printToKitchen,
+  setPrintToKitchen,
 }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions, menu } = useSelector(

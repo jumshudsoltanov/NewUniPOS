@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     installNetworkPrinter: (data) => ipcRenderer.invoke("install-network-printer", data),
     scanNetworkPrinters: (data) => ipcRenderer.invoke("scan-network-printers", data),
     pingPrinter: (data) => ipcRenderer.invoke("ping-printer", data),
+    getPrinterDiagnostics: (data) => ipcRenderer.invoke("get-printer-diagnostics", data),
     getScreens: () => ipcRenderer.invoke("get-screens"),
     toggleCustomerDisplay: (data) => ipcRenderer.invoke("toggle-customer-display", data),
     toggleKitchenDisplay: (data) => ipcRenderer.invoke("toggle-kitchen-display", data),

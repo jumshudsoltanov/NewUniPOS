@@ -20,6 +20,7 @@ import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import SalesShiftStatusPill from "../common/SalesShiftStatusPill";
 import SalesShiftModal from "../Settings/SalesShiftModal";
 import { checkShiftGuard } from "../../utils/shiftGuard";
+import { getNotifications } from "../../utils/notificationService";
 import { toast } from "sonner";
 import { setSelectedRoomGroupId, setSelectedFloor, setSelectedRoomType, setSearchText, clearFilters, fetchRoomGroups } from "../../redux/Slices/HotelSlice";
 import BookingsModal from "../Rooms/BookingsModal";
@@ -224,7 +225,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
   const [notifCount, setNotifCount] = useState(0);
 
   const updateCount = () => {
-    const all = JSON.parse(localStorage.getItem("pos_notifications") || "[]");
+    const all = getNotifications();
     setNotifCount(all.filter(n => n.status === "new").length);
   };
 
@@ -639,7 +640,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span className="d-none d-xl-inline">
+                  <span className="waiter-name-always">
                     {loginedWaiter?.data?.name}
                   </span>
                 </div>

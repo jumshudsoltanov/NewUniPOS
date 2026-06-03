@@ -31,6 +31,8 @@ log.info("UniPOS Desktop Application is starting...");
 app.disableHardwareAcceleration();
 
 if (process.platform === "win32") {
+  // Set app user model id so Windows taskbar groups & icons match the desktop shortcut
+  app.setAppUserModelId("com.unipos.desktop");
   app.commandLine.appendSwitch("no-sandbox");
   app.commandLine.appendSwitch("disable-gpu");
   app.commandLine.appendSwitch("disable-gpu-sandbox");
@@ -142,30 +144,28 @@ function getAppIconPath() {
   let found = null;
   try {
     const appPath = app.getAppPath();
-    const candidates = [
-      path.join(__dirname, "..", "static", "images", "logo.png"),
-      path.join(
-        __dirname,
-        "..",
-        "front",
-        "src",
-        "assets",
-        "images",
-        "unipos_logo.png",
-      ),
-      path.join(
-        __dirname,
-        "..",
-        "front",
-        "src",
-        "assets",
-        "images",
-        "logo.png",
-      ),
-      path.join(__dirname, "..", "front", "public", "favicon.png"),
-      path.join(__dirname, "..", "front", "dist", "favicon.png"),
-      path.join(appPath, "electron", "front", "dist", "favicon.png"),
-    ];
+    // On Windows prefer .ico for correct taskbar icon; on other platforms use .png
+    const isWin = process.platform === "win32";
+    const candidates = isWin
+      ? [
+          path.join(__dirname, "..", "static", "images", "logo-build.ico"),
+          path.join(__dirname, "..", "static", "images", "logo.png"),
+          path.join(__dirname, "..", "static", "images", "logo-build.png"),
+          path.join(__dirname, "..", "static", "images", "logo-icon.png"),
+          path.join(__dirname, "..", "front", "src", "assets", "images", "unipos_logo.png"),
+          path.join(__dirname, "..", "front", "src", "assets", "images", "logo.png"),
+          path.join(__dirname, "..", "front", "public", "favicon.png"),
+          path.join(__dirname, "..", "front", "dist", "favicon.png"),
+          path.join(appPath, "electron", "front", "dist", "favicon.png"),
+        ]
+      : [
+          path.join(__dirname, "..", "static", "images", "logo.png"),
+          path.join(__dirname, "..", "front", "src", "assets", "images", "unipos_logo.png"),
+          path.join(__dirname, "..", "front", "src", "assets", "images", "logo.png"),
+          path.join(__dirname, "..", "front", "public", "favicon.png"),
+          path.join(__dirname, "..", "front", "dist", "favicon.png"),
+          path.join(appPath, "electron", "front", "dist", "favicon.png"),
+        ];
     for (const p of candidates) {
       if (fs.existsSync(p)) {
         found = p;
@@ -784,6 +784,388 @@ ipcMain.handle("get-system-printers", async () => {
   }
 });
 
+const runPromiseWithTimeout = (promise, timeoutMs, fallback) =>
+  new Promise((resolve) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      resolve(typeof fallback === "function" ? fallback() : fallback);
+    }, Math.max(250, Number(timeoutMs) || 1000));
+
+    Promise.resolve(promise)
+      .then((value) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch(() => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(typeof fallback === "function" ? fallback() : fallback);
+      });
+  });
+
+const normalizePrinterName = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
+
+const getPrinterDisplayName = (printer) =>
+  printer?.local_name || printer?.name || printer?.usb_name || printer?.ip || "Printer";
+
+const buildPrinterCandidates = (printer) => {
+  const candidates = [
+    printer?.usb_name,
+    printer?.local_name,
+    printer?.name,
+    printer?.printerName,
+  ];
+  if (printer?.ip) candidates.push(`UNIPOS_${String(printer.ip).replace(/\./g, "_")}`);
+  return candidates
+    .map((candidate) => String(candidate || "").trim())
+    .filter((candidate) => candidate && candidate !== "RASTER");
+};
+
+const readWindowsPrintersSnapshot = async () => {
+  if (process.platform !== "win32") return [];
+  const script = [
+    "$ErrorActionPreference='SilentlyContinue'",
+    "$items=Get-WmiObject -Class Win32_Printer | Select-Object Name,DeviceID,PortName,Status,Default,WorkOffline,PrinterStatus,ExtendedPrinterStatus,PrinterState,DetectedErrorState",
+    "if($items){$items | ConvertTo-Json -Compress -Depth 3}",
+  ].join("; ");
+
+  return new Promise((resolve) => {
+    exec(
+      `powershell -NoProfile -WindowStyle Hidden -Command "${script}"`,
+      { timeout: 2500 },
+      (err, stdout) => {
+        if (err || !stdout || !stdout.trim()) return resolve([]);
+        try {
+          const parsed = JSON.parse(stdout.trim());
+          resolve(Array.isArray(parsed) ? parsed : [parsed]);
+        } catch {
+          resolve([]);
+        }
+      },
+    );
+  });
+};
+
+const readComPortsSnapshot = async () => {
+  if (process.platform !== "win32") return [];
+  return new Promise((resolve) => {
+    exec(
+      `powershell -NoProfile -WindowStyle Hidden -Command "Get-WmiObject Win32_SerialPort | Select-Object -ExpandProperty DeviceID"`,
+      { timeout: 1800 },
+      (err, stdout) => {
+        if (err || !stdout) return resolve([]);
+        resolve(
+          stdout
+            .split(/\r?\n/)
+            .map((port) => port.trim().toUpperCase())
+            .filter((port) => /^COM\d+$/i.test(port)),
+        );
+      },
+    );
+  });
+};
+
+const findWindowsPrinterInfo = (printer, windowsPrinters) => {
+  const candidates = buildPrinterCandidates(printer).map(normalizePrinterName);
+  if (!candidates.length) return null;
+  return (
+    windowsPrinters.find((item) => {
+      const names = [item?.Name, item?.DeviceID].map(normalizePrinterName);
+      return names.some((name) => name && candidates.includes(name));
+    }) || null
+  );
+};
+
+const issueMeta = {
+  offline: { status: "error", label: "Offline" },
+  paper_out: { status: "error", label: "Kağız bitib" },
+  paper_low: { status: "warning", label: "Kağız azdır" },
+  cover_open: { status: "error", label: "Qapaq açıqdır" },
+  paper_jam: { status: "error", label: "Kağız ilişib" },
+  cutter_error: { status: "error", label: "Kəsici xətası" },
+  service_requested: { status: "error", label: "Servis tələb olunur" },
+  paused: { status: "warning", label: "Pauzadadır" },
+  busy: { status: "warning", label: "Məşğuldur" },
+  queued_jobs: { status: "warning", label: "Növbədə çap var" },
+  misconfigured: { status: "error", label: "Tənzimləmə natamamdır" },
+  status_unknown: { status: "unknown", label: "Status məlum deyil" },
+};
+
+const pushIssue = (issues, code) => {
+  if (!issueMeta[code]) return;
+  if (!issues.some((issue) => issue.code === code)) {
+    issues.push({ code, ...issueMeta[code] });
+  }
+};
+
+const getWorstStatus = (issues, fallback = "ok") => {
+  if (issues.some((issue) => issue.status === "error")) return "error";
+  if (issues.some((issue) => issue.status === "warning")) return "warning";
+  if (issues.some((issue) => issue.status === "unknown")) return "unknown";
+  return fallback;
+};
+
+const classifyWindowsPrinter = (info) => {
+  const issues = [];
+  if (!info) return { issues, online: null, detail: "" };
+
+  const detected = Number(info.DetectedErrorState);
+  const printerStatus = Number(info.PrinterStatus);
+  const extendedStatus = Number(info.ExtendedPrinterStatus);
+  const state = Number(info.PrinterState) || 0;
+  const workOffline = String(info.WorkOffline).toLowerCase() === "true" || info.WorkOffline === true;
+
+  if (workOffline || printerStatus === 7 || extendedStatus === 7 || (state & 0x80)) {
+    pushIssue(issues, "offline");
+  }
+  if (detected === 3 || (state & 0x40)) pushIssue(issues, "paper_low");
+  if (detected === 4 || (state & 0x10)) pushIssue(issues, "paper_out");
+  if (detected === 7 || (state & 0x400000)) pushIssue(issues, "cover_open");
+  if (detected === 8 || (state & 0x8)) pushIssue(issues, "paper_jam");
+  if (detected === 10 || (state & 0x100000)) pushIssue(issues, "service_requested");
+  if (detected === 11 || (state & 0x800)) pushIssue(issues, "service_requested");
+  if (state & 0x1) pushIssue(issues, "paused");
+  if ([4, 10, 12, 13].includes(extendedStatus) || (state & 0x200)) pushIssue(issues, "busy");
+
+  const statusText = [info.Status, info.PortName].filter(Boolean).join(" • ");
+  return {
+    issues,
+    online: !issues.some((issue) => issue.code === "offline"),
+    detail: statusText,
+  };
+};
+
+const queryNetworkPrinterStatus = async (ip, port, timeoutMs = 1200) => {
+  const net = require("net");
+  const startedAt = Date.now();
+  return new Promise((resolve) => {
+    if (!ip) {
+      resolve({ online: null, supportsStatus: false, bytes: [], latencyMs: 0 });
+      return;
+    }
+
+    const socket = new net.Socket();
+    const bytes = [];
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      try {
+        socket.destroy();
+      } catch {}
+      resolve({ latencyMs: Date.now() - startedAt, ...result });
+    };
+
+    socket.setTimeout(Math.max(400, Number(timeoutMs) || 1200));
+    socket.connect(Number(port) || 9100, ip, () => {
+      const statusRequest = Buffer.from([
+        0x10, 0x04, 0x01,
+        0x10, 0x04, 0x02,
+        0x10, 0x04, 0x03,
+        0x10, 0x04, 0x04,
+      ]);
+      socket.write(statusRequest, () => {
+        setTimeout(() => {
+          finish({ online: true, supportsStatus: bytes.length > 0, bytes });
+        }, Math.min(700, Math.max(250, Number(timeoutMs) - 250)));
+      });
+    });
+    socket.on("data", (data) => {
+      for (const byte of data.values()) bytes.push(byte);
+      if (bytes.length >= 4) {
+        finish({ online: true, supportsStatus: true, bytes });
+      }
+    });
+    socket.on("error", () => finish({ online: false, supportsStatus: false, bytes: [] }));
+    socket.on("timeout", () => finish({ online: false, supportsStatus: false, bytes: [] }));
+  });
+};
+
+const parseEscPosIssues = (bytes) => {
+  const issues = [];
+  if (!Array.isArray(bytes) || bytes.length === 0) return issues;
+  const offlineByte = bytes.length >= 2 ? bytes[1] : null;
+  const errorByte = bytes.length >= 3 ? bytes[2] : null;
+  const paperByte = bytes.length >= 4 ? bytes[3] : bytes[bytes.length - 1];
+
+  if (typeof offlineByte === "number") {
+    if (offlineByte & 0x04) pushIssue(issues, "cover_open");
+    if (offlineByte & 0x20) pushIssue(issues, "paper_out");
+    if (offlineByte & 0x40) pushIssue(issues, "service_requested");
+  }
+  if (typeof errorByte === "number") {
+    if (errorByte & 0x08) pushIssue(issues, "cutter_error");
+    if (errorByte & 0x60) pushIssue(issues, "service_requested");
+  }
+  if (typeof paperByte === "number") {
+    if (paperByte & 0x60) pushIssue(issues, "paper_out");
+    else if (paperByte & 0x0c) pushIssue(issues, "paper_low");
+  }
+
+  return issues;
+};
+
+const countQueuedJobsForPrinter = (printer) => {
+  const ip = String(printer?.ip || "").trim();
+  if (!ip) return 0;
+  return _printQueue.filter((job) => String(job.ip || "").trim() === ip).length;
+};
+
+const buildPrinterDiagnostic = async (printer, shared, options = {}) => {
+  const startedAt = Date.now();
+  const connectionType = printer?.connection_type || (printer?.ip ? "network" : "usb");
+  const isNetwork =
+    connectionType === "network" ||
+    (connectionType !== "usb" && connectionType !== "com" && !!printer?.ip);
+  const displayName = getPrinterDisplayName(printer);
+  const issues = [];
+  const sources = [];
+  let online = null;
+  let detail = "";
+  let supportsPaperStatus = false;
+
+  const windowsInfo = findWindowsPrinterInfo(printer, shared.windowsPrinters || []);
+  if (windowsInfo) {
+    sources.push("windows");
+    const windowsStatus = classifyWindowsPrinter(windowsInfo);
+    windowsStatus.issues.forEach((issue) => pushIssue(issues, issue.code));
+    if (windowsStatus.online !== null) online = windowsStatus.online;
+    if (windowsStatus.detail) detail = windowsStatus.detail;
+    supportsPaperStatus = true;
+  }
+
+  if (isNetwork) {
+    if (!printer?.ip) {
+      pushIssue(issues, "misconfigured");
+    } else {
+      sources.push("tcp");
+      const networkStatus = await queryNetworkPrinterStatus(
+        printer.ip,
+        printer.port || 9100,
+        Math.min(1600, Number(options.timeoutMs) || 1400),
+      );
+      online = networkStatus.online;
+      if (!networkStatus.online) {
+        pushIssue(issues, "offline");
+      } else if (networkStatus.supportsStatus) {
+        sources.push("escpos");
+        supportsPaperStatus = true;
+        parseEscPosIssues(networkStatus.bytes).forEach((issue) =>
+          pushIssue(issues, issue.code),
+        );
+      }
+      if (!detail) {
+        detail = networkStatus.supportsStatus
+          ? "ESC/POS status cavabı alındı"
+          : "TCP bağlantısı var, sensor statusu cavab vermədi";
+      }
+    }
+  } else if (connectionType === "com") {
+    const comPort = String(printer?.usb_name || printer?.com_port || "").trim().toUpperCase();
+    sources.push("com");
+    if (!/^COM\d+$/i.test(comPort)) {
+      pushIssue(issues, "misconfigured");
+    } else if ((shared.comPorts || []).includes(comPort)) {
+      online = true;
+      detail = detail || `${comPort} mövcuddur`;
+    } else {
+      online = false;
+      pushIssue(issues, "offline");
+      detail = detail || `${comPort} tapılmadı`;
+    }
+  } else if (!windowsInfo) {
+    pushIssue(issues, "status_unknown");
+    detail = "Windows printer statusu tapılmadı";
+  }
+
+  const queuedJobs = countQueuedJobsForPrinter(printer);
+  if (queuedJobs > 0) pushIssue(issues, "queued_jobs");
+
+  const status = getWorstStatus(issues, online === false ? "error" : "ok");
+  const label =
+    issues.find((issue) => issue.status === "error")?.label ||
+    issues.find((issue) => issue.status === "warning")?.label ||
+    (status === "unknown" ? "Status məlum deyil" : online === false ? "Offline" : "Online");
+
+  return {
+    id: printer?.id ?? null,
+    key: String(printer?.id ?? displayName),
+    name: displayName,
+    code: printer?.name || printer?.usb_name || printer?.ip || "",
+    connectionType,
+    ip: printer?.ip || null,
+    port: printer?.port || null,
+    status,
+    online,
+    label,
+    detail,
+    issues,
+    sources,
+    supportsPaperStatus,
+    queuedJobs,
+    checkedAt: new Date().toISOString(),
+    latencyMs: Date.now() - startedAt,
+  };
+};
+
+ipcMain.handle("get-printer-diagnostics", async (_event, { printers = [], timeoutMs = 3500 } = {}) => {
+  const startedAt = Date.now();
+  const safePrinters = Array.isArray(printers) ? printers.slice(0, 30) : [];
+  try {
+    const shared = await runPromiseWithTimeout(
+      Promise.all([readWindowsPrintersSnapshot(), readComPortsSnapshot()]).then(
+        ([windowsPrinters, comPorts]) => ({ windowsPrinters, comPorts }),
+      ),
+      2800,
+      { windowsPrinters: [], comPorts: [] },
+    );
+
+    const diagnostics = await runPromiseWithTimeout(
+      Promise.all(
+        safePrinters.map((printer) =>
+          buildPrinterDiagnostic(printer, shared, { timeoutMs }),
+        ),
+      ),
+      Math.max(1800, Number(timeoutMs) || 3500),
+      [],
+    );
+
+    return {
+      success: true,
+      generatedAt: new Date().toISOString(),
+      elapsedMs: Date.now() - startedAt,
+      printers: Array.isArray(diagnostics) ? diagnostics : [],
+    };
+  } catch (error) {
+    return {
+      success: false,
+      generatedAt: new Date().toISOString(),
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || String(error || "Printer diaqnostikası alınmadı"),
+      printers: safePrinters.map((printer) => ({
+        id: printer?.id ?? null,
+        key: String(printer?.id ?? getPrinterDisplayName(printer)),
+        name: getPrinterDisplayName(printer),
+        status: "unknown",
+        online: null,
+        label: "Status məlum deyil",
+        detail: "Diaqnostika cavab vermədi",
+        issues: [{ code: "status_unknown", ...issueMeta.status_unknown }],
+        sources: [],
+        checkedAt: new Date().toISOString(),
+      })),
+    };
+  }
+});
+
 ipcMain.handle("ping-printer", async (_event, { ip, port = 9100 }) => {
   const net = require("net");
   return new Promise((resolve) => {
@@ -1293,6 +1675,7 @@ ipcMain.handle(
           overflow-x: hidden;
           overflow-y: auto;
           -webkit-print-color-adjust: exact;
+          ${imageQuality}
         }
         #zoom-outer {
           width: ${receiptWidthPx}px;
@@ -1339,7 +1722,7 @@ ipcMain.handle(
       // Şəkillərin tam mount olmasını gözlə
       await rasterWindow.webContents.executeJavaScript(`
         new Promise(resolve => {
-          setTimeout(resolve, 2000); // QR-ın tam render olunması üçün 2 saniyə
+          setTimeout(resolve, 200); // QR-ın tam render olunması üçün saniyə azaldıldı
         });
       `);
 
@@ -1374,7 +1757,7 @@ ipcMain.handle(
       if (captureH <= MAX_SLICE_H) {
         // ── TƏK PARÇA CAPTURE ──
         rasterWindow.setContentSize(receiptWidthPx, captureH);
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 50));
 
         // Scroll-u sıfırla və hündürlükləri yenilə
         await rasterWindow.webContents.executeJavaScript(`
@@ -1387,7 +1770,7 @@ ipcMain.handle(
             window.scrollTo(0, 0);
           })();
         `);
-        await new Promise((r) => setTimeout(r, 400));
+        await new Promise((r) => setTimeout(r, 50));
 
         // Tam sahəni capture et — explicit rect ilə, tam əmin olmaq üçün
         const capturedImage = await rasterWindow.webContents.capturePage({
@@ -1406,7 +1789,7 @@ ipcMain.handle(
         );
 
         rasterWindow.setContentSize(receiptWidthPx, MAX_SLICE_H);
-        await new Promise((r) => setTimeout(r, 400));
+        await new Promise((r) => setTimeout(r, 50));
 
         // Document hündürlüyünü tam captureH-ya set et ki scroll işləsin
         await rasterWindow.webContents.executeJavaScript(`
@@ -1418,7 +1801,7 @@ ipcMain.handle(
             window.scrollTo(0, 0);
           })();
         `);
-        await new Promise((r) => setTimeout(r, 400));
+        await new Promise((r) => setTimeout(r, 50));
 
         const slices = [];
         let scrollY = 0;
@@ -1427,7 +1810,7 @@ ipcMain.handle(
           await rasterWindow.webContents.executeJavaScript(`
             window.scrollTo(0, ${scrollY});
           `);
-          await new Promise((r) => setTimeout(r, 400));
+          await new Promise((r) => setTimeout(r, 50));
 
           const rawSlice = await rasterWindow.webContents.capturePage({
             x: 0,
@@ -1477,6 +1860,19 @@ ipcMain.handle(
       const ESC = 0x1b, GS = 0x1d;
       const parts = [];
       parts.push(Buffer.from([ESC, 0x40]));
+
+      // Səs və Pul Yeşiyi komandaları başlanğıcda göndərilir
+      if (s.sound_notify) {
+        parts.push(Buffer.from([ESC, 0x42, 0x04, 0x01])); // XPrinter Alarm
+        parts.push(Buffer.from([ESC, 0x28, 0x41, 0x04, 0x00, 0x61, 0x03, 0x01, 0x01])); // Epson Beeper
+      }
+      if (s.cash_drawer || s.open_drawer_without_print) {
+        parts.push(Buffer.from([ESC, 0x70, 0x00, 0x19, 0xfa])); // XPrinter Drawer 1
+        parts.push(Buffer.from([ESC, 0x70, 0x01, 0x19, 0xfa])); // XPrinter Drawer 2
+        // Bəzi alternativ printerlər üçün əlavə əmr:
+        parts.push(Buffer.from([ESC, 0x70, 0x00, 0x40, 0x50])); 
+      }
+
       parts.push(Buffer.from([ESC, 0x33, 0x00]));
 
       // Automatik trim: Sonuncu tünd (qara) sətiri tapırıq
@@ -1511,7 +1907,8 @@ ipcMain.handle(
           const srcY = isRotated ? trimmedH - 1 - row : row;
 
           for (let col = 0; col < receiptWidthPx; col++) {
-            const pixelOffset = (srcY * imgW + col) * 4;
+            const srcX = isRotated ? receiptWidthPx - 1 - col : col;
+            const pixelOffset = (srcY * imgW + srcX) * 4;
             const gray = 0.299 * bmp[pixelOffset] + 0.587 * bmp[pixelOffset+1] + 0.114 * bmp[pixelOffset+2];
             if (gray < threshold) {
               const byteIdx = Math.floor(col / 8);
@@ -1530,18 +1927,7 @@ ipcMain.handle(
 
       const finalCutParts = [];
 
-      // Səs və Pul Yeşiyi komandaları (XPrinter və Epson standartları birlikdə göndərilir)
-      if (s.sound_notify) {
-        finalCutParts.push(Buffer.from([ESC, 0x42, 0x04, 0x01])); // XPrinter Alarm
-        finalCutParts.push(
-          Buffer.from([ESC, 0x28, 0x41, 0x04, 0x00, 0x61, 0x03, 0x01, 0x01]),
-        ); // Epson Beeper
-      }
-
-      if (s.cash_drawer || s.open_drawer_without_print) {
-        finalCutParts.push(Buffer.from([ESC, 0x70, 0x00, 0x19, 0xfa])); // XPrinter Drawer 1
-        finalCutParts.push(Buffer.from([ESC, 0x70, 0x01, 0x19, 0xfa])); // XPrinter Drawer 2
-      }
+      // Səs və Pul yeşiyi yuxarıya (çapdan əvvələ) keçirildi.
 
       const feedBeforeCut = Math.min(255, compat.cutFeedLines);
       const cut = s.cut_mode || "full";
@@ -1699,7 +2085,7 @@ ipcMain.handle(
             let loaded = 0;
             const check = () => { loaded++; if (loaded >= imgs.length) resolve(); };
             imgs.forEach(img => { if (img.complete) check(); else { img.onload = check; img.onerror = check; } });
-            setTimeout(resolve, 600);
+            setTimeout(resolve, 50);
           }).catch(resolve);
         } else {
           const imgs = document.querySelectorAll('img');
@@ -1707,7 +2093,7 @@ ipcMain.handle(
           let loaded = 0;
           const check = () => { loaded++; if (loaded >= imgs.length) resolve(); };
           imgs.forEach(img => { if (img.complete) check(); else { img.onload = check; img.onerror = check; } });
-          setTimeout(resolve, 800);
+          setTimeout(resolve, 100);
         }
       });
     `);
@@ -1741,7 +2127,7 @@ ipcMain.handle(
         try {
           const safeHeight = Math.min(driverActualPx + 100, 16300); // 16384 is Windows GDI limit, capping at 16300
           printWindow.setContentSize(driverContentPx, safeHeight);
-          await new Promise((r) => setTimeout(r, 400));
+          await new Promise((r) => setTimeout(r, 50));
           
           // Yenidən ölçüb @page-i yenilə
           await printWindow.webContents.executeJavaScript(`
@@ -1766,7 +2152,7 @@ ipcMain.handle(
               document.head.appendChild(s);
             })();
           `);
-          await new Promise((r) => setTimeout(r, 200));
+          await new Promise((r) => setTimeout(r, 50));
           console.log('[DRIVER] Uzun çek: pəncərə dinamik resize edildi — ' + driverActualPx + 'px (safe: ' + safeHeight + 'px)');
         } catch (e) {
           console.error("Dinamik resize xətası (hesabat çox uzundur):", e);
@@ -1836,6 +2222,7 @@ ipcMain.handle(
           if (settings.cash_drawer || settings.open_drawer_without_print) {
             parts2.push(Buffer.from([0x1b, 0x70, 0x00, 0x19, 0xfa])); // XPrinter Drawer 1
             parts2.push(Buffer.from([0x1b, 0x70, 0x01, 0x19, 0xfa])); // XPrinter Drawer 2
+            parts2.push(Buffer.from([0x1b, 0x70, 0x00, 0x40, 0x50])); // Alternativ
           }
           const cmdBuf = Buffer.concat(parts2);
           const s2 = net2.connect(

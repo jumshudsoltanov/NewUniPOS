@@ -4,6 +4,12 @@ import { useSelector } from "react-redux";
 import axios, { localApi } from "../../utils/apiConfig";
 import './StatusModal.css';
 import { toast } from 'sonner';
+import { usePrinterDiagnostics } from "../../hooks/usePrinterDiagnostics";
+import {
+    getPrinterDiagnosticClass,
+    getPrinterDiagnosticLabel,
+    getPrinterKey,
+} from "../../utils/printerDiagnostics";
 
 const StatusModal = ({ show, onHide }) => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -38,6 +44,15 @@ const StatusModal = ({ show, onHide }) => {
     const pomPollAttemptsRef = useRef(0);
     const pomPollCancelledRef = useRef(false);
     const pomSuccessScheduledRef = useRef(false);
+    const {
+        diagnostics: printerDiagnostics,
+        isChecking: printerDiagnosticsChecking,
+        refresh: refreshPrinterDiagnostics,
+    } = usePrinterDiagnostics(printers, {
+        enabled: show && printers.length > 0,
+        intervalMs: 15000,
+        timeoutMs: 3500,
+    });
 
     const profile = loginedProfileData?.data?.profile || {};
     const terminal = loginedProfileData?.data?.terminal || {};
@@ -55,10 +70,16 @@ const StatusModal = ({ show, onHide }) => {
             if (response.data && Array.isArray(response.data.data)) {
                 setPrinters(response.data.data.map(p => ({
                     id: p.id,
+                    local_name: p.local_name,
                     name: p.local_name || p.name,
                     code: p.name,
-                    status: "Connected",
-                    ip: p.ip || "Network Printer",
+                    status: "checking",
+                    ip: p.ip || "",
+                    port: p.port,
+                    connection_type: p.connection_type,
+                    usb_name: p.usb_name,
+                    is_cashier: p.is_cashier,
+                    type: p.type,
                     departments: [
                         p.is_cashier === 1 ? "Çek" : null,
                         p.type?.includes("Bar") ? "Bar" : null,
@@ -502,7 +523,12 @@ const StatusModal = ({ show, onHide }) => {
                                 </div>
 
                                 <div className="devices-items-container full-width">
-                                    {printers.map(device => (
+                                    {printers.map(device => {
+                                        const diagnostic = printerDiagnostics[getPrinterKey(device)];
+                                        const statusClass = printerDiagnosticsChecking && !diagnostic ? "checking" : getPrinterDiagnosticClass(diagnostic);
+                                        const statusLabel = printerDiagnosticsChecking && !diagnostic ? "Yoxlanır" : getPrinterDiagnosticLabel(diagnostic);
+                                        const queuedText = diagnostic?.queuedJobs > 0 ? ` • Növbə: ${diagnostic.queuedJobs}` : "";
+                                        return (
                                         <div key={`printer-${device.id}`} className="device-detail-card">
                                             <div className="device-icon-side">
                                                 <i className="bi bi-printer"></i>
@@ -510,20 +536,32 @@ const StatusModal = ({ show, onHide }) => {
                                             <div className="device-info-side">
                                                 <div className="device-card-top">
                                                     <div className="device-name-container">
-                                                        <span className="status-indicator"></span>
+                                                        <span className={`status-indicator status-indicator--${statusClass}`}></span>
                                                         <span className="device-display-name">{device.name}</span>
                                                     </div>
-                                                    <i className="bi bi-arrow-repeat device-sync-icon" onClick={handleQuickSync}></i>
+                                                    <i
+                                                        className="bi bi-arrow-repeat device-sync-icon"
+                                                        title="Printer statusunu yenilə"
+                                                        onClick={refreshPrinterDiagnostics}
+                                                    ></i>
                                                 </div>
-                                                <div className="device-code">{device.code}</div>
+                                                <div className="device-code">
+                                                    {device.code}
+                                                    {diagnostic?.detail ? ` • ${diagnostic.detail}` : ""}
+                                                    {queuedText}
+                                                </div>
                                                 <div className="device-badges">
+                                                    <span className={`dept-badge printer-diag-badge printer-diag-badge--${statusClass}`}>
+                                                        {statusLabel}
+                                                    </span>
                                                     {device.departments.map((dept, idx) => (
                                                         <span key={idx} className="dept-badge">{dept}</span>
                                                     ))}
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
 
                                     {printers.length === 0 && (
                                         <div className="no-devices">Printer tapılmadı</div>

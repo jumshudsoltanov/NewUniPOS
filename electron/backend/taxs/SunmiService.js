@@ -229,7 +229,236 @@ class SunmiService {
         });
     }
 
-    async createSale({ items, payments, cashierName, orderId }) {
+    _round2(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return 0;
+        return Math.round((n + Number.EPSILON) * 100) / 100;
+    }
+
+    _lineGrossCents(item) {
+        const quantity = Number(item.count ?? item.quantity ?? 1);
+        const salePrice = Number(item.price || 0);
+        return Math.max(0, Math.round(quantity * salePrice * 100));
+    }
+
+    _distributeCents(totalCents, weights) {
+        const cents = Math.max(0, Math.round(Number(totalCents) || 0));
+        const safeWeights = (weights || []).map((weight) => Math.max(0, Math.round(Number(weight) || 0)));
+        const weightSum = safeWeights.reduce((acc, weight) => acc + weight, 0);
+        const allocations = new Array(safeWeights.length).fill(0);
+        if (cents <= 0 || weightSum <= 0 || safeWeights.length === 0) {
+            return allocations;
+        }
+
+        const shares = safeWeights.map((weight, index) => {
+            const exact = (cents * weight) / weightSum;
+            const floor = Math.floor(exact);
+            allocations[index] = floor;
+            return { index, remainder: exact - floor };
+        });
+
+        let remaining = cents - allocations.reduce((acc, value) => acc + value, 0);
+        shares.sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+        for (let i = 0; remaining > 0; i += 1, remaining -= 1) {
+            allocations[shares[i % shares.length].index] += 1;
+        }
+        return allocations;
+    }
+
+    _unitPriceCoveringLineCents(lineCents, quantity) {
+        const q = Number(quantity) || 0;
+        const cents = Math.max(0, Math.round(Number(lineCents) || 0));
+        if (q <= 0 || cents <= 0) return 0;
+        return this._round2(Math.ceil(((cents / 100) / q) * 100 - 1e-9) / 100);
+    }
+
+    _sunmiLineDocumentTotal(line) {
+        const gross = this._round2((Number(line.salePrice) || 0) * (Number(line.quantity) || 0));
+        const discount = this._round2(Math.max(0, Number(line.discountAmount) || 0));
+        return this._round2(Math.max(0, gross - discount));
+    }
+
+    _sunmiItemsDocumentTotal(saleItems) {
+        return this._round2((saleItems || []).reduce((acc, line) => acc + this._sunmiLineDocumentTotal(line), 0));
+    }
+
+    _sunmiItemLine(item, quantity, salePrice, vatType, discountAmount = 0) {
+        return {
+            name: (item.product?.name || item.name || 'Məhsul').substring(0, 64),
+            code: String(item.barcode || item.product_id || item.id || '0'),
+            quantity: Number(quantity.toFixed(3)),
+            salePrice: this._round2(salePrice),
+            purchasePrice: this._round2(item.purchase_price || 0),
+            codeType: 1,
+            quantityType: 0,
+            vatType,
+            discountAmount: this._round2(discountAmount)
+        };
+    }
+
+    _sunmiFeeLine(name, code, amount, vatType) {
+        const value = this._round2(amount);
+        if (!(value > 0)) return null;
+        return {
+            name: String(name).substring(0, 64),
+            code: String(code),
+            quantity: 1,
+            salePrice: value,
+            purchasePrice: 0,
+            codeType: 1,
+            quantityType: 0,
+            vatType,
+            discountAmount: 0
+        };
+    }
+
+    _buildSunmiSaleItemsWithAdjustments(sourceItems, discountAmount, serviceFee, deliveryFee, vatType) {
+        const lineGrossCents = sourceItems.map((item) => this._lineGrossCents(item));
+        const grossTotalCents = lineGrossCents.reduce((acc, value) => acc + value, 0);
+        const discountCents = Math.min(
+            Math.max(0, Math.round(this._round2(discountAmount) * 100)),
+            grossTotalCents
+        );
+        const distributedDiscounts = this._distributeCents(discountCents, lineGrossCents);
+
+        const saleItems = sourceItems.map((item, index) => {
+            const quantity = Number(item.count ?? item.quantity ?? 1);
+            const netLineCents = Math.max(0, lineGrossCents[index] - (distributedDiscounts[index] || 0));
+            const unitPrice = this._unitPriceCoveringLineCents(netLineCents, quantity);
+            const roundedGrossCents = Math.max(0, Math.round(unitPrice * quantity * 100));
+            const roundingDiscount = Math.max(0, roundedGrossCents - netLineCents);
+            return this._sunmiItemLine(item, quantity, unitPrice, vatType, roundingDiscount / 100);
+        });
+
+        const serviceLine = this._sunmiFeeLine('Xidmət haqqı', 'SVC', serviceFee, vatType);
+        if (serviceLine) saleItems.push(serviceLine);
+
+        const deliveryLine = this._sunmiFeeLine('Çatdırılma haqqı', 'DLV', deliveryFee, vatType);
+        if (deliveryLine) saleItems.push(deliveryLine);
+
+        return saleItems;
+    }
+
+    _alignSunmiItemsToOrderTotal(saleItems, orderTotal) {
+        const targetTotal = this._round2(orderTotal);
+        if (!(targetTotal > 0) || !Array.isArray(saleItems) || saleItems.length === 0) {
+            return this._sunmiItemsDocumentTotal(saleItems || []);
+        }
+
+        let currentTotal = this._sunmiItemsDocumentTotal(saleItems);
+        let diff = this._round2(targetTotal - currentTotal);
+        if (Math.abs(diff) < 0.005) {
+            return currentTotal;
+        }
+
+        const serviceIndex = saleItems.findIndex((line) => String(line.code) === 'SVC');
+        const lastProductIndex = (() => {
+            for (let i = saleItems.length - 1; i >= 0; i -= 1) {
+                const code = String(saleItems[i].code || '');
+                if (code !== 'SVC' && code !== 'DLV') return i;
+            }
+            return -1;
+        })();
+
+        if (diff > 0) {
+            const targetIndex = serviceIndex >= 0 ? serviceIndex : lastProductIndex;
+            if (targetIndex >= 0) {
+                const line = saleItems[targetIndex];
+                const quantity = Number(line.quantity) || 0;
+                if (quantity > 0) {
+                    const nextLineTotal = this._round2(this._sunmiLineDocumentTotal(line) + diff);
+                    line.salePrice = this._unitPriceCoveringLineCents(Math.round(nextLineTotal * 100), quantity);
+                    const grossCents = Math.max(0, Math.round(line.salePrice * quantity * 100));
+                    line.discountAmount = this._round2(Math.max(0, grossCents - Math.round(nextLineTotal * 100)) / 100);
+                }
+            } else {
+                const correctionLine = this._sunmiFeeLine('Düzəliş', 'ADJ', diff, this._getVatType());
+                if (correctionLine) saleItems.push(correctionLine);
+            }
+        } else {
+            let remainingDiscount = Math.abs(Math.round(diff * 100));
+            const indexes = [
+                ...(lastProductIndex >= 0 ? [lastProductIndex] : []),
+                ...saleItems.map((_, index) => index).filter((index) => index !== lastProductIndex)
+            ];
+            for (const index of indexes) {
+                if (remainingDiscount <= 0) break;
+                const line = saleItems[index];
+                const availableCents = Math.max(0, Math.round(this._sunmiLineDocumentTotal(line) * 100));
+                const useCents = Math.min(availableCents, remainingDiscount);
+                line.discountAmount = this._round2((Math.round(this._round2(line.discountAmount || 0) * 100) + useCents) / 100);
+                remainingDiscount -= useCents;
+            }
+        }
+
+        currentTotal = this._sunmiItemsDocumentTotal(saleItems);
+        diff = this._round2(targetTotal - currentTotal);
+        if (Math.abs(diff) >= 0.005 && diff > 0) {
+            const correctionLine = this._sunmiFeeLine('Düzəliş', 'ADJ', diff, this._getVatType());
+            if (correctionLine) saleItems.push(correctionLine);
+            currentTotal = this._sunmiItemsDocumentTotal(saleItems);
+        }
+        return currentTotal;
+    }
+
+    _resolveSunmiPayments(payments, documentTotal) {
+        const total = this._round2(documentTotal);
+        let cashPayment = 0;
+        let cardPayment = 0;
+        const paymentList = Array.isArray(payments) ? payments : [];
+
+        paymentList.forEach((p) => {
+            const amount = this._round2(p.amount || 0);
+            if (this._isCashless(p.name, p.type)) {
+                cardPayment = this._round2(cardPayment + amount);
+            } else {
+                cashPayment = this._round2(cashPayment + amount);
+            }
+        });
+
+        if (paymentList.length === 0 || this._round2(cashPayment + cardPayment) <= 0) {
+            return { cashPayment: total, cardPayment: 0 };
+        }
+
+        let paidTotal = this._round2(cashPayment + cardPayment);
+        if (Math.abs(paidTotal - total) < 0.005) {
+            return { cashPayment, cardPayment };
+        }
+
+        if (paidTotal < total) {
+            const missing = this._round2(total - paidTotal);
+            if (cardPayment > 0 && cashPayment <= 0) {
+                cardPayment = this._round2(cardPayment + missing);
+            } else if (cashPayment > 0) {
+                cashPayment = this._round2(cashPayment + missing);
+            } else if (cardPayment > 0) {
+                cardPayment = this._round2(cardPayment + missing);
+            } else {
+                cashPayment = total;
+            }
+        } else {
+            if (cardPayment > 0 && cashPayment <= 0) {
+                cardPayment = total;
+            } else if (cashPayment > 0 && cardPayment <= 0) {
+                cashPayment = total;
+            } else {
+                let over = this._round2(paidTotal - total);
+                const cashReduce = Math.min(cashPayment, over);
+                cashPayment = this._round2(cashPayment - cashReduce);
+                over = this._round2(over - cashReduce);
+                if (over > 0) {
+                    cardPayment = this._round2(Math.max(0, cardPayment - over));
+                }
+            }
+        }
+
+        return {
+            cashPayment: this._round2(cashPayment),
+            cardPayment: this._round2(cardPayment)
+        };
+    }
+
+    async createSale({ items, payments, cashierName, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
         const vatType = this._getVatType();
 
         const sourceItems = this._filterPositiveQtyItems(items);
@@ -245,7 +474,7 @@ class SunmiService {
                 code: String(item.barcode || item.product_id || item.id || '0'),
                 quantity: Number(quantity.toFixed(3)),
                 salePrice: Number(salePrice.toFixed(2)),
-                purchasePrice: Number((item.purchase_price || 0).toFixed(2)),
+                purchasePrice: this._round2(item.purchase_price || 0),
                 codeType: 1,
                 quantityType: 0,
                 vatType,
@@ -283,6 +512,14 @@ class SunmiService {
             }
         }
 
+        const adjustedSunmiItems = this._buildSunmiSaleItemsWithAdjustments(sourceItems, discountAmount, serviceFee, deliveryFee, vatType);
+        saleItems.splice(0, saleItems.length, ...adjustedSunmiItems);
+        const targetTotal = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : 0;
+        const documentTotal = this._alignSunmiItemsToOrderTotal(saleItems, targetTotal);
+        const resolvedPayments = this._resolveSunmiPayments(payments, documentTotal);
+        cashRounded = resolvedPayments.cashPayment;
+        cardRounded = resolvedPayments.cardPayment;
+
         const data = {
             documentUUID: String(orderId || uuidv4()),
             cashPayment: cashRounded,
@@ -304,7 +541,7 @@ class SunmiService {
         return result;
     }
 
-    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId, orderId }) {
+    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
         const vatType = this._getVatType();
 
         const sourceItems = this._filterPositiveQtyItems(items);
@@ -320,7 +557,7 @@ class SunmiService {
                 code: String(item.barcode || item.product_id || item.id || '0'),
                 quantity: Number(qty.toFixed(3)),
                 salePrice: Number(price.toFixed(2)),
-                purchasePrice: Number((item.purchase_price || 0).toFixed(2)),
+                purchasePrice: this._round2(item.purchase_price || 0),
                 codeType: 1,
                 quantityType: 0,
                 vatType: vatType,
@@ -357,6 +594,13 @@ class SunmiService {
             cashRounded = Math.max(0, returnTotalRounded - cardRounded);
             cardRounded = returnTotalRounded - cashRounded;
         }
+
+        returnItems = this._buildSunmiSaleItemsWithAdjustments(sourceItems, discountAmount, serviceFee, deliveryFee, vatType);
+        const targetReturnTotal = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : 0;
+        const alignedReturnTotal = this._alignSunmiItemsToOrderTotal(returnItems, targetReturnTotal);
+        const resolvedReturnPayments = this._resolveSunmiPayments(payments, alignedReturnTotal);
+        cashRounded = resolvedReturnPayments.cashPayment;
+        cardRounded = resolvedReturnPayments.cardPayment;
 
         const data = {
             parentDocumentId: parentDocumentId,

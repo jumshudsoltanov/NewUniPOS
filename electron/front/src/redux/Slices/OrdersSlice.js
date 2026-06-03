@@ -1385,6 +1385,7 @@ export const OrderSlice = createSlice({
     addProducts: (state, action) => {
       const incomingProduct = action.payload;
       const normalizedQuantity = Number(incomingProduct.quantity);
+      const parsedPrice = parseFloat(incomingProduct.price);
 
       state.products.push({
         ...incomingProduct,
@@ -1393,7 +1394,7 @@ export const OrderSlice = createSlice({
             ? normalizedQuantity
             : 1,
         newOrder: 1,
-        price: parseFloat(incomingProduct.price),
+        price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
       });
     },
 

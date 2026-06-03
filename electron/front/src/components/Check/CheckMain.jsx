@@ -1,9 +1,18 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
+import ModifierModal from "../ModifierModal/ModifierModal";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal"; // Import
-import { addPendingDeletion, removeAllProductsById, removeProductByIdAndPrice } from "../../redux/Slices/OrdersSlice"; // Import action
+import DeleteQtyModal from "../DeleteQtyModal/DeleteQtyModal";
+import {
+  addPendingDeletion,
+  removeAllProductsById,
+  removeProductByIdAndPrice,
+  removeLocalProductByFirstId,
+  replaceProductQuantity,
+  addProducts,
+} from "../../redux/Slices/OrdersSlice"; // Import action
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
 import { getProductHourlySum } from "../../utils/orderHourlyPrice";
@@ -23,21 +32,165 @@ const CheckMain = ({ orders, table }) => {
   const [editItemModal, setEditItemModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  const [showModifierModal, setShowModifierModal] = useState(false);
+  const [modifierProduct, setModifierProduct] = useState(null);
+  const [modifierCheckItem, setModifierCheckItem] = useState(null); // original check row for delete
+
   // State for Product Delete Modal
   const [openDeleteProductModal, setOpenDeleteProductModal] = useState(false);
   const [deleteActionType, setDeleteActionType] = useState('full');
   const [productToDelete, setProductToDelete] = useState(null);
   const [qtyToReduce, setQtyToReduce] = useState(0);
+  const [openDeleteQtyModal, setOpenDeleteQtyModal] = useState(false);
 
   const { menu, products, sentProducts } = useSelector((state) => state.OrderSlice);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { id: orderIdParam } = useParams();
 
+  // --- SWIPE GESTURE STATE ---
+  const [swipeGesturesEnabled, setSwipeGesturesEnabled] = useState(
+    () => localStorage.getItem("pos_swipe_gestures_enabled") === "true"
+  );
+  const [swipeOffsets, setSwipeOffsets] = useState({});
+  const touchStartRef = useRef({});
+  const lastSwipeTimeRef = useRef(0);
+
   const orderEditLocked = useMemo(
     () => isOrderEditLocked(orders),
     [orders?.is_locked, orders?.uuid],
   );
+
+  useEffect(() => {
+    const handleSwipeSettingChange = (e) => setSwipeGesturesEnabled(e.detail);
+    window.addEventListener("swipeGesturesChanged", handleSwipeSettingChange);
+    return () => window.removeEventListener("swipeGesturesChanged", handleSwipeSettingChange);
+  }, []);
+
+  const getSwipeItemProductId = (item) => Number(item.product_id || item.id);
+
+  const isOwnPriceSwipeItem = (item) =>
+    item.product?.own_set_price === 1 || item.own_set_price === 1;
+
+  const removeLocalSwipeItem = (item) => {
+    const productId = getSwipeItemProductId(item);
+    if (isOwnPriceSwipeItem(item)) {
+      if (Number(item.firstId) >= 999999999) {
+        dispatch(removeLocalProductByFirstId(item.firstId));
+      } else {
+        dispatch(removeProductByIdAndPrice({ product_id: productId, price: Number(item.price) }));
+      }
+    } else {
+      dispatch(removeAllProductsById(productId));
+    }
+  };
+
+  const reduceLocalSwipeItem = (item, localQty) => {
+    const productId = getSwipeItemProductId(item);
+    const nextQty = Math.max(0, Number(localQty || 0) - 1);
+
+    if (nextQty <= 0) {
+      removeLocalSwipeItem(item);
+      return;
+    }
+
+    dispatch(replaceProductQuantity({
+      productId,
+      newQty: nextQty,
+      price: Number(item.price).toFixed(2),
+      ...(isOwnPriceSwipeItem(item) && Number(item.firstId) >= 999999999 ? { firstId: item.firstId } : {}),
+    }));
+  };
+
+  const runSwipeDeleteAction = (action, item) => {
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
+      return;
+    }
+
+    const localQty = Number(item.localQuantity || (item.isNew && !item.savedQuantity ? item.count : 0) || 0);
+    const savedQty = Number(item.savedQuantity || 0);
+
+    if (item.isNew && localQty > 0) {
+      if (action === "delete_one") {
+        reduceLocalSwipeItem(item, localQty);
+        return;
+      }
+
+      removeLocalSwipeItem(item);
+      if (savedQty <= 0) return;
+      item = { ...item, localQuantity: 0, isNew: false, count: savedQty };
+    }
+
+    setDeleteActionType(action === "delete_one" ? "partial" : "full");
+    setProductToDelete(item);
+    setQtyToReduce(action === "delete_one" ? 1 : Number(item.savedQuantity || item.count || 0));
+    setOpenDeleteProductModal(true);
+  };
+
+  const handleTouchStart = (e, itemKey) => {
+    if (!swipeGesturesEnabled || orderEditLocked) return;
+    touchStartRef.current[itemKey] = e.touches ? e.touches[0].clientX : e.clientX;
+  };
+
+  const handleTouchMove = (e, itemKey) => {
+    if (!swipeGesturesEnabled || orderEditLocked || touchStartRef.current[itemKey] == null) return;
+    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+    const diff = currentX - touchStartRef.current[itemKey];
+    
+    // limit max swipe
+    if (diff > 100) setSwipeOffsets(prev => ({ ...prev, [itemKey]: 100 }));
+    else if (diff < -150) setSwipeOffsets(prev => ({ ...prev, [itemKey]: -150 }));
+    else setSwipeOffsets(prev => ({ ...prev, [itemKey]: diff }));
+  };
+
+  const handleTouchEnd = (itemKey, item) => {
+    if (!swipeGesturesEnabled || orderEditLocked || touchStartRef.current[itemKey] == null) return;
+    const diff = swipeOffsets[itemKey] || 0;
+    touchStartRef.current[itemKey] = null;
+
+    if (Math.abs(diff) > 5) {
+      lastSwipeTimeRef.current = Date.now();
+    }
+
+    if (diff > 60) {
+      // Swipe Right -> Increase count
+      dispatch(addProducts({ 
+        product_id: item.product_id, 
+        count: 1, 
+        price: item.price, 
+        modifiers: item.modifiers || [], 
+        comment: item.comment,
+        own_set_price: item.own_set_price
+      }));
+    } else if (diff < -120) {
+      // Full left swipe -> decrease/delete one item.
+      setSwipeOffsets(prev => ({ ...prev, [itemKey]: 0 }));
+      runSwipeDeleteAction("delete_one", item);
+      return;
+    } else if (diff < -60) {
+      // Short left swipe -> reveal delete actions.
+      setSwipeOffsets(prev => ({ ...prev, [itemKey]: -150 }));
+      return; // return to keep it open
+    }
+
+    // Reset offset if not opened
+    setSwipeOffsets(prev => ({ ...prev, [itemKey]: 0 }));
+  };
+
+  const handleMouseLeave = (itemKey, item) => {
+    if (touchStartRef.current[itemKey] != null) {
+      handleTouchEnd(itemKey, item);
+    }
+  };
+
+  const handleSwipeAction = (e, itemKey, action, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSwipeOffsets(prev => ({ ...prev, [itemKey]: 0 }));
+    runSwipeDeleteAction(action, item);
+  };
+  // -------------------------
 
   const allItems = useMemo(() => {
     const groupedMap = new Map();
@@ -62,8 +215,13 @@ const CheckMain = ({ orders, table }) => {
         const modifiersStr = typeof orderItem.modifiers === 'string' ? orderItem.modifiers : JSON.stringify(orderItem.modifiers || []);
         const modObj = typeof orderItem.modifiers === 'string' ? JSON.parse(orderItem.modifiers || '[]') : (orderItem.modifiers || []);
         const isOwnSetPrice = orderItem.product?.own_set_price === 1 || orderItem.own_set_price === 1;
-        const uniqueKeyPart = modObj.length > 0 || isOwnSetPrice ? `-${orderItem.id}` : '';
-        const key = `${prodId}-${isGift}-${price}-${modifiersStr}${uniqueKeyPart}`;
+
+        // Sort modifiers by id to ensure deterministic string matching for identical modifiers
+        const sortedMods = [...modObj].sort((a, b) => a.id - b.id);
+        const normalizedModifiersStr = JSON.stringify(sortedMods);
+
+        const uniqueKeyPart = isOwnSetPrice ? `-${orderItem.id}` : '';
+        const key = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
         const existing = groupedMap.get(key);
         const rowSort = sortTimeFromSavedRow(orderItem);
 
@@ -118,11 +276,17 @@ const CheckMain = ({ orders, table }) => {
       const prodId = Number(item.id || item.product_id);
       const isGift = item.is_gift ? 1 : 0;
       const price = parseFloat(item.price || 0).toFixed(2);
-      const modifiersStr = typeof item.modifiers === 'string' ? item.modifiers : JSON.stringify(item.modifiers || []);
-      const hasModifiers = (item.modifiers && item.modifiers.length > 0);
+      
+      let modObj = [];
+      try {
+        modObj = typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : (item.modifiers || []);
+      } catch (e) { }
+      const sortedMods = [...modObj].sort((a, b) => a.id - b.id);
+      const normalizedModifiersStr = JSON.stringify(sortedMods);
+
       const isOwnSetPrice = item.own_set_price === 1;
-      const uniqueKeyPart = (hasModifiers || isOwnSetPrice) ? `-local-idx-${idx}` : '';
-      const key = `${prodId}-${isGift}-${price}-${modifiersStr}${uniqueKeyPart}`;
+      const uniqueKeyPart = isOwnSetPrice ? `-local-idx-${idx}` : '';
+      const key = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
       const existing = groupedMap.get(key);
 
       const qtyToAdd = Number(item.quantity || item.count || 1);
@@ -231,13 +395,44 @@ const CheckMain = ({ orders, table }) => {
   };
 
   const handleItemClick = (item) => {
+    if (Date.now() - lastSwipeTimeRef.current < 200) {
+      return; // Ignore click if a swipe gesture just occurred
+    }
+    
     if (orderEditLocked) {
       toast.error(orderEditLockedToast());
       return;
     }
     if (item.isDeleted) return; // Prevent clicking deleted items
-    setSelectedProduct(item);
-    setEditItemModal(true);
+
+    const catalogProduct = findCatalogProduct(menu, item.product_id);
+    const hasGroups = catalogProduct?.modifier_groups && (
+      (Array.isArray(catalogProduct.modifier_groups) && catalogProduct.modifier_groups.length > 0) ||
+      (typeof catalogProduct.modifier_groups === 'object' && Object.keys(catalogProduct.modifier_groups).length > 0) ||
+      (typeof catalogProduct.modifier_groups === 'string' && catalogProduct.modifier_groups.length > 5)
+    );
+
+    if (hasGroups || (item.modifiers && item.modifiers.length > 0)) {
+      setModifierProduct({
+        ...(catalogProduct || item),
+        modifiers: item.modifiers,
+        count: item.count,   // current qty in check for smart Sil button
+        isFromCheck: true
+      });
+      setModifierCheckItem(item); // keep original check row for delete
+      setShowModifierModal(true);
+    } else {
+      setSelectedProduct(item);
+      setEditItemModal(true);
+    }
+  };
+
+  const handleModifierConfirm = (productWithModifiers) => {
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
+      return;
+    }
+    dispatch(addProducts(productWithModifiers));
   };
 
   let fallbackProfileData = null;
@@ -322,110 +517,141 @@ const CheckMain = ({ orders, table }) => {
                 firstHourlyProductRowIndex >= 0 &&
                 !!orders?.uuid;
 
+              const itemKey = `${item.product_id}-${item.is_gift}-${index}`;
+
               return (
                 <div
-                  onClick={() => handleItemClick(item)}
-                  className={`order-item ${item.isNew ? "new-order-highlight" : ""}`}
-                  key={`${item.product_id}-${item.is_gift}-${index}`}
-                  style={rowStyle}
+                  className={`order-item-swipe-wrapper ${item.isNew ? "new-order-swipe-wrapper" : ""}`}
+                  key={itemKey}
+                  style={{ position: 'relative', overflow: 'hidden' }}
                 >
-                  <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <div className="d-flex align-items-center flex-wrap gap-1">
-                      <span className="fw-semibold">{displayProductName}</span>
-                      {item.isDeleted && (
-                        <span className="pending-delete-badge full" title="Silinəcək">
-                          <i className="bi bi-trash3-fill"></i>
-                        </span>
-                      )}
-                      {item.partialDelete > 0 && !item.isDeleted && (
-                        <span className="pending-delete-badge partial" title={`−${item.partialDelete} silinəcək`}>
-                          <i className="bi bi-dash-circle-fill"></i>
-                          −{item.partialDelete}
-                        </span>
-                      )}
-                      {modifiers.length > 0 && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" title="Modifikatorlar">
-                          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                          <polyline points="2 17 12 22 22 17"></polyline>
-                          <polyline points="2 12 12 17 22 12"></polyline>
-                        </svg>
-                      )}
-                      {isGift && <i className="bi bi-gift-fill text-danger" title="İkram"></i>}
-                    </div>
+                  <div className={`swipe-background swipe-left ${swipeOffsets[itemKey] < 0 ? 'active' : ''}`}>
+                    <button className="swipe-btn minus" onClick={(e) => handleSwipeAction(e, itemKey, 'delete_one', item)}>
+                      -1
+                    </button>
+                    <button className="swipe-btn delete" onClick={(e) => handleSwipeAction(e, itemKey, 'delete_all', item)}>
+                      <i className="bi bi-trash3-fill"></i>
+                    </button>
+                  </div>
 
-                    <div className="d-flex flex-column gap-1 mt-1">
-                      {modifiers.length > 0 && (
-                        <div className="check-item-modifiers">
-                          {modifiers.map((m, i) => (
-                            <span key={i} className="modifier-tag">
-                              {m.name} {m.count > 1 ? `(x${m.count})` : ""}
+                  <div className={`swipe-background swipe-right ${swipeOffsets[itemKey] > 0 ? 'active' : ''}`}>
+                    <div className="swipe-action-indicator">
+                      <i className="bi bi-plus-lg"></i>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => handleItemClick(item)}
+                    className={`order-item ${item.isNew ? "new-order-highlight" : ""}`}
+                    style={{ 
+                      ...rowStyle, 
+                      transform: `translateX(${swipeOffsets[itemKey] || 0}px)`, 
+                      transition: touchStartRef.current[itemKey] != null ? 'none' : 'transform 0.2s ease-out',
+                      position: 'relative',
+                      zIndex: 2,
+                      background: item.isNew ? '#ebf2fe' : '#fff', // required to hide the background buttons
+                      userSelect: 'none'
+                    }}
+                    onTouchStart={(e) => handleTouchStart(e, itemKey)}
+                    onTouchMove={(e) => handleTouchMove(e, itemKey)}
+                    onTouchEnd={() => handleTouchEnd(itemKey, item)}
+                    onMouseDown={(e) => handleTouchStart(e, itemKey)}
+                    onMouseMove={(e) => handleTouchMove(e, itemKey)}
+                    onMouseUp={() => handleTouchEnd(itemKey, item)}
+                    onMouseLeave={() => handleMouseLeave(itemKey, item)}
+                  >
+                    <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <div className="d-flex align-items-center flex-wrap gap-1">
+                        <span className="fw-semibold">{displayProductName}</span>
+                        {item.isDeleted && (
+                          <span className="pending-delete-badge full" title="Silinəcək">
+                            <i className="bi bi-trash3-fill"></i>
+                          </span>
+                        )}
+                        {item.partialDelete > 0 && !item.isDeleted && (
+                          <span className="pending-delete-badge partial" title={`−${item.partialDelete} silinəcək`}>
+                            <i className="bi bi-dash-circle-fill"></i>
+                            −{item.partialDelete}
+                          </span>
+                        )}
+
+                        {isGift && <i className="bi bi-gift-fill text-danger" title="İkram"></i>}
+                      </div>
+
+                      <div className="d-flex flex-column gap-1 mt-1">
+                        {modifiers.length > 0 && (
+                          <div className="check-item-modifiers-inline" style={{ display: 'block', fontSize: '0.8rem', color: '#4B5563', marginTop: '2px', lineHeight: '1.3', whiteSpace: 'normal' }}>
+                            <span style={{fontWeight: 500}}>{displayProductName}:</span> {modifiers.map((m, i) => (
+                              <span key={i}>
+                                {m.name} {m.count > 0 ? `x${m.count}` : ""}{i < modifiers.length - 1 ? ", " : ""}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {item.comment && item.isNew && (
+                          <div style={{ fontSize: "0.75rem", color: "#856404", fontStyle: "italic", lineHeight: "1.2" }}>
+                            <i className="fa-solid fa-comment-dots me-1"></i>
+                            {item.comment}
+                          </div>
+                        )}
+
+                        {isDiscounted && !isGift && (
+                          <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
+                            Endirim: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
+                          </span>
+                        )}
+
+                        {hourlyLine > 0 && (
+                          <div style={{ fontSize: "0.75rem", color: "#053796", fontWeight: 600, lineHeight: "1.2" }}>
+                            Saatlıq: {hourlyLine.toFixed(2)} ₼/saat
+                          </div>
+                        )}
+
+                        {showInlineProductTimer && (
+                          <div
+                            className="check-item-product-timer-lite"
+                            onClick={stopTimerBubble}
+                            title="Taymer — idarə: məhsula toxun və «Saatlıq» tabı"
+                          >
+                            <span className="check-item-timer-lite-sep">
+                              <i className="bi bi-stopwatch" aria-hidden />
+                              <span className="check-item-timer-lite-mono">{timerClock}</span>
                             </span>
-                          ))}
-                        </div>
-                      )}
+                            <span className="check-item-timer-lite-sep">
+                              <i className="bi bi-plus-circle" aria-hidden />
+                              <span className="check-item-timer-lite-mono">{Number(timerCharge).toFixed(2)} ₼</span>
+                            </span>
+                          </div>
+                        )}
 
-                      {item.comment && item.isNew && (
-                        <div style={{ fontSize: "0.75rem", color: "#856404", fontStyle: "italic", lineHeight: "1.2" }}>
-                          <i className="fa-solid fa-comment-dots me-1"></i>
-                          {item.comment}
-                        </div>
-                      )}
-
-                      {isDiscounted && !isGift && (
-                        <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
-                          Endirim: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
-                        </span>
-                      )}
-
-                      {hourlyLine > 0 && (
-                        <div style={{ fontSize: "0.75rem", color: "#053796", fontWeight: 600, lineHeight: "1.2" }}>
-                          Saatlıq: {hourlyLine.toFixed(2)} ₼/saat
-                        </div>
-                      )}
-
-                      {showInlineProductTimer && (
-                        <div
-                          className="check-item-product-timer-lite"
-                          onClick={stopTimerBubble}
-                          title="Taymer — idarə: məhsula toxun və «Saatlıq» tabı"
-                        >
-                          <span className="check-item-timer-lite-sep">
-                            <i className="bi bi-stopwatch" aria-hidden />
-                            <span className="check-item-timer-lite-mono">{timerClock}</span>
-                          </span>
-                          <span className="check-item-timer-lite-sep">
-                            <i className="bi bi-plus-circle" aria-hidden />
-                            <span className="check-item-timer-lite-mono">{Number(timerCharge).toFixed(2)} ₼</span>
-                          </span>
-                        </div>
-                      )}
-
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="col-qty d-flex justify-content-center align-items-center">
-                    <div className="d-flex align-items-center gap-1">
-                      <span className="fw-bold">{Number(item.count).toFixed(2)}</span>
-                      <span className="text-muted" style={{ fontSize: '0.8rem' }}>x</span>
+                    <div className="col-qty d-flex justify-content-center align-items-center">
+                      <div className="d-flex align-items-center gap-1">
+                        <span className="fw-bold">{Number(item.count).toFixed(2)}</span>
+                        <span className="text-muted" style={{ fontSize: '0.8rem' }}>x</span>
 
-                      {isGift ? (
-                        <div className="d-flex align-items-center gap-1">
-                          <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
-                          <span className="fw-bold text-danger">0.00</span>
-                        </div>
-                      ) : (currentPrice !== originalPrice) ? (
-                        <div className="d-flex align-items-center gap-1">
-                          <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
+                        {isGift ? (
+                          <div className="d-flex align-items-center gap-1">
+                            <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
+                            <span className="fw-bold text-danger">0.00</span>
+                          </div>
+                        ) : (currentPrice !== originalPrice) ? (
+                          <div className="d-flex align-items-center gap-1">
+                            <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
+                            <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
+                          </div>
+                        ) : (
                           <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
-                        </div>
-                      ) : (
-                        <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="col-total d-flex align-items-center justify-content-end fw-bold">
-                    {totalAmount} ₼
+                    <div className="col-total d-flex align-items-center justify-content-end fw-bold">
+                      {totalAmount} ₼
+                    </div>
                   </div>
                 </div>
               )
@@ -450,6 +676,41 @@ const CheckMain = ({ orders, table }) => {
           }}
         />
       )}
+
+      {showModifierModal && (
+        <ModifierModal
+          show={showModifierModal}
+          onHide={() => setShowModifierModal(false)}
+          product={modifierProduct}
+          onConfirm={handleModifierConfirm}
+          onDelete={(type, qty) => {
+            if (type === 'qty_select') {
+              setShowModifierModal(false);
+              setOpenDeleteQtyModal(true);
+            } else {
+              setShowModifierModal(false);
+              setDeleteActionType(type);
+              setProductToDelete(modifierCheckItem);
+              setQtyToReduce(qty);
+              setOpenDeleteProductModal(true);
+            }
+          }}
+        />
+      )}
+
+      {/* Product Delete Qty Modal */}
+      <DeleteQtyModal
+        show={openDeleteQtyModal}
+        onClose={() => setOpenDeleteQtyModal(false)}
+        product={modifierCheckItem}
+        onConfirm={(type, qty) => {
+          setOpenDeleteQtyModal(false);
+          setDeleteActionType(type);
+          setProductToDelete(modifierCheckItem);
+          setQtyToReduce(qty);
+          setOpenDeleteProductModal(true);
+        }}
+      />
 
       {/* Product Delete Modal */}
       <CheckDeleteModal

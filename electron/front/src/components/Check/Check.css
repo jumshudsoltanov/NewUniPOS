@@ -67,6 +67,33 @@
   line-height: 1;
 }
 
+.printer-health-badge {
+  position: absolute;
+  left: -4px;
+  bottom: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ebf2fe;
+  box-sizing: border-box;
+  z-index: 3;
+  line-height: 1;
+}
+
+.printer-health-badge--offline {
+  background: #ef4444;
+}
+
+.printer-health-badge--warning {
+  background: #f59e0b;
+}
+
 /* Content Area - Fixed Layout */
 .check-content {
   background-color: #ebf2fe;
@@ -644,6 +671,106 @@
   display: flex;
   flex-direction: column;
 }
+
+/* SWIPE GESTURES STYLING */
+.order-item-swipe-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px dashed #eef2f6;
+}
+
+.order-item-swipe-wrapper:last-child {
+  border-bottom: none;
+}
+
+.order-item-swipe-wrapper .order-item {
+  border-bottom: none !important; /* Move border to wrapper */
+}
+
+.order-item-swipe-wrapper.new-order-swipe-wrapper {
+  background: #ebf2fe;
+  margin-left: -5px;
+  margin-right: -5px;
+}
+
+.order-item-swipe-wrapper.new-order-swipe-wrapper .order-item {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.order-item-swipe-wrapper.new-order-swipe-wrapper::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #053796;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.swipe-background {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+  transition: opacity 0.2s;
+  opacity: 0;
+}
+
+.swipe-background.active {
+  opacity: 1;
+}
+
+.swipe-background.swipe-left {
+  right: 0;
+  justify-content: flex-end;
+  background-color: #f8f9fa; /* slightly grey background for actions */
+  width: 100%;
+}
+
+.swipe-background.swipe-right {
+  left: 0;
+  justify-content: flex-start;
+  background-color: #10b981; /* green */
+  width: 100%;
+}
+
+.swipe-action-indicator {
+  width: 60px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.swipe-btn {
+  height: 100%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  width: 75px;
+  font-size: 1.2rem;
+}
+
+.swipe-btn.minus {
+  background-color: #f59e0b; /* yellow-orange */
+}
+
+.swipe-btn.delete {
+  background-color: #ef4444; /* red */
+}
+/* END SWIPE GESTURES */
 
 .order-item {
   display: flex;
@@ -1538,10 +1665,8 @@
 
 .new-order-highlight {
   background-color: #ebf2fe;
-  box-shadow:
-    -5px 0 0 #ebf2fe,
-    5px 0 0 #ebf2fe;
-  border-left: 3px solid #053796;
+  box-shadow: none;
+  border-left: none;
 }
 
 /* Geniş monitor: bir az daha rahat aralıq və oxunaqlı məhsul adı */

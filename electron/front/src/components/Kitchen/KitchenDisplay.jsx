@@ -13,11 +13,33 @@ const TABS = [
 
 const KitchenDisplay = () => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-    const profileId = loginedProfileData?.data?.profile?.id;
-    const terminalName = loginedProfileData?.data?.terminal?.name || "KDS";
+    const storedAuthData = useMemo(() => {
+        try {
+            return JSON.parse(localStorage.getItem("authResult") || "null");
+        } catch {
+            return null;
+        }
+    }, []);
+    const storedProfileData = useMemo(() => {
+        try {
+            return JSON.parse(localStorage.getItem("profile") || "null");
+        } catch {
+            return null;
+        }
+    }, []);
+    const effectiveAuthData = loginedProfileData?.data ? loginedProfileData : storedAuthData;
+    const profileId =
+        effectiveAuthData?.data?.profile?.id ||
+        storedProfileData?.id ||
+        storedProfileData?.profile_id;
+    const terminalName =
+        effectiveAuthData?.data?.terminal?.name ||
+        storedProfileData?.terminal?.name ||
+        "KDS";
 
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
     const [activeTab, setActiveTab] = useState("all");
     const [currentTime, setCurrentTime] = useState(new Date());
     const prevOrdersCount = useRef(0);
@@ -45,8 +67,13 @@ const KitchenDisplay = () => {
     };
 
     const fetchOrders = useCallback(async () => {
-        if (!profileId) return;
+        if (!profileId) {
+            setLoadError("Profil məlumatı tapılmadı");
+            setLoading(false);
+            return;
+        }
         try {
+            setLoadError("");
             const res = await localApi.get(`/kitchen/${profileId}/orders`);
             if (res.data.success) {
                 const newOrders = res.data.data || [];
@@ -56,6 +83,7 @@ const KitchenDisplay = () => {
             }
         } catch (error) {
             console.error("KDS Fetch Error:", error);
+            setLoadError(error?.response?.data?.message || "KDS sifarişlərini yükləmək mümkün olmadı");
         } finally {
             setLoading(false);
         }
@@ -170,6 +198,21 @@ const KitchenDisplay = () => {
                 <div className="kds-empty-state">
                     <div className="kds-loader"><div className="kds-loader-ring"></div></div>
                     <h2>Yüklənir...</h2>
+                </div>
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="kds-container">
+                <div className="kds-empty-state">
+                    <i className="bi bi-exclamation-triangle"></i>
+                    <h2>KDS açıla bilmədi</h2>
+                    <p>{loadError}</p>
+                    <button className="kds-complete-btn" onClick={fetchOrders}>
+                        Yenidən yoxla
+                    </button>
                 </div>
             </div>
         );

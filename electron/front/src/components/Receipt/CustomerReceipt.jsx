@@ -158,8 +158,16 @@ const CustomerReceipt = ({
         label: { fontWeight: "900" },
         value: { textAlign: "right", flex: 1, marginLeft: "4px" },
         items: { fontSize: fs(11) },
+        itemsGrid: {
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) max-content max-content max-content",
+            columnGap: "0.35em",
+            alignItems: "start",
+            width: "100%",
+            minWidth: 0,
+            boxSizing: "border-box",
+        },
         itemsHeader: {
-            display: "flex",
             fontWeight: "900",
             borderBottom: "1px solid #000",
             paddingBottom: "2px",
@@ -175,29 +183,29 @@ const CustomerReceipt = ({
             paddingRight: "4px",
             minWidth: 0,
         },
-        colQty: { width: "30px", textAlign: "center", fontWeight: "900", whiteSpace: "nowrap", flexShrink: 0 },
-        colPrice: { width: "55px", textAlign: "right", fontWeight: "900", paddingRight: "4px", whiteSpace: "nowrap", flexShrink: 0 },
+        colQty: { minWidth: "2ch", textAlign: "center", fontWeight: "900", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" },
+        colPrice: { minWidth: "4.6ch", textAlign: "right", fontWeight: "900", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" },
         colTotal: {
-            width: "65px",
+            minWidth: "6.8ch",
             textAlign: "right",
             fontWeight: "900",
             whiteSpace: "nowrap",
-            flexShrink: 0,
+            fontVariantNumeric: "tabular-nums",
         },
         itemRow: {
-            display: "flex",
             padding: "4px 0",
             borderBottom: "1px dashed #000",
             fontSize: fs(11),
             fontWeight: "900",
             lineHeight: "1.3",
-            alignItems: "flex-start",
         },
         summaryRow: {
             display: "flex",
             marginBottom: "2px",
             fontSize: fs(12),
             fontWeight: "900",
+            alignItems: "baseline",
+            gap: "0.35em",
         },
         total: {
             display: "flex",
@@ -205,6 +213,18 @@ const CustomerReceipt = ({
             fontSize: fs(14),
             marginTop: "4px",
             whiteSpace: "nowrap",
+            alignItems: "baseline",
+            gap: "0.35em",
+        },
+        moneyInline: {
+            display: "inline-flex",
+            alignItems: "baseline",
+            justifyContent: "flex-end",
+            gap: "0.12em",
+            whiteSpace: "nowrap",
+            direction: "ltr",
+            unicodeBidi: "isolate",
+            fontVariantNumeric: "tabular-nums",
         },
         footer: {
             display: "flex",
@@ -359,6 +379,14 @@ const CustomerReceipt = ({
         }))
         .filter((p) => p._displayAmount > 0.001);
 
+    const formatMoney = (value) => normalizeMoney(value).toFixed(2);
+    const renderMoney = (value) => (
+        <span style={styles.moneyInline}>
+            <span>{formatMoney(value)}</span>
+            <span>₼</span>
+        </span>
+    );
+
     return (
         <div style={styles.receipt}>
             {/* HEADER */}
@@ -494,7 +522,7 @@ const CustomerReceipt = ({
 
             {/* ITEMS */}
             <div style={styles.items}>
-                <div style={styles.itemsHeader}>
+                <div style={{ ...styles.itemsGrid, ...styles.itemsHeader }}>
                     <span style={styles.colName}>Məhsul</span>
                     <span style={styles.colQty}>Say</span>
                     <span style={styles.colPrice}>Qiy</span>
@@ -503,13 +531,11 @@ const CustomerReceipt = ({
 
                 {checkData?.rate_per_minute &&
                     Number(checkData?.rate_per_minute) !== 0 ? (
-                    <div style={styles.itemRow}>
+                    <div style={{ ...styles.itemsGrid, ...styles.itemRow }}>
                         <span style={styles.colName}>Timer {checkData?.is_timer_clock ? `(${checkData.is_timer_clock})` : ''}</span>
                         <span style={styles.colQty}></span>
                         <span style={styles.colPrice}></span>
-                        <span style={styles.colTotal}>
-                            {parseFloat(checkData.rate_per_minute).toFixed(2)} ₼
-                        </span>
+                        <span style={styles.colTotal}>{renderMoney(checkData.rate_per_minute)}</span>
                     </div>
                 ) : null}
 
@@ -561,6 +587,7 @@ const CustomerReceipt = ({
 
                         return (
                             <div key={i} style={{
+                                ...styles.itemsGrid,
                                 ...styles.itemRow,
                                 borderBottom: i === grouped.length - 1 ? "1.5px solid #000" : styles.itemRow.borderBottom
                             }}>
@@ -586,7 +613,7 @@ const CustomerReceipt = ({
                                 )}
 
                                 <span style={styles.colTotal}>
-                                    {((params.price + (params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0))) * params.quantity).toFixed(2)} ₼
+                                    {renderMoney((params.price + (params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0))) * params.quantity)}
                                 </span>
                             </div>
                         );
@@ -596,6 +623,7 @@ const CustomerReceipt = ({
                 {/* TAYMER MƏLUMATI */}
                 {Number(checkData?.is_timer_status) === 1 && (
                     <div style={{
+                        ...styles.itemsGrid,
                         ...styles.itemRow,
                         fontWeight: "bold",
                         borderTop: "1px dashed #000",
@@ -609,9 +637,7 @@ const CustomerReceipt = ({
                         <span style={styles.colPrice}>
                             {(Number(checkData.rate_per_minute) || 0).toFixed(2)}
                         </span>
-                        <span style={styles.colTotal}>
-                            {(Number(checkData.rate_per_minute) || 0).toFixed(2)} ₼
-                        </span>
+                        <span style={styles.colTotal}>{renderMoney(checkData.rate_per_minute)}</span>
                     </div>
                 )}
             </div>
@@ -633,7 +659,7 @@ const CustomerReceipt = ({
                             Endirim ({discountInfo.percent}%)
                         </span>
                         <span style={styles.colTotal}>
-                            {discountInfo.amount.toFixed(2)} ₼
+                            {renderMoney(discountInfo.amount)}
                         </span>
                     </div>
                 )}
@@ -644,7 +670,7 @@ const CustomerReceipt = ({
                             {getCustomerFacingServiceFeeLabel()} ({serviceInfo.percent}%)
                         </span>
                         <span style={styles.colTotal}>
-                            {serviceInfo.amount.toFixed(2)} ₼
+                            {renderMoney(serviceInfo.amount)}
                         </span>
                     </div>
                 )}
@@ -658,7 +684,7 @@ const CustomerReceipt = ({
             <div style={styles.total}>
                 <span style={{ flex: 1 }}>YEKUN</span>
                 <span style={styles.colTotal}>
-                    {displayTotal.toFixed(2)} ₼
+                    {renderMoney(displayTotal)}
                 </span>
             </div>
 
@@ -683,8 +709,8 @@ const CustomerReceipt = ({
                             <span style={{ flex: 1 }}>
                                 {pay.paymentMethodName || pay.name || pay.method_name || "Nağd"}
                             </span>
-                            <span>
-                                {pay._displayAmount.toFixed(2)} ₼
+                            <span style={styles.colTotal}>
+                                {renderMoney(pay._displayAmount)}
                             </span>
                         </div>
                     ))}
@@ -693,14 +719,14 @@ const CustomerReceipt = ({
                     {(checkData?.paid_amount !== undefined || checkData?.paidAmount !== undefined) && (
                         <div style={{ ...styles.summaryRow, marginTop: "4px", borderTop: "1px dashed #000", paddingTop: "2px" }}>
                             <span style={{ flex: 1 }}>VERİLƏN</span>
-                            <span>{parseFloat(checkData.paid_amount || checkData.paidAmount || 0).toFixed(2)} ₼</span>
+                            <span style={styles.colTotal}>{renderMoney(checkData.paid_amount || checkData.paidAmount || 0)}</span>
                         </div>
                     )}
 
                     {(checkData?.change !== undefined) && (
                         <div style={styles.summaryRow}>
                             <span style={{ flex: 1 }}>QALIQ</span>
-                            <span>{Math.max(0, parseFloat(checkData.change || 0)).toFixed(2)} ₼</span>
+                            <span style={styles.colTotal}>{renderMoney(Math.max(0, parseFloat(checkData.change || 0)))}</span>
                         </div>
                     )}
                 </div>
@@ -709,7 +735,9 @@ const CustomerReceipt = ({
             {/* ÖDƏNİLİB STATUS */}
             {isPaid && (
                 <div style={styles.statusBox}>
-                    <span style={styles.statusText}>ÖDƏNİLİB — {displayTotal.toFixed(2)} ₼</span>
+                    <span style={styles.statusText}>
+                        ÖDƏNİLİB — {renderMoney(displayTotal)}
+                    </span>
                 </div>
             )}
 

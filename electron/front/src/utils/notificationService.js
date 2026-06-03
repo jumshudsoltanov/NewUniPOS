@@ -1,3 +1,28 @@
+const isSuppressedNotification = (notification) => {
+  return (
+    notification?.title === "Printer təyinatı yoxdur" ||
+    String(notification?.dedupeKey || "").startsWith("no-kitchen-printer-")
+  );
+};
+
+const readNotifications = () => {
+  const notifications = JSON.parse(
+    localStorage.getItem("pos_notifications") || "[]",
+  );
+  const visibleNotifications = notifications.filter(
+    (notification) => !isSuppressedNotification(notification),
+  );
+
+  if (visibleNotifications.length !== notifications.length) {
+    localStorage.setItem(
+      "pos_notifications",
+      JSON.stringify(visibleNotifications),
+    );
+  }
+
+  return visibleNotifications;
+};
+
 export const addNotification = (title, message, options = {}) => {
   const {
     orderId = null,
@@ -7,9 +32,11 @@ export const addNotification = (title, message, options = {}) => {
     dedupeKey = null,
     dedupeTtlMs = 180000,
   } = options;
-  const notifications = JSON.parse(
-    localStorage.getItem("pos_notifications") || "[]",
-  );
+  if (isSuppressedNotification({ title, dedupeKey })) {
+    return;
+  }
+
+  const notifications = readNotifications();
   if (dedupeKey) {
     const now = Date.now();
     const ttl = Number(dedupeTtlMs) > 0 ? Number(dedupeTtlMs) : 180000;
@@ -52,9 +79,7 @@ export const addNotification = (title, message, options = {}) => {
 };
 
 export const getNotifications = () => {
-  const notifications = JSON.parse(
-    localStorage.getItem("pos_notifications") || "[]",
-  );
+  const notifications = readNotifications();
   const now = Date.now();
   const twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
 
@@ -77,18 +102,14 @@ export const getNotifications = () => {
 };
 
 export const clearNotifications = (status) => {
-  const notifications = JSON.parse(
-    localStorage.getItem("pos_notifications") || "[]",
-  );
+  const notifications = readNotifications();
   const updated = notifications.filter((n) => n.status !== status);
   localStorage.setItem("pos_notifications", JSON.stringify(updated));
   window.dispatchEvent(new CustomEvent("newNotification"));
 };
 
 export const markAllAsOld = () => {
-  const notifications = JSON.parse(
-    localStorage.getItem("pos_notifications") || "[]",
-  );
+  const notifications = readNotifications();
   const updated = notifications.map((n) => ({ ...n, status: "old" }));
   localStorage.setItem("pos_notifications", JSON.stringify(updated));
   window.dispatchEvent(new CustomEvent("newNotification"));

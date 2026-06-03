@@ -147,6 +147,14 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     () => localStorage.getItem("pos_auto_payment_enabled") === "true"
   );
 
+  const [kitchenPrintBlockEnabled, setKitchenPrintBlockEnabled] = useState(
+    () => localStorage.getItem("pos_kitchen_print_block") === "true"
+  );
+
+  const [swipeGesturesEnabled, setSwipeGesturesEnabled] = useState(
+    () => localStorage.getItem("pos_swipe_gestures_enabled") === "true"
+  );
+
   const [resettingDb, setResettingDb] = useState(false);
 
   const [syncTroubleshootLoading, setSyncTroubleshootLoading] = useState(false);
@@ -635,7 +643,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       onHide={handleModalHide}
       centered
       animation={false}
-      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" ? " pin-advanced-catview-wide" : ""}${view === "receiptDesign" ? " pin-advanced-receipt-wide" : ""}${view === "systemUsers" ? " pin-advanced-sysusers-wide" : ""}${view === "operationNames" ? " pin-advanced-opnames-wide" : ""}${view === "syncCheck" ? " pin-advanced-wa-wide" : ""}`}
+      dialogClassName={`custom-modal-width${view === "whatsapp" ? " pin-advanced-wa-wide" : ""}${view === "updates" ? " pin-advanced-updates-wide" : ""}${view === "categoryView" || view === "settings" ? " pin-advanced-catview-wide" : ""}${view === "receiptDesign" ? " pin-advanced-receipt-wide" : ""}${view === "systemUsers" ? " pin-advanced-sysusers-wide" : ""}${view === "operationNames" ? " pin-advanced-opnames-wide" : ""}${view === "syncCheck" ? " pin-advanced-wa-wide" : ""}`}
       contentClassName="custom-modal-content"
     >
       <div className="discount-modal-container">
@@ -1434,6 +1442,48 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
               </div>
             </div>
 
+            <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Mətbəx printerinə blok</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Sifariş ekranında mətbəxə çapı bloklamaq üçün düyməni göstər</div>
+                </div>
+                <div
+                  className={`wa-toggle ${kitchenPrintBlockEnabled ? "wa-toggle-on" : ""}`}
+                  onClick={() => {
+                    const newVal = !kitchenPrintBlockEnabled;
+                    setKitchenPrintBlockEnabled(newVal);
+                    localStorage.setItem("pos_kitchen_print_block", newVal ? "true" : "false");
+                    window.dispatchEvent(new CustomEvent("kitchenPrintBlockChanged", { detail: newVal }));
+                  }}
+                  style={{ cursor: "pointer", flexShrink: 0 }}
+                >
+                  <div className="wa-toggle-thumb" />
+                </div>
+              </div>
+            </div>
+
+            <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Sürüşdürmə (Swipe) hərəkətləri</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Sifariş ekranında məhsulu sağa/sola sürüşdürüb silmək və ya sayını artırmaq</div>
+                </div>
+                <div
+                  className={`wa-toggle ${swipeGesturesEnabled ? "wa-toggle-on" : ""}`}
+                  onClick={() => {
+                    const newVal = !swipeGesturesEnabled;
+                    setSwipeGesturesEnabled(newVal);
+                    localStorage.setItem("pos_swipe_gestures_enabled", newVal ? "true" : "false");
+                    window.dispatchEvent(new CustomEvent("swipeGesturesChanged", { detail: newVal }));
+                  }}
+                  style={{ cursor: "pointer", flexShrink: 0 }}
+                >
+                  <div className="wa-toggle-thumb" />
+                </div>
+              </div>
+            </div>
+
             {/* POS Blok Ödəniş Üsulu */}
             <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
               <span className="pin-adv-catview-label" style={{ marginBottom: 6, display: "block" }}>
@@ -1443,7 +1493,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                 POS bloklananda (abunəlik bitdikdə) ödəniş üsulunun necə seçiləcəyini təyin edin
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", gap: 12 }}>
                 {/* SuperAdmin seçimi */}
                 <div
                   onClick={() => {
@@ -1451,8 +1501,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     localStorage.setItem("pos_auto_payment_enabled", "false");
                   }}
                   style={{
+                    flex: 1,
                     display: "flex", alignItems: "center", gap: 12,
-                    padding: "12px 14px", borderRadius: 10, cursor: "pointer",
+                    padding: "10px 12px", borderRadius: 10, cursor: "pointer",
                     background: !autoPaymentEnabled ? "#eef2ff" : "#fff",
                     border: "1.5px solid",
                     borderColor: !autoPaymentEnabled ? "#053796" : "#e5e7eb",
@@ -1471,11 +1522,11 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: !autoPaymentEnabled ? "#053796" : "#374151" }}>
-                      SuperAdmin tənzimləməsi
+                    <div style={{ fontSize: 13, fontWeight: 600, color: !autoPaymentEnabled ? "#053796" : "#374151" }}>
+                      SuperAdmin
                     </div>
-                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>
-                      Admin paneldən idarə olunur
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>
+                      Admin paneldən
                     </div>
                   </div>
                 </div>
@@ -1487,8 +1538,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     localStorage.setItem("pos_auto_payment_enabled", "true");
                   }}
                   style={{
+                    flex: 1,
                     display: "flex", alignItems: "center", gap: 12,
-                    padding: "12px 14px", borderRadius: 10, cursor: "pointer",
+                    padding: "10px 12px", borderRadius: 10, cursor: "pointer",
                     background: autoPaymentEnabled ? "#eef2ff" : "#fff",
                     border: "1.5px solid",
                     borderColor: autoPaymentEnabled ? "#053796" : "#e5e7eb",
@@ -1507,18 +1559,18 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: autoPaymentEnabled ? "#053796" : "#374151" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: autoPaymentEnabled ? "#053796" : "#374151" }}>
                       Avtomatik
                     </div>
-                    <div style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>
-                      Sistem tərəfindən avtomatik seçilsin
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>
+                      Sistem seçsin
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="wa-settings-actions" style={{ marginTop: "16px" }}>
+            <div className="wa-settings-actions" style={{ marginTop: "12px" }}>
               <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
             </div>
           </div>

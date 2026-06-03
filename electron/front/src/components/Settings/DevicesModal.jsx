@@ -8,6 +8,12 @@ import apiConfig, { localApi, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig"
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 import { cashierPrinterPrefStorageKey, clearPrintersCache, savePrintersToStorage } from "../../utils/printerHelpers.jsx";
+import { usePrinterDiagnostics } from "../../hooks/usePrinterDiagnostics";
+import {
+    getPrinterDiagnosticClass,
+    getPrinterDiagnosticLabel,
+    getPrinterKey,
+} from "../../utils/printerDiagnostics";
 import "./DevicesModal.css";
 
 
@@ -476,8 +482,16 @@ const DevicesModal = ({ show, onHide }) => {
     const [selectedTaxIndex, setSelectedTaxIndex] = useState(null);
     const [selectedPrinterIndex, setSelectedPrinterIndex] = useState(null);
     const [printerTab, setPrinterTab] = useState("connection");
-    const [printerStatuses, setPrinterStatuses] = useState({}); // { [printer.id]: 'online'|'offline'|'checking' }
     const [taxDailyInfo, setTaxDailyInfo] = useState({});
+    const {
+        diagnostics: printerDiagnostics,
+        isChecking: printerDiagnosticsChecking,
+        refresh: refreshPrinterDiagnostics,
+    } = usePrinterDiagnostics(printers, {
+        enabled: show && activeTab === "printers",
+        intervalMs: 30000,
+        timeoutMs: 3500,
+    });
 
     // Periodic Report States
     const [reportStart, setReportStart] = useState({ date: '', time: '06:00' });
@@ -566,25 +580,6 @@ const DevicesModal = ({ show, onHide }) => {
         }
     }, [show, printers]);
 
-    const pingAllPrinters = useCallback(async (printerList) => {
-        if (!window.electronAPI?.pingPrinter) return;
-        const networkOnes = printerList.filter(p => (p.connection_type === 'network' || !p.connection_type) && p.ip);
-        if (!networkOnes.length) return;
-        // Mark all as checking
-        const checking = {};
-        networkOnes.forEach(p => { checking[p.id] = 'checking'; });
-        setPrinterStatuses(prev => ({ ...prev, ...checking }));
-        // Ping in parallel
-        await Promise.all(networkOnes.map(async (p) => {
-            try {
-                const res = await window.electronAPI.pingPrinter({ ip: p.ip, port: p.port || 9100 });
-                setPrinterStatuses(prev => ({ ...prev, [p.id]: res?.online ? 'online' : 'offline' }));
-            } catch {
-                setPrinterStatuses(prev => ({ ...prev, [p.id]: 'offline' }));
-            }
-        }));
-    }, []);
-
     const fetchData = async () => {
         try {
             const prRes = await apiConfig.get(`/pos/printers/${profileId}`);
@@ -598,9 +593,6 @@ const DevicesModal = ({ show, onHide }) => {
                 return { ...p, connection_type: ct, usb_name: usbName };
             });
             setPrinters(normalizedPrinters);
-            setPrinterStatuses({});
-            // Ping after short delay so UI renders first
-            setTimeout(() => pingAllPrinters(normalizedPrinters), 300);
 
             const authStr = localStorage.getItem("authResult");
             const authProfile = authStr ? (JSON.parse(authStr)?.data?.profile || {}) : {};
@@ -889,13 +881,22 @@ const DevicesModal = ({ show, onHide }) => {
     };
 
     const handleUpdateKitchenDisplay = async (active = null, screenId = null) => {
+        return handleKitchenDisplayLocal(active, screenId);
+
         const nextActive = active !== null ? active : kitchenDisplay.active;
         const nextScreenId = screenId !== null ? screenId : kitchenDisplay.screenId;
 
         // Update local state and UI immediately
         setKitchenDisplay({ active: nextActive, screenId: nextScreenId });
         if (window.electronAPI?.toggleKitchenDisplay) {
-            window.electronAPI.toggleKitchenDisplay({ active: nextActive, screenId: nextScreenId });
+            window.electronAPI
+                .toggleKitchenDisplay({ active: nextActive, screenId: nextScreenId })
+                .catch((error) => {
+                    console.error("Kitchen Display window error:", error);
+                    if (nextActive) handleOpenKitchenDisplayPreview();
+                });
+        } else if (nextActive) {
+            handleOpenKitchenDisplayPreview();
         }
 
         // Always persist to localStorage so slave auto-start works
@@ -903,6 +904,10 @@ const DevicesModal = ({ show, onHide }) => {
         storedProfile2.is_kitchen_display_active = nextActive ? 1 : 0;
         storedProfile2.kitchen_display_screen_id = nextScreenId;
         localStorage.setItem("profile", JSON.stringify(storedProfile2));
+
+        toast.success(nextActive ? "KDS ekranı açıldı" : "KDS ekranı bağlandı");
+        const shouldSyncKitchenDisplayApi = Boolean(window.__UNIPOS_ENABLE_KDS_API_SYNC__);
+        if (shouldSyncKitchenDisplayApi) {
 
         try {
             await localApi.patch("/profiles/kitchen-display", {
@@ -915,6 +920,51 @@ const DevicesModal = ({ show, onHide }) => {
             // On slave, local DB may not have this endpoint — localStorage save is enough
             console.warn("Kitchen Display API sync skipped (slave or offline):", error?.response?.status);
             toast.success("Mətbəx ekranı tənzimləmələri yadda saxlanıldı (lokal)");
+        }
+        }
+    };
+
+    const handleOpenKitchenDisplayPreview = () => {
+        const baseUrl = window.location.href.split("#")[0];
+        const previewWindow = window.open(
+            `${baseUrl}#/kitchen-display`,
+            "unipos-kds-preview",
+            "width=1280,height=720"
+        );
+
+        if (previewWindow) {
+            previewWindow.focus();
+        } else {
+            toast.error("KDS pəncərəsini açmaq mümkün olmadı");
+        }
+    };
+
+    const handleKitchenDisplayLocal = async (active = null, screenId = null) => {
+        const nextActive = active !== null ? active : kitchenDisplay.active;
+        const nextScreenId = screenId !== null ? screenId : kitchenDisplay.screenId;
+
+        setKitchenDisplay({ active: nextActive, screenId: nextScreenId });
+
+        const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
+        storedProfile.is_kitchen_display_active = nextActive ? 1 : 0;
+        storedProfile.kitchen_display_screen_id = nextScreenId;
+        localStorage.setItem("profile", JSON.stringify(storedProfile));
+
+        if (window.electronAPI?.toggleKitchenDisplay) {
+            try {
+                await window.electronAPI.toggleKitchenDisplay({ active: nextActive, screenId: nextScreenId });
+                toast.success(nextActive ? "KDS ekranı açıldı" : "KDS ekranı bağlandı");
+                return;
+            } catch (error) {
+                console.error("Kitchen Display window error:", error);
+            }
+        }
+
+        if (nextActive) {
+            handleOpenKitchenDisplayPreview();
+            toast.success("KDS preview açıldı");
+        } else {
+            toast.success("KDS ayarı lokal yadda saxlanıldı");
         }
     };
 
@@ -1131,6 +1181,12 @@ const DevicesModal = ({ show, onHide }) => {
                             Müştəri Ekranı
                         </div>
                         <div
+                            className={`devices-mobile-tab ${activeTab === "kitchen" ? "active" : ""}`}
+                            onClick={() => setActiveTab("kitchen")}
+                        >
+                            KDS Ekranı
+                        </div>
+                        <div
                             className={`devices-mobile-tab ${activeTab === "scales" ? "active" : ""}`}
                             onClick={() => setActiveTab("scales")}
                         >
@@ -1190,7 +1246,6 @@ const DevicesModal = ({ show, onHide }) => {
                             <div
                                 className={`devices-menu-item ${activeTab === "kitchen" ? "active" : ""}`}
                                 onClick={() => setActiveTab("kitchen")}
-                                style={{ display: 'none' }}
                             >
                                 <i className="bi bi-egg-fried"></i>
                                 <span>Mətbəx Ekranı</span>
@@ -1247,7 +1302,11 @@ const DevicesModal = ({ show, onHide }) => {
                                             {printers.map((printer, index) => {
                                                 const connType = printer.connection_type;
                                                 const isNet = connType === 'network' || (!connType && printer.ip);
-                                                const status = isNet ? (printerStatuses[printer.id] || null) : null;
+                                                const diagnostic = printerDiagnostics[getPrinterKey(printer)];
+                                                const statusClass = getPrinterDiagnosticClass(diagnostic);
+                                                const statusLabel = getPrinterDiagnosticLabel(diagnostic);
+                                                const queuedText = diagnostic?.queuedJobs > 0 ? ` • Növbə: ${diagnostic.queuedJobs}` : "";
+                                                const showDiagnosticDetail = diagnostic && ["error", "warning"].includes(diagnostic.status);
                                                 return (
                                                     <div
                                                         key={printer.id || index}
@@ -1258,9 +1317,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                         <div className="printer-card-header">
                                                             <div className="printer-card-icon" style={{ background: '#eff6ff', color: '#3b82f6', position: 'relative' }}>
                                                                 <i className="bi bi-printer"></i>
-                                                                {status && (
-                                                                    <span className={`printer-status-dot printer-status-dot--${status}`}></span>
-                                                                )}
+                                                                <span className={`printer-status-dot printer-status-dot--${statusClass}`}></span>
                                                             </div>
                                                             <div className="printer-card-title">
                                                                 <h5>{printer.local_name || printer.name}</h5>
@@ -1270,13 +1327,23 @@ const DevicesModal = ({ show, onHide }) => {
                                                                     {printer.connection_type === 'com' && printer.usb_name ? ` • COM: ${printer.usb_name}` : ''}
                                                                     {isNet && printer.ip ? ` • ${printer.ip}` : ''}
                                                                 </span>
+                                                                {showDiagnosticDetail && (
+                                                                    <small className="printer-diagnostic-detail">
+                                                                        {[statusLabel, diagnostic?.detail, queuedText ? `Növbə: ${diagnostic.queuedJobs}` : ""].filter(Boolean).join(" • ")}
+                                                                    </small>
+                                                                )}
                                                             </div>
-                                                            {isNet && (
-                                                                <span className={`printer-status-badge printer-status-badge--${status || 'checking'}`}>
-                                                                    {status === 'online' ? 'Online' : status === 'offline' ? 'Offline' : '...'}
-                                                                </span>
-                                                            )}
-                                                            <i className="bi bi-chevron-right" style={{ marginLeft: isNet ? '8px' : 'auto', color: '#94a3b8', fontSize: '18px' }}></i>
+                                                            <span
+                                                                className={`printer-status-badge printer-status-badge--${printerDiagnosticsChecking && !diagnostic ? 'checking' : statusClass}`}
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    refreshPrinterDiagnostics();
+                                                                }}
+                                                                title="Statusu yenilə"
+                                                            >
+                                                                {printerDiagnosticsChecking && !diagnostic ? '...' : statusLabel}
+                                                            </span>
+                                                            <i className="bi bi-chevron-right" style={{ marginLeft: '8px', color: '#94a3b8', fontSize: '18px' }}></i>
                                                         </div>
                                                     </div>
                                                 );
@@ -1489,11 +1556,21 @@ const DevicesModal = ({ show, onHide }) => {
                                             <h4>Mətbəx Ekranı (KDS)</h4>
                                             <p>Sifarişlərin mətbəxdə izlənməsi üçün rəqəmsal ekranı aktivləşdirin.</p>
                                         </div>
-                                        <div
-                                            className={`premium-switch ${kitchenDisplay.active ? "active" : ""}`}
-                                            onClick={() => handleUpdateKitchenDisplay(!kitchenDisplay.active)}
-                                        >
-                                            <div className="switch-handle"></div>
+                                        <div className="display-config-actions">
+                                            <button
+                                                type="button"
+                                                className="display-preview-button"
+                                                onClick={handleOpenKitchenDisplayPreview}
+                                            >
+                                                <i className="bi bi-box-arrow-up-right"></i>
+                                                <span>Açıb bax</span>
+                                            </button>
+                                            <div
+                                                className={`premium-switch ${kitchenDisplay.active ? "active" : ""}`}
+                                                onClick={() => handleKitchenDisplayLocal(!kitchenDisplay.active)}
+                                            >
+                                                <div className="switch-handle"></div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1503,7 +1580,7 @@ const DevicesModal = ({ show, onHide }) => {
                                             <select
                                                 className="printer-select"
                                                 value={kitchenDisplay.screenId}
-                                                onChange={(e) => handleUpdateKitchenDisplay(null, e.target.value)}
+                                                onChange={(e) => handleKitchenDisplayLocal(null, e.target.value)}
                                             >
                                                 <option value="">Seçilməyib</option>
                                                 {screens.map(s => (

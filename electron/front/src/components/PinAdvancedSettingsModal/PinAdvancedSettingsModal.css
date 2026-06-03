@@ -581,7 +581,7 @@
 
 /* Category view modal width */
 .pin-advanced-catview-wide.custom-modal-width {
-    max-width: 420px !important;
+    max-width: 700px !important;
 }
 
 /* ═══ Kateqoriya görünüşü ═══ */
@@ -589,7 +589,7 @@
     padding: 16px 16px 20px !important;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 12px;
 }
 
 .pin-adv-catview-hint {
@@ -746,6 +746,15 @@
     isolation: isolate;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.pin-adv-receipt-preview-sandbox *,
+.pin-adv-receipt-preview-sandbox *::before,
+.pin-adv-receipt-preview-sandbox *::after {
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 /* Invisible custom scrollbar */

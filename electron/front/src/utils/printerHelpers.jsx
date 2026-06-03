@@ -172,18 +172,6 @@ export const processAndPrintOrders = async (
 
     if (printers.length === 0) {
       console.warn(`❌ No printer found for item: ${item.name}`);
-      const displayId = orderData.checkData?.id || orderData.orderId;
-      addNotification(
-        "Printer təyinatı yoxdur",
-        `${item.name} üçün mətbəx printeri quraşdırılmayıb (menyuda kateqoriya və ya məhsul üzrə).`,
-        {
-          orderId: displayId,
-          category: "system",
-          type: "warning",
-          dedupeKey: `no-kitchen-printer-${String(item.id ?? item.name)}`,
-          dedupeTtlMs: 300000,
-        },
-      );
       continue;
     }
 

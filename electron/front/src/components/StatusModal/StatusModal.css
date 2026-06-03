@@ -327,6 +327,32 @@
     border-radius: 50%;
 }
 
+.status-indicator--online {
+    background-color: #48BB78;
+}
+
+.status-indicator--offline {
+    background-color: #F56565;
+}
+
+.status-indicator--warning {
+    background-color: #ED8936;
+}
+
+.status-indicator--unknown,
+.status-indicator--checking {
+    background-color: #A0AEC0;
+}
+
+.status-indicator--checking {
+    animation: statusDotPulse 1s infinite;
+}
+
+@keyframes statusDotPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
 .device-display-name {
     font-size: 1.2rem;
     font-weight: 700;
@@ -352,6 +378,32 @@
     font-weight: 600;
     padding: 3px 12px;
     border-radius: 8px;
+}
+
+.printer-diag-badge {
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+.printer-diag-badge--online {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.printer-diag-badge--offline {
+    background: #fed7d7;
+    color: #9b2c2c;
+}
+
+.printer-diag-badge--warning {
+    background: #feebc8;
+    color: #9c4221;
+}
+
+.printer-diag-badge--unknown,
+.printer-diag-badge--checking {
+    background: #edf2f7;
+    color: #4a5568;
 }
 
 .pending-view-btn {

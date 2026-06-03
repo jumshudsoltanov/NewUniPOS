@@ -496,8 +496,8 @@ function AppContent() {
         <Route path="/blocked" element={<BlockPage />} />
         <Route path="/customer" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><CustomerDisplay /></Suspense>} />
         <Route path="/kitchen-display" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><KitchenDisplay /></Suspense>} />
-        <Route path="/kds" element={<KitchenDisplay />} />
-        <Route path="/kitchen" element={<KitchenDisplay />} />
+        <Route path="/kds" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><KitchenDisplay /></Suspense>} />
+        <Route path="/kitchen" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><KitchenDisplay /></Suspense>} />
 
         <Route element={<Layout />}>
           <Route path="/tables" element={<TablesOrRooms />} />
