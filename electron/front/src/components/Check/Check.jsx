@@ -114,7 +114,9 @@ const Check = () => {
   // Settings toolbar states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDragMode, setIsDragMode] = useState(false);
-  const [customOrders, setCustomOrders] = useState({});
+  const [customOrders, setCustomOrders] = useState(() => {
+    try { const s = localStorage.getItem("unipos_category_orders"); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
   const customOrdersRef = useRef({});
   const [tempCustomOrders, setTempCustomOrders] = useState(null);
   const [lockCheck, setLockCheck] = useState(false);
@@ -373,9 +375,10 @@ const Check = () => {
     }
   }, [isHotelMode, loginedProfileData?.data?.profile?.id, rooms.length, dispatch]);
 
-  // Ref-i customOrders ilə sinxron saxla
+  // Ref + localStorage sync
   useEffect(() => {
     customOrdersRef.current = customOrders;
+    try { localStorage.setItem("unipos_category_orders", JSON.stringify(customOrders)); } catch {}
   }, [customOrders]);
 
   // ── Barkod skaner dinləyicisi ──
