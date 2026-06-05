@@ -1,11 +1,39 @@
 html,
 body,
 #root {
-    background-color: #F3F4F6 !important;
-    min-height: 100dvh;
-    height: 100dvh;
+    background-color: #E2E5EB !important;
     margin: 0;
     overflow: hidden;
+    height: 100%;
+    min-height: 100%;
+}
+
+@media (max-width: 991.98px) {
+    html,
+    body,
+    #root {
+        height: var(--app-height, 100%) !important;
+        max-height: var(--app-height, 100%) !important;
+    }
+
+    .vh-100,
+    .h-100 {
+        height: var(--app-height, 100%) !important;
+        max-height: var(--app-height, 100%) !important;
+    }
+
+    .app-layout {
+        display: flex;
+        flex-direction: column;
+        height: var(--app-height, 100%) !important;
+        overflow: hidden;
+    }
+
+    .app-layout > main {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow: hidden;
+    }
 }
 
 

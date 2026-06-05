@@ -1,8 +1,12 @@
 .header {
   width: 100%;
-  height: 60px;
+  height: calc(60px + env(safe-area-inset-top, 0px));
+  max-height: calc(60px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
   background: var(--Surface-Default, #053796);
-  padding: 0 clamp(8px, 2vw, 16px);
+  padding-left: clamp(8px, 2vw, 16px);
+  padding-right: clamp(8px, 2vw, 16px);
   overflow: hidden;
 }
 
@@ -290,24 +294,29 @@ ul li {
 
 .mobile-footer {
   position: fixed;
-  bottom: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   width: 100%;
-  height: calc(56px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: calc(56px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+  min-height: calc(56px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+  max-height: calc(56px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+  box-sizing: border-box;
   background: var(--Surface-Default, #053796);
-  z-index: 1000;
+  z-index: 9999;
   display: flex;
   align-items: stretch;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   gap: 0;
+  padding: 0;
+  margin: 0;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Background padding for safe area logic in root index.html to avoid blue gaps entirely */
+/* Background — mobil gap ag gorunmesin */
 body {
-  background-color: #F3F4F6 !important;
+  background-color: #E2E5EB !important;
 }
 
 .mobile-footer::-webkit-scrollbar {
@@ -327,7 +336,8 @@ body.touch-scroll-active .mobile-footer::-webkit-scrollbar {
 .mobile-tab-btn {
   flex: 0 0 auto;
   min-width: 110px;
-  height: 100%;
+  height: 56px;
+  max-height: 56px;
   border: none;
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
@@ -342,6 +352,15 @@ body.touch-scroll-active .mobile-footer::-webkit-scrollbar {
   justify-content: center;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
+}
+
+.mobile-footer .mobile-tab-btn {
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  align-self: stretch !important;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .mobile-tab-btn.active {
@@ -489,7 +508,7 @@ body.touch-scroll-active .mobile-footer::-webkit-scrollbar {
 
 @media (max-width: 991.98px) {
   .hotel-filter-strip {
-    top: 104px;
+    top: calc(104px + env(safe-area-inset-top, 0px));
     padding: 8px 12px;
   }
 
@@ -527,63 +546,103 @@ body.touch-scroll-active .mobile-footer::-webkit-scrollbar {
   }
 }
 
-/* Mobile tabs bar at the top */
-.mobile-tabs-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 54px;
-  background: #042d7a;
-  z-index: 999;
-  display: flex;
-  align-items: stretch;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  gap: 0;
-  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
+/* Mobile tabs bar — alt nav (Bolt/Bar/Wolt), yalniz mobil */
+@media (max-width: 767.98px) {
+  .mobile-tabs-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: calc(52px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+    min-height: calc(52px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+    max-height: calc(52px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+    box-sizing: border-box;
+    background: #042d7a;
+    z-index: 9999;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    gap: 0;
+    padding: 0;
+    margin: 0;
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .mobile-tabs-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-tabs-bar .mobile-tab-btn {
+    font-size: 12px;
+    padding: 0 12px;
+    min-width: 76px;
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    flex-shrink: 0;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    align-self: stretch !important;
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+  }
+
+  .mobile-tabs-bar .mobile-tab-btn.active {
+    background: #021c4c;
+    box-shadow: inset 0 2px 0 #F59E0B;
+  }
+
+  .mobile-add-btn {
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: none !important;
+    align-self: stretch !important;
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 52px;
+    width: 52px;
+    border: none;
+    background: #053796;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: sticky;
+    right: 0;
+    flex-shrink: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.1);
+    margin-left: auto;
+  }
+
+  .mobile-add-btn svg {
+    width: 24px;
+    height: 24px;
+  }
 }
 
-.mobile-tabs-bar::-webkit-scrollbar {
-  display: none;
-}
-
-.mobile-tabs-bar .mobile-tab-btn {
-  font-size: 12px;
-  padding: 0 14px;
-  min-width: 80px;
-  height: 54px;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.mobile-tabs-bar .mobile-tab-btn.active {
-  background: #021c4c;
-  box-shadow: inset 0 2px 0 #F59E0B;
-}
-
-.mobile-add-btn {
-  height: 54px;
-  min-width: 54px;
-  width: 54px;
-  border: none;
-  background: #053796;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: sticky;
-  right: 0;
-  flex-shrink: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: -4px 0 10px rgba(0, 0, 0, 0.1);
-  margin-left: auto;
+@media (min-width: 768px) {
+  .mobile-tabs-bar {
+    display: none !important;
+  }
 }
 
 @media (max-width: 768px) {
   .header {
-    height: 50px;
-    padding: 0;
+    height: calc(50px + env(safe-area-inset-top, 0px));
+    max-height: calc(50px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 

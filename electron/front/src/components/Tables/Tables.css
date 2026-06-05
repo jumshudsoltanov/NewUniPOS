@@ -7,11 +7,11 @@
     background-color: #E2E5EB;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
     .tables-scroll-container {
-        height: calc(100vh - 60px);
+        height: calc(var(--app-height, 100vh) - 50px - env(safe-area-inset-top, 0px) - 52px - var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
         padding-top: 15px;
-        padding-bottom: 60px;
+        padding-bottom: 8px;
     }
 }
 

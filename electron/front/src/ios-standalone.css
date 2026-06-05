@@ -1,0 +1,50 @@
+/* iOS Safari Add to Home Screen — yalniz viewport, olculer komponent CSS-de qalir */
+
+@media (max-width: 991.98px) {
+  html.ios-device {
+    background-color: #042d7a;
+    overflow: hidden;
+  }
+
+  html.ios-device body,
+  html.ios-device #root {
+    background-color: #e2e5eb !important;
+    overflow: hidden;
+  }
+
+  html.ios-device body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  html.ios-device #root {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+  }
+
+  html.ios-device .vh-100,
+  html.ios-device .h-100 {
+    height: var(--app-height, 100%) !important;
+    min-height: unset !important;
+    max-height: var(--app-height, 100%) !important;
+  }
+
+  html.ios-device .app-layout {
+    height: var(--app-height, 100%) !important;
+    max-height: var(--app-height, 100%) !important;
+  }
+}
+
+html.ios-standalone {
+  background-color: #042d7a !important;
+}
+
+@media (max-width: 767.98px) {
+  html.ios-device.ios-standalone body {
+    background-color: #042d7a !important;
+  }
+}

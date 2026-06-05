@@ -204,8 +204,11 @@
   }
 
   .CheckRightboxHeader {
-    height: 60px !important;
+    height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+    padding-top: env(safe-area-inset-top, 0px);
     padding-left: 8px !important;
+    box-sizing: border-box;
   }
 }
 
@@ -445,33 +448,41 @@
   overflow: hidden;
 }
 
-/* Mobile Bottom Nav */
-.mobile-bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 60px;
-  background-color: #fff;
-  border-top: 1px solid #e0e0e0;
-  z-index: 1050;
-  display: flex;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-}
-
+/* Mobile Bottom Nav — yalniz mobil/tablet (< lg) */
 @media (max-width: 991.98px) {
   .mobile-bottom-nav {
-    position: sticky;
+    position: fixed;
+    left: 0;
+    right: 0;
     bottom: 0;
-    z-index: 100;
+    width: 100%;
+    height: calc(56px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+    min-height: calc(56px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+    max-height: calc(56px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+    box-sizing: border-box;
+    background-color: #fff;
+    border-top: 1px solid #e0e0e0;
+    z-index: 9999;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    padding: 0;
+    margin: 0;
     flex-shrink: 0;
     box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
-    width: 100%;
+  }
+}
+
+@media (min-width: 992px) {
+  .mobile-bottom-nav {
+    display: none !important;
   }
 }
 
 .mobile-nav-item {
   flex: 1;
+  height: 100%;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -480,6 +491,9 @@
   cursor: pointer;
   font-size: 0.9rem;
   gap: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
 }
 
 .mobile-nav-item i {
@@ -493,20 +507,40 @@
 
 /* Adjust content height on mobile to prevent overlap with nav */
 @media (max-width: 991.98px) {
-  /* Mobile sidebar should overlay content, not shrink it */
+  /* Mobile sidebar — sol teref, yuxaridan baslayir (overlay) */
   .check-container {
     position: relative;
   }
 
   .check-sidebar {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
     width: 56px;
-    z-index: 120;
+    height: var(--app-height, 100dvh);
+    max-height: var(--app-height, 100dvh);
+    z-index: 10001;
     padding: 12px 0;
+    padding-bottom: calc(12px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+    box-sizing: border-box;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-right: 1px dashed #a5b4fc;
+    border-bottom: none;
     box-shadow: 3px 0 10px rgba(0, 0, 0, 0.08);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .check-sidebar .sidebar-top,
+  .check-sidebar .sidebar-bottom {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100%;
   }
 
   .check-content {
@@ -514,13 +548,12 @@
     min-width: 0;
   }
 
-  /* < lg */
-  /* Flex layout handles height automatically */
   .mobile-content-adjust {
     flex: 1;
     display: flex;
     flex-direction: row;
     height: 100%;
+    min-height: 0;
   }
 }
 
@@ -1199,8 +1232,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  padding: 0 12px;
-  height: 60px;
+  padding: env(safe-area-inset-top, 0px) 12px 0 12px;
+  height: calc(60px + env(safe-area-inset-top, 0px));
+  max-height: calc(60px + env(safe-area-inset-top, 0px));
+  box-sizing: border-box;
   flex-shrink: 0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -1271,6 +1306,8 @@
   z-index: 50;
   align-items: stretch;
   flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .mobile-icon-btn {
@@ -1723,8 +1760,10 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    height: 60px;
-    padding: 0 12px;
+    height: calc(60px + env(safe-area-inset-top, 0px));
+    max-height: calc(60px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 12px 0 12px;
+    box-sizing: border-box;
     gap: 8px;
   }
 
@@ -1797,7 +1836,10 @@
   }
 
   .CheckRightboxHeader {
-    height: 50px;
+    height: calc(50px + env(safe-area-inset-top, 0px));
+    max-height: calc(50px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    box-sizing: border-box;
   }
 
   .check-content {
@@ -2687,10 +2729,16 @@
    dvh (dynamic viewport height) - fixes footer cut-off when browser URL bar is visible
    ======================== */
 @media (max-width: 991.98px) {
-  /* Use dvh so height adapts when mobile browser chrome appears/disappears */
+  /* iOS: --app-height ile tam ekran */
   .vh-100 {
-    height: 100dvh !important;
-    min-height: 100dvh !important;
+    height: var(--app-height, 100dvh) !important;
+    max-height: var(--app-height, 100dvh) !important;
+  }
+
+  /* fixed nav flex column icinde boyumesin */
+  .mobile-bottom-nav {
+    flex: none !important;
+    align-self: auto !important;
   }
 
   /* Ensure check panel fills height and the footer never gets pushed off screen */
@@ -2699,6 +2747,19 @@
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
+    padding-bottom: calc(78px + 56px + var(--safe-bottom, env(safe-area-inset-bottom, 0px))) !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Odenis / printer / sil duymeleri — alt nav barin ustunde */
+  .checkBottomMobile {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(56px + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+    width: 100%;
+    z-index: 9998;
+    margin: 0;
   }
 
   /* Content area scrolls, footer stays fixed */
@@ -2713,12 +2774,14 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Right panel (menu/categories) — must be constrained so bottom nav stays visible */
+  /* Right panel (menu/categories) — bottom nav ucun yer */
   .checkRightBox {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
+    padding-bottom: calc(54px + var(--safe-bottom, env(safe-area-inset-bottom, 0px))) !important;
+    box-sizing: border-box !important;
   }
 
   .checkRightBoxContent {

@@ -1,106 +1,76 @@
-<!doctype html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/favicon.png" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="UniPOS Mobile POS" />
-  <meta name="theme-color" content="#053796" />
-  <meta property="og:title" content="UniPOS Mobile POS" />
-  <meta property="og:description" content="UniPOS Point of Sale — Mobile Terminal" />
-  <meta property="og:image" content="/favicon.png" />
-  <meta property="og:type" content="website" />
-  <meta name="twitter:card" content="summary" />
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/favicon.png" />
-  <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:55667 http://localhost:5173;" /> -->
-  <title>UniPOS Mobile POS</title>
-  <script>
-    // Desktopda adi UniPOS olaraq deyis
-    if (window.innerWidth >= 992 && !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-      document.title = "UniPOS";
-      document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "UniPOS";
-    }
-    // Pinch zoom qarshisi
-    document.addEventListener('touchmove', function(e) {
-      if (e.scale && e.scale !== 1) e.preventDefault();
-    }, { passive: false });
-    document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
-    // iOS: header content status bar altinda qalsin, fon yuxari davam etsin
-    (function() {
-      if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
-      // env(safe-area-inset-top) ile status bar hundurluyunu al
-      var testDiv = document.createElement('div');
-      testDiv.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;height:0;opacity:0;pointer-events:none';
-      document.documentElement.appendChild(testDiv);
-      var topPx = parseInt(getComputedStyle(testDiv).top) || 0;
-      testDiv.remove();
-      // env islemedise piksel hesabla: screen.height - window.innerHeight
-      if (topPx === 0) {
-        topPx = screen.height - window.innerHeight;
-        if (topPx > 60 || topPx < 0) topPx = 0;
-      }
-      if (topPx > 0) {
-        var s = document.createElement('style');
-        s.textContent = '.header{padding-top:' + topPx + 'px!important;height:calc(60px + ' + topPx + 'px)!important}';
-        document.head.appendChild(s);
-      }
-      // keyboard acilanda header yuxari qacmasin
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', function() {
-          window.scrollTo(0, 0);
-        });
-      }
-    })();
-  </script>
-  <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
-    html {
-      height: -webkit-fill-available;
-      overflow: hidden;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100vh;
-      height: 100dvh;
-      height: -webkit-fill-available;
-      overflow: hidden;
-      background-color: #E2E5EB !important;
-      -webkit-text-size-adjust: 100%;
-      touch-action: manipulation;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: none;
-    }
-    #root {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      position: relative;
-      background-color: #E2E5EB;
-    }
-    @media (max-width: 991px) {
-      body {
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-      }
-    }
-    .tables-scroll-container, .checks-list, .check-content {
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: none;
-    }
-  </style>
-</head>
-
-<body style="background-color: #F3F4F6;">
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
-</body>
-
-</html>
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="UniPOS Mobile POS" />
+  <meta name="theme-color" content="#053796" />
+  <meta property="og:title" content="UniPOS Mobile POS" />
+  <meta property="og:description" content="UniPOS Point of Sale — Mobile Terminal" />
+  <meta property="og:image" content="/favicon.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+  <title>UniPOS Mobile POS</title>
+  <script>
+    if (window.innerWidth >= 992 && !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      document.title = "UniPOS";
+      document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "UniPOS";
+    }
+    document.addEventListener('touchmove', function(e) {
+      if (e.scale && e.scale !== 1) e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+    (function() {
+      if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+      document.documentElement.classList.add('ios-device');
+      if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+        document.documentElement.classList.add('ios-standalone');
+      }
+      var h = window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', h + 'px');
+      document.documentElement.style.height = h + 'px';
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html {
+      height: 100%;
+      height: -webkit-fill-available;
+      overflow: hidden;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #E2E5EB;
+      -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
+      overscroll-behavior: none;
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #E2E5EB;
+    }
+    .tables-scroll-container, .checks-list, .check-content {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>
