@@ -7,12 +7,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="UniPOS" />
+  <meta name="apple-mobile-web-app-title" content="UniPOS Mobile" />
   <meta name="theme-color" content="#053796" />
+  <meta property="og:title" content="UniPOS Mobile" />
+  <meta property="og:description" content="UniPOS Point of Sale — Mobile Terminal" />
+  <meta property="og:image" content="/favicon.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/favicon.png" />
   <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:55667 http://localhost:5173;" /> -->
   <title>UniPOS</title>
+  <script>
+    if (window.innerWidth < 992 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      document.title = "UniPOS Mobile";
+      document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "UniPOS Mobile";
+    }
+  </script>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
