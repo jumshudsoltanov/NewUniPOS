@@ -790,6 +790,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
               </svg>
             </button>
           )}
+            </>
         </div>
       )}
 
