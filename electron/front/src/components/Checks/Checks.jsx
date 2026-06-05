@@ -578,10 +578,14 @@ const Checks = () => {
               className="filter-input-id"
             />
             <button
-              className={`filter-modal-btn ${(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax) ? "has-filters" : ""}`}
+              className={`filter-btn ${(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax) ? "has-filters" : ""}`}
               onClick={() => setShowFilterModal(true)}
             >
-              <i className="bi bi-funnel-fill me-1"></i>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" />
+                <line x1="12" y1="18" x2="12" y2="18" /><circle cx="12" cy="18" r="2" />
+                <circle cx="16" cy="12" r="2" /><circle cx="8" cy="6" r="2" />
+              </svg>
               Filter
               {(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax) && (
                 <span className="filter-active-dot"></span>

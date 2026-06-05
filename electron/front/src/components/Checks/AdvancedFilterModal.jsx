@@ -54,7 +54,8 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
 
   useEffect(() => {
     if (show) setF({ ...filters });
-  }, [filters, show]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show]);
 
   const upd = (k, v) => setF(prev => ({ ...prev, [k]: v }));
 
