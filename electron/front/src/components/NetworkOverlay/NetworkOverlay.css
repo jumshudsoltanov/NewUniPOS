@@ -904,13 +904,92 @@
     }
 }
 
-@media (max-width: 400px) {
+@media (max-width: 480px) {
+    .network-disconnect-overlay {
+        padding: 16px 12px;
+        align-items: center;
+    }
+    .network-disconnect-inner {
+        max-width: 100%;
+        gap: 14px;
+    }
+    .network-disconnect-icon-wrap {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        font-size: 22px;
+    }
+    .network-disconnect-title {
+        font-size: 1.05rem;
+    }
+    .network-disconnect-lead {
+        font-size: 0.8rem;
+    }
+    .network-disconnect-quit-btn {
+        min-width: 0;
+        width: 100%;
+        height: 44px;
+        font-size: 0.9rem;
+    }
+    .network-master-glass-panel {
+        padding: 20px 16px 18px;
+    }
+    .network-master-glass-panel__title {
+        font-size: 1rem;
+    }
+    .network-master-glass-panel__lead {
+        font-size: 0.78rem;
+    }
+    .network-master-glass-panel__actions {
+        flex-direction: column;
+    }
+    .network-master-glass-panel__actions .network-master-btn-sm {
+        width: 100%;
+    }
+    .network-master-disconnect-card {
+        padding: 18px 16px 16px;
+    }
+    .network-master-disconnect-card__head {
+        gap: 12px;
+    }
+    .network-master-disconnect-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+    .network-master-disconnect-title {
+        font-size: 0.95rem;
+    }
+    .network-master-disconnect-actions .network-master-btn-sm {
+        min-height: 48px;
+        font-size: 0.85rem;
+    }
+    .network-master-fullscreen-body.discount-body {
+        padding: 14px;
+    }
+    .network-master-brief--fullscreen {
+        padding: 14px 12px 18px;
+    }
+    .network-master-btn-grid-3 {
+        grid-template-columns: 1fr 1fr;
+    }
+    .network-master-ip-input.discount-input {
+        height: 44px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 360px) {
     .network-master-btn-grid-3 {
         grid-template-columns: 1fr;
     }
-
     .network-master-chip-btn {
         height: 42px;
-        font-size: 13px;
+        font-size: 12px;
+    }
+    .network-disconnect-icon-wrap {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
     }
 }
