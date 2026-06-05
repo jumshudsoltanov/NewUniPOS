@@ -1,12 +1,11 @@
 .header {
   width: 100%;
-  height: calc(60px + constant(safe-area-inset-top, 0px));
-  height: calc(60px + env(safe-area-inset-top, 0px));
+  height: 60px;
   background: var(--Surface-Default, #053796);
   padding: 0 clamp(8px, 2vw, 16px);
-  padding-top: constant(safe-area-inset-top, 0px);
-  padding-top: env(safe-area-inset-top, 0px);
   overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+  height: calc(60px + env(safe-area-inset-top, 0px));
 }
 
 /* Background container for the tabs */
