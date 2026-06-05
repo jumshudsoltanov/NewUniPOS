@@ -512,7 +512,9 @@
     }
 
     .modifier-modal-v2-modal-wrapper .modal-content {
+        height: 100vh;
         height: 100dvh;
+        max-height: 100vh;
         max-height: 100dvh;
         min-height: unset;
         border-radius: 0 !important;
