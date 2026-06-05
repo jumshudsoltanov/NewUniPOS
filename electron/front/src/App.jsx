@@ -467,6 +467,7 @@ function AppContent() {
       <>
         <div className="loading-overlay-transparent">
           <div className="loading-overlay-inner">
+            <img src="/favicon.png" alt="UniPOS" style={{ width: 64, height: 64, marginBottom: 16, borderRadius: 8 }} />
             <div className="premium-loader">
               <div className="loader-ring"></div>
               <div className="loader-dot"></div>
