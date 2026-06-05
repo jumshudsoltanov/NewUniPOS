@@ -375,7 +375,16 @@ const InsertData = async (profileId) => {
 };
 
 // Production: frontend dist qovluğunu servis et
-const frontendDist = path.join(__dirname, "..", "front", "dist");
+const getDistPath = () => {
+  try {
+    const electron = require('electron');
+    if (electron?.app?.getAppPath()) {
+      return path.join(electron.app.getAppPath(), "electron", "front", "dist");
+    }
+  } catch {}
+  return path.join(__dirname, "..", "front", "dist");
+};
+const frontendDist = getDistPath();
 app.use(express.static(frontendDist));
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
