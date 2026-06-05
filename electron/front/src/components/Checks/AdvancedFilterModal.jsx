@@ -150,11 +150,15 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
               <div className="af-fld">
                 <label>Status</label>
                 <div className="af-chips">
-                  {statusOptions.map(o => (
-                    <span key={o.value} className={`af-chip ${f.filterStatus === o.value ? "active" : ""}`}
-                      style={f.filterStatus === o.value ? { background: o.color, borderColor: o.color, color: "#fff" } : { borderColor: o.color, color: o.color }}
-                      onClick={() => upd("filterStatus", o.value)}>{o.label}</span>
-                  ))}
+                  {statusOptions.map(o => {
+                    const isActive = f.filterStatus === o.value;
+                    const clr = o.color || "#94a3b8";
+                    return (
+                      <span key={o.value} className={`af-chip ${isActive ? "active" : ""}`}
+                        style={isActive ? { background: clr, borderColor: clr, color: "#fff" } : { borderColor: clr, color: clr }}
+                        onClick={() => upd("filterStatus", o.value)}>{o.label}</span>
+                    );
+                  })}
                 </div>
               </div>
             </div>
