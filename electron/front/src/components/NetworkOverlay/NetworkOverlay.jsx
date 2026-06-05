@@ -141,6 +141,8 @@ const NetworkOverlay = () => {
         }
     };
 
+    const canQuit = !!window.electronAPI?.quitApp;
+
     const handleQuit = () => {
         if (window.electronAPI?.quitApp) {
             try { window.electronAPI.quitApp(); } catch (e) { console.warn("quitApp error:", e); }
@@ -198,10 +200,12 @@ const NetworkOverlay = () => {
                             </div>
                             <h2 className="network-disconnect-title">Əsas terminala qoşulu deyil</h2>
                             <p className="network-disconnect-lead">Şəbəkə əlçatan deyil.</p>
-                            <button type="button" className="network-disconnect-quit-btn" onClick={handleQuit}>
-                                <i className="bi bi-x-lg" aria-hidden />
-                                <span>Proqramı bağla</span>
-                            </button>
+                            {canQuit && (
+                                <button type="button" className="network-disconnect-quit-btn" onClick={handleQuit}>
+                                    <i className="bi bi-x-lg" aria-hidden />
+                                    <span>Proqramı bağla</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </Modal>
@@ -292,12 +296,14 @@ const NetworkOverlay = () => {
                                 </button>
                             </div>
 
-                            <div className="network-master-exit-row">
-                                <button type="button" className="network-master-chip-btn network-master-chip-btn--outline network-master-exit-btn" onClick={handleQuit}>
-                                    <i className="bi bi-x-lg" aria-hidden />
-                                    <span>Proqramı bağla</span>
-                                </button>
-                            </div>
+                            {canQuit && (
+                                <div className="network-master-exit-row">
+                                    <button type="button" className="network-master-chip-btn network-master-chip-btn--outline network-master-exit-btn" onClick={handleQuit}>
+                                        <i className="bi bi-x-lg" aria-hidden />
+                                        <span>Proqramı bağla</span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </Modal>

@@ -915,6 +915,7 @@
     .network-master-modal-content--disconnect.modal-content {
         min-height: 100dvh;
         display: flex;
+        background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%) !important;
     }
     .network-disconnect-overlay {
         position: relative;
@@ -922,21 +923,17 @@
         width: 100%;
         height: auto;
         min-height: 100dvh;
-        padding: 60px 20px 32px;
+        padding: 40px 24px;
         display: flex;
         align-items: center;
         justify-content: center;
         flex: 1;
     }
     .network-disconnect-wifi-trigger {
-        position: fixed;
-        top: 12px;
-        right: 12px;
-        width: 40px;
-        height: 40px;
-        font-size: 18px;
-        border-radius: 10px;
-        z-index: 10;
+        display: none;
+    }
+    .network-disconnect-inner {
+        gap: 20px;
     }
     .network-disconnect-inner {
         max-width: 280px;
