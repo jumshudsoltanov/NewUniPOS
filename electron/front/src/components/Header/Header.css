@@ -4,8 +4,15 @@
   background: var(--Surface-Default, #053796);
   padding: 0 clamp(8px, 2vw, 16px);
   overflow: hidden;
+  /* iOS safe area (notch) + köhnə Safari üçün constant() */
+  padding-top: constant(safe-area-inset-top, 0px);
   padding-top: env(safe-area-inset-top, 0px);
+  height: calc(60px + constant(safe-area-inset-top, 0px));
   height: calc(60px + env(safe-area-inset-top, 0px));
+  /* PWA da status bar altinda qalmamaq ucun */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 /* Background container for the tabs */

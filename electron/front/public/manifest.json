@@ -3,7 +3,7 @@
   "short_name": "UniPOS",
   "description": "UniPOS Point of Sale — Mobile Terminal",
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#053796",
   "theme_color": "#053796",
   "orientation": "portrait-primary",
