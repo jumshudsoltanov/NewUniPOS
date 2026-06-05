@@ -402,15 +402,20 @@ const Checks = () => {
         return amt >= minVal && amt <= maxVal;
       });
     }
-    // Sort
+    // Sort (multi-select: array of sort keys)
     if (sortOrder) {
+      const sortKeys = Array.isArray(sortOrder) ? sortOrder : [sortOrder];
       orders = [...orders].sort((a, b) => {
-        if (sortOrder === "id_asc") return Number(a.id || 0) - Number(b.id || 0);
-        if (sortOrder === "id_desc") return Number(b.id || 0) - Number(a.id || 0);
-        if (sortOrder === "amount_asc") return computeOrderCardDisplayAmount(a) - computeOrderCardDisplayAmount(b);
-        if (sortOrder === "amount_desc") return computeOrderCardDisplayAmount(b) - computeOrderCardDisplayAmount(a);
-        if (sortOrder === "date_asc") return new Date(a.start_date) - new Date(b.start_date);
-        if (sortOrder === "date_desc") return new Date(b.start_date) - new Date(a.start_date);
+        for (const key of sortKeys) {
+          let cmp = 0;
+          if (key === "id_asc") cmp = Number(a.id || 0) - Number(b.id || 0);
+          else if (key === "id_desc") cmp = Number(b.id || 0) - Number(a.id || 0);
+          else if (key === "amount_asc") cmp = computeOrderCardDisplayAmount(a) - computeOrderCardDisplayAmount(b);
+          else if (key === "amount_desc") cmp = computeOrderCardDisplayAmount(b) - computeOrderCardDisplayAmount(a);
+          else if (key === "date_asc") cmp = new Date(a.start_date) - new Date(b.start_date);
+          else if (key === "date_desc") cmp = new Date(b.start_date) - new Date(a.start_date);
+          if (cmp !== 0) return cmp;
+        }
         return 0;
       });
     }

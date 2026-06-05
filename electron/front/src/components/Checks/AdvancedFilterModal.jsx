@@ -104,7 +104,12 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
             {f.filterWaiter && tag("Əməkdaş: " + (waiters.find(w => String(w.id) === f.filterWaiter)?.name || ""), () => upd("filterWaiter", ""))}
             {f.filterHall && tag("Zal: " + (halls.find(h => String(h.id) === f.filterHall)?.name || ""), () => upd("filterHall", ""))}
             {f.filterTable && tag("Masa: " + (tableOpts.find(t => String(t.id) === f.filterTable)?.name || ""), () => upd("filterTable", ""))}
-            {f.sortOrder && tag(sortOptions.find(o => o.value === f.sortOrder)?.label, () => upd("sortOrder", ""))}
+            {(Array.isArray(f.sortOrder) ? f.sortOrder : (f.sortOrder ? [f.sortOrder] : [])).map(sv => (
+              tag(sortOptions.find(o => o.value === sv)?.label, () => {
+                const arr = Array.isArray(f.sortOrder) ? f.sortOrder.filter(v => v !== sv) : [];
+                upd("sortOrder", arr.length ? arr : "");
+              })
+            ))}
             {f.filterPaymentMethod && tag("Ödəniş: " + (paymentMethods.find(p => String(p.id) === f.filterPaymentMethod)?.name || ""), () => upd("filterPaymentMethod", ""))}
             {f.filterDifference && tag(diffOptions.find(o => o.value === f.filterDifference)?.label, () => upd("filterDifference", ""))}
             {f.filterTaxSent && tag(f.filterTaxSent === "sent" ? "Vergiyə göndərilib" : "Göndərilməyib", () => upd("filterTaxSent", ""))}
@@ -203,12 +208,24 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
           <div className="af-sec">
             <div className="af-sec-title"><i className="bi bi-arrow-up-down me-2"></i>Sıralama</div>
             <div className="af-sort-row">
-              {sortOptions.map(o => (
-                <span key={o.value} className={`af-sort-chip ${f.sortOrder === o.value ? "active" : ""}`}
-                  onClick={() => upd("sortOrder", o.value)}>
-                  {o.label}
-                </span>
-              ))}
+              {sortOptions.map(o => {
+                const active = f.sortOrder === o.value || (Array.isArray(f.sortOrder) && f.sortOrder.includes(o.value));
+                return (
+                  <span key={o.value} className={`af-sort-chip ${active ? "active" : ""}`}
+                    onClick={() => {
+                      if (!o.value) { upd("sortOrder", ""); return; }
+                      const current = Array.isArray(f.sortOrder) ? [...f.sortOrder] : [];
+                      if (current.includes(o.value)) {
+                        const next = current.filter(v => v !== o.value);
+                        upd("sortOrder", next.length ? next : "");
+                      } else {
+                        upd("sortOrder", [...current, o.value]);
+                      }
+                    }}>
+                    {o.label}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>
