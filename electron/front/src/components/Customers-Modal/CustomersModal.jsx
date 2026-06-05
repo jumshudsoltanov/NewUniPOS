@@ -100,7 +100,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
       ? Number(selectedHall?.service_fee)
       : Number(loginedProfileData?.data?.profile?.service_fee);
 
-    const generatedUuid = crypto.randomUUID();
+    const generatedUuid = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 
     const optimisticOrder = {

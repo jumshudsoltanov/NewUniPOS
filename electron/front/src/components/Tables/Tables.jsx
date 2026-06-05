@@ -418,7 +418,7 @@ const Tables = () => {
           const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
           const profileId = loginedProfileData?.data?.profile?.id;
           if (waiterId && terminalId && profileId && table?.id) {
-            const generatedUuid = crypto.randomUUID();
+            const generatedUuid = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
             const hallObj = currentHallData || {};
             const sv = Number(hallObj.service_fee || loginedProfileData?.data?.profile?.service_fee || 0);
