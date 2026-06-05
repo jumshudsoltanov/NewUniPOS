@@ -73,16 +73,26 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
   };
 
   const [isCreating, setIsCreating] = useState(false);
+  const isCreatingRef = useRef(false);
 
   const createOrder = useCallback(async () => {
-    if (isCreating) return;
-    
+    if (isCreatingRef.current) return;
+
     const waiterId = loginedWaiter?.data?.id;
     const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
     const profileId = loginedProfileData?.data?.profile?.id;
     if (!waiterId || !terminalId || !profileId || !table?.id) return;
 
     setIsCreating(true);
+    isCreatingRef.current = true;
+
+    // 15 saniyə timeout — cavab gəlməsə da spinner dayansın
+    const fallbackTimer = setTimeout(() => {
+      if (isCreatingRef.current) {
+        setIsCreating(false);
+        isCreatingRef.current = false;
+      }
+    }, 15000);
 
     const sv = selectedHall?.service_fee !== 0
       ? Number(selectedHall?.service_fee)
@@ -167,7 +177,9 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
       } catch (err) {
         console.error("API Create Error:", err);
       } finally {
+        clearTimeout(fallbackTimer);
         setIsCreating(false);
+        isCreatingRef.current = false;
       }
     })();
   }, [

@@ -11,6 +11,12 @@
     body, html {
       background-color: #F3F4F6 !important;
       -webkit-text-size-adjust: 100%;
+      touch-action: manipulation;
+      -webkit-overflow-scrolling: touch;
+    }
+    body, #root {
+      min-height: 100dvh;
+      min-height: -webkit-fill-available;
     }
   </style>
 </head>
