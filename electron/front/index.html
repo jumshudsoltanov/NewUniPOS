@@ -29,13 +29,17 @@
       if (e.scale && e.scale !== 1) e.preventDefault();
     }, { passive: false });
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
-    // iOS: header padding (status bar altinda qalmasin)
+    // iOS: keyboard acilanda header yuxari qacmasin
     (function() {
       if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
-      var top = screen.height < 800 ? 20 : 44;
-      var s = document.createElement('style');
-      s.textContent = '.header{padding-top:' + top + 'px!important;height:calc(60px + ' + top + 'px)!important}';
-      document.head.appendChild(s);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function() {
+          if (window.visualViewport.height < window.innerHeight) {
+            window.scrollTo(0, 0);
+            document.activeElement?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          }
+        });
+      }
     })();
   </script>
   <style>
@@ -69,8 +73,7 @@
     }
     @media (max-width: 991px) {
       body {
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
+        position: relative;
       }
     }
     .tables-scroll-container, .checks-list, .check-content {
