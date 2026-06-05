@@ -29,6 +29,17 @@
       if (e.scale && e.scale !== 1) e.preventDefault();
     }, { passive: false });
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+    // iOS: header status bar altinda qalmasin
+    (function() {
+      if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+      var h = Math.min(screen.height, screen.width);
+      // Notch: 44px, No notch: 20px
+      var sb = h > 375 ? 44 : 20;
+      document.documentElement.style.setProperty('--safe-top', sb + 'px');
+      var st = document.createElement('style');
+      st.textContent = '.header{padding-top:var(--safe-top,0px)!important;height:calc(60px + var(--safe-top,0px))!important}';
+      document.head.appendChild(st);
+    })();
   </script>
   <style>
     *, *::before, *::after {
