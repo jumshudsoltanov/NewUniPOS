@@ -114,12 +114,7 @@ const Check = () => {
   // Settings toolbar states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDragMode, setIsDragMode] = useState(false);
-  const [customOrders, setCustomOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem("unipos_category_orders");
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
+  const [customOrders, setCustomOrders] = useState({});
   const customOrdersRef = useRef({});
   const [tempCustomOrders, setTempCustomOrders] = useState(null);
   const [lockCheck, setLockCheck] = useState(false);
@@ -378,10 +373,9 @@ const Check = () => {
     }
   }, [isHotelMode, loginedProfileData?.data?.profile?.id, rooms.length, dispatch]);
 
-  // Ref-i customOrders ilə sinxron saxla + localStorage-a yaz
+  // Ref-i customOrders ilə sinxron saxla
   useEffect(() => {
     customOrdersRef.current = customOrders;
-    try { localStorage.setItem("unipos_category_orders", JSON.stringify(customOrders)); } catch {}
   }, [customOrders]);
 
   // ── Barkod skaner dinləyicisi ──
@@ -2861,8 +2855,9 @@ const Check = () => {
                                 );
                                 const genCatIds = new Set(genCats.map((g) => g.id));
                                 const rootCatIds = new Set(rootCats.map((c) => c.id));
-                                const genCatOrdered = items.filter((id) => genCatIds.has(id)).map((id, i) => ({ id, ordering: i + 1 }));
-                                const catOrdered = items.filter((id) => rootCatIds.has(id)).map((id, i) => ({ id, ordering: i + 1 }));
+                                // Qlobal position: items array-indəki index+1 (per-group yox)
+                                const genCatOrdered = items.map((id, idx) => genCatIds.has(id) ? { id, ordering: idx + 1 } : null).filter(Boolean);
+                                const catOrdered = items.map((id, idx) => rootCatIds.has(id) ? { id, ordering: idx + 1 } : null).filter(Boolean);
                                 if (genCatOrdered.length > 0) {
                                   await apiConfig.put("/general-categories/ordering", {
                                     orderedItems: genCatOrdered,
