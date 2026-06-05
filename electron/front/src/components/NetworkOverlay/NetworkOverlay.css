@@ -904,92 +904,169 @@
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 576px) {
+    /* Fullscreen overlay - mobile */
     .network-disconnect-overlay {
-        padding: 16px 12px;
+        padding: 20px 16px;
         align-items: center;
+        justify-content: center;
+        height: 100%;
+        min-height: 100dvh;
+        width: 100%;
+    }
+    .network-disconnect-wifi-trigger {
+        top: 12px;
+        right: 12px;
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        border-radius: 10px;
     }
     .network-disconnect-inner {
-        max-width: 100%;
-        gap: 14px;
+        max-width: 280px;
+        gap: 16px;
+        padding: 0;
     }
     .network-disconnect-icon-wrap {
-        width: 52px;
-        height: 52px;
+        width: 56px;
+        height: 56px;
+        font-size: 24px;
         border-radius: 14px;
-        font-size: 22px;
+        margin-bottom: 0;
     }
     .network-disconnect-title {
-        font-size: 1.05rem;
+        font-size: 1.1rem;
+        line-height: 1.3;
     }
     .network-disconnect-lead {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
+        line-height: 1.4;
     }
     .network-disconnect-quit-btn {
         min-width: 0;
         width: 100%;
-        height: 44px;
-        font-size: 0.9rem;
+        height: 48px;
+        font-size: 0.95rem;
+        border-radius: 10px;
     }
+
+    /* IP config modal - mobile */
+    .network-master-ip-dialog.custom-modal-width {
+        max-width: calc(100% - 24px) !important;
+        width: calc(100% - 24px) !important;
+        margin: 0 auto !important;
+    }
+    .network-master-ip-modal-body.discount-body {
+        padding: 16px 16px 18px;
+        gap: 14px;
+    }
+    .network-master-ip-modal-inner.discount-modal-container {
+        border-radius: 10px;
+    }
+    .network-master-settings-header.discount-header {
+        min-height: 52px;
+        padding: 12px 16px;
+    }
+    .network-master-status-card {
+        border-radius: 8px;
+    }
+    .network-master-status-row {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+    .network-master-status-mono {
+        font-size: 12px;
+    }
+    .network-master-fs-hint {
+        font-size: 12px;
+        line-height: 1.4;
+    }
+    .network-master-field-label {
+        font-size: 11px;
+    }
+    .network-master-ip-input.discount-input {
+        height: 46px;
+        font-size: 15px;
+        padding: 0 14px;
+    }
+    .network-master-btn-grid-3 {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .network-master-chip-btn {
+        height: 46px;
+        font-size: 14px;
+        border-radius: 8px;
+    }
+    .network-master-exit-row {
+        margin-top: 6px;
+    }
+    .network-master-chip-btn.network-master-chip-btn--outline.network-master-exit-btn {
+        min-width: 0;
+        width: 100%;
+        height: 44px;
+        font-size: 14px;
+    }
+
+    /* Brief / glass panel - mobile */
     .network-master-glass-panel {
+        max-width: calc(100% - 32px);
         padding: 20px 16px 18px;
+        margin: 0 16px;
     }
     .network-master-glass-panel__title {
         font-size: 1rem;
     }
     .network-master-glass-panel__lead {
-        font-size: 0.78rem;
+        font-size: 0.8rem;
     }
     .network-master-glass-panel__actions {
         flex-direction: column;
+        gap: 8px;
     }
     .network-master-glass-panel__actions .network-master-btn-sm {
         width: 100%;
     }
     .network-master-disconnect-card {
+        max-width: calc(100% - 32px);
         padding: 18px 16px 16px;
+        margin: 0 16px;
     }
     .network-master-disconnect-card__head {
         gap: 12px;
     }
     .network-master-disconnect-icon {
-        width: 44px;
-        height: 44px;
+        width: 48px;
+        height: 48px;
         font-size: 22px;
     }
     .network-master-disconnect-title {
         font-size: 0.95rem;
     }
+    .network-master-disconnect-hint p {
+        font-size: 0.8rem;
+    }
     .network-master-disconnect-actions .network-master-btn-sm {
         min-height: 48px;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
     }
+
+    /* Fullscreen settings body - mobile */
     .network-master-fullscreen-body.discount-body {
-        padding: 14px;
+        padding: 16px;
+        gap: 14px;
+    }
+    .network-master-fullscreen-body .network-master-status-card,
+    .network-master-fullscreen-body .network-master-fs-hint,
+    .network-master-fullscreen-body .network-master-field-label,
+    .network-master-fullscreen-body .network-master-ip-input.discount-input,
+    .network-master-fullscreen-body .network-master-btn-grid-3 {
+        max-width: 100%;
+    }
+    .network-master-fullscreen-body .network-master-exit-row {
+        max-width: 100%;
     }
     .network-master-brief--fullscreen {
-        padding: 14px 12px 18px;
-    }
-    .network-master-btn-grid-3 {
-        grid-template-columns: 1fr 1fr;
-    }
-    .network-master-ip-input.discount-input {
-        height: 44px;
-        font-size: 14px;
-    }
-}
-
-@media (max-width: 360px) {
-    .network-master-btn-grid-3 {
-        grid-template-columns: 1fr;
-    }
-    .network-master-chip-btn {
-        height: 42px;
-        font-size: 12px;
-    }
-    .network-disconnect-icon-wrap {
-        width: 44px;
-        height: 44px;
-        font-size: 18px;
+        padding: 16px 14px 20px;
     }
 }

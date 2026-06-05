@@ -142,9 +142,11 @@ const NetworkOverlay = () => {
     };
 
     const handleQuit = () => {
-        if (window.electronAPI?.quitApp) window.electronAPI.quitApp();
-        else if (window.electronAPI) window.close();
-        else navigate("/");
+        if (window.electronAPI?.quitApp) {
+            try { window.electronAPI.quitApp(); } catch (e) { console.warn("quitApp error:", e); }
+        }
+        if (window.close) window.close();
+        setTimeout(() => { navigate("/"); }, 300);
     };
 
     const handleWifiIconTap = () => {
