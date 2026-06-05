@@ -38,6 +38,7 @@ const defaultFilters = {
   searchId: "", filterSaleType: "", filterWaiter: "", filterHall: "", filterTable: "",
   filterStatus: "", sortOrder: "", filterPaymentMethod: "", filterDifference: "",
   filterTaxSent: "", filterAmountMin: "", filterAmountMax: "",
+  filterDiscount: "", filterGuestMin: "", filterGuestMax: "", filterHasNote: "",
 };
 
 const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls }) => {
@@ -114,6 +115,9 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
             {f.filterPaymentMethod && tag("Ödəniş: " + (paymentMethods.find(p => String(p.id) === f.filterPaymentMethod)?.name || ""), () => upd("filterPaymentMethod", ""))}
             {f.filterDifference && tag(diffOptions.find(o => o.value === f.filterDifference)?.label, () => upd("filterDifference", ""))}
             {f.filterTaxSent && tag(f.filterTaxSent === "sent" ? "Vergiyə göndərilib" : "Göndərilməyib", () => upd("filterTaxSent", ""))}
+            {f.filterDiscount && tag(f.filterDiscount === "yes" ? "Endirim var" : "Endirim yox", () => upd("filterDiscount", ""))}
+            {f.filterHasNote && tag(f.filterHasNote === "yes" ? "Qeyd var" : "Qeyd yox", () => upd("filterHasNote", ""))}
+            {(f.filterGuestMin || f.filterGuestMax) && tag("Qonaq: " + (f.filterGuestMin || "0") + "-" + (f.filterGuestMax || "∞"), () => { upd("filterGuestMin", ""); upd("filterGuestMax", ""); })}
           </div>
         )}
 
@@ -200,6 +204,29 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
                 <div className="d-flex gap-2">
                   <Form.Control type="number" placeholder="Min" value={f.filterAmountMin} onChange={e => upd("filterAmountMin", e.target.value)} />
                   <Form.Control type="number" placeholder="Max" value={f.filterAmountMax} onChange={e => upd("filterAmountMax", e.target.value)} />
+                </div>
+              </div>
+              <div className="af-fld">
+                <label>Endirim</label>
+                <Form.Select value={f.filterDiscount} onChange={e => upd("filterDiscount", e.target.value)}>
+                  <option value="">Hamısı</option>
+                  <option value="yes">Endirim olanlar</option>
+                  <option value="no">Endirim olmayanlar</option>
+                </Form.Select>
+              </div>
+              <div className="af-fld">
+                <label>Qeyd</label>
+                <Form.Select value={f.filterHasNote} onChange={e => upd("filterHasNote", e.target.value)}>
+                  <option value="">Hamısı</option>
+                  <option value="yes">Qeydi olanlar</option>
+                  <option value="no">Qeydsiz</option>
+                </Form.Select>
+              </div>
+              <div className="af-fld">
+                <label>Qonaq sayı</label>
+                <div className="d-flex gap-2">
+                  <Form.Control type="number" placeholder="Min" value={f.filterGuestMin} onChange={e => upd("filterGuestMin", e.target.value)} />
+                  <Form.Control type="number" placeholder="Max" value={f.filterGuestMax} onChange={e => upd("filterGuestMax", e.target.value)} />
                 </div>
               </div>
             </div>

@@ -134,6 +134,10 @@ const Checks = () => {
   const [filterTaxSent, setFilterTaxSent] = useState("");
   const [filterAmountMin, setFilterAmountMin] = useState("");
   const [filterAmountMax, setFilterAmountMax] = useState("");
+  const [filterDiscount, setFilterDiscount] = useState("");
+  const [filterHasNote, setFilterHasNote] = useState("");
+  const [filterGuestMin, setFilterGuestMin] = useState("");
+  const [filterGuestMax, setFilterGuestMax] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const profileId = loginedProfileData?.data?.profile?.id;
@@ -406,6 +410,29 @@ const Checks = () => {
         return amt >= minVal && amt <= maxVal;
       });
     }
+    // Discount filter
+    if (filterDiscount) {
+      orders = orders.filter((o) => {
+        const hasDiscount = Number(o.discount || 0) !== 0;
+        return filterDiscount === "yes" ? hasDiscount : !hasDiscount;
+      });
+    }
+    // Has note filter
+    if (filterHasNote) {
+      orders = orders.filter((o) => {
+        const hasNote = !!(o.note || o.note_public || "");
+        return filterHasNote === "yes" ? hasNote : !hasNote;
+      });
+    }
+    // Guest count range filter
+    if (filterGuestMin || filterGuestMax) {
+      const minG = filterGuestMin ? Number(filterGuestMin) : 0;
+      const maxG = filterGuestMax ? Number(filterGuestMax) : Infinity;
+      orders = orders.filter((o) => {
+        const gc = Number(o.guest_count || 0);
+        return gc >= minG && gc <= maxG;
+      });
+    }
     // Sort (multi-select: array of sort keys)
     if (sortOrder && (Array.isArray(sortOrder) ? sortOrder.length > 0 : true)) {
       const sortKeys = Array.isArray(sortOrder) ? sortOrder : [sortOrder];
@@ -426,7 +453,7 @@ const Checks = () => {
     return orders;
   }, [
     currentDisplayOrders, loginedWaiter?.data, activeTab, filterStatus,
-    filterPaymentMethod, filterDifference, filterTaxSent, filterAmountMin, filterAmountMax, sortOrder,
+    filterPaymentMethod, filterDifference, filterTaxSent, filterAmountMin, filterAmountMax, filterDiscount, filterHasNote, filterGuestMin, filterGuestMax, sortOrder,
   ]);
 
   const totalAmount = useMemo(
@@ -447,6 +474,10 @@ const Checks = () => {
     setFilterTaxSent(f.filterTaxSent || "");
     setFilterAmountMin(f.filterAmountMin || "");
     setFilterAmountMax(f.filterAmountMax || "");
+    setFilterDiscount(f.filterDiscount || "");
+    setFilterHasNote(f.filterHasNote || "");
+    setFilterGuestMin(f.filterGuestMin || "");
+    setFilterGuestMax(f.filterGuestMax || "");
   }, []);
 
   const formatDisplayDate = (date) => {
@@ -582,7 +613,7 @@ const Checks = () => {
               className="filter-input-id"
             />
             <button
-              className={`filter-btn ${(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax) ? "has-filters" : ""}`}
+              className={`filter-btn ${(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax || filterDiscount || filterHasNote || filterGuestMin || filterGuestMax) ? "has-filters" : ""}`}
               onClick={() => setShowFilterModal(true)}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -591,7 +622,7 @@ const Checks = () => {
                 <circle cx="16" cy="12" r="2" /><circle cx="8" cy="6" r="2" />
               </svg>
               Filter
-              {(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax) && (
+              {(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax || filterDiscount || filterHasNote || filterGuestMin || filterGuestMax) && (
                 <span className="filter-active-dot"></span>
               )}
             </button>
@@ -720,6 +751,10 @@ const Checks = () => {
           filterTaxSent,
           filterAmountMin,
           filterAmountMax,
+          filterDiscount,
+          filterHasNote,
+          filterGuestMin,
+          filterGuestMax,
         }}
         onApply={handleFilterApply}
         onClear={handleFilterApply}
