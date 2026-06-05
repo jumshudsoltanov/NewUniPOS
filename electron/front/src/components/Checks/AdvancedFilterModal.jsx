@@ -106,10 +106,10 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
             {f.filterHall && tag("Zal: " + (halls.find(h => String(h.id) === f.filterHall)?.name || ""), () => upd("filterHall", ""))}
             {f.filterTable && tag("Masa: " + (tableOpts.find(t => String(t.id) === f.filterTable)?.name || ""), () => upd("filterTable", ""))}
             {(Array.isArray(f.sortOrder) ? f.sortOrder : (f.sortOrder ? [f.sortOrder] : [])).map(sv => (
-              tag(sortOptions.find(o => o.value === sv)?.label, () => {
+              <span key={sv} className="af-tag" onClick={() => {
                 const arr = Array.isArray(f.sortOrder) ? f.sortOrder.filter(v => v !== sv) : [];
                 upd("sortOrder", arr.length ? arr : "");
-              })
+              }}>{sortOptions.find(o => o.value === sv)?.label}<i className="bi bi-x ms-1"></i></span>
             ))}
             {f.filterPaymentMethod && tag("Ödəniş: " + (paymentMethods.find(p => String(p.id) === f.filterPaymentMethod)?.name || ""), () => upd("filterPaymentMethod", ""))}
             {f.filterDifference && tag(diffOptions.find(o => o.value === f.filterDifference)?.label, () => upd("filterDifference", ""))}
