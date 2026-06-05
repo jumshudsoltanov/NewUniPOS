@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from "react"
 import { useDispatch, useSelector } from "react-redux";
 import { getActiveOrders, getArchivedOrders, addOrderOptimistic } from "../../redux/Slices/BooksSlice";
 import { getWaitersList } from "../../redux/Slices/WaitersSlice";
+import { getPaymentMethods } from "../../redux/Slices/PaymentMethodsSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useNavigate } from "react-router-dom";
 import CheckDetailModal from "./CheckDetailModal";
@@ -250,11 +251,12 @@ const Checks = () => {
     return () => clearTimeout(handler);
   }, [searchId]);
 
-  // Fetch reference data (waiters, tables)
+  // Fetch reference data (waiters, tables, payment methods)
   useEffect(() => {
     if (profileId) {
       dispatch(getWaitersList(profileId));
       dispatch(getTableGroups(profileId));
+      dispatch(getPaymentMethods(profileId));
     }
   }, [profileId, dispatch]);
 

@@ -11,7 +11,7 @@ const saleTypeOptions = [
 ];
 
 const statusOptions = [
-  { value: "", label: "Hamısı", color: "#94a3b8" },
+  { value: "", label: "Hamısı" },
   { value: "1", label: "Açıq", color: "#053796" },
   { value: "2", label: "Bağlanmış", color: "#16a34a" },
   { value: "3", label: "Silinib", color: "#dc2626" },
@@ -21,267 +21,199 @@ const sortOptions = [
   { value: "", label: "Standart" },
   { value: "id_asc", label: "ID ↑ artan" },
   { value: "id_desc", label: "ID ↓ azalan" },
-  { value: "amount_asc", label: "Məbləğ ↑ artan" },
-  { value: "amount_desc", label: "Məbləğ ↓ azalan" },
-  { value: "date_asc", label: "Tarix ↑ köhnə" },
-  { value: "date_desc", label: "Tarix ↓ yeni" },
+  { value: "amount_asc", label: "Məbləğ ↑" },
+  { value: "amount_desc", label: "Məbləğ ↓" },
+  { value: "date_asc", label: "Tarix ↑" },
+  { value: "date_desc", label: "Tarix ↓" },
 ];
 
-const differenceOptions = [
-  { value: "", label: "Hamısı", icon: "bi-funnel" },
-  { value: "zero", label: "Fərqsiz (0 ₼)", icon: "bi-check-circle" },
-  { value: "positive", label: "Artıq ödəniş", icon: "bi-arrow-up-circle" },
-  { value: "negative", label: "Qalıq var", icon: "bi-exclamation-circle" },
-];
-
-const taxOptions = [
+const diffOptions = [
   { value: "", label: "Hamısı" },
-  { value: "sent", label: "Göndərilənlər" },
-  { value: "not_sent", label: "Göndərilməyənlər" },
+  { value: "zero", label: "Fərqsiz (0 ₼)" },
+  { value: "positive", label: "Artıq ödəniş" },
+  { value: "negative", label: "Qalıq var" },
 ];
 
 const defaultFilters = {
-  searchId: "",
-  filterSaleType: "",
-  filterWaiter: "",
-  filterHall: "",
-  filterTable: "",
-  filterStatus: "",
-  sortOrder: "",
-  filterPaymentMethod: "",
-  filterDifference: "",
-  filterTaxSent: "",
+  searchId: "", filterSaleType: "", filterWaiter: "", filterHall: "", filterTable: "",
+  filterStatus: "", sortOrder: "", filterPaymentMethod: "", filterDifference: "",
+  filterTaxSent: "", filterAmountMin: "", filterAmountMax: "",
 };
 
-const FilterTag = ({ label, active, onClick }) => (
-  <span
-    className={`filter-tag ${active ? "active" : ""}`}
-    onClick={onClick}
-  >
-    {label}
-    {active && <i className="bi bi-x ms-1"></i>}
-  </span>
-);
-
-const AdvancedFilterModal = ({
-  show,
-  onHide,
-  filters,
-  onApply,
-  onClear,
-  halls,
-}) => {
+const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls }) => {
   const dispatch = useDispatch();
-  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-  const { waitersLists } = useSelector((state) => state.WaitersSlice);
-  const { paymentMethods } = useSelector((state) => state.PaymentMethodsSlice);
+  const { loginedProfileData } = useSelector((s) => s.LoginSlice);
+  const { waitersLists } = useSelector((s) => s.WaitersSlice);
+  const { paymentMethods } = useSelector((s) => s.PaymentMethodsSlice);
   const profileId = loginedProfileData?.data?.profile?.id;
   const waiters = useMemo(() => waitersLists?.data || [], [waitersLists]);
 
-  const [localFilters, setLocalFilters] = useState({ ...filters });
+  const [f, setF] = useState({ ...defaultFilters });
+
+  useEffect(() => { if (profileId) dispatch(getPaymentMethods(profileId)); }, [profileId, dispatch]);
 
   useEffect(() => {
-    if (profileId) dispatch(getPaymentMethods(profileId));
-  }, [profileId, dispatch]);
-
-  useEffect(() => {
-    setLocalFilters({ ...filters });
+    if (show) setF({ ...filters });
   }, [filters, show]);
 
-  const update = (key, value) => setLocalFilters((p) => ({ ...p, [key]: value }));
-  const hasActiveFilters = Object.entries(localFilters).some(([k, v]) => k !== "searchId" && v);
+  const upd = (k, v) => setF(prev => ({ ...prev, [k]: v }));
 
-  const handleApply = () => { onApply({ ...localFilters }); onHide(); };
-  const handleClear = () => { setLocalFilters({ ...defaultFilters }); onApply({ ...defaultFilters }); onHide(); };
+  const handleApply = () => { onApply({ ...f }); onHide(); };
+  const handleClear = () => { const c = { ...defaultFilters }; setF(c); onApply(c); onHide(); };
 
-  const tableOptions = useMemo(() => {
-    if (!localFilters.filterHall) return [];
-    const hall = halls.find((h) => h.id.toString() === localFilters.filterHall);
+  const tableOpts = useMemo(() => {
+    if (!f.filterHall) return [];
+    const hall = halls.find(h => h.id.toString() === f.filterHall);
     return hall ? hall.tables : [];
-  }, [halls, localFilters.filterHall]);
+  }, [halls, f.filterHall]);
 
-  const activeCount = Object.entries(localFilters).filter(([k, v]) => k !== "searchId" && v).length;
+  const hasActive = Object.entries(f).some(([k, v]) => k !== "searchId" && v);
+  const activeCount = Object.entries(f).filter(([k, v]) => k !== "searchId" && v).length;
+
+  const tag = (label, onClick) => (
+    <span className="af-tag" onClick={onClick}>{label}<i className="bi bi-x ms-1"></i></span>
+  );
 
   return (
-    <Modal show={show} onHide={onHide} centered size="xl" className="af-modal">
-      <div className="af-modal-inner">
-        <Modal.Header closeButton className="af-header">
-          <div className="d-flex align-items-center gap-3">
-            <div className="af-header-icon">
-              <i className="bi bi-funnel-fill"></i>
-            </div>
-            <div>
-              <Modal.Title className="af-title">Qabaqcıl Filter</Modal.Title>
-              <span className="af-subtitle">Çek siyahısını filtrələyin</span>
-            </div>
+    <Modal show={show} onHide={onHide} centered dialogClassName="af-dialog" contentClassName="af-content">
+      {/* Header */}
+      <div className="af-hdr">
+        <div className="af-hdr-left">
+          <div className="af-hdr-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" />
+              <line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" />
+              <line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" />
+              <line x1="17" y1="16" x2="23" y2="16" />
+            </svg>
           </div>
-          {activeCount > 0 && (
-            <span className="af-badge">{activeCount} aktiv</span>
-          )}
-        </Modal.Header>
+          <span className="af-hdr-title">Filter</span>
+        </div>
+        <button className="af-close" onClick={onHide}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        </button>
+      </div>
 
-        <Modal.Body className="af-body">
-          {/* Active tags */}
-          {activeCount > 0 && (
-            <div className="af-tags-bar">
-              <i className="bi bi-funnel me-2" style={{ color: "#053796", fontSize: "13px" }}></i>
-              {localFilters.filterSaleType && (
-                <FilterTag
-                  label={saleTypeOptions.find(o => o.value === localFilters.filterSaleType)?.label}
-                  active onClick={() => update("filterSaleType", "")}
-                />
-              )}
-              {localFilters.filterStatus && (
-                <FilterTag
-                  label={statusOptions.find(o => o.value === localFilters.filterStatus)?.label}
-                  active onClick={() => update("filterStatus", "")}
-                />
-              )}
-              {localFilters.filterWaiter && (
-                <FilterTag label={`Əməkdaş: ${waiters.find(w => String(w.id) === localFilters.filterWaiter)?.name || ""}`} active onClick={() => update("filterWaiter", "")} />
-              )}
-              {localFilters.filterHall && (
-                <FilterTag label={`Zal: ${halls.find(h => String(h.id) === localFilters.filterHall)?.name || ""}`} active onClick={() => update("filterHall", "")} />
-              )}
-              {localFilters.filterTable && (
-                <FilterTag label={`Masa: ${tableOptions.find(t => String(t.id) === localFilters.filterTable)?.name || ""}`} active onClick={() => update("filterTable", "")} />
-              )}
-              {localFilters.sortOrder && (
-                <FilterTag label={sortOptions.find(o => o.value === localFilters.sortOrder)?.label} active onClick={() => update("sortOrder", "")} />
-              )}
-              {localFilters.filterPaymentMethod && (
-                <FilterTag label={`Ödəniş: ${paymentMethods.find(p => String(p.id) === localFilters.filterPaymentMethod)?.name || ""}`} active onClick={() => update("filterPaymentMethod", "")} />
-              )}
-              {localFilters.filterDifference && (
-                <FilterTag label={differenceOptions.find(o => o.value === localFilters.filterDifference)?.label} active onClick={() => update("filterDifference", "")} />
-              )}
-              {localFilters.filterTaxSent && (
-                <FilterTag label={localFilters.filterTaxSent === "sent" ? "Vergiyə göndərilən" : "Göndərilməyən"} active onClick={() => update("filterTaxSent", "")} />
-              )}
-            </div>
-          )}
+      {/* Body */}
+      <div className="af-body">
+        {hasActive && (
+          <div className="af-tags">
+            {f.filterSaleType && tag(saleTypeOptions.find(o => o.value === f.filterSaleType)?.label, () => upd("filterSaleType", ""))}
+            {f.filterStatus && tag(statusOptions.find(o => o.value === f.filterStatus)?.label, () => upd("filterStatus", ""))}
+            {f.filterWaiter && tag("Əməkdaş: " + (waiters.find(w => String(w.id) === f.filterWaiter)?.name || ""), () => upd("filterWaiter", ""))}
+            {f.filterHall && tag("Zal: " + (halls.find(h => String(h.id) === f.filterHall)?.name || ""), () => upd("filterHall", ""))}
+            {f.filterTable && tag("Masa: " + (tableOpts.find(t => String(t.id) === f.filterTable)?.name || ""), () => upd("filterTable", ""))}
+            {f.sortOrder && tag(sortOptions.find(o => o.value === f.sortOrder)?.label, () => upd("sortOrder", ""))}
+            {f.filterPaymentMethod && tag("Ödəniş: " + (paymentMethods.find(p => String(p.id) === f.filterPaymentMethod)?.name || ""), () => upd("filterPaymentMethod", ""))}
+            {f.filterDifference && tag(diffOptions.find(o => o.value === f.filterDifference)?.label, () => upd("filterDifference", ""))}
+            {f.filterTaxSent && tag(f.filterTaxSent === "sent" ? "Vergiyə göndərilib" : "Göndərilməyib", () => upd("filterTaxSent", ""))}
+          </div>
+        )}
 
-          <div className="af-sections">
-            {/* Section 1: Basic */}
-            <div className="af-section">
-              <div className="af-section-title">
-                <i className="bi bi-sliders2 me-2"></i> Əsas
+        <div className="af-sections">
+          {/* Basic */}
+          <div className="af-sec">
+            <div className="af-sec-title"><i className="bi bi-sliders2 me-2"></i>Əsas</div>
+            <div className="af-grid3">
+              <div className="af-fld">
+                <label>Çek ID</label>
+                <Form.Control type="text" placeholder="ID" value={f.searchId} onChange={e => upd("searchId", e.target.value)} />
               </div>
-              <div className="af-grid">
-                <div className="af-field">
-                  <label>Çek ID</label>
-                  <Form.Control type="text" placeholder="ID ilə axtar" value={localFilters.searchId} onChange={(e) => update("searchId", e.target.value)} />
-                </div>
-                <div className="af-field">
-                  <label>Satış üsulu</label>
-                  <Form.Select value={localFilters.filterSaleType} onChange={(e) => update("filterSaleType", e.target.value)}>
-                    {saleTypeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </Form.Select>
-                </div>
-                <div className="af-field">
-                  <label>Status</label>
-                  <div className="status-chips">
-                    {statusOptions.map(o => (
-                      <span
-                        key={o.value}
-                        className={`status-chip ${localFilters.filterStatus === o.value ? "active" : ""}`}
-                        style={localFilters.filterStatus === o.value ? { background: o.color, borderColor: o.color } : { color: o.color, borderColor: o.color }}
-                        onClick={() => update("filterStatus", o.value)}
-                      >
-                        {o.label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="af-field">
-                  <label>Əməkdaş</label>
-                  <Form.Select value={localFilters.filterWaiter} onChange={(e) => update("filterWaiter", e.target.value)}>
-                    <option value="">Hamısı</option>
-                    {waiters.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </Form.Select>
-                </div>
-                <div className="af-field">
-                  <label>Zal</label>
-                  <Form.Select value={localFilters.filterHall} onChange={(e) => { update("filterHall", e.target.value); update("filterTable", ""); }}>
-                    <option value="">Hamısı</option>
-                    {halls.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
-                  </Form.Select>
-                </div>
-                <div className="af-field">
-                  <label>Masa</label>
-                  <Form.Select value={localFilters.filterTable} onChange={(e) => update("filterTable", e.target.value)} disabled={!localFilters.filterHall}>
-                    <option value="">Hamısı</option>
-                    {tableOptions.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </Form.Select>
-                </div>
+              <div className="af-fld">
+                <label>Satış üsulu</label>
+                <Form.Select value={f.filterSaleType} onChange={e => upd("filterSaleType", e.target.value)}>
+                  {saleTypeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </Form.Select>
               </div>
-            </div>
-
-            {/* Section 2: Advanced */}
-            <div className="af-section">
-              <div className="af-section-title">
-                <i className="bi bi-gear me-2"></i> Təkmilləşmiş
+              <div className="af-fld">
+                <label>Əməkdaş</label>
+                <Form.Select value={f.filterWaiter} onChange={e => upd("filterWaiter", e.target.value)}>
+                  <option value="">Hamısı</option>
+                  {waiters.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                </Form.Select>
               </div>
-              <div className="af-grid">
-                <div className="af-field">
-                  <label>Ödəniş üsulu</label>
-                  <Form.Select value={localFilters.filterPaymentMethod} onChange={(e) => update("filterPaymentMethod", e.target.value)}>
-                    <option value="">Hamısı</option>
-                    {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
-                  </Form.Select>
-                </div>
-                <div className="af-field">
-                  <label>Fərq (Qalıq)</label>
-                  <Form.Select value={localFilters.filterDifference} onChange={(e) => update("filterDifference", e.target.value)}>
-                    {differenceOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </Form.Select>
-                </div>
-                <div className="af-field">
-                  <label>Vergiyə göndərilmə</label>
-                  <Form.Select value={localFilters.filterTaxSent} onChange={(e) => update("filterTaxSent", e.target.value)}>
-                    {taxOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </Form.Select>
-                </div>
-                <div className="af-field">
-                  <label>Məbləğ aralığı</label>
-                  <div className="d-flex gap-2">
-                    <Form.Control type="number" placeholder="Min" value={localFilters.filterAmountMin || ""} onChange={(e) => update("filterAmountMin", e.target.value)} />
-                    <Form.Control type="number" placeholder="Max" value={localFilters.filterAmountMax || ""} onChange={(e) => update("filterAmountMax", e.target.value)} />
-                  </div>
-                </div>
+              <div className="af-fld">
+                <label>Zal</label>
+                <Form.Select value={f.filterHall} onChange={e => { upd("filterHall", e.target.value); upd("filterTable", ""); }}>
+                  <option value="">Hamısı</option>
+                  {halls.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
+                </Form.Select>
               </div>
-            </div>
-
-            {/* Section 3: Sort */}
-            <div className="af-section">
-              <div className="af-section-title">
-                <i className="bi bi-arrow-up-down me-2"></i> Sıralama
+              <div className="af-fld">
+                <label>Masa</label>
+                <Form.Select value={f.filterTable} onChange={e => upd("filterTable", e.target.value)} disabled={!f.filterHall}>
+                  <option value="">Hamısı</option>
+                  {tableOpts.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </Form.Select>
               </div>
-              <div className="sort-row">
-                {sortOptions.map(o => (
-                  <span
-                    key={o.value}
-                    className={`sort-chip ${localFilters.sortOrder === o.value ? "active" : ""}`}
-                    onClick={() => update("sortOrder", o.value)}
-                  >
-                    {o.value && o.value.endsWith("_asc") && <i className="bi bi-sort-up me-1"></i>}
-                    {o.value && o.value.endsWith("_desc") && <i className="bi bi-sort-down me-1"></i>}
-                    {o.label}
-                  </span>
-                ))}
+              <div className="af-fld">
+                <label>Status</label>
+                <div className="af-chips">
+                  {statusOptions.map(o => (
+                    <span key={o.value} className={`af-chip ${f.filterStatus === o.value ? "active" : ""}`}
+                      style={f.filterStatus === o.value ? { background: o.color, borderColor: o.color, color: "#fff" } : { borderColor: o.color, color: o.color }}
+                      onClick={() => upd("filterStatus", o.value)}>{o.label}</span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </Modal.Body>
 
-        <Modal.Footer className="af-footer">
-          <button className="af-btn af-btn-clear" onClick={handleClear}>
-            <i className="bi bi-eraser me-1"></i> Təmizlə
-          </button>
-          <button className="af-btn af-btn-apply" onClick={handleApply}>
-            <i className="bi bi-check2 me-1"></i> Tətbiq et
-          </button>
-        </Modal.Footer>
+          {/* Advanced */}
+          <div className="af-sec">
+            <div className="af-sec-title"><i className="bi bi-gear me-2"></i>Təkmilləşmiş</div>
+            <div className="af-grid3">
+              <div className="af-fld">
+                <label>Ödəniş üsulu</label>
+                <Form.Select value={f.filterPaymentMethod} onChange={e => upd("filterPaymentMethod", e.target.value)}>
+                  <option value="">Hamısı</option>
+                  {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
+                </Form.Select>
+              </div>
+              <div className="af-fld">
+                <label>Fərq (qalıq)</label>
+                <Form.Select value={f.filterDifference} onChange={e => upd("filterDifference", e.target.value)}>
+                  {diffOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </Form.Select>
+              </div>
+              <div className="af-fld">
+                <label>Vergiyə göndərilmə</label>
+                <Form.Select value={f.filterTaxSent} onChange={e => upd("filterTaxSent", e.target.value)}>
+                  <option value="">Hamısı</option>
+                  <option value="sent">Göndərilənlər</option>
+                  <option value="not_sent">Göndərilməyənlər</option>
+                </Form.Select>
+              </div>
+              <div className="af-fld">
+                <label>Məbləğ aralığı</label>
+                <div className="d-flex gap-2">
+                  <Form.Control type="number" placeholder="Min" value={f.filterAmountMin} onChange={e => upd("filterAmountMin", e.target.value)} />
+                  <Form.Control type="number" placeholder="Max" value={f.filterAmountMax} onChange={e => upd("filterAmountMax", e.target.value)} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sort */}
+          <div className="af-sec">
+            <div className="af-sec-title"><i className="bi bi-arrow-up-down me-2"></i>Sıralama</div>
+            <div className="af-sort-row">
+              {sortOptions.map(o => (
+                <span key={o.value} className={`af-sort-chip ${f.sortOrder === o.value ? "active" : ""}`}
+                  onClick={() => upd("sortOrder", o.value)}>
+                  {o.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="af-ftr">
+        <button className="af-btn-clear" onClick={handleClear}><i className="bi bi-eraser me-1"></i>Təmizlə</button>
+        <button className="af-btn-apply" onClick={handleApply}><i className="bi bi-check2 me-1"></i>Tətbiq et</button>
       </div>
     </Modal>
   );
