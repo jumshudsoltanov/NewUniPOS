@@ -8,7 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import CustomersModal from "../Customers-Modal/CustomersModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import { updateTableOrders } from "../../redux/Slices/OrdersSlice";
-import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, addOrderOptimistic } from "../../redux/Slices/BooksSlice";
 import {
   getTableGroups,
   setTempTableOrder,
@@ -21,6 +21,7 @@ import {
   loadLocalLayouts,
   saveTableLayouts,
   updateLocalLayoutsFromServer,
+  addOrderToTableOptimistic,
 } from "../../redux/Slices/TablesSlice";
 import { toast } from "sonner";
 import { getSocket } from "../../utils/apiConfig";
@@ -411,8 +412,40 @@ const Tables = () => {
           toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
           return;
         }
-        setSelectedTable(table);
-        setShowModal(true);
+        const skipGuest = localStorage.getItem("unipos_skip_guest_count") === "1";
+        if (skipGuest) {
+          // Birbaşa yarat — modal açılmadan
+          const waiterId = loginedWaiter?.data?.id;
+          const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
+          const profileId = loginedProfileData?.data?.profile?.id;
+          if (waiterId && terminalId && profileId && table?.id) {
+            const generatedUuid = crypto.randomUUID();
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const sv = currentHallData?.service_fee !== 0
+              ? Number(currentHallData?.service_fee)
+              : Number(loginedProfileData?.data?.profile?.service_fee);
+            const optimisticOrder = {
+              uuid: generatedUuid, id: null, waiter_id: waiterId, profile_id: profileId,
+              terminal_id: terminalId, sale_type: "dine_in", sale_type_name: "Restoranda",
+              table_id: table.id, guest_count: 0, status: 1, is_selected: 1,
+              orders_items: [],
+              table: { id: table.id, name: table.name, hall: { name: currentHallData?.name } },
+              table_name: table.name, hall_name: currentHallData?.name,
+              amount: 0, total: 0, start_date: new Date().toISOString(),
+              created_at: new Date().toISOString(), discount: 0,
+              service_value: sv || 0, service_type: sv ? "percent" : null,
+              waiter: { id: waiterId, name: waiterName }
+            };
+            dispatch(addOrderOptimistic(optimisticOrder));
+            dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
+            navigate(`/check/${generatedUuid}?tableId=${table.id}`);
+          } else {
+            toast.error("Məlumat çatışmır, zəhmət olmasa səhifəni yeniləyin.");
+          }
+        } else {
+          setSelectedTable(table);
+          setShowModal(true);
+        }
       }
     },
     [
