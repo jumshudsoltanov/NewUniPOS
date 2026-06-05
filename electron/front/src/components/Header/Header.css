@@ -530,7 +530,7 @@ body.touch-scroll-active .mobile-footer::-webkit-scrollbar {
 /* Mobile tabs bar at the top */
 .mobile-tabs-bar {
   position: fixed;
-  bottom: 0;
+  bottom: 56px;
   left: 0;
   width: 100%;
   height: 44px;
