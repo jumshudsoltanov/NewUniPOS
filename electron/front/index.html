@@ -29,16 +29,10 @@
       if (e.scale && e.scale !== 1) e.preventDefault();
     }, { passive: false });
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
-    // iOS: header status bar altinda qalmasin
+    // iOS: body status bar altindan baslasin, header da duzgun olsun
     (function() {
       if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
-      var h = Math.min(screen.height, screen.width);
-      // Notch: 44px, No notch: 20px
-      var sb = h > 375 ? 44 : 20;
-      document.documentElement.style.setProperty('--safe-top', sb + 'px');
-      var st = document.createElement('style');
-      st.textContent = '.header{padding-top:var(--safe-top,0px)!important;height:calc(60px + var(--safe-top,0px))!important}';
-      document.head.appendChild(st);
+      document.body.classList.add('ios-safe');
     })();
   </script>
   <style>
@@ -75,6 +69,11 @@
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
       }
+    }
+    /* iOS: status bar altinda qalmasin */
+    body.ios-safe {
+      top: env(safe-area-inset-top, 0px) !important;
+      height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
     }
     .tables-scroll-container, .checks-list, .check-content {
       -webkit-overflow-scrolling: touch;
