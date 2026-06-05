@@ -1194,23 +1194,6 @@ textarea.printer-input {
 
     .devices-mobile-tabs::-webkit-scrollbar {
         display: none;
-        /* Chrome/Safari */
-    }
-
-        background: rgba(255, 255, 255, 0.15);
-        font-weight: 600;
-        border-radius: 6px 10px 0 0;
-    }
-
-    .devices-mobile-tab.active::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        left: 20%;
-        right: 20%;
-        height: 3px;
-        background: #fff;
-        border-radius: 3px 3px 0 0;
     }
 
     .devices-modal .modal-body {
