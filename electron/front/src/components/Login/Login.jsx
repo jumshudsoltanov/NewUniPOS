@@ -249,7 +249,7 @@ const Login = () => {
 
   return (
     <>
-      <Container fluid className="p-0 dvh-100 overflow-hidden">
+      <Container fluid className="p-0 vh-100 overflow-hidden">
         <Row className="g-0 h-100">
 
           {/* IMAGE SECTION */}
