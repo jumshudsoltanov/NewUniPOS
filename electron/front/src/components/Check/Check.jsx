@@ -373,31 +373,10 @@ const Check = () => {
     }
   }, [isHotelMode, loginedProfileData?.data?.profile?.id, rooms.length, dispatch]);
 
-  // Menu datası dəyişəndə customOrders boşdursa ordering field-indən qur
+  // Ref-i customOrders ilə sinxron saxla
   useEffect(() => {
-    if (!menuDataWithCategories?.data && !menuDataWithGeneralCategories?.data) return;
-    if (Object.keys(customOrdersRef.current).length > 0) return;
-
-    const newOrders = {};
-    // ROOT: general categories + standalone categories ordering ilə
-    const genCats = menuDataWithGeneralCategories?.data || [];
-    const cats = (menuDataWithCategories?.data || []).filter(
-      (c) => !c.general_categorie_id || c.general_categorie_id === 0,
-    );
-    const rootItems = [...genCats, ...cats].sort((a, b) => (a.ordering ?? 999999) - (b.ordering ?? 999999));
-    newOrders["ROOT"] = rootItems.map((i) => i.id);
-
-    // General categories altındakı kateqoriyalar
-    for (const gc of genCats) {
-      const gcCats = (menuDataWithCategories?.data || []).filter(
-        (c) => Number(c.general_categorie_id) === Number(gc.id),
-      ).sort((a, b) => (a.ordering ?? 999999) - (b.ordering ?? 999999));
-      if (gcCats.length > 0) newOrders[`GEN_${gc.id}`] = gcCats.map((c) => c.id);
-    }
-
-    setCustomOrders(newOrders);
-    customOrdersRef.current = newOrders;
-  }, [menuDataWithCategories, menuDataWithGeneralCategories]);
+    customOrdersRef.current = customOrders;
+  }, [customOrders]);
 
   // ── Barkod skaner dinləyicisi ──
   const barcodeBufferRef = useRef("");
@@ -1767,11 +1746,31 @@ const Check = () => {
 
 
   const categoryOrderMemo = useMemo(() => {
-    if (menuViewMode === "ROOT") return customOrders["ROOT"] || [];
-    if (menuViewMode === "CATEGORIES" && selectedGenCat) return customOrders[`GEN_${selectedGenCat.id}`] || [];
-    if (menuViewMode === "PRODUCTS" && selectedCat) return customOrders[`CAT_${selectedCat.id}`] || [];
+    // customOrders-dan götür, yoxdursa birbaşa menu datasından ordering-ə görə qur
+    if (menuViewMode === "ROOT") {
+      if (customOrders["ROOT"]) return customOrders["ROOT"];
+      const genCats = menuDataWithGeneralCategories?.data || [];
+      const cats = (menuDataWithCategories?.data || []).filter(
+        (c) => !c.general_categorie_id || c.general_categorie_id === 0,
+      );
+      return [...genCats, ...cats].sort((a, b) => (a.ordering ?? 999999) - (b.ordering ?? 999999)).map((i) => i.id);
+    }
+    if (menuViewMode === "CATEGORIES" && selectedGenCat) {
+      const key = `GEN_${selectedGenCat.id}`;
+      if (customOrders[key]) return customOrders[key];
+      const gc = (menuDataWithGeneralCategories?.data || []).find((g) => g.id == selectedGenCat.id);
+      if (gc?.categories) return [...gc.categories].sort((a, b) => (a.ordering ?? 999999) - (b.ordering ?? 999999)).map((c) => c.id);
+      return [];
+    }
+    if (menuViewMode === "PRODUCTS" && selectedCat) {
+      const key = `CAT_${selectedCat.id}`;
+      if (customOrders[key]) return customOrders[key];
+      const cat = (menuDataWithCategories?.data || []).find((c) => c.id == selectedCat.id);
+      if (cat?.products) return [...cat.products].sort((a, b) => (a.ordering ?? 999999) - (b.ordering ?? 999999)).map((p) => p.id);
+      return [];
+    }
     return [];
-  }, [menuViewMode, customOrders, selectedGenCat, selectedCat]);
+  }, [menuViewMode, customOrders, selectedGenCat, selectedCat, menuDataWithCategories, menuDataWithGeneralCategories]);
 
   const handleCategoryOrderChange = useCallback((newOrder) => {
     let key = null;
