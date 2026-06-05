@@ -118,6 +118,17 @@ const Login = () => {
   } = useSelector((state) => state.SyncSlice);
 
   useEffect(() => {
+    // Mobilde keyboard acilanda header yuxari surmemsin
+    if (window.visualViewport) {
+      const handler = () => {
+        if (window.visualViewport.height < window.innerHeight) {
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
+        }
+      };
+      window.visualViewport.addEventListener('resize', handler);
+      return () => window.visualViewport.removeEventListener('resize', handler);
+    }
   }, []);
 
   const activeProfileData = loginedProfileData || fallbackProfileData;
