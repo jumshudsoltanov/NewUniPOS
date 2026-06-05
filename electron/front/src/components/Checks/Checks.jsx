@@ -370,7 +370,11 @@ const Checks = () => {
     if (filterPaymentMethod) {
       const pmId = Number(filterPaymentMethod);
       orders = orders.filter((o) =>
-        o.order_payments?.some((p) => Number(p.payment_method_id) === pmId)
+        o.order_payments?.some((p) =>
+          Number(p.payment_method_id) === pmId ||
+          Number(p.payment_method?.id) === pmId ||
+          Number(p.tag?.id) === pmId
+        )
       );
     }
     // Difference (balance) filter
