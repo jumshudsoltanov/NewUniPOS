@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const app = express();
 const AppRouter = require("./router/AppRouter");
 const cors = require("cors");
@@ -372,6 +373,15 @@ const InsertData = async (profileId) => {
     console.warn("[MAX_CHECK] Startup sync error:", e.message),
   );
 };
+
+// Production: frontend dist qovluğunu servis et
+const frontendDist = path.join(__dirname, "..", "front", "dist");
+app.use(express.static(frontendDist));
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) return next();
+  const indexPath = path.join(frontendDist, "index.html");
+  res.sendFile(indexPath, (err) => { if (err) next(); });
+});
 
 const server = app.listen(55667, () => {
   console.log("Express Server Is Running on port 55667");
