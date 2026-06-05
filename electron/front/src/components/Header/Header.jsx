@@ -727,7 +727,8 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
         </Row>
       </Container>
 
-      {/* MOBILE ROOM GROUP / HALL TABS + ADD BTN */}
+
+      {/* MOBILE ROOM GROUP / HALL TABS (moved up from footer) */}
       {!showBack && (
         <div className="mobile-tabs-bar d-flex d-md-none">
           {Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 ? (
@@ -751,34 +752,42 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
               ))}
             </>
           ) : (
-            <>
-              {tableGroups?.data?.map((hall, index) => (
-                <button
-                  key={index}
-                  className={`mobile-tab-btn ${activeHall === hall.id ? "active" : ""}`}
-                  onClick={() => setActiveHall(hall.id)}
-                >
-                  {hall.name}
-                </button>
-              ))}
-              {Number(loginedWaiter?.data?.can_create_order) === 1 && (
-                <button
-                  className="mobile-add-btn"
-                  onClick={async () => {
-                    const guard = await checkShiftGuard(loginedProfileData);
-                    if (guard.blocked) {
-                      toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
-                      return;
-                    }
-                    setOnShowSalesTypeModal(true);
-                  }}
-                >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+            tableGroups &&
+            tableGroups?.data?.map((hall, index) => (
+              <button
+                key={index}
+                className={`mobile-tab-btn ${activeHall === hall.id ? "active" : ""}`}
+                onClick={() => setActiveHall(hall.id)}
+              >
+                {hall.name}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* HOTEL FILTER STRIP — shown on tables page in hotel mode */}
+      {/* MOBILE FOOTER (only for restaurant mode add button) */}
+      {!showBack && Number(loginedProfileData?.data?.profile?.is_hotel_mode) !== 1 && (
+        <div className="mobile-footer d-flex d-md-none">
+          {Number(loginedWaiter?.data?.can_create_order) === 1 && (
+            <button
+              className="mobile-add-btn"
+              onClick={async () => {
+                const guard = await checkShiftGuard(loginedProfileData);
+                if (guard.blocked) {
+                  toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                  return;
+                }
+                setOnShowSalesTypeModal(true);
+              }}
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
                   d="M12 5V19M5 12H19"
@@ -790,7 +799,6 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
               </svg>
             </button>
           )}
-            </>
         </div>
       )}
 
