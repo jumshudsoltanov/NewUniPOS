@@ -131,6 +131,8 @@ const Checks = () => {
   const [filterPaymentMethod, setFilterPaymentMethod] = useState("");
   const [filterDifference, setFilterDifference] = useState("");
   const [filterTaxSent, setFilterTaxSent] = useState("");
+  const [filterAmountMin, setFilterAmountMin] = useState("");
+  const [filterAmountMax, setFilterAmountMax] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const profileId = loginedProfileData?.data?.profile?.id;
@@ -389,6 +391,15 @@ const Checks = () => {
         return true;
       });
     }
+    // Amount range filter
+    if (filterAmountMin || filterAmountMax) {
+      const minVal = filterAmountMin ? Number(filterAmountMin) : -Infinity;
+      const maxVal = filterAmountMax ? Number(filterAmountMax) : Infinity;
+      orders = orders.filter((o) => {
+        const amt = computeOrderCardDisplayAmount(o);
+        return amt >= minVal && amt <= maxVal;
+      });
+    }
     // Sort
     if (sortOrder) {
       orders = [...orders].sort((a, b) => {
@@ -404,7 +415,7 @@ const Checks = () => {
     return orders;
   }, [
     currentDisplayOrders, loginedWaiter?.data, activeTab, filterStatus,
-    filterPaymentMethod, filterDifference, filterTaxSent, sortOrder,
+    filterPaymentMethod, filterDifference, filterTaxSent, filterAmountMin, filterAmountMax, sortOrder,
   ]);
 
   const totalAmount = useMemo(
@@ -423,6 +434,8 @@ const Checks = () => {
     setFilterPaymentMethod(f.filterPaymentMethod || "");
     setFilterDifference(f.filterDifference || "");
     setFilterTaxSent(f.filterTaxSent || "");
+    setFilterAmountMin(f.filterAmountMin || "");
+    setFilterAmountMax(f.filterAmountMax || "");
   }, []);
 
   const formatDisplayDate = (date) => {
@@ -558,12 +571,12 @@ const Checks = () => {
               className="filter-input-id"
             />
             <button
-              className="filter-modal-btn"
+              className={`filter-modal-btn ${(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax) ? "has-filters" : ""}`}
               onClick={() => setShowFilterModal(true)}
             >
               <i className="bi bi-funnel-fill me-1"></i>
               Filter
-              {(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder) && (
+              {(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder || filterAmountMin || filterAmountMax) && (
                 <span className="filter-active-dot"></span>
               )}
             </button>
@@ -690,6 +703,8 @@ const Checks = () => {
           filterPaymentMethod,
           filterDifference,
           filterTaxSent,
+          filterAmountMin,
+          filterAmountMax,
         }}
         onApply={handleFilterApply}
         onClear={handleFilterApply}
