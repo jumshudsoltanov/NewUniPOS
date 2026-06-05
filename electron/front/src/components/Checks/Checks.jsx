@@ -405,20 +405,16 @@ const Checks = () => {
     // Sort (multi-select: array of sort keys)
     if (sortOrder && (Array.isArray(sortOrder) ? sortOrder.length > 0 : true)) {
       const sortKeys = Array.isArray(sortOrder) ? sortOrder : [sortOrder];
-      const getVal = (o, key) => {
-        if (key === "id_asc" || key === "id_desc") return Number(o.id) || 0;
-        if (key === "amount_asc" || key === "amount_desc") return computeOrderCardDisplayAmount(o);
-        if (key === "date_asc" || key === "date_desc") return o.start_date ? new Date(o.start_date).getTime() : 0;
-        return 0;
-      };
       orders = [...orders].sort((a, b) => {
-        for (const key of sortKeys) {
-          const va = getVal(a, key);
-          const vb = getVal(b, key);
-          let cmp = 0;
-          if (key.endsWith("_asc") || key === "id_asc") cmp = va - vb;
-          else if (key.endsWith("_desc")) cmp = vb - va;
-          if (cmp !== 0) return cmp;
+        for (const sk of sortKeys) {
+          let va, vb;
+          if (sk === "id_asc" || sk === "id_desc") { va = Number(a.id) || 0; vb = Number(b.id) || 0; }
+          else if (sk === "amount_asc" || sk === "amount_desc") { va = Number(computeOrderCardDisplayAmount(a).toFixed(2)); vb = Number(computeOrderCardDisplayAmount(b).toFixed(2)); }
+          else if (sk === "date_asc" || sk === "date_desc") { va = a.start_date ? new Date(a.start_date).getTime() : 0; vb = b.start_date ? new Date(b.start_date).getTime() : 0; }
+          else continue;
+          if (va === vb) continue;
+          if (sk.endsWith("_asc") || sk === "id_asc") return va > vb ? 1 : -1;
+          if (sk.endsWith("_desc")) return va > vb ? -1 : 1;
         }
         return 0;
       });
