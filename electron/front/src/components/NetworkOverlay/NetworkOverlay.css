@@ -22,6 +22,7 @@
 .network-master-modal-content--disconnect.modal-content {
     background: transparent !important;
     box-shadow: none !important;
+    display: flex;
 }
 
 /* Tam ekran şəffaf overlay — modal deyil, bütün ekranı tutur */
@@ -111,7 +112,7 @@
     height: 48px;
     padding: 0 28px;
     border-radius: 10px;
-    background: #4F85F4;
+    background: #ef4444;
     color: #fff;
     border: none;
     font-size: 0.95rem;
@@ -123,14 +124,15 @@
     gap: 8px;
     cursor: pointer;
     transition: background 0.2s;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .network-disconnect-quit-btn:hover {
-    background: #3d72e0;
+    background: #dc2626;
 }
 
 .network-disconnect-quit-btn:active {
-    background: #3366cc;
+    background: #b91c1c;
 }
 
 .network-disconnect-quit-btn .bi {
@@ -906,21 +908,35 @@
 
 @media (max-width: 576px) {
     /* Fullscreen overlay - mobile */
+    .network-master-modal-root.modal,
+    .network-master-modal--disconnect.modal {
+        padding: 0 !important;
+    }
+    .network-master-modal-content--disconnect.modal-content {
+        min-height: 100dvh;
+        display: flex;
+    }
     .network-disconnect-overlay {
-        padding: 20px 16px;
+        position: relative;
+        inset: auto;
+        width: 100%;
+        height: auto;
+        min-height: 100dvh;
+        padding: 60px 20px 32px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        height: 100%;
-        min-height: 100dvh;
-        width: 100%;
+        flex: 1;
     }
     .network-disconnect-wifi-trigger {
+        position: fixed;
         top: 12px;
         right: 12px;
         width: 40px;
         height: 40px;
         font-size: 18px;
         border-radius: 10px;
+        z-index: 10;
     }
     .network-disconnect-inner {
         max-width: 280px;
