@@ -23,6 +23,11 @@
       document.title = "UniPOS Mobile";
       document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "UniPOS Mobile";
     }
+    // Pinch zoom qarshisi
+    document.addEventListener('touchmove', function(e) {
+      if (e.scale && e.scale !== 1) e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
   </script>
   <style>
     *, *::before, *::after {
@@ -57,6 +62,7 @@
       height: 100%;
       overflow: hidden;
       position: relative;
+      background-color: #f5f6f8;
     }
     .tables-scroll-container, .checks-list, .check-content {
       -webkit-overflow-scrolling: touch;
