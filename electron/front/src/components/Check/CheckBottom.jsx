@@ -694,6 +694,7 @@ const CheckBottom = ({
             <i className="bi bi-printer-fill"></i>
           )}
         </button>
+        {Number(loginedWaiter?.data?.can_clear_check) === 1 && (
         <button
           className="mobile-icon-btn gray-btn"
           onClick={() => {
@@ -711,6 +712,7 @@ const CheckBottom = ({
         >
           <i className="bi bi-trash-fill"></i>
         </button>
+        )}
         {canCloseCheck ? (
           <button className="mobile-pay-btn" onClick={goCloseCheck}>
             <i className="bi bi-check2-all fs-4 text-white"></i>
