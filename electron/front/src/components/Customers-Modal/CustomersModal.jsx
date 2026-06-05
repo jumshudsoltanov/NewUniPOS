@@ -42,12 +42,6 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
     }
   }, [show]);
 
-  useEffect(() => {
-    if (show && autoCreate) {
-      createOrder();
-    }
-  }, [show, autoCreate]);
-
   const handleCancel = useCallback(() => {
     setGuestCount("0");
     onHide();
@@ -74,6 +68,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
 
   const [isCreating, setIsCreating] = useState(false);
   const isCreatingRef = useRef(false);
+  const createOrderRef = useRef(null);
 
   const createOrder = useCallback(async () => {
     if (isCreatingRef.current) {
@@ -202,6 +197,18 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
     onHide,
     isCreating,
   ]);
+
+  // Ref-i her defe yenile (useCallback-den sonra olmalidi)
+  createOrderRef.current = createOrder;
+
+  useEffect(() => {
+    if (show && autoCreate && createOrderRef.current) {
+      const t = setTimeout(() => {
+        if (createOrderRef.current) createOrderRef.current();
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [show, autoCreate]);
 
   return (
     <Modal show={show} onHide={handleCancel} centered className="customers-modal" backdrop="static" animation={false}>
