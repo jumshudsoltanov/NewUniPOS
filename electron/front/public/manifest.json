@@ -1,7 +1,7 @@
 {
-  "name": "UniPOS",
+  "name": "UniPOS Mobile POS",
   "short_name": "UniPOS",
-  "description": "UniPOS Point of Sale",
+  "description": "UniPOS Point of Sale — Mobile Terminal",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#053796",
