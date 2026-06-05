@@ -17,6 +17,13 @@
     body, #root {
       min-height: 100dvh;
       min-height: -webkit-fill-available;
+      overflow-x: hidden;
+      position: relative;
+    }
+    /* iOS scroll bounce qarshisi */
+    .tables-scroll-container, .checks-list, .check-content {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: none;
     }
   </style>
 </head>

@@ -76,12 +76,19 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
   const isCreatingRef = useRef(false);
 
   const createOrder = useCallback(async () => {
-    if (isCreatingRef.current) return;
+    if (isCreatingRef.current) {
+      console.warn("[CustomersModal] createOrder: artıq işləyir");
+      return;
+    }
 
     const waiterId = loginedWaiter?.data?.id;
     const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
     const profileId = loginedProfileData?.data?.profile?.id;
-    if (!waiterId || !terminalId || !profileId || !table?.id) return;
+    if (!waiterId || !terminalId || !profileId || !table?.id) {
+      console.warn("[CustomersModal] createOrder: məlumat çatışmır", { waiterId, terminalId, profileId, tableId: table?.id });
+      onHide();
+      return;
+    }
 
     setIsCreating(true);
     isCreatingRef.current = true;
