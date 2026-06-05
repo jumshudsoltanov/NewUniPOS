@@ -7,6 +7,7 @@ import { getWaitersList } from "../../redux/Slices/WaitersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { useNavigate } from "react-router-dom";
 import CheckDetailModal from "./CheckDetailModal";
+import AdvancedFilterModal from "./AdvancedFilterModal";
 import { toast } from "sonner";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { computeOrderCardDisplayAmount } from "../../utils/orderDisplayTotal";
@@ -126,6 +127,11 @@ const Checks = () => {
   const [filterHall, setFilterHall] = useState("");
   const [filterTable, setFilterTable] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [sortOrder, setSortOrder] = useState("");
+  const [filterPaymentMethod, setFilterPaymentMethod] = useState("");
+  const [filterDifference, setFilterDifference] = useState("");
+  const [filterTaxSent, setFilterTaxSent] = useState("");
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   const profileId = loginedProfileData?.data?.profile?.id;
 
@@ -356,13 +362,68 @@ const Checks = () => {
       const statusNum = Number(filterStatus);
       orders = orders.filter((o) => Number(o.status) === statusNum);
     }
+    // Payment method filter
+    if (filterPaymentMethod) {
+      const pmId = Number(filterPaymentMethod);
+      orders = orders.filter((o) =>
+        o.order_payments?.some((p) => Number(p.payment_method_id) === pmId)
+      );
+    }
+    // Difference (balance) filter
+    if (filterDifference) {
+      orders = orders.filter((o) => {
+        const total = computeOrderCardDisplayAmount(o);
+        const paid = (o.order_payments || []).reduce((s, p) => s + Number(p.amount || 0), 0);
+        const diff = total - paid;
+        if (filterDifference === "zero") return Math.abs(diff) < 0.01;
+        if (filterDifference === "positive") return diff > 0.01;
+        if (filterDifference === "negative") return diff < -0.01;
+        return true;
+      });
+    }
+    // Tax sent filter
+    if (filterTaxSent) {
+      orders = orders.filter((o) => {
+        if (filterTaxSent === "sent") return Number(o.is_synced) === 1;
+        if (filterTaxSent === "not_sent") return Number(o.is_synced) !== 1;
+        return true;
+      });
+    }
+    // Sort
+    if (sortOrder) {
+      orders = [...orders].sort((a, b) => {
+        if (sortOrder === "id_asc") return Number(a.id || 0) - Number(b.id || 0);
+        if (sortOrder === "id_desc") return Number(b.id || 0) - Number(a.id || 0);
+        if (sortOrder === "amount_asc") return computeOrderCardDisplayAmount(a) - computeOrderCardDisplayAmount(b);
+        if (sortOrder === "amount_desc") return computeOrderCardDisplayAmount(b) - computeOrderCardDisplayAmount(a);
+        if (sortOrder === "date_asc") return new Date(a.start_date) - new Date(b.start_date);
+        if (sortOrder === "date_desc") return new Date(b.start_date) - new Date(a.start_date);
+        return 0;
+      });
+    }
     return orders;
-  }, [currentDisplayOrders, loginedWaiter?.data, activeTab, filterStatus]);
+  }, [
+    currentDisplayOrders, loginedWaiter?.data, activeTab, filterStatus,
+    filterPaymentMethod, filterDifference, filterTaxSent, sortOrder,
+  ]);
 
   const totalAmount = useMemo(
     () => filteredDisplayOrders.reduce((sum, o) => sum + computeOrderCardDisplayAmount(o), 0),
     [filteredDisplayOrders],
   );
+
+  const handleFilterApply = useCallback((f) => {
+    setSearchId(f.searchId || "");
+    setFilterSaleType(f.filterSaleType || "");
+    setFilterWaiter(f.filterWaiter || "");
+    setFilterHall(f.filterHall || "");
+    setFilterTable(f.filterTable || "");
+    setFilterStatus(f.filterStatus || "");
+    setSortOrder(f.sortOrder || "");
+    setFilterPaymentMethod(f.filterPaymentMethod || "");
+    setFilterDifference(f.filterDifference || "");
+    setFilterTaxSent(f.filterTaxSent || "");
+  }, []);
 
   const formatDisplayDate = (date) => {
     if (!date) return "";
@@ -485,8 +546,7 @@ const Checks = () => {
         </button>
       </div>
 
-      {/* Date Filter Bar & Advanced Filters - Show for ALL tabs, but hide Date part for 'open' tab if not needed */}
-      {/* Date Filter Bar & Advanced Filters - Show for ALL tabs, but hide Date part for 'open' tab if not needed */}
+      {/* Filter Bar */}
       {(activeTab !== "offline") && (
         <div className="checks-filter-container">
           <div className="checks-advanced-filters">
@@ -497,62 +557,16 @@ const Checks = () => {
               onChange={(e) => setSearchId(e.target.value)}
               className="filter-input-id"
             />
-            <Form.Select
-              value={filterSaleType}
-              onChange={(e) => setFilterSaleType(e.target.value)}
-              className="filter-select"
+            <button
+              className="filter-modal-btn"
+              onClick={() => setShowFilterModal(true)}
             >
-              <option value="">Satış üsulu</option>
-              <option value="dine_in">Restoranda</option>
-              <option value="takeaway">Gəl götür</option>
-              <option value="delivery">Çatdırılma</option>
-            </Form.Select>
-
-            {Number(loginedWaiter?.data?.can_edit_all_checks) !== 1 && (
-              <Form.Select
-                value={filterWaiter}
-                onChange={(e) => setFilterWaiter(e.target.value)}
-                className="filter-select"
-              >
-                <option value="">Əməkdaş</option>
-                {waiters.map(w => (
-                  <option key={w.id} value={w.id}>{w.name}</option>
-                ))}
-              </Form.Select>
-            )}
-
-            <Form.Select
-              value={filterHall}
-              onChange={(e) => { setFilterHall(e.target.value); setFilterTable(""); }}
-              className="filter-select"
-            >
-              <option value="">Zal</option>
-              {halls.map(h => (
-                <option key={h.id} value={h.id}>{h.name}</option>
-              ))}
-            </Form.Select>
-
-            <Form.Select
-              value={filterTable}
-              onChange={(e) => setFilterTable(e.target.value)}
-              className="filter-select"
-              disabled={!filterHall}
-            >
-              <option value="">Masa</option>
-              {tables.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </Form.Select>
-
-            <Form.Select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Status</option>
-              <option value="2">Bağlanmış</option>
-              <option value="3">Silinib</option>
-            </Form.Select>
+              <i className="bi bi-funnel-fill me-1"></i>
+              Filter
+              {(filterSaleType || filterWaiter || filterHall || filterStatus || filterPaymentMethod || filterDifference || filterTaxSent || sortOrder) && (
+                <span className="filter-active-dot"></span>
+              )}
+            </button>
           </div>
 
           {(activeTab === "archive") && (
@@ -659,6 +673,28 @@ const Checks = () => {
         show={showModal}
         onClose={() => setShowModal(false)}
         order={selectedOrder}
+      />
+
+      {/* Advanced Filter Modal */}
+      <AdvancedFilterModal
+        show={showFilterModal}
+        onHide={() => setShowFilterModal(false)}
+        filters={{
+          searchId,
+          filterSaleType,
+          filterWaiter,
+          filterHall,
+          filterTable,
+          filterStatus,
+          sortOrder,
+          filterPaymentMethod,
+          filterDifference,
+          filterTaxSent,
+        }}
+        onApply={handleFilterApply}
+        onClear={handleFilterApply}
+        halls={halls}
+        tables={tables}
       />
     </Container>
   );

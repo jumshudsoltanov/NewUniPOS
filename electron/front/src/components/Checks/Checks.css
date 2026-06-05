@@ -876,3 +876,117 @@
     margin-top: 10px;
     color: #053796;
 }
+
+/* ── Filter Modal Button ── */
+.filter-modal-btn {
+    height: 40px;
+    padding: 0 20px;
+    border: 1.5px solid #dadce0;
+    border-radius: 8px;
+    background: #f8f9fa;
+    font-family: "Poppins", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: #3c4043;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+}
+
+.filter-modal-btn:hover {
+    background: #e8eaed;
+    border-color: #053796;
+    color: #053796;
+}
+
+.filter-active-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #053796;
+    display: inline-block;
+}
+
+/* ── Advanced Filter Modal ── */
+.advanced-filter-modal .modal-dialog {
+    max-width: 720px;
+}
+
+.advanced-filter-modal .modal-header {
+    background: #f8faff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 24px;
+}
+
+.advanced-filter-modal .modal-title {
+    font-family: "Poppins", sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.advanced-filter-modal .modal-title i {
+    color: #053796;
+    font-size: 18px;
+}
+
+.advanced-filter-modal .modal-body {
+    padding: 24px;
+}
+
+.advanced-filter-modal .modal-footer {
+    border-top: 1px solid #e2e8f0;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-label {
+    font-family: "Poppins", sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-group .form-control,
+.filter-group .form-select {
+    height: 42px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    font-size: 13px;
+    font-family: "Poppins", sans-serif;
+    color: #1e293b;
+}
+
+.filter-group .form-control:focus,
+.filter-group .form-select:focus {
+    border-color: #053796;
+    box-shadow: 0 0 0 3px rgba(5, 55, 150, 0.08);
+}
+
+@media (max-width: 576px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+}
