@@ -929,7 +929,7 @@ const Check = () => {
         // Refresh to get definitive server state
         const profileId = loginedProfileData?.data?.profile?.id;
         if (profileId) {
-          dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+          await dispatch(getActiveOrders({ profileId, silentRefresh: true }));
           // Hotel mode: refresh rooms to show updated balance on room card
           if (isHotelMode) {
             dispatch(fetchRooms(profileId));
@@ -1112,7 +1112,14 @@ const Check = () => {
     isExitingRef.current = true;
     const hadPendingProducts = products?.length > 0;
     const hadPendingDeletions = pendingDeletions?.length > 0;
-    const resultingItemCount = (currentOrder?.orders_items?.length || 0) - (pendingDeletions?.length || 0) + (products?.length || 0);
+    // Həqiqi quantity cəmi ilə hesabla — .length sayğacı qıraqları kəsirdi (count>1 olan məhsullar)
+    const currentItemSum = (currentOrder?.orders_items || []).reduce((sum, item) => sum + Number(item.count || 0), 0);
+    const deleteSum = (pendingDeletions || []).reduce((sum, del) => {
+      const qty = del.type === 'partial' ? Number(del.qty || 0) : Number(del.originalQty || 0);
+      return sum + qty;
+    }, 0);
+    const addSum = (products || []).reduce((sum, p) => sum + Number(p.quantity || 1), 0);
+    const resultingItemCount = currentItemSum - deleteSum + addSum;
     const profileHasTimer = Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1;
     const hasTimerOnTable = effectiveHourlyPrice > 0 && profileHasTimer;
     const isTimerActiveOrHasBalance =

@@ -462,6 +462,9 @@ const DevicesModal = ({ show, onHide }) => {
     const [posAutoLockEnabled, setPosAutoLockEnabled] = useState(() => {
         try { return localStorage.getItem("pos_auto_lock_enabled") === "1"; } catch { return false; }
     });
+    const [skipGuestCount, setSkipGuestCount] = useState(() => {
+        try { return localStorage.getItem("unipos_skip_guest_count") === "1"; } catch { return false; }
+    });
     const [posAutoLockSeconds, setPosAutoLockSeconds] = useState(() => {
         try {
             const s = localStorage.getItem("pos_auto_lock_seconds");
@@ -563,6 +566,13 @@ const DevicesModal = ({ show, onHide }) => {
     const handlePosAutoLockSecondsBlur = () => {
         if (!posAutoLockEnabled) return;
         persistPosAutoLock(true, posAutoLockSeconds);
+    };
+
+    const handleToggleSkipGuestCount = () => {
+        const next = !skipGuestCount;
+        setSkipGuestCount(next);
+        try { localStorage.setItem("unipos_skip_guest_count", next ? "1" : "0"); } catch {}
+        toast.success(next ? "Qonaq sayı sorğusu DEAKTİV (birbaşa 0)" : "Qonaq sayı sorğusu AKTİV");
     };
 
     useEffect(() => {
@@ -1507,6 +1517,23 @@ const DevicesModal = ({ show, onHide }) => {
                                         </select>
                                     </div>
                                 )}
+
+                                <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+                                    <h5 style={{ margin: '0 0 12px', color: '#1e293b', fontWeight: 600, fontSize: '14px' }}>Əlavə</h5>
+                                    <div className="settings-toggle-row">
+                                        <div className="settings-toggle-icon"><i className="bi bi-person-dash"></i></div>
+                                        <div className="settings-toggle-text">
+                                            <span className="settings-toggle-label">Qonaq sayını ləğv et</span>
+                                            <span className="settings-toggle-desc">Aktiv olduqda yeni masa yaradılarkən qonaq sayı soruşulmadan birbaşa 0 olaraq açılır.</span>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${skipGuestCount ? "active" : ""}`}
+                                            onClick={handleToggleSkipGuestCount}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         ) : activeTab === "display" ? (
                             <div className="display-settings">

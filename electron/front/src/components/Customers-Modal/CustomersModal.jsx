@@ -14,7 +14,7 @@ import { saveLog, deleteCheck, updateGuestCountOrder } from "../../redux/Slices/
 import { addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { preloadCheck } from "../../utils/preloadCheck";
 
-const CustomersModal = ({ show, onHide, table, selectedHall }) => {
+const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
   const [guestCount, setGuestCount] = useState("0");
   const dispatch = useDispatch();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -41,6 +41,12 @@ const CustomersModal = ({ show, onHide, table, selectedHall }) => {
       setGuestCount("0");
     }
   }, [show]);
+
+  useEffect(() => {
+    if (show && autoCreate) {
+      createOrder();
+    }
+  }, [show, autoCreate]);
 
   const handleCancel = useCallback(() => {
     setGuestCount("0");

@@ -2964,6 +2964,15 @@ module.exports = {
         Math.max(total - discount + service, parseFloat(ord?.deposit || 0)) +
         Number(ord?.delivery_fee || 0);
 
+      // Son məhsul silinəndə (boş çek) — avtomatik status=3, admin panelə sync olunsun
+      const isEmptyCheck = allItems.length === 0;
+      const shouldAutoClose = isEmptyCheck && Number(ord?.print_count || 0) === 0;
+      if (isEmptyCheck && !shouldAutoClose) {
+        console.warn(
+          `[BATCH_DELETE_GUARD] Empty check ${orderId} NOT auto-closed — print_count=${ord?.print_count}`,
+        );
+      }
+
       await OrdersModel.update(
         {
           amount: total,
@@ -2971,6 +2980,7 @@ module.exports = {
           discount,
           service_charge: service,
           is_synced: 0,
+          ...(shouldAutoClose ? { status: 3, end_date: new Date() } : {}),
         },
         { where: { uuid: orderId }, transaction },
       );

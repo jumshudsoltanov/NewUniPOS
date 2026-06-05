@@ -1230,6 +1230,7 @@ const Tables = () => {
         onHide={() => setShowModal(false)}
         table={selectedTable}
         selectedHall={currentHallData}
+        autoCreate={localStorage.getItem("unipos_skip_guest_count") === "1"}
       />
 
       <OtherChecks
