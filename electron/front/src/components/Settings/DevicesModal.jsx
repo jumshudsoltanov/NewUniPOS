@@ -1802,13 +1802,13 @@ const DevicesModal = ({ show, onHide }) => {
                                         {localIp && localIp !== "Unknown" ? (
                                             <div className="qr-wrapper">
                                                 <QRCode
-                                                    value={localIp}
+                                                    value={`http://${localIp}:55667`}
                                                     size={window.innerHeight < 700 ? 140 : 180}
                                                     level="H"
                                                     style={{ height: "auto", maxWidth: "100%", margin: "0 auto" }}
                                                 />
                                                 <div className="ip-badge">
-                                                    IP: {localIp}
+                                                    {localIp}:55667
                                                 </div>
                                             </div>
                                         ) : (
