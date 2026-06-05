@@ -204,7 +204,11 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
   useEffect(() => {
     if (show && autoCreate && createOrderRef.current) {
       const t = setTimeout(() => {
-        if (createOrderRef.current) createOrderRef.current();
+        if (createOrderRef.current) {
+          createOrderRef.current().catch((e) => {
+            console.warn("[CustomersModal] autoCreate xeta:", e);
+          });
+        }
       }, 100);
       return () => clearTimeout(t);
     }
