@@ -114,7 +114,12 @@ const Check = () => {
   // Settings toolbar states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDragMode, setIsDragMode] = useState(false);
-  const [customOrders, setCustomOrders] = useState({});
+  const [customOrders, setCustomOrders] = useState(() => {
+    try {
+      const saved = localStorage.getItem("unipos_category_orders");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const customOrdersRef = useRef({});
   const [tempCustomOrders, setTempCustomOrders] = useState(null);
   const [lockCheck, setLockCheck] = useState(false);
@@ -372,6 +377,13 @@ const Check = () => {
       dispatch(fetchRooms(pid));
     }
   }, [isHotelMode, loginedProfileData?.data?.profile?.id, rooms.length, dispatch]);
+
+  // Kateqoriya sırasını localStorage-da saxla ki, mount itirəndə qayıtmasın
+  useEffect(() => {
+    customOrdersRef.current = customOrders;
+    try { localStorage.setItem("unipos_category_orders", JSON.stringify(customOrders)); }
+    catch {}
+  }, [customOrders]);
 
   // ── Barkod skaner dinləyicisi ──
   const barcodeBufferRef = useRef("");
@@ -2875,8 +2887,7 @@ const Check = () => {
                                 }
                                 setIsDragMode(false);
                                 setTempCustomOrders(null);
-                                customOrdersRef.current = {};
-                                setCustomOrders({});
+                                // customOrders təmizlənmir — localStorage-da saxlanır
                                 toast.dismiss(loadingToast);
                                 addNotification("Sıralama Dəyişdirildi", "Menyu sıralaması yeniləndi.");
                                 toast.success("Sıralama uğurla yadda saxlanıldı!");
