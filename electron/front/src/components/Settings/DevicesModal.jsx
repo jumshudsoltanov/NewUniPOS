@@ -33,7 +33,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
     return (
         <div>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div className="printer-detail-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <button onClick={onBack} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}>
                         <i className="bi bi-chevron-left"></i>
@@ -47,7 +47,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                         </div>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <div className="printer-detail-actions" style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                     <button className="btn-test" onClick={() => {
                         if (isNetwork && printer.ip) onTestPrint(null, printer.ip, printer.port || 9100);
                         else onTestPrint(printer.usb_name || printer.local_name || printer.name);

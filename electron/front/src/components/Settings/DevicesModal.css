@@ -1244,6 +1244,62 @@ textarea.printer-input {
         min-width: 100%;
     }
 
+    .printer-detail-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+    }
+    .printer-detail-header .printer-detail-actions {
+        width: 100%;
+        justify-content: stretch !important;
+    }
+    .printer-detail-header .printer-detail-actions button {
+        flex: 1;
+        min-height: 44px;
+        font-size: 14px;
+    }
+    .ip-port-row {
+        flex-direction: column;
+    }
+    .connection-toggle {
+        flex-wrap: wrap;
+    }
+    .connection-toggle .conn-btn {
+        flex: 1;
+        min-width: 80px;
+        min-height: 44px;
+        font-size: 13px;
+    }
+    .network-scan-results {
+        max-height: 150px;
+    }
+    .settings-inputs-grid {
+        flex-direction: column;
+    }
+    .settings-chip-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .settings-chip-group {
+        flex-wrap: wrap;
+    }
+    .settings-chip-group .settings-chip {
+        flex: 1;
+        min-width: 60px;
+        text-align: center;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .settings-font-row {
+        flex-wrap: wrap;
+    }
+    .settings-font-row .font-chip {
+        flex: 1;
+        min-width: 80px;
+        min-height: 44px;
+    }
     .display-config-card {
         padding: 15px;
     }
