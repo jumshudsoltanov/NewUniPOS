@@ -29,9 +29,15 @@
       if (e.scale && e.scale !== 1) e.preventDefault();
     }, { passive: false });
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
-    // iOS: body status bar altindan baslasin, header da duzgun olsun
+    // iOS: body status bar altindan baslasin
     (function() {
       if (!/iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+      // env() islemirse birbasa px ile set et
+      var top = 44; // default notch
+      if (screen.height < 800) top = 20; // no notch (SE, 8)
+      var s = document.createElement('style');
+      s.textContent = 'body.ios-safe{top:' + top + 'px!important;height:calc(100dvh - ' + top + 'px)!important}';
+      document.head.appendChild(s);
       document.body.classList.add('ios-safe');
     })();
   </script>
