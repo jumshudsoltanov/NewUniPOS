@@ -198,7 +198,6 @@ const Settings = () => {
       icon: <i className="bi bi-file-earmark-text"></i>,
       permission: Number(loginedWaiter?.data?.can_create_report) === 1,
       onClick: () => setShowReportModal(true),
-      hideOnMobile: true,
     },
     {
       id: "sales-shift",
@@ -214,7 +213,6 @@ const Settings = () => {
       label: "Əməliyyat əlavə et",
       icon: <i className="bi bi-plus-square"></i>,
       highlight: true,
-      hideOnMobile: true,
     },
     {
       id: "customers",
@@ -223,7 +221,6 @@ const Settings = () => {
       highlight: true,
       permission: Number(loginedWaiter?.data?.can_view_customers) === 1,
       onClick: () => setShowCustomersModal(true),
-      hideOnMobile: true,
     },
     {
       id: "archive",
@@ -233,14 +230,12 @@ const Settings = () => {
         Number(loginedWaiter?.data?.can_view_archived_checks) === 1 ||
         Number(loginedWaiter?.data?.can_edit_all_checks) === 1,
       onClick: () => navigate("/checks"),
-      hideOnMobile: true,
     },
     {
       id: "devices",
       label: "Cihazlar",
       icon: <i className="bi bi-laptop"></i>,
       highlight: true,
-      hideOnMobile: true,
       onClick: () => setShowDevicesModal(true),
       permission:
         Number(loginedWaiter?.data?.can_access_settings) === 1 &&
