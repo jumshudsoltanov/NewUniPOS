@@ -414,31 +414,34 @@ const Tables = () => {
         }
         const skipGuest = localStorage.getItem("unipos_skip_guest_count") === "1";
         if (skipGuest) {
-          // Birbaşa yarat — modal açılmadan
           const waiterId = loginedWaiter?.data?.id;
           const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
           const profileId = loginedProfileData?.data?.profile?.id;
           if (waiterId && terminalId && profileId && table?.id) {
             const generatedUuid = crypto.randomUUID();
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
-            const sv = currentHallData?.service_fee !== 0
-              ? Number(currentHallData?.service_fee)
-              : Number(loginedProfileData?.data?.profile?.service_fee);
+            const hallObj = currentHallData || {};
+            const sv = Number(hallObj.service_fee || loginedProfileData?.data?.profile?.service_fee || 0);
             const optimisticOrder = {
               uuid: generatedUuid, id: null, waiter_id: waiterId, profile_id: profileId,
               terminal_id: terminalId, sale_type: "dine_in", sale_type_name: "Restoranda",
               table_id: table.id, guest_count: 0, status: 1, is_selected: 1,
               orders_items: [],
-              table: { id: table.id, name: table.name, hall: { name: currentHallData?.name } },
-              table_name: table.name, hall_name: currentHallData?.name,
+              table: { id: table.id, name: table.name, hall: { name: hallObj.name || "" } },
+              table_name: table.name, hall_name: hallObj.name || "",
               amount: 0, total: 0, start_date: new Date().toISOString(),
               created_at: new Date().toISOString(), discount: 0,
-              service_value: sv || 0, service_type: sv ? "percent" : null,
+              service_value: sv, service_type: sv ? "percent" : null,
               waiter: { id: waiterId, name: waiterName }
             };
-            dispatch(addOrderOptimistic(optimisticOrder));
-            dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
-            navigate(`/check/${generatedUuid}?tableId=${table.id}`);
+            try {
+              dispatch(addOrderOptimistic(optimisticOrder));
+              dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
+              navigate(`/check/${generatedUuid}?tableId=${table.id}`);
+            } catch (e) {
+              console.error("Order yaratma xetasi:", e);
+              toast.error("Sifariş yaratmaq mümkün olmadı");
+            }
           } else {
             toast.error("Məlumat çatışmır, zəhmət olmasa səhifəni yeniləyin.");
           }
