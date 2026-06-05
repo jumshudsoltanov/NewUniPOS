@@ -373,10 +373,31 @@ const Check = () => {
     }
   }, [isHotelMode, loginedProfileData?.data?.profile?.id, rooms.length, dispatch]);
 
-  // Ref-i customOrders ilə sinxron saxla
+  // Menu datası dəyişəndə customOrders boşdursa ordering field-indən qur
   useEffect(() => {
-    customOrdersRef.current = customOrders;
-  }, [customOrders]);
+    if (!menuDataWithCategories?.data && !menuDataWithGeneralCategories?.data) return;
+    if (Object.keys(customOrdersRef.current).length > 0) return;
+
+    const newOrders = {};
+    // ROOT: general categories + standalone categories ordering ilə
+    const genCats = menuDataWithGeneralCategories?.data || [];
+    const cats = (menuDataWithCategories?.data || []).filter(
+      (c) => !c.general_categorie_id || c.general_categorie_id === 0,
+    );
+    const rootItems = [...genCats, ...cats].sort((a, b) => (a.ordering ?? 999999) - (b.ordering ?? 999999));
+    newOrders["ROOT"] = rootItems.map((i) => i.id);
+
+    // General categories altındakı kateqoriyalar
+    for (const gc of genCats) {
+      const gcCats = (menuDataWithCategories?.data || []).filter(
+        (c) => Number(c.general_categorie_id) === Number(gc.id),
+      ).sort((a, b) => (a.ordering ?? 999999) - (b.ordering ?? 999999));
+      if (gcCats.length > 0) newOrders[`GEN_${gc.id}`] = gcCats.map((c) => c.id);
+    }
+
+    setCustomOrders(newOrders);
+    customOrdersRef.current = newOrders;
+  }, [menuDataWithCategories, menuDataWithGeneralCategories]);
 
   // ── Barkod skaner dinləyicisi ──
   const barcodeBufferRef = useRef("");

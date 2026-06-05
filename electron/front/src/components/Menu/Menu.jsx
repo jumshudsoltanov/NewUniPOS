@@ -423,9 +423,12 @@ const Menu = ({
     }
   };
 
-  // Apply custom ordering
+  // Apply custom ordering (from drag-drop) or fallback to server ordering field
   const applyOrder = useCallback((items, order) => {
-    if (!order || !Array.isArray(order) || order.length === 0) return items;
+    if (!order || !Array.isArray(order) || order.length === 0) {
+      // No custom order — use server-side ordering field (saved & synced across Master/Slave)
+      return [...items].sort((a, b) => (a.ordering ?? 999999) - (b.ordering ?? 999999));
+    }
 
     const orderMap = {};
     order.forEach((id, idx) => {
