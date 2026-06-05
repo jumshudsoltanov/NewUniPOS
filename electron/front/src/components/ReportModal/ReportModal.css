@@ -635,6 +635,15 @@
 
   .report-sidebar-scroll {
     padding: 12px 14px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .report-content {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .report-sidebar-footer {
+    flex-shrink: 0;
   }
 
   .report-sidebar .form-label {
