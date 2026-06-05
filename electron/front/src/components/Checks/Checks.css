@@ -742,8 +742,11 @@
 
 .calendar-day.today {
     border: 2px solid #053796;
-    /* Brand Color */
     color: #053796;
+}
+.calendar-day.selected.today {
+    border: 2px solid #fff;
+    color: #fff;
 }
 
 .calendar-day.empty {
