@@ -3,6 +3,7 @@ import { Modal } from "react-bootstrap";
 import "./NewItemsModal.css";
 import ProductCommentTagsModal from "../ProductCommentTagsModal/ProductCommentTagsModal";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
+import { t } from "../../utils/translations";
 
 const getMergeKey = (item) => {
     const prodId = item.product_id || item.id;
@@ -288,7 +289,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
             backdrop="static"
         >
             <div className="new-items-header">
-                <span className="new-items-title">Çap oluna bilən şöbələr</span>
+                <span className="new-items-title">{t("cap_oluna_bilen_sobeler")}</span>
                 <button className="new-items-close-btn" onClick={onClose}>
                     <i className="bi bi-x-lg"></i>
                 </button>
@@ -299,7 +300,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                     <div key={dept} className="new-items-dept-section">
                         <div className="new-items-dept-header">
                             <span className="dept-name">{dept}</span>
-                            <span className="dept-action">Şərh yaz</span>
+                            <span className="dept-action">{t("serh_yaz")}</span>
                         </div>
 
                         <div className="new-items-list">
@@ -335,14 +336,14 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                     <button
                                                         className="item-action-btn tag-btn"
                                                         onClick={() => { setTagsModalItem(item); setTagsModalPortion(0); }}
-                                                        title="Şərh seç"
+                                                        title={t("serh_sec")}
                                                     >
                                                         <i className="bi bi-tag-fill"></i>
                                                     </button>
                                                     <button
                                                         className={`item-action-btn edit-btn ${openComments[item.mergedIndex] ? 'active' : ''}`}
                                                         onClick={() => toggleComment(item.mergedIndex, -1)}
-                                                        title="Şərh yaz"
+                                                        title={t("serh_yaz")}
                                                     >
                                                         <i className="bi bi-pencil"></i>
                                                     </button>
@@ -381,14 +382,14 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                                     <button
                                                                         className="item-action-btn tag-btn mod-action-btn"
                                                                         onClick={() => setTagsModalMod({ item, modId: mod.id || modIdx, modName: mod.name, modKey })}
-                                                                        title="Şərh seç"
+                                                                        title={t("serh_sec")}
                                                                     >
                                                                         <i className="bi bi-tag-fill"></i>
                                                                     </button>
                                                                     <button
                                                                         className={`item-action-btn edit-btn mod-action-btn ${isModEditing ? 'active' : ''}`}
                                                                         onClick={() => setOpenModComments(prev => ({ ...prev, [modKey]: !prev[modKey] }))}
-                                                                        title="Şərh yaz"
+                                                                        title={t("serh_yaz")}
                                                                     >
                                                                         <i className="bi bi-pencil"></i>
                                                                     </button>
@@ -446,7 +447,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                                 value={commentVal}
                                                                 onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, 0)}
                                                                 onFocus={() => setActiveInput({ mergedIndex: item.mergedIndex, portionIndex: 0 })}
-                                                                placeholder="Açıqlama"
+                                                                placeholder={t("aciqlama_1")}
                                                                 rows={2}
                                                                 autoFocus
                                                             />
@@ -478,8 +479,8 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                                     <button type="button" className="counter-btn" onClick={() => setGroupQty(item.mergedIndex, gIdx, 1)} disabled={(g.qty || 1) >= portions - (groups.length - 1)}>+</button>
                                                                 </div>
                                                                 <div className="portion-actions">
-                                                                    <button className="item-action-btn tag-btn" onClick={() => { setTagsModalItem(item); setTagsModalPortion(gIdx); }} title="Şərh seç"><i className="bi bi-tag-fill"></i></button>
-                                                                    <button className={`item-action-btn edit-btn ${isEditing ? 'active' : ''}`} onClick={() => toggleComment(item.mergedIndex, gIdx)} title="Şərh yaz"><i className="bi bi-pencil"></i></button>
+                                                                    <button className="item-action-btn tag-btn" onClick={() => { setTagsModalItem(item); setTagsModalPortion(gIdx); }} title={t("serh_sec")}><i className="bi bi-tag-fill"></i></button>
+                                                                    <button className={`item-action-btn edit-btn ${isEditing ? 'active' : ''}`} onClick={() => toggleComment(item.mergedIndex, gIdx)} title={t("serh_yaz")}><i className="bi bi-pencil"></i></button>
                                                                     {groups.length > 1 && <button className="item-action-btn delete-btn" onClick={() => removeGroup(item.mergedIndex, gIdx)} title="Sil"><i className="bi bi-x-lg"></i></button>}
                                                                 </div>
                                                             </div>
@@ -488,7 +489,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                             ) : null}
                                                             {isEditing && (
                                                                 <div className="item-comment-section">
-                                                                    <textarea className="item-comment-input" value={dispVal} onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, gIdx)} onFocus={() => setActiveInput({ mergedIndex: item.mergedIndex, portionIndex: gIdx })} placeholder="Açıqlama" rows={1} autoFocus />
+                                                                    <textarea className="item-comment-input" value={dispVal} onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, gIdx)} onFocus={() => setActiveInput({ mergedIndex: item.mergedIndex, portionIndex: gIdx })} placeholder={t("aciqlama_1")} rows={1} autoFocus />
                                                                 </div>
                                                             )}
                                                         </div>
@@ -496,8 +497,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                 })}
                                                 {canAdd && (
                                                     <button type="button" className="add-group-btn" onClick={() => addGroup(item.mergedIndex)}>
-                                                        <i className="bi bi-plus-lg"></i> Böl
-                                                    </button>
+                                                        <i className="bi bi-plus-lg"></i>{t("bol")}</button>
                                                 )}
                                             </div>
                                         );
@@ -512,7 +512,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                 {(items.length === 0 && (!pendingDeletions || pendingDeletions.length === 0)) && (
                     <div className="new-items-empty">
                         <i className="bi bi-inbox"></i>
-                        <p>Hazırda yeni məhsul yoxdur</p>
+                        <p>{t("hazirda_yeni_mehsul_yoxdur")}</p>
                     </div>
                 )}
 
@@ -531,7 +531,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                     return (
                         <div className="new-items-dept-section mt-4">
                             <div className="new-items-dept-header">
-                                <span className="dept-name">Silinəcək məhsullar</span>
+                                <span className="dept-name">{t("silinecek_mehsullar")}</span>
                             </div>
                             <div className="new-items-list">
                                 {groupedList.map((item, idx) => (
@@ -558,7 +558,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
             <div className="new-items-footer">
                 <button className="send-all-btn" onClick={handleSendAndClose}>
                     <i className="bi bi-send"></i>
-                    <span>Göndər</span>
+                    <span>{t("send")}</span>
                 </button>
             </div>
         </Modal>

@@ -11,6 +11,7 @@ import { useCallback, useMemo } from "react";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
+import { t } from "../../utils/translations";
 
 const TagModal = ({ show, onClose, order }) => {
   const [tag, setTag] = useState("");
@@ -68,7 +69,7 @@ const TagModal = ({ show, onClose, order }) => {
         className="text-white"
         style={{ backgroundColor: "#4F85F4" }}
       >
-        <Modal.Title>Qəbz etiketi</Modal.Title>
+        <Modal.Title>{t("qebz_etiketi")}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <InputGroup className="mb-3">

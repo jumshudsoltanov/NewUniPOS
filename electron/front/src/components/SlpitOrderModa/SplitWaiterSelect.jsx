@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { getWaitersList } from "../../redux/Slices/WaitersSlice";
+import { t } from "../../utils/translations";
 import "../Waiters/Waiters.css"; // Reuse existing styles
 
 const SplitWaiterSelect = ({ show, onClose, onSelect }) => {
@@ -59,7 +60,7 @@ const SplitWaiterSelect = ({ show, onClose, onSelect }) => {
                                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                             </svg>
                         </div>
-                        <span className="header-title">Əməkdaş seç</span>
+                        <span className="header-title">{t("emekdas_sec")}</span>
                     </div>
                     <button className="close-btn" onClick={onClose}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -76,7 +77,7 @@ const SplitWaiterSelect = ({ show, onClose, onSelect }) => {
                         <input
                             type="text"
                             className="waiters-search-input"
-                            placeholder="Əməkdaş axtar"
+                            placeholder={t("emekdas_axtar")}
                             value={searchTerm || ""}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -112,7 +113,7 @@ const SplitWaiterSelect = ({ show, onClose, onSelect }) => {
                     </div>
 
                     {/* Apply Button */}
-                    <button className="waiter-apply-btn" onClick={handleApply}>Tətbiq et</button>
+                    <button className="waiter-apply-btn" onClick={handleApply}>{t("apply")}</button>
                 </div>
             </div>
         </Modal>

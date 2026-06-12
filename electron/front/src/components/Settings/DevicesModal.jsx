@@ -14,6 +14,7 @@ import {
     getPrinterDiagnosticLabel,
     getPrinterKey,
 } from "../../utils/printerDiagnostics";
+import { t } from "../../utils/translations";
 import "./DevicesModal.css";
 
 
@@ -52,7 +53,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                         if (isNetwork && printer.ip) onTestPrint(null, printer.ip, printer.port || 9100);
                         else onTestPrint(printer.usb_name || printer.local_name || printer.name);
                     }}>Test çapı</button>
-                    <button className="btn-save-printer" onClick={onSave}>Yadda saxla</button>
+                    <button className="btn-save-printer" onClick={onSave}>{t("save")}</button>
                 </div>
             </div>
 
@@ -74,7 +75,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                     </div>
 
                     <div className="printer-form-group">
-                        <label>Görünən adı</label>
+                        <label>{t("gorunen_adi")}</label>
                         <input className="printer-input" value={printer.local_name || ""} onChange={e => updatePrinterField('local_name', e.target.value)} />
                     </div>
 
@@ -86,21 +87,19 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                     onClick={onRefreshSystemPrinters}
                                     disabled={systemPrintersLoading}
                                     style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '3px 10px', fontSize: '12px', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px' }}
-                                    title="Sistem printerlərini yenilə"
+                                    title={t("sistem_printerlerini_yenile")}
                                 >
                                     <i className={`bi bi-arrow-clockwise${systemPrintersLoading ? ' spin' : ''}`}></i>
                                     {systemPrintersLoading ? 'Yüklənir...' : 'Yenilə'}
                                 </button>
                             </div>
                             <select className="printer-select" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value)}>
-                                <option value="">— Seçilməyib —</option>
+                                <option value="">{t("secilmeyib_1")}</option>
                                 {systemPrinters.map(sp => <option key={sp.name} value={sp.name}>{sp.name}</option>)}
                             </select>
                             {systemPrinters.length === 0 && !systemPrintersLoading && (
                                 <small style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                                    <i className="bi bi-exclamation-circle" style={{ marginRight: '4px' }}></i>
-                                    Windows-da printer tapılmadı. Printerin qurulduğunu yoxlayın (Windows → Printerlər).
-                                </small>
+                                    <i className="bi bi-exclamation-circle" style={{ marginRight: '4px' }}></i>{t("windowsda_printer_tapilmadi_printerin_quruldugunu_yoxlayin_windows_→_printerler")}</small>
                             )}
                         </div>
                     ) : ct === 'com' ? (
@@ -110,35 +109,33 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                             {comPorts && comPorts.length > 0 ? (
                                 <>
                                     <select className="printer-select" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value)}>
-                                        <option value="">— Port seçin —</option>
+                                        <option value="">{t("port_secin")}</option>
                                         {comPorts.map(p => <option key={p} value={p}>{p}</option>)}
                                     </select>
                                     {printer.usb_name && !/^COM\d+$/i.test(printer.usb_name) && (
-                                        <small style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                                            ⚠ Yuxarıdan COM port seçin (məs. COM3) — hal-hazırda yanlış dəyər var
-                                        </small>
+                                        <small style={{ color: '#ef4444', fontSize: '12px', marginTop: '4px', display: 'block' }}>{t("⚠_yuxaridan_com_port_secin_mes_com3_halhazirda_yanlis_deyer_var")}</small>
                                     )}
                                     {(!printer.usb_name || /^COM\d+$/i.test(printer.usb_name)) && (
-                                        <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>Yuxarıda avtomatik tapılan portlar</small>
+                                        <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>{t("yuxarida_avtomatik_tapilan_portlar")}</small>
                                     )}
                                 </>
                             ) : (
                                 <>
                                     <input className="printer-input" placeholder="COM3" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value.toUpperCase())} />
-                                    <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>Sistem COM portu tapılmadı — əl ilə daxil edin (məs. COM3)</small>
+                                    <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>{t("sistem_com_portu_tapilmadi_el_ile_daxil_edin_mes_com3")}</small>
                                 </>
                             )}
                         </div>
                         <div className="printer-form-group">
-                            <label>Baud Rate (Sürət)</label>
+                            <label>{t("baud_rate_suret")}</label>
                             <select className="printer-select" value={printer.baud_rate || "9600"} onChange={e => updatePrinterField('baud_rate', e.target.value)}>
                                 <option value="9600">9600 (standart)</option>
                                 <option value="19200">19200</option>
                                 <option value="38400">38400</option>
                                 <option value="57600">57600</option>
-                                <option value="115200">115200 (sürətli)</option>
+                                <option value="115200">{t("115200_suretli")}</option>
                             </select>
-                            <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>Printer baud rate ilə uyğun olmalıdır. Əgər yavaş və ya qəribə çap edirsə — 115200 sınayın.</small>
+                            <small style={{ color: '#94a3b8', fontSize: '12px', marginTop: '4px', display: 'block' }}>{t("printer_baud_rate_ile_uygun_olmalidir_eger_yavas_ve_ya_qeribe_cap_edirse_115200_sinayin")}</small>
                         </div>
                         </>
                     ) : (
@@ -148,7 +145,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                     <label>IP Address</label>
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                         <input className="printer-input" placeholder="192.168.1.100" value={printer.ip || ""} onChange={e => { updatePrinterField('ip', e.target.value); setPingStatus(null); }} />
-                                        <button className={`ping-btn ${pingStatus || ''}`} onClick={handlePing} disabled={!printer.ip || pingStatus === 'checking'} title="Bağlantını yoxla">
+                                        <button className={`ping-btn ${pingStatus || ''}`} onClick={handlePing} disabled={!printer.ip || pingStatus === 'checking'} title={t("baglantini_yoxla")}>
                                             {pingStatus === 'checking' && <i className="bi bi-arrow-repeat spin"></i>}
                                             {pingStatus === 'online' && <i className="bi bi-check-circle-fill"></i>}
                                             {pingStatus === 'offline' && <i className="bi bi-x-circle-fill"></i>}
@@ -164,9 +161,9 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
 
                             <div className="network-scan-section">
                                 <div className="network-scan-header">
-                                    <span className="network-scan-label">Şəbəkədə tap</span>
+                                    <span className="network-scan-label">{t("sebekede_tap")}</span>
                                     <button className={`network-scan-btn ${networkScanning ? 'scanning' : ''}`} onClick={onScan} disabled={networkScanning}>
-                                        {networkScanning ? <><i className="bi bi-arrow-repeat spin"></i> Axtarılır...</> : <><i className="bi bi-wifi"></i> Axtar</>}
+                                        {networkScanning ? <><i className="bi bi-arrow-repeat spin"></i>{t("axtarilir")}</> : <><i className="bi bi-wifi"></i> Axtar</>}
                                     </button>
                                 </div>
                                 {networkScanResults.length > 0 && (
@@ -185,7 +182,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
 
                             {/* Çap növü: Raster (default) vs Windows Driver */}
                             <div style={{ padding: '12px 14px', background: '#f8faff', border: '1px solid #e0e9ff', borderRadius: 10 }}>
-                                <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', marginBottom: 10 }}>Çap növü</div>
+                                <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', marginBottom: 10 }}>{t("cap_novu")}</div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     {/* Raster seçimi */}
                                     {(() => {
@@ -193,8 +190,8 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isRaster ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isRaster ? '#eff6ff' : '#fff' }}>
                                                 <input type="radio" name={`ptype_${printer.id}`} checked={isRaster} onChange={() => updatePrinterField('usb_name', 'RASTER')} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
                                                 <div>
-                                                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>Tam dizayn çapı (Raster) <span style={{ fontSize: 11, background: '#dcfce7', color: '#16a34a', padding: '1px 7px', borderRadius: 20, marginLeft: 4 }}>Tövsiyə</span></div>
-                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>HTML çek dizaynı şəkil kimi çap olunur. Windows driver lazım deyil, birbaşa IP-yə göndərilir.</div>
+                                                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{t("tam_dizayn_capi_raster")}<span style={{ fontSize: 11, background: '#dcfce7', color: '#16a34a', padding: '1px 7px', borderRadius: 20, marginLeft: 4 }}>{t("tovsiye")}</span></div>
+                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{t("html_cek_dizayni_sekil_kimi_cap_olunur_windows_driver_lazim_deyil_birbasa_ipye_gonderilir")}</div>
                                                 </div>
                                             </label>);
                                     })()}
@@ -204,8 +201,8 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isWin ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isWin ? '#eff6ff' : '#fff' }}>
                                                 <input type="radio" name={`ptype_${printer.id}`} checked={!!isWin} onChange={() => { const autoName = printer.ip ? `UNIPOS_${String(printer.ip).replace(/\./g, '_')}` : (systemPrinters[0]?.name || 'UNIPOS_PRINTER'); updatePrinterField('usb_name', autoName); }} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
                                                 <div>
-                                                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>Windows Driver vasitəsilə</div>
-                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>Bu printerin Windows-da qurulu olması lazımdır. Aşağıdan adını seçin.</div>
+                                                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{t("windows_driver_vasitesile")}</div>
+                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{t("bu_printerin_windowsda_qurulu_olmasi_lazimdir_asagidan_adini_secin")}</div>
                                                 </div>
                                             </label>);
                                     })()}
@@ -215,9 +212,9 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                             {/* Windows Driver seçilibsə — sistem printer adı + Qur düyməsi */}
                             {(printer.usb_name && printer.usb_name.trim() && printer.usb_name !== 'RASTER') ? (
                                 <div className="printer-form-group">
-                                    <label>Windows Sistem Printer Adı</label>
+                                    <label>{t("windows_sistem_printer_adi")}</label>
                                     <select className="printer-select" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value)}>
-                                        <option value="">— Printer seçin —</option>
+                                        <option value="">{t("printer_secin")}</option>
                                         {systemPrinters.map(sp => <option key={sp.name} value={sp.name}>{sp.name}</option>)}
                                     </select>
                                 </div>
@@ -249,13 +246,13 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                     </div>
 
                     {/* ── Toggles ── */}
-                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Çap parametrləri</div>
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>{t("cap_parametrleri")}</div>
                     {[
-                        { label: 'Səsli bildiriş', field: 'sound_notify', icon: 'bi-volume-up', desc: 'Yeni çap gəldikdə zəng səsi çıxarsın' },
-                        { label: 'Pul yeşiyi', field: 'cash_drawer', icon: 'bi-cash-stack', desc: 'Çapdan sonra pul yeşiyini avto aç' },
-                        { label: 'Pul yeşiyi (çapsız)', field: 'open_drawer_without_print', icon: 'bi-box-arrow-up', desc: 'Çap olmadan manual açıq trigger göndər' },
-                        { label: 'Sürətli çap', field: 'fast_print', icon: 'bi-lightning', desc: 'Görüntü keyfiyyətini azaldıb sürəti artır' },
-                        { label: 'Loqo çapı', field: 'print_logo', icon: 'bi-image', desc: profileLogo ? 'Çekin başında profil loqosu çap olunacaq' : 'Loqo admin paneldən profilə yüklənməlidir' },
+                        { label: t("sesli_bildiris"), field: 'sound_notify', icon: 'bi-volume-up', desc: 'Yeni çap gəldikdə zəng səsi çıxarsın' },
+                        { label: t("pul_yesiyi"), field: 'cash_drawer', icon: 'bi-cash-stack', desc: 'Çapdan sonra pul yeşiyini avto aç' },
+                        { label: t("pul_yesiyi_capsiz"), field: 'open_drawer_without_print', icon: 'bi-box-arrow-up', desc: 'Çap olmadan manual açıq trigger göndər' },
+                        { label: t("suretli_cap"), field: 'fast_print', icon: 'bi-lightning', desc: 'Görüntü keyfiyyətini azaldıb sürəti artır' },
+                        { label: t("loqo_capi"), field: 'print_logo', icon: 'bi-image', desc: profileLogo ? 'Çekin başında profil loqosu çap olunacaq' : 'Loqo admin paneldən profilə yüklənməlidir' },
                     ].map(item => (
                         <div key={item.field} className="settings-toggle-row">
                             <div className="settings-toggle-icon"><i className={`bi ${item.icon}`}></i></div>
@@ -279,12 +276,12 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                         alt="Profil loqosu"
                                         className="logo-preview-img"
                                     />
-                                    <span className="logo-preview-label">Bu loqo çekin üstündə çap olunacaq</span>
+                                    <span className="logo-preview-label">{t("bu_loqo_cekin_ustunde_cap_olunacaq")}</span>
                                 </>
                             ) : (
                                 <div className="logo-preview-empty">
                                     <i className="bi bi-exclamation-triangle"></i>
-                                    <span>Admin paneldən profil loqosu yükləyin</span>
+                                    <span>{t("admin_panelden_profil_loqosu_yukleyin")}</span>
                                 </div>
                             )}
                         </div>
@@ -295,23 +292,23 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                         <div className="settings-input-card">
                             <div className="settings-input-icon"><i className="bi bi-files"></i></div>
                             <div className="settings-input-body">
-                                <label>Nüsxə sayı</label>
+                                <label>{t("nusxe_sayi")}</label>
                                 <input className="printer-input" type="number" min="1" max="10" value={printer.copies ?? 1} onChange={e => updatePrinterField('copies', Number(e.target.value))} />
                             </div>
                         </div>
                         <div className="settings-input-card">
                             <div className="settings-input-icon"><i className="bi bi-circle-half"></i></div>
                             <div className="settings-input-body">
-                                <label>Çap sıxlığı (1–10)</label>
+                                <label>{t("cap_sixligi_110")}</label>
                                 <input className="printer-input" type="number" min="1" max="10" value={printer.darkness ?? 5} onChange={e => updatePrinterField('darkness', Number(e.target.value))} />
                             </div>
                         </div>
                     </div>
 
                     {/* ── Paper ── */}
-                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Kağız</div>
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>{t("kagiz")}</div>
                     <div className="settings-chip-row">
-                        <span className="settings-chip-label">Ölçü</span>
+                        <span className="settings-chip-label">{t("olcu")}</span>
                         <div className="settings-chip-group">
                             {['58', '80'].map(s => (
                                 <button key={s} className={`settings-chip ${(printer.paper_size || '80') === s ? 'active' : ''}`} onClick={() => updatePrinterField('paper_size', s)}>{s}mm</button>
@@ -329,26 +326,26 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                         <div className="settings-input-card">
                             <div className="settings-input-icon"><i className="bi bi-arrow-bar-down"></i></div>
                             <div className="settings-input-body">
-                                <label>Boş sətir (kəsimdən sonra)</label>
+                                <label>{t("bos_setir_kesimden_sonra")}</label>
                                 <input className="printer-input" type="number" min="0" max="20" value={printer.trailing_space ?? 0} onChange={e => updatePrinterField('trailing_space', Number(e.target.value))} />
                             </div>
                         </div>
                     </div>
 
                     {/* ── Cut mode ── */}
-                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Kəsim növü</div>
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>{t("kesim_novu")}</div>
                     <div className="settings-chip-group">
                         {[
-                            { val: 'full', label: 'Tam kəsim' },
-                            { val: 'partial', label: 'Qismən kəsim' },
-                            { val: 'none', label: 'Kəsim yox' },
+                            { val: 'full', label: t("tam_kesim") },
+                            { val: 'partial', label: t("qismen_kesim") },
+                            { val: 'none', label: t("kesim_yox") },
                         ].map(o => (
                             <button key={o.val} className={`settings-chip ${(printer.cut_mode || 'full') === o.val ? 'active' : ''}`} onClick={() => updatePrinterField('cut_mode', o.val)}>{o.label}</button>
                         ))}
                     </div>
 
                     {/* ── Encoding ── */}
-                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Kodlaşdırma</div>
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>{t("kodlasdirma")}</div>
                     <div className="settings-chip-group">
                         {[
                             { val: 'utf8', label: 'UTF-8' },
@@ -361,7 +358,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                     </div>
 
                     {/* ── Font ── */}
-                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Şrift</div>
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>{t("srift")}</div>
                     <div className="settings-font-row">
                         {['Arial', 'Courier New', 'Tahoma', 'Verdana', 'Consolas'].map(f => (
                             <button key={f} className={`font-chip ${(printer.font_family || 'Arial') === f ? 'active' : ''}`} onClick={() => updatePrinterField('font_family', f)} style={{ fontFamily: f }}>{f}</button>
@@ -369,12 +366,12 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                     </div>
 
                     {/* ── Header / Footer text ── */}
-                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Çek başlığı</div>
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>{t("cek_basligi")}</div>
                     <div className="settings-toggle-row" style={{ marginBottom: 8 }}>
                         <div className="settings-toggle-icon"><i className="bi bi-type-bold"></i></div>
                         <div className="settings-toggle-text">
-                            <span className="settings-toggle-label">Qalın şrift (bold)</span>
-                            <span className="settings-toggle-desc">Başlıq mətni bold çap olunsun</span>
+                            <span className="settings-toggle-label">{t("qalin_srift_bold")}</span>
+                            <span className="settings-toggle-desc">{t("basliq_metni_bold_cap_olunsun")}</span>
                         </div>
                         <div className={`premium-switch ${printer.bold_header ? 'active' : ''}`} onClick={() => updatePrinterField('bold_header', printer.bold_header ? 0 : 1)}>
                             <div className="switch-handle"></div>
@@ -383,15 +380,15 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                     <div className="settings-toggle-row" style={{ marginBottom: 12 }}>
                         <div className="settings-toggle-icon"><i className="bi bi-fonts"></i></div>
                         <div className="settings-toggle-text">
-                            <span className="settings-toggle-label">Böyük şrift (double-height)</span>
-                            <span className="settings-toggle-desc">Başlıq ESC/POS double-height rejimində</span>
+                            <span className="settings-toggle-label">{t("boyuk_srift_doubleheight")}</span>
+                            <span className="settings-toggle-desc">{t("basliq_esc/pos_doubleheight_rejiminde")}</span>
                         </div>
                         <div className={`premium-switch ${printer.double_height_header ? 'active' : ''}`} onClick={() => updatePrinterField('double_height_header', printer.double_height_header ? 0 : 1)}>
                             <div className="switch-handle"></div>
                         </div>
                     </div>
                     <div className="printer-form-group">
-                        <label>Başlıq mətni (çekin üstündə)</label>
+                        <label>{t("basliq_metni_cekin_ustunde")}</label>
                         <textarea
                             className="printer-input"
                             rows={2}
@@ -402,7 +399,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                         />
                     </div>
                     <div className="printer-form-group" style={{ marginTop: 10 }}>
-                        <label>Altlıq mətni (çekin altında)</label>
+                        <label>{t("altliq_metni_cekin_altinda")}</label>
                         <textarea
                             className="printer-input"
                             rows={2}
@@ -414,12 +411,12 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                     </div>
 
                     {/* ── Other ── */}
-                    <div className="settings-section-title" style={{ marginTop: '20px' }}>Digər</div>
+                    <div className="settings-section-title" style={{ marginTop: '20px' }}>{t("diger")}</div>
                     <div className="settings-toggle-row">
                         <div className="settings-toggle-icon"><i className="bi bi-arrow-down-up"></i></div>
                         <div className="settings-toggle-text">
-                            <span className="settings-toggle-label">Çevrilmiş çap (180°)</span>
-                            <span className="settings-toggle-desc">Çeki baş-aşağı çap et</span>
+                            <span className="settings-toggle-label">{t("cevrilmis_cap_180°")}</span>
+                            <span className="settings-toggle-desc">{t("ceki_basasagi_cap_et")}</span>
                         </div>
                         <div className={`premium-switch ${printer.rotate_180 ? 'active' : ''}`} onClick={() => updatePrinterField('rotate_180', printer.rotate_180 ? 0 : 1)}>
                             <div className="switch-handle"></div>
@@ -537,9 +534,9 @@ const DevicesModal = ({ show, onHide }) => {
             } else {
                 localStorage.setItem(key, v);
             }
-            toast.success("Kassa çap seçimi yadda saxlanıldı");
+            toast.success(t("kassa_cap_secimi_yadda_saxlanildi"));
         } catch {
-            toast.error("Yadda saxlanmadı");
+            toast.error(t("yadda_saxlanmadi"));
         }
     };
 
@@ -681,7 +678,7 @@ const DevicesModal = ({ show, onHide }) => {
             const baseIp = localIp ? localIp.split('.').slice(0, 3).join('.') : '192.168.1';
             const results = await window.electronAPI?.scanNetworkPrinters?.({ baseIp, port: 9100 }) || [];
             setNetworkScanResults(results);
-            if (results.length === 0) toast.info("Şəbəkədə printer tapılmadı");
+            if (results.length === 0) toast.info(t("sebekede_printer_tapilmadi"));
             else toast.success(`${results.length} printer tapıldı`);
         } catch (e) {
             toast.error("Scan xətası: " + e.message);
@@ -720,12 +717,12 @@ const DevicesModal = ({ show, onHide }) => {
                 const testHtml = `
                     <div style="text-align: center; font-family: sans-serif; padding: 10px;">
                         <h2 style="margin: 0;">UniPOS</h2>
-                        <h4 style="margin: 5px 0;">TEST ÇAPI</h4>
+                        <h4 style="margin: 5px 0;">{t("test_capi")}</h4>
                         <p style="margin: 5px 0;">-------------------------</p>
                         <p style="margin: 2px 0;">Printer: ${printerIp || printerName}</p>
                         <p style="margin: 2px 0;">Tarix: ${new Date().toLocaleString()}</p>
                         <p style="margin: 5px 0;">-------------------------</p>
-                        <p style="margin: 5px 0; font-size: 12px;">Sistem uğurla qoşuldu</p>
+                        <p style="margin: 5px 0; font-size: 12px;">{t("sistem_ugurla_qosuldu")}</p>
                     </div>
                 `;
                 await window.electronAPI.printReceipt({
@@ -735,7 +732,7 @@ const DevicesModal = ({ show, onHide }) => {
                     printerPort: printerPort || 9100,
                     printerSettings: { printer_label: printerName || "" },
                 });
-                toast.success("Test çapı göndərildi");
+                toast.success(t("test_capi_gonderildi"));
             }
         } catch (error) {
             toast.error("Çap xətası: " + error.message);
@@ -762,7 +759,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleToggleCustomerReceiptAutoPrint = async () => {
         const nextStatus = !customerReceiptAutoPrint;
         if (!profileId) {
-            toast.error("Profil tapılmadı. Əvvəlcə giriş edin.");
+            toast.error(t("profil_tapilmadi_evvelce_giris_edin"));
             return;
         }
         setCustomerReceiptAutoPrint(nextStatus);
@@ -803,7 +800,7 @@ const DevicesModal = ({ show, onHide }) => {
 
     const handleToggleSalesShiftRequired = async () => {
         const nextStatus = !salesShiftRequired;
-        if (!profileId) { toast.error("Profil tapılmadı."); return; }
+        if (!profileId) { toast.error(t("profil_tapilmadi_1")); return; }
         setSalesShiftRequired(nextStatus);
         const saveLocal = () => {
             const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
@@ -834,7 +831,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleToggleMasterPrinting = async (type) => {
         const nextStatus = !masterModes[type];
         if (!profileId) {
-            toast.error("Profil tapılmadı. Əvvəlcə giriş edin.");
+            toast.error(t("profil_tapilmadi_evvelce_giris_edin"));
             return;
         }
         const field = type === 'cashier' ? 'is_master_cashier_printing' : 'is_master_product_printing';
@@ -882,11 +879,11 @@ const DevicesModal = ({ show, onHide }) => {
                 isActive: nextActive,
                 screenId: nextScreenId
             });
-            toast.success("Müştəri ekranı tənzimləmələri yadda saxlanıldı");
+            toast.success(t("musteri_ekrani_tenzimlemeleri_yadda_saxlanildi"));
         } catch (error) {
             // On slave, local DB may not have this endpoint — localStorage save is enough
             console.warn("Customer Display API sync skipped (slave or offline):", error?.response?.status);
-            toast.success("Müştəri ekranı tənzimləmələri yadda saxlanıldı (lokal)");
+            toast.success(t("musteri_ekrani_tenzimlemeleri_yadda_saxlanildi_lokal"));
         }
     };
 
@@ -925,11 +922,11 @@ const DevicesModal = ({ show, onHide }) => {
                 isActive: nextActive,
                 screenId: nextScreenId
             });
-            toast.success("Mətbəx ekranı tənzimləmələri yadda saxlanıldı");
+            toast.success(t("metbex_ekrani_tenzimlemeleri_yadda_saxlanildi"));
         } catch (error) {
             // On slave, local DB may not have this endpoint — localStorage save is enough
             console.warn("Kitchen Display API sync skipped (slave or offline):", error?.response?.status);
-            toast.success("Mətbəx ekranı tənzimləmələri yadda saxlanıldı (lokal)");
+            toast.success(t("metbex_ekrani_tenzimlemeleri_yadda_saxlanildi_lokal"));
         }
         }
     };
@@ -945,7 +942,7 @@ const DevicesModal = ({ show, onHide }) => {
         if (previewWindow) {
             previewWindow.focus();
         } else {
-            toast.error("KDS pəncərəsini açmaq mümkün olmadı");
+            toast.error(t("kds_penceresini_acmaq_mumkun_olmadi"));
         }
     };
 
@@ -972,9 +969,9 @@ const DevicesModal = ({ show, onHide }) => {
 
         if (nextActive) {
             handleOpenKitchenDisplayPreview();
-            toast.success("KDS preview açıldı");
+            toast.success(t("kds_preview_acildi"));
         } else {
-            toast.success("KDS ayarı lokal yadda saxlanıldı");
+            toast.success(t("kds_ayari_lokal_yadda_saxlanildi"));
         }
     };
 
@@ -1030,7 +1027,7 @@ const DevicesModal = ({ show, onHide }) => {
         setTaxDeviceLoading(index, true);
         try {
             await localApi.post('/tax/open-shift', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
-            toast.success('N\u00F6vb\u0259 a\u00E7\u0131ld\u0131');
+            toast.success(t("n_u00f6vb_u0259_a_u00e7_u0131ld_u0131"));
             handleShiftStatus(tax, index);
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -1045,7 +1042,7 @@ const DevicesModal = ({ show, onHide }) => {
         setTaxDeviceLoading(index, true);
         try {
             const result = await localApi.post('/tax/close-shift', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
-            toast.success('N\u00F6vb\u0259 ba\u011Fland\u0131 (Z-Report)');
+            toast.success(t("n_u00f6vb_u0259_ba_u011fland_u0131_zreport"));
             setShiftStates(prev => ({ ...prev, [index]: { shiftStatus: false } }));
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -1060,7 +1057,7 @@ const DevicesModal = ({ show, onHide }) => {
         setTaxDeviceLoading(index, true);
         try {
             await localApi.post('/tax/x-report', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
-            toast.success('X-Report \u00E7ap edildi');
+            toast.success(t("xreport__u00e7ap_edildi"));
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
             toast.error('X-Report x\u0259tas\u0131: ' + msg);
@@ -1072,7 +1069,7 @@ const DevicesModal = ({ show, onHide }) => {
 
     const handlePeriodicReport = async (tax, index) => {
         if (!reportStart.date || !reportEnd.date) {
-            toast.warning('D\u00f6vri hesabat \u00fc\u00e7\u00fcn \u201cBu tarixd\u0259n\u201d v\u0259 \u201cBu tarix\u0259 q\u0259d\u0259r\u201d t\u0259r\u0259zi se\u00e7in');
+            toast.warning(t("d_u00f6vri_hesabat__u00fc_u00e7_u00fcn__u201cbu_tarixd_u0259n_u201d_v_u0259__u201cbu_tarix_u0259_q_u0259d_u0259r_u201d_t_u0259r_u0259zi_se_u00e7in"));
             return;
         }
         setTaxDeviceLoading(index, true);
@@ -1089,7 +1086,7 @@ const DevicesModal = ({ show, onHide }) => {
             if (errCode !== 0) {
                 toast.error('Hesabat x\u0259tas\u0131: ' + (result.data?.error_message || `code ${errCode}`));
             } else {
-                toast.success('D\u00f6vri hesabat s\u0259n\u0259di \u00e7ap edildi');
+                toast.success(t("d_u00f6vri_hesabat_s_u0259n_u0259di__u00e7ap_edildi"));
             }
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -1102,7 +1099,7 @@ const DevicesModal = ({ show, onHide }) => {
 
     const handleOperationHistory = async (tax, index) => {
         if (!reportStart.date || !reportEnd.date) {
-            toast.warning('Tarix\u00e7\u0259 \u00fc\u00e7\u00fcn \u201cBu tarixd\u0259n\u201d v\u0259 \u201cBu tarix\u0259 q\u0259d\u0259r\u201d t\u0259r\u0259zi doldurun');
+            toast.warning(t("tarix_u00e7_u0259__u00fc_u00e7_u00fcn__u201cbu_tarixd_u0259n_u201d_v_u0259__u201cbu_tarix_u0259_q_u0259d_u0259r_u201d_t_u0259r_u0259zi_doldurun"));
             return;
         }
         setTaxDeviceLoading(index, true);
@@ -1119,7 +1116,7 @@ const DevicesModal = ({ show, onHide }) => {
             if (errCode !== 0) {
                 toast.error('Tarix\u00e7\u0259 x\u0259tas\u0131: ' + (result.data?.error_message || `code ${errCode}`));
             } else {
-                toast.success('Se\u00E7ilmi\u015F tarix \u00FCzr\u0259 \u0259m\u0259liyyat siyah\u0131s\u0131 cihaza g\u00F6nd\u0259rildi (fiskal cihaz \u00E7ap ed\u0259 bil\u0259r)');
+                toast.success(t("se_u00e7ilmi_u015f_tarix__u00fczr_u0259__u0259m_u0259liyyat_siyah_u0131s_u0131_cihaza_g_u00f6nd_u0259rildi_fiskal_cihaz__u00e7ap_ed_u0259_bil_u0259r"));
             }
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -1134,7 +1131,7 @@ const DevicesModal = ({ show, onHide }) => {
         setTaxDeviceLoading(index, true);
         try {
             await localApi.post('/tax/reprint-error', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
-            toast.success('Yenid\u0259n \u00E7ap sor\u011Fusu g\u00F6nd\u0259rildi');
+            toast.success(t("yenid_u0259n__u00e7ap_sor_u011fusu_g_u00f6nd_u0259rildi"));
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
             toast.error('\u00C7ap x\u0259tas\u0131: ' + msg);
@@ -1152,7 +1149,7 @@ const DevicesModal = ({ show, onHide }) => {
                 const d = result.data.data;
                 toast.success(`${d.company_name || tax.tax_cash_type} \u2014 S/N: ${d.cashbox_factory_number || '?'}, Son s\u0259n\u0259d: #${d.last_doc_number || '?'}`);
             } else {
-                toast.info('Cihaz m\u0259lumat\u0131 al\u0131nd\u0131');
+                toast.info(t("cihaz_m_u0259lumat_u0131_al_u0131nd_u0131"));
             }
         } catch (err) {
             const msg = err.response?.data?.message || err.message;
@@ -1166,7 +1163,7 @@ const DevicesModal = ({ show, onHide }) => {
     return (
         <Modal show={show} onHide={onHide} centered size="xl" className="devices-modal">
             <Modal.Header closeButton>
-                <Modal.Title>Cihazlar və Printerlər</Modal.Title>
+                <Modal.Title>{t("cihazlar_ve_printerler")}</Modal.Title>
             </Modal.Header>
 
             {
@@ -1175,21 +1172,15 @@ const DevicesModal = ({ show, onHide }) => {
                         <div
                             className={`devices-mobile-tab ${activeTab === "printers" ? "active" : ""}`}
                             onClick={() => setActiveTab("printers")}
-                        >
-                            Printerlər
-                        </div>
+                        >{t("printerler")}</div>
                         <div
                             className={`devices-mobile-tab ${activeTab === "printSettings" ? "active" : ""}`}
                             onClick={() => setActiveTab("printSettings")}
-                        >
-                            Çap Tənzimləmələri
-                        </div>
+                        >{t("cap_tenzimlemeleri")}</div>
                         <div
                             className={`devices-mobile-tab ${activeTab === "display" ? "active" : ""}`}
                             onClick={() => setActiveTab("display")}
-                        >
-                            Müştəri Ekranı
-                        </div>
+                        >{t("musteri_ekrani")}</div>
                         <div
                             className={`devices-mobile-tab ${activeTab === "kitchen" ? "active" : ""}`}
                             onClick={() => setActiveTab("kitchen")}
@@ -1199,15 +1190,11 @@ const DevicesModal = ({ show, onHide }) => {
                         <div
                             className={`devices-mobile-tab ${activeTab === "scales" ? "active" : ""}`}
                             onClick={() => setActiveTab("scales")}
-                        >
-                            Tərəzilər
-                        </div>
+                        >{t("tereziler")}</div>
                         <div
                             className={`devices-mobile-tab ${activeTab === "scanners" ? "active" : ""}`}
                             onClick={() => setActiveTab("scanners")}
-                        >
-                            Skanerlər
-                        </div>
+                        >{t("skanerler")}</div>
                         {taxes.length > 0 && canSeeTax && (
                             <div
                                 className={`devices-mobile-tab ${activeTab === "taxes" ? "active" : ""}`}
@@ -1220,9 +1207,7 @@ const DevicesModal = ({ show, onHide }) => {
                             <div
                                 className={`devices-mobile-tab ${activeTab === "mobile" ? "active" : ""}`}
                                 onClick={() => setActiveTab("mobile")}
-                            >
-                                Mobil Qoşulma
-                            </div>
+                            >{t("mobil_qosulma")}</div>
                         )}
                     </div>
                 )
@@ -1237,42 +1222,42 @@ const DevicesModal = ({ show, onHide }) => {
                                 onClick={() => { setActiveTab("printers"); setSelectedPrinterIndex(null); }}
                             >
                                 <i className="bi bi-printer"></i>
-                                <span>Printerlər</span>
+                                <span>{t("printerler")}</span>
                             </div>
                             <div
                                 className={`devices-menu-item ${activeTab === "printSettings" ? "active" : ""}`}
                                 onClick={() => setActiveTab("printSettings")}
                             >
                                 <i className="bi bi-sliders"></i>
-                                <span>Çap Tənzimləmələri</span>
+                                <span>{t("cap_tenzimlemeleri")}</span>
                             </div>
                             <div
                                 className={`devices-menu-item ${activeTab === "display" ? "active" : ""}`}
                                 onClick={() => setActiveTab("display")}
                             >
                                 <i className="bi bi-display"></i>
-                                <span>Müştəri Ekranı</span>
+                                <span>{t("musteri_ekrani")}</span>
                             </div>
                             <div
                                 className={`devices-menu-item ${activeTab === "kitchen" ? "active" : ""}`}
                                 onClick={() => setActiveTab("kitchen")}
                             >
                                 <i className="bi bi-egg-fried"></i>
-                                <span>Mətbəx Ekranı</span>
+                                <span>{t("metbex_ekrani")}</span>
                             </div>
                             <div
                                 className={`devices-menu-item ${activeTab === "scales" ? "active" : ""}`}
                                 onClick={() => setActiveTab("scales")}
                             >
                                 <i className="bi bi-rulers"></i>
-                                <span>Tərəzilər</span>
+                                <span>{t("tereziler")}</span>
                             </div>
                             <div
                                 className={`devices-menu-item ${activeTab === "scanners" ? "active" : ""}`}
                                 onClick={() => setActiveTab("scanners")}
                             >
                                 <i className="bi bi-qr-code-scan"></i>
-                                <span>Skanerlər</span>
+                                <span>{t("skanerler")}</span>
                             </div>
 
                             {taxes.length > 0 && canSeeTax && (
@@ -1291,7 +1276,7 @@ const DevicesModal = ({ show, onHide }) => {
                                     onClick={() => setActiveTab("mobile")}
                                 >
                                     <i className="bi bi-phone"></i>
-                                    <span>Mobil Qoşulma</span>
+                                    <span>{t("mobil_qosulma")}</span>
                                 </div>
                             )}
                         </div>
@@ -1305,8 +1290,8 @@ const DevicesModal = ({ show, onHide }) => {
                                 {selectedPrinterIndex === null ? (
                                     <>
                                         <div style={{ marginBottom: '16px' }}>
-                                            <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>Printerlər</h4>
-                                            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Cihaza klikləyərək tənzimləmələri edin</p>
+                                            <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>{t("printerler")}</h4>
+                                            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>{t("cihaza_klikleyerek_tenzimlemeleri_edin")}</p>
                                         </div>
                                         <div className="printers-grid">
                                             {printers.map((printer, index) => {
@@ -1349,7 +1334,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                                     event.stopPropagation();
                                                                     refreshPrinterDiagnostics();
                                                                 }}
-                                                                title="Statusu yenilə"
+                                                                title={t("statusu_yenile")}
                                                             >
                                                                 {printerDiagnosticsChecking && !diagnostic ? '...' : statusLabel}
                                                             </span>
@@ -1383,15 +1368,15 @@ const DevicesModal = ({ show, onHide }) => {
                         ) : activeTab === "printSettings" ? (
                             <div className="display-settings">
                                 <div style={{ marginBottom: '16px' }}>
-                                    <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>Çap Tənzimləmələri</h4>
-                                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Mərkəzi çap, avto çap və növbə tənzimləmələri</p>
+                                    <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>{t("cap_tenzimlemeleri")}</h4>
+                                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>{t("merkezi_cap_avto_cap_ve_novbe_tenzimlemeleri")}</p>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     <div className="settings-toggle-row">
                                         <div className="settings-toggle-icon"><i className="bi bi-printer"></i></div>
                                         <div className="settings-toggle-text">
-                                            <span className="settings-toggle-label">Mərkəzi Kassa Çapı</span>
-                                            <span className="settings-toggle-desc">Mərkəzi printer Master-dadır. Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir.</span>
+                                            <span className="settings-toggle-label">{t("merkezi_kassa_capi")}</span>
+                                            <span className="settings-toggle-desc">{t("merkezi_printer_masterdadir_slave_merkezi_aciq_olduqda_mastera_gonderir_master_ozunde_cap_edir")}</span>
                                         </div>
                                         <div
                                             className={`premium-switch ${masterModes.cashier ? "active" : ""}`}
@@ -1403,8 +1388,8 @@ const DevicesModal = ({ show, onHide }) => {
                                     <div className="settings-toggle-row">
                                         <div className="settings-toggle-icon"><i className="bi bi-egg-fried"></i></div>
                                         <div className="settings-toggle-text">
-                                            <span className="settings-toggle-label">Mərkəzi Mətbəx Çapı</span>
-                                            <span className="settings-toggle-desc">Mərkəzi printer Master-dadır. Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir.</span>
+                                            <span className="settings-toggle-label">{t("merkezi_metbex_capi")}</span>
+                                            <span className="settings-toggle-desc">{t("merkezi_printer_masterdadir_slave_merkezi_aciq_olduqda_mastera_gonderir_master_ozunde_cap_edir")}</span>
                                         </div>
                                         <div
                                             className={`premium-switch ${masterModes.product ? "active" : ""}`}
@@ -1416,8 +1401,8 @@ const DevicesModal = ({ show, onHide }) => {
                                     <div className="settings-toggle-row">
                                         <div className="settings-toggle-icon"><i className="bi bi-receipt"></i></div>
                                         <div className="settings-toggle-text">
-                                            <span className="settings-toggle-label">Müştəri çeki avto çap</span>
-                                            <span className="settings-toggle-desc">CheckOver səhifəsində "Çeki çap et" toggle avtomatik açıq olsun.</span>
+                                            <span className="settings-toggle-label">{t("musteri_ceki_avto_cap")}</span>
+                                            <span className="settings-toggle-desc">{t("checkover_sehifesinde_ceki_cap_et_toggle_avtomatik_aciq_olsun")}</span>
                                         </div>
                                         <div
                                             className={`premium-switch ${customerReceiptAutoPrint ? "active" : ""}`}
@@ -1429,8 +1414,8 @@ const DevicesModal = ({ show, onHide }) => {
                                     <div className="settings-toggle-row">
                                         <div className="settings-toggle-icon"><i className="bi bi-clock-history"></i></div>
                                         <div className="settings-toggle-text">
-                                            <span className="settings-toggle-label">Növbəli açılış tələb et</span>
-                                            <span className="settings-toggle-desc">Növbə açılmadan sifariş yaratmaq mümkün olmasın.</span>
+                                            <span className="settings-toggle-label">{t("novbeli_acilis_teleb_et")}</span>
+                                            <span className="settings-toggle-desc">{t("novbe_acilmadan_sifaris_yaratmaq_mumkun_olmasin")}</span>
                                         </div>
                                         <div
                                             className={`premium-switch ${salesShiftRequired ? "active" : ""}`}
@@ -1443,7 +1428,7 @@ const DevicesModal = ({ show, onHide }) => {
                                         <div className="settings-toggle-icon"><i className="bi bi-keyboard"></i></div>
                                         <div className="settings-toggle-text">
                                             <span className="settings-toggle-label">POS Klaviatura</span>
-                                            <span className="settings-toggle-desc">Axtarış açılanda ekran klaviaturası avtomatik açılsın (Azərbaycan hərfləri).</span>
+                                            <span className="settings-toggle-desc">{t("axtaris_acilanda_ekran_klaviaturasi_avtomatik_acilsin_azerbaycan_herfleri")}</span>
                                         </div>
                                         <div
                                             className={`premium-switch ${posKeyboardEnabled ? "active" : ""}`}
@@ -1461,7 +1446,7 @@ const DevicesModal = ({ show, onHide }) => {
                                         <div className="settings-toggle-icon"><i className="bi bi-shield-lock"></i></div>
                                         <div className="settings-toggle-text">
                                             <span className="settings-toggle-label">Avto bloklama (PIN)</span>
-                                            <span className="settings-toggle-desc">Müddət ərzində ekranda əməliyyat olmasa avtomatik PIN səhifəsinə keçir (masa, check, tənzimləmələr).</span>
+                                            <span className="settings-toggle-desc">{t("muddet_erzinde_ekranda_emeliyyat_olmasa_avtomatik_pin_sehifesine_kecir_masa_check_tenzimlemeler")}</span>
                                         </div>
                                         <div
                                             className={`premium-switch ${posAutoLockEnabled ? "active" : ""}`}
@@ -1472,7 +1457,7 @@ const DevicesModal = ({ show, onHide }) => {
                                     </div>
                                     {posAutoLockEnabled && (
                                         <div className="printer-form-group" style={{ marginTop: 4 }}>
-                                            <label>Gözləmə (saniyə)</label>
+                                            <label>{t("gozleme_saniye")}</label>
                                             <input
                                                 type="number"
                                                 className="printer-input"
@@ -1488,25 +1473,23 @@ const DevicesModal = ({ show, onHide }) => {
                                                     }
                                                 }}
                                             />
-                                            <span style={{ display: "block", marginTop: 6, fontSize: "12px", color: "#64748b" }}>
-                                                Minimum 5 saniyə. Fəaliyyətsizlikdən sonra /pin açılır.
-                                            </span>
+                                            <span style={{ display: "block", marginTop: 6, fontSize: "12px", color: "#64748b" }}>{t("minimum_5_saniye_fealiyyetsizlikden_sonra_/pin_acilir")}</span>
                                         </div>
                                     )}
                                 </div>
 
                                 {printers.filter((p) => Number(p.is_cashier) === 1).length >= 2 && (
                                     <div className="cashier-print-select-card" style={{ marginTop: '24px' }}>
-                                        <h4 className="cashier-print-select-title">Bu terminal üçün kassa çapı</h4>
-                                        <p className="cashier-print-select-desc">Hansı kassa printerlərinə müştəri çeki getməli olduğunu seçin.</p>
-                                        <label className="cashier-print-select-label">Seçim</label>
+                                        <h4 className="cashier-print-select-title">{t("bu_terminal_ucun_kassa_capi")}</h4>
+                                        <p className="cashier-print-select-desc">{t("hansi_kassa_printerlerine_musteri_ceki_getmeli_oldugunu_secin")}</p>
+                                        <label className="cashier-print-select-label">{t("secim")}</label>
                                         <select
                                             className="form-select form-select-sm cashier-print-select"
                                             value={cashierPrintPref}
                                             onChange={handleCashierPrintPrefChange}
                                         >
-                                            <option value="">Avtomatik — yalnız ilk kassa printeri</option>
-                                            <option value="all">Bütün kassa printerlərinə çap</option>
+                                            <option value="">{t("avtomatik_yalniz_ilk_kassa_printeri")}</option>
+                                            <option value="all">{t("butun_kassa_printerlerine_cap")}</option>
                                             {printers
                                                 .filter((p) => Number(p.is_cashier) === 1)
                                                 .map((p) => (
@@ -1519,12 +1502,12 @@ const DevicesModal = ({ show, onHide }) => {
                                 )}
 
                                 <div style={{ marginTop: '24px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                                    <h5 style={{ margin: '0 0 12px', color: '#1e293b', fontWeight: 600, fontSize: '14px' }}>Əlavə</h5>
+                                    <h5 style={{ margin: '0 0 12px', color: '#1e293b', fontWeight: 600, fontSize: '14px' }}>{t("elave_1")}</h5>
                                     <div className="settings-toggle-row">
                                         <div className="settings-toggle-icon"><i className="bi bi-person-dash"></i></div>
                                         <div className="settings-toggle-text">
-                                            <span className="settings-toggle-label">Qonaq sayını ləğv et</span>
-                                            <span className="settings-toggle-desc">Aktiv olduqda yeni masa yaradılarkən qonaq sayı soruşulmadan birbaşa 0 olaraq açılır.</span>
+                                            <span className="settings-toggle-label">{t("qonaq_sayini_legv_et")}</span>
+                                            <span className="settings-toggle-desc">{t("aktiv_olduqda_yeni_masa_yaradilarken_qonaq_sayi_sorusulmadan_birbasa_0_olaraq_acilir")}</span>
                                         </div>
                                         <div
                                             className={`premium-switch ${skipGuestCount ? "active" : ""}`}
@@ -1540,8 +1523,8 @@ const DevicesModal = ({ show, onHide }) => {
                                 <div className="display-config-card">
                                     <div className="display-config-header">
                                         <div className="display-config-info">
-                                            <h4>İkinci Monitor (Dual-Monitor)</h4>
-                                            <p>Cihaza bağlı olan ikinci ekranda müştəri menyusunu aktivləşdirin.</p>
+                                            <h4>{t("i̇kinci_monitor_dualmonitor")}</h4>
+                                            <p>{t("cihaza_bagli_olan_ikinci_ekranda_musteri_menyusunu_aktivlesdirin")}</p>
                                         </div>
                                         <div
                                             className={`premium-switch ${customerDisplay.active ? "active" : ""}`}
@@ -1553,13 +1536,13 @@ const DevicesModal = ({ show, onHide }) => {
 
                                     <div className="display-config-body">
                                         <div className="printer-form-group">
-                                            <label>Monitor Seçimi</label>
+                                            <label>{t("monitor_secimi")}</label>
                                             <select
                                                 className="printer-select"
                                                 value={customerDisplay.screenId}
                                                 onChange={(e) => handleUpdateCustomerDisplay(null, e.target.value)}
                                             >
-                                                <option value="">Seçilməyib</option>
+                                                <option value="">{t("secilmeyib")}</option>
                                                 {screens.map(s => (
                                                     <option key={s.id} value={s.id}>
                                                         {s.label} {s.isPrimary ? "(Əsas)" : ""} - {s.bounds.width}x{s.bounds.height}
@@ -1570,7 +1553,7 @@ const DevicesModal = ({ show, onHide }) => {
 
                                         <div className="display-preview-info">
                                             <i className="bi bi-info-circle"></i>
-                                            <span>Əgər cihazınızda ikinci ekran qoşuludursa, onu siyahıdan seçin və yuxarıdakı açarı aktiv edin.</span>
+                                            <span>{t("eger_cihazinizda_ikinci_ekran_qosuludursa_onu_siyahidan_secin_ve_yuxaridaki_acari_aktiv_edin")}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1580,8 +1563,8 @@ const DevicesModal = ({ show, onHide }) => {
                                 <div className="display-config-card">
                                     <div className="display-config-header">
                                         <div className="display-config-info">
-                                            <h4>Mətbəx Ekranı (KDS)</h4>
-                                            <p>Sifarişlərin mətbəxdə izlənməsi üçün rəqəmsal ekranı aktivləşdirin.</p>
+                                            <h4>{t("metbex_ekrani_kds")}</h4>
+                                            <p>{t("sifarislerin_metbexde_izlenmesi_ucun_reqemsal_ekrani_aktivlesdirin")}</p>
                                         </div>
                                         <div className="display-config-actions">
                                             <button
@@ -1590,7 +1573,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                 onClick={handleOpenKitchenDisplayPreview}
                                             >
                                                 <i className="bi bi-box-arrow-up-right"></i>
-                                                <span>Açıb bax</span>
+                                                <span>{t("acib_bax")}</span>
                                             </button>
                                             <div
                                                 className={`premium-switch ${kitchenDisplay.active ? "active" : ""}`}
@@ -1603,13 +1586,13 @@ const DevicesModal = ({ show, onHide }) => {
 
                                     <div className="display-config-body">
                                         <div className="printer-form-group">
-                                            <label>Monitor Seçimi</label>
+                                            <label>{t("monitor_secimi")}</label>
                                             <select
                                                 className="printer-select"
                                                 value={kitchenDisplay.screenId}
                                                 onChange={(e) => handleKitchenDisplayLocal(null, e.target.value)}
                                             >
-                                                <option value="">Seçilməyib</option>
+                                                <option value="">{t("secilmeyib")}</option>
                                                 {screens.map(s => (
                                                     <option key={s.id} value={s.id}>
                                                         {s.label} {s.isPrimary ? "(Əsas)" : ""} - {s.bounds.width}x{s.bounds.height}
@@ -1620,7 +1603,7 @@ const DevicesModal = ({ show, onHide }) => {
 
                                         <div className="display-preview-info">
                                             <i className="bi bi-info-circle"></i>
-                                            <span>Mətbəx ekranı açıldıqda bütün aktiv sifarişlər orada rəqəmsal kartlar şəklində görünəcək.</span>
+                                            <span>{t("metbex_ekrani_acildiqda_butun_aktiv_sifarisler_orada_reqemsal_kartlar_seklinde_gorunecek")}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1630,8 +1613,8 @@ const DevicesModal = ({ show, onHide }) => {
                                 {selectedTaxIndex === null ? (
                                     <>
                                         <div style={{ marginBottom: '16px' }}>
-                                            <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>E-kassa Cihazları</h4>
-                                            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Cihaza klikləyərək ətraflı məlumatı görün</p>
+                                            <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>{t("ekassa_cihazlari")}</h4>
+                                            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>{t("cihaza_klikleyerek_etrafli_melumati_gorun")}</p>
                                         </div>
                                         <div className="printers-grid">
                                             {taxes.map((tax, index) => {
@@ -1665,7 +1648,7 @@ const DevicesModal = ({ show, onHide }) => {
                                         const shift = shiftStates[idx];
 
                                         const handleNotImplemented = () => {
-                                            toast.info("Bu funskiya tezlikl\u0259 \u0259lav\u0259 edil\u0259c\u0259k");
+                                            toast.info(t("bu_funskiya_tezlikl_u0259__u0259lav_u0259_edil_u0259c_u0259k"));
                                         };
 
                                         return (
@@ -1714,7 +1697,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                     {/* Left Column */}
                                                     <div>
                                                         <div style={{ marginBottom: '20px' }}>
-                                                            <label style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, display: 'block', marginBottom: '8px' }}>Bu tarixdən</label>
+                                                            <label style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, display: 'block', marginBottom: '8px' }}>{t("bu_tarixden")}</label>
                                                             <div style={{ display: 'flex', gap: '12px' }}>
                                                                 <div style={{ flex: 1.5, position: 'relative' }}>
                                                                     <input type="date" value={reportStart.date} onChange={e => setReportStart({ ...reportStart, date: e.target.value })} style={{ width: '100%', height: '42px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', fontSize: '14px', color: '#334155' }} />
@@ -1725,7 +1708,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                             </div>
                                                         </div>
                                                         <div style={{ marginBottom: '24px' }}>
-                                                            <label style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, display: 'block', marginBottom: '8px' }}>Bu tarixə qədər</label>
+                                                            <label style={{ fontSize: '13px', color: '#64748b', fontWeight: 500, display: 'block', marginBottom: '8px' }}>{t("bu_tarixe_qeder")}</label>
                                                             <div style={{ display: 'flex', gap: '12px' }}>
                                                                 <div style={{ flex: 1.5, position: 'relative' }}>
                                                                     <input type="date" value={reportEnd.date} onChange={e => setReportEnd({ ...reportEnd, date: e.target.value })} style={{ width: '100%', height: '42px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', fontSize: '14px', color: '#334155' }} />
@@ -1736,10 +1719,10 @@ const DevicesModal = ({ show, onHide }) => {
                                                             </div>
                                                         </div>
                                                         <div style={{ display: 'flex', gap: '12px' }}>
-                                                            <button type="button" title="Yuxarıdakı tarix aralığında fiskal cihazdan bütün əməliyyatların siyahısı (DATAPAY: dövri hesabat, çap ola bilər)" onClick={() => handleOperationHistory(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 2, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                                                            <button type="button" title={t("yuxaridaki_tarix_araliginda_fiskal_cihazdan_butun_emeliyyatlarin_siyahisi_datapay_dovri_hesabat_cap_ola_biler")} onClick={() => handleOperationHistory(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 2, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
                                                                 Əməliyyat tarixçəsi
                                                             </button>
-                                                            <button type="button" title="Eyni tarix aralığında d\u00F6vri (Z) hesabat \u2014 cihazdan" onClick={() => handlePeriodicReport(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 1, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
+                                                            <button type="button" title={t("eyni_tarix_araliginda_d_u00f6vri_z_hesabat__u2014_cihazdan")} onClick={() => handlePeriodicReport(tax, idx)} disabled={taxLoading[idx]} style={{ flex: 1, background: '#3b82f6', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
                                                                 Hesabat
                                                             </button>
                                                         </div>
@@ -1758,9 +1741,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                             onClick={() => handleOpenShift(tax, idx)}
                                                             disabled={taxLoading[idx]}
                                                             style={{ width: '100%', background: '#3b82f6', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}
-                                                        >
-                                                            Növbəni aç
-                                                        </button>
+                                                        >{t("novbeni_ac")}</button>
                                                         <div style={{ height: '8px' }}></div>
                                                         <button
                                                             onClick={() => handleCloseShift(tax, idx)}
@@ -1794,8 +1775,8 @@ const DevicesModal = ({ show, onHide }) => {
                             <div className="mobile-qr-section">
                                 <div className="qr-container-card">
                                     <div className="qr-header">
-                                        <h3>Mobil Terminal Qoşulması</h3>
-                                        <p>Android tətbiqdə bu QR kodu skan edərək Master bazasına qoşula bilərsiniz.</p>
+                                        <h3>{t("mobil_terminal_qosulmasi")}</h3>
+                                        <p>{t("android_tetbiqde_bu_qr_kodu_skan_ederek_master_bazasina_qosula_bilersiniz")}</p>
                                     </div>
 
                                     <div className="qr-display-box">
@@ -1814,7 +1795,7 @@ const DevicesModal = ({ show, onHide }) => {
                                         ) : (
                                             <div className="qr-error">
                                                 <i className="bi bi-exclamation-triangle"></i>
-                                                <p>IP ünvanı müəyyən edilə bilmədi. Şəbəkə bağlantısını yoxlayın.</p>
+                                                <p>{t("ip_unvani_mueyyen_edile_bilmedi_sebeke_baglantisini_yoxlayin")}</p>
                                             </div>
                                         )}
                                     </div>
@@ -1822,15 +1803,15 @@ const DevicesModal = ({ show, onHide }) => {
                                     <div className="qr-steps">
                                         <div className="step-item">
                                             <span className="step-num">1</span>
-                                            <p>Mobil tətbiqi açın</p>
+                                            <p>{t("mobil_tetbiqi_acin")}</p>
                                         </div>
                                         <div className="step-item">
                                             <span className="step-num">2</span>
-                                            <p>Qr Skaner düyməsinə klikləyin</p>
+                                            <p>{t("qr_skaner_duymesine_klikleyin")}</p>
                                         </div>
                                         <div className="step-item">
                                             <span className="step-num">3</span>
-                                            <p>Kodu ekranın önünə tutun</p>
+                                            <p>{t("kodu_ekranin_onune_tutun")}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1838,7 +1819,7 @@ const DevicesModal = ({ show, onHide }) => {
                         ) : (
                             <div style={{ textAlign: 'center', marginTop: '100px', color: '#64748b' }}>
                                 <i className="bi bi-gear" style={{ fontSize: '48px' }}></i>
-                                <p style={{ marginTop: '16px' }}>Bu bölmə üzərində iş gedir...</p>
+                                <p style={{ marginTop: '16px' }}>{t("bu_bolme_uzerinde_is_gedir")}</p>
                             </div>
                         )}
                     </div>

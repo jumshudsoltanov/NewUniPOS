@@ -4,6 +4,7 @@ import "./CustomersModal.css";
 import { useDispatch, useSelector } from "react-redux";
 import { updateGuestCountOrder, saveLog } from "../../redux/Slices/OrdersSlice";
 import { toast } from "sonner";
+import { t } from "../../utils/translations";
 
 const UpdateGuestCountModal = ({ show, onHide, order, onSuccess }) => {
     const [guestCount, setGuestCount] = useState("0");
@@ -59,7 +60,7 @@ const UpdateGuestCountModal = ({ show, onHide, order, onSuccess }) => {
                     details: `Yeni qonaq sayı: ${guestCount}`
                 }));
 
-                toast.success("Qonaq sayı güncəlləndi");
+                toast.success(t("qonaq_sayi_guncellendi"));
                 if (onSuccess) {
                     onSuccess();
                 }
@@ -67,7 +68,7 @@ const UpdateGuestCountModal = ({ show, onHide, order, onSuccess }) => {
             }
         } catch (err) {
             console.error("Guest count update error:", err);
-            toast.error("Xəta baş verdi");
+            toast.error(t("error_occurred"));
         } finally {
             setIsUpdating(false);
         }
@@ -90,7 +91,7 @@ const UpdateGuestCountModal = ({ show, onHide, order, onSuccess }) => {
                         <div className="customers-icon-circle">
                             <i className="bi bi-people-fill"></i>
                         </div>
-                        <div className="customers-modal-title">Qonaq Sayını dəyiş</div>
+                        <div className="customers-modal-title">{t("qonaq_sayini_deyis")}</div>
                     </div>
                     <button className="btn-close-custom" onClick={onHide}>
                         <svg

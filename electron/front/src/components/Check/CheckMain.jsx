@@ -28,6 +28,8 @@ import {
   getDisplayProductName,
   resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 
 const parseModifierList = (modifiers) => {
   try {
@@ -504,7 +506,7 @@ const CheckMain = ({ orders, table }) => {
 
         const hasPermission = Number(loginedWaiter?.data?.can_delete_product) === 1;
         if (!hasPermission) {
-          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+          toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
           return;
         }
 
@@ -539,7 +541,7 @@ const CheckMain = ({ orders, table }) => {
           }));
         } catch (error) {
           console.error("Modifier update error:", error);
-          toast.error("Modifikatorları yadda saxlamaq mümkün olmadı");
+          toast.error(t("modifikatorlari_yadda_saxlamaq_mumkun_olmadi"));
           return;
         }
       }
@@ -563,7 +565,7 @@ const CheckMain = ({ orders, table }) => {
       if (newLocalQty < 0) {
         const hasPermission = Number(loginedWaiter?.data?.can_delete_product) === 1;
         if (!hasPermission) {
-          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+          toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
           return;
         }
 
@@ -675,9 +677,9 @@ const CheckMain = ({ orders, table }) => {
       >
 
         <div className="order-table-header">
-          <div className="header-col col-name-header">Məhsul</div>
+          <div className="header-col col-name-header">{t("product")}</div>
           <div className="header-col col-qty-header">Say</div>
-          <div className="header-col col-total-header">Cəm</div>
+          <div className="header-col col-total-header">{t("cem")}</div>
         </div>
 
         <div className="order-list-container">
@@ -762,7 +764,7 @@ const CheckMain = ({ orders, table }) => {
                       <div className="d-flex align-items-center flex-wrap gap-1">
                         <span className="fw-semibold">{displayProductName}</span>
                         {item.isDeleted && (
-                          <span className="pending-delete-badge full" title="Silinəcək">
+                          <span className="pending-delete-badge full" title={t("silinecek")}>
                             <i className="bi bi-trash3-fill"></i>
                           </span>
                         )}
@@ -773,7 +775,7 @@ const CheckMain = ({ orders, table }) => {
                           </span>
                         )}
 
-                        {isGift && <i className="bi bi-gift-fill text-danger" title="İkram"></i>}
+                        {isGift && <i className="bi bi-gift-fill text-danger" title={t("i̇kram")}></i>}
                       </div>
 
                       <div className="d-flex flex-column gap-1 mt-1">
@@ -802,7 +804,7 @@ const CheckMain = ({ orders, table }) => {
 
                         {hourlyLine > 0 && (
                           <div style={{ fontSize: "0.75rem", color: "#053796", fontWeight: 600, lineHeight: "1.2" }}>
-                            Saatlıq: {hourlyLine.toFixed(2)} ₼/saat
+                            Saatlıq: {formatPrice(hourlyLine)}/saat
                           </div>
                         )}
 
@@ -810,7 +812,7 @@ const CheckMain = ({ orders, table }) => {
                           <div
                             className="check-item-product-timer-lite"
                             onClick={stopTimerBubble}
-                            title="Taymer — idarə: məhsula toxun və «Saatlıq» tabı"
+                            title={t("taymer_idare_mehsula_toxun_ve_saatliq_tabi")}
                           >
                             <span className="check-item-timer-lite-sep">
                               <i className="bi bi-stopwatch" aria-hidden />
@@ -893,7 +895,7 @@ const CheckMain = ({ orders, table }) => {
             if (!hasPermission) {
               const isPureLocal = modifierCheckItem?.isNew && (!modifierCheckItem?.savedQuantity || modifierCheckItem?.savedQuantity <= 0);
               if (!isPureLocal) {
-                toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
                 return;
               }
             }
@@ -979,7 +981,7 @@ const CheckMain = ({ orders, table }) => {
                 wasteComment: data.wasteComment || "",
               }));
             });
-            toast.success("Məhsul silinmək üçün işarələndi!");
+            toast.success(t("mehsul_silinmek_ucun_isarelendi"));
           } else if (deleteActionType === 'partial') {
             // Find all DB rows for this product, sorted by id
             const productRows = (orders.orders_items || [])
@@ -1011,7 +1013,7 @@ const CheckMain = ({ orders, table }) => {
                 wasteComment: data.wasteComment || "",
               }));
             }
-            toast.success("Miqdar azalma üçün işarələndi!");
+            toast.success(t("miqdar_azalma_ucun_isarelendi"));
           }
         }}
         order={orders}

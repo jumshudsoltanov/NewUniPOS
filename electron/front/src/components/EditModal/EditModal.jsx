@@ -35,6 +35,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
+import { t } from "../../utils/translations";
 
 const removeLocalProduct = (dispatch, product) => {
   const productId = Number(product.product_id || product.id);
@@ -209,7 +210,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
   const syncHourlyPrice = async () => {
     if (!productInfo) return;
     if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) {
-      toast.error("Sizin qiymət dəyişmək icazəniz yoxdur!");
+      toast.error(t("sizin_qiymet_deyismek_icazeniz_yoxdur"));
       return;
     }
     const newHp = parseFloat(String(hourlyInput).replace(",", ".")) || 0;
@@ -228,13 +229,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
         no_service_fee: productInfo.no_service_fee ? 1 : 0,
       }
     })).unwrap();
-    toast.success("Saatlıq qiymət yeniləndi");
+    toast.success(t("saatliq_qiymet_yenilendi"));
   };
 
   const handleStartOrderTimer = () => {
     if (!orders?.uuid) return;
     dispatch(startTimer({ orderId: orders.uuid }));
-    toast.info("Taymer başladı");
+    toast.info(t("taymer_basladi"));
   };
 
   const handleStopOrderTimer = () => {
@@ -250,7 +251,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
       elapsedSeconds: seconds,
       clockStr: clockSrc
     }));
-    toast.info("Taymer dayandırıldı");
+    toast.info(t("taymer_dayandirildi"));
   };
 
   const handleResetOrderTimer = () => {
@@ -261,19 +262,19 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
   const confirmResetOrderTimer = () => {
     if (!orders?.uuid) return;
     dispatch(resetTimer({ orderId: orders.uuid }));
-    toast.info("Taymer sıfırlandı");
+    toast.info(t("taymer_sifirlandi"));
     setShowResetTimerConfirm(false);
   };
 
   const salesTypes = [
-    { id: "dine_in", label: "Yerində" },
-    { id: "takeaway", label: "Gəl götür" },
-    { id: "delivery", label: "Çatdırılma" }
+    { id: "dine_in", label: t("yerinde") },
+    { id: "takeaway", label: t("takeaway") },
+    { id: "delivery", label: t("delivery") }
   ];
 
   const handleTransfer = async () => {
     if (product?.isNew) {
-      toast.info("Gözləyən məhsulu köçürmək üçün əvvəlcə 'Göndər' düyməsini sıxın.");
+      toast.info(t("gozleyen_mehsulu_kocurmek_ucun_evvelce_gonder_duymesini_sixin"));
       return;
     }
 
@@ -367,12 +368,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
       const itemId = product?.id || product?.firstId;
 
       if (!orderId) {
-        toast.error("Sifariş ID-si tapılmadı");
+        toast.error(t("sifaris_idsi_tapilmadi"));
         return;
       }
 
       if (product.isNew) {
-        toast.info("Gözləyən məhsula endirim tətbiq etmək üçün əvvəlcə 'Göndər' düyməsini sıxın.");
+        toast.info(t("gozleyen_mehsula_endirim_tetbiq_etmek_ucun_evvelce_gonder_duymesini_sixin"));
         return;
       }
 
@@ -387,7 +388,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
       };
 
       await dispatch(updateItemDiscount(payload)).unwrap();
-      toast.success("Endirim tətbiq edildi");
+      toast.success(t("endirim_tetbiq_edildi"));
 
       onClose();
     } catch (error) {
@@ -429,7 +430,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 onClick={() => { setActiveTab("edit"); setTransferQty(1); }}
               >
                 <i className="bi bi-pencil-fill"></i>
-                <span>Dəyişmək</span>
+                <span>{t("deyismek")}</span>
               </button>
 
               {Number(loginedWaiter?.data?.can_transfer_product) === 1 && (
@@ -438,7 +439,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   onClick={() => { setActiveTab("transfer"); setTransferQty(1); }}
                 >
                   <i className="bi bi-arrow-left-right"></i>
-                  <span>Köçürmə</span>
+                  <span>{t("kocurme")}</span>
                 </button>
               )}
 
@@ -448,7 +449,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   onClick={() => { setActiveTab("gift"); setTransferQty(1); }}
                 >
                   <i className="bi bi-gift-fill"></i>
-                  <span>İkram</span>
+                  <span>{t("i̇kram")}</span>
                 </button>
               )}
 
@@ -468,7 +469,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   onClick={() => { setActiveTab("hourly"); setTransferQty(1); }}
                 >
                   <i className="bi bi-clock-history"></i>
-                  <span>Saatlıq</span>
+                  <span>{t("saatliq")}</span>
                 </button>
               )}
 
@@ -477,7 +478,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 onClick={() => setActiveTab("seller")}
               >
                 <i className="bi bi-person-fill"></i>
-                <span>Satıcı</span>
+                <span>{t("satici")}</span>
               </button>
             </div>
 
@@ -496,7 +497,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       } else {
                         // DB items still remain — icazə yoxla
                         if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                          toast.error("Yalnız yeni əlavə edilmiş məhsullar silindi. Göndərilmiş məhsulları silmək icazəniz yoxdur!");
+                          toast.error(t("yalniz_yeni_elave_edilmis_mehsullar_silindi_gonderilmis_mehsullari_silmek_icazeniz_yoxdur"));
                           onClose();
                           return;
                         }
@@ -524,7 +525,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   {/* Price / Input Display */}
                   <div className="input-display-box" onClick={() => {
                     if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) {
-                      toast.error("Sizin qiymət dəyişmək icazəniz yoxdur!");
+                      toast.error(t("sizin_qiymet_deyismek_icazeniz_yoxdur"));
                       return;
                     }
                     setNumpadTarget("price");
@@ -551,7 +552,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         const newQty = Math.max(0, qty - 1);
                         const savedQty = product.savedQuantity || 0;
                         if (newQty < savedQty && Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                          toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
                           return;
                         }
                         setQtyStr(String(newQty));
@@ -614,14 +615,14 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                             onClose();
                           } else {
                             if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                              toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                              toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
                               return;
                             }
                             onOpenDeleteModal('full', { ...product, localQuantity: 0, isNew: false, count: product.savedQuantity });
                           }
                         } else {
                           if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                            toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                            toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
                             return;
                           }
                           onOpenDeleteModal('full', product);
@@ -634,7 +635,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
 
                       if (newLocalQty < 0) {
                         if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                          toast.error("Sizin məhsul silmək icazəniz yoxdur!");
+                          toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
                           setQtyStr(String(savedQty));
                           return;
                         }
@@ -773,7 +774,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       onClose(true);
                     } catch (error) {
                       console.error("Save error:", error);
-                      toast.error("Xəta baş verdi");
+                      toast.error(t("error_occurred"));
                     } finally {
                       setIsSubmitting(false);
                     }
@@ -782,7 +783,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   {isSubmitting ? (
                     <>
                       <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                      <span>Gözləyin...</span>
+                      <span>{t("gozleyin")}</span>
                     </>
                   ) : (
                     <>
@@ -842,7 +843,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   {/* New Order Toggle - Only show if Table/Dine-in is selected */}
                   {selectedSalesType === 'dine_in' && selectedTable && (
                     <div className="d-flex align-items-center justify-content-between px-2 mt-2" onClick={() => setCreateNewOrder(!createNewOrder)} style={{ cursor: 'pointer' }}>
-                      <span className="text-secondary fw-500">Yeni sifariş yarat</span>
+                      <span className="text-secondary fw-500">{t("yeni_sifaris_yarat")}</span>
                       <div className={`toggle-switch ${createNewOrder ? 'active' : ''}`}>
                         <div className="toggle-knob"></div>
                       </div>
@@ -862,12 +863,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   {isSubmitting ? (
                     <>
                       <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                      <span>Köçürülür...</span>
+                      <span>{t("kocurulur")}</span>
                     </>
                   ) : (
                     <>
-                      <i className="bi bi-arrow-left-right"></i> Köçür
-                    </>
+                      <i className="bi bi-arrow-left-right"></i>{t("kocur")}</>
                   )}
                 </button>
 
@@ -911,7 +911,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     style={{ opacity: isSubmitting ? 0.7 : 1 }}
                     onClick={() => {
                       if (product?.isNew) {
-                        toast.info("Gözləyən məhsulun ikramını ləğv etmək üçün əvvəlcə 'Göndər' düyməsini sıxın.");
+                        toast.info(t("gozleyen_mehsulun_ikramini_legv_etmek_ucun_evvelce_gonder_duymesini_sixin"));
                         return;
                       }
                       if (isSubmitting) return;
@@ -929,9 +929,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         setIsSubmitting(false);
                         if (res.type.endsWith('fulfilled')) {
                           onClose();
-                          toast.success("İkram ləğv edildi");
+                          toast.success(t("i̇kram_legv_edildi"));
                         } else {
-                          toast.error("Xəta baş verdi");
+                          toast.error(t("error_occurred"));
                         }
                       });
                     }}
@@ -939,13 +939,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     {isSubmitting ? (
                       <>
                         <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                        <span>Ləğv edilir...</span>
+                        <span>{t("legv_edilir")}</span>
                       </>
                     ) : (
                       <>
-                        <i className="bi bi-x-circle"></i>
-                        İkramı Ləğv Et
-                      </>
+                        <i className="bi bi-x-circle"></i>{t("i̇krami_legv_et")}</>
                     )}
                   </button>
                 ) : (
@@ -955,7 +953,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     style={{ opacity: isSubmitting ? 0.7 : 1 }}
                     onClick={() => {
                       if (product?.isNew) {
-                        toast.info("Gözləyən məhsulu ikram etmək üçün əvvəlcə 'Göndər' düyməsini sıxın.");
+                        toast.info(t("gozleyen_mehsulu_ikram_etmek_ucun_evvelce_gonder_duymesini_sixin"));
                         return;
                       }
                       if (isSubmitting) return;
@@ -973,9 +971,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         setIsSubmitting(false);
                         if (res.type.endsWith('fulfilled')) {
                           onClose();
-                          toast.success("Məhsul ikram edildi");
+                          toast.success(t("mehsul_ikram_edildi"));
                         } else {
-                          toast.error("Xəta baş verdi");
+                          toast.error(t("error_occurred"));
                         }
                       });
                     }}
@@ -983,13 +981,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     {isSubmitting ? (
                       <>
                         <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                        <span>İkram edilir...</span>
+                        <span>{t("i̇kram_edilir")}</span>
                       </>
                     ) : (
                       <>
-                        <i className="bi bi-gift-fill"></i>
-                        İkram Et
-                      </>
+                        <i className="bi bi-gift-fill"></i>{t("i̇kram_et")}</>
                     )}
                   </button>
                 )}
@@ -998,8 +994,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
               isNoDiscount ? (
                 <div className="empty-tab-content p-4 text-center text-muted">
                   <i className="bi bi-slash-circle fs-1 d-block mb-3 text-danger"></i>
-                  <h5 className="text-danger">Endirim qadağandır</h5>
-                  <p>Bu məhsula endirim tətbiq edilə bilməz</p>
+                  <h5 className="text-danger">{t("endirim_qadagandir")}</h5>
+                  <p>{t("bu_mehsula_endirim_tetbiq_edile_bilmez")}</p>
                 </div>
               ) : (
                 <>
@@ -1054,12 +1050,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     {isSubmitting ? (
                       <>
                         <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                        <span>Tətbiq edilir...</span>
+                        <span>{t("tetbiq_edilir")}</span>
                       </>
                     ) : (
                       <>
                         <i className="bi bi-percent"></i>
-                        <span>Tətbiq et</span>
+                        <span>{t("apply")}</span>
                       </>
                     )}
                   </button>
@@ -1072,10 +1068,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     <div className="edit-hourly-live-panel">
                       <div className="edit-hourly-live-head">
                         <span className="edit-hourly-live-badge">
-                          <i className="bi bi-broadcast-pin" aria-hidden />
-                          Canlı
-                        </span>
-                        <span className="edit-hourly-live-sub">Taymer vəziyyəti</span>
+                          <i className="bi bi-broadcast-pin" aria-hidden />{t("canli")}</span>
+                        <span className="edit-hourly-live-sub">{t("taymer_veziyyeti")}</span>
                       </div>
                       <div className="edit-hourly-live-clock-wrap">
                         <i className="bi bi-stopwatch edit-hourly-live-clock-ico" aria-hidden />
@@ -1102,26 +1096,26 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                           title={isTimerRunning ? "Artıq işləyir" : "Başlat"}
                         >
                           <i className="bi bi-play-fill" />
-                          <span>Başlat</span>
+                          <span>{t("baslat")}</span>
                         </button>
                         <button
                           type="button"
                           className="edit-hourly-tile edit-hourly-tile-primary"
                           onClick={handleStopOrderTimer}
                           disabled={!isTimerRunning}
-                          title="Dayandır"
+                          title={t("dayandir")}
                         >
                           <i className="bi bi-pause-fill" />
-                          <span>Dayandır</span>
+                          <span>{t("dayandir")}</span>
                         </button>
                         <button
                           type="button"
                           className="edit-hourly-tile edit-hourly-tile-outline"
                           onClick={handleResetOrderTimer}
-                          title="Sıfırla"
+                          title={t("sifirla")}
                         >
                           <i className="bi bi-arrow-counterclockwise" />
-                          <span>Sıfırla</span>
+                          <span>{t("sifirla")}</span>
                         </button>
                       </div>
                     </div>
@@ -1130,7 +1124,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   <div className="edit-hourly-price-card">
                     <div className="edit-hourly-price-card-head">
                       <i className="bi bi-currency-exchange" aria-hidden />
-                      <span>Saatlıq qiymət (₼/saat)</span>
+                      <span>{t("saatliq_qiymet_₼/saat")}</span>
                     </div>
                     <input
                       type="text"
@@ -1139,13 +1133,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       disabled={Number(loginedWaiter?.data?.can_change_product_price) !== 1}
                       onChange={(e) => {
                         if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) {
-                          toast.error("Sizin qiymət dəyişmək icazəniz yoxdur!");
+                          toast.error(t("sizin_qiymet_deyismek_icazeniz_yoxdur"));
                           return;
                         }
                         setHourlyInput(e.target.value);
                       }}
                     />
-                    <p className="edit-hourly-price-hint">Dəyişəndən sonra aşağıdan saxlayın — menyuya yazılır.</p>
+                    <p className="edit-hourly-price-hint">{t("deyisenden_sonra_asagidan_saxlayin_menyuya_yazilir")}</p>
                   </div>
                 </div>
                 <button
@@ -1160,7 +1154,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       onClose(true);
                     } catch (error) {
                       console.error("Saatlıq saxlama:", error);
-                      toast.error("Xəta baş verdi");
+                      toast.error(t("error_occurred"));
                     } finally {
                       setIsSubmitting(false);
                     }
@@ -1169,21 +1163,17 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   {isSubmitting ? (
                     <>
                       <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                      <span>Gözləyin...</span>
+                      <span>{t("gozleyin")}</span>
                     </>
                   ) : (
                     <>
-                      <i className="bi bi-check-lg"></i>
-                      Saatlıq qiyməti saxla
-                    </>
+                      <i className="bi bi-check-lg"></i>{t("saatliq_qiymeti_saxla")}</>
                   )}
                 </button>
               </>
             ) : (
               <div className="empty-tab-content p-4 text-center text-muted">
-                <i className="bi bi-cone-striped fs-1 d-block mb-3"></i>
-                Bu bölmə tezliklə hazır olacaq
-              </div>
+                <i className="bi bi-cone-striped fs-1 d-block mb-3"></i>{t("bu_bolme_tezlikle_hazir_olacaq")}</div>
             )}
           </div>
         </div>
@@ -1213,7 +1203,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
     >
       <Modal.Body className="p-0 overflow-hidden rounded">
         <div className="edit-header edit-reset-confirm-header-bar">
-          <span className="edit-product-title">Təsdiq</span>
+          <span className="edit-product-title">{t("tesdiq")}</span>
           <button
             type="button"
             className="btn-close-custom"
@@ -1224,22 +1214,18 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
           </button>
         </div>
         <div className="edit-reset-confirm-inner">
-          <p className="edit-reset-confirm-text mb-0">Taymeri sıfırlamaq istədiyinizə əminsiniz?</p>
+          <p className="edit-reset-confirm-text mb-0">{t("taymeri_sifirlamaq_istediyinize_eminsiniz")}</p>
           <div className="edit-reset-confirm-actions">
             <button
               type="button"
               className="edit-reset-confirm-btn edit-reset-confirm-btn-cancel"
               onClick={() => setShowResetTimerConfirm(false)}
-            >
-              Ləğv et
-            </button>
+            >{t("cancel")}</button>
             <button
               type="button"
               className="edit-reset-confirm-btn edit-reset-confirm-btn-ok"
               onClick={confirmResetOrderTimer}
-            >
-              Sıfırla
-            </button>
+            >{t("sifirla")}</button>
           </div>
         </div>
       </Modal.Body>

@@ -24,6 +24,7 @@ const CloseIcon = () => (
 
 import SplitTableSelect from "./SplitTableSelect";
 import SplitWaiterSelect from "./SplitWaiterSelect";
+import { t } from "../../utils/translations";
 
 export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit, onCloseOtherModals }) => {
     const [splitQuantities, setSplitQuantities] = useState({});
@@ -119,9 +120,9 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
     const displayItems = getMergedItems(order?.orders_items);
 
     const salesTypes = [
-        { id: "dine_in", label: "Yerində" },
-        { id: "takeaway", label: "Gəl götür" },
-        { id: "delivery", label: "Çatdırılma" }
+        { id: "dine_in", label: t("yerinde") },
+        { id: "takeaway", label: t("takeaway") },
+        { id: "delivery", label: t("delivery") }
     ];
 
     // Find label for current sales type
@@ -140,7 +141,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
                 <div className="split-order-container">
                     {/* Header */}
                     <div className="split-header">
-                        <h2 className="split-title">Çeki böl</h2>
+                        <h2 className="split-title">{t("ceki_bol")}</h2>
                         <button className="split-close-btn" onClick={onClose}>
                             <CloseIcon />
                         </button>
@@ -148,9 +149,9 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
 
                     {/* Column Headers */}
                     <div className="split-list-header">
-                        <div className="col-product">Məhsullar</div>
+                        <div className="col-product">{t("products")}</div>
                         <div className="col-qty">Miqdar</div>
-                        <div className="col-action">Bölmək</div>
+                        <div className="col-action">{t("bolmek")}</div>
                     </div>
 
                     {/* Product List */}
@@ -259,16 +260,12 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
                         >
                             {isSubmitting ? (
                                 <>
-                                    <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                                    Bölünür...
-                                </>
+                                    <div className="spinner-border spinner-border-sm me-2" role="status"></div>{t("bolunur")}</>
                             ) : (
                                 <>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="me-2">
                                         <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M9 21H4v-5" />
-                                    </svg>
-                                    Bölmək
-                                </>
+                                    </svg>{t("bolmek")}</>
                             )}
                         </button>
                     </div>

@@ -3,6 +3,7 @@ import Modal from "react-bootstrap/Modal";
 import "./CheckDeleteModal.css";
 import { useDispatch, useSelector } from "react-redux"
 import { getTagsList } from "../../redux/Slices/TagsSlice";
+import { t } from "../../utils/translations";
 
 const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, actionName, title }) => {
     let headerName = title || (type === "checks" ? "Çeki sil" : "Məhsulu sil");
@@ -108,7 +109,7 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
                             <div className={`waste-toggle-icon-wrap ${isWaste ? "active" : ""}`}>
                                 <i className="bi bi-trash2-fill"></i>
                             </div>
-                            <span className="waste-toggle-label">Tullantıya at</span>
+                            <span className="waste-toggle-label">{t("tullantiya_at")}</span>
                             <div className={`waste-toggle-pill ${isWaste ? "on" : ""}`}>
                                 <div className="waste-toggle-knob"></div>
                             </div>
@@ -119,7 +120,7 @@ const CheckDeleteModal = ({ show, onClose, onConfirm, type, order, tagsType, act
                     {isWarehouse && isWaste && (
                         <textarea
                             className="waste-comment-input"
-                            placeholder="Şərh əlavə et (istəyə bağlı)"
+                            placeholder={t("serh_elave_et_isteye_bagli")}
                             value={wasteComment}
                             onChange={e => setWasteComment(e.target.value)}
                             rows={2}

@@ -21,8 +21,10 @@ import DevicesModal from "./DevicesModal";
 import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import "./Settings.css";
 import { checkIsSlaveTerminal } from "../../utils/masterSlaveHelpers";
+import { useTranslation } from "../../hooks/useTranslation";
 
 const Settings = () => {
+  const { t, lang, changeLanguage, languageOptions } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -98,14 +100,14 @@ const Settings = () => {
 
   const handleSoftRefresh = async () => {
     if (!loginedProfileData?.data?.profile?.id) {
-      toast.error("Profil məlumatı yoxdur, səhifə yenilənə bilmədi.");
+      toast.error(t("no_profile_data"));
       return;
     }
 
     setIsRefreshing(true);
     setSyncCounts(null);
     setRefreshIsOnline(true);
-    const toastId = toast.loading("Məlumatlar yenilənir...");
+    const toastId = toast.loading(t("data_updating"));
     try {
       const profileId = loginedProfileData.data.profile.id;
       const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`);
@@ -187,21 +189,21 @@ const Settings = () => {
   const topMenuItems = [
     {
       id: "refund",
-      label: "Geri qaytarılma",
+      label: t("refund"),
       icon: <i className="bi bi-arrow-counterclockwise"></i>,
       permission: Number(loginedWaiter?.data?.can_return_receipt) === 1,
       onClick: () => setShowReturnModal(true),
     },
     {
       id: "report",
-      label: "Hesabat yarat",
+      label: t("create_report"),
       icon: <i className="bi bi-file-earmark-text"></i>,
       permission: Number(loginedWaiter?.data?.can_create_report) === 1,
       onClick: () => setShowReportModal(true),
     },
     {
       id: "sales-shift",
-      label: "Satış növbəsi",
+      label: t("sales_shift"),
       icon: <i className="bi bi-clock-history"></i>,
       permission:
         Number(loginedProfileData?.data?.profile?.queue_sales_module) === 1 &&
@@ -210,13 +212,13 @@ const Settings = () => {
     },
     {
       id: "operation",
-      label: "Əməliyyat əlavə et",
+      label: t("add_operation"),
       icon: <i className="bi bi-plus-square"></i>,
       highlight: true,
     },
     {
       id: "customers",
-      label: "Müştərilər",
+      label: t("customers"),
       icon: <i className="bi bi-people"></i>,
       highlight: true,
       permission: Number(loginedWaiter?.data?.can_view_customers) === 1,
@@ -224,7 +226,7 @@ const Settings = () => {
     },
     {
       id: "archive",
-      label: "Çek arxivi",
+      label: t("check_archive"),
       icon: <i className="bi bi-archive"></i>,
       permission:
         Number(loginedWaiter?.data?.can_view_archived_checks) === 1 ||
@@ -233,7 +235,7 @@ const Settings = () => {
     },
     {
       id: "devices",
-      label: "Cihazlar",
+      label: t("devices"),
       icon: <i className="bi bi-laptop"></i>,
       highlight: true,
       onClick: () => setShowDevicesModal(true),
@@ -243,7 +245,7 @@ const Settings = () => {
     },
     {
       id: "masterip",
-      label: "Master IP",
+      label: t("master_ip"),
       icon: <i className="bi bi-wifi"></i>,
       highlight: true,
       onClick: () =>
@@ -258,14 +260,25 @@ const Settings = () => {
 
   const bottomMenuItems = [
     {
+      id: "language",
+      label: (languageOptions.find(l => l.code === lang) || {}).label || lang,
+      icon: <i className="bi bi-globe"></i>,
+      highlight: true,
+      onClick: () => {
+        const codes = languageOptions.map(l => l.code);
+        const next = codes[(codes.indexOf(lang) + 1) % codes.length];
+        changeLanguage(next);
+      },
+    },
+    {
       id: "refresh",
-      label: "Yenilə",
+      label: t("refresh"),
       icon: <i className="bi bi-arrow-repeat"></i>,
       onClick: handleSoftRefresh,
     },
     {
       id: "sound",
-      label: "Səs",
+      label: t("sound"),
       icon: <i className="bi bi-volume-up"></i>,
     },
     {
@@ -276,20 +289,20 @@ const Settings = () => {
     },
     {
       id: "fullscreen",
-      label: "Pəncərə rejimi",
+      label: t("window_mode"),
       icon: <i className="bi bi-arrows-fullscreen"></i>,
       onClick: handleFullscreenToggle,
       hiddenOnMobile: true,
     },
     {
       id: "support",
-      label: "Dəstək",
+      label: t("support"),
       icon: <i className="bi bi-question-circle"></i>,
       onClick: () => setShowSupportModal(true),
     },
     {
       id: "anydesk",
-      label: "AnyDesk",
+      label: t("anydesk"),
       icon: <i className="bi bi-display"></i>,
       onClick: handleOpenAnyDesk,
       hiddenOnMobile: true,
@@ -304,7 +317,7 @@ const Settings = () => {
           <button className="settings-back-btn" onClick={() => navigate(-1)}>
             <i className="bi bi-arrow-left"></i>
           </button>
-          <h1 className="settings-page-title">Kontrol panel</h1>
+          <h1 className="settings-page-title">{t("settings")}</h1>
           {Number(loginedProfileData?.data?.profile?.is_hotel_mode) === 1 && (
             <span style={{
               background: '#F59E0B',
@@ -316,9 +329,7 @@ const Settings = () => {
               textTransform: 'uppercase',
               letterSpacing: '1px',
               marginLeft: '8px'
-            }}>
-              OTEL
-            </span>
+            }}>{t("hotel")}</span>
           )}
           {appVersion && (
             <span className="settings-version-badge">v{appVersion}</span>

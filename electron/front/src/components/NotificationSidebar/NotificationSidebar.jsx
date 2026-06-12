@@ -5,6 +5,7 @@ import {
   markAllAsOld,
   clearNotifications,
 } from "../../utils/notificationService";
+import { t } from "../../utils/translations";
 
 const NotificationSidebarComponent = ({ show, onClose }) => {
   const [activeTab, setActiveTab] = useState("new"); // "new" or "old"
@@ -112,8 +113,7 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                   className="notif-clear-text-btn"
                   onClick={handleClearAll}
                 >
-                  <i className="bi bi-trash3"></i> Hamısını təmizlə
-                </button>
+                  <i className="bi bi-trash3"></i>{t("hamisini_temizle")}</button>
               </div>
             )}
 

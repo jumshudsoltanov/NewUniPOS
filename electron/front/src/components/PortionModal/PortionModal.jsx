@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
+import { t } from "../../utils/translations";
 import "./PortionModal.css";
 
 const PortionModal = ({ show, onHide, product, onConfirm }) => {
@@ -78,7 +79,7 @@ const PortionModal = ({ show, onHide, product, onConfirm }) => {
                     <input
                         className="portion-name-input"
                         type="text"
-                        placeholder="Porsiya adı (istəyə bağlı)"
+                        placeholder={t("porsiya_adi_isteye_bagli")}
                         value={portionName}
                         onChange={e => setPortionName(e.target.value)}
                         maxLength={40}
@@ -87,7 +88,7 @@ const PortionModal = ({ show, onHide, product, onConfirm }) => {
 
                 {/* Price display */}
                 <div className="portion-price-display">
-                    <span className="price-label">Qiymət</span>
+                    <span className="price-label">{t("qiymet")}</span>
                     <span className="price-value">{parseFloat(displayPrice || 0).toFixed(2)} ₼</span>
                 </div>
 
@@ -123,9 +124,7 @@ const PortionModal = ({ show, onHide, product, onConfirm }) => {
             </Modal.Body>
 
             <div className="portion-modal-footer">
-                <button className="portion-cancel-btn" onClick={onHide}>
-                    Ləğv et
-                </button>
+                <button className="portion-cancel-btn" onClick={onHide}>{t("cancel")}</button>
                 <button className="portion-add-btn" onClick={handleConfirm}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19" />

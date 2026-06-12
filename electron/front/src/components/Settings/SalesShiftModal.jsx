@@ -4,6 +4,7 @@ import { useSelector } from "react-redux";
 import apiConfig, { getSocket } from "../../utils/apiConfig";
 import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
+import { t } from "../../utils/translations";
 import "../ReportModal/ReportModal.css";
 import "./SalesShiftModal.css";
 
@@ -81,41 +82,41 @@ const buildShiftPrintHtml = ({
 </style>
 ${logoSrc ? `<div class="logo-wrap"><img src="${logoSrc}" alt="logo"/></div>` : ""}
 ${profileName ? `<div class="profile">${escapeHtml(profileName)}</div>` : ""}
-<div class="title">SATIŞ NÖVBƏSİ HESABATI</div>
+<div class="title">{t("satis_novbesi̇_hesabati")}</div>
 <hr class="divider"/>
-<div class="kv"><span class="kv-label">Açılış</span><span class="kv-value">${escapeHtml(openedAt || "—")}</span></div>
-<div class="kv"><span class="kv-label">Bağlanma</span><span class="kv-value">${escapeHtml(closedAt || "—")}</span></div>
-<div class="kv"><span class="kv-label">Terminal</span><span class="kv-value">${escapeHtml(terminalLabel || "Hamısı")}</span></div>
-<div class="kv"><span class="kv-label">Açan</span><span class="kv-value">${escapeHtml(openedBy || "—")}</span></div>
-<div class="kv"><span class="kv-label">Bağlayan</span><span class="kv-value">${escapeHtml(closedBy || "—")}</span></div>
-${Number(startingCash) > 0 ? `<div class="kv"><span class="kv-label">Başlanğıc qalıq</span><span class="kv-value">${money(startingCash)} &#8380;</span></div>` : ""}
+<div class="kv"><span class="kv-label">{t("acilis")}</span><span class="kv-value">${escapeHtml(openedAt || "—")}</span></div>
+<div class="kv"><span class="kv-label">{t("baglanma")}</span><span class="kv-value">${escapeHtml(closedAt || "—")}</span></div>
+<div class="kv"><span class="kv-label">{t("terminal")}</span><span class="kv-value">${escapeHtml(terminalLabel || "Hamısı")}</span></div>
+<div class="kv"><span class="kv-label">{t("acan")}</span><span class="kv-value">${escapeHtml(openedBy || "—")}</span></div>
+<div class="kv"><span class="kv-label">{t("baglayan")}</span><span class="kv-value">${escapeHtml(closedBy || "—")}</span></div>
+${Number(startingCash) > 0 ? `<div class="kv"><span class="kv-label">{t("baslangic_qaliq")}</span><span class="kv-value">${money(startingCash)} &#8380;</span></div>` : ""}
 <hr class="divider"/>
-<div class="section-title">Ümumi</div>
-<div class="kv"><span class="kv-label">Bağlanmış çek</span><span class="kv-value">${summary?.checksCount ?? 0}</span></div>
-<div class="total-row"><span class="total-label">Cəm məbləğ</span><span class="total-amount">${money(summary?.grossTotal)} &#8380;</span></div>
+<div class="section-title">{t("umumi")}</div>
+<div class="kv"><span class="kv-label">{t("baglanmis_cek")}</span><span class="kv-value">${summary?.checksCount ?? 0}</span></div>
+<div class="total-row"><span class="total-label">{t("cem_mebleg")}</span><span class="total-amount">${money(summary?.grossTotal)} &#8380;</span></div>
 <hr class="divider" style="margin-top:8px"/>
-<div class="section-title">Satış hesabatı</div>
-<div class="kv"><span class="kv-label">Cəm</span><span class="kv-value">${money(summary?.total_amount)} &#8380;</span></div>
+<div class="section-title">{t("satis_hesabati")}</div>
+<div class="kv"><span class="kv-label">{t("cem")}</span><span class="kv-value">${money(summary?.total_amount)} &#8380;</span></div>
 <div class="kv"><span class="kv-label">Vergi</span><span class="kv-value">${money(summary?.total_tax)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">İkram</span><span class="kv-value">${money(summary?.total_gift)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">Xidmət</span><span class="kv-value">${money(summary?.total_service)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">{t("i̇kram")}</span><span class="kv-value">${money(summary?.total_gift)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">{t("xidmet")}</span><span class="kv-value">${money(summary?.total_service)} &#8380;</span></div>
 <div class="kv"><span class="kv-label">Endirim</span><span class="kv-value">${money(summary?.total_discount)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">Çatdırılma haqqı</span><span class="kv-value">${money(summary?.delivery_fee)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">Geri qaytarılma</span><span class="kv-value">${money(summary?.total_refund)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">Silinmələr</span><span class="kv-value">${money(summary?.total_deleted)} &#8380;</span></div>
-${(Number(summary?.total_paid || 0) > 0 || Number(summary?.total_unpaid || 0) > 0) ? `<div class="kv" style="border-top:1px dashed #000;margin-top:3px;padding-top:3px"><span class="kv-label">Ödənişli bağlamalar</span><span class="kv-value">${money(summary?.total_paid)} &#8380;</span></div><div class="kv"><span class="kv-label">Ödənişsiz bağlamalar</span><span class="kv-value">${money(summary?.total_unpaid)} &#8380;</span></div>` : ""}
+<div class="kv"><span class="kv-label">{t("catdirilma_haqqi")}</span><span class="kv-value">${money(summary?.delivery_fee)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">{t("refund")}</span><span class="kv-value">${money(summary?.total_refund)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">{t("silinmeler")}</span><span class="kv-value">${money(summary?.total_deleted)} &#8380;</span></div>
+${(Number(summary?.total_paid || 0) > 0 || Number(summary?.total_unpaid || 0) > 0) ? `<div class="kv" style="border-top:1px dashed #000;margin-top:3px;padding-top:3px"><span class="kv-label">{t("odenisli_baglamalar")}</span><span class="kv-value">${money(summary?.total_paid)} &#8380;</span></div><div class="kv"><span class="kv-label">{t("odenissiz_baglamalar")}</span><span class="kv-value">${money(summary?.total_unpaid)} &#8380;</span></div>` : ""}
 <div class="total-row" style="margin-top:3px"><span class="total-label">Yekun</span><span class="total-amount">${money(summary?.net_total)} &#8380;</span></div>
-${Number(summary?.guest_count || 0) > 0 ? `<div class="kv" style="margin-top:3px"><span class="kv-label">Qonaq sayı</span><span class="kv-value">${summary?.guest_count ?? 0}</span></div>` : ""}
+${Number(summary?.guest_count || 0) > 0 ? `<div class="kv" style="margin-top:3px"><span class="kv-label">{t("guest_count")}</span><span class="kv-value">${summary?.guest_count ?? 0}</span></div>` : ""}
 <hr class="divider" style="margin-top:8px"/>
-<div class="section-title">Ofisiant üzrə</div>
-<table><thead><tr><th>Ad</th><th class="r">Çek</th><th class="r">Məbləğ</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+<div class="section-title">{t("ofisiant_uzre")}</div>
+<table><thead><tr><th>Ad</th><th class="r">{t("cek")}</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
 <hr class="divider"/>
-<div class="section-title">Satış tipi</div>
-<table><thead><tr><th>Tip</th><th class="r">Say</th><th class="r">Məbləğ</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
-${payRows ? `<hr class="divider"/><div class="section-title">Ödəniş üsulları</div><table><thead><tr><th>Üsul</th><th class="r">Məbləğ</th></tr></thead><tbody>${payRows}</tbody></table>` : ""}
-${unpaidRows ? `<hr class="divider"/><div class="section-title">Ödənişsiz bağlamalar</div><table><thead><tr><th>Üsul</th><th class="r">Məbləğ</th></tr></thead><tbody>${unpaidRows}</tbody></table>` : ""}
-${tagRows ? `<hr class="divider"/><div class="section-title">Etiketlər</div><table><thead><tr><th>Etiket</th><th class="r">Məbləğ</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
-${catRows ? `<hr class="divider"/><div class="section-title">Kateqoriya hesabatı</div><table><thead><tr><th>Kateqoriya</th><th class="r">Say</th><th class="r">Məbləğ</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
+<div class="section-title">{t("satis_tipi_1")}</div>
+<table><thead><tr><th>{t("type")}</th><th class="r">Say</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+${payRows ? `<hr class="divider"/><div class="section-title">{t("odenis_usullari")}</div><table><thead><tr><th>{t("usul")}</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${payRows}</tbody></table>` : ""}
+${unpaidRows ? `<hr class="divider"/><div class="section-title">{t("odenissiz_baglamalar")}</div><table><thead><tr><th>{t("usul")}</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${unpaidRows}</tbody></table>` : ""}
+${tagRows ? `<hr class="divider"/><div class="section-title">{t("etiketler")}</div><table><thead><tr><th>Etiket</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
+${catRows ? `<hr class="divider"/><div class="section-title">{t("kateqoriya_hesabati")}</div><table><thead><tr><th>Kateqoriya</th><th class="r">Say</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
 ${footerNote ? `<div class="footer-note">${escapeHtml(footerNote)}</div>` : ""}`;
 };
 
@@ -158,63 +159,55 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
             <div className="ssd-center-title">
                 <h4>{profileName || "Bağlanmış növbə"}</h4>
                 <div className="ssd-status-pill">
-                    <span className="ssd-status-pill-dot" aria-hidden />
-                    Arxiv · Bağlı
-                </div>
+                    <span className="ssd-status-pill-dot" aria-hidden />{t("arxiv_·_bagli")}</div>
             </div>
 
             {/* Məlumat kartı */}
             <div className="ssd-card">
                 <div className="ssd-card-title">
-                    <i className="bi bi-info-circle-fill" aria-hidden />
-                    Məlumat
-                </div>
+                    <i className="bi bi-info-circle-fill" aria-hidden />{t("melumat")}</div>
                 <div className="ssd-kv">
-                    <span>Bağlanma</span>
+                    <span>{t("baglanma")}</span>
                     <span>{closedLabel}</span>
                 </div>
                 <div className="ssd-kv">
-                    <span>Açılış</span>
+                    <span>{t("acilis")}</span>
                     <span>{openedLabel}</span>
                 </div>
                 <div className="ssd-kv">
-                    <span>Terminal</span>
+                    <span>{t("terminal")}</span>
                     <span>{row?.terminal_id || "—"}</span>
                 </div>
                 <div className="ssd-kv">
-                    <span>Açan</span>
+                    <span>{t("acan")}</span>
                     <span>{row?.opened_by_name || "—"}</span>
                 </div>
                 <div className="ssd-kv">
-                    <span>Bağlayan</span>
+                    <span>{t("baglayan")}</span>
                     <span>{row?.closed_by_name || "—"}</span>
                 </div>
                 {Number(row?.starting_cash || snapshot?.startingCash) > 0 && (
                     <div className="ssd-kv">
-                        <span>Başlanğıc qalıq</span>
+                        <span>{t("baslangic_qaliq")}</span>
                         <span>{money(row?.starting_cash || snapshot?.startingCash)} ₼</span>
                     </div>
                 )}
             </div>
 
             {!s ? (
-                <div className="ssd-empty-msg">
-                    Bu növbə üçün saxlanmış hesabat tapılmadı.
-                </div>
+                <div className="ssd-empty-msg">{t("bu_novbe_ucun_saxlanmis_hesabat_tapilmadi")}</div>
             ) : (
                 <>
                     {/* Ümumi kart */}
                     <div className="ssd-card">
                         <div className="ssd-card-title">
-                            <i className="bi bi-bar-chart-fill" aria-hidden />
-                            Ümumi
-                        </div>
+                            <i className="bi bi-bar-chart-fill" aria-hidden />{t("umumi")}</div>
                         <div className="ssd-kv">
-                            <span>Bağlanmış çek</span>
+                            <span>{t("baglanmis_cek")}</span>
                             <span>{s.checksCount ?? 0}</span>
                         </div>
                         <div className="ssd-total-row">
-                            <span>Cəm məbləğ</span>
+                            <span>{t("cem_mebleg")}</span>
                             <span>{money(s.grossTotal)} ₼</span>
                         </div>
                     </div>
@@ -222,44 +215,40 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                     {/* Satış hesabatı */}
                     <div className="ssd-card">
                         <div className="ssd-card-title">
-                            <i className="bi bi-receipt" aria-hidden />
-                            Satış hesabatı
-                        </div>
-                        <div className="ssd-kv"><span>Cəm</span><span>{money(s.total_amount)} ₼</span></div>
+                            <i className="bi bi-receipt" aria-hidden />{t("satis_hesabati")}</div>
+                        <div className="ssd-kv"><span>{t("cem")}</span><span>{money(s.total_amount)} ₼</span></div>
                         <div className="ssd-kv"><span>Vergi</span><span>{money(s.total_tax)} ₼</span></div>
-                        <div className="ssd-kv"><span>İkram</span><span>{money(s.total_gift)} ₼</span></div>
-                        <div className="ssd-kv"><span>Xidmət</span><span>{money(s.total_service)} ₼</span></div>
+                        <div className="ssd-kv"><span>{t("i̇kram")}</span><span>{money(s.total_gift)} ₼</span></div>
+                        <div className="ssd-kv"><span>{t("xidmet")}</span><span>{money(s.total_service)} ₼</span></div>
                         <div className="ssd-kv"><span>Endirim</span><span>{money(s.total_discount)} ₼</span></div>
-                        <div className="ssd-kv"><span>Çatdırılma haqqı</span><span>{money(s.delivery_fee)} ₼</span></div>
-                        <div className="ssd-kv"><span>Geri qaytarılma</span><span>{money(s.total_refund)} ₼</span></div>
-                        <div className="ssd-kv"><span>Silinmələr</span><span>{money(s.total_deleted)} ₼</span></div>
+                        <div className="ssd-kv"><span>{t("catdirilma_haqqi")}</span><span>{money(s.delivery_fee)} ₼</span></div>
+                        <div className="ssd-kv"><span>{t("refund")}</span><span>{money(s.total_refund)} ₼</span></div>
+                        <div className="ssd-kv"><span>{t("silinmeler")}</span><span>{money(s.total_deleted)} ₼</span></div>
                         {(s.total_paid > 0 || s.total_unpaid > 0) && (
                             <>
-                                <div className="ssd-kv" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span>Ödənişli bağlamalar</span><span>{money(s.total_paid)} ₼</span></div>
-                                <div className="ssd-kv"><span>Ödənişsiz bağlamalar</span><span>{money(s.total_unpaid)} ₼</span></div>
+                                <div className="ssd-kv" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span>{t("odenisli_baglamalar")}</span><span>{money(s.total_paid)} ₼</span></div>
+                                <div className="ssd-kv"><span>{t("odenissiz_baglamalar")}</span><span>{money(s.total_unpaid)} ₼</span></div>
                             </>
                         )}
                         <div className="ssd-total-row"><span>Yekun</span><span>{money(s.net_total)} ₼</span></div>
                     </div>
                     {(s.guest_count > 0) && (
                         <div className="ssd-card">
-                            <div className="ssd-kv"><span>Qonaq sayı</span><span>{s.guest_count ?? 0}</span></div>
+                            <div className="ssd-kv"><span>{t("guest_count")}</span><span>{s.guest_count ?? 0}</span></div>
                         </div>
                     )}
 
                     {/* Ofisiant */}
                     <div className="ssd-card">
                         <div className="ssd-card-title">
-                            <i className="bi bi-person-fill" aria-hidden />
-                            Ofisiant
-                        </div>
+                            <i className="bi bi-person-fill" aria-hidden />{t("waiter")}</div>
                         <div className="ssd-table-wrap">
                             <table>
                                 <thead>
                                     <tr>
                                         <th>Ad</th>
-                                        <th className="num">Çek</th>
-                                        <th className="num">Məbləğ</th>
+                                        <th className="num">{t("cek")}</th>
+                                        <th className="num">{t("mebleg")}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -284,16 +273,14 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                     {/* Satış tipi */}
                     <div className="ssd-card">
                         <div className="ssd-card-title">
-                            <i className="bi bi-tag-fill" aria-hidden />
-                            Satış tipi
-                        </div>
+                            <i className="bi bi-tag-fill" aria-hidden />{t("satis_tipi_1")}</div>
                         <div className="ssd-table-wrap">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Tip</th>
+                                        <th>{t("type")}</th>
                                         <th className="num">Say</th>
-                                        <th className="num">Məbləğ</th>
+                                        <th className="num">{t("mebleg")}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -318,19 +305,17 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                     {/* Ödəniş üsulları */}
                     <div className="ssd-card">
                         <div className="ssd-card-title">
-                            <i className="bi bi-credit-card-fill" aria-hidden />
-                            Ödəniş üsulları
-                        </div>
+                            <i className="bi bi-credit-card-fill" aria-hidden />{t("odenis_usullari")}</div>
                         <div className="ssd-table-wrap">
                             <table>
-                                <thead><tr><th>Üsul</th><th className="num">Məbləğ</th></tr></thead>
+                                <thead><tr><th>{t("usul")}</th><th className="num">{t("mebleg")}</th></tr></thead>
                                 <tbody>
                                     {Object.keys(s.payments || {}).length ? (
                                         Object.entries(s.payments).map(([name, amount]) => (
                                             <tr key={name}><td>{name}</td><td className="num">{money(amount)}</td></tr>
                                         ))
                                     ) : (
-                                        <tr><td colSpan={2} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                        <tr><td colSpan={2} className="ssm-table-empty">{t("melumat_yoxdur")}</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -340,19 +325,17 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                     {/* Ödənişsiz bağlamalar */}
                     <div className="ssd-card">
                         <div className="ssd-card-title">
-                            <i className="bi bi-x-circle-fill" aria-hidden />
-                            Ödənişsiz bağlamalar
-                        </div>
+                            <i className="bi bi-x-circle-fill" aria-hidden />{t("odenissiz_baglamalar")}</div>
                         <div className="ssd-table-wrap">
                             <table>
-                                <thead><tr><th>Üsul</th><th className="num">Məbləğ</th></tr></thead>
+                                <thead><tr><th>{t("usul")}</th><th className="num">{t("mebleg")}</th></tr></thead>
                                 <tbody>
                                     {Object.keys(s.unpaid_payments || {}).length ? (
                                         Object.entries(s.unpaid_payments).map(([name, amount]) => (
                                             <tr key={name}><td>{name}</td><td className="num">{money(amount)}</td></tr>
                                         ))
                                     ) : (
-                                        <tr><td colSpan={2} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                        <tr><td colSpan={2} className="ssm-table-empty">{t("melumat_yoxdur")}</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -362,19 +345,17 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                     {/* Etiketlər */}
                     <div className="ssd-card">
                         <div className="ssd-card-title">
-                            <i className="bi bi-bookmark-fill" aria-hidden />
-                            Etiketlər
-                        </div>
+                            <i className="bi bi-bookmark-fill" aria-hidden />{t("etiketler")}</div>
                         <div className="ssd-table-wrap">
                             <table>
-                                <thead><tr><th>Etiket</th><th className="num">Say</th><th className="num">Məbləğ</th></tr></thead>
+                                <thead><tr><th>Etiket</th><th className="num">Say</th><th className="num">{t("mebleg")}</th></tr></thead>
                                 <tbody>
                                     {Object.keys(s.tags || {}).length ? (
                                         Object.entries(s.tags).map(([tag, details]) => (
                                             <tr key={tag}><td>{tag}</td><td className="num">{details.count}</td><td className="num">{money(details.total)}</td></tr>
                                         ))
                                     ) : (
-                                        <tr><td colSpan={3} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                        <tr><td colSpan={3} className="ssm-table-empty">{t("melumat_yoxdur")}</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -384,12 +365,10 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                     {/* Kateqoriya hesabatı */}
                     <div className="ssd-card">
                         <div className="ssd-card-title">
-                            <i className="bi bi-grid-fill" aria-hidden />
-                            Kateqoriya hesabatı
-                        </div>
+                            <i className="bi bi-grid-fill" aria-hidden />{t("kateqoriya_hesabati")}</div>
                         <div className="ssd-table-wrap">
                             <table>
-                                <thead><tr><th>Kateqoriya / Məhsul</th><th className="num">Say</th><th className="num">Məbləğ</th></tr></thead>
+                                <thead><tr><th>{t("kateqoriya_/_mehsul")}</th><th className="num">Say</th><th className="num">{t("mebleg")}</th></tr></thead>
                                 <tbody>
                                     {(s.byCategory || []).length ? (
                                         s.byCategory.map((cat) => (
@@ -409,7 +388,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                                             </React.Fragment>
                                         ))
                                     ) : (
-                                        <tr><td colSpan={3} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                        <tr><td colSpan={3} className="ssm-table-empty">{t("melumat_yoxdur")}</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -542,7 +521,7 @@ const SalesShiftModal = ({ show, onHide }) => {
 
     const printToCashier = async (html) => {
         if (!window.electronAPI?.printReceipt || !cashierPrinters.length) {
-            toast.warning("Kassa printeri tapılmadı və ya Electron çapı yoxdur");
+            toast.warning(t("kassa_printeri_tapilmadi_ve_ya_electron_capi_yoxdur"));
             return;
         }
         for (const cashierPrinter of cashierPrinters) {
@@ -591,7 +570,7 @@ const SalesShiftModal = ({ show, onHide }) => {
 
     const handlePrintSnapshot = async (snapshot, shiftRow, { isReprint } = {}) => {
         if (!snapshot?.summary) {
-            toast.error("Hesabat məlumatı yoxdur");
+            toast.error(t("hesabat_melumati_yoxdur"));
             return;
         }
         const validLogo = (logo) =>
@@ -630,14 +609,14 @@ const SalesShiftModal = ({ show, onHide }) => {
                 startingCash: Number(startingCash) || 0,
             });
             if (res.data?.message === "success") {
-                toast.success("Satış növbəsi açıldı");
+                toast.success(t("satis_novbesi_acildi"));
                 setStartingCash("");
                 window.dispatchEvent(new CustomEvent("salesShiftChanged"));
                 await refreshAll();
             }
         } catch (e) {
             if (e.response?.data?.message === "open_exists") {
-                toast.warning("Bu terminal üçün artıq açıq növbə var");
+                toast.warning(t("bu_terminal_ucun_artiq_aciq_novbe_var"));
                 await refreshAll();
             } else {
                 toastShiftError(e, "Növbə açılmadı");
@@ -668,7 +647,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                     profileId: Number(profileId),
                 };
                 await handlePrintSnapshot(snapshot, shift, { isReprint: false });
-                toast.success("Növbə bağlandı");
+                toast.success(t("novbe_baglandi"));
                 window.dispatchEvent(new CustomEvent("salesShiftChanged"));
                 setCurrentShift(null);
                 setLivePayload(null);
@@ -719,17 +698,14 @@ const SalesShiftModal = ({ show, onHide }) => {
 
     const currentShiftBody = !currentShift ? (
         <>
-            <p className="sales-shift-hint mb-0">
-                Açıq növbə yoxdur. «Növbəni aç» ilə başladın. Bu terminal üzrə bağlanmış çeklər izlənəcək;
-                növbəni bağlayanda kassa printerindən hesabat çap olunacaq.
-            </p>
+            <p className="sales-shift-hint mb-0">{t("aciq_novbe_yoxdur_novbeni_ac_ile_basladin_bu_terminal_uzre_baglanmis_cekler_izlenecek_novbeni_baglayanda_kassa_printerinden_hesabat_cap_olunacaq")}</p>
             <div className="ssm-starting-cash-card mt-3">
                 <div className="ssm-starting-cash-icon">
                     <i className="bi bi-cash-stack" aria-hidden />
                 </div>
                 <div className="ssm-starting-cash-body">
-                    <label className="ssm-starting-cash-label" htmlFor="startingCashInput">Başlanğıc qalıq</label>
-                    <span className="ssm-starting-cash-hint">Növbə başlamazdan əvvəl kassadakı pul</span>
+                    <label className="ssm-starting-cash-label" htmlFor="startingCashInput">{t("baslangic_qaliq")}</label>
+                    <span className="ssm-starting-cash-hint">{t("novbe_baslamazdan_evvel_kassadaki_pul")}</span>
                 </div>
                 <div className="ssm-starting-cash-input-wrap">
                     <input
@@ -747,12 +723,8 @@ const SalesShiftModal = ({ show, onHide }) => {
                 </div>
             </div>
             <div className="sales-shift-actions mt-3">
-                <Button variant="primary" onClick={handleOpenShift} disabled={loading || !profileId}>
-                    Növbəni aç
-                </Button>
-                <Button variant="outline-secondary" onClick={refreshAll} disabled={loading}>
-                    Yenilə
-                </Button>
+                <Button variant="primary" onClick={handleOpenShift} disabled={loading || !profileId}>{t("novbeni_ac")}</Button>
+                <Button variant="outline-secondary" onClick={refreshAll} disabled={loading}>{t("refresh")}</Button>
             </div>
         </>
     ) : (
@@ -760,28 +732,28 @@ const SalesShiftModal = ({ show, onHide }) => {
             {/* Məlumat kartı */}
             <div className="ssm-info-card">
                 <div className="ssm-info-row">
-                    <span className="ssm-info-label">Açılış</span>
+                    <span className="ssm-info-label">{t("acilis")}</span>
                     <span className="ssm-info-value">
                         {currentShift.opened_at ? new Date(currentShift.opened_at).toLocaleString("az-AZ") : "—"}
                     </span>
                 </div>
                 <div className="ssm-info-row">
-                    <span className="ssm-info-label">Açan</span>
+                    <span className="ssm-info-label">{t("acan")}</span>
                     <span className="ssm-info-value">{currentShift.opened_by_name || "—"}</span>
                 </div>
                 <div className="ssm-info-row">
-                    <span className="ssm-info-label">Terminal</span>
+                    <span className="ssm-info-label">{t("terminal")}</span>
                     <span className="ssm-info-value">{currentShift.terminal_id || terminalId || "—"}</span>
                 </div>
                 {Number(currentShift.starting_cash) > 0 && (
                     <div className="ssm-info-row">
-                        <span className="ssm-info-label">Başlanğıc qalıq</span>
+                        <span className="ssm-info-label">{t("baslangic_qaliq")}</span>
                         <span className="ssm-info-value">{money(currentShift.starting_cash)} ₼</span>
                     </div>
                 )}
                 {currentShift.closed_by_name && (
                     <div className="ssm-info-row">
-                        <span className="ssm-info-label">Bağlayan</span>
+                        <span className="ssm-info-label">{t("baglayan")}</span>
                         <span className="ssm-info-value">{currentShift.closed_by_name}</span>
                     </div>
                 )}
@@ -789,35 +761,25 @@ const SalesShiftModal = ({ show, onHide }) => {
 
             <div className="sales-shift-actions">
                 <Button variant="outline-secondary" onClick={() => fetchLive()} disabled={loading}>
-                    <i className="bi bi-arrow-clockwise" aria-hidden />
-                    Canlı yenilə
-                </Button>
+                    <i className="bi bi-arrow-clockwise" aria-hidden />{t("canli_yenile")}</Button>
                 {!showClosePrompt && (
                     <Button variant="danger" onClick={() => setShowClosePrompt(true)} disabled={loading}>
-                        <i className="bi bi-printer-fill" aria-hidden />
-                        Bağla və çap et
-                    </Button>
+                        <i className="bi bi-printer-fill" aria-hidden />{t("bagla_ve_cap_et")}</Button>
                 )}
             </div>
 
             {showClosePrompt && (
                 <div className="sales-shift-close-confirm">
-                    <p className="mb-0">
-                        Növbəni bağlamaq istəyirsiniz? Kassa printerinə bağlanmış növbə hesabatı göndəriləcək.
-                    </p>
+                    <p className="mb-0">{t("novbeni_baglamaq_isteyirsiniz_kassa_printerine_baglanmis_novbe_hesabati_gonderilecek")}</p>
                     <div className="sales-shift-close-confirm-actions mt-2">
                         <Button
                             variant="outline-secondary"
                             size="sm"
                             onClick={() => setShowClosePrompt(false)}
                             disabled={loading}
-                        >
-                            Ləğv et
-                        </Button>
+                        >{t("cancel")}</Button>
                         <Button variant="danger" size="sm" onClick={executeCloseShift} disabled={loading}>
-                            <i className="bi bi-printer-fill me-1" aria-hidden />
-                            Bəli, bağla
-                        </Button>
+                            <i className="bi bi-printer-fill me-1" aria-hidden />{t("beli_bagla")}</Button>
                     </div>
                 </div>
             )}
@@ -826,62 +788,56 @@ const SalesShiftModal = ({ show, onHide }) => {
                 <>
                     {/* Ümumi xülasə */}
                     <div className="ssm-section-header">
-                        <i className="bi bi-bar-chart-fill" aria-hidden />
-                        Növbə xülasəsi
-                    </div>
+                        <i className="bi bi-bar-chart-fill" aria-hidden />{t("novbe_xulasesi")}</div>
                     <div className="ssm-info-card">
                         <div className="ssm-info-row">
-                            <span className="ssm-info-label">Bağlanmış çek</span>
+                            <span className="ssm-info-label">{t("baglanmis_cek")}</span>
                             <span className="ssm-info-value">{summary.checksCount ?? 0}</span>
                         </div>
                         <div className="ssm-info-row ssm-total-row">
-                            <span>Cəm məbləğ</span>
+                            <span>{t("cem_mebleg")}</span>
                             <span>{money(summary.grossTotal)} ₼</span>
                         </div>
                         <div className="ssm-info-row ssm-total-row" style={{ borderTop: '1px dashed #e2e8f0', marginTop: 4, paddingTop: 4 }}>
-                            <span>Çeklərin cəmi (yekun)</span>
+                            <span>{t("ceklerin_cemi_yekun")}</span>
                             <span>{money(summary.net_total)} ₼</span>
                         </div>
                     </div>
 
                     {/* Satış hesabatı */}
                     <div className="ssm-section-header">
-                        <i className="bi bi-receipt" aria-hidden />
-                        Satış hesabatı
-                    </div>
+                        <i className="bi bi-receipt" aria-hidden />{t("satis_hesabati")}</div>
                     <div className="ssm-info-card">
-                        <div className="ssm-info-row"><span className="ssm-info-label">Cəm</span><span className="ssm-info-value">{money(summary.total_amount)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("cem")}</span><span className="ssm-info-value">{money(summary.total_amount)} ₼</span></div>
                         <div className="ssm-info-row"><span className="ssm-info-label">Vergi</span><span className="ssm-info-value">{money(summary.total_tax)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">İkram</span><span className="ssm-info-value">{money(summary.total_gift)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">Xidmət</span><span className="ssm-info-value">{money(summary.total_service)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("i̇kram")}</span><span className="ssm-info-value">{money(summary.total_gift)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("xidmet")}</span><span className="ssm-info-value">{money(summary.total_service)} ₼</span></div>
                         <div className="ssm-info-row"><span className="ssm-info-label">Endirim</span><span className="ssm-info-value">{money(summary.total_discount)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">Çatdırılma haqqı</span><span className="ssm-info-value">{money(summary.delivery_fee)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">Geri qaytarılma</span><span className="ssm-info-value">{money(summary.total_refund)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">Silinmələr</span><span className="ssm-info-value">{money(summary.total_deleted)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("catdirilma_haqqi")}</span><span className="ssm-info-value">{money(summary.delivery_fee)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("refund")}</span><span className="ssm-info-value">{money(summary.total_refund)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("silinmeler")}</span><span className="ssm-info-value">{money(summary.total_deleted)} ₼</span></div>
                         {(summary.total_paid > 0 || summary.total_unpaid > 0) && (
                             <>
-                                <div className="ssm-info-row" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span className="ssm-info-label">Ödənişli bağlamalar</span><span className="ssm-info-value">{money(summary.total_paid)} ₼</span></div>
-                                <div className="ssm-info-row"><span className="ssm-info-label">Ödənişsiz bağlamalar</span><span className="ssm-info-value">{money(summary.total_unpaid)} ₼</span></div>
+                                <div className="ssm-info-row" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span className="ssm-info-label">{t("odenisli_baglamalar")}</span><span className="ssm-info-value">{money(summary.total_paid)} ₼</span></div>
+                                <div className="ssm-info-row"><span className="ssm-info-label">{t("odenissiz_baglamalar")}</span><span className="ssm-info-value">{money(summary.total_unpaid)} ₼</span></div>
                             </>
                         )}
                         <div className="ssm-info-row ssm-total-row"><span>Yekun</span><span>{money(summary.net_total)} ₼</span></div>
                     </div>
                     <div className="ssm-info-card">
-                        <div className="ssm-info-row"><span className="ssm-info-label">Qonaq sayı</span><span className="ssm-info-value">{summary.guest_count ?? 0}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("guest_count")}</span><span className="ssm-info-value">{summary.guest_count ?? 0}</span></div>
                     </div>
 
                     {/* Ofisiant cədvəli */}
                     <div className="ssm-section-header">
-                        <i className="bi bi-person-fill" aria-hidden />
-                        Ofisiant (canlı)
-                    </div>
+                        <i className="bi bi-person-fill" aria-hidden />{t("ofisiant_canli")}</div>
                     <div className="ssm-table-card">
                         <table className="ssm-table">
                             <thead>
                                 <tr>
                                     <th>Ad</th>
-                                    <th className="num">Çek</th>
-                                    <th className="num">Məbləğ</th>
+                                    <th className="num">{t("cek")}</th>
+                                    <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -895,9 +851,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={3} className="ssm-table-empty">
-                                            Hələ bağlanmış çek yoxdur
-                                        </td>
+                                        <td colSpan={3} className="ssm-table-empty">{t("hele_baglanmis_cek_yoxdur")}</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -906,16 +860,14 @@ const SalesShiftModal = ({ show, onHide }) => {
 
                     {/* Satış tipi cədvəli */}
                     <div className="ssm-section-header">
-                        <i className="bi bi-tag-fill" aria-hidden />
-                        Satış tipi (canlı)
-                    </div>
+                        <i className="bi bi-tag-fill" aria-hidden />{t("satis_tipi_canli")}</div>
                     <div className="ssm-table-card">
                         <table className="ssm-table">
                             <thead>
                                 <tr>
-                                    <th>Tip</th>
+                                    <th>{t("type")}</th>
                                     <th className="num">Say</th>
-                                    <th className="num">Məbləğ</th>
+                                    <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -929,9 +881,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={3} className="ssm-table-empty">
-                                            Məlumat yoxdur
-                                        </td>
+                                        <td colSpan={3} className="ssm-table-empty">{t("melumat_yoxdur")}</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -940,15 +890,13 @@ const SalesShiftModal = ({ show, onHide }) => {
 
                     {/* Ödəniş üsulları */}
                     <div className="ssm-section-header">
-                        <i className="bi bi-credit-card-fill" aria-hidden />
-                        Ödəniş üsulları
-                    </div>
+                        <i className="bi bi-credit-card-fill" aria-hidden />{t("odenis_usullari")}</div>
                     <div className="ssm-table-card">
                         <table className="ssm-table">
                             <thead>
                                 <tr>
-                                    <th>Üsul</th>
-                                    <th className="num">Məbləğ</th>
+                                    <th>{t("usul")}</th>
+                                    <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -960,7 +908,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan={2} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                    <tr><td colSpan={2} className="ssm-table-empty">{t("melumat_yoxdur")}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -968,15 +916,13 @@ const SalesShiftModal = ({ show, onHide }) => {
 
                     {/* Ödənişsiz bağlamalar */}
                     <div className="ssm-section-header">
-                        <i className="bi bi-x-circle-fill" aria-hidden />
-                        Ödənişsiz bağlamalar
-                    </div>
+                        <i className="bi bi-x-circle-fill" aria-hidden />{t("odenissiz_baglamalar")}</div>
                     <div className="ssm-table-card">
                         <table className="ssm-table">
                             <thead>
                                 <tr>
-                                    <th>Üsul</th>
-                                    <th className="num">Məbləğ</th>
+                                    <th>{t("usul")}</th>
+                                    <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -988,7 +934,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan={2} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                    <tr><td colSpan={2} className="ssm-table-empty">{t("melumat_yoxdur")}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -996,16 +942,14 @@ const SalesShiftModal = ({ show, onHide }) => {
 
                     {/* Etiketlər */}
                     <div className="ssm-section-header">
-                        <i className="bi bi-bookmark-fill" aria-hidden />
-                        Etiketlər
-                    </div>
+                        <i className="bi bi-bookmark-fill" aria-hidden />{t("etiketler")}</div>
                     <div className="ssm-table-card">
                         <table className="ssm-table">
                             <thead>
                                 <tr>
                                     <th>Etiket</th>
                                     <th className="num">Say</th>
-                                    <th className="num">Məbləğ</th>
+                                    <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1018,7 +962,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                         </tr>
                                     ))
                                 ) : (
-                                    <tr><td colSpan={3} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                    <tr><td colSpan={3} className="ssm-table-empty">{t("melumat_yoxdur")}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -1026,16 +970,14 @@ const SalesShiftModal = ({ show, onHide }) => {
 
                     {/* Kateqoriya hesabatı */}
                     <div className="ssm-section-header">
-                        <i className="bi bi-grid-fill" aria-hidden />
-                        Kateqoriya hesabatı
-                    </div>
+                        <i className="bi bi-grid-fill" aria-hidden />{t("kateqoriya_hesabati")}</div>
                     <div className="ssm-table-card">
                         <table className="ssm-table">
                             <thead>
                                 <tr>
-                                    <th>Kateqoriya / Məhsul</th>
+                                    <th>{t("kateqoriya_/_mehsul")}</th>
                                     <th className="num">Say</th>
-                                    <th className="num">Məbləğ</th>
+                                    <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1057,7 +999,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                         </React.Fragment>
                                     ))
                                 ) : (
-                                    <tr><td colSpan={3} className="ssm-table-empty">Məlumat yoxdur</td></tr>
+                                    <tr><td colSpan={3} className="ssm-table-empty">{t("melumat_yoxdur")}</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -1070,11 +1012,9 @@ const SalesShiftModal = ({ show, onHide }) => {
     const historyBody =
         !canSeeShiftHistory ? (
             <div className="sales-shift-empty-right">
-                <i className="bi bi-lock-fill me-2" aria-hidden />
-                İcazəniz yoxdur
-            </div>
+                <i className="bi bi-lock-fill me-2" aria-hidden />{t("i̇cazeniz_yoxdur")}</div>
         ) : history.length === 0 ? (
-            <div className="sales-shift-empty-right">Hələ bağlanmış növbə yoxdur.</div>
+            <div className="sales-shift-empty-right">{t("hele_baglanmis_novbe_yoxdur")}</div>
         ) : (
             <div className="sales-shift-history-strip-wrap">
                 <div
@@ -1129,9 +1069,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                         onClick={() => handleReprintFromHistory(h)}
                                         disabled={loading}
                                     >
-                                        <i className="bi bi-printer-fill" aria-hidden />
-                                        Təkrar çap
-                                    </Button>
+                                        <i className="bi bi-printer-fill" aria-hidden />{t("tekrar_cap")}</Button>
                                 </div>
                             </div>
                         );
@@ -1155,9 +1093,7 @@ const SalesShiftModal = ({ show, onHide }) => {
             >
                 <Modal.Header className="report-modal-header" closeButton closeVariant="white">
                     <div className="sales-shift-main-header-inner">
-                        <Modal.Title as="h5" className="report-modal-title mb-0">
-                            Satış növbəsi
-                        </Modal.Title>
+                        <Modal.Title as="h5" className="report-modal-title mb-0">{t("sales_shift")}</Modal.Title>
                         <span
                             className={`sales-shift-header-status ${currentShift ? "sales-shift-header-status--open" : "sales-shift-header-status--closed"
                                 }`}
@@ -1178,9 +1114,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                         <div className="sales-shift-modal-body">
                             <div className="sales-shift-col-left">
                                 <h6 className="sales-shift-panel-title">
-                                    <i className="bi bi-lightning-charge-fill" aria-hidden />
-                                    Cari növbə
-                                </h6>
+                                    <i className="bi bi-lightning-charge-fill" aria-hidden />{t("cari_novbe")}</h6>
                                 {currentShiftBody}
                             </div>
                             <div className="sales-shift-col-right">
@@ -1194,7 +1128,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                 <div className="ssm-history-filter">
                                     <div className="ssm-history-filter-row">
                                         <div className="ssm-history-filter-field">
-                                            <label htmlFor="historyFrom">Başlanğıc</label>
+                                            <label htmlFor="historyFrom">{t("baslangic")}</label>
                                             <input
                                                 id="historyFrom"
                                                 type="date"
@@ -1253,13 +1187,13 @@ const SalesShiftModal = ({ show, onHide }) => {
                 restoreFocus={false}
             >
                 <Modal.Header closeButton closeVariant="white">
-                    <Modal.Title>Növbə detalları</Modal.Title>
+                    <Modal.Title>{t("novbe_detallari")}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
                     {shiftDetailModal?.loading ? (
                         <div className="text-center py-5">
                             <Spinner animation="border" size="sm" variant="primary" />
-                            <p className="text-muted small mt-2 mb-0">Yüklənir…</p>
+                            <p className="text-muted small mt-2 mb-0">{t("yuklenir…")}</p>
                         </div>
                     ) : (
                         detailRow && (
@@ -1281,9 +1215,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                     await handleReprintFromHistory(detailRow);
                                 }}
                             >
-                                <i className="bi bi-printer-fill" aria-hidden />
-                                Təkrar çap et
-                            </Button>
+                                <i className="bi bi-printer-fill" aria-hidden />{t("tekrar_cap_et")}</Button>
                         </div>
                     </Modal.Footer>
                 )}

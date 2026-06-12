@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import { t } from "../../utils/translations";
 import './AddressModal.css';
 
 // Fix for Leaflet marker icons in React
@@ -156,7 +157,7 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
             backdrop="static"
         >
             <div className="address-modal-header">
-                <h2 className="address-modal-title">Ünvan əlavə et</h2>
+                <h2 className="address-modal-title">{t("unvan_elave_et")}</h2>
                 <button className="address-modal-close-btn" onClick={onHide}>
                     <i className="bi bi-x"></i>
                 </button>
@@ -164,10 +165,10 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
 
             <div className="address-modal-body">
                 <div className="address-field-group">
-                    <label className="address-field-label">Ünvan başlığı</label>
+                    <label className="address-field-label">{t("unvan_basligi")}</label>
                     <input
                         type="text"
-                        placeholder="Ünvan başlığını daxil edin"
+                        placeholder={t("unvan_basligini_daxil_edin")}
                         className="address-input"
                         value={addressTitle}
                         onChange={(e) => setAddressTitle(e.target.value)}
@@ -179,7 +180,7 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
                         <i className="bi bi-search"></i>
                         <input
                             type="text"
-                            placeholder="Ünvan axtarın..."
+                            placeholder={t("unvan_axtarin")}
                             className="address-search-input"
                             value={searchQuery}
                             onChange={(e) => {
@@ -226,7 +227,7 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
                 <div className="address-field-group mb-0">
                     <label className="address-field-label">Qeyd</label>
                     <textarea
-                        placeholder="Qeyd yazın"
+                        placeholder={t("qeyd_yazin")}
                         className="address-textarea compact-textarea"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
@@ -238,9 +239,7 @@ const AddressModal = ({ show, onHide, onConfirm }) => {
                         className={`submit-address-btn ${(addressTitle || searchQuery) ? 'active' : ''}`}
                         onClick={handleConfirm}
                         disabled={!(addressTitle || searchQuery)}
-                    >
-                        Ünvanı təsdiqləyin
-                    </button>
+                    >{t("unvani_tesdiqleyin")}</button>
                 </div>
             </div>
         </Modal>

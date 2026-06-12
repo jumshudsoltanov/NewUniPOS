@@ -1,4 +1,5 @@
 import { Modal } from "react-bootstrap";
+import { t } from "../../utils/translations";
 import "./CheckReceiptModal.css";
 
 const CheckReceiptModal = ({ show, onClose, order }) => {
@@ -24,8 +25,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
         );
         if (order.status === 2) return (
             <span className="receipt-status-pill closed">
-                <i className="bi bi-check-circle-fill"></i> Bağlanıb
-            </span>
+                <i className="bi bi-check-circle-fill"></i>{t("baglanib")}</span>
         );
         return (
             <span className="receipt-status-pill active">
@@ -46,7 +46,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
     return (
         <Modal show={show} onHide={onClose} centered className="check-receipt-modal">
             <Modal.Header closeButton>
-                <Modal.Title>Çek</Modal.Title>
+                <Modal.Title>{t("cek")}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <div className="receipt-container">
@@ -61,29 +61,29 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                     <div className="receipt-info-card">
                         {order.waiter?.name && (
                             <div className="receipt-info-row">
-                                <span className="receipt-info-label">Ofisiant</span>
+                                <span className="receipt-info-label">{t("waiter")}</span>
                                 <span className="receipt-info-value">{order.waiter.name}</span>
                             </div>
                         )}
                         <div className="receipt-info-row">
-                            <span className="receipt-info-label">Satış üsulu</span>
+                            <span className="receipt-info-label">{t("satis_usulu_1")}</span>
                             <span className="receipt-info-value">
                                 {saleTypeLabels[order.sale_type] || order.sale_type || "Naməlum"}
                             </span>
                         </div>
                         {order.guest_count && (
                             <div className="receipt-info-row">
-                                <span className="receipt-info-label">Qonaq sayı</span>
+                                <span className="receipt-info-label">{t("guest_count")}</span>
                                 <span className="receipt-info-value">{order.guest_count}</span>
                             </div>
                         )}
                         <div className="receipt-info-row">
-                            <span className="receipt-info-label">Açıldı</span>
+                            <span className="receipt-info-label">{t("acildi_1")}</span>
                             <span className="receipt-info-value">{formatDate(order.start_date)}</span>
                         </div>
                         {order.end_date && (
                             <div className="receipt-info-row">
-                                <span className="receipt-info-label">Bağlandı</span>
+                                <span className="receipt-info-label">{t("baglandi_1")}</span>
                                 <span className="receipt-info-value">{formatDate(order.end_date)}</span>
                             </div>
                         )}
@@ -91,14 +91,14 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
 
                     {/* Items Card */}
                     <div className="receipt-items-card">
-                        <div className="receipt-items-title">Məhsullar</div>
+                        <div className="receipt-items-title">{t("products")}</div>
                         <table className="receipt-items-table">
                             <thead>
                                 <tr>
                                     <th>Ad</th>
                                     <th>Miq</th>
-                                    <th>Qiymət</th>
-                                    <th>Cəm</th>
+                                    <th>{t("qiymet")}</th>
+                                    <th>{t("cem")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -150,7 +150,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                     {/* Totals Card */}
                     <div className="receipt-totals-card">
                         <div className="receipt-total-row">
-                            <span className="receipt-total-label">Cəm</span>
+                            <span className="receipt-total-label">{t("cem")}</span>
                             <span className="receipt-total-value">{formatMoney(subtotal)} ₼</span>
                         </div>
                         {discount > 0 && (
@@ -161,7 +161,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                         )}
                         {serviceCharge > 0 && (
                             <div className="receipt-total-row">
-                                <span className="receipt-total-label">Servis haqqı</span>
+                                <span className="receipt-total-label">{t("servis_haqqi_2")}</span>
                                 <span className="receipt-total-value">{formatMoney(serviceCharge)} ₼</span>
                             </div>
                         )}
@@ -174,7 +174,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                     {/* Payment Card */}
                     {order.order_payments?.length > 0 && (
                         <div className="receipt-payment-card">
-                            <div className="receipt-payment-title">Ödəniş üsulu</div>
+                            <div className="receipt-payment-title">{t("odenis_usulu")}</div>
                             {order.order_payments.map((p, i) => (
                                 <div key={i} className="receipt-payment-row">
                                     <span className="receipt-payment-method">

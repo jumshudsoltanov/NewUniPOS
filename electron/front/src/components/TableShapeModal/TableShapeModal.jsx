@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "../../utils/translations";
 import "./TableShapeModal.css";
 
 const TableShapeModal = ({ show, onHide, onSelect, currentShape }) => {
@@ -56,7 +57,7 @@ const TableShapeModal = ({ show, onHide, onSelect, currentShape }) => {
                                     <rect x="14" y="14" width="7" height="7" rx="1" />
                                 </svg>
                             </div>
-                            <span className="tsm-title">Masa formasını seçin</span>
+                            <span className="tsm-title">{t("masa_formasini_secin")}</span>
                         </div>
                         <button type="button" className="tsm-close-btn" onClick={onHide}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -89,9 +90,7 @@ const TableShapeModal = ({ show, onHide, onSelect, currentShape }) => {
 
                     {/* Footer */}
                     <div className="tsm-footer">
-                        <button className="tsm-footer-btn" onClick={onHide}>
-                            Bağla
-                        </button>
+                        <button className="tsm-footer-btn" onClick={onHide}>{t("bagla")}</button>
                     </div>
                 </div>
             </div>

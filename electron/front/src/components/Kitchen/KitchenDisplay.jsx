@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useSelector } from "react-redux";
 import { getSocket, localApi } from "../../utils/apiConfig";
 import { toast } from "sonner";
+import { t } from "../../utils/translations";
 import "./KitchenDisplay.css";
 
 const TABS = [
-    { key: "all", label: "Bütün çeklər" },
-    { key: "preparing", label: "Hazırlanır" },
+    { key: "all", label: t("butun_cekler") },
+    { key: "preparing", label: t("hazirlanir") },
     { key: "late", label: "Gecikir" },
-    { key: "ready", label: "Hazırdır" },
+    { key: "ready", label: t("hazirdir") },
 ];
 
 const KitchenDisplay = () => {
@@ -112,10 +113,10 @@ const KitchenDisplay = () => {
             const res = await localApi.patch(`/kitchen/item/${itemId}/status`, { status: nextStatus });
             if (res.data.success) {
                 fetchOrders();
-                if (nextStatus === 2) toast.success("Məhsul hazırdır!");
+                if (nextStatus === 2) toast.success(t("mehsul_hazirdir"));
             }
         } catch (error) {
-            toast.error("Xəta baş verdi");
+            toast.error(t("error_occurred"));
         }
     };
 
@@ -126,9 +127,9 @@ const KitchenDisplay = () => {
                 await localApi.patch(`/kitchen/item/${item.id}/status`, { status: 2 });
             }
             fetchOrders();
-            toast.success("Bütün masa tamamlandı!");
+            toast.success(t("butun_masa_tamamlandi"));
         } catch (error) {
-            toast.error("Xəta baş verdi");
+            toast.error(t("error_occurred"));
         }
     };
 
@@ -197,7 +198,7 @@ const KitchenDisplay = () => {
             <div className="kds-container">
                 <div className="kds-empty-state">
                     <div className="kds-loader"><div className="kds-loader-ring"></div></div>
-                    <h2>Yüklənir...</h2>
+                    <h2>{t("loading")}</h2>
                 </div>
             </div>
         );
@@ -208,11 +209,9 @@ const KitchenDisplay = () => {
             <div className="kds-container">
                 <div className="kds-empty-state">
                     <i className="bi bi-exclamation-triangle"></i>
-                    <h2>KDS açıla bilmədi</h2>
+                    <h2>{t("kds_acila_bilmedi")}</h2>
                     <p>{loadError}</p>
-                    <button className="kds-complete-btn" onClick={fetchOrders}>
-                        Yenidən yoxla
-                    </button>
+                    <button className="kds-complete-btn" onClick={fetchOrders}>{t("yeniden_yoxla")}</button>
                 </div>
             </div>
         );
@@ -248,8 +247,8 @@ const KitchenDisplay = () => {
                 {filteredOrders.length === 0 ? (
                     <div className="kds-empty-state">
                         <i className="bi bi-cup-hot"></i>
-                        <h2>Aktiv sifariş yoxdur</h2>
-                        <p>Yeni sifarişlər daxil olanda avtomatik yenilənəcək</p>
+                        <h2>{t("aktiv_sifaris_yoxdur")}</h2>
+                        <p>{t("yeni_sifarisler_daxil_olanda_avtomatik_yenilenecek")}</p>
                     </div>
                 ) : (
                     filteredOrders.map((order) => {

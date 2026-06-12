@@ -4,6 +4,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { startTimer, stopTimer, resetTimer } from '../../redux/Slices/OrdersSlice';
 import { toast } from 'sonner';
 import { getEffectiveHourlyPrice, getProductHourlySum } from '../../utils/orderHourlyPrice';
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 
 const TimerModal = ({ show, onHide, order, table }) => {
   const dispatch = useDispatch();
@@ -47,7 +49,7 @@ const TimerModal = ({ show, onHide, order, table }) => {
 
   const handleResetTimer = () => {
     dispatch(resetTimer({ orderId: order.uuid }));
-    toast.info("Taymer sıfırlandı");
+    toast.info(t("taymer_sifirlandi"));
   };
 
   const timerRates = useMemo(() => {
@@ -114,8 +116,8 @@ const TimerModal = ({ show, onHide, order, table }) => {
                 <span style={{ fontSize: '14px', fontWeight: '600', color: '#053796' }}>{Number(timerRates.eff).toFixed(2)} ₼/saat</span>
              </div>
              <div className="d-flex justify-content-between pt-2" style={{ borderTop: '1px solid #eee' }}>
-                <span style={{ fontSize: '14px', color: '#555' }}>Cəmi məbləğ:</span>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: '#053796', fontVariantNumeric: 'tabular-nums' }}>{timerCharge.toFixed(2)} ₼</span>
+                <span style={{ fontSize: '14px', color: '#555' }}>{t("cemi_mebleg")}</span>
+                <span style={{ fontSize: '16px', fontWeight: '700', color: '#053796', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(timerCharge)}</span>
              </div>
           </div>
 
@@ -126,16 +128,14 @@ const TimerModal = ({ show, onHide, order, table }) => {
                  onClick={handleStopTimer}
                  style={{ flex: 1, backgroundColor: '#053796', height: '50px', fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                >
-                 <i className="bi bi-pause-fill me-2"></i> Dayandır
-               </button>
+                 <i className="bi bi-pause-fill me-2"></i>{t("dayandir")}</button>
              ) : (
                <button 
                  className="apply-btn" 
                  onClick={handleStartTimer}
                  style={{ flex: 1, backgroundColor: '#053796', height: '50px', fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                >
-                 <i className="bi bi-play-fill me-2"></i> Başlat
-               </button>
+                 <i className="bi bi-play-fill me-2"></i>{t("baslat")}</button>
              )}
              
              <button 

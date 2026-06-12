@@ -1,6 +1,8 @@
 import { Modal } from "react-bootstrap";
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "../DiscountModal/DiscountModal.css";
 import "./TableGroupsModal.css";
 
@@ -50,7 +52,7 @@ const TableGroupsModal = ({ show, onClose, tableGroups }) => {
                                 <rect x="3" y="14" width="7" height="7" rx="1" />
                                 <rect x="14" y="14" width="7" height="7" rx="1" />
                             </svg>
-                            <span className="tgm-title">Masa seç</span>
+                            <span className="tgm-title">{t("masa_sec")}</span>
                         </div>
                         <button type="button" className="tgm-close-btn" onClick={() => onClose(null)}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
@@ -93,7 +95,7 @@ const TableGroupsModal = ({ show, onClose, tableGroups }) => {
                                     >
                                         <span className="tgm-card-name">{table.number || table.name}</span>
                                         {hasOrders && amount != null && (
-                                            <span className="tgm-card-amount">{amount.toFixed(2)} ₼</span>
+                                            <span className="tgm-card-amount">{formatPrice(amount)}</span>
                                         )}
                                         {hasOrders && orders[0]?.waiter?.name && (
                                             <span className="tgm-card-waiter">{orders[0].waiter.name}</span>

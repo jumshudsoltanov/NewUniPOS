@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "../../utils/translations";
 
 const KitchenReceipt = ({
     orderedItems = [],
@@ -228,14 +229,14 @@ const KitchenReceipt = ({
 
                 {showCheckNumber && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Çek №: </span>
+                        <span style={styles.label}>{t("cek_№_1")}</span>
                         <span style={styles.value}>#{displayCheckId}</span>
                     </div>
                 )}
 
                 {showHallTable && hallName && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Satış yeri: </span>
+                        <span style={styles.label}>{t("satis_yeri_1")}</span>
                         <span style={styles.value}>
                             {hallName}
                             {cleanTable ? `-${cleanTable}` : ""}
@@ -245,14 +246,14 @@ const KitchenReceipt = ({
 
                 {showSaleType && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Satış tipi: </span>
+                        <span style={styles.label}>{t("satis_tipi_2")}</span>
                         <span style={styles.value}>{typeName || "Restoranda"}</span>
                     </div>
                 )}
 
                 {showCustomer && (selectedCustomer || checkData?.customerName) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Müştəri: </span>
+                        <span style={styles.label}>{t("musteri")}</span>
                         <span style={styles.value}>
                             {selectedCustomer?.name || checkData?.customerName}
                         </span>
@@ -261,7 +262,7 @@ const KitchenReceipt = ({
 
                 {showGuestCount && checkData?.guest_count > 0 && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Qonaq sayı: </span>
+                        <span style={styles.label}>{t("qonaq_sayi_1")}</span>
                         <span style={styles.value}>{checkData.guest_count}</span>
                     </div>
                 )}
@@ -279,7 +280,7 @@ const KitchenReceipt = ({
             {/* ITEMS */}
             <div style={styles.items}>
                 <div style={styles.itemsHeader}>
-                    <span style={styles.colName}>Məhsul</span>
+                    <span style={styles.colName}>{t("product")}</span>
                     <span style={styles.colQty}>Say</span>
                 </div>
 
@@ -294,7 +295,7 @@ const KitchenReceipt = ({
                         }}>
                             <div style={styles.colName}>
                                 <span>
-                                    {item.isModifierStandalone && <span style={{ color: '#d32f2f' }}>ƏLAVƏ: </span>}
+                                    {item.isModifierStandalone && <span style={{ color: '#d32f2f' }}>{t("elave")}</span>}
                                     {itemName}
                                     {item.portion_name && (
                                         <span style={{ fontSize: fs(11), display: 'block', fontWeight: '700', color: '#333', fontStyle: 'italic' }}>

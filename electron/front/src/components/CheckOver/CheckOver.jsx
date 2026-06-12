@@ -20,6 +20,7 @@ import { isPosBlocked, isPaymentExpired } from "../../utils/dateHelpers";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 import RoomChargeModal from "../RoomChargeModal/RoomChargeModal";
 import { updateFolioBalance, fetchRooms } from '../../redux/Slices/HotelSlice';
+import { t } from "../../utils/translations";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -82,7 +83,7 @@ const CheckOver = () => {
         const w = loginedWaiter?.data;
         if (w == null) return;
         if (Number(w.cannot_close_check) !== 1) {
-            toast.error("İcazəniz yoxdur: Çek bağlamaq hüququnuz yoxdur.");
+            toast.error(t("i̇cazeniz_yoxdur_cek_baglamaq_huququnuz_yoxdur"));
             navigate(`/check/${id}`, { replace: true });
         }
     }, [id, loginedWaiter?.data, navigate]);
@@ -365,11 +366,11 @@ const CheckOver = () => {
 
     const handleConfirmReady = () => {
         if (viewMode === "PAYMENT" && selectedMethods.length === 0) {
-            toast.error("Zəhmət olmasa ödəniş üsulunu seçin");
+            toast.error(t("zehmet_olmasa_odenis_usulunu_secin"));
             return;
         }
         if (viewMode === "UNPAID" && !unpaidReason) {
-            toast.error("Zəhmət olmasa ödənişsiz bağlanış səbəbini seçin");
+            toast.error(t("zehmet_olmasa_odenissiz_baglanis_sebebini_secin"));
             return;
         }
         if (viewMode === "PAYMENT") {
@@ -510,7 +511,7 @@ const CheckOver = () => {
                                         };
                                     });
                         if (saleItems.length === 0) {
-                            toast.warning('Fiskal çek üçün məhsul siyahısı boşdur — göndərilmədi.');
+                            toast.warning(t("fiskal_cek_ucun_mehsul_siyahisi_bosdur_gonderilmedi"));
                         } else {
                             // Call tax sale API in the background (as requested: do not wait for fiscal device)
                             let paymentsForTax;
@@ -661,7 +662,7 @@ const CheckOver = () => {
                             <Form.Control
                                 type="text"
                                 className="calc-input text-end"
-                                placeholder="Məbləği daxil edin"
+                                placeholder={t("meblegi_daxil_edin")}
                                 value={calcValue}
                                 readOnly
                                 onFocus={() => setActiveInputMode(null)}
@@ -671,15 +672,15 @@ const CheckOver = () => {
 
                         <div className="calc-info-grid mb-4">
                             <div className="calc-info-card">
-                                <span className="label">Ödənilməli</span>
+                                <span className="label">{t("odenilmeli")}</span>
                                 <span className="value">{calcTotal.sumTotal} ₼</span>
                             </div>
                             <div className="calc-info-card highlighted">
-                                <span className="label">Ödənilən</span>
+                                <span className="label">{t("odenilen")}</span>
                                 <span className="value">{(Number(calcValue) || totalPaidInMethods || 0).toFixed(2)} ₼</span>
                             </div>
                             <div className={`calc-info-card ${Number(remainingBalance) >= 0 ? 'positive' : 'negative'}`}>
-                                <span className="label">Qalıq</span>
+                                <span className="label">{t("qaliq")}</span>
                                 <span className="value">{remainingBalance} ₼</span>
                             </div>
                         </div>
@@ -707,7 +708,7 @@ const CheckOver = () => {
                             <>
                                 <div className="payment-header d-flex justify-content-between align-items-center mb-4">
                                     <div className="payment-title-group">
-                                        <h2 className="payment-title">Ödənilməli</h2>
+                                        <h2 className="payment-title">{t("odenilmeli")}</h2>
                                         {selectedCustomer && (
                                             <div className="customer-info-tag">
                                                 <i className="bi bi-person-fill me-1"></i>
@@ -780,9 +781,7 @@ const CheckOver = () => {
                                             <div className={`custom-selection-indicator ${roomChargeMethod ? 'selected' : ''}`}>
                                                 {roomChargeMethod && <i className="bi bi-check-lg"></i>}
                                             </div>
-                                            <span className="method-name">
-                                                Otağa Yaz
-                                            </span>
+                                            <span className="method-name">{t("otaga_yaz")}</span>
                                         </div>
                                         {roomChargeMethod && (
                                             <div className="method-right-content">
@@ -803,7 +802,7 @@ const CheckOver = () => {
                                         className="print-toggle-section mt-3 pt-3 d-flex justify-content-between align-items-center clickable-row"
                                         onClick={() => setTaxPrint(!taxPrint)}
                                     >
-                                        <span className="toggle-label">Vergi ilə çap</span>
+                                        <span className="toggle-label">{t("vergi_ile_cap")}</span>
                                         <Form.Check
                                             type="switch"
                                             id="tax-print-switch"
@@ -818,7 +817,7 @@ const CheckOver = () => {
                                     className="print-toggle-section mt-3 pt-3 d-flex justify-content-between align-items-center clickable-row"
                                     onClick={() => setPrintCheck(!printCheck)}
                                 >
-                                    <span className="toggle-label">Çeki çap et</span>
+                                    <span className="toggle-label">{t("ceki_cap_et")}</span>
                                     <Form.Check
                                         type="switch"
                                         id="print-check-switch"
@@ -830,7 +829,7 @@ const CheckOver = () => {
 
                                 {Number(remainingBalance) > 0 && (
                                     <div className="change-display">
-                                        <span className="change-label">Qalıq:</span>
+                                        <span className="change-label">{t("qaliq_1")}</span>
                                         <span className="change-amount">{remainingBalance} ₼</span>
                                     </div>
                                 )}
@@ -842,28 +841,24 @@ const CheckOver = () => {
                                             if (Number(loginedWaiter?.data?.can_close_without_payment) === 1) {
                                                 setViewMode("UNPAID");
                                             } else {
-                                                toast.error("İcazəniz yoxdur: Ödənişsiz bağlamaq hüququnuz yoxdur.");
+                                                toast.error(t("i̇cazeniz_yoxdur_odenissiz_baglamaq_huququnuz_yoxdur"));
                                             }
                                         }}
                                         style={{
                                             opacity: Number(loginedWaiter?.data?.can_close_without_payment) === 1 ? 1 : 0.5,
                                             cursor: Number(loginedWaiter?.data?.can_close_without_payment) === 1 ? 'pointer' : 'not-allowed'
                                         }}
-                                    >
-                                        Ödənişsiz bağla
-                                    </button>
+                                    >{t("odenissiz_bagla")}</button>
                                     <button
                                         className="confirm-close-btn green-btn"
                                         onClick={handleConfirmReady}
-                                    >
-                                        Bağla
-                                    </button>
+                                    >{t("bagla")}</button>
                                 </div>
                             </>
                         ) : (
                             <>
                                 <div className="payment-header d-flex justify-content-between align-items-center mb-4">
-                                    <h2 className="payment-title">Ödənişsiz bağla</h2>
+                                    <h2 className="payment-title">{t("odenissiz_bagla")}</h2>
                                     <div className="total-amount-display strikethrough">
                                         <span className="amount">{calcTotal.sumTotal}</span>
                                         <span className="symbol">₼</span>
@@ -895,7 +890,7 @@ const CheckOver = () => {
                                     <Form.Control
                                         as="textarea"
                                         rows={4}
-                                        placeholder="Çekə şərh yaz"
+                                        placeholder={t("ceke_serh_yaz_1")}
                                         className="comment-textarea"
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
@@ -907,7 +902,7 @@ const CheckOver = () => {
                                     className="print-toggle-section mt-4 pt-3 d-flex justify-content-between align-items-center clickable-row"
                                     onClick={() => setPrintCheck(!printCheck)}
                                 >
-                                    <span className="toggle-label">Çeki çap et</span>
+                                    <span className="toggle-label">{t("ceki_cap_et")}</span>
                                     <Form.Check
                                         type="switch"
                                         id="print-check-switch-unpaid"
@@ -924,9 +919,7 @@ const CheckOver = () => {
                                     <button
                                         className="confirm-close-btn maroon-btn"
                                         onClick={handleConfirmReady}
-                                    >
-                                        Bağla
-                                    </button>
+                                    >{t("bagla")}</button>
                                 </div>
                             </>
                         )}
@@ -950,8 +943,8 @@ const CheckOver = () => {
                                 <i className="bi bi-receipt"></i>
                             </div>
                             <div>
-                                <div className="customers-modal-title">Kassa seçimi</div>
-                                <div style={{ fontSize: "12px", fontWeight: 500, opacity: 0.92, marginTop: "2px" }}>Çek bağlanışı</div>
+                                <div className="customers-modal-title">{t("kassa_secimi")}</div>
+                                <div style={{ fontSize: "12px", fontWeight: 500, opacity: 0.92, marginTop: "2px" }}>{t("cek_baglanisi")}</div>
                             </div>
                         </div>
                         <button type="button" className="btn-close-custom" onClick={() => setShowTaxSelectionModal(false)} aria-label="Bağla">
@@ -964,10 +957,8 @@ const CheckOver = () => {
 
                     <div className="tax-kassa-modal-body-inner">
                         <div className="tax-kassa-modal-intro">
-                            <p className="tax-kassa-modal-intro-title">Hansı vergi kassasına göndərmək istəyirsiniz?</p>
-                            <p className="tax-kassa-modal-intro-sub">
-                                Bağlanan çek üçün vergi çeki seçdiyiniz kassada kəsiləcək.
-                            </p>
+                            <p className="tax-kassa-modal-intro-title">{t("hansi_vergi_kassasina_gondermek_isteyirsiniz")}</p>
+                            <p className="tax-kassa-modal-intro-sub">{t("baglanan_cek_ucun_vergi_ceki_secdiyiniz_kassada_kesilecek")}</p>
                         </div>
                         <div className="tax-kassa-modal-list-wrap">
                             <div className="d-flex flex-column gap-3">
@@ -1011,9 +1002,7 @@ const CheckOver = () => {
                             </div>
                         </div>
                         <div className="tax-kassa-modal-footer">
-                            <button type="button" className="btn-imtina" onClick={() => setShowTaxSelectionModal(false)}>
-                                İmtina
-                            </button>
+                            <button type="button" className="btn-imtina" onClick={() => setShowTaxSelectionModal(false)}>{t("i̇mtina")}</button>
                         </div>
                     </div>
                 </div>

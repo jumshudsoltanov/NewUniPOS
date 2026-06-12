@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Modal from "react-bootstrap/Modal";
+import { t } from "../../utils/translations";
 import "./ManualPriceModal.css";
 
 const ManualPriceModal = ({ show, onClose, product, onConfirm }) => {
@@ -97,9 +98,7 @@ const ManualPriceModal = ({ show, onClose, product, onConfirm }) => {
                     </div>
 
                     <button className="confirm-btn" onClick={handleConfirm} disabled={!price || parseFloat(price) <= 0}>
-                        <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>
-                        Əlavə et
-                    </button>
+                        <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>{t("elave_et")}</button>
                 </div>
             </div>
         </Modal>

@@ -6,6 +6,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { processAndPrintOrders } from "../../utils/printerHelpers";
 import { getSocket } from "../../utils/apiConfig";
+import { t } from "../../utils/translations";
 import "./ClearCheck.css";
 
 const ClearCheck = ({ show, onClose, order }) => {
@@ -122,7 +123,7 @@ const ClearCheck = ({ show, onClose, order }) => {
             <div className="clear-check-icon-circle">
               <i className="bi bi-exclamation-triangle"></i>
             </div>
-            <div className="clear-check-modal-title">Qəbzi Təmizləmək</div>
+            <div className="clear-check-modal-title">{t("qebzi_temizlemek")}</div>
           </div>
           <button className="btn-close-custom" onClick={onClose}>
             <svg
@@ -144,18 +145,12 @@ const ClearCheck = ({ show, onClose, order }) => {
 
         <div className="clear-check-modal-body">
           <div className="clear-check-message">
-            <p className="clear-check-question">
-              Qəbzi təmizləmək istədiyinizə əminsiniz?
-            </p>
-            <p className="clear-check-warning">
-              Bu əməliyyat bütün seçilmiş məhsulları siləcək.
-            </p>
+            <p className="clear-check-question">{t("qebzi_temizlemek_istediyinize_eminsiniz")}</p>
+            <p className="clear-check-warning">{t("bu_emeliyyat_butun_secilmis_mehsullari_silecek")}</p>
           </div>
 
           <div className="clear-check-footer-buttons">
-            <button className="clear-check-cancel-btn" onClick={onClose}>
-              Ləğv et
-            </button>
+            <button className="clear-check-cancel-btn" onClick={onClose}>{t("cancel")}</button>
             <button
               className="clear-check-confirm-btn"
               onClick={handleClearCheck}

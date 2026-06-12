@@ -1,5 +1,6 @@
 import "./SettingsMenu.css";
 import { useSelector } from "react-redux";
+import { t } from "../../utils/translations";
 
 const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData, onExit, onQuitApp }) => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -16,7 +17,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
         typeof onExit === "function"
             ? {
                   id: "exit",
-                  label: "Terminaldan çıx",
+                  label: t("terminaldan_cix"),
                   icon: (
                       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9"></path>
@@ -32,7 +33,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
     const menuItems = [
         {
             id: "refresh",
-            label: "Yenilə",
+            label: t("refresh"),
             icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
                     <path d="M22 12C22 17.52 17.52 22 12 22C6.48 22 3.11 16.44 3.11 16.44M3.11 16.44H7.63M3.11 16.44V21.44M2 12C2 6.48 6.44 2 12 2C18.67 2 22 7.56 22 7.56M22 7.56V2.56M22 7.56H17.56" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -42,7 +43,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
         },
         {
             id: "brandList",
-            label: "Müəssisələr siyahısı",
+            label: t("muessiseler_siyahisi"),
             icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="4" y="4" width="6" height="6" rx="1.5"></rect>
@@ -55,7 +56,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
         },
         {
             id: "downloadData",
-            label: "Məlumatları yüklə",
+            label: t("melumatlari_yukle"),
             icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z"></path>
@@ -69,7 +70,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
         ...(exitItem ? [exitItem] : []),
         {
             id: "quitApp",
-            label: "Proqramdan çıx",
+            label: t("proqramdan_cix"),
             icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
@@ -87,7 +88,7 @@ const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData,
             <div className="settings-menu">
                 {/* Header */}
                 <div className="settings-menu-header">
-                    <h3 className="settings-menu-title">Kontrol panel</h3>
+                    <h3 className="settings-menu-title">{t("settings")}</h3>
                     <button className="settings-menu-close" onClick={onClose}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

@@ -3,6 +3,7 @@ import { Modal } from 'react-bootstrap';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { fetchLogs } from '../../redux/Slices/OrdersSlice';
+import { t } from "../../utils/translations";
 
 const OrderLogsModal = ({ show, onHide, order }) => {
     const dispatch = useDispatch();
@@ -43,7 +44,7 @@ const OrderLogsModal = ({ show, onHide, order }) => {
                         <div className="empty-icon mb-2 opacity-50">
                             <i className="bi bi-clock-history fs-2"></i>
                         </div>
-                        <p className="text-secondary small">Hələ ki, heç bir əməliyyat yoxdur</p>
+                        <p className="text-secondary small">{t("hele_ki_hec_bir_emeliyyat_yoxdur")}</p>
                     </div>
                 ) : (
                     <div className="timeline-container p-3 flex-grow-1 logs-scroll" style={{ overflowY: 'auto', overflowX: 'hidden' }}>

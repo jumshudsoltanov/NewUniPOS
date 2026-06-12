@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCouriersFromAdmin } from "../../redux/Slices/CouriersSlice";
+import { t } from "../../utils/translations";
 import "./CourierModal.css";
 
 const statusLabels = {
@@ -111,9 +112,7 @@ const CourierModal = ({ show, onHide, onApply, currentOrder, selectedCustomer })
 
                 {!isOnline && (
                     <div className="courier-offline-banner">
-                        <i className="bi bi-wifi-off"></i>
-                        İnternet bağlantısı yoxdur
-                    </div>
+                        <i className="bi bi-wifi-off"></i>{t("i̇nternet_baglantisi_yoxdur")}</div>
                 )}
 
                 {/* Body */}
@@ -129,7 +128,7 @@ const CourierModal = ({ show, onHide, onApply, currentOrder, selectedCustomer })
                             </svg>
                         </div>
                         <div className="courier-fee-input-group">
-                            <span className="courier-fee-label">Çatdırılma haqqı</span>
+                            <span className="courier-fee-label">{t("catdirilma_haqqi")}</span>
                             <div className="courier-fee-row">
                                 <input
                                     type="number"
@@ -159,7 +158,7 @@ const CourierModal = ({ show, onHide, onApply, currentOrder, selectedCustomer })
                     )}
 
                     {/* Courier list */}
-                    <div className="courier-section-label">Kuryerlər</div>
+                    <div className="courier-section-label">{t("kuryerler")}</div>
 
                     <div className="courier-search-wrapper">
                         <i className="bi bi-search"></i>
@@ -175,14 +174,12 @@ const CourierModal = ({ show, onHide, onApply, currentOrder, selectedCustomer })
 
                     <div className="courier-list-scroll">
                         {!isOnline ? (
-                            <div className="courier-list-empty">İnternet yoxdur</div>
+                            <div className="courier-list-empty">{t("no_internet")}</div>
                         ) : status === "loading" ? (
                             <div className="courier-list-empty">
-                                <span className="spinner-border spinner-border-sm me-2" />
-                                Yüklənir...
-                            </div>
+                                <span className="spinner-border spinner-border-sm me-2" />{t("loading")}</div>
                         ) : filteredCouriers.length === 0 ? (
-                            <div className="courier-list-empty">Kuryer tapılmadı</div>
+                            <div className="courier-list-empty">{t("kuryer_tapilmadi")}</div>
                         ) : (
                             filteredCouriers.map((courier) => (
                                 <div
@@ -209,9 +206,7 @@ const CourierModal = ({ show, onHide, onApply, currentOrder, selectedCustomer })
                 {/* Footer — DiscountModal style */}
                 <div className="courier-action-row">
                     {currentOrder?.courier_id && (
-                        <button className="courier-reject-btn" onClick={handleRemove}>
-                            İmtina
-                        </button>
+                        <button className="courier-reject-btn" onClick={handleRemove}>{t("i̇mtina")}</button>
                     )}
                     <button
                         className="courier-apply-btn"
@@ -223,9 +218,7 @@ const CourierModal = ({ show, onHide, onApply, currentOrder, selectedCustomer })
                             <path d="M16 8h4l3 3v5h-7V8z"/>
                             <circle cx="5.5" cy="18.5" r="2.5"/>
                             <circle cx="18.5" cy="18.5" r="2.5"/>
-                        </svg>
-                        Tətbiq et
-                    </button>
+                        </svg>{t("apply")}</button>
                 </div>
             </div>
         </Modal>

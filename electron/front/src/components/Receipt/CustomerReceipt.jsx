@@ -6,6 +6,7 @@ import {
     resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
 import { getCustomerFacingServiceFeeLabel } from "../../utils/posOperationNames";
+import { t } from "../../utils/translations";
 
 const CustomerReceipt = ({
     orderedItems,
@@ -43,7 +44,7 @@ const CustomerReceipt = ({
         "https://unipos.tech";
 
     if (!checkData || !orderedItems)
-        return <div style={{ padding: "16px", fontFamily: "sans-serif" }}>Yüklənir...</div>;
+        return <div style={{ padding: "16px", fontFamily: "sans-serif" }}>{t("loading")}</div>;
 
     const formatLocalDate = (dateStr) => {
         if (!dateStr) return "—";
@@ -417,56 +418,56 @@ const CustomerReceipt = ({
             <div style={styles.infoSection}>
                 {showAddress && address && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Ünvan</span>
+                        <span style={styles.label}>{t("unvan_1")}</span>
                         <span style={styles.value}>{address}</span>
                     </div>
                 )}
 
                 {showPhone && phone && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Əlaqə</span>
+                        <span style={styles.label}>{t("elaqe")}</span>
                         <span style={styles.value}>{phone}</span>
                     </div>
                 )}
 
                 {showCheckNumber && (checkData?.orderId || checkData?.id) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Çek №</span>
+                        <span style={styles.label}>{t("cek_№")}</span>
                         <span style={styles.value}>#{checkData.orderId || checkData.id}</span>
                     </div>
                 )}
 
                 {showCustomer && (checkData?.customer_name || checkData?.customerName || checkData?.customer?.name || checkData?.customer?.full_name) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Müştəri</span>
+                        <span style={styles.label}>{t("customer")}</span>
                         <span style={styles.value}>{checkData.customer_name || checkData.customerName || checkData.customer?.name || checkData.customer?.full_name}</span>
                     </div>
                 )}
 
                 {showCustomerPhone && (checkData?.customerPhone || checkData?.customer_phone || checkData?.customer?.phone) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Müşt. Tel</span>
+                        <span style={styles.label}>{t("must_tel")}</span>
                         <span style={styles.value}>{checkData.customerPhone || checkData.customer_phone || checkData.customer?.phone}</span>
                     </div>
                 )}
 
                 {showCustomerAddress && (checkData?.customerAddress || checkData?.customer_address || checkData?.customer?.address) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Müşt. Ünvan</span>
+                        <span style={styles.label}>{t("must_unvan")}</span>
                         <span style={styles.value}>{checkData.customerAddress || checkData.customer_address || checkData.customer?.address}</span>
                     </div>
                 )}
 
                 {showTags && checkData?.tags && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Qəbz etiketi</span>
+                        <span style={styles.label}>{t("qebz_etiketi")}</span>
                         <span style={styles.value}>{checkData.tags}</span>
                     </div>
                 )}
 
                 {showHallTable && (hallName || tableName) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Satış yeri</span>
+                        <span style={styles.label}>{t("satis_yeri")}</span>
                         <span style={styles.value}>
                             {hallName}
                             {hallName && tableName ? "-" : ""}
@@ -477,42 +478,42 @@ const CustomerReceipt = ({
 
                 {showDates && (checkData?.startDate || checkData?.start_date) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Açılma tarixi</span>
+                        <span style={styles.label}>{t("acilma_tarixi")}</span>
                         <span style={styles.value}>{formatLocalDate(checkData.startDate || checkData.start_date)}</span>
                     </div>
                 )}
 
                 {showDates && (checkData?.endDate || checkData?.end_date) && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Bağlanma tarixi</span>
+                        <span style={styles.label}>{t("baglanma_tarixi")}</span>
                         <span style={styles.value}>{formatLocalDate(checkData.endDate || checkData.end_date)}</span>
                     </div>
                 )}
 
                 {showPrintDate && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Çap tarixi</span>
+                        <span style={styles.label}>{t("cap_tarixi_1")}</span>
                         <span style={styles.value}>{currentTime}</span>
                     </div>
                 )}
 
                 {showWaiter && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Ofisiant</span>
+                        <span style={styles.label}>{t("waiter")}</span>
                         <span style={styles.value}>{checkData?.waiter_name || checkData?.waiter?.name || "-"}</span>
                     </div>
                 )}
 
                 {showGuestCount && Number(checkData?.guest_count || 0) > 0 && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Qonaq sayı</span>
+                        <span style={styles.label}>{t("guest_count")}</span>
                         <span style={styles.value}>{checkData.guest_count}</span>
                     </div>
                 )}
 
                 {showSaleType && displaySaleType !== "Restoranda" && (
                     <div style={styles.infoRow}>
-                        <span style={styles.label}>Satış tipi</span>
+                        <span style={styles.label}>{t("satis_tipi_1")}</span>
                         <span style={styles.value}>{displaySaleType}</span>
                     </div>
                 )}
@@ -523,10 +524,10 @@ const CustomerReceipt = ({
             {/* ITEMS */}
             <div style={styles.items}>
                 <div style={{ ...styles.itemsGrid, ...styles.itemsHeader }}>
-                    <span style={styles.colName}>Məhsul</span>
+                    <span style={styles.colName}>{t("product")}</span>
                     <span style={styles.colQty}>Say</span>
                     <span style={styles.colPrice}>Qiy</span>
-                    <span style={styles.colTotal}>Cəm</span>
+                    <span style={styles.colTotal}>{t("cem")}</span>
                 </div>
 
                 {checkData?.rate_per_minute &&
@@ -603,9 +604,7 @@ const CustomerReceipt = ({
                                 <span style={styles.colQty}>{params.quantity}</span>
 
                                 {params.is_gift ? (
-                                    <span style={{ ...styles.colPrice, fontSize: fs(8) }}>
-                                        İKRAM
-                                    </span>
+                                    <span style={{ ...styles.colPrice, fontSize: fs(8) }}>{t("i̇kram_1")}</span>
                                 ) : (
                                     <span style={styles.colPrice}>
                                         {(params.price + (params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0))).toFixed(2)}
@@ -647,7 +646,7 @@ const CustomerReceipt = ({
             {/* ÖDƏNİLMƏYİB STATUS */}
             {!isPaid && (
                 <div style={styles.statusBox}>
-                    <span style={styles.statusText}>ÖDƏNİLMƏYİB</span>
+                    <span style={styles.statusText}>{t("odeni̇lmeyi̇b")}</span>
                 </div>
             )}
 
@@ -700,9 +699,7 @@ const CustomerReceipt = ({
                             marginTop: "3px",
                             fontSize: fs(12),
                         }}
-                    >
-                        Ödəniş üsulları:
-                    </div>
+                    >{t("odenis_usullari_1")}</div>
 
                     {displayPaymentRows.map((pay, idx) => (
                         <div key={idx} style={styles.summaryRow}>
@@ -718,7 +715,7 @@ const CustomerReceipt = ({
                     {/* NEW: Paid and Change */}
                     {(checkData?.paid_amount !== undefined || checkData?.paidAmount !== undefined) && (
                         <div style={{ ...styles.summaryRow, marginTop: "4px", borderTop: "1px dashed #000", paddingTop: "2px" }}>
-                            <span style={{ flex: 1 }}>VERİLƏN</span>
+                            <span style={{ flex: 1 }}>{t("veri̇len")}</span>
                             <span style={styles.colTotal}>{renderMoney(checkData.paid_amount || checkData.paidAmount || 0)}</span>
                         </div>
                     )}

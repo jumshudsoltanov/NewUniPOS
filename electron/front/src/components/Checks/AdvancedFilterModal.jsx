@@ -2,18 +2,19 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Modal, Form } from "react-bootstrap";
 import { useSelector, useDispatch } from "react-redux";
 import { getPaymentMethods } from "../../redux/Slices/PaymentMethodsSlice";
+import { t } from "../../utils/translations";
 
 const saleTypeOptions = [
-  { value: "", label: "Hamısı", icon: "bi-card-list" },
-  { value: "dine_in", label: "Restoranda", icon: "bi-shop" },
-  { value: "takeaway", label: "Gəl götür", icon: "bi-bag" },
-  { value: "delivery", label: "Çatdırılma", icon: "bi-truck" },
+  { value: "", label: t("all"), icon: "bi-card-list" },
+  { value: "dine_in", label: t("dine_in"), icon: "bi-shop" },
+  { value: "takeaway", label: t("takeaway"), icon: "bi-bag" },
+  { value: "delivery", label: t("delivery"), icon: "bi-truck" },
 ];
 
 const statusOptions = [
-  { value: "", label: "Hamısı" },
-  { value: "1", label: "Açıq", color: "#053796" },
-  { value: "2", label: "Bağlanmış", color: "#16a34a" },
+  { value: "", label: t("all") },
+  { value: "1", label: t("aciq"), color: "#053796" },
+  { value: "2", label: t("baglanmis"), color: "#16a34a" },
   { value: "3", label: "Silinib", color: "#dc2626" },
 ];
 
@@ -21,17 +22,17 @@ const sortOptions = [
   { value: "", label: "Standart" },
   { value: "id_asc", label: "ID ↑ artan" },
   { value: "id_desc", label: "ID ↓ azalan" },
-  { value: "amount_asc", label: "Məbləğ ↑" },
-  { value: "amount_desc", label: "Məbləğ ↓" },
+  { value: "amount_asc", label: t("mebleg_↑") },
+  { value: "amount_desc", label: t("mebleg_↓") },
   { value: "date_asc", label: "Tarix ↑" },
   { value: "date_desc", label: "Tarix ↓" },
 ];
 
 const diffOptions = [
-  { value: "", label: "Hamısı" },
-  { value: "zero", label: "Fərqsiz (0 ₼)" },
-  { value: "positive", label: "Artıq ödəniş" },
-  { value: "negative", label: "Qalıq var" },
+  { value: "", label: t("all") },
+  { value: "zero", label: t("ferqsiz_0_₼") },
+  { value: "positive", label: t("artiq_odenis") },
+  { value: "negative", label: t("qaliq_var") },
 ];
 
 const defaultFilters = {
@@ -124,36 +125,36 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
         <div className="af-sections">
           {/* Basic */}
           <div className="af-sec">
-            <div className="af-sec-title"><i className="bi bi-sliders2 me-2"></i>Əsas</div>
+            <div className="af-sec-title"><i className="bi bi-sliders2 me-2"></i>{t("esas_1")}</div>
             <div className="af-grid3">
               <div className="af-fld">
-                <label>Çek ID</label>
+                <label>{t("cek_id")}</label>
                 <Form.Control type="text" placeholder="ID" value={f.searchId} onChange={e => upd("searchId", e.target.value)} />
               </div>
               <div className="af-fld">
-                <label>Satış üsulu</label>
+                <label>{t("satis_usulu_1")}</label>
                 <Form.Select value={f.filterSaleType} onChange={e => upd("filterSaleType", e.target.value)}>
                   {saleTypeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Əməkdaş</label>
+                <label>{t("emekdas")}</label>
                 <Form.Select value={f.filterWaiter} onChange={e => upd("filterWaiter", e.target.value)}>
-                  <option value="">Hamısı</option>
+                  <option value="">{t("all")}</option>
                   {waiters.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Zal</label>
+                <label>{t("hall")}</label>
                 <Form.Select value={f.filterHall} onChange={e => { upd("filterHall", e.target.value); upd("filterTable", ""); }}>
-                  <option value="">Hamısı</option>
+                  <option value="">{t("all")}</option>
                   {halls.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Masa</label>
+                <label>{t("table")}</label>
                 <Form.Select value={f.filterTable} onChange={e => upd("filterTable", e.target.value)} disabled={!f.filterHall}>
-                  <option value="">Hamısı</option>
+                  <option value="">{t("all")}</option>
                   {tableOpts.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </Form.Select>
               </div>
@@ -176,31 +177,31 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
 
           {/* Advanced */}
           <div className="af-sec">
-            <div className="af-sec-title"><i className="bi bi-gear me-2"></i>Təkmilləşmiş</div>
+            <div className="af-sec-title"><i className="bi bi-gear me-2"></i>{t("tekmillesmis")}</div>
             <div className="af-grid3">
               <div className="af-fld">
-                <label>Ödəniş üsulu</label>
+                <label>{t("odenis_usulu")}</label>
                 <Form.Select value={f.filterPaymentMethod} onChange={e => upd("filterPaymentMethod", e.target.value)}>
-                  <option value="">Hamısı</option>
+                  <option value="">{t("all")}</option>
                   {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Fərq (qalıq)</label>
+                <label>{t("ferq_qaliq")}</label>
                 <Form.Select value={f.filterDifference} onChange={e => upd("filterDifference", e.target.value)}>
                   {diffOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Vergiyə göndərilmə</label>
+                <label>{t("vergiye_gonderilme")}</label>
                 <Form.Select value={f.filterTaxSent} onChange={e => upd("filterTaxSent", e.target.value)}>
-                  <option value="">Hamısı</option>
-                  <option value="sent">Göndərilənlər</option>
-                  <option value="not_sent">Göndərilməyənlər</option>
+                  <option value="">{t("all")}</option>
+                  <option value="sent">{t("gonderilenler")}</option>
+                  <option value="not_sent">{t("gonderilmeyenler")}</option>
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Məbləğ aralığı</label>
+                <label>{t("mebleg_araligi")}</label>
                 <div className="d-flex gap-2">
                   <Form.Control type="number" placeholder="Min" value={f.filterAmountMin} onChange={e => upd("filterAmountMin", e.target.value)} />
                   <Form.Control type="number" placeholder="Max" value={f.filterAmountMax} onChange={e => upd("filterAmountMax", e.target.value)} />
@@ -209,7 +210,7 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
               <div className="af-fld">
                 <label>Endirim</label>
                 <Form.Select value={f.filterDiscount} onChange={e => upd("filterDiscount", e.target.value)}>
-                  <option value="">Hamısı</option>
+                  <option value="">{t("all")}</option>
                   <option value="yes">Endirim olanlar</option>
                   <option value="no">Endirim olmayanlar</option>
                 </Form.Select>
@@ -217,13 +218,13 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
               <div className="af-fld">
                 <label>Qeyd</label>
                 <Form.Select value={f.filterHasNote} onChange={e => upd("filterHasNote", e.target.value)}>
-                  <option value="">Hamısı</option>
+                  <option value="">{t("all")}</option>
                   <option value="yes">Qeydi olanlar</option>
                   <option value="no">Qeydsiz</option>
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Qonaq sayı</label>
+                <label>{t("guest_count")}</label>
                 <div className="d-flex gap-2">
                   <Form.Control type="number" placeholder="Min" value={f.filterGuestMin} onChange={e => upd("filterGuestMin", e.target.value)} />
                   <Form.Control type="number" placeholder="Max" value={f.filterGuestMax} onChange={e => upd("filterGuestMax", e.target.value)} />
@@ -234,7 +235,7 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
 
           {/* Sort */}
           <div className="af-sec">
-            <div className="af-sec-title"><i className="bi bi-arrow-up-down me-2"></i>Sıralama</div>
+            <div className="af-sec-title"><i className="bi bi-arrow-up-down me-2"></i>{t("siralama")}</div>
             <div className="af-sort-row">
               {sortOptions.map(o => {
                 const active = f.sortOrder === o.value || (Array.isArray(f.sortOrder) && f.sortOrder.includes(o.value));
@@ -261,8 +262,8 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
 
       {/* Footer */}
       <div className="af-ftr">
-        <button className="af-btn-clear" onClick={handleClear}><i className="bi bi-eraser me-1"></i>Təmizlə</button>
-        <button className="af-btn-apply" onClick={handleApply}><i className="bi bi-check2 me-1"></i>Tətbiq et</button>
+        <button className="af-btn-clear" onClick={handleClear}><i className="bi bi-eraser me-1"></i>{t("temizle")}</button>
+        <button className="af-btn-apply" onClick={handleApply}><i className="bi bi-check2 me-1"></i>{t("apply")}</button>
       </div>
     </Modal>
   );

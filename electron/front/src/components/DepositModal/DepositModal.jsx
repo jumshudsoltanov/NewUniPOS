@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateDepositOnOrders } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { t } from "../../utils/translations";
 
 const DepositModal = ({ show, onClose, order }) => {
     const dispatch = useDispatch();
@@ -83,7 +84,7 @@ const DepositModal = ({ show, onClose, order }) => {
                         <div className="customers-icon-circle">
                             <i className="bi bi-wallet2"></i>
                         </div>
-                        <div className="customers-modal-title">Depozit</div>
+                        <div className="customers-modal-title">{t("deposit")}</div>
                     </div>
                     <button className="btn-close-custom" onClick={onClose}>
                         <svg
@@ -141,9 +142,7 @@ const DepositModal = ({ show, onClose, order }) => {
                             <i className="bi bi-trash3"></i>
                         </button>
                         <button className="customers-save-btn deposit-save-btn" onClick={handleApply}>
-                            <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>
-                            Tətbiq et
-                        </button>
+                            <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>{t("apply")}</button>
                     </div>
                 </div>
             </div>

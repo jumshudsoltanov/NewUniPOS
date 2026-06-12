@@ -21,6 +21,7 @@ import apiConfig from "../../utils/apiConfig";
 import { getSocket } from "../../utils/apiConfig";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { normalizeCardId } from "../../utils/cardId";
+import { t } from "../../utils/translations";
 
 const PIN_LENGTH = 4;
 
@@ -273,7 +274,7 @@ const Pin = () => {
 
   const handleRefresh = async () => {
     if (!activeProfileData?.data?.profile?.id) {
-      toast.error("Profil məlumatı yoxdur, səhifə yenilənə bilmədi.");
+      toast.error(t("no_profile_data"));
       return;
     }
 
@@ -293,7 +294,7 @@ const Pin = () => {
       }
 
       if (syncRes?.data?.isOnline === false) {
-        toast.warn("Server əlçatmaz — lokal məlumatlar yükləndi.");
+        toast.warn(t("server_elcatmaz_lokal_melumatlar_yuklendi"));
       }
 
       await Promise.all([
@@ -306,7 +307,7 @@ const Pin = () => {
       if (syncRes?.data?.counts) {
         await new Promise(resolve => setTimeout(resolve, 1800));
       } else {
-        toast.success("Məlumatlar uğurla yeniləndi!");
+        toast.success(t("data_updated"));
       }
 
       const socket = getSocket();
@@ -315,7 +316,7 @@ const Pin = () => {
       }
     } catch (error) {
       console.error("Yeniləmə xətası:", error);
-      toast.error("Yeniləmə zamanı xəta baş verdi.");
+      toast.error(t("data_update_error"));
     } finally {
       setIsRefreshing(false);
       setPinSyncCounts(null);
@@ -405,7 +406,7 @@ const Pin = () => {
       try {
         const profileId = activeProfileData?.data?.profile?.id;
         if (!profileId) {
-          toast.error("Profil məlumatı yoxdur.");
+          toast.error(t("profil_melumati_yoxdur"));
           return;
         }
         const waiterResult = await dispatch(
@@ -437,7 +438,7 @@ const Pin = () => {
         }
         const profileId = activeProfileData?.data?.profile?.id;
         if (!profileId) {
-          toast.error("Profil məlumatı yoxdur.");
+          toast.error(t("profil_melumati_yoxdur"));
           return;
         }
         const waiterResult = await dispatch(
@@ -630,7 +631,7 @@ const Pin = () => {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span className="support-text">Texniki dəstək</span>
+                  <span className="support-text">{t("tech_support")}</span>
                 </button>
 
                 <div className="statusIcons">
@@ -747,16 +748,14 @@ const Pin = () => {
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                       </svg>
                     </div>
-                    <span className="warning-text">
-                      Abunəliyinizin bitmə tarixi yaxınlaşır! <strong>{daysLeft === 0 ? "Bu gün" : `${daysLeft} gün`}</strong> qalıb.
-                    </span>
+                    <span className="warning-text">{t("subscription_expires")}<strong>{daysLeft === 0 ? "Bu gün" : `${daysLeft} gün`}</strong>{t("qalib")}</span>
                   </div>
                 );
               })()}
 
               <div className="pinContainer">
                 <div className="pinHeader">
-                  <span className="pinText">PIN Kodu daxil edin</span>
+                  <span className="pinText">{t("pin_kodu_daxil_edin")}</span>
                 </div>
 
                 <div className="pinDots">
@@ -813,7 +812,7 @@ const Pin = () => {
                 </span>
                 <span className="terminalDivider">•</span>
                 <span className="terminalBranch">
-                  Filial: <strong>{profileInfo?.username || "Main"}</strong>
+                  {t("filial")}: <strong>{profileInfo?.username || "Main"}</strong>
                 </span>
                 {Number(profileInfo?.is_hotel_mode) === 1 && (
                   <span className="terminalDivider">•</span>
@@ -828,9 +827,7 @@ const Pin = () => {
                     borderRadius: '4px',
                     textTransform: 'uppercase',
                     letterSpacing: '1px',
-                  }}>
-                    OTEL
-                  </span>
+                  }}>{t("hotel")}</span>
                 )}
               </div>
             </div>

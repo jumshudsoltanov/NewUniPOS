@@ -6,6 +6,8 @@ import axios from "../../utils/apiConfig";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { buildFiscalLineItemsFromOrderItems, mapOrderPaymentForTax, computeFiscalCheckTotalsFromOrder } from "../../utils/orderItemLineTotal";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "./ReturnCheckModal.css";
 
 const TAX_HTTP_TIMEOUT_MS = 180000;
@@ -136,9 +138,9 @@ const ReturnCheckModal = ({ show, onClose }) => {
                     }, { timeout: TAX_HTTP_TIMEOUT_MS });
 
                     if (mbResult.data?.success) {
-                        toast.success('Vergi geri qaytarma uğurlu');
+                        toast.success(t("vergi_geri_qaytarma_ugurlu"));
                     } else {
-                        toast.warning('Vergi geri qaytarma uğursuz oldu, lakin çek geri qaytarılır');
+                        toast.warning(t("vergi_geri_qaytarma_ugursuz_oldu_lakin_cek_geri_qaytarilir"));
                     }
                 } catch (taxErr) {
                     console.error('Tax moneyback error:', taxErr);
@@ -202,7 +204,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
                 backdrop="static"
             >
                 <div className="return-header">
-                    <span className="return-header-title">Çek axtar</span>
+                    <span className="return-header-title">{t("cek_axtar")}</span>
                     <button className="return-close-btn" onClick={onClose}>
                         <i className="bi bi-x-lg"></i>
                     </button>
@@ -231,7 +233,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
                         {(!isMobile || activeMobileTab === "keypad") && (
                             <Col md={5} className="return-keypad-section">
                                 <div className="return-check-id-display">
-                                    <span className="return-check-id-label">Çek</span>
+                                    <span className="return-check-id-label">{t("cek")}</span>
                                     <div className="return-check-id-value">{checkId || "—"}</div>
                                 </div>
 
@@ -277,7 +279,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
                                 {!order && !error && (
                                     <div className="return-empty-state">
                                         <i className="bi bi-receipt"></i>
-                                        <p>Çek ID-sini daxil edin və axtarın</p>
+                                        <p>{t("cek_idsini_daxil_edin_ve_axtarin")}</p>
                                     </div>
                                 )}
 
@@ -294,10 +296,10 @@ const ReturnCheckModal = ({ show, onClose }) => {
                                             <table className="return-items-table">
                                                 <thead>
                                                     <tr>
-                                                        <th>Məhsul</th>
+                                                        <th>{t("product")}</th>
                                                         <th>Miq</th>
-                                                        <th>Qiymət</th>
-                                                        <th className="text-end">Cəm</th>
+                                                        <th>{t("qiymet")}</th>
+                                                        <th className="text-end">{t("cem")}</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -317,24 +319,24 @@ const ReturnCheckModal = ({ show, onClose }) => {
 
                                         <div className="return-order-summary">
                                             <div className="return-summary-row">
-                                                <span>Cəm:</span>
-                                                <span>{totals.subtotal.toFixed(2)} ₼</span>
+                                                <span>{t("cem_1")}</span>
+                                                <span>{formatPrice(totals.subtotal)}</span>
                                             </div>
                                             {totals.discount > 0 && (
                                                 <div className="return-summary-row return-discount">
                                                     <span>Endirim:</span>
-                                                    <span>-{totals.discount.toFixed(2)} ₼</span>
+                                                    <span>-{formatPrice(totals.discount)}</span>
                                                 </div>
                                             )}
                                             {totals.service > 0 && (
                                                 <div className="return-summary-row">
                                                     <span>Servis:</span>
-                                                    <span>{totals.service.toFixed(2)} ₼</span>
+                                                    <span>{formatPrice(totals.service)}</span>
                                                 </div>
                                             )}
                                             <div className="return-summary-row return-total">
                                                 <span>Yekun:</span>
-                                                <span>{totals.total.toFixed(2)} ₼</span>
+                                                <span>{formatPrice(totals.total)}</span>
                                             </div>
                                         </div>
 
@@ -361,7 +363,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
                 type="checks"
                 order={order}
                 tagsType={5}
-                title="Geri qaytarılma səbəbi"
+                title={t("geri_qaytarilma_sebebi")}
             />
         </>
     );

@@ -7,6 +7,7 @@ import { updateServiceFeeOnOrders } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { t } from "../../utils/translations";
 
 const ServiceFeeModal = ({ show, onClose, order, hall }) => {
   const [value, setValue] = useState("0");
@@ -121,7 +122,7 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
                 />
               </svg>
             </div>
-            <span className="header-title">Servis Haqqı</span>
+            <span className="header-title">{t("servis_haqqi_1")}</span>
           </div>
           <button className="close-btn" onClick={onClose}>
             <svg
@@ -181,10 +182,9 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
               <div className="shortcut-icon">
                 <i className="bi bi-info-circle-fill"></i>
               </div>
-              <div className="shortcut-text">
-                Zal üzrə servis haqqı: <strong>{hall.service_fee}%</strong>
+              <div className="shortcut-text">{t("zal_uzre_servis_haqqi")}<strong>{hall.service_fee}%</strong>
               </div>
-              <div className="shortcut-action">Tətbiq et</div>
+              <div className="shortcut-action">{t("apply")}</div>
             </div>
           )} */}
 
@@ -261,9 +261,7 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
               >
                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
-              </svg>
-              Tətbiq et
-            </button>
+              </svg>{t("apply")}</button>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import Modal from "react-bootstrap/Modal";
 import "./ProductCommentTagsModal.css";
 import { useDispatch, useSelector } from "react-redux";
 import { getTagsList } from "../../redux/Slices/TagsSlice";
+import { t } from "../../utils/translations";
 
 const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave }) => {
     const [selectedTags, setSelectedTags] = useState([]);
@@ -64,7 +65,7 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
                         <div className="product-comment-tags-icon-circle">
                             <i className="bi bi-tag-fill"></i>
                         </div>
-                        <div className="product-comment-tags-modal-title">Şərh seç</div>
+                        <div className="product-comment-tags-modal-title">{t("serh_sec")}</div>
                     </div>
                     <button className="btn-close-custom" onClick={() => onClose?.()}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -100,7 +101,7 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
                     </div>
                     {tags.length === 0 && (
                         <div className="product-comment-tags-empty">
-                            <span>Şərh tagları tapılmadı</span>
+                            <span>{t("serh_taglari_tapilmadi")}</span>
                         </div>
                     )}
                 </div>
@@ -110,9 +111,7 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
                         className="product-comment-tags-save-btn"
                         onClick={handleSave}
                     >
-                        <i className="bi bi-check2 me-2" style={{ fontSize: "1.5rem" }}></i>
-                        Yadda saxla
-                    </button>
+                        <i className="bi bi-check2 me-2" style={{ fontSize: "1.5rem" }}></i>{t("save")}</button>
                 </div>
             </div>
         </Modal>

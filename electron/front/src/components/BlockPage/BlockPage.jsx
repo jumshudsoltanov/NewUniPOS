@@ -10,6 +10,7 @@ import DefaultLogo from "../../assets/images/unipos_logo.png";
 import apiConfig from "../../utils/apiConfig";
 import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import { mergeBlockedLoginPayload } from "../../utils/authResultMerge";
+import { t } from "../../utils/translations";
 import "./BlockPage.css";
 
 const formatDate = (dateStr) => {
@@ -76,7 +77,7 @@ const BlockPage = () => {
                 storageData = matched?.profile;
             }
             if (!storageData) {
-                toast.error("Profil məlumatı tapılmadı");
+                toast.error(t("profil_melumati_tapilmadi"));
                 setIsRefreshing(false);
                 return;
             }
@@ -87,18 +88,18 @@ const BlockPage = () => {
             const profile = data?.data?.profile;
 
             if (isPosBlocked(profile?.is_pos_block)) {
-                toast.error("POS hələ də bloklanmış vəziyyətdədir.");
+                toast.error(t("pos_hele_de_bloklanmis_veziyyetdedir"));
                 return;
             }
 
             if (profile?.next_payment_date) {
                 if (isPaymentExpired(profile.next_payment_date)) {
-                    toast.error("Abunəlik hələ yenilənməyib.");
+                    toast.error(t("abunelik_hele_yenilenmeyib"));
                     return;
                 }
             }
 
-            toast.success("Sistem yeniləndi!");
+            toast.success(t("sistem_yenilendi"));
             if (profile?.id) {
                 await Promise.all([
                     dispatch(getTableGroups(profile.id)).unwrap(),
@@ -118,7 +119,7 @@ const BlockPage = () => {
                 const merged = mergeBlockedLoginPayload(error.data, prevSnapshot);
                 localStorage.setItem("authResult", JSON.stringify(merged));
                 dispatch(setLoginData(merged));
-                toast.error("POS hələ də bloklanmış vəziyyətdədir.");
+                toast.error(t("pos_hele_de_bloklanmis_veziyyetdedir"));
             } else {
                 toast.error(error?.data?.message || "Yeniləmə zamanı xəta baş verdi");
             }
@@ -137,12 +138,12 @@ const BlockPage = () => {
         try {
             const profileId = activeProfileData?.data?.profile?.id;
             if (!profileId) {
-                toast.error("Profil tapılmadı");
+                toast.error(t("profil_tapilmadi"));
                 return;
             }
             await apiConfig.post("/pin/payment-notification", { profileId });
             setPaymentSent(true);
-            toast.success("Bildiriş göndərildi! Zəhmət olmasa telefonunuzu yoxlayın.");
+            toast.success(t("bildiris_gonderildi_zehmet_olmasa_telefonunuzu_yoxlayin"));
         } catch (err) {
             toast.error(err?.response?.data?.message || "Bildiriş göndərilmədi");
         } finally {
@@ -183,7 +184,7 @@ const BlockPage = () => {
                     {restaurantName && (
                         <>
                             <div className="block-info-item">
-                                <span className="info-label">Müəssisə</span>
+                                <span className="info-label">{t("enterprise_placeholder")}</span>
                                 <span className="info-value">{restaurantName}</span>
                             </div>
                             <div className="block-info-divider"></div>
@@ -191,7 +192,7 @@ const BlockPage = () => {
                     )}
                     <div className="block-info-item">
                         <span className="info-label">Status</span>
-                        <span className="info-value" style={{ color: '#DC2626' }}>Bloklanıb</span>
+                        <span className="info-value" style={{ color: '#DC2626' }}>{t("bloklanib")}</span>
                     </div>
                     {nextPaymentDate && !isPosBlock && (
                         <>
@@ -212,12 +213,9 @@ const BlockPage = () => {
                                 <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
                                 <line x1="1" y1="10" x2="23" y2="10" />
                             </svg>
-                            <span>Kart ilə ödəniş</span>
+                            <span>{t("kart_ile_odenis")}</span>
                         </div>
-                        <p className="block-payment-desc">
-                            Abunəlik ödənişini kart ilə həyata keçirin. Ödəniş edildikdən sonra
-                            "Ödədim" düyməsinə toxunun.
-                        </p>
+                        <p className="block-payment-desc">{t("abunelik_odenisini_kart_ile_heyata_kecirin_odenis_edildikden_sonra_odedim_duymesine_toxunun")}</p>
                         <button
                             className="block-btn block-btn-pay"
                             onClick={handlePaymentNotify}
@@ -226,14 +224,14 @@ const BlockPage = () => {
                             {paymentSending ? (
                                 <>
                                     <div className="spinner-border spinner-border-sm" role="status"></div>
-                                    <span>Göndərilir...</span>
+                                    <span>{t("gonderilir")}</span>
                                 </>
                             ) : (
                                 <>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <polyline points="20 6 9 17 4 12" />
                                     </svg>
-                                    <span>Ödədim</span>
+                                    <span>{t("odedim")}</span>
                                 </>
                             )}
                         </button>
@@ -246,7 +244,7 @@ const BlockPage = () => {
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                             <polyline points="22 4 12 14.01 9 11.01" />
                         </svg>
-                        <span>Bildiriş göndərildi. Təsdiq gözlənilir...</span>
+                        <span>{t("bildiris_gonderildi_tesdiq_gozlenilir")}</span>
                     </div>
                 )}
 
@@ -259,14 +257,14 @@ const BlockPage = () => {
                         {isRefreshing ? (
                             <>
                                 <div className="spinner-border spinner-border-sm" role="status"></div>
-                                <span>Yoxlanılır...</span>
+                                <span>{t("yoxlanilir")}</span>
                             </>
                         ) : (
                             <>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M22 12C22 17.52 17.52 22 12 22C6.48 22 3.11 16.44 3.11 16.44M3.11 16.44H7.63M3.11 16.44V21.44M2 12C2 6.48 6.44 2 12 2C18.67 2 22 7.56 22 7.56M22 7.56V2.56M22 7.56H17.56" />
                                 </svg>
-                                <span>Yenilə</span>
+                                <span>{t("refresh")}</span>
                             </>
                         )}
                     </button>
@@ -277,7 +275,7 @@ const BlockPage = () => {
                             <polyline points="16 17 21 12 16 7"></polyline>
                             <line x1="21" y1="12" x2="9" y2="12"></line>
                         </svg>
-                        <span>Proqramdan çıx</span>
+                        <span>{t("proqramdan_cix")}</span>
                     </button>
                 </div>
 
@@ -286,9 +284,7 @@ const BlockPage = () => {
                         <path d="M4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12"></path>
                         <path d="M4 12V16C4 17.1 4.9 18 6 18H7V12H4Z"></path>
                         <path d="M20 12V16C20 17.1 19.1 18 18 18H17V12H20Z"></path>
-                    </svg>
-                    Texniki dəstək üçün əlaqə saxlayın
-                </div>
+                    </svg>{t("texniki_destek_ucun_elaqe_saxlayin")}</div>
             </div>
         </div>
     );

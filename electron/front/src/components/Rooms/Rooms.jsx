@@ -9,6 +9,7 @@ import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import RoomCard from "./RoomCard";
 import ReservationModal from "./ReservationModal";
+import { t } from "../../utils/translations";
 import "./Rooms.css";
 
 const Rooms = () => {
@@ -112,7 +113,7 @@ const Rooms = () => {
       const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
       const profileIdVal = loginedProfileData?.data?.profile?.id;
       if (!waiterId || !terminalId || !profileIdVal) {
-        toast.error("İstifadəçi məlumatları tapılmadı");
+        toast.error(t("i̇stifadeci_melumatlari_tapilmadi"));
         return null;
       }
 
@@ -201,7 +202,7 @@ const Rooms = () => {
       if (room.status === "available" || room.status === "reserved") {
         const waiterCanOrder = Number(loginedWaiter?.data?.can_create_order) === 1;
         if (!waiterCanOrder) {
-          toast.error("İcazəniz yoxdur");
+          toast.error(t("i̇cazeniz_yoxdur"));
           return;
         }
         setPreselectedRoom(room);
@@ -244,9 +245,9 @@ const Rooms = () => {
       <Container className="mt-4">
         <div className="rooms-loading">
           <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Yüklənir...</span>
+            <span className="visually-hidden">{t("loading")}</span>
           </div>
-          <p style={{ color: "#6B7280", marginTop: "12px" }}>Otaqlar yüklənir...</p>
+          <p style={{ color: "#6B7280", marginTop: "12px" }}>{t("otaqlar_yuklenir")}</p>
         </div>
       </Container>
     );
@@ -257,9 +258,7 @@ const Rooms = () => {
     return (
       <Container className="mt-4">
         <Alert variant="warning" className="text-center shadow-sm border-0">
-          <i className="bi bi-building me-2"></i>
-          Heç bir otaq tapılmadı. Admin panelindən otaqları əlavə edin.
-        </Alert>
+          <i className="bi bi-building me-2"></i>{t("hec_bir_otaq_tapilmadi_admin_panelinden_otaqlari_elave_edin")}</Alert>
       </Container>
     );
   }
@@ -274,9 +273,7 @@ const Rooms = () => {
         {filteredRooms.length === 0 ? (
           <div className="rooms-empty">
             <i className="bi bi-search" style={{ fontSize: "32px", color: "#D1D5DB" }}></i>
-            <p style={{ color: "#9CA3AF", marginTop: "8px" }}>
-              Axtarışa uyğun otaq tapılmadı
-            </p>
+            <p style={{ color: "#9CA3AF", marginTop: "8px" }}>{t("axtarisa_uygun_otaq_tapilmadi")}</p>
           </div>
         ) : (
           <Row className="g-3">

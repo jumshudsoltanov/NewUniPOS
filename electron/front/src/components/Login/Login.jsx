@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import apiConfig from "../../utils/apiConfig";
 import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import BrandsModal from "../BrandsModal/BrandsModal";
+import { t } from "../../utils/translations";
 
 const ImageSection = React.memo(({ backgroundImg }) => {
   const [loaded, setLoaded] = useState(false);
@@ -137,12 +138,12 @@ const Login = () => {
 
   const handleRefresh = async () => {
     if (!loginedProfileData?.data?.profile?.id) {
-      toast.error("Profil məlumatı yoxdur, səhifə yenilənə bilmədi.");
+      toast.error(t("no_profile_data"));
       return;
     }
 
     setIsRefreshing(true);
-    const toastId = toast.loading("Məlumatlar yenilənir...");
+    const toastId = toast.loading(t("data_updating"));
     try {
       const profileId = loginedProfileData.data.profile.id;
       await apiConfig.post(`/sync/refresh/${profileId}`);
@@ -303,7 +304,7 @@ const Login = () => {
                       strokeLinejoin="round"
                     />
                   </svg>
-                  <span className="support-text">Texniki dəstək</span>
+                  <span className="support-text">{t("tech_support")}</span>
                 </button>
 
                 <div className="statusIcons">
@@ -403,9 +404,7 @@ const Login = () => {
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                       </svg>
                     </div>
-                    <span className="warning-text">
-                      Abunəliyinizin bitmə tarixi yaxınlaşır! <strong>{daysLeft === 0 ? "Bu gün" : `${daysLeft} gün`}</strong> qalıb.
-                    </span>
+                    <span className="warning-text">{t("subscription_expires")}<strong>{daysLeft === 0 ? "Bu gün" : `${daysLeft} gün`}</strong>{t("qalib")}</span>
                   </div>
                 );
               })()}
@@ -425,16 +424,14 @@ const Login = () => {
                       </div>
                       <input
                         type="text"
-                        placeholder="Müəssisə"
+                        placeholder={t("enterprise_placeholder")}
                         className="customInput"
                         value={brand}
                         onChange={(e) => setBrand(e.target.value)}
                         autoFocus
                       />
                     </div>
-                    <button type="submit" className="actionBtn">
-                      İrəli
-                    </button>
+                    <button type="submit" className="actionBtn">{t("forward")}</button>
                   </form>
                 ) : (
                   <form
@@ -477,7 +474,7 @@ const Login = () => {
                       </div>
                       <input
                         type="text"
-                        placeholder="Terminal ID"
+                        placeholder={t("terminal_id_placeholder")}
                         className="customInput"
                         value={terminalId}
                         onChange={(e) => setTerminalId(e.target.value)}
@@ -532,7 +529,7 @@ const Login = () => {
                       </div>
                       <input
                         type="password"
-                        placeholder="Şifrə"
+                        placeholder={t("password_placeholder")}
                         className="customInput"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -543,16 +540,12 @@ const Login = () => {
                         type="button"
                         className="backBtn"
                         onClick={() => setStep(1)}
-                      >
-                        Geri
-                      </button>
+                      >{t("back")}</button>
                       <button
                         type="submit"
                         className="actionBtn flex-grow-1"
                         onClick={senToLoginBrand}
-                      >
-                        Daxil ol
-                      </button>
+                      >{t("login")}</button>
                     </div>
                   </form>
                 )}

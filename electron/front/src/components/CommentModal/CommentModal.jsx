@@ -9,6 +9,7 @@ import { updateComments } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
+import { t } from "../../utils/translations";
 
 const CommentModal = React.memo(({ show, onClose, order }) => {
   const dispatch = useDispatch();
@@ -50,7 +51,7 @@ const CommentModal = React.memo(({ show, onClose, order }) => {
           <div className="comment-icon-circle">
             <i className="bi bi-chat-text"></i>
           </div>
-          <div className="comment-modal-title">Çekə Şərh Yaz</div>
+          <div className="comment-modal-title">{t("ceke_serh_yaz")}</div>
         </div>
         <button className="btn-close-custom" onClick={onClose}>
           <svg
@@ -77,12 +78,12 @@ const CommentModal = React.memo(({ show, onClose, order }) => {
           onChange={(e) => setComment(e.target.value)}
           value={comment}
           rows={4}
-          placeholder="Şərhinizi bura yazın..."
+          placeholder={t("serhinizi_bura_yazin")}
           style={{ resize: "none" }}
         />
 
         <div className="comment-footer-buttons">
-          <button className="comment-cancel-btn" onClick={onClose}>Bağla</button>
+          <button className="comment-cancel-btn" onClick={onClose}>{t("bagla")}</button>
           <button className="comment-save-btn" onClick={handleUpdateComment}>
             <i className="bi bi-check2 me-2" style={{ fontSize: '1.2rem' }}></i>
             Saxla

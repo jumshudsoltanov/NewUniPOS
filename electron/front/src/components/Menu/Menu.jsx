@@ -21,6 +21,8 @@ import {
   isOrderEditLocked,
   orderEditLockedToast,
 } from "../../utils/checkEditLock";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "./Menu.css";
 
 const Menu = ({
@@ -193,7 +195,7 @@ const Menu = ({
 
     if (item.categories && Array.isArray(item.categories)) {
       if (item.categories.length === 0) {
-        toast.warning("Bu kateqoriyada məlumat yoxdur");
+        toast.warning(t("bu_kateqoriyada_melumat_yoxdur"));
         return;
       }
       setSelectedGenCat(item);
@@ -203,7 +205,7 @@ const Menu = ({
 
     if (item.products && Array.isArray(item.products)) {
       if (item.products.length === 0) {
-        toast.warning("Bu kateqoriyada məhsul yoxdur");
+        toast.warning(t("bu_kateqoriyada_mehsul_yoxdur"));
         return;
       }
       setSelectedCat(item);
@@ -344,7 +346,7 @@ const Menu = ({
           orderId: order?.uuid,
           action: "Məhsul əlavə edildi (Sərbəst say)",
           waiterName,
-          details: `${pendingFreeCountProduct.name} - ${numericCount} x ${unitPrice.toFixed(2)}₼ = ${lineTotal.toFixed(2)}₼`,
+          details: `${pendingFreeCountProduct.name} - ${numericCount} x ${formatPrice(unitPrice)} = ${formatPrice(lineTotal)}`,
         }),
       );
 
@@ -725,14 +727,14 @@ const Menu = ({
                     </span>
                   )}
                   <span className="menu-list-item-price">
-                    {effectivePrice.toFixed(2)} ₼
+                    {formatPrice(effectivePrice)}
                   </span>
                 </div>
               );
             })}
           {itemsToRender?.length === 0 && (
             <div className="text-center w-100 text-muted mt-5">
-              <p>Məlumat tapılmadı</p>
+              <p>{t("melumat_tapilmadi")}</p>
             </div>
           )}
         </div>
@@ -896,7 +898,7 @@ const Menu = ({
             })}
           {itemsToRender?.length === 0 && (
             <div className="text-center w-100 text-muted mt-5">
-              <p>Məlumat tapılmadı</p>
+              <p>{t("melumat_tapilmadi")}</p>
             </div>
           )}
         </Row>

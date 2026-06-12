@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Modal, Row, Col } from "react-bootstrap";
+import { t } from "../../utils/translations";
 import "./OperationsModal.css";
 
 const DEFAULT_OPERATION_NAMES = {
@@ -118,9 +119,7 @@ const OperationsModal = React.memo(({
         <button
           className="btn w-100 close-operation-btn"
           onClick={onHide}
-        >
-          Bağla
-        </button>
+        >{t("bagla")}</button>
       </div>
     </Modal>
   );

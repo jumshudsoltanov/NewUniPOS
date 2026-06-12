@@ -6,6 +6,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { useDispatch, useSelector } from "react-redux";
 import TableGroupsModal from "../TableGroupsModal/TableGroupsModal";
+import { t } from "../../utils/translations";
 
 const saleTypes = [
   { id: "dine_in",   name: "Yerində",    icon: "bi bi-house-door" },
@@ -53,9 +54,7 @@ const ChangeSaleTypeModal = ({ show, onClose, order }) => {
             <div className="st-icon-box">
               <i className="bi bi-cart3"></i>
             </div>
-            <Modal.Title style={{ fontSize: "18px", fontWeight: 600, color: "#fff", margin: 0 }}>
-              Satış üsulu
-            </Modal.Title>
+            <Modal.Title style={{ fontSize: "18px", fontWeight: 600, color: "#fff", margin: 0 }}>{t("satis_usulu_1")}</Modal.Title>
           </div>
           <button className="st-close-btn" onClick={onClose}>
             <i className="bi bi-x-lg"></i>

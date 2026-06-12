@@ -6,6 +6,8 @@ import { updateDiscountOnOrders } from "../../redux/Slices/OrdersSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getOrderItemsAndTimerSubtotal } from "../../utils/orderDisplayTotal";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 
 const DiscountModal = React.memo(({ show, onClose, order }) => {
   const dispatch = useDispatch();
@@ -168,12 +170,12 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
                   Maks:{" "}
                   {discountType === "percent"
                     ? `${maxPercentDiscount % 1 === 0 ? maxPercentDiscount.toFixed(0) : maxPercentDiscount.toFixed(1)}%`
-                    : `${maxCashDiscount.toFixed(2)} ₼`}
+                    : `${formatPrice(maxCashDiscount)}`}
                 </>
               )}
               {subtotal > 0 && deposit > 0 && " · "}
               {deposit > 0 && (
-                <span>Depozit: {deposit.toFixed(2)} ₼ (yekun depozitdən az olmaz)</span>
+                <span>Depozit: {formatPrice(deposit)} (yekun depozitdən az olmaz)</span>
               )}
             </div>
           )}
@@ -282,9 +284,7 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
               >
                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
-              </svg>
-              Tətbiq et
-            </button>
+              </svg>{t("apply")}</button>
           </div>
         </div>
       </div>

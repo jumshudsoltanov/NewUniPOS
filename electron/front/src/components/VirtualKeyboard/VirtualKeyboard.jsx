@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import ReactDOM from "react-dom";
+import { t } from "../../utils/translations";
 import "./VirtualKeyboard.css";
 
 const NUMBER_ROW = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
@@ -113,9 +114,7 @@ const VirtualKeyboard = ({ onKeyPress, onBackspace, onClose }) => {
             </div>
           ))}
           <div className="vk-row vk-row-bottom">
-            <div className="vk-key vk-key-space" onClick={handleSpace}>
-              Boşluq
-            </div>
+            <div className="vk-key vk-key-space" onClick={handleSpace}>{t("bosluq")}</div>
           </div>
         </div>
       </div>

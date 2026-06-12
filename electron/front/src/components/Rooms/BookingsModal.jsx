@@ -3,6 +3,7 @@ import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { fetchBookings, updateBookingStatus, deleteBooking, fetchRooms } from "../../redux/Slices/HotelSlice";
+import { t } from "../../utils/translations";
 
 const statusLabels = {
   active: "Aktiv",
@@ -42,14 +43,14 @@ const BookingsModal = ({ show, onHide, profileId }) => {
       const pid = profileId;
       if (type === "cancel") {
         await dispatch(updateBookingStatus({ bookingId: booking.id, status: "cancelled" })).unwrap();
-        toast.success("Rezervasiya ləğv edildi");
+        toast.success(t("rezervasiya_legv_edildi"));
         if (pid) {
           dispatch(fetchBookings(pid));
           dispatch(fetchRooms(pid));
         }
       } else if (type === "delete") {
         await dispatch(deleteBooking(booking.id)).unwrap();
-        toast.success("Rezervasiya silindi");
+        toast.success(t("rezervasiya_silindi"));
         if (pid) {
           dispatch(fetchRooms(pid));
         }
@@ -97,7 +98,7 @@ const BookingsModal = ({ show, onHide, profileId }) => {
             <div className="reservation-header-icon">
               <i className="bi bi-journal-text"></i>
             </div>
-            <span className="reservation-header-title">Bütün rezervasiyalar</span>
+            <span className="reservation-header-title">{t("butun_rezervasiyalar")}</span>
           </div>
           <button className="reservation-close-btn" onClick={onHide}>
             <i className="bi bi-x-lg" style={{ fontSize: "13px" }}></i>
@@ -115,15 +116,15 @@ const BookingsModal = ({ show, onHide, profileId }) => {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#EF4444" }}></span>
-            <span style={{ fontSize: "13px", color: "#374151" }}>Ləğv edilmiş: <strong>{cancelledCount}</strong></span>
+            <span style={{ fontSize: "13px", color: "#374151" }}>{t("legv_edilmis_1")}<strong>{cancelledCount}</strong></span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#6B7280" }}></span>
-            <span style={{ fontSize: "13px", color: "#374151" }}>Bitmiş: <strong>{completedCount}</strong></span>
+            <span style={{ fontSize: "13px", color: "#374151" }}>{t("bitmis_1")}<strong>{completedCount}</strong></span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3B82F6" }}></span>
-            <span style={{ fontSize: "13px", color: "#374151" }}>Ümumi: <strong>{bookings.length}</strong></span>
+            <span style={{ fontSize: "13px", color: "#374151" }}>{t("umumi_1")}<strong>{bookings.length}</strong></span>
           </div>
         </div>
 
@@ -132,18 +133,18 @@ const BookingsModal = ({ show, onHide, profileId }) => {
           {sorted.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px 20px", color: "#9CA3AF" }}>
               <i className="bi bi-journal-text" style={{ fontSize: "32px", display: "block", marginBottom: "8px" }}></i>
-              <p style={{ margin: 0 }}>Heç bir rezervasiya tapılmadı</p>
+              <p style={{ margin: 0 }}>{t("hec_bir_rezervasiya_tapilmadi")}</p>
             </div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
               <thead>
                 <tr style={{ borderBottom: "2px solid #E5E7EB" }}>
-                  <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>Qonaq</th>
-                  <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>Otaq</th>
-                  <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>Giriş</th>
-                  <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>Çıxış</th>
+                  <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>{t("guest")}</th>
+                  <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>{t("room")}</th>
+                  <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>{t("check_in")}</th>
+                  <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>{t("check_out")}</th>
                   <th style={{ textAlign: "left", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>Status</th>
-                  <th style={{ textAlign: "right", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>Əməliyyat</th>
+                  <th style={{ textAlign: "right", padding: "8px 6px", fontWeight: 600, color: "#6B7280", fontSize: "11px", textTransform: "uppercase" }}>{t("emeliyyat")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -202,7 +203,7 @@ const BookingsModal = ({ show, onHide, profileId }) => {
                             }}
                           >
                             {isProcessing ? (
-                              <><span className="spinner-border spinner-border-sm me-1" role="status"></span>Göndərilir</>
+                              <><span className="spinner-border spinner-border-sm me-1" role="status"></span>{t("gonderilir_1")}</>
                             ) : (
                               "Ləğv et"
                             )}
@@ -290,9 +291,7 @@ const BookingsModal = ({ show, onHide, profileId }) => {
                     color: "#374151", fontSize: "13px", fontWeight: 500,
                     cursor: "pointer",
                   }}
-                >
-                  İmtina
-                </button>
+                >{t("i̇mtina")}</button>
                 <button
                   onClick={handleConfirmAction}
                   style={{

@@ -16,6 +16,8 @@ import { getSocket } from "../../utils/apiConfig";
 import { fetchRooms } from "../../redux/Slices/HotelSlice";
 import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 const getStatusColor = (status) => {
   switch (status) {
     case 1: return "#053796";
@@ -43,7 +45,7 @@ const CheckListItem = React.memo(({ check, onClick, roomNumber }) => (
           </span>
         )}
         {check.status === 1 ? (
-          <span className="checks-check-badge checks-badge-open">Açıq</span>
+          <span className="checks-check-badge checks-badge-open">{t("aciq")}</span>
         ) : (
           <span className={`checks-check-badge ${check.status === 3 ? "warning" : ""}`}>
             {check.status === 2 ? "Bağlanmış" : "Silinib"}
@@ -180,7 +182,7 @@ const Checks = () => {
       const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
       const pid = loginedProfileData?.data?.profile?.id;
       if (!waiterId || !terminalId || !pid) {
-        toast.error("İstifadəçi məlumatları tapılmadı");
+        toast.error(t("i̇stifadeci_melumatlari_tapilmadi"));
         return;
       }
       const generatedUuid = crypto.randomUUID();
@@ -494,7 +496,7 @@ const Checks = () => {
     // can_access_own_checks_only=0: yalnız öz çeklərinə; =1: bütün çeklərə giriş
     if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 0) {
       if (order?.waiter_id !== loginedWaiter?.data?.id && order?.waiter?.id !== loginedWaiter?.data?.id) {
-        toast.error("İcazəniz yoxdur: Bu çek başqa ofisianta aiddir.");
+        toast.error(t("i̇cazeniz_yoxdur_bu_cek_basqa_ofisianta_aiddir"));
         return;
       }
     }
@@ -584,9 +586,7 @@ const Checks = () => {
         <button
           className={`checks-nav-tab ${activeTab === "open" ? "active" : ""}`}
           onClick={() => setActiveTab("open")}
-        >
-          Açıq
-        </button>
+        >{t("aciq")}</button>
         <button
           className={`checks-nav-tab ${activeTab === "archive" ? "active" : ""}`}
           onClick={() => setActiveTab("archive")}
@@ -647,13 +647,13 @@ const Checks = () => {
       {/* Summary Bar */}
       <div className="checks-summary-bar">
         <div className="checks-summary-left">
-          <span className="checks-summary-label">Çek sayı:</span>
+          <span className="checks-summary-label">{t("cek_sayi")}</span>
           <span className="checks-summary-value">{filteredDisplayOrders.length}</span>
         </div>
         <div className="checks-summary-right">
-          <span className="checks-summary-label">Cəm:</span>
+          <span className="checks-summary-label">{t("cem_1")}</span>
           <span className="checks-summary-value checks-total">
-            {totalAmount.toFixed(2)} ₼
+            {formatPrice(totalAmount)}
           </span>
         </div>
       </div>
@@ -663,12 +663,12 @@ const Checks = () => {
         {status === 'loading' && (
           <div className="checks-loading-overlay">
             <Spinner animation="border" variant="primary" />
-            <span className="checks-loading-text">Yüklənir...</span>
+            <span className="checks-loading-text">{t("loading")}</span>
           </div>
         )}
 
         {filteredDisplayOrders.length === 0 ? (
-          <div className="checks-empty-state"><p>Heç bir çek tapılmadı</p></div>
+          <div className="checks-empty-state"><p>{t("hec_bir_cek_tapilmadi")}</p></div>
         ) : (
           filteredDisplayOrders.map((check, index) => {
             const showDateHeader = index === 0 || formatDateKey(filteredDisplayOrders[index - 1]?.start_date) !== formatDateKey(check?.start_date);
@@ -700,7 +700,7 @@ const Checks = () => {
       {/* Calendar Modal */}
       <Modal show={showCalendar} onHide={() => setShowCalendar(false)} centered className="calendar-modal">
         <Modal.Header closeButton>
-          <Modal.Title>Təqvim</Modal.Title>
+          <Modal.Title>{t("teqvim")}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div className="calendar-header">

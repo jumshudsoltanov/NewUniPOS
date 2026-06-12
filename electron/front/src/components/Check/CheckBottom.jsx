@@ -37,6 +37,7 @@ import {
   getDisplayProductName,
   resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
+import { t } from "../../utils/translations";
 
 const CheckBottom = ({
   orders,
@@ -212,7 +213,7 @@ const CheckBottom = ({
 
   const goCloseCheck = async () => {
     if (!canCloseCheck) {
-      toast.error("İcazəniz yoxdur: Çek bağlamaq hüququnuz yoxdur.");
+      toast.error(t("i̇cazeniz_yoxdur_cek_baglamaq_huququnuz_yoxdur"));
       return;
     }
 
@@ -459,7 +460,7 @@ const CheckBottom = ({
               className="summary-row customer-row"
               style={{ color: "white", fontWeight: "500" }}
             >
-              <span>Müştəri:</span>
+              <span>{t("musteri")}</span>
               <span
                 title={`${selectedCustomer.name} (${selectedCustomer.phone || ""})`}
               >
@@ -479,7 +480,7 @@ const CheckBottom = ({
             </div>
           )}
           <div className="summary-row">
-            <span>Ara cəm:</span>
+            <span>{t("ara_cem")}</span>
             <span>{calcTotal.total} ₼</span>
           </div>
           {Number(calcTotal.discountAmount) > 0 && (
@@ -496,7 +497,7 @@ const CheckBottom = ({
           )}
           {Number(calcTotal.serviceAmount) > 0 && (
             <div className="summary-row">
-              <span>Servis haqqı:</span>
+              <span>{t("servis_haqqi")}</span>
               <span>
                 +{calcTotal.serviceAmount} ₼ (~
                 {calcTotal.effectiveServicePercentage}%)
@@ -505,7 +506,7 @@ const CheckBottom = ({
           )}
           {Number(calcTotal.deliveryFee) > 0 && (
             <div className="summary-row">
-              <span>Çatdırılma:</span>
+              <span>{t("catdirilma")}</span>
               <span>+{calcTotal.deliveryFee} ₼</span>
             </div>
           )}
@@ -541,21 +542,21 @@ const CheckBottom = ({
                   className="d-flex justify-content-between align-items-center mb-1"
                   style={{ fontSize: "0.8rem", opacity: 0.9 }}
                 >
-                  <span>Masa (saatlıq):</span>
+                  <span>{t("masa_saatliq")}</span>
                   <span>{Number(effectiveHourlyPrice).toFixed(2)} ₼</span>
                 </div>
                 <div
                   className="d-flex justify-content-between align-items-center mb-1"
                   style={{ fontSize: "0.8rem", opacity: 0.9 }}
                 >
-                  <span>Keçən vaxt:</span>
+                  <span>{t("kecen_vaxt")}</span>
                   <span className="fw-bold">{timerClock}</span>
                 </div>
                 <div
                   className="d-flex justify-content-between align-items-center mt-1 total-row"
                   style={{ fontSize: "0.9rem", fontWeight: 700 }}
                 >
-                  <span>Taymer qazancı:</span>
+                  <span>{t("taymer_qazanci")}</span>
                   <span>{Number(timerCharge).toFixed(2)} ₼</span>
                 </div>
               </div>
@@ -590,12 +591,12 @@ const CheckBottom = ({
                     role="status"
                     aria-hidden="true"
                   ></span>
-                  <span>Göndərilir...</span>
+                  <span>{t("gonderilir")}</span>
                 </div>
               ) : (
                 <>
                   <i className="bi bi-printer"></i>
-                  <span>Göndər</span>
+                  <span>{t("send")}</span>
                   {totalChanges > 0 && (
                     <span className="new-items-badge">{totalChanges}</span>
                   )}

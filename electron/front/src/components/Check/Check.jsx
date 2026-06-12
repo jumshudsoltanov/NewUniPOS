@@ -100,6 +100,8 @@ import {
   menuWithCategories,
   applyProductOrdering,
 } from "../../redux/Slices/MenuSlice";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -433,8 +435,8 @@ const Check = () => {
 
   const handleHotelOpenWhatsApp = () => {
     if (!hotelRoom) return;
-    if (!hotelRoom.guest_phone) { toast.error("Nömrə yoxdur"); return; }
-    if (!hotelRoom.booking_id) { toast.error("Rezervasiya ID yoxdur"); return; }
+    if (!hotelRoom.guest_phone) { toast.error(t("no_phone")); return; }
+    if (!hotelRoom.booking_id) { toast.error(t("no_booking_id")); return; }
     setWaReminderType("info");
     setWaCustomMessage(buildDefaultMessage("info"));
     setWaSendMode("now");
@@ -457,9 +459,9 @@ const Check = () => {
       .unwrap()
       .then((res) => {
         if (res?.data?.scheduled) {
-          toast.success("WhatsApp təyin edildi");
+          toast.success(t("whatsapp_scheduled"));
         } else {
-          toast.success("WhatsApp göndərildi");
+          toast.success(t("whatsapp_sent"));
         }
         setShowWhatsAppModal(false);
       })
@@ -475,7 +477,7 @@ const Check = () => {
     }))
       .unwrap()
       .then(() => {
-        toast.success("Çıxış xatırlatması göndərildi");
+        toast.success(t("checkout_reminder_sent"));
         setWaReminderSent(true);
       })
       .catch((err) => toast.error(err?.error || "Xatırlatma göndərilmədi"));
@@ -530,10 +532,10 @@ const Check = () => {
     setIsUpdatingDeposit(true);
     try {
       await dispatch(updateFolioBalance({ roomId: hotelRoom.id, profileId: hotelProfileId, balance: val })).unwrap();
-      toast.success("Depozit yeniləndi");
+      toast.success(t("deposit_updated"));
       setShowDepositKeypad(false);
       dispatch(fetchRooms(hotelProfileId));
-    } catch { toast.error("Depozit yenilənə bilmədi"); }
+    } catch { toast.error(t("deposit_update_error")); }
     finally { setIsUpdatingDeposit(false); }
   };
 
@@ -563,8 +565,8 @@ const Check = () => {
   const handleHotelPrintReceipt = async () => {
     if (!hotelRoom) return;
     const printers = cashierPrinters;
-    if (!printers.length) { toast.error("Kassa printeri tapılmadı"); return; }
-    if (!window.electronAPI?.printReceipt) { toast.error("Çap sistemi mövcud deyil"); return; }
+    if (!printers.length) { toast.error(t("printer_not_found")); return; }
+    if (!window.electronAPI?.printReceipt) { toast.error(t("print_system_unavailable")); return; }
 
     const d1 = hotelRoom.check_in ? new Date(hotelRoom.check_in) : null;
     const d2 = hotelRoom.check_out ? new Date(hotelRoom.check_out) : null;
@@ -573,10 +575,10 @@ const Check = () => {
     const line = (a, b) => `<tr><td style="padding:4px 2px;border-bottom:1px dashed #666;font-size:12px;font-weight:600">${a}</td><td style="padding:4px 2px;border-bottom:1px dashed #666;font-size:12px;font-weight:600;text-align:right">${b}</td></tr>`;
 
     const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Qəbz</title></head><body style="font-family:'Arial',sans-serif;width:300px;margin:0 auto;padding:10px">
+<html><head><meta charset="utf-8"><title>{t("receipt")}</title></head><body style="font-family:'Arial',sans-serif;width:300px;margin:0 auto;padding:10px">
   <div style="text-align:center;margin-bottom:12px">
-    <div style="font-size:16px;font-weight:700">QƏBZ</div>
-    <div style="font-size:10px;color:#666">Otaq Qəbzi</div>
+    <div style="font-size:16px;font-weight:700">{t("qebz")}</div>
+    <div style="font-size:10px;color:#666">{t("room_receipt")}</div>
   </div>
   <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
     ${line("Otaq", hotelRoom.room_number || "")}
@@ -586,20 +588,18 @@ const Check = () => {
     ${line("Telefon", hotelRoom.guest_phone || "—")}
   </table>
   ${d1 || d2 ? `<table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">Tarixlər</td></tr>
+    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">{t("dates")}</td></tr>
     ${d1 ? line("Giriş", `${String(d1.getDate()).padStart(2,"0")}.${String(d1.getMonth()+1).padStart(2,"0")}.${d1.getFullYear()}`) : ""}
     ${d2 ? line("Çıxış", `${String(d2.getDate()).padStart(2,"0")}.${String(d2.getMonth()+1).padStart(2,"0")}.${d2.getFullYear()}`) : ""}
     ${nights > 0 ? line("Gecə", `${nights}`) : ""}
   </table>` : ""}
   <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">Maliyyə</td></tr>
-    ${line("Depozit", `${bal.toFixed(2)} ₼`)}
+    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">{t("financial")}</td></tr>
+    ${line("Depozit", `${formatPrice(bal)}`)}
   </table>
   <div style="border-top:2px solid #000;margin:8px 0"></div>
   <div style="text-align:center;font-size:10px;color:#999;margin-top:8px">
-    ${new Date().toLocaleString("az-AZ")}<br>
-    Təşəkkür edirik!
-  </div>
+    ${new Date().toLocaleString("az-AZ")}<br>{t("thanks")}</div>
 </body></html>`;
 
     try {
@@ -624,7 +624,7 @@ const Check = () => {
           : { html, printerName: String(hasUsbName ? printer.usb_name : (printer.local_name || printer.name) || ""), printerSettings: ps };
         await window.electronAPI.printReceipt(payload);
       }
-      toast.success("Qəbz çap edildi");
+      toast.success(t("qebz_cap_edildi"));
     } catch (err) {
       toast.error("Çap xətası: " + (err.message || "Bilinməyən xəta"));
     }
@@ -1103,7 +1103,7 @@ const Check = () => {
 
     } catch (e) {
       console.error(e);
-      toast.error("Xəta baş verdi");
+      toast.error(t("error_occurred"));
     } finally {
       isSendingRef.current = false;
       setIsSending(false);
@@ -1218,7 +1218,7 @@ const Check = () => {
     }
 
     if (products?.length > 0) {
-      toast.info("Endirim etmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("discount_first"));
       return;
     }
 
@@ -1233,7 +1233,7 @@ const Check = () => {
     }
 
     if (products?.length > 0) {
-      toast.info("Xidmət haqqı əlavə etmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("service_fee_first"));
       return;
     }
 
@@ -1248,7 +1248,7 @@ const Check = () => {
     }
 
     if (products?.length > 0) {
-      toast.info("Depozit əlavə etmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("deposit_first"));
       return;
     }
 
@@ -1273,7 +1273,7 @@ const Check = () => {
     }
 
     if (products?.length > 0) {
-      toast.info("Çeki birləşdirmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("merge_check_first"));
       return;
     }
 
@@ -1288,7 +1288,7 @@ const Check = () => {
     }
 
     if (products?.length > 0) {
-      toast.info("Satış üsulunu dəyişmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("change_sale_type_first"));
       return;
     }
 
@@ -1304,7 +1304,7 @@ const Check = () => {
     }
 
     if (products?.length > 0) {
-      toast.info("Masanı dəyişmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("change_table_first"));
       return;
     }
 
@@ -1344,14 +1344,14 @@ const Check = () => {
 
     const handleOrderDeleted = ({ orderId }) => {
       if (orderId && orderId === id) {
-        toast.warning("Bu çek başqa terminal tərəfindən silindi.");
+        toast.warning(t("check_deleted_other"));
         navigate(postOrderTarget, { replace: true });
       }
     };
 
     const handleOrderClosed = ({ orderId }) => {
       if (orderId && orderId === id) {
-        toast.info("Bu çek başqa terminal tərəfindən bağlandı.");
+        toast.info(t("check_closed_other"));
         navigate(postOrderTarget, { replace: true });
       }
     };
@@ -1465,7 +1465,7 @@ const Check = () => {
     }
 
     if (products?.length > 0) {
-      toast.info("Çeki bölmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("split_check_first"));
       return;
     }
 
@@ -1477,7 +1477,7 @@ const Check = () => {
 
   const openHistoryModalFunc = useCallback(() => {
     if (products?.length > 0) {
-      toast.info("Əməliyyat tarixçəsinə baxmaq üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("view_history_first"));
       return;
     }
     setShowHistoryModal(true);
@@ -1490,7 +1490,7 @@ const Check = () => {
       return;
     }
     if (products?.length > 0) {
-      toast.info("Müştəri seçmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("select_customer_first"));
       return;
     }
     setShowCustomerModal(true);
@@ -1499,7 +1499,7 @@ const Check = () => {
 
   const openGuestCountModalFunc = useCallback(() => {
     if (products?.length > 0) {
-      toast.info("Qonaq sayını dəyişmək üçün əvvəlcə gözləyən məhsulları 'Göndər' düyməsi ilə təsdiqləyin.");
+      toast.info(t("change_guest_count_first"));
       return;
     }
     setShowGuestCountModal(true);
@@ -1586,7 +1586,7 @@ const Check = () => {
     navigate(isPacksOnly ? "/checks" : "/tables", { replace: true });
     dispatch(removeOrderOptimisticFromTables(orderId));
     dispatch(removeOrderOptimistic(orderId));
-    toast.success("Çek silindi");
+    toast.success(t("check_deleted"));
 
     // 2. Background execution block
     const performBackgroundDeletion = async () => {
@@ -1663,7 +1663,7 @@ const Check = () => {
           }
         } catch (error) {
           console.error("Delayed Delete Error:", error);
-          toast.error("Silinmə zamanı xəta baş verdi");
+          toast.error(t("check_delete_error"));
         }
       })();
 
@@ -1677,20 +1677,20 @@ const Check = () => {
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
 
-    const toastId = toast.loading("Məhsul silinir...");
+    const toastId = toast.loading(t("product_deleting"));
     try {
       const profileId = loginedProfileData?.data?.profile?.id;
       await dispatch(deleteProduct({ id: productToDelete.id, profile_id: profileId })).unwrap();
 
       toast.dismiss(toastId);
       addNotification("Məhsul Silindi", `"${productToDelete.name}" məhsulu menyudan silindi.`, { category: "info" });
-      toast.success("Məhsul silindi!");
+      toast.success(t("product_deleted"));
       setShowDeleteConfirm(false);
       setProductToDelete(null);
     } catch (error) {
       toast.dismiss(toastId);
       console.error(error);
-      toast.error("Silinmə zamanı xəta baş verdi");
+      toast.error(t("check_delete_error"));
     }
   };
 
@@ -2065,7 +2065,7 @@ const Check = () => {
                   <div
                     className="sidebar-icon"
                     onClick={() => setShowKitchenBlockModal(true)}
-                    title="Mətbəx printerlərini bloklamaq"
+                    title={t("metbex_printerlerini_bloklamaq")}
                   >
                     {/* Kitchen/pot icon */}
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#343434" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2167,7 +2167,7 @@ const Check = () => {
                         try {
                           // isNew məhsullar varsa — əvvəl göndər tələb et, çap etmə
                           if ((products.length > 0 || pendingDeletions.length > 0) && !orderEditLocked) {
-                            toast.warning("Əvvəlcə məhsulları çap üçün göndərin (\"Göndər\" düyməsi).");
+                            toast.warning(t("evvelce_mehsullari_cap_ucun_gonderin__gonder__duymesi"));
                             setIsPrintingCheck(false);
                             return;
                           }
@@ -2192,7 +2192,7 @@ const Check = () => {
                           }, loginedProfileData, { dispatch, loginedWaiter, autoLockCheckAfterPrint: true });
 
                           if (result.success) {
-                            toast.success("Ön çap uğurla tamamlandı");
+                            toast.success(t("on_cap_ugurla_tamamlandi"));
                             const profileId = loginedProfileData?.data?.profile?.id;
                             dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName }));
                             dispatch(getActiveOrders({ profileId, silentRefresh: true }));
@@ -2354,7 +2354,7 @@ const Check = () => {
                     className="create-order-btn small-btn"
                     onClick={async () => {
                       if (products.length > 0 || pendingDeletions.length > 0) {
-                        toast.warning("Əvvəlcə mövcud məhsulları göndərin (\"Göndər\" düyməsi), sonra yeni sifariş yaradın.");
+                        toast.warning(t("evvelce_movcud_mehsullari_gonderin__gonder__duymesi_sonra_yeni_sifaris_yaradin"));
                         return;
                       }
                       const guard = await checkShiftGuard(loginedProfileData);
@@ -2380,7 +2380,7 @@ const Check = () => {
                         strokeLinejoin="round"
                       />
                     </svg>
-                    <span className="d-none d-xl-inline">Yeni sifariş</span>
+                    <span className="d-none d-xl-inline">{t("new_order")}</span>
                   </button>
                 </>
               )}
@@ -2399,7 +2399,7 @@ const Check = () => {
                       navigate("/checks");
                     }}
                   >
-                    <span className="d-none d-xl-inline">Çeklər</span>
+                    <span className="d-none d-xl-inline">{t("checks")}</span>
                     <svg
                       className="d-xl-none"
                       width="22"
@@ -2648,9 +2648,7 @@ const Check = () => {
                               e.stopPropagation();
                               setSearchText("");
                             }}
-                          >
-                            Təmizlə
-                          </div>
+                          >{t("temizle")}</div>
                         </div>
 
                         <div
@@ -2711,10 +2709,10 @@ const Check = () => {
                       <div className="settings-actions">
                         <div
                           className="settings-action-btn"
-                          title="Sıranı dəyiş"
+                          title={t("sirani_deyis")}
                           onClick={() => {
                             if (!navigator.onLine) {
-                              toast.error("İnternet bağlantısı yoxdur. Sıranı dəyişmək üçün internet lazımdır.");
+                              toast.error(t("i̇nternet_baglantisi_yoxdur_sirani_deyismek_ucun_internet_lazimdir"));
                               return;
                             }
                             setIsDragMode(true);
@@ -2723,21 +2721,21 @@ const Check = () => {
                         >
                           <i className="bi bi-arrows-move"></i>
                         </div>
-                        <div className="settings-action-btn" title="Əlavə et" onClick={() => setShowProductModal(true)}>
+                        <div className="settings-action-btn" title={t("elave_et")} onClick={() => setShowProductModal(true)}>
                           <i className="bi bi-plus-lg"></i>
                         </div>
                         <div
                           className={`settings-action-btn ${isEditMode ? 'active-mode' : ''}`}
-                          title="Redaktə et"
+                          title={t("redakte_et")}
                           onClick={() => {
                             if (isDragMode) return;
                             const newEditMode = !isEditMode;
                             setIsEditMode(newEditMode);
                             if (newEditMode) {
                               setIsDeleteMode(false);
-                              toast.info("Redaktə rejimi aktivdir. Məhsulun üzərinə vurun.");
+                              toast.info(t("redakte_rejimi_aktivdir_mehsulun_uzerine_vurun"));
                             } else {
-                              toast.info("Redaktə rejimi deaktiv edildi.");
+                              toast.info(t("redakte_rejimi_deaktiv_edildi"));
                             }
                           }}
                         >
@@ -2752,9 +2750,9 @@ const Check = () => {
                             setIsDeleteMode(newDeleteMode);
                             if (newDeleteMode) {
                               setIsEditMode(false);
-                              toast.info("Silmə rejimi aktivdir. Məhsulun üzərinə vurun.");
+                              toast.info(t("silme_rejimi_aktivdir_mehsulun_uzerine_vurun"));
                             } else {
-                              toast.info("Silmə rejimi deaktiv edildi.");
+                              toast.info(t("silme_rejimi_deaktiv_edildi"));
                             }
                           }}
                         >
@@ -2767,7 +2765,7 @@ const Check = () => {
                       <div className="drag-mode-actions">
                         <div
                           className="drag-mode-btn cancel"
-                          title="Ləğv et"
+                          title={t("cancel")}
                           onClick={() => {
                             setIsDragMode(false);
                             setCustomOrders(tempCustomOrders);
@@ -2778,7 +2776,7 @@ const Check = () => {
                         </div>
                         <div
                           className="drag-mode-btn confirm"
-                          title="Təsdiqlə"
+                          title={t("tesdiqle")}
                           onClick={async () => {
                             const loadingToast = toast.loading("Dəyişikliklər yadda saxlanılır...");
 
@@ -2786,7 +2784,7 @@ const Check = () => {
                               const profileId = loginedProfileData?.data?.profile?.id;
                               if (!profileId) {
                                 toast.dismiss(loadingToast);
-                                toast.error("Profil ID tapılmadı");
+                                toast.error(t("profil_id_tapilmadi"));
                                 return;
                               }
 
@@ -2854,7 +2852,7 @@ const Check = () => {
                                 // customOrders təmizlənmir — localStorage-da saxlanır
                                 toast.dismiss(loadingToast);
                                 addNotification("Sıralama Dəyişdirildi", "Menyu sıralaması yeniləndi.");
-                                toast.success("Sıralama uğurla yadda saxlanıldı!");
+                                toast.success(t("siralama_ugurla_yadda_saxlanildi"));
                               } else {
                                 toast.dismiss(loadingToast);
                                 setIsDragMode(false);
@@ -3041,7 +3039,7 @@ const Check = () => {
           const profileId = loginedProfileData?.data?.profile?.id;
 
           if (!waiterId || !terminalId || !profileId) {
-            toast.error("İstifadəçi məlumatları çatışmır");
+            toast.error(t("i̇stifadeci_melumatlari_catismir"));
             return;
           }
 
@@ -3109,7 +3107,7 @@ const Check = () => {
             details: `Masa: ${currentTable?.name || "Naməlum"}`
           }));
           navigate(`/check/${generatedUuid}?tableId=${currentTable?.id}`);
-          toast.success("Yeni çek yaradıldı");
+          toast.success(t("yeni_cek_yaradildi"));
 
           dispatch(saleNewOrders(payload)).unwrap()
             .then((res) => {
@@ -3123,7 +3121,7 @@ const Check = () => {
             })
             .catch((err) => {
               console.error(err);
-              toast.error("Xəta baş verdi");
+              toast.error(t("error_occurred"));
             });
         }}
       />
@@ -3176,7 +3174,7 @@ const Check = () => {
               <div className="delete-confirm-icon-circle">
                 <i className="bi bi-trash3-fill"></i>
               </div>
-              <div className="delete-confirm-title">Məhsulu Silmək</div>
+              <div className="delete-confirm-title">{t("mehsulu_silmek")}</div>
             </div>
             <button className="btn-close-custom" onClick={() => setShowDeleteConfirm(false)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3188,13 +3186,10 @@ const Check = () => {
 
           <div className="delete-confirm-body">
             <p>
-              "<strong>{productToDelete?.name}</strong>" məhsulu silinəcək.
-              <br />
-              Bu əməliyyatı geri qaytarmaq mümkün deyil.
-            </p>
+              "<strong>{productToDelete?.name}</strong>{t("mehsulu_silinecek")}<br />{t("bu_emeliyyati_geri_qaytarmaq_mumkun_deyil")}</p>
 
             <div className="delete-confirm-footer">
-              <button className="delete-confirm-cancel" onClick={() => setShowDeleteConfirm(false)}>Ləğv et</button>
+              <button className="delete-confirm-cancel" onClick={() => setShowDeleteConfirm(false)}>{t("cancel")}</button>
               <button className="delete-confirm-save" onClick={handleDeleteProduct}>
                 <i className="bi bi-trash3-fill"></i>
                 Sil
@@ -3286,7 +3281,7 @@ const Check = () => {
                   <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
               </div>
-              <span className="header-title">Masa boşdur</span>
+              <span className="header-title">{t("masa_bosdur")}</span>
             </div>
             <button className="close-btn" onClick={() => { setShowEmptyCheckConfirm(false); const d = emptyCheckDataRef.current; if (d) { if (d.targetPath === -1) goTables(true, true); else navigate(d.targetPath, { replace: true }); } }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3299,12 +3294,8 @@ const Check = () => {
           {/* Body */}
           <div className="discount-body">
             <div style={{ textAlign: "center", padding: "8px 0" }}>
-              <p style={{ fontSize: "16px", color: "#333", margin: "0 0 6px", fontWeight: 500 }}>
-                Bu masada heç bir məhsul yoxdur.
-              </p>
-              <p style={{ fontSize: "15px", color: "#666", margin: 0 }}>
-                Masanı silmək istədiyinizə əminsiniz?
-              </p>
+              <p style={{ fontSize: "16px", color: "#333", margin: "0 0 6px", fontWeight: 500 }}>{t("bu_masada_hec_bir_mehsul_yoxdur")}</p>
+              <p style={{ fontSize: "15px", color: "#666", margin: 0 }}>{t("masani_silmek_istediyinize_eminsiniz")}</p>
             </div>
 
             <div className="action-row" style={{ marginTop: 0 }}>
@@ -3337,7 +3328,7 @@ const Check = () => {
                   dispatch(removeOrderOptimistic(d.orderId));
                   if (d.targetPath === -1) goTables(true, true);
                   else navigate(d.targetPath, { replace: true });
-                  setTimeout(() => toast.info("Masa boş olduğu üçün silindi"), 0);
+                  setTimeout(() => toast.info(t("masa_bos_oldugu_ucun_silindi")), 0);
 
                   // Backend delete
                   try {
@@ -3404,7 +3395,7 @@ const Check = () => {
             <div className="hc-wa-header-left">
               <div className="hc-wa-header-icon"><i className="bi bi-whatsapp"></i></div>
               <div>
-                <div className="hc-wa-header-title">WhatsApp mesajı</div>
+                <div className="hc-wa-header-title">{t("whatsapp_mesaji")}</div>
                 <div className="hc-wa-header-sub">{hotelRoom?.guest_name || "Qonaq"} · {hotelRoom?.guest_phone || "—"}</div>
               </div>
             </div>
@@ -3420,30 +3411,28 @@ const Check = () => {
             <div className="hc-wa-templates">
               <button className={`hc-wa-tpl-btn ${waReminderType !== "checkout" ? "active" : ""}`}
                 onClick={() => { setWaReminderType("info"); setWaCustomMessage(buildDefaultMessage("info")); }}>
-                <i className="bi bi-info-circle"></i> Məlumat
-              </button>
+                <i className="bi bi-info-circle"></i>{t("melumat")}</button>
               <button className={`hc-wa-tpl-btn ${waReminderType === "checkout" ? "active" : ""}`}
                 onClick={() => { setWaReminderType("checkout"); setWaCustomMessage(buildDefaultMessage("checkout")); }}>
-                <i className="bi bi-box-arrow-right"></i> Çıxış xatırlatması
-              </button>
+                <i className="bi bi-box-arrow-right"></i>{t("cixis_xatirlatmasi")}</button>
             </div>
             <div className="hc-wa-editor">
-              <div className="hc-wa-editor-label">Mesaj mətni</div>
+              <div className="hc-wa-editor-label">{t("mesaj_metni")}</div>
               <textarea className="hc-wa-editor-area" rows="8" value={waCustomMessage}
                 onChange={(e) => setWaCustomMessage(e.target.value)}
-                placeholder="Mesaj mətni daxil edin..." />
+                placeholder={t("mesaj_metni_daxil_edin")} />
               <div className="hc-wa-char-count">{waCustomMessage.length} simvol</div>
             </div>
             <div className="hc-wa-delivery">
-              <div className="hc-wa-section-title">Göndərmə</div>
+              <div className="hc-wa-section-title">{t("gonderme")}</div>
               <div className="hc-wa-delivery-options">
                 <label className={`hc-wa-radio ${waSendMode === "now" ? "checked" : ""}`}>
                   <input type="radio" name="waMode" checked={waSendMode === "now"} onChange={() => setWaSendMode("now")} />
                   <div className="hc-wa-radio-content">
                     <div className="hc-wa-radio-icon"><i className="bi bi-send-fill"></i></div>
                     <div>
-                      <div className="hc-wa-radio-title">Dərhal göndər</div>
-                      <div className="hc-wa-radio-desc">Mesaj dərhal WhatsApp olaraq göndəriləcək</div>
+                      <div className="hc-wa-radio-title">{t("derhal_gonder")}</div>
+                      <div className="hc-wa-radio-desc">{t("mesaj_derhal_whatsapp_olaraq_gonderilecek")}</div>
                     </div>
                   </div>
                 </label>
@@ -3456,8 +3445,8 @@ const Check = () => {
                   <div className="hc-wa-radio-content">
                     <div className="hc-wa-radio-icon"><i className="bi bi-calendar-clock"></i></div>
                     <div>
-                      <div className="hc-wa-radio-title">Vaxt təyin et</div>
-                      <div className="hc-wa-radio-desc">Mesaj müəyyən edilmiş vaxtda göndəriləcək</div>
+                      <div className="hc-wa-radio-title">{t("vaxt_teyin_et")}</div>
+                      <div className="hc-wa-radio-desc">{t("mesaj_mueyyen_edilmis_vaxtda_gonderilecek")}</div>
                     </div>
                   </div>
                 </label>
@@ -3483,8 +3472,8 @@ const Check = () => {
                 <div className="hc-wa-auto-header-left">
                   <i className="bi bi-bell-fill"></i>
                   <div>
-                    <div className="hc-wa-auto-title">Avtomatik çıxış xatırlatması</div>
-                    <div className="hc-wa-auto-desc">Qonağın çıxış vaxtı yaxınlaşdıqda avtomatik bildiriş göndər</div>
+                    <div className="hc-wa-auto-title">{t("avtomatik_cixis_xatirlatmasi")}</div>
+                    <div className="hc-wa-auto-desc">{t("qonagin_cixis_vaxti_yaxinlasdiqda_avtomatik_bildiris_gonder")}</div>
                   </div>
                 </div>
                 <label className="hc-wa-toggle">
@@ -3495,13 +3484,13 @@ const Check = () => {
               {waAutoRemind && (
                 <div className="hc-wa-auto-body">
                   <div className="hc-wa-auto-row">
-                    <span className="hc-wa-auto-label">Çıxışa neçə saat qalmış bildiriş göndərilsin?</span>
+                    <span className="hc-wa-auto-label">{t("cixisa_nece_saat_qalmis_bildiris_gonderilsin")}</span>
                     <div className="hc-wa-auto-controls">
                       <select className="hc-wa-select" value={waRemindHours} onChange={(e) => setWaRemindHours(Number(e.target.value))}>
-                        <option value={1}>1 saat qalmış</option>
-                        <option value={2}>2 saat qalmış</option>
-                        <option value={3}>3 saat qalmış</option>
-                        <option value={6}>6 saat qalmış</option>
+                        <option value={1}>{t("1_saat_qalmis")}</option>
+                        <option value={2}>{t("2_saat_qalmis")}</option>
+                        <option value={3}>{t("3_saat_qalmis")}</option>
+                        <option value={6}>{t("6_saat_qalmis")}</option>
                       </select>
                       <button className="hc-wa-btn-remind" onClick={handleSendCheckoutReminder}
                         disabled={isSendingWhatsapp || !hotelRoom?.guest_phone || waReminderSent}>
@@ -3517,8 +3506,7 @@ const Check = () => {
                   )}
                   {waReminderSent && (
                     <div className="hc-wa-auto-success">
-                      <i className="bi bi-check-circle-fill"></i> Xatırlatma göndərildi
-                    </div>
+                      <i className="bi bi-check-circle-fill"></i>{t("xatirlatma_gonderildi")}</div>
                   )}
                 </div>
               )}
@@ -3527,16 +3515,15 @@ const Check = () => {
 
           <div className="hc-wa-footer">
             <button className="hc-wa-footer-btn hc-wa-footer-cancel" onClick={() => setShowWhatsAppModal(false)}>
-              <i className="bi bi-x"></i> İmtina
-            </button>
+              <i className="bi bi-x"></i>{t("i̇mtina")}</button>
             <button className="hc-wa-footer-btn hc-wa-footer-send" onClick={handleWASend}
               disabled={isSendingWhatsapp || !waCustomMessage || (waSendMode === "schedule" && !waScheduleTime)}>
               {isSendingWhatsapp ? (
-                <><span className="spinner-border spinner-border-sm"></span> Göndərilir...</>
+                <><span className="spinner-border spinner-border-sm"></span>{t("gonderilir")}</>
               ) : waSendMode === "schedule" ? (
-                <><i className="bi bi-calendar-check"></i> Təyin et</>
+                <><i className="bi bi-calendar-check"></i>{t("teyin_et")}</>
               ) : (
-                <><i className="bi bi-send-fill"></i> Göndər</>
+                <><i className="bi bi-send-fill"></i>{t("send")}</>
               )}
             </button>
           </div>

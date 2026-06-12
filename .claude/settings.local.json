@@ -87,7 +87,10 @@
       "PowerShell(try { $pkg = Get-Content \"node_modules\\\\openai\\\\package.json\" -Raw | ConvertFrom-Json; \"engines: $\\($pkg.engines | ConvertTo-Json\\)\" } catch { \"no engines field\" })",
       "PowerShell(npm run *)",
       "Bash(git push *)",
-      "Bash(node _fix3.js)"
+      "Bash(node _fix3.js)",
+      "Bash(pip install *)",
+      "Bash(python scripts/extract_translations.py --dry-run --scan-dir \"electron/front/src/components/Header\")",
+      "Bash(python *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",

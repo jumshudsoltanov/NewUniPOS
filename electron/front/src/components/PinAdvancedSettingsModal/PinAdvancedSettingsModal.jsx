@@ -8,6 +8,7 @@ import apiConfig from "../../utils/apiConfig";
 import CustomerReceipt from "../Receipt/CustomerReceipt";
 import KitchenReceipt from "../Receipt/KitchenReceipt";
 import { DEFAULT_OPERATION_NAMES } from "../Operations/OperationsModal";
+import { t } from "../../utils/translations";
 
 const WHATSAPP_NUMBER = "994775012507";
 
@@ -26,40 +27,40 @@ function normalizePosReceiptSettings(raw) {
 }
 
 const ALL_ACTIONS = [
-  { key: "prefix:Yeni sifariş yaradıldı", label: "Yeni çek açıldı" },
-  { key: "Çek bağlandı", label: "Çek bağlandı" },
-  { key: "Ödəniş edildi", label: "Ödəniş edildi" },
-  { key: "Ödənişsiz bağlandı", label: "Ödənişsiz bağlandı" },
-  { key: "Qəbz kilidləndi", label: "Çek kilidləndi" },
-  { key: "Qəbz açıldı", label: "Çek kilidi açıldı" },
-  { key: "Çek yenidən açıldı", label: "Çek yenidən açıldı" },
-  { key: "Çek silindi", label: "Çek silindi" },
-  { key: "Çeklər birləşdirildi", label: "Çeklər birləşdirildi" },
-  { key: "Çek geri qaytarma", label: "Çek geri qaytarma" },
-  { key: "Çek çap edildi", label: "Çek çap edildi" },
-  { key: "Ön çap çıxarıldı", label: "Ön çap çıxarıldı" },
-  { key: "Qəbz təmizləndi", label: "Qəbz təmizləndi" },
-  { key: "Sifariş göndərildi", label: "Sifariş göndərildi" },
-  { key: "prefix:Məhsul əlavə edildi", label: "Məhsul əlavə edildi" },
-  { key: "Məhsul silindi", label: "Məhsul silindi" },
-  { key: "Məhsullar silindi", label: "Məhsullar silindi" },
-  { key: "Məhsul köçürüldü", label: "Məhsul köçürüldü" },
-  { key: "Məhsul qəbul edildi", label: "Məhsul qəbul edildi" },
-  { key: "Məhsula endirim", label: "Məhsula endirim" },
-  { key: "Miqdar dəyişdirildi", label: "Miqdar dəyişdirildi" },
-  { key: "Qiymət dəyişdirildi", label: "Qiymət dəyişdirildi" },
-  { key: "Endirim dəyişildi", label: "Endirim dəyişildi" },
-  { key: "Servis haqqı dəyişildi", label: "Servis haqqı dəyişildi" },
-  { key: "Masa dəyişildi", label: "Masa dəyişildi" },
-  { key: "Satış növü dəyişildi", label: "Satış növü dəyişildi" },
-  { key: "Ofisiant dəyişildi", label: "Ofisiant dəyişildi" },
-  { key: "Depozit dəyişildi", label: "Depozit dəyişildi" },
-  { key: "Qonaq sayı dəyişdirildi", label: "Qonaq sayı dəyişdirildi" },
-  { key: "Şərh yazıldı", label: "Şərh yazıldı" },
-  { key: "Taymer başladıldı", label: "Taymer başladıldı" },
-  { key: "Taymer dayandırıldı", label: "Taymer dayandırıldı" },
-  { key: "Taymer sıfırlandı", label: "Taymer sıfırlandı" },
-  { key: "prefix:Vergi ", label: "Vergi əməliyyatları" },
+  { key: "prefix:Yeni sifariş yaradıldı", label: t("yeni_cek_acildi") },
+  { key: "Çek bağlandı", label: t("cek_baglandi") },
+  { key: "Ödəniş edildi", label: t("odenis_edildi") },
+  { key: "Ödənişsiz bağlandı", label: t("odenissiz_baglandi") },
+  { key: "Qəbz kilidləndi", label: t("cek_kilidlendi") },
+  { key: "Qəbz açıldı", label: t("cek_kilidi_acildi") },
+  { key: "Çek yenidən açıldı", label: t("cek_yeniden_acildi") },
+  { key: "Çek silindi", label: t("check_deleted") },
+  { key: "Çeklər birləşdirildi", label: t("cekler_birlesdirildi") },
+  { key: "Çek geri qaytarma", label: t("cek_geri_qaytarma") },
+  { key: "Çek çap edildi", label: t("cek_cap_edildi") },
+  { key: "Ön çap çıxarıldı", label: t("on_cap_cixarildi") },
+  { key: "Qəbz təmizləndi", label: t("qebz_temizlendi") },
+  { key: "Sifariş göndərildi", label: t("sifaris_gonderildi") },
+  { key: "prefix:Məhsul əlavə edildi", label: t("mehsul_elave_edildi") },
+  { key: "Məhsul silindi", label: t("mehsul_silindi") },
+  { key: "Məhsullar silindi", label: t("mehsullar_silindi") },
+  { key: "Məhsul köçürüldü", label: t("mehsul_kocuruldu") },
+  { key: "Məhsul qəbul edildi", label: t("mehsul_qebul_edildi") },
+  { key: "Məhsula endirim", label: t("mehsula_endirim") },
+  { key: "Miqdar dəyişdirildi", label: t("miqdar_deyisdirildi") },
+  { key: "Qiymət dəyişdirildi", label: t("qiymet_deyisdirildi") },
+  { key: "Endirim dəyişildi", label: t("endirim_deyisildi") },
+  { key: "Servis haqqı dəyişildi", label: t("servis_haqqi_deyisildi") },
+  { key: "Masa dəyişildi", label: t("masa_deyisildi") },
+  { key: "Satış növü dəyişildi", label: t("satis_novu_deyisildi") },
+  { key: "Ofisiant dəyişildi", label: t("ofisiant_deyisildi") },
+  { key: "Depozit dəyişildi", label: t("depozit_deyisildi") },
+  { key: "Qonaq sayı dəyişdirildi", label: t("qonaq_sayi_deyisdirildi") },
+  { key: "Şərh yazıldı", label: t("serh_yazildi") },
+  { key: "Taymer başladıldı", label: t("taymer_basladildi") },
+  { key: "Taymer dayandırıldı", label: t("taymer_dayandirildi") },
+  { key: "Taymer sıfırlandı", label: t("taymer_sifirlandi") },
+  { key: "prefix:Vergi ", label: t("vergi_emeliyyatlari") },
 ];
 
 function isActionDenied(key, denyActions, denyPrefixes) {
@@ -173,14 +174,14 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
        const { data } = await apiConfig.get("/sync/pending-details");
        setStuckOrders(data?.orders || []);
      } catch (err) {
-       toast.error("Gecikən/xətalı çeklər yüklənə bilmədi");
+       toast.error(t("geciken/xetali_cekler_yuklene_bilmedi"));
      } finally {
        setSyncTroubleshootLoading(false);
      }
   };
 
   const handleForceRemoteDelete = async () => {
-      if (!remoteCheckId.trim()) return toast.warning("ID və ya UUID daxil edin");
+      if (!remoteCheckId.trim()) return toast.warning(t("id_ve_ya_uuid_daxil_edin"));
       setForcingRemote(true);
       try {
          const { data } = await apiConfig.post("/sync/force-delete-remote", { remoteId: remoteCheckId.trim() });
@@ -220,13 +221,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
        try {
            const { data } = await apiConfig.post(`/sync/force-sync-order/${uuid}`);
            if (data.success) {
-               toast.success("Çek yenidən göndərildi");
+               toast.success(t("cek_yeniden_gonderildi"));
                loadStuckOrders();
            } else {
                toast.error(data.message || "Xəta baş verdi");
            }
        } catch (e) {
-           toast.error("Şəbəkə xətası");
+           toast.error(t("sebeke_xetasi"));
        }
    };
 
@@ -234,10 +235,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
        setSyncTroubleshootLoading(true);
        try {
            await apiConfig.post("/sync/force-now");
-           toast.success("Məcburi sinxronizasiya başladıldı");
+           toast.success(t("mecburi_sinxronizasiya_basladildi"));
            setTimeout(loadStuckOrders, 2000); // 2s saniyəlik gözləmə
        } catch (err) {
-           toast.error("Xəta baş verdi");
+           toast.error(t("error_occurred"));
            setSyncTroubleshootLoading(false);
        }
   };
@@ -300,11 +301,11 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
           .then(() => setWaState("entering"))
           .catch(() => {
             setWaState("error");
-            toast.error("WhatsApp təsdiq kodu göndərilmədi!");
+            toast.error(t("whatsapp_tesdiq_kodu_gonderilmedi"));
           });
       } else {
         setWaState("error");
-        toast.error("Profil tapılmadı");
+        toast.error(t("profil_tapilmadi"));
       }
     }
   }, [show, profileId]);
@@ -374,10 +375,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       if (res?.ok && Array.isArray(res.data)) {
         setReleases(res.data.slice(0, 8));
       } else {
-        toast.error("GitHub releaslər yüklənə bilmədi");
+        toast.error(t("github_releasler_yuklene_bilmedi"));
       }
     } catch {
-      toast.error("GitHub-a qoşula bilmədi");
+      toast.error(t("githuba_qosula_bilmedi"));
     } finally {
       setReleasesLoading(false);
     }
@@ -399,7 +400,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       .then(() => setWaState("entering"))
       .catch(() => {
         setWaState("error");
-        toast.error("Kod göndərilmədi!");
+        toast.error(t("kod_gonderilmedi_1"));
       });
   }, [profileId]);
 
@@ -465,7 +466,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     setWaSaving(true);
     try {
       const { data } = await apiConfig.post("/admin/whatsapp-settings", { denyActions, denyPrefixes, blockEmptyCheckDelete });
-      if (data?.ok) { toast.success("WhatsApp ayarları saxlanıldı"); setView("main"); }
+      if (data?.ok) { toast.success(t("whatsapp_ayarlari_saxlanildi")); setView("main"); }
       else toast.error(data?.message || "Saxlama xətası");
     } catch (err) {
       console.error("[WhatsApp Save]", err);
@@ -489,15 +490,15 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   }, [profileId]);
 
   const handleCreateUser = async () => {
-    if (!suNewName.trim()) return toast.error("Ad daxil edin");
-    if (!/^\d{4,6}$/.test(suNewPin)) return toast.error("PIN 4-6 rəqəmli olmalıdır");
+    if (!suNewName.trim()) return toast.error(t("ad_daxil_edin"));
+    if (!/^\d{4,6}$/.test(suNewPin)) return toast.error(t("pin_46_reqemli_olmalidir"));
     setSuSaving(true);
     try {
       const { data } = await apiConfig.post("/admin/system-users", {
         profile_id: profileId, name: suNewName.trim(), pin: suNewPin,
       });
       if (data?.ok) {
-        toast.success("İstifadəçi yaradıldı");
+        toast.success(t("i̇stifadeci_yaradildi"));
         setSuNewName(""); setSuNewPin("");
         await loadSystemUsers();
       } else toast.error(data?.message || "Xəta");
@@ -507,15 +508,15 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
   };
 
   const handleUpdateUser = async (id) => {
-    if (!suEditName.trim()) return toast.error("Ad daxil edin");
-    if (suEditPin && !/^\d{4,6}$/.test(suEditPin)) return toast.error("PIN 4-6 rəqəmli olmalıdır");
+    if (!suEditName.trim()) return toast.error(t("ad_daxil_edin"));
+    if (suEditPin && !/^\d{4,6}$/.test(suEditPin)) return toast.error(t("pin_46_reqemli_olmalidir"));
     setSuSaving(true);
     try {
       const body = { name: suEditName.trim() };
       if (suEditPin) body.pin = suEditPin;
       const { data } = await apiConfig.put(`/admin/system-users/${id}`, body);
       if (data?.ok) {
-        toast.success("Yadda saxlanıldı");
+        toast.success(t("yadda_saxlanildi"));
         setSuEditingId(null); setSuEditName(""); setSuEditPin("");
         await loadSystemUsers();
       } else toast.error(data?.message || "Xəta");
@@ -531,17 +532,17 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       if (data?.ok) { toast.success("Silindi"); await loadSystemUsers(); }
       else toast.error(data?.message || "Xəta");
     } catch (err) {
-      toast.error("Silmə xətası");
+      toast.error(t("silme_xetasi"));
     } finally { setSuSaving(false); }
   };
 
   const handleOpenDevtools = async () => {
     if (!window.electronAPI?.openDevToolsDetached) {
-      toast.error("Bu funksiya yalnız desktop tətbiqində mövcuddur.");
+      toast.error(t("bu_funksiya_yalniz_desktop_tetbiqinde_movcuddur"));
       return;
     }
     const res = await window.electronAPI.openDevToolsDetached();
-    if (res?.ok) toast.success("Developer Tools açıldı.");
+    if (res?.ok) toast.success(t("developer_tools_acildi"));
     else toast.error(res?.message || "DevTools açıla bilmədi.");
     onClose();
   };
@@ -555,7 +556,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
         try { localStorage.removeItem("profile"); localStorage.removeItem("authResult"); localStorage.removeItem("authlogin"); } catch {}
         setView("main"); onClose(); window.location.reload();
       } else { toast.error(data?.message || "Sıfırlama alınmadı."); }
-    } catch { toast.error("Serverə qoşula bilmədi."); }
+    } catch { toast.error(t("servere_qosula_bilmedi")); }
     finally { setResettingDb(false); }
   };
 
@@ -572,7 +573,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     window.dispatchEvent(new CustomEvent("categoryViewSettingsChanged", {
       detail: { cardsPerRow, cardFontSize, productViewMode, hideImages }
     }));
-    toast.success("Görünüş ayarları saxlanıldı");
+    toast.success(t("gorunus_ayarlari_saxlanildi"));
     setView("main");
   };
 
@@ -585,13 +586,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     if (touchScrollEnabled) document.body.classList.add("touch-scroll-active");
     else document.body.classList.remove("touch-scroll-active");
     
-    toast.success("Skrol ayarları saxlanıldı");
+    toast.success(t("skrol_ayarlari_saxlanildi"));
     setView("main");
   };
 
   const handleSaveReceiptDesign = () => {
      localStorage.setItem("pos_receipt_settings", JSON.stringify(receiptSettings));
-     toast.success("Çek dizayn ayarları saxlanıldı");
+     toast.success(t("cek_dizayn_ayarlari_saxlanildi"));
      setView("main");
   };
 
@@ -716,13 +717,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             {waState === "sending" && (
               <>
                 <div className="wa-modal-spinner"></div>
-                <p className="pin-adv-password-hint">WhatsApp təsdiq kodu göndərilir...</p>
+                <p className="pin-adv-password-hint">{t("whatsapp_tesdiq_kodu_gonderilir")}</p>
               </>
             )}
 
             {waState === "entering" && (
               <>
-                <p className="pin-adv-password-hint">WhatsApp təsdiq kodunu daxil edin</p>
+                <p className="pin-adv-password-hint">{t("whatsapp_tesdiq_kodunu_daxil_edin")}</p>
                 <div className={`pin-adv-password-dots ${waError ? "pin-adv-password-error" : ""}`}>
                   {Array.from({ length: 4 }).map((_, i) => (
                     <span key={i} className={`pin-adv-dot ${i < waCode.length ? "filled" : ""}`} />
@@ -741,23 +742,19 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     </button>
                   ))}
                 </div>
-                <button type="button" className="wa-modal-resend" onClick={sendWaCode}>
-                  Kod gəlmədi?
-                </button>
+                <button type="button" className="wa-modal-resend" onClick={sendWaCode}>{t("kod_gelmedi")}</button>
               </>
             )}
 
             {waState === "verified" && (
-              <p className="pin-adv-password-hint" style={{ color: "#16a34a" }}>✓ Kod təsdiqləndi, daxil olunur...</p>
+              <p className="pin-adv-password-hint" style={{ color: "#16a34a" }}>{t("✓_kod_tesdiqlendi_daxil_olunur")}</p>
             )}
 
             {waState === "error" && (
               <>
-                <p className="pin-adv-password-hint" style={{ color: "#dc2626" }}>Kod göndərilmədi</p>
+                <p className="pin-adv-password-hint" style={{ color: "#dc2626" }}>{t("kod_gonderilmedi")}</p>
                 <button type="button" className="apply-btn" onClick={sendWaCode}
-                  style={{ width: "auto", padding: "10px 24px", fontSize: "14px" }}>
-                  Yenidən cəhd edin
-                </button>
+                  style={{ width: "auto", padding: "10px 24px", fontSize: "14px" }}>{t("yeniden_cehd_edin")}</button>
               </>
             )}
           </div>
@@ -765,19 +762,17 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
         ) : view === "whatsapp" ? (
           <div className="discount-body wa-settings-body">
             {waLoading ? (
-              <div className="wa-settings-loading">Yüklənir...</div>
+              <div className="wa-settings-loading">{t("loading")}</div>
             ) : (
               <>
-                <p className="wa-settings-hint">Aktiv olan əməliyyatlar WhatsApp-a göndəriləcək.</p>
+                <p className="wa-settings-hint">{t("aktiv_olan_emeliyyatlar_whatsappa_gonderilecek")}</p>
                 <div className="wa-settings-list">
                   <div
                     className={`wa-settings-row ${blockEmptyCheckDelete ? "wa-on" : "wa-off"}`}
                     onClick={() => setBlockEmptyCheckDelete(v => !v)}
                     style={{ cursor: "pointer", borderBottom: "2px solid #e5e7eb", marginBottom: 4 }}
                   >
-                    <span className="wa-settings-label" style={{ pointerEvents: "none" }}>
-                      Boş çek silinəndə bildiriş blokla
-                    </span>
+                    <span className="wa-settings-label" style={{ pointerEvents: "none" }}>{t("bos_cek_silinende_bildiris_blokla")}</span>
                     <div className={`wa-toggle ${blockEmptyCheckDelete ? "wa-toggle-on" : ""}`} style={{ pointerEvents: "none" }}>
                       <div className="wa-toggle-thumb" />
                     </div>
@@ -793,7 +788,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                   })}
                 </div>
                 <div className="wa-settings-actions">
-                  <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")} disabled={waSaving}>Geri</button>
+                  <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")} disabled={waSaving}>{t("back")}</button>
                   <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveWhatsapp} disabled={waSaving}>{waSaving ? "Saxlanılır..." : "Yadda saxla"}</button>
                 </div>
               </>
@@ -802,11 +797,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
         ) : view === "dbReset" ? (
           <div className="discount-body pin-advanced-reset-confirm-body">
-            <p className="pin-advanced-reset-confirm-text">
-              Bütün lokal verilənlər bazası silinəcək.<strong> Bu geri qaytarılmır.</strong> Davam edək?
-            </p>
+            <p className="pin-advanced-reset-confirm-text">{t("butun_lokal_verilenler_bazasi_silinecek")}<strong>{t("bu_geri_qaytarilmir")}</strong>{t("davam_edek")}</p>
             <div className="action-row pin-advanced-reset-confirm-actions">
-              <button type="button" className="delete-all-btn" onClick={() => setView("main")} disabled={resettingDb}>İmtina</button>
+              <button type="button" className="delete-all-btn" onClick={() => setView("main")} disabled={resettingDb}>{t("i̇mtina")}</button>
               <button type="button" className="apply-btn" onClick={executeResetDatabase} disabled={resettingDb}>{resettingDb ? "Sıfırlanır..." : "Bəli, sıfırla"}</button>
             </div>
           </div>
@@ -820,8 +813,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             {/* Avto-yeniləmə toggle */}
             <div className="pin-adv-update-row">
               <div className="pin-adv-update-row-label">
-                <i className="bi bi-arrow-repeat" /> Avto-yeniləmə
-              </div>
+                <i className="bi bi-arrow-repeat" />{t("avtoyenileme")}</div>
               <div className={`wa-toggle ${autoUpdateEnabled ? "wa-toggle-on" : ""}`} onClick={() => handleToggleAutoUpdate(!autoUpdateEnabled)} style={{ cursor: "pointer" }}>
                 <div className="wa-toggle-thumb" />
               </div>
@@ -831,8 +823,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             {!autoUpdateEnabled && (
               <div className="pin-adv-update-row">
                 <div className="pin-adv-update-row-label">
-                  <i className="bi bi-download" /> Manual yeniləmə
-                </div>
+                  <i className="bi bi-download" />{t("manual_yenileme")}</div>
                 <div className={`wa-toggle ${manualUpdateEnabled ? "wa-toggle-on" : ""}`} onClick={() => handleToggleManualUpdate(!manualUpdateEnabled)} style={{ cursor: "pointer" }}>
                   <div className="wa-toggle-thumb" />
                 </div>
@@ -855,8 +846,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             {/* Hazır olduqda quraşdır */}
             {updateReady && (
               <button type="button" className="pin-adv-update-btn success" onClick={handleInstallNow}>
-                <i className="bi bi-download" /> Yeniləməni quraşdır və yenidən başlat
-              </button>
+                <i className="bi bi-download" />{t("yenilemeni_qurasdir_ve_yeniden_baslat")}</button>
             )}
 
             {/* Manuel release seçimi */}
@@ -881,7 +871,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                           target="_blank"
                           rel="noreferrer"
                           className="pin-adv-release-download-btn"
-                          title="GitHub-dan yüklə"
+                          title={t("githubdan_yukle")}
                         >
                           <i className="bi bi-download" />
                         </a>
@@ -895,10 +885,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
         ) : view === "categoryView" ? (
           <div className="discount-body pin-adv-catview-body">
-            <p className="pin-adv-catview-hint">Kateqoriya və məhsul kartlarının görünüş ayarları</p>
+            <p className="pin-adv-catview-hint">{t("kateqoriya_ve_mehsul_kartlarinin_gorunus_ayarlari")}</p>
 
             <div className="pin-adv-catview-section">
-              <span className="pin-adv-catview-label">Sırada neçə kart görsənsin</span>
+              <span className="pin-adv-catview-label">{t("sirada_nece_kart_gorsensin")}</span>
               <div className="pin-adv-cards-row-btns">
                 {[3, 4, 5, 6, 7].map(n => (
                   <button
@@ -914,7 +904,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             </div>
 
             <div className="pin-adv-catview-section">
-              <span className="pin-adv-catview-label">Kart mətn ölçüsü</span>
+              <span className="pin-adv-catview-label">{t("kart_metn_olcusu")}</span>
               <div className="pin-adv-font-slider-row">
                 <span className="pin-adv-font-preview-small">A</span>
                 <input
@@ -929,15 +919,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                 <span className="pin-adv-font-preview-big">A</span>
               </div>
               <div className="pin-adv-font-size-display">
-                <span className="pin-adv-font-size-val" style={{ fontSize: `${cardFontSize}rem`, lineHeight: 1.3 }}>
-                  Nümunə mətn
-                </span>
+                <span className="pin-adv-font-size-val" style={{ fontSize: `${cardFontSize}rem`, lineHeight: 1.3 }}>{t("numune_metn")}</span>
                 <span className="pin-adv-font-size-num">{cardFontSize.toFixed(2)}rem</span>
               </div>
             </div>
 
             <div className="pin-adv-catview-section">
-              <span className="pin-adv-catview-label">Məhsul görünüşü</span>
+              <span className="pin-adv-catview-label">{t("mehsul_gorunusu")}</span>
               <div className="pin-adv-viewmode-btns">
                 <button
                   type="button"
@@ -959,7 +947,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
                     <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
                   </svg>
-                  <span>Siyahı</span>
+                  <span>{t("siyahi")}</span>
                 </button>
               </div>
             </div>
@@ -967,8 +955,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             <div className="pin-adv-catview-section">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Şəkilləri gizlət</span>
-                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Kateqoriya və məhsul şəkilləri görünməsin</div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>{t("sekilleri_gizlet")}</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("kateqoriya_ve_mehsul_sekilleri_gorunmesin")}</div>
                 </div>
                 <div
                   className={`wa-toggle ${hideImages ? "wa-toggle-on" : ""}`}
@@ -981,8 +969,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             </div>
 
             <div className="wa-settings-actions" style={{ marginTop: "8px" }}>
-              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
-              <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveCategoryView}>Yadda saxla</button>
+              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>{t("back")}</button>
+              <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveCategoryView}>{t("save")}</button>
             </div>
           </div>
 
@@ -996,21 +984,17 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                          className={`pin-adv-viewmode-btn ${receiptType === "customer" ? "active" : ""}`}
                          onClick={() => setReceiptType("customer")}
                          style={{ flex: 1, justifyContent: "center" }}
-                      >
-                          Müştəri Çeki
-                      </button>
+                      >{t("musteri_ceki")}</button>
                       <button
                          type="button"
                          className={`pin-adv-viewmode-btn ${receiptType === "kitchen" ? "active" : ""}`}
                          onClick={() => setReceiptType("kitchen")}
                          style={{ flex: 1, justifyContent: "center" }}
-                      >
-                          Mətbəx Çeki
-                      </button>
+                      >{t("metbex_ceki")}</button>
                   </div>
                   
                   <div className="pin-adv-catview-section" style={{ padding: '10px', background: '#f5f7fa', borderRadius: '8px', marginBottom: '15px' }}>
-                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px' }}>Kağızın Eni</span>
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px' }}>{t("kagizin_eni")}</span>
                       <div className="pin-adv-viewmode-btns" style={{ marginBottom: "15px", height: '36px' }}>
                           <button
                              type="button"
@@ -1042,19 +1026,19 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                           style={{ marginBottom: '15px' }}
                       />
 
-                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>Şrift Ailəsi</span>
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>{t("srift_ailesi")}</span>
                       <select
                           value={receiptSettings[receiptType]?.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace"}
                           onChange={e => updateReceiptSetting(receiptType, "fontFamily", e.target.value)}
                           style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e7eb', marginBottom: '15px', fontSize: '13px' }}
                       >
-                          <option value="'Consolas', 'Courier New', 'Lucida Console', monospace">Monospace (Klassik Çek)</option>
-                          <option value="'Arial', 'Helvetica', sans-serif">Sans-serif (Müasir)</option>
-                          <option value="'Times New Roman', 'Georgia', serif">Serif (Rəsmi)</option>
+                          <option value="'Consolas', 'Courier New', 'Lucida Console', monospace">{t("monospace_klassik_cek")}</option>
+                          <option value="'Arial', 'Helvetica', sans-serif">{t("sansserif_muasir")}</option>
+                          <option value="'Times New Roman', 'Georgia', serif">{t("serif_resmi")}</option>
                           <option value="'Roboto', sans-serif">Roboto</option>
                       </select>
 
-                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>Alt Yazı (Footer)</span>
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>{t("alt_yazi_footer")}</span>
                       <input
                           type="text"
                           value={receiptSettings[receiptType]?.footerText ?? ""}
@@ -1063,13 +1047,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                           style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px', marginBottom: '15px' }}
                       />
 
-                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>Kənar Boşluqlar (px)</span>
+                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>{t("kenar_bosluqlar_px")}</span>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                           {[
-                              { key: 'paddingTop', label: 'Üstdən ↑' },
+                              { key: 'paddingTop', label: t("ustden_↑") },
                               { key: 'paddingBottom', label: 'Altdan ↓' },
                               { key: 'paddingLeft', label: 'Soldan ←' },
-                              { key: 'paddingRight', label: 'Sağdan →' },
+                              { key: 'paddingRight', label: t("sagdan_→") },
                           ].map(({ key, label }) => (
                               <div key={key}>
                                   <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '3px' }}>{label}</div>
@@ -1086,24 +1070,24 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                       </div>
                   </div>
 
-                  <div className="pin-adv-catview-label" style={{ marginTop: '10px', marginBottom: '10px' }}>Məlumatların Görünüşü</div>
+                  <div className="pin-adv-catview-label" style={{ marginTop: '10px', marginBottom: '10px' }}>{t("melumatlarin_gorunusu")}</div>
                   
                   {receiptType === "customer" ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                          {[
                             { key: 'showLogo', label: 'Loqo' },
-                            { key: 'showAddress', label: 'Ünvan' },
-                            { key: 'showPhone', label: 'Əlaqə nömrəsi' },
-                            { key: 'showCheckNumber', label: 'Çek Nömrəsi' },
-                            { key: 'showCustomer', label: 'Müştəri Adı' },
-                            { key: 'showCustomerPhone', label: 'Müştəri Telefonu' },
-                            { key: 'showCustomerAddress', label: 'Müştəri Ünvanı' },
+                            { key: 'showAddress', label: t("unvan_1") },
+                            { key: 'showPhone', label: t("elaqe_nomresi") },
+                            { key: 'showCheckNumber', label: t("cek_nomresi") },
+                            { key: 'showCustomer', label: t("musteri_adi") },
+                            { key: 'showCustomerPhone', label: t("musteri_telefonu") },
+                            { key: 'showCustomerAddress', label: t("musteri_unvani") },
                             { key: 'showHallTable', label: 'Zal/Masa' },
-                            { key: 'showDates', label: 'Açılma/Bağlanma Tarixi' },
-                            { key: 'showPrintDate', label: 'Çap Tarixi' },
-                            { key: 'showWaiter', label: 'Ofisiant' },
-                            { key: 'showGuestCount', label: 'Qonaq Sayı' },
-                            { key: 'showSaleType', label: 'Satış Tipi' },
+                            { key: 'showDates', label: t("acilma/baglanma_tarixi") },
+                            { key: 'showPrintDate', label: t("cap_tarixi") },
+                            { key: 'showWaiter', label: t("waiter") },
+                            { key: 'showGuestCount', label: t("qonaq_sayi") },
+                            { key: 'showSaleType', label: t("satis_tipi") },
                             { key: 'showQrCode', label: 'QR Kod' },
                          ].map(opt => (
                             <div key={opt.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1117,13 +1101,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                   ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                          {[
-                            { key: 'showWaiter', label: 'Ofisiant' },
-                            { key: 'showCheckNumber', label: 'Çek Nömrəsi' },
+                            { key: 'showWaiter', label: t("waiter") },
+                            { key: 'showCheckNumber', label: t("cek_nomresi") },
                             { key: 'showHallTable', label: 'Zal/Masa' },
-                            { key: 'showSaleType', label: 'Satış Tipi' },
-                            { key: 'showCustomer', label: 'Müştəri Adı' },
-                            { key: 'showGuestCount', label: 'Qonaq Sayı' },
-                            { key: 'showHeaderDate', label: 'Çap Tarixi' },
+                            { key: 'showSaleType', label: t("satis_tipi") },
+                            { key: 'showCustomer', label: t("musteri_adi") },
+                            { key: 'showGuestCount', label: t("qonaq_sayi") },
+                            { key: 'showHeaderDate', label: t("cap_tarixi") },
                          ].map(opt => (
                              <div key={opt.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                <span style={{ fontSize: '14px', fontWeight: '500', color: '#444' }}>{opt.label}</span>
@@ -1137,8 +1121,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                   </div>
 
                   <div className="wa-settings-actions" style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #e5e7eb", flexShrink: 0 }}>
-                     <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
-                     <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveReceiptDesign}>Yadda saxla</button>
+                     <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>{t("back")}</button>
+                     <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveReceiptDesign}>{t("save")}</button>
                   </div>
               </div>
 
@@ -1183,13 +1167,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
         ) : view === "systemUsers" ? (
           <div className="discount-body pin-adv-sysusers-body">
             {suLoading ? (
-              <div className="wa-settings-loading">Yüklənir...</div>
+              <div className="wa-settings-loading">{t("loading")}</div>
             ) : (
               <>
                 {/* Mövcud istifadəçilər */}
                 <div className="su-list pin-invisible-scroll" style={{ maxHeight: "260px", overflowY: "auto", marginBottom: "16px" }}>
                   {systemUsers.length === 0 && (
-                    <div style={{ textAlign: "center", color: "#aaa", padding: "20px 0", fontSize: "14px" }}>Hələ istifadəçi yoxdur</div>
+                    <div style={{ textAlign: "center", color: "#aaa", padding: "20px 0", fontSize: "14px" }}>{t("hele_istifadeci_yoxdur")}</div>
                   )}
                   {systemUsers.map(u => (
                     <div key={u.id} className="su-row" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 0", borderBottom: "1px solid #f0f0f0" }}>
@@ -1238,18 +1222,18 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
                 {/* Yeni istifadəçi əlavə et */}
                 <div style={{ background: "#f8fafc", borderRadius: "8px", padding: "12px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ fontSize: "13px", fontWeight: "600", color: "#475569", marginBottom: "10px" }}>Yeni sistem istifadəçisi</div>
+                  <div style={{ fontSize: "13px", fontWeight: "600", color: "#475569", marginBottom: "10px" }}>{t("yeni_sistem_istifadecisi")}</div>
                   <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
                     <input
                       value={suNewName}
                       onChange={e => setSuNewName(e.target.value)}
-                      placeholder="Ad (məs: Admin)"
+                      placeholder={t("ad_mes_admin")}
                       style={{ flex: 1, padding: "8px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px" }}
                     />
                     <input
                       value={suNewPin}
                       onChange={e => setSuNewPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="PIN (4-6 rəq.)"
+                      placeholder={t("pin_46_req")}
                       style={{ width: "110px", padding: "8px 10px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center" }}
                     />
                   </div>
@@ -1261,7 +1245,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                 </div>
 
                 <div className="wa-settings-actions" style={{ marginTop: "12px" }}>
-                  <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+                  <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>{t("back")}</button>
                 </div>
               </>
             )}
@@ -1269,7 +1253,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
         ) : view === "operationNames" ? (
           <div className="discount-body pin-adv-opnames-body">
-            <div className="pin-adv-opnames-hint">Əməliyyat düymələrinin adlarını özünüzə uyğun dəyişdirin</div>
+            <div className="pin-adv-opnames-hint">{t("emeliyyat_duymelerinin_adlarini_ozunuze_uygun_deyisdirin")}</div>
             <div className="pin-adv-opnames-grid pin-invisible-scroll">
               {Object.entries(DEFAULT_OPERATION_NAMES).map(([key, defaultLabel]) => {
                 const isChanged = operationNames[key] && operationNames[key] !== defaultLabel;
@@ -1284,7 +1268,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                         placeholder={defaultLabel}
                       />
                       {isChanged && (
-                        <button type="button" className="pin-adv-opname-reset-btn" title="Sıfırla"
+                        <button type="button" className="pin-adv-opname-reset-btn" title={t("sifirla")}
                           onClick={() => setOperationNames(prev => ({ ...prev, [key]: defaultLabel }))}>
                           ↺
                         </button>
@@ -1296,22 +1280,16 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             </div>
             <div className="wa-settings-actions" style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #f0f0f0" }}>
               <button type="button" className="delete-all-btn wa-settings-cancel"
-                onClick={() => { setOperationNames({ ...DEFAULT_OPERATION_NAMES }); localStorage.removeItem("pos_operation_names"); toast.success("Sıfırlandı"); }}>
-                Hamısını sıfırla
-              </button>
-              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+                onClick={() => { setOperationNames({ ...DEFAULT_OPERATION_NAMES }); localStorage.removeItem("pos_operation_names"); toast.success(t("sifirlandi")); }}>{t("reset_all")}</button>
+              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>{t("back")}</button>
               <button type="button" className="apply-btn wa-settings-save"
-                onClick={() => { localStorage.setItem("pos_operation_names", JSON.stringify(operationNames)); toast.success("Əməliyyat adları saxlanıldı"); setView("main"); }}>
-                Yadda saxla
-              </button>
+                onClick={() => { localStorage.setItem("pos_operation_names", JSON.stringify(operationNames)); toast.success(t("emeliyyat_adlari_saxlanildi")); setView("main"); }}>{t("save")}</button>
             </div>
           </div>
 
         ) : view === "syncCheck" ? (
           <div className="discount-body pin-advanced-sync-body pin-invisible-scroll" style={{ maxHeight: "70vh", overflowY: "auto", padding: "10px" }}>
-            <p className="wa-settings-hint" style={{ marginBottom: "20px", fontSize: "14px", color: "#555" }}>
-               Sisteminizi admin panellə sinxronizasiya anomaliyalarından (həm gecikən, həm də boş qalan çeklərdən) tam avtomatik təmizləyin.
-            </p>
+            <p className="wa-settings-hint" style={{ marginBottom: "20px", fontSize: "14px", color: "#555" }}>{t("sisteminizi_admin_panelle_sinxronizasiya_anomaliyalarindan_hem_geciken_hem_de_bos_qalan_ceklerden_tam_avtomatik_temizleyin")}</p>
             
             {/* Auto Fix Card */}
             <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
@@ -1321,11 +1299,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                        </svg>
                    </div>
-                   <h3 style={{ fontSize: "16px", fontWeight: "600", margin: 0, color: "#1e293b" }}>Tam Avtomatik Həllər</h3>
+                   <h3 style={{ fontSize: "16px", fontWeight: "600", margin: 0, color: "#1e293b" }}>{t("tam_avtomatik_heller")}</h3>
                </div>
-               <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "20px", lineHeight: 1.5 }}>
-                 Bu funksiya POS sisteminizlə server arasında fərqləri hər iki tərəfli (Push/Pull) yoxlayır. Əgər serverdə sizdə olmayan "ghost" çeklər varsa, və ya burada gecikib getməyən çeklər varsa, hər ikisini eyni anda tapıb təmizləyir.
-               </p>
+               <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "20px", lineHeight: 1.5 }}>{t("bu_funksiya_pos_sisteminizle_server_arasinda_ferqleri_her_iki_terefli_push/pull_yoxlayir_eger_serverde_sizde_olmayan_ghost_cekler_varsa_ve_ya_burada_gecikib_getmeyen_cekler_varsa_her_ikisini_eyni_anda_tapib_temizleyir")}</p>
                <button 
                   type="button" 
                   style={{ width: "100%", padding: "14px", fontSize: "15px", fontWeight: "600", color: "#fff", background: "linear-gradient(135deg, #053796, #2563eb)", border: "none", borderRadius: "8px", cursor: "pointer", transition: "opacity 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: autoFixGhostsLoading ? 0.7 : 1 }} 
@@ -1333,12 +1309,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                   disabled={autoFixGhostsLoading}
                >
                   {autoFixGhostsLoading ? (
-                     <span>Avtomatik analiz edilir və təmizlənir...</span>
+                     <span>{t("avtomatik_analiz_edilir_ve_temizlenir")}</span>
                   ) : (
                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9-9a9 9 0 0 0-9 9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
-                        Bütün sistem problemlərini avtomatik həll et
-                     </>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9-9a9 9 0 0 0-9 9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>{t("butun_sistem_problemlerini_avtomatik_hell_et")}</>
                   )}
                </button>
             </div>
@@ -1346,21 +1320,17 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             {/* Local Stuck Orders Info */}
             <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", marginBottom: "20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-                   <span style={{ fontSize: "15px", fontWeight: "600", color: "#334155" }}>
-                       Lokalda olan gecikən/xətalı çeklər <span style={{ background: "#e2e8f0", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>{stuckOrders.length}</span>
+                   <span style={{ fontSize: "15px", fontWeight: "600", color: "#334155" }}>{t("lokalda_olan_geciken/xetali_cekler")}<span style={{ background: "#e2e8f0", padding: "2px 8px", borderRadius: "12px", fontSize: "12px" }}>{stuckOrders.length}</span>
                    </span>
                    <button type="button" style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 12px", border: "1px solid #cbd5e1", color: "#475569", borderRadius: "6px", background: "white", fontSize: "13px", fontWeight: "500", cursor: "pointer" }} onClick={loadStuckOrders} disabled={syncTroubleshootLoading}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncTroubleshootLoading ? "spin-icon" : ""}><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.44l5.58 5.58"/></svg> Yenilə
-                   </button>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={syncTroubleshootLoading ? "spin-icon" : ""}><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.44l5.58 5.58"/></svg>{t("refresh")}</button>
                 </div>
                 
                 {syncTroubleshootLoading ? (
-                  <div style={{fontSize: "13px", color:"#64748b"}}>Məlumatlar yoxlanılır...</div>
+                  <div style={{fontSize: "13px", color:"#64748b"}}>{t("melumatlar_yoxlanilir")}</div>
                 ) : stuckOrders.length === 0 ? (
                   <div style={{fontSize: "14px", color:"#10b981", display: "flex", alignItems: "center", gap: "6px"}}>
-                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                     Yerli yaddaşda ləngiyən və ya xətalı çek yoxdur.
-                  </div>
+                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>{t("yerli_yaddasda_lengiyen_ve_ya_xetali_cek_yoxdur")}</div>
                 ) : (
                   <div style={{ maxHeight: "180px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "8px" }} className="pin-invisible-scroll">
                      {stuckOrders.map(o => (
@@ -1388,9 +1358,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
             {/* Manual Edit Accordeon */}
             <details style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", overflow: "hidden" }}>
-               <summary style={{ fontSize: "14px", fontWeight: "600", color: "#475569", cursor: "pointer", outline: "none", padding: "16px", background: "#f8fafc", userSelect: "none" }}>
-                  🛠️ Əllə müdaxilə (Çətin hallar üçündür)
-               </summary>
+               <summary style={{ fontSize: "14px", fontWeight: "600", color: "#475569", cursor: "pointer", outline: "none", padding: "16px", background: "#f8fafc", userSelect: "none" }}>{t("🛠️_elle_mudaxile_cetin_hallar_ucundur")}</summary>
                <div style={{ padding: "20px", borderTop: "1px solid #e2e8f0" }}>
                  <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "15px", lineHeight: 1.5 }}>
                    Əgər avtomatik sistem nədənsə serveri təmizləyə bilməzsə (Server API xətası), Admin paneldən tapdığınız çek ID-sini (və ya UUID) məcburi bağlamaq/silmək üçün bura yazın.
@@ -1400,7 +1368,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                         type="text" 
                         value={remoteCheckId}
                         onChange={e => setRemoteCheckId(e.target.value)}
-                        placeholder="ID daxil edin (məs: 1682)"
+                        placeholder={t("id_daxil_edin_mes_1682")}
                         style={{ padding: "12px", border: "1px solid #cbd5e1", borderRadius: "8px", flex: 1, outline: "none", fontSize: "14px" }}
                         disabled={forcingRemote}
                      />
@@ -1424,13 +1392,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
         ) : view === "settings" ? (
           <div className="discount-body pin-adv-catview-body">
-            <p className="pin-adv-catview-hint">Barkod skaner və digər tənzimləmələr</p>
+            <p className="pin-adv-catview-hint">{t("barkod_skaner_ve_diger_tenzimlemeler")}</p>
 
             <div className="pin-adv-catview-section">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Barkod skan</span>
-                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Barkod skaner ilə məhsul axtarışını aktiv et</div>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("barkod_skaner_ile_mehsul_axtarisini_aktiv_et")}</div>
                 </div>
                 <div
                   className={`wa-toggle ${barcodeScanEnabled ? "wa-toggle-on" : ""}`}
@@ -1449,8 +1417,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Mətbəx printerinə blok</span>
-                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Sifariş ekranında mətbəxə çapı bloklamaq üçün düyməni göstər</div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>{t("metbex_printerine_blok")}</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("sifaris_ekraninda_metbexe_capi_bloklamaq_ucun_duymeni_goster")}</div>
                 </div>
                 <div
                   className={`wa-toggle ${kitchenPrintBlockEnabled ? "wa-toggle-on" : ""}`}
@@ -1470,8 +1438,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Sürüşdürmə (Swipe) hərəkətləri</span>
-                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Sifariş ekranında məhsulu sağa/sola sürüşdürüb silmək və ya sayını artırmaq</div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>{t("surusdurme_swipe_hereketleri")}</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("sifaris_ekraninda_mehsulu_saga/sola_surusdurub_silmek_ve_ya_sayini_artirmaq")}</div>
                 </div>
                 <div
                   className={`wa-toggle ${swipeGesturesEnabled ? "wa-toggle-on" : ""}`}
@@ -1492,7 +1460,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>AI Modulu</span>
-                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Sifariş ekranında səsli Aygün modulunu aktiv et</div>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("sifaris_ekraninda_sesli_aygun_modulunu_aktiv_et")}</div>
                 </div>
                 <div
                   className={`wa-toggle ${aiModuleEnabled ? "wa-toggle-on" : ""}`}
@@ -1511,12 +1479,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
             {/* POS Blok Ödəniş Üsulu */}
             <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
-              <span className="pin-adv-catview-label" style={{ marginBottom: 6, display: "block" }}>
-                POS blok zamanı ödəniş üsulu
-              </span>
-              <div style={{ fontSize: "12px", color: "#888", marginBottom: 12, lineHeight: 1.4 }}>
-                POS bloklananda (abunəlik bitdikdə) ödəniş üsulunun necə seçiləcəyini təyin edin
-              </div>
+              <span className="pin-adv-catview-label" style={{ marginBottom: 6, display: "block" }}>{t("pos_blok_zamani_odenis_usulu")}</span>
+              <div style={{ fontSize: "12px", color: "#888", marginBottom: 12, lineHeight: 1.4 }}>{t("pos_bloklananda_abunelik_bitdikde_odenis_usulunun_nece_secileceyini_teyin_edin")}</div>
 
               <div style={{ display: "flex", gap: 12 }}>
                 {/* SuperAdmin seçimi */}
@@ -1550,9 +1514,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <div style={{ fontSize: 13, fontWeight: 600, color: !autoPaymentEnabled ? "#053796" : "#374151" }}>
                       SuperAdmin
                     </div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>
-                      Admin paneldən
-                    </div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{t("admin_panelden")}</div>
                   </div>
                 </div>
 
@@ -1587,28 +1549,26 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <div style={{ fontSize: 13, fontWeight: 600, color: autoPaymentEnabled ? "#053796" : "#374151" }}>
                       Avtomatik
                     </div>
-                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>
-                      Sistem seçsin
-                    </div>
+                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{t("sistem_secsin")}</div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="wa-settings-actions" style={{ marginTop: "12px" }}>
-              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
+              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>{t("back")}</button>
             </div>
           </div>
 
         ) : view === "touchScroll" ? (
           <div className="discount-body pin-adv-catview-body">
-            <p className="pin-adv-catview-hint">Vakum və toxunuşlu ekranlar üçün skrol tənzimləmələri</p>
+            <p className="pin-adv-catview-hint">{t("vakum_ve_toxunuslu_ekranlar_ucun_skrol_tenzimlemeleri")}</p>
 
             <div className="pin-adv-catview-section">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>Görünən Skrolbarlar</span>
-                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>Skrol barlarını həmişə görünən və daha enli et (Vakum ekranlar üçün)</div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>{t("gorunen_skrolbarlar")}</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("skrol_barlarini_hemise_gorunen_ve_daha_enli_et_vakum_ekranlar_ucun")}</div>
                 </div>
                 <div
                   className={`wa-toggle ${touchScrollEnabled ? "wa-toggle-on" : ""}`}
@@ -1621,8 +1581,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             </div>
 
             <div className="wa-settings-actions" style={{ marginTop: "16px" }}>
-              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>Geri</button>
-              <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveTouchScroll}>Yadda saxla</button>
+              <button type="button" className="delete-all-btn wa-settings-cancel" onClick={() => setView("main")}>{t("back")}</button>
+              <button type="button" className="apply-btn wa-settings-save" onClick={handleSaveTouchScroll}>{t("save")}</button>
             </div>
           </div>
 
@@ -1638,7 +1598,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Kateqoriya görünüşü</span>
+                <span className="settings-menu-item-label">{t("kateqoriya_gorunusu")}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => { setView("updates"); loadUpdateSettings(); }}>
@@ -1648,7 +1608,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Yeniləmələr</span>
+                <span className="settings-menu-item-label">{t("yenilemeler")}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("receiptDesign")}>
@@ -1657,7 +1617,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Çek dizaynı</span>
+                <span className="settings-menu-item-label">{t("cek_dizayni")}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => { setView("whatsapp"); loadWhatsappSettings(); }}>
@@ -1666,7 +1626,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">WhatsApp mesajları</span>
+                <span className="settings-menu-item-label">{t("whatsapp_mesajlari")}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => { setView("systemUsers"); loadSystemUsers(); }}>
@@ -1676,7 +1636,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Sistem istifadəçiləri</span>
+                <span className="settings-menu-item-label">{t("sistem_istifadecileri")}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("operationNames")}>
@@ -1685,7 +1645,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <line x1="17" y1="10" x2="3" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="21" y1="14" x2="3" y2="14" /><line x1="17" y1="18" x2="3" y2="18" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Əməliyyat adları</span>
+                <span className="settings-menu-item-label">{t("emeliyyat_adlari")}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("settings")}>
@@ -1694,7 +1654,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Tənzimləmələr</span>
+                <span className="settings-menu-item-label">{t("tenzimlemeler")}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("touchScroll")}>
@@ -1703,7 +1663,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Skrol ayarları</span>
+                <span className="settings-menu-item-label">{t("skrol_ayarlari")}</span>
               </button>
 
               <button type="button" className="settings-menu-item" onClick={() => setView("syncCheck")}>
@@ -1722,7 +1682,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Terminaldan çıx</span>
+                <span className="settings-menu-item-label">{t("terminaldan_cix")}</span>
               </button>
 
               <button type="button" className="settings-menu-item danger" onClick={() => setView("dbReset")} disabled={resettingDb}>
@@ -1742,7 +1702,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
                   </svg>
                 </span>
-                <span className="settings-menu-item-label">Devtools açmaq</span>
+                <span className="settings-menu-item-label">{t("devtools_acmaq")}</span>
               </button>
 
             </div>

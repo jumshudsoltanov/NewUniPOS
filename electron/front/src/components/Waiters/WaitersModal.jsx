@@ -7,6 +7,7 @@ import { getWaitersList } from "../../redux/Slices/WaitersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { changeWaiter } from "../../redux/Slices/OrdersSlice";
+import { t } from "../../utils/translations";
 
 const WaitersModal = ({ show, onClose, order }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -105,7 +106,7 @@ const WaitersModal = ({ show, onClose, order }) => {
                 <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
               </svg>
             </div>
-            <span className="header-title">Əməkdaş seç</span>
+            <span className="header-title">{t("emekdas_sec")}</span>
           </div>
           <button className="close-btn" onClick={onClose}>
             <svg
@@ -132,7 +133,7 @@ const WaitersModal = ({ show, onClose, order }) => {
             <input
               type="text"
               className="waiters-search-input"
-              placeholder="Əməkdaş axtar"
+              placeholder={t("emekdas_axtar")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -207,7 +208,7 @@ const WaitersModal = ({ show, onClose, order }) => {
           </div>
 
           {/* Apply Button */}
-          <button className="waiter-apply-btn" onClick={handleClickUpdateWaiter}>Tətbiq et</button>
+          <button className="waiter-apply-btn" onClick={handleClickUpdateWaiter}>{t("apply")}</button>
         </div>
       </div>
     </Modal>

@@ -1,6 +1,7 @@
 import React from "react";
 import { useSalesShiftStatus } from "../../hooks/useSalesShiftStatus";
 import "./SalesShiftStatusPill.css";
+import { t } from "../../utils/translations";
 
 /**
  * @param {object} props
@@ -15,7 +16,7 @@ const SalesShiftStatusPill = ({ profileId, variant = "header", className = "", o
     if (!profileId) return null;
 
     const openedHint = shiftRow?.opened_at
-        ? `Açılış: ${new Date(shiftRow.opened_at).toLocaleString("az-AZ")}`
+        ? t("novbe_acilis", { date: new Date(shiftRow.opened_at).toLocaleString("az-AZ") })
         : "";
 
     const modeClass = loading
@@ -27,21 +28,21 @@ const SalesShiftStatusPill = ({ profileId, variant = "header", className = "", o
             : "sales-shift-pill--closed";
 
     const title = loading
-        ? "Növbə vəziyyəti yoxlanır…"
+        ? t("novbe_veziyyeti_yoxlanir")
         : fetchFailed
-          ? "Növbə statusu alınmadı"
+          ? t("novbe_statusu_alinmadi")
           : isOpen
-            ? `Satış növbəsi açıqdır. ${openedHint}`.trim()
-            : "Satış növbəsi bağlıdır — Kontrol paneldən açın.";
+            ? t("satis_novbesi_aciqdir", { hint: openedHint }).trim()
+            : t("satis_novbesi_baglidir_kontrol_panelden_acin");
 
     const labelFull = loading
-        ? "Yoxlanır…"
+        ? t("yoxlanir")
         : fetchFailed
-          ? "Növbə: —"
+          ? t("novbe_1")
           : isOpen
-            ? "Növbə açıq"
-            : "Növbə bağlı";
-    const labelShort = loading ? "…" : fetchFailed ? "—" : isOpen ? "Açıq" : "Bağlı";
+            ? t("novbe_aciq")
+            : t("novbe_bagli");
+    const labelShort = loading ? "…" : fetchFailed ? "—" : isOpen ? t("aciq") : t("bagli");
 
     const rootClass = [
         "sales-shift-pill",
@@ -62,8 +63,18 @@ const SalesShiftStatusPill = ({ profileId, variant = "header", className = "", o
             style={onClick ? { cursor: "pointer" } : undefined}
         >
             <span className="sales-shift-pill-dot" aria-hidden />
-            <span className="sales-shift-pill-label-full">{labelFull}</span>
-            <span className="sales-shift-pill-label-short">{labelShort}</span>
+            <span className="sales-shift-pill-label-full">
+                {!loading && !fetchFailed && (
+                    <i className={`bi ${isOpen ? "bi-play-fill" : "bi-stop-fill"} me-1`}></i>
+                )}
+                {labelFull}
+            </span>
+            <span className="sales-shift-pill-label-short">
+                {!loading && !fetchFailed && (
+                    <i className={`bi ${isOpen ? "bi-play-fill" : "bi-stop-fill"} me-1`}></i>
+                )}
+                {labelShort}
+            </span>
         </span>
     );
 };

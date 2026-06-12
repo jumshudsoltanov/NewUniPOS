@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import { t } from "../../utils/translations";
 import "./BrandsModal.css";
 
 const BrandsModal = ({ show, onHide }) => {
@@ -42,7 +43,7 @@ const BrandsModal = ({ show, onHide }) => {
     return (
         <Modal show={show} onHide={onHide} centered className="brands-modal">
             <Modal.Header closeButton>
-                <Modal.Title>Müəssisələr siyahısı</Modal.Title>
+                <Modal.Title>{t("muessiseler_siyahisi")}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
                 <div className="brands-list">
@@ -92,8 +93,7 @@ const BrandsModal = ({ show, onHide }) => {
             </Modal.Body>
             <Modal.Footer>
                 <button className="add-brand-btn" onClick={handleAddNewBrand}>
-                    <i className="bi bi-plus-circle"></i> Yeni müəssisə əlavə et
-                </button>
+                    <i className="bi bi-plus-circle"></i>{t("yeni_muessise_elave_et")}</button>
             </Modal.Footer>
         </Modal>
     );

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { t } from "../../utils/translations";
 import "./SupportModal.css";
 
 const SupportModal = ({ isOpen, onClose }) => {
@@ -26,7 +27,7 @@ const SupportModal = ({ isOpen, onClose }) => {
 
     // Pre-filled WhatsApp message
     const waMessage = encodeURIComponent(
-        `Salam! Texniki dəstəyə ehtiyacım var.\n\nBrend: ${brandName}\nFilial: ${branchName}\nTerminal: ${terminalId}\nVersiya: ${version}`
+        t("support_whatsapp_msg", { brand: brandName, branch: branchName, terminal: terminalId, version })
     );
     const waUrl = `https://wa.me/994775012507?text=${waMessage}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(waUrl)}`;
@@ -46,7 +47,7 @@ const SupportModal = ({ isOpen, onClose }) => {
             <div className="support-modal">
                 {/* Header */}
                 <div className="support-modal-header">
-                    <h2 className="support-modal-title">Texniki dəstək</h2>
+                    <h2 className="support-modal-title">{t("tech_support")}</h2>
                     <button className="support-modal-close" onClick={onClose}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
                             <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -62,7 +63,7 @@ const SupportModal = ({ isOpen, onClose }) => {
                         </svg>
                     </div>
                     <div className="support-phone-info">
-                        <span className="support-phone-label">Dəstək xətti</span>
+                        <span className="support-phone-label">{t("destek_xetti")}</span>
                         <span className="support-phone-number">{phoneNumber}</span>
                     </div>
                 </div>
@@ -88,16 +89,16 @@ const SupportModal = ({ isOpen, onClose }) => {
                     <div className="support-qr-container">
                         <img src={qrCodeUrl} alt="QR Code" className="support-qr-image" />
                     </div>
-                    <p className="support-qr-text">Skan edin — məlumatlarınız hazır mesajla göndərilir</p>
+                    <p className="support-qr-text">{t("skan_edin_melumatlariniz_hazir_mesajla_gonderilir")}</p>
                 </div>
 
                 {/* Terminal Info Footer */}
                 <div className="support-modal-footer">
                     {version && <span className="support-terminal-id">{version}</span>}
                     {version && <span className="support-divider">|</span>}
-                    <span>Terminal: <strong>{terminalId}</strong></span>
+                    <span>{t("terminal")}: <strong>{terminalId}</strong></span>
                     <span className="support-divider">|</span>
-                    <span>Filial: <strong>{branchName}</strong></span>
+                    <span>{t("filial")}: <strong>{branchName}</strong></span>
                 </div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import apiConfig from "../../utils/apiConfig";
+import { t } from "../../utils/translations";
 
 const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
   const [rooms, setRooms] = useState([]);
@@ -44,9 +45,7 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
             <div className="reservation-header-icon">
               <i className="bi bi-building"></i>
             </div>
-            <span className="reservation-header-title">
-              Otağa Yaz
-            </span>
+            <span className="reservation-header-title">{t("otaga_yaz")}</span>
           </div>
           <button className="reservation-close-btn" onClick={onHide}>
             <i className="bi bi-x-lg" style={{ fontSize: "13px" }}></i>
@@ -57,7 +56,7 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
         <div style={{ padding: "12px 16px", borderBottom: "1px solid #E5E7EB" }}>
           <input
             type="text"
-            placeholder="Otaq nömrəsi və ya qonaq adı axtar..."
+            placeholder={t("otaq_nomresi_ve_ya_qonaq_adi_axtar")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="form-control"
@@ -76,7 +75,7 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
           {loading ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#9CA3AF" }}>
               <div className="spinner-border spinner-border-sm text-primary" role="status" />
-              <p style={{ marginTop: "8px", fontSize: "13px" }}>Otaqlar yüklənir...</p>
+              <p style={{ marginTop: "8px", fontSize: "13px" }}>{t("otaqlar_yuklenir")}</p>
             </div>
           ) : filteredRooms.length === 0 ? (
             <div style={{ textAlign: "center", padding: "40px", color: "#9CA3AF" }}>
@@ -133,7 +132,7 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
                       {room.guest_name ? (
                         <span style={{ color: "#053796", fontWeight: 500 }}>{room.guest_name}</span>
                       ) : (
-                        <span>Boş</span>
+                        <span>{t("bos_1")}</span>
                       )}
                       {room.room_type ? ` · ${room.room_type}` : ""}
                     </div>
@@ -163,9 +162,7 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
 
         {/* Footer — reservation-footer style */}
         <div className="reservation-footer" style={{ justifyContent: "center" }}>
-          <button className="btn-cancel" onClick={onHide}>
-            Bağla
-          </button>
+          <button className="btn-cancel" onClick={onHide}>{t("bagla")}</button>
         </div>
       </div>
     </Modal>

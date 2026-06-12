@@ -8,6 +8,8 @@ import { addOrderOptimistic } from "../../redux/Slices/BooksSlice";
 import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "./RoomFolio.css";
 
 const formatDate = (d) => {
@@ -66,9 +68,9 @@ const RoomFolio = () => {
       <Container fluid className="rf-root p-0">
         <div className="rf-loading">
           <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Yüklənir...</span>
+            <span className="visually-hidden">{t("loading")}</span>
           </div>
-          <p>Otaq tapılmadı</p>
+          <p>{t("otaq_tapilmadi")}</p>
           <button
             className="rf-back-btn"
             onClick={handleBack}
@@ -97,11 +99,11 @@ const RoomFolio = () => {
   }
 
   const handleSendWhatsapp = () => {
-    if (!room.guest_phone) { toast.error("Nömrə yoxdur"); return; }
-    if (!room.booking_id) { toast.error("Rezervasiya ID yoxdur"); return; }
+    if (!room.guest_phone) { toast.error(t("no_phone")); return; }
+    if (!room.booking_id) { toast.error(t("no_booking_id")); return; }
     dispatch(sendBookingWhatsapp({ bookingId: room.booking_id, profileId }))
       .unwrap()
-      .then(() => toast.success("WhatsApp göndərildi"))
+      .then(() => toast.success(t("whatsapp_sent")))
       .catch((err) => toast.error(err?.error || "WhatsApp göndərilmədi"));
   };
 
@@ -116,10 +118,10 @@ const RoomFolio = () => {
     setIsUpdatingDeposit(true);
     try {
       await dispatch(updateFolioBalance({ roomId: room.id, profileId, balance: val })).unwrap();
-      toast.success("Depozit yeniləndi");
+      toast.success(t("deposit_updated"));
       setShowDepositKeypad(false);
       dispatch(fetchRooms(profileId));
-    } catch { toast.error("Depozit yenilənə bilmədi"); }
+    } catch { toast.error(t("deposit_update_error")); }
     finally { setIsUpdatingDeposit(false); }
   };
 
@@ -129,8 +131,8 @@ const RoomFolio = () => {
 
   const handlePrintReceipt = async () => {
     const printers = cashierPrinters;
-    if (!printers.length) { toast.error("Kassa printeri tapılmadı"); return; }
-    if (!window.electronAPI?.printReceipt) { toast.error("Çap sistemi mövcud deyil"); return; }
+    if (!printers.length) { toast.error(t("printer_not_found")); return; }
+    if (!window.electronAPI?.printReceipt) { toast.error(t("print_system_unavailable")); return; }
 
     const d1 = room.check_in ? new Date(room.check_in) : null;
     const d2 = room.check_out ? new Date(room.check_out) : null;
@@ -139,10 +141,10 @@ const RoomFolio = () => {
     const line = (a, b) => `<tr><td style="padding:4px 2px;border-bottom:1px dashed #666;font-size:12px;font-weight:600">${a}</td><td style="padding:4px 2px;border-bottom:1px dashed #666;font-size:12px;font-weight:600;text-align:right">${b}</td></tr>`;
 
     const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Qəbz</title></head><body style="font-family:'Arial',sans-serif;width:300px;margin:0 auto;padding:10px">
+<html><head><meta charset="utf-8"><title>{t("receipt")}</title></head><body style="font-family:'Arial',sans-serif;width:300px;margin:0 auto;padding:10px">
   <div style="text-align:center;margin-bottom:12px">
-    <div style="font-size:16px;font-weight:700">QƏBZ</div>
-    <div style="font-size:10px;color:#666">Otaq Qəbzi</div>
+    <div style="font-size:16px;font-weight:700">{t("qebz")}</div>
+    <div style="font-size:10px;color:#666">{t("room_receipt")}</div>
   </div>
   <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
     ${line("Otaq", room.room_number || "")}
@@ -151,16 +153,16 @@ const RoomFolio = () => {
     ${line("Qonaq", room.guest_name || "—")}
     ${line("Telefon", room.guest_phone || "—")}
   </table>
-  ${d1 || d2 ? `<table style="width:100%;border-collapse:collapse;margin-bottom:12px"><tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">Tarixlər</td></tr>
+  ${d1 || d2 ? `<table style="width:100%;border-collapse:collapse;margin-bottom:12px"><tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">{t("dates")}</td></tr>
     ${d1 ? line("Giriş", `${String(d1.getDate()).padStart(2,"0")}.${String(d1.getMonth()+1).padStart(2,"0")}.${d1.getFullYear()}`) : ""}
     ${d2 ? line("Çıxış", `${String(d2.getDate()).padStart(2,"0")}.${String(d2.getMonth()+1).padStart(2,"0")}.${d2.getFullYear()}`) : ""}
     ${nightsVal > 0 ? line("Gecə", `${nightsVal}`) : ""}
   </table>` : ""}
-  <table style="width:100%;border-collapse:collapse;margin-bottom:12px"><tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">Maliyyə</td></tr>
-    ${line("Depozit", `${balance.toFixed(2)} ₼`)}
+  <table style="width:100%;border-collapse:collapse;margin-bottom:12px"><tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">{t("financial")}</td></tr>
+    ${line("Depozit", `${formatPrice(balance)}`)}
   </table>
   <div style="border-top:2px solid #000;margin:8px 0"></div>
-  <div style="text-align:center;font-size:10px;color:#999;margin-top:8px">${new Date().toLocaleString("az-AZ")}<br>Təşəkkür edirik!</div>
+  <div style="text-align:center;font-size:10px;color:#999;margin-top:8px">${new Date().toLocaleString("az-AZ")}<br>{t("thanks")}</div>
 </body></html>`;
 
     try {
@@ -189,7 +191,7 @@ const RoomFolio = () => {
         }
         await window.electronAPI.printReceipt(payload);
       }
-      toast.success("Qəbz çap edildi");
+      toast.success(t("qebz_cap_edildi"));
     } catch (err) {
       console.error("Print error:", err);
       toast.error("Çap xətası: " + (err.message || "Bilinməyən xəta"));
@@ -201,7 +203,7 @@ const RoomFolio = () => {
     const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
     const profileIdVal = loginedProfileData?.data?.profile?.id;
     if (!waiterId || !terminalId || !profileIdVal) {
-      toast.error("İstifadəçi məlumatları tapılmadı");
+      toast.error(t("i̇stifadeci_melumatlari_tapilmadi"));
       return;
     }
 
@@ -274,7 +276,7 @@ const RoomFolio = () => {
         </div>
         <div className="rf-header-right">
           <span className={`rf-status-pill ${statusClass}`}>{statusText}</span>
-          <span className="rf-balance-pill">{balance.toFixed(2)} ₼</span>
+          <span className="rf-balance-pill">{formatPrice(balance)}</span>
         </div>
       </div>
 
@@ -290,16 +292,14 @@ const RoomFolio = () => {
                 {/* ── Guest Info ── */}
                 <div className="rf-card">
                   <div className="rf-card-header">
-                    <i className="bi bi-person-fill"></i>
-                    Qonaq məlumatları
-                  </div>
+                    <i className="bi bi-person-fill"></i>{t("qonaq_melumatlari")}</div>
                   <div className="rf-card-body">
                     <div className="rf-guest-row">
                       <span className="rf-guest-label"><i className="bi bi-person"></i>Ad Soyad</span>
                       <span className="rf-guest-value">{room.guest_name || "—"}</span>
                     </div>
                     <div className="rf-guest-row">
-                      <span className="rf-guest-label"><i className="bi bi-telephone"></i>Telefon</span>
+                      <span className="rf-guest-label"><i className="bi bi-telephone"></i>{t("phone")}</span>
                       {room.guest_phone ? (
                         <a href={`tel:${room.guest_phone}`} className="rf-guest-value rf-phone">{room.guest_phone}</a>
                       ) : (
@@ -320,7 +320,7 @@ const RoomFolio = () => {
                       <div className="rf-date-timeline">
                         <div className="rf-date-box">
                           <div className="rf-date-box-inner">
-                            <div className="rf-date-box-label">Giriş</div>
+                            <div className="rf-date-box-label">{t("check_in")}</div>
                             {checkIn ? (
                               <>
                                 <div className="rf-date-box-day">{checkIn.day}.{checkIn.month}</div>
@@ -341,7 +341,7 @@ const RoomFolio = () => {
 
                         <div className="rf-date-box">
                           <div className="rf-date-box-inner rf-date-box-out">
-                            <div className="rf-date-box-label">Çıxış</div>
+                            <div className="rf-date-box-label">{t("check_out")}</div>
                             {checkOut ? (
                               <>
                                 <div className="rf-date-box-day">{checkOut.day}.{checkOut.month}</div>
@@ -373,9 +373,7 @@ const RoomFolio = () => {
                 {/* ── Finance / Folio ── */}
                 <div className="rf-card">
                   <div className="rf-card-header">
-                    <i className="bi bi-wallet2"></i>
-                    Maliyyə
-                  </div>
+                    <i className="bi bi-wallet2"></i>{t("financial")}</div>
                   <div className="rf-card-body">
                     {!showDepositKeypad ? (
                       <>
@@ -383,21 +381,20 @@ const RoomFolio = () => {
                         <div className="rf-folio-row">
                           <span className="rf-folio-label">Depozit / Balans</span>
                           <span className={`rf-folio-amount ${balance > 0 ? "success" : balance < 0 ? "danger" : ""}`}>
-                            {balance.toFixed(2)} ₼
+                            {formatPrice(balance)}
                           </span>
                         </div>
 
                         <div className="rf-balance-edit-row">
                           <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>Cari balans</span>
-                          <span className="rf-balance-current">{balance.toFixed(2)} ₼</span>
+                          <span className="rf-balance-current">{formatPrice(balance)}</span>
                         </div>
 
                         <button
                           className="rf-action-btn outline"
                           onClick={() => { setDepositValue(String(balance > 0 ? balance : "0")); setShowDepositKeypad(true); }}
                         >
-                          <i className="bi bi-pencil"></i> Balansa düzəliş et
-                        </button>
+                          <i className="bi bi-pencil"></i>{t("balansa_duzelis_et")}</button>
                       </>
                     ) : (
                       /* ── Keypad ── */
@@ -426,9 +423,9 @@ const RoomFolio = () => {
                             disabled={isUpdatingDeposit}
                           >
                             {isUpdatingDeposit ? (
-                              <><span className="spinner-border spinner-border-sm"></span> Göndərilir</>
+                              <><span className="spinner-border spinner-border-sm"></span>{t("gonderilir_1")}</>
                             ) : (
-                              <><i className="bi bi-check2"></i> Yadda saxla</>
+                              <><i className="bi bi-check2"></i>{t("save")}</>
                             )}
                           </button>
                         </div>
@@ -440,15 +437,11 @@ const RoomFolio = () => {
                 {/* ── Actions ── */}
                 <div className="rf-card">
                   <div className="rf-card-header">
-                    <i className="bi bi-gear"></i>
-                    Əməliyyatlar
-                  </div>
+                    <i className="bi bi-gear"></i>{t("emeliyyatlar")}</div>
                   <div className="rf-card-body">
                     <div className="rf-actions">
                       <button className="rf-action-btn primary" onClick={handlePlaceOrder}>
-                        <i className="bi bi-plus-lg"></i>
-                        Yeni sifariş
-                      </button>
+                        <i className="bi bi-plus-lg"></i>{t("new_order")}</button>
                       <button
                         className="rf-action-btn whatsapp"
                         onClick={handleSendWhatsapp}
@@ -458,13 +451,9 @@ const RoomFolio = () => {
                         {isSendingWhatsapp ? "Göndərilir..." : "WhatsApp ilə xatırlat"}
                       </button>
                       <button className="rf-action-btn outline" onClick={handlePrintReceipt}>
-                        <i className="bi bi-receipt"></i>
-                        Qəbz çap et
-                      </button>
+                        <i className="bi bi-receipt"></i>{t("qebz_cap_et")}</button>
                       <button className="rf-action-btn checkout">
-                        <i className="bi bi-box-arrow-right"></i>
-                        Çıxış əməliyyatı
-                      </button>
+                        <i className="bi bi-box-arrow-right"></i>{t("cixis_emeliyyati")}</button>
                     </div>
                   </div>
                 </div>
@@ -475,8 +464,7 @@ const RoomFolio = () => {
                     <i className="bi bi-file-text"></i> Faktura
                   </button>
                   <button className="rf-action-btn outline" style={{ flex: 1 }} disabled>
-                    <i className="bi bi-arrows-move"></i> Otaq dəyiş
-                  </button>
+                    <i className="bi bi-arrows-move"></i>{t("otaq_deyis")}</button>
                 </div>
               </div>
             </Col>

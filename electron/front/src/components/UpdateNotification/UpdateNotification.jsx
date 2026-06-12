@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { t } from "../../utils/translations";
 import "./UpdateNotification.css";
 
 export default function UpdateNotification() {
@@ -144,9 +145,7 @@ export default function UpdateNotification() {
 
       {/* Manual mode: Quraşdır düyməsi */}
       {status === "ready" && !autoEnabled && manualEnabled && (
-        <button className="update-install-btn" onClick={handleInstall} style={{ background: content.color }}>
-          Quraşdır
-        </button>
+        <button className="update-install-btn" onClick={handleInstall} style={{ background: content.color }}>{t("qurasdir")}</button>
       )}
 
       {(status === "checking" || status === "found" || (status === "ready" && !autoEnabled)) && (

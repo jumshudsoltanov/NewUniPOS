@@ -5,6 +5,8 @@ import { fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
 import axios from "../../utils/apiConfig";
 import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "./ReportModal.css";
 
 /** API uğursuz olanda da cədvəllər sıfır ilə göstərilsin */
@@ -243,7 +245,7 @@ const ReportModal = ({ show, onClose }) => {
                     : null;
             setReportSummary(rawSummary != null ? rawSummary : { ...DEFAULT_REPORT_SUMMARY });
             if (summaryRes.data?.status !== "success") {
-                toast.warning("Ümumi satış xülasəsi alınmadı — sıfırlar göstərilir.");
+                toast.warning(t("umumi_satis_xulasesi_alinmadi_sifirlar_gosterilir"));
             }
 
             if (reportType !== "simple") {
@@ -254,7 +256,7 @@ const ReportModal = ({ show, onClose }) => {
                         data: detailData != null ? detailData : []
                     });
                 } else {
-                    toast.error("Detallı hesabat yüklənmədi.");
+                    toast.error(t("detalli_hesabat_yuklenmedi"));
                     setReportResults({ type: reportType, data: [] });
                 }
             } else {
@@ -278,16 +280,14 @@ const ReportModal = ({ show, onClose }) => {
         if (loading) return (
             <div className="report-loading-container">
                 <div className="spinner-border text-primary" role="status"></div>
-                <p className="mt-3">Məlumatlar hazırlanır...</p>
+                <p className="mt-3">{t("melumatlar_hazirlanir")}</p>
             </div>
         );
 
         if (!reportResults || !reportSummary) return (
             <div className="report-placeholder">
                 <i className="bi bi-file-earmark-text mb-3"></i>
-                <p className="mb-0 fs-5">
-                    Məlumatları görmək üçün "Hesabat yarat"<br />düyməsini seçin
-                </p>
+                <p className="mb-0 fs-5">{t("melumatlari_gormek_ucun_hesabat_yarat")}<br />{t("duymesini_secin")}</p>
             </div>
         );
 
@@ -306,15 +306,15 @@ const ReportModal = ({ show, onClose }) => {
                 <div className="report-data-header-row report-data-header-row--top">
                     <div className="report-data-info">
                         <p className="report-data-line">
-                            <span className="report-data-label">Bu tarixdən</span>
+                            <span className="report-data-label">{t("bu_tarixden")}</span>
                             <span className="report-data-value">{formatDate(startDate)} {startTime}</span>
                         </p>
                         <p className="report-data-line">
-                            <span className="report-data-label">Bu tarixə qədər</span>
+                            <span className="report-data-label">{t("bu_tarixe_qeder")}</span>
                             <span className="report-data-value">{formatDate(endDate)} {endTime}</span>
                         </p>
                     </div>
-                    <div className="report-data-time" title="Hesabatın çıxarılma vaxtı">
+                    <div className="report-data-time" title={t("hesabatin_cixarilma_vaxti")}>
                         <i className="bi bi-clock-fill" aria-hidden="true"></i>
                         <span>
                             Çıxarılma: {new Date().toLocaleDateString("az-AZ")}{" "}
@@ -324,11 +324,11 @@ const ReportModal = ({ show, onClose }) => {
                 </div>
                 <div className="report-data-header-row report-data-header-row--meta">
                     <span className="report-meta-chip">
-                        <span className="report-meta-chip-label">Terminal</span>
+                        <span className="report-meta-chip-label">{t("terminal")}</span>
                         <span className="report-meta-chip-value">{terminalLabel}</span>
                     </span>
                     <span className="report-meta-chip">
-                        <span className="report-meta-chip-label">Növ</span>
+                        <span className="report-meta-chip-label">{t("nov")}</span>
                         <span className="report-meta-chip-value">{activeReportLabel}</span>
                     </span>
                 </div>
@@ -337,35 +337,35 @@ const ReportModal = ({ show, onClose }) => {
 
         const SalesSummary = () => (
             <div className="report-section mb-5">
-                <div className="section-title">Satış hesabatı</div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.sumTotal}><span>Cəm</span><div className="dots"></div><span className="value">{(reportSummary.total_amount || 0).toFixed(2)}</span></div>
+                <div className="section-title">{t("satis_hesabati")}</div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.sumTotal}><span>{t("cem")}</span><div className="dots"></div><span className="value">{(reportSummary.total_amount || 0).toFixed(2)}</span></div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.tax}><span>Vergi</span><div className="dots"></div><span className="value">{(reportSummary.total_tax || 0).toFixed(2)}</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.gift}><span>İkram</span><div className="dots"></div><span className="value">{(reportSummary.total_gift || 0).toFixed(2)}</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.service}><span>Xidmət</span><div className="dots"></div><span className="value">{(reportSummary.total_service || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.gift}><span>{t("i̇kram")}</span><div className="dots"></div><span className="value">{(reportSummary.total_gift || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.service}><span>{t("xidmet")}</span><div className="dots"></div><span className="value">{(reportSummary.total_service || 0).toFixed(2)}</span></div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.discount}><span>Endirim</span><div className="dots"></div><span className="value">{(reportSummary.total_discount || 0).toFixed(2)}</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.delivery}><span>Çatdırılma haqqı</span><div className="dots"></div><span className="value">0.00</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.refund}><span>Geri qaytarılma</span><div className="dots"></div><span className="value">{(reportSummary.total_refund || 0).toFixed(2)}</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.deleted}><span>Silinmələr</span><div className="dots"></div><span className="value">{(reportSummary.total_deleted || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.delivery}><span>{t("catdirilma_haqqi")}</span><div className="dots"></div><span className="value">0.00</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.refund}><span>{t("refund")}</span><div className="dots"></div><span className="value">{(reportSummary.total_refund || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.deleted}><span>{t("silinmeler")}</span><div className="dots"></div><span className="value">{(reportSummary.total_deleted || 0).toFixed(2)}</span></div>
                 {(reportSummary.total_paid > 0 || reportSummary.total_unpaid > 0) && (
                     <>
                         <div className="receipt-row report-row-with-hint" style={{borderTop: '1px dashed #ccc', marginTop: 4, paddingTop: 4}} title={REPORT_HINTS.paidClose}>
-                            <span>Ödənişli bağlamalar</span><div className="dots"></div><span className="value">{(reportSummary.total_paid || 0).toFixed(2)}</span>
+                            <span>{t("odenisli_baglamalar")}</span><div className="dots"></div><span className="value">{(reportSummary.total_paid || 0).toFixed(2)}</span>
                         </div>
                         <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.unpaidClose}>
-                            <span>Ödənişsiz bağlamalar</span><div className="dots"></div><span className="value">{(reportSummary.total_unpaid || 0).toFixed(2)}</span>
+                            <span>{t("odenissiz_baglamalar")}</span><div className="dots"></div><span className="value">{(reportSummary.total_unpaid || 0).toFixed(2)}</span>
                         </div>
                     </>
                 )}
                 <div className="receipt-row total-line report-row-with-hint" title={REPORT_HINTS.net}><span>Yekun:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
 
-                <div className="section-title mt-4">Digər detallar</div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openCount}><span>Açıq çeklərin sayı</span><div className="dots"></div><span className="value">{reportSummary.open_orders_count || 0}</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openSum}><span>Açıq çeklərin cəmi</span><div className="dots"></div><span className="value">{(reportSummary.open_orders_total || 0).toFixed(2)} ₼</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.guests}><span>Qonaq sayı</span><div className="dots"></div><span className="value">{reportSummary.guest_count || 0}</span></div>
+                <div className="section-title mt-4">{t("diger_detallar")}</div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openCount}><span>{t("aciq_ceklerin_sayi")}</span><div className="dots"></div><span className="value">{reportSummary.open_orders_count || 0}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openSum}><span>{t("aciq_ceklerin_cemi")}</span><div className="dots"></div><span className="value">{(reportSummary.open_orders_total || 0).toFixed(2)} ₼</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.guests}><span>{t("guest_count")}</span><div className="dots"></div><span className="value">{reportSummary.guest_count || 0}</span></div>
 
                 {Object.keys(reportSummary.payments || {}).length > 0 && (
                     <>
-                        <div className="section-title mt-4">Ödəniş üsulları</div>
+                        <div className="section-title mt-4">{t("odenis_usullari")}</div>
                         {Object.entries(reportSummary.payments).map(([method, amount]) => (
                             <div className="receipt-row report-row-with-hint" key={method} title={`${REPORT_HINTS.paymentMethod} (${method})`}>
                                 <span>{method}</span><div className="dots"></div><span className="value">{Number(amount).toFixed(2)}</span>
@@ -376,7 +376,7 @@ const ReportModal = ({ show, onClose }) => {
 
                 {Object.keys(reportSummary.unpaid_payments || {}).length > 0 && (
                     <>
-                        <div className="section-title mt-4">Ödənişsiz bağlamalar</div>
+                        <div className="section-title mt-4">{t("odenissiz_baglamalar")}</div>
                         {Object.entries(reportSummary.unpaid_payments).map(([method, amount]) => (
                             <div className="receipt-row report-row-with-hint" key={method} title={`${REPORT_HINTS.unpaidTag} (${method})`}>
                                 <span>{method}</span><div className="dots"></div><span className="value">{Number(amount).toFixed(2)}</span>
@@ -387,7 +387,7 @@ const ReportModal = ({ show, onClose }) => {
 
                 {Object.keys(reportSummary.tags || {}).length > 0 && (
                     <>
-                        <div className="section-title mt-4">Etiketlər</div>
+                        <div className="section-title mt-4">{t("etiketler")}</div>
                         {Object.entries(reportSummary.tags).map(([tag, details]) => (
                             <div className="receipt-row report-row-with-hint" key={tag} title={`${REPORT_HINTS.tagRow} (${tag})`}>
                                 <span>{tag} ({details.count})</span><div className="dots"></div><span className="value">{details.total.toFixed(2)}</span>
@@ -418,9 +418,7 @@ const ReportModal = ({ show, onClose }) => {
         if (type === "inventory") {
             return (
                 <div className="report-empty-detail" role="status">
-                    <p className="mb-0">
-                        Ehtiyat hesabatı üçün məlumat mənbəsi hazırlanır.
-                    </p>
+                    <p className="mb-0">{t("ehtiyat_hesabati_ucun_melumat_menbesi_hazirlanir")}</p>
                 </div>
             );
         }
@@ -435,9 +433,7 @@ const ReportModal = ({ show, onClose }) => {
         if (isDetailEmpty) {
             return (
                 <div className="report-empty-detail" role="status">
-                    <p className="mb-0">
-                        Bu tarix aralığında və seçilmiş filtrə uyğun detallı sətir yoxdur.
-                    </p>
+                    <p className="mb-0">{t("bu_tarix_araliginda_ve_secilmis_filtre_uygun_detalli_setir_yoxdur")}</p>
                 </div>
             );
         }
@@ -448,10 +444,10 @@ const ReportModal = ({ show, onClose }) => {
                     <Table responsive className="custom-report-table">
                         <thead>
                             <tr>
-                                <th>Məhsul</th>
-                                <th className="text-center">Sayı</th>
-                                <th className="text-center">İkram</th>
-                                <th className="text-end">Məbləğ</th>
+                                <th>{t("product")}</th>
+                                <th className="text-center">{t("sayi")}</th>
+                                <th className="text-center">{t("i̇kram")}</th>
+                                <th className="text-end">{t("mebleg")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -470,11 +466,11 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table">
                         <thead>
-                            <tr><th>Zal</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                            <tr><th>{t("hall")}</th><th className="text-center">{t("sayi")}</th><th className="text-end">{t("mebleg")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} ₼</td></tr>
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{formatPrice(item.total ?? 0)}</td></tr>
                             ))}
                         </tbody>
                     </Table>
@@ -487,9 +483,9 @@ const ReportModal = ({ show, onClose }) => {
                         <Table responsive className="custom-report-table">
                             <thead>
                                 <tr>
-                                    <th>Masa</th>
-                                    <th className="text-center">Sayı</th>
-                                    <th className="text-end">Məbləğ</th>
+                                    <th>{t("table")}</th>
+                                    <th className="text-center">{t("sayi")}</th>
+                                    <th className="text-end">{t("mebleg")}</th>
                                     <th className="text-end">Timer</th>
                                 </tr>
                             </thead>
@@ -506,7 +502,7 @@ const ReportModal = ({ show, onClose }) => {
                         </Table>
                         {tablesTotalTimer > 0 && (
                             <div className="receipt-row total-line mt-3">
-                                <span>Timer cəmi</span>
+                                <span>{t("timer_cemi")}</span>
                                 <span className="value">{Number(tablesTotalTimer).toFixed(2)} ₼</span>
                             </div>
                         )}
@@ -516,11 +512,11 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table">
                         <thead>
-                            <tr><th>Əməkdaş</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                            <tr><th>{t("emekdas")}</th><th className="text-center">{t("sayi")}</th><th className="text-end">{t("mebleg")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} ₼</td></tr>
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{formatPrice(item.total ?? 0)}</td></tr>
                             ))}
                         </tbody>
                     </Table>
@@ -547,13 +543,13 @@ const ReportModal = ({ show, onClose }) => {
                                             });
                                             setCategoryPrintInclude(next);
                                         }}
-                                        title="Hamısı"
+                                        title={t("all")}
                                         aria-label="Bütün kateqoriyaları çap üçün seç"
                                     />
                                 </th>
-                                <th>Kateqoriya / Məhsul</th>
-                                <th className="text-center">Sayı</th>
-                                <th className="text-end">Məbləğ</th>
+                                <th>{t("kateqoriya_/_mehsul")}</th>
+                                <th className="text-center">{t("sayi")}</th>
+                                <th className="text-end">{t("mebleg")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -615,10 +611,10 @@ const ReportModal = ({ show, onClose }) => {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Masa</th>
+                                <th>{t("table")}</th>
                                 <th>Ofisant</th>
                                 {showTransactions && <th>Etiket</th>}
-                                <th className="text-end">Məbləğ</th>
+                                <th className="text-end">{t("mebleg")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -628,7 +624,7 @@ const ReportModal = ({ show, onClose }) => {
                                     <td>{item.table?.name || "-"}</td>
                                     <td>{item.waiter?.name || "-"}</td>
                                     {showTransactions && <td>{item.tags || "-"}</td>}
-                                    <td className="text-end">{item.total?.toFixed(2)} ₼</td>
+                                    <td className="text-end">{formatPrice(item.total ?? 0)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -638,14 +634,14 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table list-table">
                         <thead>
-                            <tr><th>ID</th><th>Ofisant</th><th className="text-end">Məbləğ</th></tr>
+                            <tr><th>ID</th><th>Ofisant</th><th className="text-end">{t("mebleg")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
                                 <tr key={i} className="table-danger">
                                     <td>#{item.id}</td>
                                     <td>{item.waiter?.name || "-"}</td>
-                                    <td className="text-end">{item.total?.toFixed(2)} ₼</td>
+                                    <td className="text-end">{formatPrice(item.total ?? 0)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -655,7 +651,7 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table">
                         <thead>
-                            <tr><th>Məhsul</th><th className="text-center">Sayı</th></tr>
+                            <tr><th>{t("product")}</th><th className="text-center">{t("sayi")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
@@ -668,14 +664,14 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table">
                         <thead>
-                            <tr><th>Üsul</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                            <tr><th>{t("usul")}</th><th className="text-center">{t("sayi")}</th><th className="text-end">{t("mebleg")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
                                 <tr key={i}>
                                     <td>{item.name}</td>
                                     <td className="text-center">{item.count}</td>
-                                    <td className="text-end">{item.total?.toFixed(2)} ₼</td>
+                                    <td className="text-end">{formatPrice(item.total ?? 0)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -685,11 +681,11 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table">
                         <thead>
-                            <tr><th>Şöbə</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                            <tr><th>{t("sobe")}</th><th className="text-center">{t("sayi")}</th><th className="text-end">{t("mebleg")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{item.total?.toFixed(2)} ₼</td></tr>
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.checks_count}</td><td className="text-end">{formatPrice(item.total ?? 0)}</td></tr>
                             ))}
                         </tbody>
                     </Table>
@@ -698,11 +694,11 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table">
                         <thead>
-                            <tr><th>Ödəniş üsulu</th><th className="text-center">Sayı</th><th className="text-end">Məbləğ</th></tr>
+                            <tr><th>{t("odenis_usulu")}</th><th className="text-center">{t("sayi")}</th><th className="text-end">{t("mebleg")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
-                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.count}</td><td className="text-end">{item.total?.toFixed(2)} ₼</td></tr>
+                                <tr key={i}><td>{item.name}</td><td className="text-center">{item.count}</td><td className="text-end">{formatPrice(item.total ?? 0)}</td></tr>
                             ))}
                         </tbody>
                     </Table>
@@ -711,7 +707,7 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table">
                         <thead>
-                            <tr><th>Müştəri</th><th className="text-center">Sifariş sayı</th><th className="text-end">Məbləğ</th></tr>
+                            <tr><th>{t("customer")}</th><th className="text-center">{t("sifaris_sayi")}</th><th className="text-end">{t("mebleg")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => {
@@ -721,7 +717,7 @@ const ReportModal = ({ show, onClose }) => {
                                     <tr key={i}>
                                         <td>{displayName}</td>
                                         <td className="text-center">{item.checks_count}</td>
-                                        <td className="text-end">{item.total?.toFixed(2)} ₼</td>
+                                        <td className="text-end">{formatPrice(item.total ?? 0)}</td>
                                     </tr>
                                 )
                             })}
@@ -730,7 +726,7 @@ const ReportModal = ({ show, onClose }) => {
                 );
             default:
                 return (
-                    <div className="alert alert-info">Seçilmiş hesabat üçün detallı məlumat tapılmadı.</div>
+                    <div className="alert alert-info">{t("secilmis_hesabat_ucun_detalli_melumat_tapilmadi")}</div>
                 );
         }
     };
@@ -750,9 +746,9 @@ const ReportModal = ({ show, onClose }) => {
                 <h2 className="report-modal-title" id="report-modal-title">Hesabat</h2>
                 <div className="report-header-actions">
                     {reportResults && !loading && (
-                        <button type="button" className="report-print-btn" onClick={handlePrint} title="Çap et">
+                        <button type="button" className="report-print-btn" onClick={handlePrint} title={t("print")}>
                             <i className="bi bi-printer-fill" aria-hidden="true"></i>
-                            <span>Çap et</span>
+                            <span>{t("print")}</span>
                         </button>
                     )}
                     <button type="button" className="report-modal-close-btn" onClick={onClose} aria-label="Bağla">
@@ -785,9 +781,9 @@ const ReportModal = ({ show, onClose }) => {
                         <Col md={5} lg={4} className="report-sidebar">
                             <div className="report-sidebar-scroll">
                             <div className="mobile-section-wrapper">
-                                <div className="mobile-group-title">Vaxt aralığı</div>
+                                <div className="mobile-group-title">{t("vaxt_araligi")}</div>
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Bu tarixdən</Form.Label>
+                                    <Form.Label>{t("bu_tarixden")}</Form.Label>
                                     <div className="date-time-row">
                                         <Form.Control
                                             type="date"
@@ -809,7 +805,7 @@ const ReportModal = ({ show, onClose }) => {
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Bu tarixə qədər</Form.Label>
+                                    <Form.Label>{t("bu_tarixe_qeder")}</Form.Label>
                                     <div className="date-time-row">
                                         <Form.Control
                                             type="date"
@@ -830,7 +826,7 @@ const ReportModal = ({ show, onClose }) => {
                                     </div>
                                 </Form.Group>
 
-                                <div className="mobile-group-title mt-4">Növ və Filtr</div>
+                                <div className="mobile-group-title mt-4">{t("nov_ve_filtr")}</div>
                                 <Form.Group className="mb-3">
                                     <Form.Label>Terminallar</Form.Label>
                                     <Form.Select
@@ -844,7 +840,7 @@ const ReportModal = ({ show, onClose }) => {
                                 </Form.Group>
 
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Hesabat növü</Form.Label>
+                                    <Form.Label>{t("hesabat_novu")}</Form.Label>
                                     <Form.Select
                                         value={reportType}
                                         onChange={(e) => setReportType(e.target.value)}

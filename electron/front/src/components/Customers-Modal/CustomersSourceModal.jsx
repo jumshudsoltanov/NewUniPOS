@@ -12,6 +12,7 @@ import {
 import { getArchivedOrders } from '../../redux/Slices/BooksSlice';
 import CheckReceiptModal from '../Checks/CheckReceiptModal';
 import VirtualKeyboard from '../VirtualKeyboard/VirtualKeyboard';
+import { t } from "../../utils/translations";
 
 const AZ_CITIES = [
     "Bakı", "Gəncə", "Sumqayıt", "Mingəçevir", "Lənkəran", "Şirvan", "Naxçıvan", "Şəki", "Yevlax",
@@ -140,7 +141,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder }) => {
                                 </div>
                             ))
                         ) : (
-                            <div className="no-results">Nəticə tapılmadı</div>
+                            <div className="no-results">{t("netice_tapilmadi")}</div>
                         )}
                     </div>
                 </div>
@@ -532,13 +533,13 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     className="bi bi-arrow-clockwise"
                                     style={{ cursor: 'pointer' }}
                                     onClick={() => setFormData(prev => ({ ...prev, code: generateCustomerCode() }))}
-                                    title="Kodu yenilə"
+                                    title={t("kodu_yenile")}
                                 ></i>
                             </div>
                         </div>
 
                         <div className="form-group">
-                            <label>Mobil nömrə</label>
+                            <label>{t("mobil_nomre")}</label>
                             <div className="phone-input-wrapper" style={{ position: 'relative' }}>
                                 <div className="country-select" onClick={() => setShowCountrySelect(!showCountrySelect)}>
                                     <img src={`https://flagcdn.com/w20/${selectedCountry.code}.png`} alt={selectedCountry.code} className="flag-icon" />
@@ -567,7 +568,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                             </div>
                         </div>
                         <div className="form-group">
-                            <label>Müştəri qrupu</label>
+                            <label>{t("musteri_qrupu")}</label>
                             <div className="custom-select-wrapper">
                                 <select
                                     name="group_id"
@@ -575,7 +576,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     value={formData.group_id}
                                     onChange={handleInputChange}
                                 >
-                                    <option value="">Müştəri qrupu seç</option>
+                                    <option value="">{t("musteri_qrupu_sec")}</option>
                                     {customerGroups.map(g => (
                                         <option key={g.id} value={g.id}>
                                             {g.name} {g.discount > 0 ? `(${g.discount}%)` : ''}
@@ -614,16 +615,16 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     value={formData.gender}
                                     onChange={handleInputChange}
                                 >
-                                    <option value="">Cins seç</option>
-                                    <option value="Kişi">Kişi</option>
-                                    <option value="Qadın">Qadın</option>
-                                    <option value="Digər">Digər</option>
+                                    <option value="">{t("cins_sec")}</option>
+                                    <option value="Kişi">{t("kisi")}</option>
+                                    <option value="Qadın">{t("qadin")}</option>
+                                    <option value="Digər">{t("diger")}</option>
                                 </select>
                                 <i className="bi bi-chevron-down select-arrow"></i>
                             </div>
                         </div>
                         <div className="form-group">
-                            <label>Doğum tarixi</label>
+                            <label>{t("dogum_tarixi")}</label>
                             <div className="input-with-icon">
                                 <input
                                     type="text"
@@ -631,7 +632,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     className="form-control-custom"
                                     value={formData.birth_date}
                                     onChange={handleInputChange}
-                                    placeholder="DD.MM.YYYY (məs: 15.06.1990)"
+                                    placeholder={t("ddmmyyyy_mes_15061990")}
                                     maxLength={10}
                                 />
                                 <input
@@ -672,21 +673,21 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                         </div>
 
                         <div className="form-group">
-                            <label>Ünvan</label>
+                            <label>{t("unvan_1")}</label>
                             <div className="address-input-container">
                                 <div className="flex-1">
                                     <SearchableSelect
                                         options={AZ_CITIES}
                                         value={formData.address}
                                         onChange={(val) => setFormData(prev => ({ ...prev, address: val }))}
-                                        placeholder="Şəhər seçin"
+                                        placeholder={t("seher_secin")}
                                     />
                                 </div>
                                 <button
                                     type="button"
                                     className="map-location-btn"
                                     onClick={() => setShowAddressModal(true)}
-                                    title="Xəritədən seçin"
+                                    title={t("xeriteden_secin")}
                                 >
                                     <i className="bi bi-geo-alt"></i>
                                 </button>
@@ -695,10 +696,10 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                     </div>
 
                     <div className="form-group mt-3">
-                        <label>Açıqlama</label>
+                        <label>{t("aciqlama_1")}</label>
                         <textarea
                             name="description"
-                            placeholder="Əlavə məlumat..."
+                            placeholder={t("elave_melumat")}
                             className="form-control-custom textarea-custom"
                             value={formData.description}
                             onChange={handleInputChange}
@@ -745,7 +746,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                     };
                                     onApply(enriched);
                                 }
-                            }}>Tətbiq et</button>
+                            }}>{t("apply")}</button>
                             <div className="dots-menu-wrapper" ref={dotsMenuRef}>
                                 <button
                                     className="dots-menu-btn"
@@ -756,13 +757,9 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                 {showDotsMenu && (
                                     <div className="dots-dropdown">
                                         <div className="dots-dropdown-item" onClick={handleEditCustomer}>
-                                            <i className="bi bi-pencil-square"></i>
-                                            Müştəri redaktoru
-                                        </div>
+                                            <i className="bi bi-pencil-square"></i>{t("musteri_redaktoru")}</div>
                                         <div className="dots-dropdown-item" onClick={() => { setShowDotsMenu(false); }}>
-                                            <i className="bi bi-plus-circle"></i>
-                                            Əməliyyat yarat
-                                        </div>
+                                            <i className="bi bi-plus-circle"></i>{t("emeliyyat_yarat")}</div>
                                     </div>
                                 )}
                             </div>
@@ -777,7 +774,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                             </div>
                             <div className="highlight-info">
                                 <span className="amount">{parseFloat(selectedCustomer.cashback || 0).toFixed(2)}</span>
-                                <span className="label">Keşbek</span>
+                                <span className="label">{t("kesbek")}</span>
                             </div>
                         </div>
                         <div className="highlight-card balance">
@@ -794,19 +791,19 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                     {/* Stats row */}
                     <div className="details-stats-row">
                         <div className="stat-item">
-                            <span className="label">Ümumi xərc</span>
+                            <span className="label">{t("umumi_xerc")}</span>
                             <div className="value">{parseFloat(selectedCustomer.total_spent || 0).toFixed(2)}</div>
                         </div>
                         <div className="stat-item">
-                            <span className="label">Cəm endirim</span>
+                            <span className="label">{t("cem_endirim")}</span>
                             <div className="value">{parseFloat(selectedCustomer.total_discount || 0).toFixed(2)}</div>
                         </div>
                         <div className="stat-item">
-                            <span className="label">Ümumi Bonus</span>
+                            <span className="label">{t("umumi_bonus")}</span>
                             <div className="value">{parseFloat(selectedCustomer.total_bonus || 0).toFixed(0)}</div>
                         </div>
                         <div className="stat-item">
-                            <span className="label">Ümumi qəbz</span>
+                            <span className="label">{t("umumi_qebz")}</span>
                             <div className="value">{selectedCustomer.total_receipts || 0}</div>
                         </div>
                     </div>
@@ -828,18 +825,18 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                 <span className="info-value">{selectedCustomer.phone || '—'}</span>
                             </div>
                             <div className="info-item">
-                                <span className="info-label">CİNS</span>
+                                <span className="info-label">{t("ci̇ns")}</span>
                                 <span className="info-value">{selectedCustomer.gender || '—'}</span>
                             </div>
                             <div className="info-item">
-                                <span className="info-label">DOĞUM TARİXİ</span>
+                                <span className="info-label">{t("dogum_tari̇xi̇")}</span>
                                 <span className="info-value">{selectedCustomer.birth_date || '—'}</span>
                             </div>
                         </div>
                         {selectedCustomer.email && (
                             <div className="personal-info-row mt-2">
                                 <div className="info-item">
-                                    <span className="info-label">E-MAİL</span>
+                                    <span className="info-label">{t("emai̇l")}</span>
                                     <span className="info-value">{selectedCustomer.email}</span>
                                 </div>
                             </div>
@@ -847,7 +844,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                         {selectedCustomer.address && (
                             <div className="personal-info-row mt-2">
                                 <div className="info-item">
-                                    <span className="info-label">ÜNVAN</span>
+                                    <span className="info-label">{t("unvan")}</span>
                                     <span className="info-value">{selectedCustomer.address}</span>
                                 </div>
                             </div>
@@ -855,7 +852,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                         {selectedCustomer.description && (
                             <div className="personal-info-row mt-2">
                                 <div className="info-item">
-                                    <span className="info-label">AÇIQLAMA</span>
+                                    <span className="info-label">{t("aciqlama")}</span>
                                     <span className="info-value">{selectedCustomer.description}</span>
                                 </div>
                             </div>
@@ -869,11 +866,11 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                             <table className="history-table">
                                 <thead>
                                     <tr>
-                                        <th>Çek#</th>
-                                        <th>Çek bağlanıb</th>
-                                        <th>Cəm</th>
+                                        <th>{t("cek#")}</th>
+                                        <th>{t("cek_baglanib")}</th>
+                                        <th>{t("cem")}</th>
                                         <th>Endirim</th>
-                                        <th>Ödəniş üsulu</th>
+                                        <th>{t("odenis_usulu")}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -889,7 +886,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                                                         {order.order_payments[0].payment_method?.name || 'Nağd'} {parseFloat(order.order_payments[0].paid).toFixed(2)}
                                                     </span>
                                                 ) : (
-                                                    <span className="payment-tag">Gözləyir</span>
+                                                    <span className="payment-tag">{t("gozleyir")}</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -905,7 +902,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
         return (
             <div className="customer-details-placeholder">
                 <i className="bi bi-person-badge"></i>
-                <p>Müştəri məlumatlarını görmək üçün siyahıdan seçin</p>
+                <p>{t("musteri_melumatlarini_gormek_ucun_siyahidan_secin")}</p>
             </div>
         );
     };
@@ -925,7 +922,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                     <div className="customers-source-icon-circle">
                         <i className="bi bi-person"></i>
                     </div>
-                    <h2 className="customers-source-modal-title">Müştərilər</h2>
+                    <h2 className="customers-source-modal-title">{t("customers")}</h2>
                 </div>
                 <button className="customers-source-close-btn" onClick={onHide}>
                     <i className="bi bi-x-lg"></i>
@@ -952,9 +949,9 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                     {loading && (
                         <div className="text-center py-3">
                             <div className="spinner-border spinner-border-sm" role="status" style={{ color: '#053796' }}>
-                                <span className="visually-hidden">Yüklənir...</span>
+                                <span className="visually-hidden">{t("loading")}</span>
                             </div>
-                            <small className="d-block mt-1" style={{ color: '#9ca3af' }}>Müştərilər yüklənir...</small>
+                            <small className="d-block mt-1" style={{ color: '#9ca3af' }}>{t("musteriler_yuklenir")}</small>
                         </div>
                     )}
 
@@ -962,7 +959,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                     {!isOnline && !loading && (
                         <div className="text-center py-3 px-2">
                             <i className="bi bi-wifi-off d-block mb-2" style={{ fontSize: '1.5rem', color: '#ef4444' }}></i>
-                            <small style={{ color: '#9ca3af' }}>İnternet bağlantısı yoxdur.<br />Müştəri siyahısı əlçatan deyil.</small>
+                            <small style={{ color: '#9ca3af' }}>{t("i̇nternet_baglantisi_yoxdur_1")}<br />{t("musteri_siyahisi_elcatan_deyil")}</small>
                         </div>
                     )}
 
@@ -992,7 +989,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                         ))}
                         {!loading && isOnline && filteredCustomers.length === 0 && (
                             <div className="text-center py-3">
-                                <small style={{ color: '#9ca3af' }}>Müştəri tapılmadı</small>
+                                <small style={{ color: '#9ca3af' }}>{t("musteri_tapilmadi")}</small>
                             </div>
                         )}
                     </div>
@@ -1000,9 +997,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                     {/* Create button at the bottom of sidebar */}
                     <div className="sidebar-create-btn-wrapper">
                         <button className="sidebar-create-btn" onClick={handleCreateNew}>
-                            <i className="bi bi-plus-lg me-2"></i>
-                            Müştəri yarat
-                        </button>
+                            <i className="bi bi-plus-lg me-2"></i>{t("musteri_yarat")}</button>
                     </div>
                 </div>
 

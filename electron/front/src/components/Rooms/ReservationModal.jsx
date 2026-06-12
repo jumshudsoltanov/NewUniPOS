@@ -4,6 +4,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { createReservation, fetchRooms } from "../../redux/Slices/HotelSlice";
 import { createCustomerViaAdmin, fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "./ReservationModal.css";
 
 const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
@@ -87,7 +89,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
     const name = customerSearch.trim();
     const phone = guestPhone.trim();
     if (!name) {
-      toast.error("Müştəri yaratmaq üçün ad daxil edin");
+      toast.error(t("musteri_yaratmaq_ucun_ad_daxil_edin"));
       return;
     }
     setIsCreatingCustomer(true);
@@ -100,7 +102,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
       if (newCustomer?.id) {
         setSelectedCustomerId(newCustomer.id);
         setGuestName(name);
-        toast.success("Müştəri yaradıldı!");
+        toast.success(t("musteri_yaradildi"));
         dispatch(fetchCustomersFromAdmin());
         setShowCustomerDropdown(false);
       }
@@ -147,19 +149,19 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
   const handleSubmit = async (actionType) => {
     if (!guestName.trim()) {
-      toast.error("Qonaq adı daxil edin");
+      toast.error(t("qonaq_adi_daxil_edin"));
       return;
     }
     if (!selectedRoomId) {
-      toast.error("Otaq seçin");
+      toast.error(t("otaq_secin"));
       return;
     }
     if (!checkIn || !checkOut) {
-      toast.error("Giriş və çıxış tarixlərini seçin");
+      toast.error(t("giris_ve_cixis_tarixlerini_secin"));
       return;
     }
     if (new Date(checkOut) <= new Date(checkIn)) {
-      toast.error("Çıxış tarixi giriş tarixindən sonra olmalıdır");
+      toast.error(t("cixis_tarixi_giris_tarixinden_sonra_olmalidir"));
       return;
     }
 
@@ -235,14 +237,12 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           {/* Customer Search */}
           <div className="mb-3">
             <label className="form-label">
-              <i className="bi bi-person-fill" style={{ marginRight: 4 }}></i>
-              Müştəri seç
-            </label>
+              <i className="bi bi-person-fill" style={{ marginRight: 4 }}></i>{t("musteri_sec")}</label>
             <div style={{ position: "relative" }}>
               <input
                 type="text"
                 className="form-control"
-                placeholder="Ad və ya telefon nömrəsi ilə axtar..."
+                placeholder={t("ad_ve_ya_telefon_nomresi_ile_axtar")}
                 value={customerSearch}
                 onChange={(e) => {
                   setCustomerSearch(e.target.value);
@@ -269,9 +269,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
                     pointerEvents: "none", lineHeight: 1,
                   }}
                 >
-                  <i className="bi bi-check-circle-fill" style={{ fontSize: "12px" }}></i>
-                  seçildi
-                </span>
+                  <i className="bi bi-check-circle-fill" style={{ fontSize: "12px" }}></i>{t("secildi")}</span>
               )}
               {showCustomerDropdown && !selectedCustomerId && customerSearch.trim() && (
                 <div
@@ -316,7 +314,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
                     onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                   >
                     {isCreatingCustomer ? (
-                      <><span className="spinner-border spinner-border-sm me-1" role="status"></span> Yaradılır...</>
+                      <><span className="spinner-border spinner-border-sm me-1" role="status"></span>{t("yaradilir")}</>
                     ) : (
                       <>
                         <i className="bi bi-plus-circle-fill" style={{ color: "#053796", fontSize: "16px" }}></i>
@@ -331,8 +329,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
           {/* Guest Name */}
           <div className="mb-3">
-            <label className="form-label">
-              Qonaq adı <span className="required">*</span>
+            <label className="form-label">{t("qonaq_adi")}<span className="required">*</span>
             </label>
             <input
               type="text"
@@ -348,7 +345,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
           {/* Guest Phone */}
           <div className="mb-3">
-            <label className="form-label">Telefon</label>
+            <label className="form-label">{t("phone")}</label>
             <input
               type="tel"
               className="form-control"
@@ -361,13 +358,11 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           {/* Document ID */}
           <div className="mb-3">
             <label className="form-label">
-              <i className="bi bi-card-text" style={{ marginRight: 4 }}></i>
-              Şəxsiyyət vəsiqəsi / FİN
-            </label>
+              <i className="bi bi-card-text" style={{ marginRight: 4 }}></i>{t("sexsiyyet_vesiqesi_/_fi̇n")}</label>
             <input
               type="text"
               className="form-control"
-              placeholder="AZE AA1234567 və ya FİN kodu"
+              placeholder={t("aze_aa1234567_ve_ya_fi̇n_kodu")}
               value={documentId}
               onChange={(e) => setDocumentId(e.target.value)}
             />
@@ -375,15 +370,14 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
           {/* Room Selection */}
           <div className="mb-3">
-            <label className="form-label">
-              Otaq <span className="required">*</span>
+            <label className="form-label">{t("room")}<span className="required">*</span>
             </label>
             <select
               className="form-select"
               value={selectedRoomId}
               onChange={(e) => setSelectedRoomId(e.target.value)}
             >
-              <option value="">Otaq seçin</option>
+              <option value="">{t("otaq_secin")}</option>
               {availableRooms.map((r) => (
                 <option key={r.id} value={r.id}>
                   Otaq {r.room_number} — {r.room_type || "Standard"}
@@ -397,8 +391,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           {/* Dates */}
           <div className="row mb-3">
             <div className="col-6">
-              <label className="form-label">
-                Giriş tarixi <span className="required">*</span>
+              <label className="form-label">{t("giris_tarixi")}<span className="required">*</span>
               </label>
               <input
                 type="date"
@@ -408,8 +401,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
               />
             </div>
             <div className="col-6">
-              <label className="form-label">
-                Çıxış tarixi <span className="required">*</span>
+              <label className="form-label">{t("cixis_tarixi")}<span className="required">*</span>
               </label>
               <input
                 type="date"
@@ -424,8 +416,8 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           {nights > 0 && roomPrice > 0 ? (
             <div className="rm-price-summary mb-3">
               <div className="rm-price-row">
-                <span>{roomPrice.toFixed(2)} ₼ × {nights} gecə</span>
-                <span className="rm-price-total">{totalPrice.toFixed(2)} ₼</span>
+                <span>{formatPrice(roomPrice)} × {nights} gecə</span>
+                <span className="rm-price-total">{formatPrice(totalPrice)}</span>
               </div>
             </div>
           ) : nights > 0 ? (
@@ -440,7 +432,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           {/* Guests */}
           <div className="row mb-3">
             <div className="col-6">
-              <label className="form-label">Böyüklər</label>
+              <label className="form-label">{t("boyukler")}</label>
               <input
                 type="number"
                 className="form-control"
@@ -451,7 +443,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
               />
             </div>
             <div className="col-6">
-              <label className="form-label">Uşaqlar</label>
+              <label className="form-label">{t("usaqlar")}</label>
               <input
                 type="number"
                 className="form-control"
@@ -466,9 +458,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           {/* Deposit */}
           <div className="mb-3">
             <label className="form-label">
-              <i className="bi bi-wallet2" style={{ marginRight: 4 }}></i>
-              Ödənilən beh / Depozit (₼)
-            </label>
+              <i className="bi bi-wallet2" style={{ marginRight: 4 }}></i>{t("odenilen_beh_/_depozit_₼")}</label>
             <input
               type="number"
               className="form-control"
@@ -482,11 +472,11 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
           {/* Notes */}
           <div className="mb-3">
-            <label className="form-label">Qeydlər</label>
+            <label className="form-label">{t("qeydler")}</label>
             <textarea
               className="form-control"
               rows={2}
-              placeholder="Əlavə qeydlər..."
+              placeholder={t("elave_qeydler")}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
@@ -495,9 +485,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
 
         {/* Footer */}
         <div className="reservation-footer">
-          <button className="btn-cancel" onClick={onHide}>
-            Ləğv et
-          </button>
+          <button className="btn-cancel" onClick={onHide}>{t("cancel")}</button>
 
           {action === "checkin" ? (
             <button
@@ -507,14 +495,10 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
             >
               {isCreatingReservation ? (
                 <>
-                  <span className="spinner-border spinner-border-sm" role="status"></span>
-                  Göndərilir...
-                </>
+                  <span className="spinner-border spinner-border-sm" role="status"></span>{t("gonderilir")}</>
               ) : (
                 <>
-                  <i className="bi bi-box-arrow-in-right"></i>
-                  Giriş et
-                </>
+                  <i className="bi bi-box-arrow-in-right"></i>{t("giris_et")}</>
               )}
             </button>
           ) : null}
@@ -526,9 +510,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
           >
             {isCreatingReservation ? (
               <>
-                <span className="spinner-border spinner-border-sm" role="status"></span>
-                Göndərilir...
-              </>
+                <span className="spinner-border spinner-border-sm" role="status"></span>{t("gonderilir")}</>
             ) : (
               <>
                 <i className="bi bi-check-lg"></i>

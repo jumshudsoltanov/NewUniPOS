@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import DefaultLogo from "../../assets/images/unipos_logo.png";
+import { t } from "../../utils/translations";
 import "./RefreshLoader.css";
 
 const SYNC_STEPS = [
-    { key: "products",          label: "Məhsullar",         icon: "bi-box-seam" },
+    { key: "products",          label: t("products"),         icon: "bi-box-seam" },
     { key: "categories",        label: "Alt kateqoriyalar",  icon: "bi-tag" },
-    { key: "generalCategories", label: "Kateqoriyalar",      icon: "bi-grid" },
-    { key: "tables",            label: "Masalar",            icon: "bi-table" },
-    { key: "tableGroups",       label: "Masa qrupları",      icon: "bi-diagram-3" },
+    { key: "generalCategories", label: t("categories"),      icon: "bi-grid" },
+    { key: "tables",            label: t("tables"),            icon: "bi-table" },
+    { key: "tableGroups",       label: t("masa_qruplari"),      icon: "bi-diagram-3" },
     { key: "waiters",           label: "Ofisiantlar",        icon: "bi-person-badge" },
-    { key: "paymentMethods",    label: "Ödəniş üsulları",   icon: "bi-credit-card" },
-    { key: "tags",              label: "Etiketlər",          icon: "bi-bookmark" },
-    { key: "printers",          label: "Printerlər",         icon: "bi-printer" },
-    { key: "salesTypes",        label: "Satış növləri",      icon: "bi-cart" },
-    { key: "activeChecks",      label: "Aktiv çeklər",       icon: "bi-receipt" },
+    { key: "paymentMethods",    label: t("odenis_usullari"),   icon: "bi-credit-card" },
+    { key: "tags",              label: t("etiketler"),          icon: "bi-bookmark" },
+    { key: "printers",          label: t("printerler"),         icon: "bi-printer" },
+    { key: "salesTypes",        label: t("satis_novleri"),      icon: "bi-cart" },
+    { key: "activeChecks",      label: t("aktiv_cekler"),       icon: "bi-receipt" },
 ];
 
 const RefreshLoader = ({ isOpen, syncCounts, isOnline = true }) => {
@@ -76,8 +77,7 @@ const RefreshLoader = ({ isOpen, syncCounts, isOnline = true }) => {
 
                 {!isOnline && (
                     <div className="rl-offline-banner">
-                        <i className="bi bi-wifi-off" /> İnternet yoxdur — lokal məlumatlar
-                    </div>
+                        <i className="bi bi-wifi-off" />{t("i̇nternet_yoxdur_lokal_melumatlar")}</div>
                 )}
 
                 <div className={`rl-status ${isDone ? "done" : ""}`}>

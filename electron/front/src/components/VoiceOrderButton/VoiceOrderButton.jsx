@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addProducts } from '../../redux/Slices/OrdersSlice';
 import './VoiceOrderButton.css';
 import apiConfig from '../../utils/apiConfig';
+import { t } from "../../utils/translations";
 
 // Wake words
 const WAKE_WORDS = ['aigun', 'aygün', 'aygun', 'ai gun', 'aiğun', 'əygun', 'əygün', 'ayqun'];
@@ -201,10 +202,10 @@ const VoiceOrderButton = () => {
                     return `${i.count || 1} ${p?.name || ''}`;
                 }).join(', ');
 
-                toast.success('Sifariş əlavə edildi!');
+                toast.success(t("sifaris_elave_edildi"));
                 await speak(`${nameList} əlavə edildi.`, BASE_URL);
             } else {
-                toast.warning('Məhsul tapılmadı');
+                toast.warning(t("mehsul_tapilmadi"));
                 await speak('Üzr istəyirəm, məhsulu tapa bilmədim. Yenidən cəhd edin.', BASE_URL);
             }
         } else {
@@ -282,10 +283,10 @@ const VoiceOrderButton = () => {
                         return `${i.count || 1} ${p?.name || ''}`;
                     }).join(', ');
 
-                    toast.success('Sifariş əlavə edildi!');
+                    toast.success(t("sifaris_elave_edildi"));
                     await speak(`${nameList} əlavə edildi.`, BASE_URL);
                 } else {
-                    toast.warning('Məhsul tapılmadı');
+                    toast.warning(t("mehsul_tapilmadi"));
                     await speak('Üzr istəyirəm, başa düşmədim. Yenidən cəhd edin.', BASE_URL);
                 }
             } else {
@@ -478,7 +479,7 @@ const VoiceOrderButton = () => {
             setStatusBoth('awake');
             await speak('Buyurun, sifarişinizi deyin.', BASE_URL);
             await startOrderRecording();
-            toast.success('AiGün dinləyir. Sifarişinizi deyin.');
+            toast.success(t("aigun_dinleyir_sifarisinizi_deyin"));
             return;
         }
 
@@ -493,7 +494,7 @@ const VoiceOrderButton = () => {
                 recognitionRef.current = null;
             }
             setStatusBoth('idle');
-            toast.info('AiGün deaktiv edildi');
+            toast.info(t("aigun_deaktiv_edildi"));
         } else {
             // Turn on
             enabledRef.current = true;
@@ -501,11 +502,11 @@ const VoiceOrderButton = () => {
             setStatusBoth('awake');
             await speak('Buyurun, sifarişinizi deyin.', BASE_URL);
             await startOrderRecording();
-            toast.success('AiGün dinləyir. Sifarişinizi deyin.');
+            toast.success(t("aigun_dinleyir_sifarisinizi_deyin"));
             return;
             await speak('Salam! Mən AiGün. Hazıram, buyurun!', BASE_URL);
             startRecognition();
-            toast.success('AiGün aktiv! "AiGün" deyərək sifarişinizi bildirin.');
+            toast.success(t("aigun_aktiv_aigun_deyerek_sifarisinizi_bildirin"));
         }
     }, [stopOrderRecording, startOrderRecording]);
 

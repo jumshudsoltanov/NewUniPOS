@@ -4,6 +4,8 @@ import "./Table.css";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { computeOrderCardMeta } from "../../utils/orderDisplayTotal";
 import { normalizeTableShape } from "../../utils/tableShape";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 
 const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }) => {
   const { name, orders } = table || {};
@@ -111,15 +113,13 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
             >
               {(() => {
                 const order = orders?.[0];
-                if (!order) return "0.00 ₼";
+                if (!order) return formatPrice(0);
                 const { displayAmount, isDepositFloor } = computeOrderCardMeta(order, table?.hourly_price);
                 return (
                   <>
-                    {displayAmount.toFixed(2)} ₼
+                    {formatPrice(displayAmount)}
                     {isDepositFloor && (
-                      <span className="deposit-indicator">
-                        DEPOZİT
-                      </span>
+                      <span className="deposit-indicator">{t("depozi̇t")}</span>
                     )}
                   </>
                 );

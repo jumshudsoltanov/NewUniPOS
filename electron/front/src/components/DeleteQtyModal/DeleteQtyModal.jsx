@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Modal from "react-bootstrap/Modal";
+import { t } from "../../utils/translations";
 import "../DiscountModal/DiscountModal.css";
 
 const DeleteQtyModal = React.memo(({ show, onClose, onConfirm, product }) => {
@@ -55,7 +56,7 @@ const DeleteQtyModal = React.memo(({ show, onClose, onConfirm, product }) => {
             <div className="header-icon">
               <i className="bi bi-trash3-fill" style={{ color: '#053796', fontSize: '20px' }}></i>
             </div>
-            <span className="header-title">Silinəcək Say</span>
+            <span className="header-title">{t("silinecek_say")}</span>
           </div>
           <button className="close-btn" onClick={onClose}>
             <svg
@@ -171,9 +172,7 @@ const DeleteQtyModal = React.memo(({ show, onClose, onConfirm, product }) => {
               >
                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
                 <line x1="7" y1="7" x2="7.01" y2="7"></line>
-              </svg>
-              Təsdiqlə
-            </button>
+              </svg>{t("tesdiqle")}</button>
           </div>
         </div>
       </div>

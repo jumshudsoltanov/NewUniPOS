@@ -3,6 +3,7 @@ import "./KitchenPrintBlockModal.css";
 import Modal from "react-bootstrap/Modal";
 import { useSelector } from "react-redux";
 import apiConfig from "../../utils/apiConfig";
+import { t } from "../../utils/translations";
 
 const KitchenPrintBlockModal = React.memo(({ show, onClose }) => {
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -85,7 +86,7 @@ const KitchenPrintBlockModal = React.memo(({ show, onClose }) => {
                 <rect x="6" y="14" width="12" height="8" />
               </svg>
             </div>
-            <span className="header-title">Çapın bloklanması</span>
+            <span className="header-title">{t("capin_bloklanmasi")}</span>
           </div>
           <button className="close-btn" onClick={() => onClose(false)}>
             <svg
@@ -107,13 +108,11 @@ const KitchenPrintBlockModal = React.memo(({ show, onClose }) => {
 
         {/* Body */}
         <div className="kitchen-block-body">
-          <p className="kitchen-block-subtitle">Printerləri idarə edin (Mavi rəngdə olanlar çap edəcək, qırmızı olanlar bloklanıb):</p>
+          <p className="kitchen-block-subtitle">{t("printerleri_idare_edin_mavi_rengde_olanlar_cap_edecek_qirmizi_olanlar_bloklanib")}</p>
           <div className="printers-list">
             {loading ? (
               <div className="no-printers">
-                <i className="bi bi-arrow-repeat spin" style={{ marginRight: '8px', fontSize: '18px' }}></i>
-                Printerlər yüklənir...
-              </div>
+                <i className="bi bi-arrow-repeat spin" style={{ marginRight: '8px', fontSize: '18px' }}></i>{t("printerler_yuklenir")}</div>
             ) : printers.length > 0 ? (
               printers.map((printer) => {
                 const isBlocked = blockedPrinters.includes(printer.id);
@@ -142,7 +141,7 @@ const KitchenPrintBlockModal = React.memo(({ show, onClose }) => {
                     
                     <div className="printer-status-right">
                       {isBlocked ? (
-                        <span className="status-badge blocked-badge">Bloklanıb</span>
+                        <span className="status-badge blocked-badge">{t("bloklanib")}</span>
                       ) : (
                         <span className="status-badge active-badge">Aktivdir</span>
                       )}
@@ -155,9 +154,7 @@ const KitchenPrintBlockModal = React.memo(({ show, onClose }) => {
               })
             ) : (
               <div className="no-printers">
-                <i className="bi bi-exclamation-circle" style={{ fontSize: '24px', display: 'block', marginBottom: '8px', color: '#94a3b8' }}></i>
-                Sistemdə printer tapılmadı
-              </div>
+                <i className="bi bi-exclamation-circle" style={{ fontSize: '24px', display: 'block', marginBottom: '8px', color: '#94a3b8' }}></i>{t("sistemde_printer_tapilmadi")}</div>
             )}
           </div>
 
@@ -166,9 +163,7 @@ const KitchenPrintBlockModal = React.memo(({ show, onClose }) => {
             <button
               className="apply-btn"
               onClick={handleApply}
-            >
-              Tətbiq et
-            </button>
+            >{t("apply")}</button>
           </div>
         </div>
       </div>

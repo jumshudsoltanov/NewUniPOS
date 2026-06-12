@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { updateRoomStatus, fetchRooms } from "../../redux/Slices/HotelSlice";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "../Table/Table.css";
 
 const statusToTableClass = {
@@ -13,11 +15,11 @@ const statusToTableClass = {
 };
 
 const statusOptions = [
-  { value: "available", label: "Boş", icon: "bi-check-circle", color: "#10B981" },
+  { value: "available", label: t("bos_1"), icon: "bi-check-circle", color: "#10B981" },
   { value: "occupied", label: "Dolu", icon: "bi-person-fill", color: "#F59E0B" },
-  { value: "cleaning", label: "Təmizlənir", icon: "bi-arrow-repeat", color: "#D97706" },
+  { value: "cleaning", label: t("temizlenir"), icon: "bi-arrow-repeat", color: "#D97706" },
   { value: "reserved", label: "Bron", icon: "bi-calendar-check", color: "#8B5CF6" },
-  { value: "maintenance", label: "Təmirdə", icon: "bi-tools", color: "#EF4444" },
+  { value: "maintenance", label: t("temirde"), icon: "bi-tools", color: "#EF4444" },
 ];
 
 const RoomCard = ({ room, onRoomClick, checkTotal = 0 }) => {
@@ -40,7 +42,7 @@ const RoomCard = ({ room, onRoomClick, checkTotal = 0 }) => {
       const pid = loginedProfileData?.data?.profile?.id;
       if (pid) dispatch(fetchRooms(pid));
     } catch (err) {
-      toast.error("Status dəyişdirilmədi");
+      toast.error(t("status_deyisdirilmedi"));
     }
   };
 
@@ -56,7 +58,7 @@ const RoomCard = ({ room, onRoomClick, checkTotal = 0 }) => {
             {room.room_number || "?"}
           </h3>
           <p className={`table-amount ${tableStatus}`}>
-            {displayAmount.toFixed(2)} ₼
+            {formatPrice(displayAmount)}
           </p>
 
           {status === "occupied" && room.guest_name ? (
@@ -134,7 +136,7 @@ const RoomCard = ({ room, onRoomClick, checkTotal = 0 }) => {
             e.stopPropagation();
             setShowStatusMenu(!showStatusMenu);
           }}
-          title="Statusu dəyiş"
+          title={t("statusu_deyis")}
         >
           <i className="bi bi-gear-fill"></i>
         </div>

@@ -6,6 +6,7 @@ import { updateLockChecK } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
+import { t } from "../../utils/translations";
 
 const CheckLockModal = ({ show, onClose, order }) => {
   const [status, setStatus] = useState(0);
@@ -39,7 +40,7 @@ const CheckLockModal = ({ show, onClose, order }) => {
       toast.success(newStatus === 1 ? "Qəbz kilidləndi" : "Qəbz kilidi açıldı");
       onClose(false);
     } catch (error) {
-      toast.error("Xəta baş verdi");
+      toast.error(t("error_occurred"));
       console.error("Lock error:", error);
     }
   }, [
@@ -68,7 +69,7 @@ const CheckLockModal = ({ show, onClose, order }) => {
             <div className="check-lock-icon-circle">
               <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'}`}></i>
             </div>
-            <div className="check-lock-modal-title">Çeki kilidlə</div>
+            <div className="check-lock-modal-title">{t("ceki_kilidle")}</div>
           </div>
           <button className="btn-close-custom" onClick={onClose}>
             <svg
@@ -107,7 +108,7 @@ const CheckLockModal = ({ show, onClose, order }) => {
         </div>
 
         <div className="check-lock-modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Ləğv et</button>
+          <button className="btn-cancel" onClick={onClose}>{t("cancel")}</button>
           <button className="check-lock-save-btn" onClick={handleUpdateStatus}>
             <i className={`bi ${status === 0 ? 'bi-lock-fill' : 'bi-unlock-fill'} me-2`}></i>
             {status === 0 ? "Kilidlə" : "Kilidi Aç"}

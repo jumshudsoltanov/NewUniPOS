@@ -2,6 +2,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
+import { t } from "../../utils/translations";
 import './OrderLogs.css';
 
 const OrderLogs = ({ order }) => {
@@ -23,14 +24,14 @@ const OrderLogs = ({ order }) => {
                 <div className="empty-icon">
                     <i className="bi bi-clock-history"></i>
                 </div>
-                <p>Hələ ki, heç bir əməliyyat yoxdur</p>
+                <p>{t("hele_ki_hec_bir_emeliyyat_yoxdur")}</p>
             </div>
         );
     }
 
     return (
         <div className="order-logs-container">
-            <h5 className="logs-title">Əməliyyat Tarixçəsi</h5>
+            <h5 className="logs-title">{t("emeliyyat_tarixcesi")}</h5>
             <div className="timeline">
                 {logs.map((log, index) => (
                     <div key={log.id} className="timeline-item">

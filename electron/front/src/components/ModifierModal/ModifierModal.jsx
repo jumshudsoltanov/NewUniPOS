@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "react-bootstrap";
 import { toast } from "sonner";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "./ModifierModal.css";
 
 const ModifierModal = ({
@@ -303,7 +305,7 @@ const ModifierModal = ({
             });
             onHide();
         } else {
-            toast.error("Zəhmət olmasa məcburi seçimləri tamamlayın.");
+            toast.error(t("zehmet_olmasa_mecburi_secimleri_tamamlayin"));
         }
     };
 
@@ -384,7 +386,7 @@ const ModifierModal = ({
                                 onClick={() => onOpenEditAction?.("transfer")}
                             >
                                 <i className="bi bi-arrow-left-right"></i>
-                                <span>Köçürmə</span>
+                                <span>{t("kocurme")}</span>
                             </button>
                         )}
                         {permissions.canGift && (
@@ -393,7 +395,7 @@ const ModifierModal = ({
                                 onClick={() => onOpenEditAction?.("gift")}
                             >
                                 <i className="bi bi-gift-fill"></i>
-                                <span>İkram</span>
+                                <span>{t("i̇kram")}</span>
                             </button>
                         )}
                         {permissions.canDiscount && (
@@ -457,7 +459,7 @@ const ModifierModal = ({
                                     )}
                                     <div className="item-v2-name">{item.name}</div>
                                     {price > 0 && (
-                                        <div className="item-v2-price">+{price.toFixed(2)} ₼</div>
+                                        <div className="item-v2-price">+{formatPrice(price)}</div>
                                     )}
                                 </div>
                             );

@@ -3,6 +3,8 @@ import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { sendBookingWhatsapp, updateFolioBalance, fetchRooms } from "../../redux/Slices/HotelSlice";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "./RoomDetailModal.css";
 
 const formatDate = (d) => {
@@ -52,16 +54,16 @@ const RoomDetailModal = ({ show, onHide, room }) => {
 
   const handleSendWhatsapp = () => {
     if (!room.guest_phone) {
-      toast.error("Qonağın telefon nömrəsi yoxdur");
+      toast.error(t("qonagin_telefon_nomresi_yoxdur"));
       return;
     }
     if (!room.booking_id) {
-      toast.error("Rezervasiya ID tapılmadı");
+      toast.error(t("rezervasiya_id_tapilmadi"));
       return;
     }
     dispatch(sendBookingWhatsapp({ bookingId: room.booking_id, profileId }))
       .unwrap()
-      .then(() => toast.success("WhatsApp mesajı göndərildi"))
+      .then(() => toast.success(t("whatsapp_mesaji_gonderildi")))
       .catch((err) => toast.error(err?.error || "WhatsApp göndərilmədi"));
   };
 
@@ -84,11 +86,11 @@ const RoomDetailModal = ({ show, onHide, room }) => {
     setIsUpdatingDeposit(true);
     try {
       await dispatch(updateFolioBalance({ roomId: room.id, profileId, balance: val })).unwrap();
-      toast.success("Depozit yeniləndi");
+      toast.success(t("deposit_updated"));
       setShowDepositKeypad(false);
       dispatch(fetchRooms(profileId));
     } catch (err) {
-      toast.error("Depozit yenilənə bilmədi");
+      toast.error(t("deposit_update_error"));
     } finally {
       setIsUpdatingDeposit(false);
     }
@@ -126,7 +128,7 @@ const RoomDetailModal = ({ show, onHide, room }) => {
             ) : null}
             {currentBalance > 0 ? (
               <span className="rd-balance-badge">
-                <i className="bi bi-coin"></i> {currentBalance.toFixed(2)} ₼
+                <i className="bi bi-coin"></i> {formatPrice(currentBalance)}
               </span>
             ) : (
               <span className="rd-balance-badge rd-balance-zero">
@@ -139,8 +141,7 @@ const RoomDetailModal = ({ show, onHide, room }) => {
           {room.guest_name ? (
             <div className="rd-section">
               <div className="rd-section-title">
-                <i className="bi bi-person-fill"></i> Qonaq məlumatları
-              </div>
+                <i className="bi bi-person-fill"></i>{t("qonaq_melumatlari")}</div>
               <div className="rd-info-grid">
                 <div className="rd-info-item">
                   <span className="rd-info-label">Ad Soyad</span>
@@ -148,7 +149,7 @@ const RoomDetailModal = ({ show, onHide, room }) => {
                 </div>
                 {room.guest_phone ? (
                   <div className="rd-info-item">
-                    <span className="rd-info-label">Telefon</span>
+                    <span className="rd-info-label">{t("phone")}</span>
                     <span className="rd-info-value rd-phone">{room.guest_phone}</span>
                   </div>
                 ) : null}
@@ -160,12 +161,11 @@ const RoomDetailModal = ({ show, onHide, room }) => {
           {(room.check_in || room.check_out) ? (
             <div className="rd-section">
               <div className="rd-section-title">
-                <i className="bi bi-calendar3"></i> Rezervasiya tarixləri
-              </div>
+                <i className="bi bi-calendar3"></i>{t("rezervasiya_tarixleri")}</div>
               <div className="rd-date-grid">
                 <div className="rd-date-box">
                   <i className="bi bi-box-arrow-in-right"></i>
-                  <div className="rd-date-label">Giriş</div>
+                  <div className="rd-date-label">{t("check_in")}</div>
                   <div className="rd-date-value">{formatDate(room.check_in)}</div>
                 </div>
                 <div className="rd-date-arrow">
@@ -173,7 +173,7 @@ const RoomDetailModal = ({ show, onHide, room }) => {
                 </div>
                 <div className="rd-date-box rd-date-out">
                   <i className="bi bi-box-arrow-right"></i>
-                  <div className="rd-date-label">Çıxış</div>
+                  <div className="rd-date-label">{t("check_out")}</div>
                   <div className="rd-date-value">{formatDate(room.check_out)}</div>
                 </div>
               </div>
@@ -195,16 +195,14 @@ const RoomDetailModal = ({ show, onHide, room }) => {
           {/* Depozit bölməsi */}
           <div className="rd-section">
             <div className="rd-section-title">
-              <i className="bi bi-wallet2"></i> Depozit
-            </div>
+              <i className="bi bi-wallet2"></i>{t("deposit")}</div>
 
             {!showDepositKeypad ? (
               <>
                 <div className="rd-depozit-goster">
-                  <span className="rd-depozit-qiymet">{currentBalance.toFixed(2)} ₼</span>
+                  <span className="rd-depozit-qiymet">{formatPrice(currentBalance)}</span>
                   <button className="rd-depozit-duzelt-btn" onClick={() => { setDepositValue(String(currentBalance > 0 ? currentBalance : "0")); setShowDepositKeypad(true); }}>
-                    <i className="bi bi-pencil-fill"></i> Düzəliş et
-                  </button>
+                    <i className="bi bi-pencil-fill"></i>{t("edit")}</button>
                 </div>
               </>
             ) : (
@@ -230,9 +228,9 @@ const RoomDetailModal = ({ show, onHide, room }) => {
                   </button>
                   <button className="rd-depozit-yadda-saxla" onClick={handleDepositApply} disabled={isUpdatingDeposit}>
                     {isUpdatingDeposit ? (
-                      <><span className="spinner-border spinner-border-sm" role="status"></span> Göndərilir</>
+                      <><span className="spinner-border spinner-border-sm" role="status"></span>{t("gonderilir_1")}</>
                     ) : (
-                      <><i className="bi bi-check2"></i> Yadda saxla</>
+                      <><i className="bi bi-check2"></i>{t("save")}</>
                     )}
                   </button>
                 </div>
@@ -243,11 +241,8 @@ const RoomDetailModal = ({ show, onHide, room }) => {
           {/* WhatsApp */}
           <div className="rd-section">
             <div className="rd-section-title">
-              <i className="bi bi-whatsapp"></i> WhatsApp bildirişi
-            </div>
-            <p className="rd-wa-desc">
-              Qonağa rezervasiya xatırlatma mesajı göndər
-            </p>
+              <i className="bi bi-whatsapp"></i>{t("whatsapp_bildirisi")}</div>
+            <p className="rd-wa-desc">{t("qonaga_rezervasiya_xatirlatma_mesaji_gonder")}</p>
             <button
               className="rd-wa-btn"
               onClick={handleSendWhatsapp}
@@ -255,18 +250,14 @@ const RoomDetailModal = ({ show, onHide, room }) => {
             >
               {isSendingWhatsapp ? (
                 <>
-                  <span className="spinner-border spinner-border-sm" role="status"></span>
-                  Göndərilir...
-                </>
+                  <span className="spinner-border spinner-border-sm" role="status"></span>{t("gonderilir")}</>
               ) : (
                 <>
-                  <i className="bi bi-whatsapp"></i>
-                  WhatsApp ilə xatırlat
-                </>
+                  <i className="bi bi-whatsapp"></i>{t("whatsapp_ile_xatirlat")}</>
               )}
             </button>
             {!room.guest_phone ? (
-              <span className="rd-wa-hint">Qonağın telefon nömrəsi mövcud deyil</span>
+              <span className="rd-wa-hint">{t("qonagin_telefon_nomresi_movcud_deyil")}</span>
             ) : null}
           </div>
         </div>

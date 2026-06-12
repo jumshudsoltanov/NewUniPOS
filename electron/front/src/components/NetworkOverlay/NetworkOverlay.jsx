@@ -3,6 +3,7 @@ import { Modal } from "react-bootstrap";
 import { getSocket, initNetwork } from "../../utils/apiConfig";
 import { checkIsSlaveTerminal } from "../../utils/masterSlaveHelpers";
 import { useNavigate } from "react-router-dom";
+import { t } from "../../utils/translations";
 import "../DiscountModal/DiscountModal.css";
 import "./NetworkOverlay.css";
 
@@ -198,12 +199,12 @@ const NetworkOverlay = () => {
                             <div className="network-disconnect-icon-wrap">
                                 <i className="bi bi-wifi-off" aria-hidden />
                             </div>
-                            <h2 className="network-disconnect-title">Əsas terminala qoşulu deyil</h2>
-                            <p className="network-disconnect-lead">Şəbəkə əlçatan deyil.</p>
+                            <h2 className="network-disconnect-title">{t("esas_terminala_qosulu_deyil")}</h2>
+                            <p className="network-disconnect-lead">{t("sebeke_elcatan_deyil")}</p>
                             {canQuit && (
                                 <button type="button" className="network-disconnect-quit-btn" onClick={handleQuit}>
                                     <i className="bi bi-x-lg" aria-hidden />
-                                    <span>Proqramı bağla</span>
+                                    <span>{t("proqrami_bagla")}</span>
                                 </button>
                             )}
                         </div>
@@ -231,9 +232,9 @@ const NetworkOverlay = () => {
                                 <div className="header-icon">
                                     <i className={`bi network-master-header-wifi-ic ${networkOk ? "bi-wifi" : "bi-wifi-off"}`} aria-hidden />
                                 </div>
-                                <span className="header-title">Master IP ayarları</span>
+                                <span className="header-title">{t("master_ip_ayarlari")}</span>
                             </div>
-                            <button type="button" className="close-btn" onClick={() => setShowIpConfigModal(false)} title="Bağla">
+                            <button type="button" className="close-btn" onClick={() => setShowIpConfigModal(false)} title={t("bagla")}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <line x1="18" y1="6" x2="6" y2="18" />
                                     <line x1="6" y1="6" x2="18" y2="18" />
@@ -244,7 +245,7 @@ const NetworkOverlay = () => {
                         <div className="discount-body network-master-ip-modal-body">
                             <div className={`network-master-status-card ${networkOk ? "network-master-status-card--ok" : "network-master-status-card--bad"}`}>
                                 <div className="network-master-status-row network-master-status-row--head">
-                                    <span className="network-master-status-label">Socket əlaqəsi</span>
+                                    <span className="network-master-status-label">{t("socket_elaqesi")}</span>
                                     <span className={`network-master-badge ${networkOk ? "network-master-badge--ok" : "network-master-badge--bad"}`}>
                                         {networkOk ? "Qoşulub" : "Kəsilib"}
                                     </span>
@@ -259,9 +260,7 @@ const NetworkOverlay = () => {
                                 </div>
                             </div>
 
-                            <p className="network-master-fs-hint">
-                                Statik IP yazın; <strong>Qoşul</strong>, <strong>Axtar</strong> və ya <strong>Avto qoşul</strong> ilə master tapın.
-                            </p>
+                            <p className="network-master-fs-hint">{t("statik_ip_yazin")}<strong>{t("qosul")}</strong>, <strong>Axtar</strong>{t("ve_ya")}<strong>{t("avto_qosul")}</strong>{t("ile_master_tapin")}</p>
 
                             <label className="network-master-field-label" htmlFor="network-master-ip-field">
                                 Statik Master IP
@@ -300,7 +299,7 @@ const NetworkOverlay = () => {
                                 <div className="network-master-exit-row">
                                     <button type="button" className="network-master-chip-btn network-master-chip-btn--outline network-master-exit-btn" onClick={handleQuit}>
                                         <i className="bi bi-x-lg" aria-hidden />
-                                        <span>Proqramı bağla</span>
+                                        <span>{t("proqrami_bagla")}</span>
                                     </button>
                                 </div>
                             )}

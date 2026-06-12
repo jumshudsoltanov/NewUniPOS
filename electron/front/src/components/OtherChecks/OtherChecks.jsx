@@ -7,6 +7,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { mergeChecks } from "../../redux/Slices/OrdersSlice";
 import { toast } from "sonner";
+import { t } from "../../utils/translations";
 
 const OtherChecks = ({
   show,
@@ -105,7 +106,7 @@ const OtherChecks = ({
     // can_access_own_checks_only=0: yalnız öz çeklərinə; =1: bütün çeklərə giriş
     if (Number(loginedWaiter?.data?.can_access_own_checks_only) === 0) {
       if (orderData?.waiter_id !== loginedWaiter?.data?.id && orderData?.waiter?.id !== loginedWaiter?.data?.id) {
-        toast.error("İcazəniz yoxdur: Bu çek başqa ofisianta aiddir.");
+        toast.error(t("i̇cazeniz_yoxdur_bu_cek_basqa_ofisianta_aiddir"));
         return;
       }
     }
@@ -125,9 +126,7 @@ const OtherChecks = ({
       centered
     >
       <Modal.Header closeButton style={{ background: "#4F85F4" }}>
-        <Modal.Title style={{ fontSize: "18px" }}>
-          Açıq çeklər
-          <span className="ms-2 badge bg-light text-primary rounded-pill">
+        <Modal.Title style={{ fontSize: "18px" }}>{t("aciq_cekler")}<span className="ms-2 badge bg-light text-primary rounded-pill">
             {filteredOrders?.length || 0}
           </span>
         </Modal.Title>
@@ -178,7 +177,7 @@ const OtherChecks = ({
           ) : (
             <div className="d-flex flex-column align-items-center justify-content-center text-muted py-5 text-center">
               <i className="bi bi-receipt mb-2 fs-1"></i>
-              <span className="fs-5">Aktiv çek tapılmadı</span>
+              <span className="fs-5">{t("aktiv_cek_tapilmadi")}</span>
             </div>
           )}
         </div>

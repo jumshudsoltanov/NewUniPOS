@@ -7,6 +7,7 @@ import './ProductModal.css';
 
 import { addNotification } from '../../utils/notificationService';
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
+import { t } from "../../utils/translations";
 
 const ProductModal = ({ show, onHide, productToEdit = null }) => {
     const dispatch = useDispatch();
@@ -107,7 +108,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
 
         const profile_id = loginedProfileData?.data?.profile?.id;
         if (!profile_id) {
-            toast.error("Profil tapılmadı");
+            toast.error(t("profil_tapilmadi"));
             setIsLoading(false);
             return;
         }
@@ -127,11 +128,11 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
             if (productToEdit) {
                 await dispatch(updateProduct({ id: productToEdit.id, productData: payload })).unwrap();
                 addNotification("Məhsul Redaktə Edildi", `"${payload.name}" məhsulunun məlumatları yeniləndi.`, { category: "info" });
-                toast.success("Məhsul yeniləndi!");
+                toast.success(t("mehsul_yenilendi"));
             } else {
                 await dispatch(addProduct(payload)).unwrap();
                 addNotification("Yeni Məhsul", `"${payload.name}" adlı yeni məhsul menyuya əlavə edildi.`, { category: "info" });
-                toast.success("Yeni məhsul yaradıldı!");
+                toast.success(t("yeni_mehsul_yaradildi"));
             }
             onHide();
         } catch (error) {
@@ -162,9 +163,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
 
             {isOffline && (
                 <div className="product-offline-banner">
-                    <i className="bi bi-wifi-off" />
-                    İnternet bağlantısı yoxdur — əməliyyatlar məhdudlaşdırılıb
-                </div>
+                    <i className="bi bi-wifi-off" />{t("i̇nternet_baglantisi_yoxdur_emeliyyatlar_mehdudlasdirilib")}</div>
             )}
 
             <div className="product-modal-tabs">
@@ -179,9 +178,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                     type="button" 
                     className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
                     onClick={() => setActiveTab('settings')}
-                >
-                    Parametrlər
-                </button>
+                >{t("parametrler")}</button>
             </div>
 
             <form onSubmit={handleSubmit} className="product-modal-form">
@@ -200,7 +197,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                         onChange={handleChange}
                                         required
                                     >
-                                        <option value="">Seçin...</option>
+                                        <option value="">{t("secin")}</option>
                                         {Array.isArray(categories) && categories.map(c => (
                                             <option key={c.id} value={c.id}>{c.name}</option>
                                         ))}
@@ -222,14 +219,14 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                     value={formData.name}
                                     onChange={handleChange}
                                     onFocus={() => setActiveInputName('name')}
-                                    placeholder="Məhsulun adı"
+                                    placeholder={t("mehsulun_adi")}
                                     required
                                 />
                             </div>
                         </Col>
                         <Col md={4}>
                             <div className="form-group-custom">
-                                <label>Qiymət (₼)</label>
+                                <label>{t("qiymet_₼")}</label>
                                 <input
                                     type="number"
                                     name="price"
@@ -248,7 +245,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                     <Row>
                         <Col md={4}>
                             <div className="form-group-custom">
-                                <label>Saatlıq qiymət (₼/saat)</label>
+                                <label>{t("saatliq_qiymet_₼/saat")}</label>
                                 <input
                                     type="number"
                                     name="hourly_price"
@@ -267,7 +264,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                     <Row>
                         <Col md={12}>
                             <div className="form-group-custom">
-                                <label>Şəkil</label>
+                                <label>{t("sekil")}</label>
                                 <div
                                     className="image-upload-box"
                                     onClick={() => fileInputRef.current.click()}
@@ -277,7 +274,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                     ) : (
                                         <div className="upload-placeholder">
                                             <i className="bi bi-cloud-arrow-up"></i>
-                                            <span>Şəkil yüklə</span>
+                                            <span>{t("sekil_yukle")}</span>
                                         </div>
                                     )}
                                 </div>
@@ -298,10 +295,10 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                         <Row>
                             <Col md={12}>
                                 <div className="form-group-custom">
-                                    <label>Parametrlər</label>
+                                    <label>{t("parametrler")}</label>
                                     <div className="toggles-container">
                                         <div className="toggle-item">
-                                            <span className="toggle-label">POS-da gizlət</span>
+                                            <span className="toggle-label">{t("posda_gizlet")}</span>
                                             <Form.Check
                                                 type="switch"
                                                 id="is_hidden_pos"
@@ -312,7 +309,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                             />
                                         </div>
                                         <div className="toggle-item">
-                                            <span className="toggle-label">QR-da gizlət</span>
+                                            <span className="toggle-label">{t("qrda_gizlet")}</span>
                                             <Form.Check
                                                 type="switch"
                                                 id="is_hidden_qr"
@@ -323,7 +320,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                             />
                                         </div>
                                         <div className="toggle-item">
-                                            <span className="toggle-label">Endirim tətbiq olunmasın</span>
+                                            <span className="toggle-label">{t("endirim_tetbiq_olunmasin")}</span>
                                             <Form.Check
                                                 type="switch"
                                                 id="no_discount"
@@ -334,7 +331,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                                             />
                                         </div>
                                         <div className="toggle-item">
-                                            <span className="toggle-label">Servis haqqı tətbiq olunmasın</span>
+                                            <span className="toggle-label">{t("servis_haqqi_tetbiq_olunmasin")}</span>
                                             <Form.Check
                                                 type="switch"
                                                 id="no_service_fee"
@@ -352,13 +349,11 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                 </div>
 
                 <div className="modal-footer-custom">
-                    <button type="button" className="btn-cancel" onClick={onHide}>Ləğv Et</button>
+                    <button type="button" className="btn-cancel" onClick={onHide}>{t("legv_et")}</button>
                     <button type="submit" className="btn-save" disabled={isLoading || isOffline} title={isOffline ? "İnternet bağlantısı yoxdur" : ""}>
                         {isLoading ? (
                             <>
-                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                Saxlanılır...
-                            </>
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>{t("saxlanilir")}</>
                         ) : (
                             <>
                                 <i className="bi bi-check-lg"></i>

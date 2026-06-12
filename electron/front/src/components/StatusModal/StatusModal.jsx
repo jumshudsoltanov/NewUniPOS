@@ -10,6 +10,7 @@ import {
     getPrinterDiagnosticLabel,
     getPrinterKey,
 } from "../../utils/printerDiagnostics";
+import { t } from "../../utils/translations";
 
 const StatusModal = ({ show, onHide }) => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -209,10 +210,10 @@ const StatusModal = ({ show, onHide }) => {
                     window.electronAPI.getSyncStatus().then(setSyncStatus).catch(() => {});
                 }
             }, 3000);
-            toast.success("Sinxronizasiya başladıldı");
+            toast.success(t("sinxronizasiya_basladildi"));
         } catch (error) {
             console.error("Manual sync error:", error);
-            toast.error("Sinxronizasiya xətası");
+            toast.error(t("sinxronizasiya_xetasi"));
         } finally {
             setSyncStatus(prev => ({ ...prev, isSyncing: false }));
         }
@@ -227,7 +228,7 @@ const StatusModal = ({ show, onHide }) => {
             window.electronAPI.getSyncStatus().then(setSyncStatus).catch(() => {});
         }
         setPomSyncPhase("success");
-        toast.success("Sinxronizasiya tamamlandı");
+        toast.success(t("sinxronizasiya_tamamlandi"));
         setTimeout(() => {
             setShowPendingDetails(false);
             setPendingDetails(null);
@@ -262,7 +263,7 @@ const StatusModal = ({ show, onHide }) => {
             setPomSyncActive(false);
             setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
             setPomSnapshotOrders([]);
-            toast.error("Sinxronizasiya xətası");
+            toast.error(t("sinxronizasiya_xetasi"));
             return;
         }
 
@@ -308,7 +309,7 @@ const StatusModal = ({ show, onHide }) => {
                 setPomSyncActive(false);
                 setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
                 setPomSnapshotOrders([]);
-                toast.warning("Müddət bitdi — pending qala bilər, bir az sonra yenidən cəhd edin");
+                toast.warning(t("muddet_bitdi_pending_qala_biler_bir_az_sonra_yeniden_cehd_edin"));
                 return;
             }
             pomPollTimeoutRef.current = setTimeout(poll, 2000);
@@ -346,7 +347,7 @@ const StatusModal = ({ show, onHide }) => {
                 window.electronAPI.getSyncStatus().then(setSyncStatus).catch(() => {});
             }
         } catch (e) {
-            toast.error("Təmizləmə xətası");
+            toast.error(t("temizleme_xetasi"));
         } finally {
             setIsClearing(false);
         }
@@ -423,7 +424,7 @@ const StatusModal = ({ show, onHide }) => {
                                         <span className="value">{localIp}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Tətbiq versiyası:</span>
+                                        <span className="label">{t("tetbiq_versiyasi")}</span>
                                         <span className="value">{appVersion ? `v${appVersion}` : "..."}</span>
                                     </div>
                                     <div className="info-item">
@@ -446,7 +447,7 @@ const StatusModal = ({ show, onHide }) => {
                                         <span className="value">{formatDate(syncStatus.lastSyncTime || terminal.last_sync)}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">Terminal versiyası:</span>
+                                        <span className="label">{t("terminal_versiyasi")}</span>
                                         <span className="value">{appVersion ? `T${appVersion}` : (terminal.version || "...")}</span>
                                     </div>
                                 </div>
@@ -454,9 +455,9 @@ const StatusModal = ({ show, onHide }) => {
 
                             {/* Yaddaş istifadəsi (Disk C:) */}
                             <div className="status-card memory-usage">
-                                <h6>Yaddaş istifadəsi (C:)</h6>
+                                <h6>{t("yaddas_istifadesi_c")}</h6>
                                 <div className="memory-info">
-                                    <span>İstifadə olunan</span>
+                                    <span>{t("i̇stifade_olunan")}</span>
                                     <span>{diskUsage.used} GB / {diskUsage.total} GB</span>
                                 </div>
                                 <ProgressBar
@@ -467,7 +468,7 @@ const StatusModal = ({ show, onHide }) => {
 
                             {/* Şəbəkə statusu */}
                             <div className="status-card network-status">
-                                <h6>Şəbəkə statusu</h6>
+                                <h6>{t("sebeke_statusu")}</h6>
                                 <div className="status-list">
                                     <div className="status-row">
                                         <span className={`sys-status-dot ${networkStatus.modem ? 'green' : 'red'}`}></span>
@@ -475,7 +476,7 @@ const StatusModal = ({ show, onHide }) => {
                                     </div>
                                     <div className="status-row">
                                         <span className={`sys-status-dot ${networkStatus.internet ? 'green' : 'red'}`}></span>
-                                        <span>İnternet</span>
+                                        <span>{t("i̇nternet")}</span>
                                     </div>
                                     <div className="status-row">
                                         <span className={`sys-status-dot ${!isMasterSlaveActive || isSocketConnected ? 'green' : 'red'}`}></span>
@@ -493,7 +494,7 @@ const StatusModal = ({ show, onHide }) => {
                                     </div>
                                     {syncStatus.lastSyncError ? (
                                         <div className="sync-last-error-hint" title={syncStatus.lastSyncError}>
-                                            <div className="sync-last-error-title">Son avto-sync xətası</div>
+                                            <div className="sync-last-error-title">{t("son_avtosync_xetasi")}</div>
                                             <div className="sync-last-error-meta">
                                                 {syncStatus.lastSyncErrorAt
                                                     ? formatDate(syncStatus.lastSyncErrorAt)
@@ -519,7 +520,7 @@ const StatusModal = ({ show, onHide }) => {
                             <div className="status-card devices-card">
                                 <div className="card-header">
                                     <i className="bi bi-database icon-main"></i>
-                                    <h6>Qoşulu Cihazlar</h6>
+                                    <h6>{t("qosulu_cihazlar")}</h6>
                                 </div>
 
                                 <div className="devices-items-container full-width">
@@ -541,7 +542,7 @@ const StatusModal = ({ show, onHide }) => {
                                                     </div>
                                                     <i
                                                         className="bi bi-arrow-repeat device-sync-icon"
-                                                        title="Printer statusunu yenilə"
+                                                        title={t("printer_statusunu_yenile")}
                                                         onClick={refreshPrinterDiagnostics}
                                                     ></i>
                                                 </div>
@@ -564,7 +565,7 @@ const StatusModal = ({ show, onHide }) => {
                                     })}
 
                                     {printers.length === 0 && (
-                                        <div className="no-devices">Printer tapılmadı</div>
+                                        <div className="no-devices">{t("printer_tapilmadi")}</div>
                                     )}
                                 </div>
                             </div>
@@ -590,8 +591,8 @@ const StatusModal = ({ show, onHide }) => {
                 {pomSyncPhase === "success" ? (
                     <div className="pom-success-simple">
                         <i className="bi bi-check-circle-fill pom-success-simple-icon" aria-hidden="true" />
-                        <p className="pom-success-simple-title">Uğurla sinxronlaşdı</p>
-                        <p className="pom-success-simple-hint">Bağlanır…</p>
+                        <p className="pom-success-simple-title">{t("ugurla_sinxronlasdi")}</p>
+                        <p className="pom-success-simple-hint">{t("baglanir…")}</p>
                     </div>
                 ) : (
                     <>
@@ -601,7 +602,7 @@ const StatusModal = ({ show, onHide }) => {
                         <div className="pom-icon">
                             <i className="bi bi-clock-history" />
                         </div>
-                        <span className="pom-title">Gözləyən sifarişlər</span>
+                        <span className="pom-title">{t("gozleyen_sifarisler")}</span>
                         <span className="pom-badge-count">{pendingDetails?.count ?? visiblePomRows.length}</span>
                     </div>
                     <button
@@ -630,12 +631,12 @@ const StatusModal = ({ show, onHide }) => {
                     {pomShowEmptyIdle ? (
                         <div className="pom-empty">
                             <i className="bi bi-check-circle-fill" />
-                            <span>Gözləyən sifariş yoxdur</span>
+                            <span>{t("gozleyen_sifaris_yoxdur")}</span>
                         </div>
                     ) : visiblePomRows.length === 0 && pomSyncActive && pomSyncPhase === "running" ? (
                         <div className="pom-empty pom-empty-wait">
                             <span className="pom-sync-spinner pom-sync-spinner-lg" aria-hidden="true" />
-                            <span>Sətirlər yenilənir…</span>
+                            <span>{t("setirler_yenilenir…")}</span>
                         </div>
                     ) : (
                         visiblePomRows.map((o) => {
@@ -677,13 +678,11 @@ const StatusModal = ({ show, onHide }) => {
                                         )}
                                         {merged.is_synced === 2 && (
                                             <span className="pom-tag orange">
-                                                <i className="bi bi-exclamation-circle" /> Buraxılıb
-                                            </span>
+                                                <i className="bi bi-exclamation-circle" />{t("buraxilib")}</span>
                                         )}
                                         {!merged.is_deleted && merged.is_synced !== 2 && (
                                             <span className="pom-tag blue">
-                                                <i className="bi bi-hourglass-split" /> Gözləyir
-                                            </span>
+                                                <i className="bi bi-hourglass-split" />{t("gozleyir")}</span>
                                         )}
                                         <span className="pom-time">{timeStr}</span>
                                     </div>
@@ -700,9 +699,7 @@ const StatusModal = ({ show, onHide }) => {
                         className="pom-btn cancel"
                         onClick={() => setShowPendingDetails(false)}
                         disabled={pomCloseDisabled}
-                    >
-                        Bağla
-                    </button>
+                    >{t("bagla")}</button>
                     <div className="pom-footer-right">
                         <button
                             type="button"

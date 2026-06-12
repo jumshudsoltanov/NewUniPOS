@@ -14,6 +14,8 @@ import apiConfig, { TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 import { sumOrderItemsLinesTotal, getOrderItemLineTotal, buildFiscalLineItemsFromOrderItems, mapOrderPaymentForTax, computeFiscalCheckTotalsFromOrder } from "../../utils/orderItemLineTotal";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 
 const getTaxConfigId = (c) => c?.id ?? (c?.ip_addr && c?.port_addr
     ? Math.abs((c.ip_addr + ':' + c.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
@@ -149,7 +151,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             onClose();
         } catch (error) {
             console.error("Çek yenidən açma xətası:", error);
-            toast.error("Xəta baş verdi");
+            toast.error(t("error_occurred"));
         }
     };
 
@@ -194,7 +196,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 loginedWaiter,
             });
             if (result.success) {
-                toast.success("Çek çap edildi");
+                toast.success(t("cek_cap_edildi"));
 
                 // Log print event
                 dispatch(saveLog({
@@ -206,7 +208,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             }
         } catch (error) {
             console.error("Print error:", error);
-            toast.error("Çap zamanı xəta baş verdi");
+            toast.error(t("cap_zamani_xeta_bas_verdi"));
         } finally {
             setIsPrinting(false);
         }
@@ -219,14 +221,14 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         if (taxLoading || !order || taxConfigs.length === 0) return;
 
         if (!order.fiscal_id) {
-            toast.error('Bu çekin fiskal ID-si yoxdur. Geri qaytarma mümkün deyil.');
+            toast.error(t("bu_cekin_fiskal_idsi_yoxdur_geri_qaytarma_mumkun_deyil"));
             return;
         }
 
         // Yalnız orijinal satışın edildiyi cihaza göndər – digər kassalar müstəqil qalır
         const targetConfig = taxConfigs.find((c) => taxConfigRowMatchesOrderCashId(c, order.tax_cash_id));
         if (!targetConfig) {
-            toast.error('Bu çekin vergi kassası tapılmadı. Geri qaytarma yalnız orijinal kassaya göndərilə bilər.');
+            toast.error(t("bu_cekin_vergi_kassasi_tapilmadi_geri_qaytarma_yalniz_orijinal_kassaya_gonderile_biler"));
             return;
         }
         const configsToSend = [targetConfig];
@@ -266,7 +268,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 }
             }, { timeout: TAX_HTTP_TIMEOUT_MS });
             if (result.data?.success) {
-                toast.success('Vergi geri qaytarma uğurlu');
+                toast.success(t("vergi_geri_qaytarma_ugurlu"));
                 dispatch(saveLog({
                     orderId: order.uuid,
                     action: 'Vergi geri qaytarma',
@@ -274,7 +276,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     details: 'Fiskal cihazdan geri qaytarma'
                 }));
             } else {
-                toast.error('Vergi geri qaytarma xətası');
+                toast.error(t("vergi_geri_qaytarma_xetasi"));
             }
         } catch (error) {
             console.error('Tax moneyback error:', error);
@@ -298,7 +300,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
         const targetConfig = taxConfigs.find((c) => taxConfigRowMatchesOrderCashId(c, order.tax_cash_id));
         if (!targetConfig) {
-            toast.error('Bu çekin vergi kassası tapılmadı. Təkrar çap yalnız orijinal kassadan edilə bilər.');
+            toast.error(t("bu_cekin_vergi_kassasi_tapilmadi_tekrar_cap_yalniz_orijinal_kassadan_edile_biler"));
             return;
         }
         const configsToSend = [targetConfig];
@@ -311,7 +313,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 fiscalId: order.fiscal_id || ''
             }, { timeout: TAX_HTTP_TIMEOUT_MS });
             if (result.data?.success) {
-                toast.success('Vergi çeki təkrar çap edildi');
+                toast.success(t("vergi_ceki_tekrar_cap_edildi"));
                 dispatch(saveLog({
                     orderId: order.uuid,
                     action: 'Vergi təkrar çap',
@@ -319,7 +321,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     details: 'Fiskal çek təkrar çap edildi'
                 }));
             } else {
-                toast.error('Vergi təkrar çap xətası');
+                toast.error(t("vergi_tekrar_cap_xetasi"));
             }
         } catch (error) {
             console.error('Tax receipt copy error:', error);
@@ -350,12 +352,12 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 return item;
             });
             if (items.length === 0) {
-                toast.error("Fiskal satış üçün məhsul siyahısı boşdur.");
+                toast.error(t("fiskal_satis_ucun_mehsul_siyahisi_bosdur"));
                 return null;
         }
         const payments = (order.order_payments || []).map(mapOrderPaymentForTax);
         if (payments.length === 0) {
-            toast.error("Ödəniş məlumatı yoxdur — fiskal satış göndərilmədi.");
+            toast.error(t("odenis_melumati_yoxdur_fiskal_satis_gonderilmedi"));
             return null;
         }
         const ft = computeFiscalCheckTotalsFromOrder(order);
@@ -427,7 +429,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             const results = result.data?.results || [];
             const successCount = results.filter((r) => r.success).length;
             if (successCount > 0) {
-                toast.success("Vergi satışı təkrar göndərildi");
+                toast.success(t("vergi_satisi_tekrar_gonderildi"));
                 const firstSuccess = results.find((r) => r.success && r.data);
                 if (firstSuccess?.data) {
                     const fd = firstSuccess.data;
@@ -544,8 +546,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 gap: '6px'
                             }}
                         >
-                            <i className="bi bi-receipt"></i> Vergi Çap
-                        </button>
+                            <i className="bi bi-receipt"></i>{t("vergi_cap")}</button>
                         <button
                             type="button"
                             onClick={handleTaxResendSaleClick}
@@ -565,8 +566,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 gap: '6px'
                             }}
                         >
-                            <i className="bi bi-arrow-repeat"></i> Təkrar vergiyə göndər
-                        </button>
+                            <i className="bi bi-arrow-repeat"></i>{t("tekrar_vergiye_gonder")}</button>
                         <button
                             onClick={handleTaxMoneyBack}
                             disabled={taxLoading}
@@ -596,15 +596,11 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                             <div
                                 className={`mobile-tab-item flex-grow-1 text-center py-3 ${mobileActiveTab === 'info' ? 'active' : ''}`}
                                 onClick={() => setMobileActiveTab('info')}
-                            >
-                                Məlumat
-                            </div>
+                            >{t("melumat")}</div>
                             <div
                                 className={`mobile-tab-item flex-grow-1 text-center py-3 ${mobileActiveTab === 'items' ? 'active' : ''}`}
                                 onClick={() => setMobileActiveTab('items')}
-                            >
-                                Sifariş
-                            </div>
+                            >{t("order")}</div>
                             <div
                                 className={`mobile-tab-item flex-grow-1 text-center py-3 ${mobileActiveTab === 'history' ? 'active' : ''}`}
                                 onClick={() => setMobileActiveTab('history')}
@@ -629,7 +625,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 </svg>
                                             </div>
                                             <div className="meta-content-col">
-                                                <div className="meta-label">AÇILDI</div>
+                                                <div className="meta-label">{t("acildi")}</div>
                                                 <div className="meta-value">{formatFullDateTime(order.start_date)}</div>
                                                 <div className="meta-sub text-muted">ID:{order.waiter_id}</div>
                                             </div>
@@ -663,7 +659,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 </svg>
                                             </div>
                                             <div className="meta-content-col">
-                                                <div className="meta-label">SATIŞ ÜSULU</div>
+                                                <div className="meta-label">{t("satis_usulu")}</div>
                                                 <div className="meta-value">
                                                     {(() => {
                                                         if (!order.sale_type) return "Naməlum";
@@ -682,7 +678,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 </svg>
                                             </div>
                                             <div className="meta-content-col">
-                                                <div className="meta-label">OFİSİANT</div>
+                                                <div className="meta-label">{t("ofi̇si̇ant")}</div>
                                                 <div className="meta-value">{order.waiter?.name || "Naməlum"}</div>
                                             </div>
                                         </div>
@@ -717,7 +713,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 </svg>
                                             </div>
                                             <div className="meta-content-col">
-                                                <div className="meta-label">ÖDƏNİŞ ÜSULU</div>
+                                                <div className="meta-label">{t("odeni̇s_usulu")}</div>
                                                 <div className="meta-value">
                                                     {order.status === 3 ? (
                                                         <span className="text-danger">Silinib</span>
@@ -744,8 +740,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                     </svg>
                                                 </div>
                                                 <div className="meta-content-col">
-                                                    <div className="meta-label" style={{ color: '#10b981' }}>VERGİ ÇEKİ</div>
-                                                    <div className="meta-value" style={{ color: '#10b981' }}>Fiskal çek kəsilib</div>
+                                                    <div className="meta-label" style={{ color: '#10b981' }}>{t("vergi̇_ceki̇")}</div>
+                                                    <div className="meta-value" style={{ color: '#10b981' }}>{t("fiskal_cek_kesilib")}</div>
                                                     {order.fiscal_id && (
                                                         <div className="meta-sub text-muted" style={{ fontSize: '11px', wordBreak: 'break-all' }}>
                                                             ID: {order.fiscal_short_id || order.fiscal_id}
@@ -758,15 +754,13 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 ) : (
                                     <div className="history-section bg-white p-0">
                                         <div className="history-filter-bar p-3 px-4">
-                                            <div className="filter-label mb-2 text-muted" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                FİLTRLƏ:
-                                            </div>
+                                            <div className="filter-label mb-2 text-muted" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t("fi̇ltrle")}</div>
                                             <Form.Select
                                                 value={logFilter}
                                                 onChange={(e) => setLogFilter(e.target.value)}
                                                 className="history-filter-select shadow-none"
                                             >
-                                                <option value="all">Siyahı (Hamısı)</option>
+                                                <option value="all">{t("siyahi_hamisi")}</option>
                                                 {logTypes.map((type, idx) => (
                                                     <option key={idx} value={type}>{type}</option>
                                                 ))}
@@ -776,7 +770,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                         <div className="history-timeline-container overflow-auto" style={{ maxHeight: isMobileSize ? 'none' : '460px', scrollbarWidth: 'thin' }}>
                                             <div style={{ padding: '16px 20px' }}>
                                                 {filteredLogs.length === 0 ? (
-                                                    <div className="text-center py-5 text-muted">Hərəkət tapılmadı</div>
+                                                    <div className="text-center py-5 text-muted">{t("hereket_tapilmadi")}</div>
                                                 ) : (
                                                     filteredLogs.map((log, idx) => (
                                                         <div key={idx} style={{ display: 'flex', gap: '14px' }}>
@@ -831,8 +825,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             <tr>
                                                 <th className="text-muted fw-normal">Ad</th>
                                                 <th className="text-muted fw-normal">Miq</th>
-                                                <th className="text-muted fw-normal">Qiymət</th>
-                                                <th className="text-muted fw-normal text-end">Cəm</th>
+                                                <th className="text-muted fw-normal">{t("qiymet")}</th>
+                                                <th className="text-muted fw-normal text-end">{t("cem")}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -855,7 +849,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                                         <span key={mi} className="check-detail-modifier-tag">
                                                                             {m.name || "—"}
                                                                             {mc > 1 ? ` (x${mc})` : ""}{" "}
-                                                                            +{mline.toFixed(2)}₼
+                                                                            +{formatPrice(mline)}
                                                                         </span>
                                                                     );
                                                                 })}
@@ -874,7 +868,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
                                 <div className="summary-section mt-auto">
                                     <div className="summary-row d-flex justify-content-between mb-2">
-                                        <span className="summary-label text-muted">Cəm:</span>
+                                        <span className="summary-label text-muted">{t("cem_1")}</span>
                                         <span className="summary-value fw-bold">{(subtotal || 0).toFixed(2)} ₼</span>
                                     </div>
 
@@ -903,7 +897,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
                                     {Number(order.delivery_fee || 0) > 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
-                                            <span className="summary-label text-muted">Çatdırılma:</span>
+                                            <span className="summary-label text-muted">{t("catdirilma")}</span>
                                             <span className="summary-value fw-bold">{Number(order.delivery_fee).toFixed(2)} ₼</span>
                                         </div>
                                     )}
@@ -953,8 +947,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 }}
                                 style={{ backgroundColor: "#f39c12", color: "#fff" }}
                             >
-                                <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i> ÇEKİ QAYTAR
-                            </Button>
+                                <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i>{t("ceki̇_qaytar")}</Button>
                             <Button
                                 variant="primary"
                                 className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
@@ -964,13 +957,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                             >
                                 {isPrinting ? (
                                     <>
-                                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-                                        ÇAP...
-                                    </>
+                                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>{t("cap_1")}</>
                                 ) : (
                                     <>
-                                        <i className="bi bi-printer me-2 fs-5"></i> ÇAP
-                                    </>
+                                        <i className="bi bi-printer me-2 fs-5"></i>{t("cap")}</>
                                 )}
                             </Button>
 
@@ -996,8 +986,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 <i className="bi bi-receipt"></i>
                             </div>
                             <div>
-                                <div className="customers-modal-title">Kassa seçimi</div>
-                                <div style={{ fontSize: "12px", fontWeight: 500, opacity: 0.92, marginTop: "2px" }}>Təkrar vergi satışı</div>
+                                <div className="customers-modal-title">{t("kassa_secimi")}</div>
+                                <div style={{ fontSize: "12px", fontWeight: 500, opacity: 0.92, marginTop: "2px" }}>{t("tekrar_vergi_satisi")}</div>
                             </div>
                         </div>
                         <button type="button" className="btn-close-custom" disabled={taxLoading} onClick={() => setShowTaxResendModal(false)} aria-label="Bağla">
@@ -1010,10 +1000,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
                     <div className="tax-kassa-modal-body-inner">
                         <div className="tax-kassa-modal-intro">
-                            <p className="tax-kassa-modal-intro-title">Hansı vergi kassasına göndərmək istəyirsiniz?</p>
-                            <p className="tax-kassa-modal-intro-sub">
-                                Seçdiyiniz cihazda yeni fiskal satış əməliyyatı başlayacaq. Əvvəl bu çekdə istifadə olunan kassa xüsusi işarələnib.
-                            </p>
+                            <p className="tax-kassa-modal-intro-title">{t("hansi_vergi_kassasina_gondermek_isteyirsiniz")}</p>
+                            <p className="tax-kassa-modal-intro-sub">{t("secdiyiniz_cihazda_yeni_fiskal_satis_emeliyyati_baslayacaq_evvel_bu_cekde_istifade_olunan_kassa_xususi_isarelenib")}</p>
                         </div>
                         <div className="tax-kassa-modal-list-wrap">
                             <div className="d-flex flex-column gap-3">
@@ -1056,7 +1044,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                     {tax.ip_addr}:{tax.port_addr}
                                                 </span>
                                                 {isOriginal && (
-                                                    <span className="tax-kassa-row-badge">Bu çekdə fiskal bu kassada</span>
+                                                    <span className="tax-kassa-row-badge">{t("bu_cekde_fiskal_bu_kassada")}</span>
                                                 )}
                                             </div>
                                             <div className="tax-kassa-row-chevron">
@@ -1073,9 +1061,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 className="btn-imtina"
                                 disabled={taxLoading}
                                 onClick={() => setShowTaxResendModal(false)}
-                            >
-                                İmtina
-                            </button>
+                            >{t("i̇mtina")}</button>
                         </div>
                     </div>
                 </div>
@@ -1089,7 +1075,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 order={order}
                 tagsType={5} // Return reasons
                 actionName="Aç"
-                title="Çeki qaytarma səbəbi"
+                title={t("ceki_qaytarma_sebebi")}
             />
         </>
     );

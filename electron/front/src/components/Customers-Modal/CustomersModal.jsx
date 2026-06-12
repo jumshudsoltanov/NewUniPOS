@@ -13,6 +13,7 @@ import {
 import { saveLog, deleteCheck, updateGuestCountOrder } from "../../redux/Slices/OrdersSlice";
 import { addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { preloadCheck } from "../../utils/preloadCheck";
+import { t } from "../../utils/translations";
 
 const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
   const [guestCount, setGuestCount] = useState("0");
@@ -222,7 +223,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
             <div className="customers-icon-circle">
               <i className="bi bi-people-fill"></i>
             </div>
-            <div className="customers-modal-title">Qonaq sayı</div>
+            <div className="customers-modal-title">{t("guest_count")}</div>
           </div>
           <button className="btn-close-custom" onClick={handleCancel}>
             <svg
@@ -292,14 +293,10 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
                   className="spinner-border spinner-border-sm me-2"
                   role="status"
                   aria-hidden="true"
-                ></span>
-                Yaradılır...
-              </>
+                ></span>{t("yaradilir")}</>
             ) : (
               <>
-                <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>
-                Təsdiqlə
-              </>
+                <i className="bi bi-check2 me-2" style={{ fontSize: '1.5rem' }}></i>{t("tesdiqle")}</>
             )}
           </button>
         </div>

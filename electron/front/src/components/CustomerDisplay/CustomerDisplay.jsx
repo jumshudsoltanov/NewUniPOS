@@ -4,6 +4,8 @@ import "./CustomerDisplay.css";
 import uniposLogo from "../../assets/images/unipos_logo.png";
 import CD_BG from "../../assets/images/PinContainerImagesDefault.jpg";
 import { getCustomerFacingServiceFeeLabel } from "../../utils/posOperationNames";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 
 const CustomerDisplay = () => {
     const [orderData, setOrderData] = useState({ items: [], total: 0, received: 0, change: 0 });
@@ -197,9 +199,7 @@ const CustomerDisplay = () => {
                         </h1>
                     </div>
 
-                    <p className="cd-sub-msg">
-                        UniPOS Tech ilə hər şey daha asan
-                    </p>
+                    <p className="cd-sub-msg">{t("unipos_tech_ile_her_sey_daha_asan")}</p>
                 </div>
             </div>
 
@@ -207,7 +207,7 @@ const CustomerDisplay = () => {
             <div className="cd-right-panel">
                 <div className="cd-header">
                     <div className="cd-header-main">
-                        <div className="cd-order-title">Sifarişiniz</div>
+                        <div className="cd-order-title">{t("sifarisiniz")}</div>
                         <div className="cd-order-details-grid">
                             {orderData?.table_name && (
                                 <div className="cd-order-detail-item">
@@ -216,7 +216,7 @@ const CustomerDisplay = () => {
                                 </div>
                             )}
                             <div className="cd-order-detail-item">
-                                <span className="label">Çek:</span>
+                                <span className="label">{t("cek_1")}</span>
                                 <span className="value">#{orderData?.check_id || "---"}</span>
                             </div>
                             <div className="cd-order-detail-item">
@@ -247,16 +247,16 @@ const CustomerDisplay = () => {
 
                 <div className="cd-item-list-container">
                     <div className="cd-item-list-header">
-                        <div className="header-col col-product">Məhsul</div>
+                        <div className="header-col col-product">{t("product")}</div>
                         <div className="header-col col-qty">Say</div>
-                        <div className="header-col col-total">Cəm</div>
+                        <div className="header-col col-total">{t("cem")}</div>
                     </div>
 
                     <div className="cd-item-list">
                         {!orderData || !orderData.items || orderData.items.length === 0 ? (
                             <div className="cd-empty-state">
                                 <i className="bi bi-cart3"></i>
-                                <h3>Səbət boşdur</h3>
+                                <h3>{t("sebet_bosdur")}</h3>
                             </div>
                         ) : (
                             orderData.items.map((item, index) => {
@@ -290,7 +290,7 @@ const CustomerDisplay = () => {
                                                     </div>
                                                 )}
                                                 {itemDiscountAmount > 0 && (
-                                                    <div className="item-discount">Endirim: -{itemDiscountAmount.toFixed(2)} ₼</div>
+                                                    <div className="item-discount">Endirim: -{formatPrice(itemDiscountAmount)}</div>
                                                 )}
                                             </div>
                                         </div>
@@ -312,34 +312,34 @@ const CustomerDisplay = () => {
 
                 <div className="cd-totals-section">
                     <div className="cd-total-row">
-                        <span>Ara Cəmi:</span>
-                        <span>{totals.subtotal.toFixed(2)} ₼</span>
+                        <span>{t("ara_cemi")}</span>
+                        <span>{formatPrice(totals.subtotal)}</span>
                     </div>
 
                     {totals.totalDiscount > 0 && (
                         <div className="cd-total-row discount">
                             <span>Endirim:</span>
-                            <span>-{totals.totalDiscount.toFixed(2)} ₼</span>
+                            <span>-{formatPrice(totals.totalDiscount)}</span>
                         </div>
                     )}
 
                     {totals.serviceCharge > 0 && (
                         <div className="cd-total-row">
                             <span>{getCustomerFacingServiceFeeLabel()}:</span>
-                            <span>{totals.serviceCharge.toFixed(2)} ₼</span>
+                            <span>{formatPrice(totals.serviceCharge)}</span>
                         </div>
                     )}
 
                     {totals.deposit > 0 && totals.isDepositFloor && (
                         <div className="cd-total-row">
                             <span>Depozit:</span>
-                            <span>{totals.deposit.toFixed(2)} ₼</span>
+                            <span>{formatPrice(totals.deposit)}</span>
                         </div>
                     )}
 
                     <div className="cd-grand-total">
-                        <span className="label">Ödəniləcək Məbləğ:</span>
-                        <span className="amount">{totals.grandTotal.toFixed(2)} ₼</span>
+                        <span className="label">{t("odenilecek_mebleg")}</span>
+                        <span className="amount">{formatPrice(totals.grandTotal)}</span>
                     </div>
                 </div>
             </div>

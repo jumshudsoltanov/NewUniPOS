@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
+import { t } from "../../utils/translations";
+import { formatPrice } from "../../utils/formatPrice";
 import "../DiscountModal/DiscountModal.css";
 import "./SplitTableSelect.css";
 
@@ -59,7 +61,7 @@ const SplitTableSelect = ({ show, onClose, onSelect }) => {
                                 <rect x="3" y="14" width="7" height="7" rx="1" />
                                 <rect x="14" y="14" width="7" height="7" rx="1" />
                             </svg>
-                            <span className="split-ts-title">Masa seç</span>
+                            <span className="split-ts-title">{t("masa_sec")}</span>
                         </div>
                         <button type="button" className="split-ts-close-btn" onClick={onClose}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
@@ -102,7 +104,7 @@ const SplitTableSelect = ({ show, onClose, onSelect }) => {
                                     >
                                         <span className="split-ts-name">{table.number || table.name}</span>
                                         {hasOrders && amount != null && (
-                                            <span className="split-ts-amount">{amount.toFixed(2)} ₼</span>
+                                            <span className="split-ts-amount">{formatPrice(amount)}</span>
                                         )}
                                         {hasOrders && orders[0]?.waiter?.name && (
                                             <span className="split-ts-waiter">{orders[0].waiter.name}</span>

@@ -24,6 +24,7 @@ import { getNotifications } from "../../utils/notificationService";
 import { toast } from "sonner";
 import { setSelectedRoomGroupId, setSelectedFloor, setSelectedRoomType, setSearchText, clearFilters, fetchRoomGroups } from "../../redux/Slices/HotelSlice";
 import BookingsModal from "../Rooms/BookingsModal";
+import { t } from "../../utils/translations";
 
 const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNewOrder }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -327,9 +328,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                       className={`hall-btn ${selectedRoomGroupId === null ? "active" : ""}`}
                       onClick={() => dispatch(setSelectedRoomGroupId(null))}
                       style={{ cursor: 'pointer' }}
-                    >
-                      Hamısı
-                    </li>
+                    >{t("all")}</li>
                     {[...roomGroups]
                       .sort((a, b) => (a.ordering ?? 999) - (b.ordering ?? 999))
                       .map((group) => (
@@ -479,18 +478,18 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                   <button
                     className="create-order-btn small-btn hotel-header-btn"
                     onClick={() => setShowBookingsModal(true)}
-                    title="Rezervasiyalar">
+                    title={t("reservations")}>
                     <i className="bi bi-journal-text" style={{ fontSize: "16px" }}></i>
-                    <span className="d-none d-xl-inline">Rezervasiyalar</span>
+                    <span className="d-none d-xl-inline">{t("reservations")}</span>
                   </button>
 
                   <div className="tools-divider"></div>
                   <button
                     className="create-order-btn small-btn hotel-header-btn"
                     onClick={() => navigate("/checks")}
-                    title="Çeklər">
+                    title={t("checks")}>
                     <i className="bi bi-receipt" style={{ fontSize: "16px" }}></i>
-                    <span className="d-none d-xl-inline">Çeklər</span>
+                    <span className="d-none d-xl-inline">{t("checks")}</span>
                   </button>
                 </>
               ) : (
@@ -505,7 +504,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                       if (onBeforeNewOrder) {
                         await onBeforeNewOrder();
                       } else if (location.pathname.startsWith("/check/") && (pendingProducts?.length > 0 || pendingDeletions?.length > 0)) {
-                        toast.warning("Əvvəlcə mövcud məhsulları göndərin (\"Göndər\" düyməsi), sonra yeni sifariş yaradın.");
+                        toast.warning(t("evvelce_movcud_mehsullari_gonderin__gonder__duymesi_sonra_yeni_sifaris_yaradin"));
                         return;
                       }
                       const guard = await checkShiftGuard(loginedProfileData);
@@ -531,7 +530,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                         strokeLinejoin="round"
                       />
                     </svg>
-                    <span className="d-none d-xl-inline">Yeni sifariş</span>
+                    <span className="d-none d-xl-inline">{t("new_order")}</span>
                   </button>
                 </>
               )}
@@ -557,7 +556,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                     style={{ cursor: "pointer" }}
                     onClick={() => navigate("/checks")}
                   >
-                    <span className="d-none d-xl-inline">Çeklər</span>
+                    <span className="d-none d-xl-inline">{t("checks")}</span>
                     <svg
                       className="d-xl-none"
                       width="22"
@@ -736,9 +735,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
               <button
                 className={`mobile-tab-btn ${selectedRoomGroupId === null ? "active" : ""}`}
                 onClick={() => dispatch(setSelectedRoomGroupId(null))}
-              >
-                Hamısı
-              </button>
+              >{t("all")}</button>
               {[...roomGroups]
                 .sort((a, b) => (a.ordering ?? 999) - (b.ordering ?? 999))
                 .map((group) => (

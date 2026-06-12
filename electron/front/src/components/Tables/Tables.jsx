@@ -30,6 +30,7 @@ import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 import { normalizeTableShape } from "../../utils/tableShape";
 import axios from "../../utils/apiConfig";
+import { t } from "../../utils/translations";
 
 /** Kanvas (layout) üçün forma əsaslı default en/hünd. — bilyar eni geniş, alçaq */
 const defaultSizeForTableShape = (rawShape) => {
@@ -325,7 +326,7 @@ const Tables = () => {
         Number(loginedWaiter?.data?.can_access_own_checks_only) === 0 &&
         isOtherTable
       ) {
-        toast.error("İcazəniz yoxdur: Bu masa başqa ofisianta aiddir.");
+        toast.error(t("no_permission_other_waiter"));
         return;
       }
 
@@ -372,11 +373,11 @@ const Tables = () => {
             }),
           ).unwrap();
 
-          toast.success("Masa uğurla dəyişdirildi");
+          toast.success(t("table_changed_success"));
           dispatch(getTableGroups(loginedProfileData.data.profile.id));
           navigate(`/check/${id}?tableId=${table?.id}`);
         } catch (error) {
-          toast.error("Xəta baş verdi");
+          toast.error(t("error_occurred"));
           console.error(error);
         }
         return;
@@ -485,10 +486,10 @@ const Tables = () => {
               })();
             } catch (e) {
               console.error("Order yaratma xetasi:", e);
-              toast.error("Sifariş yaratmaq mümkün olmadı");
+              toast.error(t("order_create_failed"));
             }
           } else {
-            toast.error("Məlumat çatışmır, zəhmət olmasa səhifəni yeniləyin.");
+            toast.error(t("data_missing_refresh"));
           }
         } else {
           setSelectedTable(table);
@@ -806,10 +807,7 @@ const Tables = () => {
     return (
       <Container className="mt-4">
         <Alert variant="warning" className="text-center shadow-sm border-0">
-          <i className="bi bi-exclamation-triangle-fill me-2"></i>
-          Daxil etdiyiniz zalda aktiv masa tapılmadı. Zəhmət olmasa başqa zal
-          seçin və ya admin panelindən masalar əlavə edin.
-        </Alert>
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>{t("daxil_etdiyiniz_zalda_aktiv_masa_tapilmadi_zehmet_olmasa_basqa_zal_secin_ve_ya_admin_panelinden_masalar_elave_edin")}</Alert>
       </Container>
     );
   }
@@ -1085,7 +1083,7 @@ const Tables = () => {
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>En (px)</div>
+                    <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>{t("width_px")}</div>
                     <input
                       type="number"
                       value={singleW}
@@ -1104,7 +1102,7 @@ const Tables = () => {
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>Hündürlük (px)</div>
+                    <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>{t("height_px")}</div>
                     <input
                       type="number"
                       value={singleH}
@@ -1134,23 +1132,17 @@ const Tables = () => {
                     padding: "6px 10px",
                   }}
                 >
-                  <i className="bi bi-check-lg me-1"></i>
-                  Tətbiq et
-                </button>
+                  <i className="bi bi-check-lg me-1"></i>{t("apply")}</button>
                 <div style={{ borderTop: "1px solid #e5e7eb", margin: "2px 0" }} />
               </>
             ) : (
-              <div style={{ fontSize: "12px", color: "#9ca3af", textAlign: "center" }}>
-                Masanı seçmək üçün tıklayın
-              </div>
+              <div style={{ fontSize: "12px", color: "#9ca3af", textAlign: "center" }}>{t("select_table")}</div>
             )}
             <div style={{ fontWeight: 700, fontSize: "13px", color: "#053796" }}>
-              <i className="bi bi-grid-3x3-gap-fill me-1"></i>
-              Toplu tənzimləmə
-            </div>
+              <i className="bi bi-grid-3x3-gap-fill me-1"></i>{t("bulk_adjust")}</div>
             <div style={{ display: "flex", gap: "8px" }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>En (px)</div>
+                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>{t("width_px")}</div>
                 <input
                   type="number"
                   value={bulkW}
@@ -1167,7 +1159,7 @@ const Tables = () => {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>Hündürlük (px)</div>
+                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>{t("height_px")}</div>
                 <input
                   type="number"
                   value={bulkH}
@@ -1195,9 +1187,7 @@ const Tables = () => {
                 padding: "6px 10px",
               }}
             >
-              <i className="bi bi-arrows-fullscreen me-1"></i>
-              Hamısına tətbiq et
-            </button>
+              <i className="bi bi-arrows-fullscreen me-1"></i>{t("apply_all")}</button>
             <button
               className="btn btn-sm"
               onClick={handleAutoArrange}
@@ -1209,9 +1199,7 @@ const Tables = () => {
                 padding: "6px 10px",
               }}
             >
-              <i className="bi bi-layout-wtf me-1"></i>
-              Avtomatik sırala
-            </button>
+              <i className="bi bi-layout-wtf me-1"></i>{t("auto_arrange")}</button>
             <button
               className="btn btn-sm"
               onClick={() => dispatch(clearHallLayout(currentHallId))}
@@ -1223,9 +1211,7 @@ const Tables = () => {
                 padding: "6px 10px",
               }}
             >
-              <i className="bi bi-arrow-counterclockwise me-1"></i>
-              Hamısını sıfırla
-            </button>
+              <i className="bi bi-arrow-counterclockwise me-1"></i>{t("reset_all")}</button>
           </div>
         )}
 
@@ -1248,7 +1234,7 @@ const Tables = () => {
                 style={{ borderRadius: "50px", padding: "10px 20px" }}
               >
                 <i className="bi bi-x-lg"></i>
-                <span className="d-none d-md-inline">Ləğv et</span>
+                <span className="d-none d-md-inline">{t("cancel")}</span>
               </button>
               <button
                 className="btn btn-success d-flex align-items-center gap-2 shadow-lg"
@@ -1256,7 +1242,7 @@ const Tables = () => {
                 style={{ borderRadius: "50px", padding: "10px 20px" }}
               >
                 <i className="bi bi-check-lg"></i>
-                <span className="d-none d-md-inline">Yadda saxla</span>
+                <span className="d-none d-md-inline">{t("save")}</span>
               </button>
             </>
           ) : (
@@ -1273,7 +1259,7 @@ const Tables = () => {
                 }}
               >
                 <i className="bi bi-pencil-fill"></i>
-                <span className="d-none d-md-inline">Düzəliş et</span>
+                <span className="d-none d-md-inline">{t("edit")}</span>
               </button>
             )
           )}
@@ -1294,12 +1280,12 @@ const Tables = () => {
             await axios.put(`/tables/${selectedTableForShape.id}`, {
               shape_type: newShape,
             });
-            toast.success("Masa forması dəyişdirildi");
+            toast.success(t("table_shape_changed"));
             dispatch(getTableGroups(loginedProfileData?.data?.profile?.id));
             setShowShapeModal(false);
             setSelectedTableForShape(null);
           } catch (error) {
-            toast.error("Masa forması dəyişdirilmədi");
+            toast.error(t("table_shape_error"));
             console.error(error);
           }
         }}
