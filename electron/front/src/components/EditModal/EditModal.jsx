@@ -36,6 +36,7 @@ import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const removeLocalProduct = (dispatch, product) => {
   const productId = Number(product.product_id || product.id);
@@ -541,7 +542,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       }}
 
                     />
-                    <div className="currency-icon">₼</div>
+                    <div className="currency-icon">{getCurrencySymbol()}</div>
                   </div>
 
                   {/* Quantity Stepper */}
@@ -1012,7 +1013,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         <button
                           className={`discount-type-btn ${discountType === 'amount' ? 'active' : ''}`}
                           onClick={() => setDiscountType('amount')}
-                        >₼</button>
+                        >{getCurrencySymbol()}</button>
                       </div>
                     </div>
 
@@ -1079,7 +1080,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         <div className="edit-hourly-metric">
                           <i className="bi bi-cash-stack" aria-hidden />
                           <span className="edit-hourly-metric-label">Qazanc</span>
-                          <span className="edit-hourly-metric-val">{Number(timerChargeLive).toFixed(2)} ₼</span>
+                          <span className="edit-hourly-metric-val">{Number(timerChargeLive).toFixed(2)} {getCurrencySymbol()}</span>
                         </div>
                         <div className="edit-hourly-metric">
                           <i className="bi bi-tag" aria-hidden />

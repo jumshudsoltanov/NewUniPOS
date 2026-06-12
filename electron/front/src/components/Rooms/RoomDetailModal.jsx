@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
 import { sendBookingWhatsapp, updateFolioBalance, fetchRooms } from "../../redux/Slices/HotelSlice";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 import "./RoomDetailModal.css";
 
 const formatDate = (d) => {
@@ -208,7 +208,7 @@ const RoomDetailModal = ({ show, onHide, room }) => {
             ) : (
               <div className="rd-depozit-keypad">
                 <div className="rd-depozit-ekran">
-                  <span className="rd-depozit-ekran-qiymet">{depositValue || "0"} ₼</span>
+                  <span className="rd-depozit-ekran-qiymet">{depositValue || "0"} {getCurrencySymbol()}</span>
                 </div>
                 <div className="rd-depozit-duymeler">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (

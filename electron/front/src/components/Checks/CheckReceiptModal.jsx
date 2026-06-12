@@ -1,5 +1,6 @@
 import { Modal } from "react-bootstrap";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 import "./CheckReceiptModal.css";
 
 const CheckReceiptModal = ({ show, onClose, order }) => {
@@ -151,23 +152,23 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                     <div className="receipt-totals-card">
                         <div className="receipt-total-row">
                             <span className="receipt-total-label">{t("cem")}</span>
-                            <span className="receipt-total-value">{formatMoney(subtotal)} ₼</span>
+                            <span className="receipt-total-value">{formatMoney(subtotal)} {getCurrencySymbol()}</span>
                         </div>
                         {discount > 0 && (
                             <div className="receipt-total-row">
                                 <span className="receipt-total-label">Endirim</span>
-                                <span className="receipt-total-value" style={{ color: '#e74c3c' }}>-{formatMoney(discount)} ₼</span>
+                                <span className="receipt-total-value" style={{ color: '#e74c3c' }}>-{formatMoney(discount)} {getCurrencySymbol()}</span>
                             </div>
                         )}
                         {serviceCharge > 0 && (
                             <div className="receipt-total-row">
                                 <span className="receipt-total-label">{t("servis_haqqi_2")}</span>
-                                <span className="receipt-total-value">{formatMoney(serviceCharge)} ₼</span>
+                                <span className="receipt-total-value">{formatMoney(serviceCharge)} {getCurrencySymbol()}</span>
                             </div>
                         )}
                         <div className="receipt-total-row grand-total">
                             <span className="receipt-total-label">Yekun</span>
-                            <span className="receipt-total-value">{formatMoney(grandTotal)} ₼</span>
+                            <span className="receipt-total-value">{formatMoney(grandTotal)} {getCurrencySymbol()}</span>
                         </div>
                     </div>
 
@@ -181,7 +182,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                                         <i className="bi bi-credit-card"></i>
                                         {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Nağd")}
                                     </span>
-                                    <span className="receipt-payment-amount">{formatMoney(p.paid)} ₼</span>
+                                    <span className="receipt-payment-amount">{formatMoney(p.paid)} {getCurrencySymbol()}</span>
                                 </div>
                             ))}
                         </div>

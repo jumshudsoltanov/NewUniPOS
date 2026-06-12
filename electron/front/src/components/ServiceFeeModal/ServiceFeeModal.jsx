@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const ServiceFeeModal = ({ show, onClose, order, hall }) => {
   const [value, setValue] = useState("0");
@@ -164,9 +165,7 @@ const ServiceFeeModal = ({ show, onClose, order, hall }) => {
               <button
                 className={`toggle-btn ${feeType === "cash" ? "active" : ""}`}
                 onClick={() => setFeeType("cash")}
-              >
-                ₼
-              </button>
+              >{getCurrencySymbol()}</button>
             </div>
           </div>
 

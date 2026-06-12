@@ -9,7 +9,7 @@ import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 import "./RoomFolio.css";
 
 const formatDate = (d) => {
@@ -399,7 +399,7 @@ const RoomFolio = () => {
                     ) : (
                       /* ── Keypad ── */
                       <div className="rf-keypad">
-                        <div className="rf-keypad-screen">{depositValue || "0"} ₼</div>
+                        <div className="rf-keypad-screen">{depositValue || "0"} {getCurrencySymbol()}</div>
                         <div className="rf-key-grid">
                           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
                             <button key={n} className="rf-key-btn" onClick={() => handleDepositNum(n)}>{n}</button>

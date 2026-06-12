@@ -6,6 +6,7 @@ import { updateDepositOnOrders } from "../../redux/Slices/OrdersSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const DepositModal = ({ show, onClose, order }) => {
     const dispatch = useDispatch();
@@ -108,7 +109,7 @@ const DepositModal = ({ show, onClose, order }) => {
                 <div className="customers-modal-body">
                     {/* Input Area */}
                     <div className="guest-count-display-box deposit-display-box">
-                        <span className="guest-count-value">{value || "0"} ₼</span>
+                        <span className="guest-count-value">{value || "0"} {getCurrencySymbol()}</span>
                     </div>
 
                     {/* Keypad Grid */}

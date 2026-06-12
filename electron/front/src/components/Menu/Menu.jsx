@@ -22,7 +22,7 @@ import {
   orderEditLockedToast,
 } from "../../utils/checkEditLock";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 import "./Menu.css";
 
 const Menu = ({
@@ -863,7 +863,7 @@ const Menu = ({
                     {(menuViewMode === "PRODUCTS" ||
                       searchText?.length > 0) && (
                       <div className="menu-card-price">
-                        <div>{effectivePrice} ₼</div>
+                        <div>{effectivePrice} {getCurrencySymbol()}</div>
                       </div>
                     )}
 

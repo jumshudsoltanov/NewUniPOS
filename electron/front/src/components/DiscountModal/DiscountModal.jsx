@@ -7,7 +7,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getOrderItemsAndTimerSubtotal } from "../../utils/orderDisplayTotal";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 
 const DiscountModal = React.memo(({ show, onClose, order }) => {
   const dispatch = useDispatch();
@@ -199,9 +199,7 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
               <button
                 className={`toggle-btn ${discountType === "cash" ? "active" : ""}`}
                 onClick={() => { setDiscountType("cash"); setValue(v => clampValue(v.replace(/\.$/, ""), "cash")); }}
-              >
-                ₼
-              </button>
+              >{getCurrencySymbol()}</button>
             </div>
           </div>
 

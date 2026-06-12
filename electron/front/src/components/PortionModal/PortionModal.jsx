@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 import "./PortionModal.css";
 
 const PortionModal = ({ show, onHide, product, onConfirm }) => {
@@ -63,7 +64,7 @@ const PortionModal = ({ show, onHide, product, onConfirm }) => {
                     <h5 className="modal-title">{product.name}</h5>
                 </div>
                 <div className="product-price-badge">
-                    {parseFloat(product.price || 0).toFixed(2)} ₼
+                    {parseFloat(product.price || 0).toFixed(2)} {getCurrencySymbol()}
                 </div>
                 <button className="close-btn" onClick={onHide}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -89,7 +90,7 @@ const PortionModal = ({ show, onHide, product, onConfirm }) => {
                 {/* Price display */}
                 <div className="portion-price-display">
                     <span className="price-label">{t("qiymet")}</span>
-                    <span className="price-value">{parseFloat(displayPrice || 0).toFixed(2)} ₼</span>
+                    <span className="price-value">{parseFloat(displayPrice || 0).toFixed(2)} {getCurrencySymbol()}</span>
                 </div>
 
                 {/* Numpad */}
@@ -119,7 +120,7 @@ const PortionModal = ({ show, onHide, product, onConfirm }) => {
                         <span className="qty-value">{quantity}</span>
                         <button className="qty-btn" onClick={() => setQuantity(q => q + 1)}>+</button>
                     </div>
-                    <span className="qty-total">{total} ₼</span>
+                    <span className="qty-total">{total} {getCurrencySymbol()}</span>
                 </div>
             </Modal.Body>
 

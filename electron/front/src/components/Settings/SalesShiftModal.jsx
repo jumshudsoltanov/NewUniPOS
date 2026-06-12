@@ -5,6 +5,7 @@ import apiConfig, { getSocket } from "../../utils/apiConfig";
 import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 import "../ReportModal/ReportModal.css";
 import "./SalesShiftModal.css";
 
@@ -189,7 +190,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                 {Number(row?.starting_cash || snapshot?.startingCash) > 0 && (
                     <div className="ssd-kv">
                         <span>{t("baslangic_qaliq")}</span>
-                        <span>{money(row?.starting_cash || snapshot?.startingCash)} ₼</span>
+                        <span>{money(row?.starting_cash || snapshot?.startingCash)} {getCurrencySymbol()}</span>
                     </div>
                 )}
             </div>
@@ -208,7 +209,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                         </div>
                         <div className="ssd-total-row">
                             <span>{t("cem_mebleg")}</span>
-                            <span>{money(s.grossTotal)} ₼</span>
+                            <span>{money(s.grossTotal)} {getCurrencySymbol()}</span>
                         </div>
                     </div>
 
@@ -216,21 +217,21 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                     <div className="ssd-card">
                         <div className="ssd-card-title">
                             <i className="bi bi-receipt" aria-hidden />{t("satis_hesabati")}</div>
-                        <div className="ssd-kv"><span>{t("cem")}</span><span>{money(s.total_amount)} ₼</span></div>
-                        <div className="ssd-kv"><span>Vergi</span><span>{money(s.total_tax)} ₼</span></div>
-                        <div className="ssd-kv"><span>{t("i̇kram")}</span><span>{money(s.total_gift)} ₼</span></div>
-                        <div className="ssd-kv"><span>{t("xidmet")}</span><span>{money(s.total_service)} ₼</span></div>
-                        <div className="ssd-kv"><span>Endirim</span><span>{money(s.total_discount)} ₼</span></div>
-                        <div className="ssd-kv"><span>{t("catdirilma_haqqi")}</span><span>{money(s.delivery_fee)} ₼</span></div>
-                        <div className="ssd-kv"><span>{t("refund")}</span><span>{money(s.total_refund)} ₼</span></div>
-                        <div className="ssd-kv"><span>{t("silinmeler")}</span><span>{money(s.total_deleted)} ₼</span></div>
+                        <div className="ssd-kv"><span>{t("cem")}</span><span>{money(s.total_amount)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>Vergi</span><span>{money(s.total_tax)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>{t("i̇kram")}</span><span>{money(s.total_gift)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>{t("xidmet")}</span><span>{money(s.total_service)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>Endirim</span><span>{money(s.total_discount)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>{t("catdirilma_haqqi")}</span><span>{money(s.delivery_fee)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>{t("refund")}</span><span>{money(s.total_refund)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>{t("silinmeler")}</span><span>{money(s.total_deleted)} {getCurrencySymbol()}</span></div>
                         {(s.total_paid > 0 || s.total_unpaid > 0) && (
                             <>
-                                <div className="ssd-kv" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span>{t("odenisli_baglamalar")}</span><span>{money(s.total_paid)} ₼</span></div>
-                                <div className="ssd-kv"><span>{t("odenissiz_baglamalar")}</span><span>{money(s.total_unpaid)} ₼</span></div>
+                                <div className="ssd-kv" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span>{t("odenisli_baglamalar")}</span><span>{money(s.total_paid)} {getCurrencySymbol()}</span></div>
+                                <div className="ssd-kv"><span>{t("odenissiz_baglamalar")}</span><span>{money(s.total_unpaid)} {getCurrencySymbol()}</span></div>
                             </>
                         )}
-                        <div className="ssd-total-row"><span>Yekun</span><span>{money(s.net_total)} ₼</span></div>
+                        <div className="ssd-total-row"><span>Yekun</span><span>{money(s.net_total)} {getCurrencySymbol()}</span></div>
                     </div>
                     {(s.guest_count > 0) && (
                         <div className="ssd-card">
@@ -719,7 +720,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                         onChange={(e) => setStartingCash(e.target.value)}
                         disabled={loading}
                     />
-                    <span className="ssm-starting-cash-currency">₼</span>
+                    <span className="ssm-starting-cash-currency">{getCurrencySymbol()}</span>
                 </div>
             </div>
             <div className="sales-shift-actions mt-3">
@@ -748,7 +749,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                 {Number(currentShift.starting_cash) > 0 && (
                     <div className="ssm-info-row">
                         <span className="ssm-info-label">{t("baslangic_qaliq")}</span>
-                        <span className="ssm-info-value">{money(currentShift.starting_cash)} ₼</span>
+                        <span className="ssm-info-value">{money(currentShift.starting_cash)} {getCurrencySymbol()}</span>
                     </div>
                 )}
                 {currentShift.closed_by_name && (
@@ -796,11 +797,11 @@ const SalesShiftModal = ({ show, onHide }) => {
                         </div>
                         <div className="ssm-info-row ssm-total-row">
                             <span>{t("cem_mebleg")}</span>
-                            <span>{money(summary.grossTotal)} ₼</span>
+                            <span>{money(summary.grossTotal)} {getCurrencySymbol()}</span>
                         </div>
                         <div className="ssm-info-row ssm-total-row" style={{ borderTop: '1px dashed #e2e8f0', marginTop: 4, paddingTop: 4 }}>
                             <span>{t("ceklerin_cemi_yekun")}</span>
-                            <span>{money(summary.net_total)} ₼</span>
+                            <span>{money(summary.net_total)} {getCurrencySymbol()}</span>
                         </div>
                     </div>
 
@@ -808,21 +809,21 @@ const SalesShiftModal = ({ show, onHide }) => {
                     <div className="ssm-section-header">
                         <i className="bi bi-receipt" aria-hidden />{t("satis_hesabati")}</div>
                     <div className="ssm-info-card">
-                        <div className="ssm-info-row"><span className="ssm-info-label">{t("cem")}</span><span className="ssm-info-value">{money(summary.total_amount)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">Vergi</span><span className="ssm-info-value">{money(summary.total_tax)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">{t("i̇kram")}</span><span className="ssm-info-value">{money(summary.total_gift)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">{t("xidmet")}</span><span className="ssm-info-value">{money(summary.total_service)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">Endirim</span><span className="ssm-info-value">{money(summary.total_discount)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">{t("catdirilma_haqqi")}</span><span className="ssm-info-value">{money(summary.delivery_fee)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">{t("refund")}</span><span className="ssm-info-value">{money(summary.total_refund)} ₼</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">{t("silinmeler")}</span><span className="ssm-info-value">{money(summary.total_deleted)} ₼</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("cem")}</span><span className="ssm-info-value">{money(summary.total_amount)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">Vergi</span><span className="ssm-info-value">{money(summary.total_tax)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("i̇kram")}</span><span className="ssm-info-value">{money(summary.total_gift)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("xidmet")}</span><span className="ssm-info-value">{money(summary.total_service)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">Endirim</span><span className="ssm-info-value">{money(summary.total_discount)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("catdirilma_haqqi")}</span><span className="ssm-info-value">{money(summary.delivery_fee)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("refund")}</span><span className="ssm-info-value">{money(summary.total_refund)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("silinmeler")}</span><span className="ssm-info-value">{money(summary.total_deleted)} {getCurrencySymbol()}</span></div>
                         {(summary.total_paid > 0 || summary.total_unpaid > 0) && (
                             <>
-                                <div className="ssm-info-row" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span className="ssm-info-label">{t("odenisli_baglamalar")}</span><span className="ssm-info-value">{money(summary.total_paid)} ₼</span></div>
-                                <div className="ssm-info-row"><span className="ssm-info-label">{t("odenissiz_baglamalar")}</span><span className="ssm-info-value">{money(summary.total_unpaid)} ₼</span></div>
+                                <div className="ssm-info-row" style={{borderTop:'1px dashed #e2e8f0',marginTop:4,paddingTop:4}}><span className="ssm-info-label">{t("odenisli_baglamalar")}</span><span className="ssm-info-value">{money(summary.total_paid)} {getCurrencySymbol()}</span></div>
+                                <div className="ssm-info-row"><span className="ssm-info-label">{t("odenissiz_baglamalar")}</span><span className="ssm-info-value">{money(summary.total_unpaid)} {getCurrencySymbol()}</span></div>
                             </>
                         )}
-                        <div className="ssm-info-row ssm-total-row"><span>Yekun</span><span>{money(summary.net_total)} ₼</span></div>
+                        <div className="ssm-info-row ssm-total-row"><span>Yekun</span><span>{money(summary.net_total)} {getCurrencySymbol()}</span></div>
                     </div>
                     <div className="ssm-info-card">
                         <div className="ssm-info-row"><span className="ssm-info-label">{t("guest_count")}</span><span className="ssm-info-value">{summary.guest_count ?? 0}</span></div>
@@ -1050,7 +1051,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                         </div>
                                     </div>
                                     {gross != null && (
-                                        <div className="sales-shift-history-gross">{money(gross)} ₼</div>
+                                        <div className="sales-shift-history-gross">{money(gross)} {getCurrencySymbol()}</div>
                                     )}
                                 </div>
                                 <div className="sales-shift-history-card-actions">

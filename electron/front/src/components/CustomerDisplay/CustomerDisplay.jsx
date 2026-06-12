@@ -5,7 +5,7 @@ import uniposLogo from "../../assets/images/unipos_logo.png";
 import CD_BG from "../../assets/images/PinContainerImagesDefault.jpg";
 import { getCustomerFacingServiceFeeLabel } from "../../utils/posOperationNames";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 
 const CustomerDisplay = () => {
     const [orderData, setOrderData] = useState({ items: [], total: 0, received: 0, change: 0 });
@@ -301,7 +301,7 @@ const CustomerDisplay = () => {
                                             </div>
                                         </div>
                                         <div className="col-total">
-                                            {(lineTotal - itemDiscountAmount).toFixed(2)} ₼
+                                            {(lineTotal - itemDiscountAmount).toFixed(2)} {getCurrencySymbol()}
                                         </div>
                                     </div>
                                 );

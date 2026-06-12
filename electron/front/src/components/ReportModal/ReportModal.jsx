@@ -6,7 +6,7 @@ import axios from "../../utils/apiConfig";
 import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 import "./ReportModal.css";
 
 /** API uğursuz olanda da cədvəllər sıfır ilə göstərilsin */
@@ -360,7 +360,7 @@ const ReportModal = ({ show, onClose }) => {
 
                 <div className="section-title mt-4">{t("diger_detallar")}</div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openCount}><span>{t("aciq_ceklerin_sayi")}</span><div className="dots"></div><span className="value">{reportSummary.open_orders_count || 0}</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openSum}><span>{t("aciq_ceklerin_cemi")}</span><div className="dots"></div><span className="value">{(reportSummary.open_orders_total || 0).toFixed(2)} ₼</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openSum}><span>{t("aciq_ceklerin_cemi")}</span><div className="dots"></div><span className="value">{(reportSummary.open_orders_total || 0).toFixed(2)} {getCurrencySymbol()}</span></div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.guests}><span>{t("guest_count")}</span><div className="dots"></div><span className="value">{reportSummary.guest_count || 0}</span></div>
 
                 {Object.keys(reportSummary.payments || {}).length > 0 && (
@@ -456,7 +456,7 @@ const ReportModal = ({ show, onClose }) => {
                                     <td>{item.name}</td>
                                     <td className="text-center">{item.quantity}</td>
                                     <td className="text-center">{item.quantity_gift || 0}</td>
-                                    <td className="text-end">{Number(item.total || 0).toFixed(2)} ₼</td>
+                                    <td className="text-end">{Number(item.total || 0).toFixed(2)} {getCurrencySymbol()}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -494,7 +494,7 @@ const ReportModal = ({ show, onClose }) => {
                                     <tr key={i}>
                                         <td>{item.name}</td>
                                         <td className="text-center">{item.checks_count}</td>
-                                        <td className="text-end">{Number(item.total || 0).toFixed(2)} ₼</td>
+                                        <td className="text-end">{Number(item.total || 0).toFixed(2)} {getCurrencySymbol()}</td>
                                         <td className="text-end">{(item.timer_total || 0) > 0 ? `${Number(item.timer_total).toFixed(2)} ₼` : '-'}</td>
                                     </tr>
                                 ))}
@@ -503,7 +503,7 @@ const ReportModal = ({ show, onClose }) => {
                         {tablesTotalTimer > 0 && (
                             <div className="receipt-row total-line mt-3">
                                 <span>{t("timer_cemi")}</span>
-                                <span className="value">{Number(tablesTotalTimer).toFixed(2)} ₼</span>
+                                <span className="value">{Number(tablesTotalTimer).toFixed(2)} {getCurrencySymbol()}</span>
                             </div>
                         )}
                     </>
@@ -581,7 +581,7 @@ const ReportModal = ({ show, onClose }) => {
                                             <strong>{Number(item.quantity || 0).toFixed(2)}</strong>
                                         </td>
                                         <td className="text-end">
-                                            <strong>{Number(item.total || 0).toFixed(2)} ₼</strong>
+                                            <strong>{Number(item.total || 0).toFixed(2)} {getCurrencySymbol()}</strong>
                                         </td>
                                     </tr>
                                     {item.products && item.products.length > 0
@@ -595,7 +595,7 @@ const ReportModal = ({ show, onClose }) => {
                                                   <td className="report-category-print-col"></td>
                                                   <td className="report-category-product-name">↳ {p.name}</td>
                                                   <td className="text-center">{Number(p.quantity || 0).toFixed(2)}</td>
-                                                  <td className="text-end">{Number(p.total || 0).toFixed(2)} ₼</td>
+                                                  <td className="text-end">{Number(p.total || 0).toFixed(2)} {getCurrencySymbol()}</td>
                                               </tr>
                                           ))
                                         : null}

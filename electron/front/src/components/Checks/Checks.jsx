@@ -17,7 +17,7 @@ import { fetchRooms } from "../../redux/Slices/HotelSlice";
 import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 const getStatusColor = (status) => {
   switch (status) {
     case 1: return "#053796";
@@ -92,7 +92,7 @@ const CheckListItem = React.memo(({ check, onClick, roomNumber }) => (
     </div>
     <div className="checks-check-right">
       <span className="checks-check-amount">
-        {computeOrderCardDisplayAmount(check).toFixed(2)} ₼
+        {computeOrderCardDisplayAmount(check).toFixed(2)} {getCurrencySymbol()}
       </span>
       {check.status !== 1 && check.order_payments?.length > 0 && (
         <div className="mt-1 d-flex flex-wrap justify-content-end">

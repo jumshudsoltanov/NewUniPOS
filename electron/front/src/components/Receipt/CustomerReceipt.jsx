@@ -7,6 +7,7 @@ import {
 } from "../../utils/orderItemDisplayHelpers";
 import { getCustomerFacingServiceFeeLabel } from "../../utils/posOperationNames";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const CustomerReceipt = ({
     orderedItems,
@@ -384,7 +385,7 @@ const CustomerReceipt = ({
     const renderMoney = (value) => (
         <span style={styles.moneyInline}>
             <span>{formatMoney(value)}</span>
-            <span>₼</span>
+            <span>{getCurrencySymbol()}</span>
         </span>
     );
 

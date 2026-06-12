@@ -38,6 +38,7 @@ import {
   resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const CheckBottom = ({
   orders,
@@ -481,7 +482,7 @@ const CheckBottom = ({
           )}
           <div className="summary-row">
             <span>{t("ara_cem")}</span>
-            <span>{calcTotal.total} ₼</span>
+            <span>{calcTotal.total} {getCurrencySymbol()}</span>
           </div>
           {Number(calcTotal.discountAmount) > 0 && (
             <div className="summary-row">
@@ -507,12 +508,12 @@ const CheckBottom = ({
           {Number(calcTotal.deliveryFee) > 0 && (
             <div className="summary-row">
               <span>{t("catdirilma")}</span>
-              <span>+{calcTotal.deliveryFee} ₼</span>
+              <span>+{calcTotal.deliveryFee} {getCurrencySymbol()}</span>
             </div>
           )}
           <div className="summary-row" style={{ fontWeight: 700 }}>
             <span>{calcTotal.isDepositFloor ? "Minimal məbləğ:" : "Cəm:"}</span>
-            <span>{calcTotal.sumTotal} ₼</span>
+            <span>{calcTotal.sumTotal} {getCurrencySymbol()}</span>
           </div>
           {Number(calcTotal.depositAmount) > 0 && (
             <div
@@ -525,7 +526,7 @@ const CheckBottom = ({
               }}
             >
               <span>Depozit:</span>
-              <span>{calcTotal.depositAmount} ₼</span>
+              <span>{calcTotal.depositAmount} {getCurrencySymbol()}</span>
             </div>
           )}
           {Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 &&
@@ -543,7 +544,7 @@ const CheckBottom = ({
                   style={{ fontSize: "0.8rem", opacity: 0.9 }}
                 >
                   <span>{t("masa_saatliq")}</span>
-                  <span>{Number(effectiveHourlyPrice).toFixed(2)} ₼</span>
+                  <span>{Number(effectiveHourlyPrice).toFixed(2)} {getCurrencySymbol()}</span>
                 </div>
                 <div
                   className="d-flex justify-content-between align-items-center mb-1"
@@ -557,7 +558,7 @@ const CheckBottom = ({
                   style={{ fontSize: "0.9rem", fontWeight: 700 }}
                 >
                   <span>{t("taymer_qazanci")}</span>
-                  <span>{Number(timerCharge).toFixed(2)} ₼</span>
+                  <span>{Number(timerCharge).toFixed(2)} {getCurrencySymbol()}</span>
                 </div>
               </div>
             )}
@@ -617,7 +618,7 @@ const CheckBottom = ({
           {canCloseCheck ? (
             <button className="btn-pay" onClick={goCloseCheck}>
               <i className="bi bi-check2-all"></i>
-              <span>{calcTotal.sumTotal} ₼</span>
+              <span>{calcTotal.sumTotal} {getCurrencySymbol()}</span>
             </button>
           ) : null}
         </div>
@@ -717,7 +718,7 @@ const CheckBottom = ({
         {canCloseCheck ? (
           <button className="mobile-pay-btn" onClick={goCloseCheck}>
             <i className="bi bi-check2-all fs-4 text-white"></i>
-            <span className="pay-amount">{calcTotal.sumTotal} ₼</span>
+            <span className="pay-amount">{calcTotal.sumTotal} {getCurrencySymbol()}</span>
           </button>
         ) : null}
       </div>

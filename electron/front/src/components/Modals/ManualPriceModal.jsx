@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Modal from "react-bootstrap/Modal";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 import "./ManualPriceModal.css";
 
 const ManualPriceModal = ({ show, onClose, product, onConfirm }) => {
@@ -67,7 +68,7 @@ const ManualPriceModal = ({ show, onClose, product, onConfirm }) => {
 
                 <div className="modal-body-custom">
                     <div className="price-display-box">
-                        <div className="currency-symbol">₼</div>
+                        <div className="currency-symbol">{getCurrencySymbol()}</div>
                         <input
                             type="text"
                             className="price-input"

@@ -29,7 +29,7 @@ import {
   resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 
 const parseModifierList = (modifiers) => {
   try {
@@ -820,7 +820,7 @@ const CheckMain = ({ orders, table }) => {
                             </span>
                             <span className="check-item-timer-lite-sep">
                               <i className="bi bi-plus-circle" aria-hidden />
-                              <span className="check-item-timer-lite-mono">{Number(timerCharge).toFixed(2)} ₼</span>
+                              <span className="check-item-timer-lite-mono">{Number(timerCharge).toFixed(2)} {getCurrencySymbol()}</span>
                             </span>
                           </div>
                         )}
@@ -850,7 +850,7 @@ const CheckMain = ({ orders, table }) => {
                     </div>
 
                     <div className="col-total d-flex align-items-center justify-content-end fw-bold">
-                      {totalAmount} ₼
+                      {totalAmount} {getCurrencySymbol()}
                     </div>
                   </div>
                 </div>

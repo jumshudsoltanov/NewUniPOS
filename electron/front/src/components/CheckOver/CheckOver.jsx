@@ -21,6 +21,7 @@ import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 import RoomChargeModal from "../RoomChargeModal/RoomChargeModal";
 import { updateFolioBalance, fetchRooms } from '../../redux/Slices/HotelSlice';
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -667,21 +668,21 @@ const CheckOver = () => {
                                 readOnly
                                 onFocus={() => setActiveInputMode(null)}
                             />
-                            <span className="currency-symbol">₼</span>
+                            <span className="currency-symbol">{getCurrencySymbol()}</span>
                         </div>
 
                         <div className="calc-info-grid mb-4">
                             <div className="calc-info-card">
                                 <span className="label">{t("odenilmeli")}</span>
-                                <span className="value">{calcTotal.sumTotal} ₼</span>
+                                <span className="value">{calcTotal.sumTotal} {getCurrencySymbol()}</span>
                             </div>
                             <div className="calc-info-card highlighted">
                                 <span className="label">{t("odenilen")}</span>
-                                <span className="value">{(Number(calcValue) || totalPaidInMethods || 0).toFixed(2)} ₼</span>
+                                <span className="value">{(Number(calcValue) || totalPaidInMethods || 0).toFixed(2)} {getCurrencySymbol()}</span>
                             </div>
                             <div className={`calc-info-card ${Number(remainingBalance) >= 0 ? 'positive' : 'negative'}`}>
                                 <span className="label">{t("qaliq")}</span>
-                                <span className="value">{remainingBalance} ₼</span>
+                                <span className="value">{remainingBalance} {getCurrencySymbol()}</span>
                             </div>
                         </div>
                         <div className="numpad-grid">
@@ -718,7 +719,7 @@ const CheckOver = () => {
                                     </div>
                                     <div className="total-amount-display">
                                         <span className="amount">{calcTotal.sumTotal}</span>
-                                        <span className="symbol">₼</span>
+                                        <span className="symbol">{getCurrencySymbol()}</span>
                                     </div>
                                 </div>
 
@@ -751,12 +752,12 @@ const CheckOver = () => {
                                                                         onFocus={() => setActiveInputMode(`split-${idx}`)}
                                                                         autoFocus={idx === 0}
                                                                     />
-                                                                    <span className="currency-sym">₼</span>
+                                                                    <span className="currency-sym">{getCurrencySymbol()}</span>
                                                                 </div>
                                                             ) : (
                                                                 <div className="method-amount">
                                                                     <span>{isSelected.amount || calcTotal.sumTotal}</span>
-                                                                    <span className="symbol">₼</span>
+                                                                    <span className="symbol">{getCurrencySymbol()}</span>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -790,7 +791,7 @@ const CheckOver = () => {
                                                         {roomChargeMethod.room_number}
                                                     </span>
                                                     <span>{roomChargeMethod.amount || calcTotal.sumTotal}</span>
-                                                    <span className="symbol">₼</span>
+                                                    <span className="symbol">{getCurrencySymbol()}</span>
                                                 </div>
                                             </div>
                                         )}
@@ -830,7 +831,7 @@ const CheckOver = () => {
                                 {Number(remainingBalance) > 0 && (
                                     <div className="change-display">
                                         <span className="change-label">{t("qaliq_1")}</span>
-                                        <span className="change-amount">{remainingBalance} ₼</span>
+                                        <span className="change-amount">{remainingBalance} {getCurrencySymbol()}</span>
                                     </div>
                                 )}
 
@@ -861,7 +862,7 @@ const CheckOver = () => {
                                     <h2 className="payment-title">{t("odenissiz_bagla")}</h2>
                                     <div className="total-amount-display strikethrough">
                                         <span className="amount">{calcTotal.sumTotal}</span>
-                                        <span className="symbol">₼</span>
+                                        <span className="symbol">{getCurrencySymbol()}</span>
                                     </div>
                                 </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "react-bootstrap";
 import apiConfig from "../../utils/apiConfig";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
   const [rooms, setRooms] = useState([]);
@@ -151,7 +152,7 @@ const RoomChargeModal = ({ show, onHide, onSelect, profileId }) => {
                   </span>
                   {room.folio_balance > 0 && (
                     <span style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
-                      {Number(room.folio_balance).toFixed(2)} ₼
+                      {Number(room.folio_balance).toFixed(2)} {getCurrencySymbol()}
                     </span>
                   )}
                 </div>

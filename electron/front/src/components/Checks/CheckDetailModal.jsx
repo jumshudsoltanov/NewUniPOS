@@ -15,7 +15,7 @@ import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 import { sumOrderItemsLinesTotal, getOrderItemLineTotal, buildFiscalLineItemsFromOrderItems, mapOrderPaymentForTax, computeFiscalCheckTotalsFromOrder } from "../../utils/orderItemLineTotal";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 
 const getTaxConfigId = (c) => c?.id ?? (c?.ip_addr && c?.port_addr
     ? Math.abs((c.ip_addr + ':' + c.port_addr).split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0) & 0x7FFFFFFF)
@@ -698,7 +698,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                         {order.is_timer_status === 1 ? ' (Aktiv)' : ' (Dayandırılıb)'}
                                                     </div>
                                                     {Number(order.rate_per_minute || 0) > 0 && (
-                                                        <div className="meta-sub text-primary fw-bold">{Number(order.rate_per_minute).toFixed(2)} ₼</div>
+                                                        <div className="meta-sub text-primary fw-bold">{Number(order.rate_per_minute).toFixed(2)} {getCurrencySymbol()}</div>
                                                     )}
                                                 </div>
                                             </div>
@@ -721,7 +721,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                         order.order_payments.map((p, i) => (
                                                             <div key={i} className="d-flex justify-content-between w-100">
                                                                 <span>{p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Naməlum")}</span>
-                                                                <span className="ms-2">{Number(p.paid).toFixed(2)}₼</span>
+                                                                <span className="ms-2">{Number(p.paid).toFixed(2)} {getCurrencySymbol()}</span>
                                                             </div>
                                                         ))
                                                     ) : (
@@ -869,14 +869,14 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 <div className="summary-section mt-auto">
                                     <div className="summary-row d-flex justify-content-between mb-2">
                                         <span className="summary-label text-muted">{t("cem_1")}</span>
-                                        <span className="summary-value fw-bold">{(subtotal || 0).toFixed(2)} ₼</span>
+                                        <span className="summary-value fw-bold">{(subtotal || 0).toFixed(2)} {getCurrencySymbol()}</span>
                                     </div>
 
                                     {Number(order.discount || 0) !== 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
                                             <span className="summary-label text-muted">Endirim ({discountPercentage}%):</span>
                                             <span className="summary-value text-danger fw-bold">
-                                                {Number(order.discount) > 0 ? '-' : ''}{Math.abs(Number(order.discount)).toFixed(2)} ₼
+                                                {Number(order.discount) > 0 ? '-' : ''}{Math.abs(Number(order.discount)).toFixed(2)} {getCurrencySymbol()}
                                             </span>
                                         </div>
                                     )}
@@ -884,28 +884,28 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                     {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
                                             <span className="summary-label text-muted">Depozit (Minimal):</span>
-                                            <span className="summary-value fw-bold">{Number(order.deposit).toFixed(2)} ₼</span>
+                                            <span className="summary-value fw-bold">{Number(order.deposit).toFixed(2)} {getCurrencySymbol()}</span>
                                         </div>
                                     )}
 
                                     {Number(order.service_charge || 0) !== 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
                                             <span className="summary-label text-muted">Servis haqqı ({servicePercentage}%):</span>
-                                            <span className="summary-value fw-bold">{Number(order.service_charge).toFixed(2)} ₼</span>
+                                            <span className="summary-value fw-bold">{Number(order.service_charge).toFixed(2)} {getCurrencySymbol()}</span>
                                         </div>
                                     )}
 
                                     {Number(order.delivery_fee || 0) > 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
                                             <span className="summary-label text-muted">{t("catdirilma")}</span>
-                                            <span className="summary-value fw-bold">{Number(order.delivery_fee).toFixed(2)} ₼</span>
+                                            <span className="summary-value fw-bold">{Number(order.delivery_fee).toFixed(2)} {getCurrencySymbol()}</span>
                                         </div>
                                     )}
 
                                     {Number(order.rate_per_minute || 0) > 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
                                             <span className="summary-label text-muted">Taymer:</span>
-                                            <span className="summary-value fw-bold">{Number(order.rate_per_minute).toFixed(2)} ₼</span>
+                                            <span className="summary-value fw-bold">{Number(order.rate_per_minute).toFixed(2)} {getCurrencySymbol()}</span>
                                         </div>
                                     )}
 
@@ -914,7 +914,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
                                         </span>
                                         <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
-                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0) + Number(order.rate_per_minute || 0)).toFixed(2)} ₼
+                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0) + Number(order.rate_per_minute || 0)).toFixed(2)} {getCurrencySymbol()}
                                         </span>
                                     </div>
                                 </div>

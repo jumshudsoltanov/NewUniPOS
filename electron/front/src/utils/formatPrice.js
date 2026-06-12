@@ -45,6 +45,15 @@ export function formatPrice(amount) {
 }
 
 /**
+ * Dilə uyğun valyuta işarəsini qaytarır
+ * getCurrencySymbol() -> az: "₼", en: "$", ru: "₽", tr: "₺"
+ */
+export function getCurrencySymbol() {
+  const lang = localStorage.getItem("language") || "az";
+  return symbolMap[lang] || "₼";
+}
+
+/**
  * Sadəcə nömrə formatı (valyuta işarəsi olmadan)
  * formatNumber(10500.5) -> az: "10.500,50", en: "10,500.50"
  */

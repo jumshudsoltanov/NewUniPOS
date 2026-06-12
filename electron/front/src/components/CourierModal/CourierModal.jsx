@@ -3,6 +3,7 @@ import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCouriersFromAdmin } from "../../redux/Slices/CouriersSlice";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 import "./CourierModal.css";
 
 const statusLabels = {
@@ -139,7 +140,7 @@ const CourierModal = ({ show, onHide, onApply, currentOrder, selectedCustomer })
                                     value={deliveryFee}
                                     onChange={(e) => setDeliveryFee(e.target.value)}
                                 />
-                                <span className="courier-fee-currency">₼</span>
+                                <span className="courier-fee-currency">{getCurrencySymbol()}</span>
                             </div>
                         </div>
                     </div>

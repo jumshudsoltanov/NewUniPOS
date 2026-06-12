@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "react-bootstrap";
 import { toast } from "sonner";
 import { t } from "../../utils/translations";
-import { formatPrice } from "../../utils/formatPrice";
+import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 import "./ModifierModal.css";
 
 const ModifierModal = ({
@@ -467,7 +467,7 @@ const ModifierModal = ({
                     </div>
 
                     <div className="modifier-v2-total-bar">
-                        Cəm: {calculateTotal()} ₼
+                        Cəm: {calculateTotal()} {getCurrencySymbol()}
                     </div>
                 </div>
 

@@ -8,6 +8,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { mergeChecks } from "../../redux/Slices/OrdersSlice";
 import { toast } from "sonner";
 import { t } from "../../utils/translations";
+import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const OtherChecks = ({
   show,
@@ -170,7 +171,7 @@ const OtherChecks = ({
                   </div>
                 </div>
                 <div className="fw-bold text-nowrap text-primary fs-5">
-                  {Number(item.total || 0).toFixed(2)} ₼
+                  {Number(item.total || 0).toFixed(2)} {getCurrencySymbol()}
                 </div>
               </button>
             ))
