@@ -2791,3 +2791,8 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* Empty check modal — bir az böyük variant */
+.empty-check-modal {
+  max-width: 400px !important;
+}

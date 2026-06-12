@@ -85,7 +85,9 @@
       "PowerShell(try { $pkg = Get-Content \"node_modules\\\\multer\\\\package.json\" -Raw | ConvertFrom-Json; \"engines: $\\($pkg.engines | ConvertTo-Json\\)\" } catch { \"no engines field\" })",
       "PowerShell(try { $pkg = Get-Content \"node_modules\\\\mariadb\\\\package.json\" -Raw | ConvertFrom-Json; \"engines: $\\($pkg.engines | ConvertTo-Json\\)\"; \"napi_versions: $\\($pkg.napi_versions | ConvertTo-Json\\)\" } catch { \"no engines field\" })",
       "PowerShell(try { $pkg = Get-Content \"node_modules\\\\openai\\\\package.json\" -Raw | ConvertFrom-Json; \"engines: $\\($pkg.engines | ConvertTo-Json\\)\" } catch { \"no engines field\" })",
-      "PowerShell(npm run *)"
+      "PowerShell(npm run *)",
+      "Bash(git push *)",
+      "Bash(node _fix3.js)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Jumshud\\Desktop\\unipos-new-admin\\backend\\model",

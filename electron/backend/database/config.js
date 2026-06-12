@@ -9,7 +9,7 @@ const sequelize = new Sequelize(
   {
     host: "localhost",
     dialect: "mariadb",
-    port: 3307,
+    port: 3306,
     pool: {
       max: 20,
       min: 5,

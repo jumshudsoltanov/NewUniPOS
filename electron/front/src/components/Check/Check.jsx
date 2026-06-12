@@ -786,6 +786,8 @@ const Check = () => {
   const [isSending, setIsSending] = useState(false);
   const isSendingRef = useRef(false);
   const isExitingRef = useRef(false);
+  const emptyCheckDataRef = useRef(null);
+  const [showEmptyCheckConfirm, setShowEmptyCheckConfirm] = useState(false);
   const [hadOrderItems, setHadOrderItems] = useState(false);
   const {
     pendingCount: syncCount,
@@ -1147,74 +1149,19 @@ const Check = () => {
     if (!isHotelMode && actualResultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
       const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
       const profileId = loginedProfileData?.data?.profile?.id;
-      const isMasterSlaveActive = loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1;
       const orderId = currentOrder.uuid;
 
-      // Master-Slave safety: server-dən yoxla ki, çekdə həqiqətən məhsul yoxdur
-      // Race condition qarşısını alır — slave göndərib amma UI hələ yenilənməyib
-      const tryDelete = async () => {
-        try {
-          await dispatch(deleteCheck({
-            orderId,
-            reason: 0,
-            reasonText: "Masa boş olduğu üçün silindi",
-            waiterName,
-            forceDestroy: !hadOrderItems,
-          })).unwrap();
-
-          const socket = getSocket();
-          if (socket?.connected) socket.emit("order_deleted", { orderId });
-          if (profileId) {
-            setTimeout(() => {
-              dispatch(clearDeletedOrderId(orderId));
-              dispatch(clearDeletedOrderIdBooks(orderId));
-              dispatch(getTableGroups(profileId));
-              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
-            }, 600);
-          } else {
-            setTimeout(() => {
-              dispatch(clearDeletedOrderId(orderId));
-              dispatch(clearDeletedOrderIdBooks(orderId));
-            }, 5000);
-          }
-        } catch (error) {
-          // Server reject etdi (məs. məhsullar var) — silmə baş tutmadı, UI-ı yenilə
-          console.error("Auto-delete error:", error);
-          dispatch(clearDeletedOrderId(orderId));
-          dispatch(clearDeletedOrderIdBooks(orderId));
-          if (profileId) {
-            dispatch(getTableGroups(profileId));
-            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
-          }
-        }
+      // Təsdiq modalı üçün məlumatları ref-də saxla
+      emptyCheckDataRef.current = {
+        orderId,
+        waiterName,
+        profileId,
+        targetPath,
+        hadOrderItems,
+        isMasterSlaveActive: loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1,
       };
 
-      const doNavigate = (showDeletedToast = true) => {
-        dispatch(removeOrderOptimisticFromTables(orderId));
-        dispatch(removeOrderOptimistic(orderId));
-        if (targetPath === -1) goTables(true, true);
-        else navigate(targetPath, { replace: true });
-        if (showDeletedToast) setTimeout(() => toast.info("Masa boş olduğu üçün silindi"), 0);
-      };
-
-      if (isMasterSlaveActive) {
-        const socket = getSocket();
-        if (socket) {
-          socket.emit("check_can_delete", { orderId }, (canDelete) => {
-            if (canDelete) {
-              doNavigate(true);
-              tryDelete();
-            } else {
-              // Başqa terminal bu masada açıqdır — silmə, sadəcə çıx
-              doNavigate(false);
-            }
-          });
-          return;
-        }
-      }
-
-      doNavigate();
-      tryDelete();
+      setShowEmptyCheckConfirm(true);
       return;
     }
 
@@ -3312,10 +3259,134 @@ const Check = () => {
         show={showNotifications}
         onClose={() => setShowNotifications(false)}
       />
-      <StatusModal
-        show={showStatusModal}
-        onHide={() => setShowStatusModal(false)}
-      />
+      {/* Boş çek silmə təsdiq modalı */}
+      <Modal
+        show={showEmptyCheckConfirm}
+        onHide={() => {
+          setShowEmptyCheckConfirm(false);
+          const d = emptyCheckDataRef.current;
+          if (d) {
+            if (d.targetPath === -1) goTables(true, true);
+            else navigate(d.targetPath, { replace: true });
+          }
+        }}
+        centered
+        animation={false}
+        dialogClassName="custom-modal-width empty-check-modal"
+        contentClassName="custom-modal-content"
+      >
+        <div className="discount-modal-container">
+          {/* Header */}
+          <div className="discount-header" style={{ backgroundColor: "#5D99FF" }}>
+            <div className="header-left">
+              <div className="header-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <span className="header-title">Masa boşdur</span>
+            </div>
+            <button className="close-btn" onClick={() => { setShowEmptyCheckConfirm(false); const d = emptyCheckDataRef.current; if (d) { if (d.targetPath === -1) goTables(true, true); else navigate(d.targetPath, { replace: true }); } }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="discount-body">
+            <div style={{ textAlign: "center", padding: "8px 0" }}>
+              <p style={{ fontSize: "16px", color: "#333", margin: "0 0 6px", fontWeight: 500 }}>
+                Bu masada heç bir məhsul yoxdur.
+              </p>
+              <p style={{ fontSize: "15px", color: "#666", margin: 0 }}>
+                Masanı silmək istədiyinizə əminsiniz?
+              </p>
+            </div>
+
+            <div className="action-row" style={{ marginTop: 0 }}>
+              <button
+                className="delete-all-btn"
+                onClick={() => {
+                  setShowEmptyCheckConfirm(false);
+                  const d = emptyCheckDataRef.current;
+                  if (d) {
+                    if (d.targetPath === -1) goTables(true, true);
+                    else navigate(d.targetPath, { replace: true });
+                  }
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              <button
+                className="apply-btn"
+                style={{ backgroundColor: "#dc2626", border: "none", boxShadow: "0 4px 6px rgba(220,38,38,0.3)" }}
+                onClick={async () => {
+                  const d = emptyCheckDataRef.current;
+                  if (!d) return;
+                  setShowEmptyCheckConfirm(false);
+
+                  // Navigate immediately + optimistic removal
+                  dispatch(removeOrderOptimisticFromTables(d.orderId));
+                  dispatch(removeOrderOptimistic(d.orderId));
+                  if (d.targetPath === -1) goTables(true, true);
+                  else navigate(d.targetPath, { replace: true });
+                  setTimeout(() => toast.info("Masa boş olduğu üçün silindi"), 0);
+
+                  // Backend delete
+                  try {
+                    await dispatch(deleteCheck({
+                      orderId: d.orderId,
+                      reason: 0,
+                      reasonText: "Masa boş olduğu üçün silindi",
+                      waiterName: d.waiterName,
+                      forceDestroy: !d.hadOrderItems,
+                    })).unwrap();
+
+                    const socket = getSocket();
+                    if (socket?.connected) socket.emit("order_deleted", { orderId: d.orderId });
+                    if (d.profileId) {
+                      setTimeout(() => {
+                        dispatch(clearDeletedOrderId(d.orderId));
+                        dispatch(clearDeletedOrderIdBooks(d.orderId));
+                        dispatch(getTableGroups(d.profileId));
+                        dispatch(getActiveOrders({ profileId: d.profileId, silentRefresh: true }));
+                      }, 600);
+                    } else {
+                      setTimeout(() => {
+                        dispatch(clearDeletedOrderId(d.orderId));
+                        dispatch(clearDeletedOrderIdBooks(d.orderId));
+                      }, 5000);
+                    }
+                  } catch (error) {
+                    console.error("Auto-delete error:", error);
+                    dispatch(clearDeletedOrderId(d.orderId));
+                    dispatch(clearDeletedOrderIdBooks(d.orderId));
+                    if (d.profileId) {
+                      dispatch(getTableGroups(d.profileId));
+                      dispatch(getActiveOrders({ profileId: d.profileId, silentRefresh: true }));
+                    }
+                  }
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "8px" }}>
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+                Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
       <ProductModal
         show={showProductModal}
         onHide={() => {

@@ -7,8 +7,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import CustomersModal from "../Customers-Modal/CustomersModal";
 import OtherChecks from "../OtherChecks/OtherChecks";
-import { updateTableOrders } from "../../redux/Slices/OrdersSlice";
-import { getActiveOrders, addOrderOptimistic } from "../../redux/Slices/BooksSlice";
+import { updateTableOrders, saveLog } from "../../redux/Slices/OrdersSlice";
+import { getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
+import { saleNewOrders, getNextOrderId } from "../../redux/Slices/SaleSlice";
 import {
   getTableGroups,
   setTempTableOrder,
@@ -437,7 +438,51 @@ const Tables = () => {
             try {
               dispatch(addOrderOptimistic(optimisticOrder));
               dispatch(addOrderToTableOptimistic({ order: optimisticOrder, tableId: table.id }));
+              dispatch(saveLog({
+                orderId: generatedUuid,
+                action: "Yeni sifariş yaradıldı",
+                waiterName,
+                details: `Masa: ${table?.name || "Naməlum"}, Qonaq sayı: 0`
+              }));
               navigate(`/check/${generatedUuid}?tableId=${table.id}`);
+
+              // Background-da API çağır — order DB-də yaransın və ID alsın
+              (async () => {
+                try {
+                  let nextId = null;
+                  try {
+                    const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
+                    nextId = nextIdRes?.data?.nextId;
+                  } catch (e) {
+                    console.warn("getNextOrderId failed, using backend-generated id", e);
+                  }
+
+                  const payload = {
+                    guestCount: 0,
+                    tableId: table.id,
+                    waiterId,
+                    terminalId,
+                    profileId,
+                    sale_type: "dine_in",
+                    hallId: currentHallId,
+                    status: 1,
+                    serviceType: sv ? "percent" : null,
+                    serviceValue: sv,
+                    is_selected: 1,
+                    uuid: generatedUuid,
+                    ...(nextId && { id: nextId }),
+                  };
+
+                  const res = await dispatch(saleNewOrders(payload)).unwrap();
+                  const serverOrder = res?.data;
+                  const finalId = serverOrder?.id ?? res?.count;
+                  if (finalId) {
+                    dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+                  }
+                } catch (err) {
+                  console.error("API Create Error:", err);
+                }
+              })();
             } catch (e) {
               console.error("Order yaratma xetasi:", e);
               toast.error("Sifariş yaratmaq mümkün olmadı");
