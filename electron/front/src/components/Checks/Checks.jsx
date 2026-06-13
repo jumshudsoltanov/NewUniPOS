@@ -2,7 +2,7 @@ import { Container, Modal, Form, Row, Col, Spinner } from "react-bootstrap";
 import "./Checks.css";
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getActiveOrders, getArchivedOrders, addOrderOptimistic } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, getArchivedOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { getWaitersList } from "../../redux/Slices/WaitersSlice";
 import { getPaymentMethods } from "../../redux/Slices/PaymentMethodsSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -14,7 +14,7 @@ import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { computeOrderCardDisplayAmount } from "../../utils/orderDisplayTotal";
 import { getSocket } from "../../utils/apiConfig";
 import { fetchRooms } from "../../redux/Slices/HotelSlice";
-import { saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
+import { saleNewOrders, saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { t } from "../../utils/translations";
 import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
@@ -346,6 +346,57 @@ const Checks = () => {
     fetchData();
 
   }, [activeTab, profileId, dispatch, selectedDate, debouncedSearchId, filterSaleType, filterWaiter, filterHall, filterTable]);
+
+  // ── Pending orderlarin recover-i ─────────────────────────────────────────
+  // Sehife yenilendikde localStorage-da qalan ve DB-de yaradilmayan
+  // orderlari avtomatik berpa et
+  useEffect(() => {
+    if (!profileId || activeTab !== "open") return;
+
+    try {
+      const pending = JSON.parse(localStorage.getItem("pending_order_uuids") || "[]");
+      if (pending.length === 0) return;
+
+      const activeUuids = new Set(openOrders.map(o => String(o.uuid)));
+      const needRecovery = pending.filter(uuid => !activeUuids.has(uuid));
+      if (needRecovery.length === 0) return;
+
+      console.warn(`[RECOVERY] ${needRecovery.length} pending order berpa olunur...`);
+
+      needRecovery.forEach(async (uuid) => {
+        try {
+          const raw = localStorage.getItem(`pending_payload_${uuid}`);
+          if (!raw) return;
+
+          const recoveryPayload = JSON.parse(raw);
+          let nextId = null;
+          try {
+            const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
+            nextId = nextIdRes?.data?.nextId;
+          } catch (_) {}
+
+          const payload = { ...recoveryPayload, uuid, ...(nextId && { id: nextId }) };
+          const res = await dispatch(saleNewOrders(payload)).unwrap();
+          const serverOrder = res?.data;
+          const finalId = serverOrder?.id ?? res?.count;
+          if (finalId) {
+            dispatch(updateOrderOptimisticId({ uuid, newOrderData: { id: finalId } }));
+          }
+
+          // Ugurlu oldu — temizle
+          const updated = JSON.parse(localStorage.getItem("pending_order_uuids") || "[]");
+          const idx = updated.indexOf(uuid);
+          if (idx !== -1) {
+            updated.splice(idx, 1);
+            localStorage.setItem("pending_order_uuids", JSON.stringify(updated));
+            localStorage.removeItem(`pending_payload_${uuid}`);
+          }
+        } catch (err) {
+          console.warn(`[RECOVERY] ${uuid} berpa olunmadi:`, err?.message);
+        }
+      });
+    } catch (_) {}
+  }, [profileId, activeTab, openOrders, dispatch]);
 
   const currentDisplayOrders = useMemo(() => {
     if (activeTab !== "open") return archivedBooks;

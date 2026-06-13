@@ -3112,20 +3112,29 @@ const Check = () => {
           navigate(`/check/${generatedUuid}?tableId=${currentTable?.id}`);
           toast.success(t("yeni_cek_yaradildi"));
 
-          dispatch(saleNewOrders(payload)).unwrap()
-            .then((res) => {
-              const serverOrder = res?.data;
-              const finalId = serverOrder?.id ?? res?.count;
-              if (finalId && finalId !== nextId) {
-                dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+          // Retry ile order yarat (3 defeye qeder)
+          (async () => {
+            for (let attempt = 0; attempt < 3; attempt++) {
+              try {
+                const res = await dispatch(saleNewOrders(payload)).unwrap();
+                const serverOrder = res?.data;
+                const finalId = serverOrder?.id ?? res?.count;
+                if (finalId && finalId !== nextId) {
+                  dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+                }
+                dispatch(getTableGroups(profileId));
+                dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+                break; // ugurlu oldu
+              } catch (err) {
+                console.error(`API Create Error (attempt ${attempt + 1}):`, err);
+                if (attempt < 2) {
+                  await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+                } else {
+                  toast.error(t("error_occurred"));
+                }
               }
-              dispatch(getTableGroups(profileId));
-              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
-            })
-            .catch((err) => {
-              console.error(err);
-              toast.error(t("error_occurred"));
-            });
+            }
+          })();
         }}
       />
 
@@ -3257,7 +3266,7 @@ const Check = () => {
         show={showNotifications}
         onClose={() => setShowNotifications(false)}
       />
-      {/* Boş çek silmə təsdiq modalı */}
+      {/* Boş çek silmə təsdiq modalı — CustomersModal stilində */}
       <Modal
         show={showEmptyCheckConfirm}
         onHide={() => {
@@ -3270,23 +3279,19 @@ const Check = () => {
         }}
         centered
         animation={false}
-        dialogClassName="custom-modal-width empty-check-modal"
+        dialogClassName="empty-check-modal"
         contentClassName="custom-modal-content"
       >
-        <div className="discount-modal-container">
-          {/* Header */}
-          <div className="discount-header" style={{ backgroundColor: "#5D99FF" }}>
-            <div className="header-left">
-              <div className="header-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
+        <div className="modal-content-wrapper">
+          {/* CustomersModal stilində header */}
+          <div className="customers-modal-header">
+            <div className="customers-header-content">
+              <div className="customers-icon-circle">
+                <i className="bi bi-info-lg"></i>
               </div>
-              <span className="header-title">{t("masa_bosdur")}</span>
+              <div className="customers-modal-title">{t("masa_bosdur")}</div>
             </div>
-            <button className="close-btn" onClick={() => { setShowEmptyCheckConfirm(false); const d = emptyCheckDataRef.current; if (d) { if (d.targetPath === -1) goTables(true, true); else navigate(d.targetPath, { replace: true }); } }}>
+            <button className="btn-close-custom" onClick={() => { setShowEmptyCheckConfirm(false); const d = emptyCheckDataRef.current; if (d) { if (d.targetPath === -1) goTables(true, true); else navigate(d.targetPath, { replace: true }); } }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -3295,15 +3300,19 @@ const Check = () => {
           </div>
 
           {/* Body */}
-          <div className="discount-body">
-            <div style={{ textAlign: "center", padding: "8px 0" }}>
-              <p style={{ fontSize: "16px", color: "#333", margin: "0 0 6px", fontWeight: 500 }}>{t("bu_masada_hec_bir_mehsul_yoxdur")}</p>
+          <div className="customers-modal-body">
+            <div style={{ textAlign: "center", padding: "20px 8px 12px" }}>
+              <div style={{ fontSize: "42px", color: "#4F85F4", marginBottom: "12px" }}>
+                <i className="bi bi-trash3"></i>
+              </div>
+              <p style={{ fontSize: "17px", color: "#333", margin: "0 0 8px", fontWeight: 500 }}>{t("bu_masada_hec_bir_mehsul_yoxdur")}</p>
               <p style={{ fontSize: "15px", color: "#666", margin: 0 }}>{t("masani_silmek_istediyinize_eminsiniz")}</p>
             </div>
 
-            <div className="action-row" style={{ marginTop: 0 }}>
+            <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
               <button
-                className="delete-all-btn"
+                className="customers-save-btn"
+                style={{ flex: 1, backgroundColor: "#e5e7eb", color: "#333", boxShadow: "none", height: "48px" }}
                 onClick={() => {
                   setShowEmptyCheckConfirm(false);
                   const d = emptyCheckDataRef.current;
@@ -3313,14 +3322,12 @@ const Check = () => {
                   }
                 }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <i className="bi bi-x-lg" style={{ fontSize: "1.2rem", marginRight: "6px" }}></i>
+                {t("cancel")}
               </button>
               <button
-                className="apply-btn"
-                style={{ backgroundColor: "#dc2626", border: "none", boxShadow: "0 4px 6px rgba(220,38,38,0.3)" }}
+                className="customers-save-btn"
+                style={{ flex: 1, height: "48px" }}
                 onClick={async () => {
                   const d = emptyCheckDataRef.current;
                   if (!d) return;
@@ -3369,12 +3376,7 @@ const Check = () => {
                   }
                 }}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "8px" }}>
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  <line x1="10" y1="11" x2="10" y2="17"></line>
-                  <line x1="14" y1="11" x2="14" y2="17"></line>
-                </svg>
+                <i className="bi bi-trash3" style={{ fontSize: "1.2rem", marginRight: "6px" }}></i>
                 Sil
               </button>
             </div>

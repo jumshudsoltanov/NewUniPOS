@@ -44,12 +44,19 @@ const Settings = () => {
     return localStorage.getItem("showHeaderClock") === "true";
   });
   const [appVersion, setAppVersion] = useState(null);
+  const [isDev, setIsDev] = useState(false);
 
   useEffect(() => {
     if (window.electronAPI?.getAppVersion) {
       window.electronAPI
         .getAppVersion()
         .then((v) => setAppVersion(v))
+        .catch(() => {});
+    }
+    if (window.electronAPI?.getIsDev) {
+      window.electronAPI
+        .getIsDev()
+        .then((v) => setIsDev(v))
         .catch(() => {});
     }
   }, []);
@@ -366,6 +373,7 @@ const Settings = () => {
           {/* Bottom Menu Row */}
           <div className="settings-grid settings-grid-bottom">
             {bottomMenuItems
+              .filter((item) => (item.id !== "language" || isDev))
               .filter((item) => !item.hiddenOnMobile || !isMobile)
               .map((item) => (
                 <button

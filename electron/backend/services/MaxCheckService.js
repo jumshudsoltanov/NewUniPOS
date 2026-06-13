@@ -16,6 +16,7 @@ class MaxCheckService {
         this._syncInFlight = false;
         this._lastProfileId = null;
         this._pendingSyncMaxId = null; // tracks unsent max ID for retry
+        this._offlineMode = false;     // skip admin API calls when no internet
 
         // Periodic retry: every 30s check if local > server and push to server
         setInterval(() => {
@@ -44,17 +45,34 @@ class MaxCheckService {
             const ok = await this.syncMaxIdToServer(profileId, maxToSync);
             if (ok) {
                 this._pendingSyncMaxId = null;
+                this._offlineMode = false; // sync uğurlu oldu — online-a qayıt
+            }
+        } else {
+            // Heç bir sync lazım deyil, amma offline-dirsak bir də serveri yoxla
+            if (this._offlineMode) {
+                // force=true — offline olsaq da admin API-ə cəhd et
+                const serverMax = await this.fetchServerMaxId(profileId, true);
+                if (serverMax > 0) {
+                    this._offlineMode = false;
+                }
             }
         }
     }
 
-    async fetchServerMaxId(profileId) {
+    async fetchServerMaxId(profileId, force = false) {
+        // Əgər offline rejimindəyik, admin API-ə heç cəhd etmə — local DB kifayətdir
+        // force=true olanda (periodic sync) yenə cəhd edir
+        if (!force && this._offlineMode) {
+            console.log(`[MAX_CHECK] Offline mode: skipping server fetch, using cached: ${this.cachedServerMaxId}`);
+            return this.cachedServerMaxId;
+        }
+
         const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
         for (const url of urls) {
             try {
                 const response = await axios.get(url, {
                     params: { profile_id: profileId },
-                    timeout: 5000,
+                    timeout: 2000,  // 5s → 2s: offline olanda tez cavab ver
                     httpsAgent: tlsAgent,
                 });
                 if (response.status === 200 && response.data != null) {
@@ -67,6 +85,7 @@ class MaxCheckService {
                         0
                     ) || 0;
                     this.cachedServerMaxId = serverMax;
+                    this._offlineMode = false; // admin API cavab verdi — online
                     console.log(`[MAX_CHECK] Server max ID: ${serverMax} (profile: ${profileId}, url: ${url})`);
                     return serverMax;
                 }
@@ -74,7 +93,9 @@ class MaxCheckService {
                 console.warn(`[MAX_CHECK] GET ${url} failed — status: ${e.response?.status}, error: ${e.message}`);
             }
         }
-        console.warn(`[MAX_CHECK] Could not reach server. Using cached: ${this.cachedServerMaxId}`);
+        // Hər iki URL cəhdi uğursuz oldu — offline rejiminə keç
+        this._offlineMode = true;
+        console.warn(`[MAX_CHECK] Could not reach server. Entering offline mode. Using cached: ${this.cachedServerMaxId}`);
         return this.cachedServerMaxId;
     }
 
@@ -135,7 +156,8 @@ class MaxCheckService {
         let localMax = this.cachedLocalMaxId;
 
         let serverMax = this.cachedServerMaxId;
-        if (serverMax === 0) {
+        // Admin API-dən ancaq cache boşdursa və offline deyilsək sorğula
+        if (serverMax === 0 && !this._offlineMode) {
             try {
                 serverMax = await this.fetchServerMaxId(profileId);
             } catch (e) {
@@ -165,7 +187,8 @@ class MaxCheckService {
         try {
             const localMax = (await OrdersModel.max("id", { paranoid: false })) || 0;
             this.cachedLocalMaxId = localMax;
-            const serverMax = await this.fetchServerMaxId(profileId);
+            // force=false — offline-dirsa start-upda admin API-ə cəhd etmə, tez başlasın
+            const serverMax = await this.fetchServerMaxId(profileId, true);
             const effectiveMax = Math.max(localMax, serverMax);
 
             if (localMax > serverMax && localMax > 0) {

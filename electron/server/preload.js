@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     toggleKitchenDisplay: (data) => ipcRenderer.invoke("toggle-kitchen-display", data),
     quitApp: () => ipcRenderer.invoke("quit-app"),
     getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+    getIsDev: () => ipcRenderer.invoke("get-is-dev"),
     installUpdate: () => ipcRenderer.invoke("install-update"),
     openDevToolsDetached: () => ipcRenderer.invoke("open-devtools-detached"),
     getUniposInstance: () => ipcRenderer.invoke("get-unipos-instance"),

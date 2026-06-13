@@ -2792,7 +2792,15 @@
   }
 }
 
-/* Empty check modal — bir az böyük variant */
+/* Empty check modal — CustomersModal stilində, bir az böyük */
 .empty-check-modal {
-  max-width: 400px !important;
+  max-width: 420px !important;
+}
+.empty-check-modal .modal-content-wrapper {
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
+}
+.empty-check-modal .customers-modal-body {
+  padding: 16px 24px 24px;
 }

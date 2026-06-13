@@ -2505,6 +2505,10 @@ ipcMain.handle("get-app-version", () => {
   return app.getVersion();
 });
 
+ipcMain.handle("get-is-dev", () => {
+  return isDev;
+});
+
 ipcMain.handle("open-devtools-detached", () => {
   try {
     const openDetached = (win) => {

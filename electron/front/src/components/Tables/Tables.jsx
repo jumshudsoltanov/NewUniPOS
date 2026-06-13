@@ -448,40 +448,75 @@ const Tables = () => {
 
               // Background-da API çağır — order DB-də yaransın və ID alsın
               (async () => {
+                const recoveryPayload = {
+                  guestCount: 0,
+                  tableId: table.id,
+                  waiterId,
+                  terminalId,
+                  profileId,
+                  sale_type: "dine_in",
+                  hallId: currentHallId,
+                  serviceType: sv ? "percent" : null,
+                  serviceValue: sv,
+                  status: 1,
+                  is_selected: 1,
+                };
+
+                // Melumatlari localStorage-a yaz ki, sehife yenilense de itmesin
                 try {
-                  let nextId = null;
+                  const pending = JSON.parse(localStorage.getItem("pending_order_uuids") || "[]");
+                  if (!pending.includes(generatedUuid)) {
+                    pending.push(generatedUuid);
+                    localStorage.setItem("pending_order_uuids", JSON.stringify(pending));
+                    localStorage.setItem(`pending_payload_${generatedUuid}`, JSON.stringify(recoveryPayload));
+                  }
+                } catch (_) {}
+
+                const retryCreateOrder = async (attempt = 0) => {
                   try {
-                    const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
-                    nextId = nextIdRes?.data?.nextId;
-                  } catch (e) {
-                    console.warn("getNextOrderId failed, using backend-generated id", e);
-                  }
+                    let nextId = null;
+                    try {
+                      const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
+                      nextId = nextIdRes?.data?.nextId;
+                    } catch (e) {
+                      console.warn("getNextOrderId failed, using backend-generated id", e);
+                    }
 
-                  const payload = {
-                    guestCount: 0,
-                    tableId: table.id,
-                    waiterId,
-                    terminalId,
-                    profileId,
-                    sale_type: "dine_in",
-                    hallId: currentHallId,
-                    status: 1,
-                    serviceType: sv ? "percent" : null,
-                    serviceValue: sv,
-                    is_selected: 1,
-                    uuid: generatedUuid,
-                    ...(nextId && { id: nextId }),
-                  };
+                    const payload = {
+                      ...recoveryPayload,
+                      uuid: generatedUuid,
+                      ...(nextId && { id: nextId }),
+                    };
 
-                  const res = await dispatch(saleNewOrders(payload)).unwrap();
-                  const serverOrder = res?.data;
-                  const finalId = serverOrder?.id ?? res?.count;
-                  if (finalId) {
-                    dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+                    const res = await dispatch(saleNewOrders(payload)).unwrap();
+                    const serverOrder = res?.data;
+                    const finalId = serverOrder?.id ?? res?.count;
+                    if (finalId) {
+                      dispatch(updateOrderOptimisticId({ uuid: generatedUuid, newOrderData: { id: finalId } }));
+                    }
+
+                    // Uğurlu oldu — localStorage-dan təmizlə
+                    try {
+                      const pending = JSON.parse(localStorage.getItem("pending_order_uuids") || "[]");
+                      const idx = pending.indexOf(generatedUuid);
+                      if (idx !== -1) {
+                        pending.splice(idx, 1);
+                        localStorage.setItem("pending_order_uuids", JSON.stringify(pending));
+                        localStorage.removeItem(`pending_payload_${generatedUuid}`);
+                      }
+                    } catch (_) {}
+                  } catch (err) {
+                    console.error(`API Create Error (attempt ${attempt + 1}):`, err);
+                    // 3 dəfəyə qədər retry (1s, 2s, 4s gözlə)
+                    if (attempt < 2) {
+                      const delay = Math.pow(2, attempt) * 1000;
+                      await new Promise(r => setTimeout(r, delay));
+                      return retryCreateOrder(attempt + 1);
+                    }
                   }
-                } catch (err) {
-                  console.error("API Create Error:", err);
-                }
+                };
+
+                retryCreateOrder();
               })();
             } catch (e) {
               console.error("Order yaratma xetasi:", e);
