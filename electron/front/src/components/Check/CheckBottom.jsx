@@ -633,7 +633,7 @@ const CheckBottom = ({
               const guard = await checkShiftGuard(loginedProfileData);
               if (guard.blocked) {
                 toast.error(
-                  guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.",
+                  guard.reason || t("shift_not_open"),
                 );
                 return;
               }
@@ -668,8 +668,7 @@ const CheckBottom = ({
               loginedWaiter?.data?.name ||
               loginedWaiter?.name ||
               loginedProfileData?.data?.profile?.name ||
-              orders?.waiter?.name ||
-              "Naməlum";
+              orders?.waiter?.name || t("unknown");
             dispatch(
               saveLog({
                 orderId: orders.uuid,

@@ -15,17 +15,17 @@ const statusOptions = [
   { value: "", label: t("all") },
   { value: "1", label: t("aciq"), color: "#053796" },
   { value: "2", label: t("baglanmis"), color: "#16a34a" },
-  { value: "3", label: "Silinib", color: "#dc2626" },
+  { value: "3", label: t("silinib"), color: "#dc2626" },
 ];
 
 const sortOptions = [
   { value: "", label: "Standart" },
-  { value: "id_asc", label: "ID ↑ artan" },
-  { value: "id_desc", label: "ID ↓ azalan" },
+  { value: "id_asc", label: "ID ↑" },
+  { value: "id_desc", label: "ID ↓" },
   { value: "amount_asc", label: t("mebleg_↑") },
   { value: "amount_desc", label: t("mebleg_↓") },
-  { value: "date_asc", label: "Tarix ↑" },
-  { value: "date_desc", label: "Tarix ↓" },
+  { value: "date_asc", label: t("tarix_↑") },
+  { value: "date_desc", label: t("tarix_↓") },
 ];
 
 const diffOptions = [
@@ -104,21 +104,21 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
           <div className="af-tags">
             {f.filterSaleType && tag(saleTypeOptions.find(o => o.value === f.filterSaleType)?.label, () => upd("filterSaleType", ""))}
             {f.filterStatus && tag(statusOptions.find(o => o.value === f.filterStatus)?.label, () => upd("filterStatus", ""))}
-            {f.filterWaiter && tag("Əməkdaş: " + (waiters.find(w => String(w.id) === f.filterWaiter)?.name || ""), () => upd("filterWaiter", ""))}
-            {f.filterHall && tag("Zal: " + (halls.find(h => String(h.id) === f.filterHall)?.name || ""), () => upd("filterHall", ""))}
-            {f.filterTable && tag("Masa: " + (tableOpts.find(t => String(t.id) === f.filterTable)?.name || ""), () => upd("filterTable", ""))}
+            {f.filterWaiter && tag(t("emekdas") + ": " + (waiters.find(w => String(w.id) === f.filterWaiter)?.name || ""), () => upd("filterWaiter", ""))}
+            {f.filterHall && tag(t("hall") + ": " + (halls.find(h => String(h.id) === f.filterHall)?.name || ""), () => upd("filterHall", ""))}
+            {f.filterTable && tag(t("table") + ": " + (tableOpts.find(t => String(t.id) === f.filterTable)?.name || ""), () => upd("filterTable", ""))}
             {(Array.isArray(f.sortOrder) ? f.sortOrder : (f.sortOrder ? [f.sortOrder] : [])).map(sv => (
               <span key={sv} className="af-tag" onClick={() => {
                 const arr = Array.isArray(f.sortOrder) ? f.sortOrder.filter(v => v !== sv) : [];
                 upd("sortOrder", arr.length ? arr : "");
               }}>{sortOptions.find(o => o.value === sv)?.label}<i className="bi bi-x ms-1"></i></span>
             ))}
-            {f.filterPaymentMethod && tag("Ödəniş: " + (paymentMethods.find(p => String(p.id) === f.filterPaymentMethod)?.name || ""), () => upd("filterPaymentMethod", ""))}
+            {f.filterPaymentMethod && tag(t("odenis") + ": " + (paymentMethods.find(p => String(p.id) === f.filterPaymentMethod)?.name || ""), () => upd("filterPaymentMethod", ""))}
             {f.filterDifference && tag(diffOptions.find(o => o.value === f.filterDifference)?.label, () => upd("filterDifference", ""))}
-            {f.filterTaxSent && tag(f.filterTaxSent === "sent" ? "Vergiyə göndərilib" : "Göndərilməyib", () => upd("filterTaxSent", ""))}
-            {f.filterDiscount && tag(f.filterDiscount === "yes" ? "Endirim var" : "Endirim yox", () => upd("filterDiscount", ""))}
-            {f.filterHasNote && tag(f.filterHasNote === "yes" ? "Qeyd var" : "Qeyd yox", () => upd("filterHasNote", ""))}
-            {(f.filterGuestMin || f.filterGuestMax) && tag("Qonaq: " + (f.filterGuestMin || "0") + "-" + (f.filterGuestMax || "∞"), () => { upd("filterGuestMin", ""); upd("filterGuestMax", ""); })}
+            {f.filterTaxSent && tag(f.filterTaxSent === "sent" ? t("vergiye_gonderilib") : t("gonderilmeyib"), () => upd("filterTaxSent", ""))}
+            {f.filterDiscount && tag(f.filterDiscount === "yes" ? t("endirim_var") : t("endirim_yox"), () => upd("filterDiscount", ""))}
+            {f.filterHasNote && tag(f.filterHasNote === "yes" ? t("qeyd_var") : t("qeyd_yox"), () => upd("filterHasNote", ""))}
+            {(f.filterGuestMin || f.filterGuestMax) && tag(t("guest") + ": " + (f.filterGuestMin || "0") + "-" + (f.filterGuestMax || "∞"), () => { upd("filterGuestMin", ""); upd("filterGuestMax", ""); })}
           </div>
         )}
 

@@ -263,8 +263,7 @@ const Menu = ({
 
     const waiterName =
       loginedWaiter?.data?.name ||
-      loginedProfileData?.data?.profile?.name ||
-      "Naməlum";
+      loginedProfileData?.data?.profile?.name || t("unknown");
 
     // Batch log: collect product names and flush after 800ms of inactivity
     pendingLogNames.current.push(product.name);
@@ -301,8 +300,7 @@ const Menu = ({
 
       const waiterName =
         loginedWaiter?.data?.name ||
-        loginedProfileData?.data?.profile?.name ||
-        "Naməlum";
+        loginedProfileData?.data?.profile?.name || t("unknown");
       dispatch(
         saveLog({
           orderId: order?.uuid,
@@ -339,8 +337,7 @@ const Menu = ({
 
       const waiterName =
         loginedWaiter?.data?.name ||
-        loginedProfileData?.data?.profile?.name ||
-        "Naməlum";
+        loginedProfileData?.data?.profile?.name || t("unknown");
       dispatch(
         saveLog({
           orderId: order?.uuid,
@@ -361,8 +358,7 @@ const Menu = ({
     }
     const waiterName =
       loginedWaiter?.data?.name ||
-      loginedProfileData?.data?.profile?.name ||
-      "Naməlum";
+      loginedProfileData?.data?.profile?.name || t("unknown");
 
     // Create a detail string for the log that includes the selected modifiers
     let details = productWithModifiers.name;
@@ -395,8 +391,7 @@ const Menu = ({
     }
     const waiterName =
       loginedWaiter?.data?.name ||
-      loginedProfileData?.data?.profile?.name ||
-      "Naməlum";
+      loginedProfileData?.data?.profile?.name || t("unknown");
     dispatch(
       saveLog({
         orderId: order?.uuid,

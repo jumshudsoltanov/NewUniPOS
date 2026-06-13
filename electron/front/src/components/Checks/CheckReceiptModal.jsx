@@ -69,7 +69,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                         <div className="receipt-info-row">
                             <span className="receipt-info-label">{t("satis_usulu_1")}</span>
                             <span className="receipt-info-value">
-                                {saleTypeLabels[order.sale_type] || order.sale_type || "Naməlum"}
+                                {saleTypeLabels[order.sale_type] || order.sale_type || t("unknown")}
                             </span>
                         </div>
                         {order.guest_count && (
@@ -106,7 +106,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                                 {(() => {
                                     const groupedItems = [];
                                     order.orders_items?.forEach(item => {
-                                        const prodName = item.product?.name || item.product_name || "Məhsul";
+                                        const prodName = item.product?.name || item.product_name || t("product");
                                         const price = Number(item.price);
                                         const isGift = item.is_gift === 1 || item.is_gift === true;
                                         
@@ -180,7 +180,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                                 <div key={i} className="receipt-payment-row">
                                     <span className="receipt-payment-method">
                                         <i className="bi bi-credit-card"></i>
-                                        {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Nağd")}
+                                        {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? t("odenissiz") : t("nagd"))}
                                     </span>
                                     <span className="receipt-payment-amount">{formatMoney(p.paid)} {getCurrencySymbol()}</span>
                                 </div>

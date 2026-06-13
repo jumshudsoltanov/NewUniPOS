@@ -409,7 +409,7 @@ const Check = () => {
           if (product) {
             e.preventDefault();
             dispatch(addProducts(product));
-            toast.success(`${product.name} check-ə əlavə edildi`);
+            toast.success(t("barcode_product_added", { name: product.name }));
           }
         }
         barcodeBufferRef.current = "";
@@ -465,7 +465,7 @@ const Check = () => {
         }
         setShowWhatsAppModal(false);
       })
-      .catch((err) => toast.error(err?.error || "WhatsApp göndərilmədi"));
+      .catch((err) => toast.error(err?.error || t("whatsapp_error")));
   };
 
   const handleSendCheckoutReminder = () => {
@@ -480,7 +480,7 @@ const Check = () => {
         toast.success(t("checkout_reminder_sent"));
         setWaReminderSent(true);
       })
-      .catch((err) => toast.error(err?.error || "Xatırlatma göndərilmədi"));
+      .catch((err) => toast.error(err?.error || t("checkout_reminder_error")));
   };
 
   // Check-out countdown and auto-reminder interval
@@ -572,34 +572,37 @@ const Check = () => {
     const d2 = hotelRoom.check_out ? new Date(hotelRoom.check_out) : null;
     const nights = d1 && d2 ? Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) : 0;
     const bal = Number(hotelRoom.folio_balance || 0);
+    const lang = localStorage.getItem("language") || "az";
+    const localeMap = { az: "az-AZ", en: "en-US", ru: "ru-RU", tr: "tr-TR" };
+    const locale = localeMap[lang] || "az-AZ";
     const line = (a, b) => `<tr><td style="padding:4px 2px;border-bottom:1px dashed #666;font-size:12px;font-weight:600">${a}</td><td style="padding:4px 2px;border-bottom:1px dashed #666;font-size:12px;font-weight:600;text-align:right">${b}</td></tr>`;
 
     const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>{t("receipt")}</title></head><body style="font-family:'Arial',sans-serif;width:300px;margin:0 auto;padding:10px">
+<html><head><meta charset="utf-8"><title>${t("receipt")}</title></head><body style="font-family:'Arial',sans-serif;width:300px;margin:0 auto;padding:10px">
   <div style="text-align:center;margin-bottom:12px">
-    <div style="font-size:16px;font-weight:700">{t("qebz")}</div>
-    <div style="font-size:10px;color:#666">{t("room_receipt")}</div>
+    <div style="font-size:16px;font-weight:700">${t("qebz")}</div>
+    <div style="font-size:10px;color:#666">${t("room_receipt")}</div>
   </div>
   <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-    ${line("Otaq", hotelRoom.room_number || "")}
-    ${line("Tip", hotelRoom.room_type || "—")}
-    ${line("Mərtəbə", hotelRoom.floor ? `${hotelRoom.floor}. mərtəbə` : "—")}
-    ${line("Qonaq", hotelRoom.guest_name || "—")}
-    ${line("Telefon", hotelRoom.guest_phone || "—")}
+    ${line(t("room"), hotelRoom.room_number || "")}
+    ${line(t("type"), hotelRoom.room_type || "—")}
+    ${line(t("floor"), hotelRoom.floor ? `${hotelRoom.floor}. ${t("floor")}` : "—")}
+    ${line(t("guest"), hotelRoom.guest_name || "—")}
+    ${line(t("phone"), hotelRoom.guest_phone || "—")}
   </table>
   ${d1 || d2 ? `<table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">{t("dates")}</td></tr>
-    ${d1 ? line("Giriş", `${String(d1.getDate()).padStart(2,"0")}.${String(d1.getMonth()+1).padStart(2,"0")}.${d1.getFullYear()}`) : ""}
-    ${d2 ? line("Çıxış", `${String(d2.getDate()).padStart(2,"0")}.${String(d2.getMonth()+1).padStart(2,"0")}.${d2.getFullYear()}`) : ""}
-    ${nights > 0 ? line("Gecə", `${nights}`) : ""}
+    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">${t("dates")}</td></tr>
+    ${d1 ? line(t("check_in"), `${String(d1.getDate()).padStart(2,"0")}.${String(d1.getMonth()+1).padStart(2,"0")}.${d1.getFullYear()}`) : ""}
+    ${d2 ? line(t("check_out"), `${String(d2.getDate()).padStart(2,"0")}.${String(d2.getMonth()+1).padStart(2,"0")}.${d2.getFullYear()}`) : ""}
+    ${nights > 0 ? line(t("night"), `${nights}`) : ""}
   </table>` : ""}
   <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">{t("financial")}</td></tr>
-    ${line("Depozit", `${formatPrice(bal)}`)}
+    <tr><td style="padding:4px 2px;font-size:11px;font-weight:700;border-bottom:1px solid #000" colspan="2">${t("financial")}</td></tr>
+    ${line(t("deposit"), `${formatPrice(bal)}`)}
   </table>
   <div style="border-top:2px solid #000;margin:8px 0"></div>
   <div style="text-align:center;font-size:10px;color:#999;margin-top:8px">
-    ${new Date().toLocaleString("az-AZ")}<br>{t("thanks")}</div>
+    ${new Date().toLocaleString(locale)}<br>${t("thanks")}</div>
 </body></html>`;
 
     try {
@@ -626,7 +629,7 @@ const Check = () => {
       }
       toast.success(t("qebz_cap_edildi"));
     } catch (err) {
-      toast.error("Çap xətası: " + (err.message || "Bilinməyən xəta"));
+      toast.error("Çap xətası: " + (err.message || t("unknown_error")));
     }
   };
 
@@ -854,13 +857,13 @@ const Check = () => {
         return;
       }
 
-      const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || "Naməlum";
+      const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || t("unknown");
 
       const getSaleTypeName = (type, typeName) => {
         if (typeName) return typeName;
-        if (type == 1 || type === "takeaway") return "Gəl götür";
-        if (type == 2 || type === "delivery") return "Çatdırılma";
-        return "Restoranda";
+        if (type == 1 || type === "takeaway") return t("takeaway");
+        if (type == 2 || type === "delivery") return t("delivery");
+        return t("dine_in");
       };
       const displaySaleType = getSaleTypeName(currentOrder?.sale_type, currentOrder?.sale_type_name);
 
@@ -962,7 +965,7 @@ const Check = () => {
           processAndPrintOrders(
             deletedItemsForPrint,
             {
-              table: currentTable?.name || currentOrder?.table_name || "Masa",
+              table: currentTable?.name || currentOrder?.table_name || t("table"),
               waiter: orderWaiter,
               hallName: currentHall?.name || "",
               orderId: currentOrder?.uuid || id,
@@ -1073,7 +1076,7 @@ const Check = () => {
 
         const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
         const printContext = {
-          table: currentTable?.name || currentOrder?.table_name || "Masa",
+          table: currentTable?.name || currentOrder?.table_name || t("table"),
           waiter: orderWaiter,
           hallName: currentHall?.name || "",
           orderId: currentOrder?.uuid || id,
@@ -1147,7 +1150,7 @@ const Check = () => {
     const actualResultingItemCount = hadPendingProducts ? Math.max(resultingItemCount, 1) : resultingItemCount;
 
     if (!isHotelMode && actualResultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
       const profileId = loginedProfileData?.data?.profile?.id;
       const orderId = currentOrder.uuid;
 
@@ -1510,7 +1513,7 @@ const Check = () => {
     const hallServiceFee = tableGroups?.data?.find((item) => { return item?.id == splitData?.table?.hall_id })
     try {
       await autoSendIfNeeded();
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
       // Enrich items with product names for logging
       const itemsWithNames = (splitData.items || []).map(item => {
         const orderItem = currentOrder?.orders_items?.find(oi => String(oi.product_id) === String(item.id));
@@ -1558,7 +1561,7 @@ const Check = () => {
 
 
   const handleDeleteCheckFunction = async ({ reason, reasonName, orderId, waste, wasteComment }) => {
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
     const profileId = loginedProfileData?.data?.profile?.id;
 
     // Auto-stop timer if active when deleting check
@@ -1597,7 +1600,7 @@ const Check = () => {
             const menuRef = menu?.find(m => m.id == (item.product_id || item.id));
             return {
               ...item,
-              name: menuRef?.name || item.product?.name || item.name || "Məhsul",
+              name: menuRef?.name || item.product?.name || item.name || t("product"),
               quantity: Number(item.count || item.quantity || 0),
               printer_details: menuRef?.printer_details || item.printer_details || [],
               category_id: menuRef?.category_id || item.category_id,
@@ -1609,9 +1612,9 @@ const Check = () => {
 
           const getSaleTypeNameTemp = (type, typeName) => {
             if (typeName) return typeName;
-            if (type == 1 || type === "takeaway") return "Gəl götür";
-            if (type == 2 || type === "delivery") return "Çatdırılma";
-            return "Restoranda";
+            if (type == 1 || type === "takeaway") return t("takeaway");
+            if (type == 2 || type === "delivery") return t("delivery");
+            return t("dine_in");
           };
 
           try {
@@ -1619,7 +1622,7 @@ const Check = () => {
             await processAndPrintOrders(
               itemsToPrint,
               {
-                table: currentOrder?.table_name || currentTable?.name || "Masa",
+                table: currentOrder?.table_name || currentTable?.name || t("table"),
                 waiter: orderWaiter,
                 hallName: currentHall?.name || "",
                 orderId: currentOrder?.uuid,
@@ -2148,7 +2151,7 @@ const Check = () => {
 
                       if (currentOrder?.uuid) {
                         setIsPrintingCheck(true);
-                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
                         // Auto-stop timer when printing customer receipt
                         if (currentOrder?.is_timer_status === 1) {
@@ -2359,7 +2362,7 @@ const Check = () => {
                       }
                       const guard = await checkShiftGuard(loginedProfileData);
                       if (guard.blocked) {
-                        toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                        toast.error(guard.reason || t("shift_not_open"));
                         return;
                       }
                       setOnShowSalesTypeModal(true);
@@ -2861,7 +2864,7 @@ const Check = () => {
                             } catch (error) {
                               console.error("Save order error:", error);
                               toast.dismiss(loadingToast);
-                              toast.error("Xəta baş verdi: " + error.message);
+                              toast.error(t("error_occurred") + ": " + error.message);
                             }
                           }}
                         >
@@ -3069,7 +3072,7 @@ const Check = () => {
             ...(nextId && { id: nextId }),
           };
 
-          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
           const optimisticOrder = {
             uuid: generatedUuid,
             id: nextId ?? null,
@@ -3077,7 +3080,7 @@ const Check = () => {
             profile_id: profileId,
             terminal_id: terminalId,
             sale_type: "dine_in",
-            sale_type_name: "Restoranda",
+            sale_type_name: t("dine_in"),
             table_id: currentTable?.id,
             guest_count: 0,
             status: 1,
@@ -3104,7 +3107,7 @@ const Check = () => {
             orderId: generatedUuid,
             action: "Yeni sifariş yaradıldı (Check View)",
             waiterName,
-            details: `Masa: ${currentTable?.name || "Naməlum"}`
+            details: `Masa: ${currentTable?.name || t("unknown")}`
           }));
           navigate(`/check/${generatedUuid}?tableId=${currentTable?.id}`);
           toast.success(t("yeni_cek_yaradildi"));
@@ -3205,7 +3208,7 @@ const Check = () => {
           setShowCustomerModal(false);
 
           if (currentOrder?.uuid) {
-            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
             // 1. Assign customer
             dispatch(assignCustomerToOrder({
@@ -3396,7 +3399,7 @@ const Check = () => {
               <div className="hc-wa-header-icon"><i className="bi bi-whatsapp"></i></div>
               <div>
                 <div className="hc-wa-header-title">{t("whatsapp_mesaji")}</div>
-                <div className="hc-wa-header-sub">{hotelRoom?.guest_name || "Qonaq"} · {hotelRoom?.guest_phone || "—"}</div>
+                <div className="hc-wa-header-sub">{hotelRoom?.guest_name || t("guest")} · {hotelRoom?.guest_phone || "—"}</div>
               </div>
             </div>
             <button className="hc-wa-close" onClick={() => setShowWhatsAppModal(false)}><i className="bi bi-x-lg"></i></button>
@@ -3405,7 +3408,7 @@ const Check = () => {
           <div className="hc-wa-body">
             <div className="hc-wa-recipient-bar">
               <i className="bi bi-person-circle"></i>
-              <span><strong>{hotelRoom?.guest_name || "Qonaq"}</strong> — {hotelRoom?.guest_phone || "Nömrə yoxdur"}</span>
+              <span><strong>{hotelRoom?.guest_name || t("guest")}</strong> — {hotelRoom?.guest_phone || t("no_phone")}</span>
               {hotelRoom?.room_number && <span className="hc-wa-room-badge">Otaq {hotelRoom.room_number}</span>}
             </div>
             <div className="hc-wa-templates">

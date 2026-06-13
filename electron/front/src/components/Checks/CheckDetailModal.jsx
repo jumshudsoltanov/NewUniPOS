@@ -94,7 +94,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             }
         };
         (order?.orders_items || []).forEach((item) => {
-            const name = item.product?.name || item.name || "Məhsul";
+            const name = item.product?.name || item.name || t("product");
             const price = Number(item.price || 0);
             const modifiers = parseMods(item);
             const modKey = JSON.stringify(modifiers);
@@ -132,7 +132,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
     const handleReopenConfirm = async ({ reason, reasonName }) => {
         try {
-            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
             await dispatch(reopenOrder({
                 orderId: order.uuid,
                 reasonId: reason,
@@ -159,18 +159,18 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         if (!order || isPrinting) return;
         setIsPrinting(true);
 
-        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || order.waiter?.name || "Naməlum";
+        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || order.waiter?.name || t("unknown");
 
         // Map data for consistent receipt format
         const mappedItems = (order.orders_items || []).map(item => ({
             ...item,
-            product_name: item.product?.name || item.name || "Məhsul",
+            product_name: item.product?.name || item.name || t("product"),
             quantity: item.count || 0
         }));
 
         const mappedPayments = (order.order_payments || []).map(p => ({
             ...p,
-            name: p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Nağd"),
+            name: p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? t("odenissiz") : t("nagd")),
             amount: p.paid
         }));
 
@@ -184,7 +184,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 waiter_name: order.waiter?.name || order.waiter_name,
                 payments: mappedPayments
             },
-            tableName: order.table?.name || "Masa",
+            tableName: order.table?.name || t("table"),
             hallName: order.table?.hall?.name || "",
             waiterName: waiterName,
             menuCatalog,
@@ -235,7 +235,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
         setTaxLoading(true);
         try {
-            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
             const profileTaxType = loginedProfileData?.data?.profile?.tax_type
                 ?? (() => { try { return JSON.parse(localStorage.getItem("profile") || "{}")?.tax_type; } catch { return null; } })();
             const rawItems = buildFiscalLineItemsFromOrderItems(order);
@@ -307,7 +307,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
         setTaxLoading(true);
         try {
-            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
             const result = await apiConfig.post('/tax/receipt-copy', {
                 taxConfigs: configsToSend,
                 fiscalId: order.fiscal_id || ''
@@ -407,7 +407,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
         setTaxLoading(true);
         try {
-            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
             const result = await apiConfig.post(
                 "/tax/sale",
                 {
@@ -470,7 +470,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             const errMsg = error.response?.data?.message || error.message;
             toast.error("Vergi təkrar satış xətası: " + errMsg);
             addNotification("Fiskal Satış Xətası", errMsg, { category: "system", type: "error" });
-            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
             dispatch(
                 saveLog({
                     orderId: order.uuid,
@@ -662,7 +662,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 <div className="meta-label">{t("satis_usulu")}</div>
                                                 <div className="meta-value">
                                                     {(() => {
-                                                        if (!order.sale_type) return "Naməlum";
+                                                        if (!order.sale_type) return t("unknown");
                                                         if (saleTypeLabels[order.sale_type]) return saleTypeLabels[order.sale_type];
                                                         return order.sale_type.charAt(0).toUpperCase() + order.sale_type.slice(1);
                                                     })()}
@@ -679,7 +679,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             </div>
                                             <div className="meta-content-col">
                                                 <div className="meta-label">{t("ofi̇si̇ant")}</div>
-                                                <div className="meta-value">{order.waiter?.name || "Naməlum"}</div>
+                                                <div className="meta-value">{order.waiter?.name || t("unknown")}</div>
                                             </div>
                                         </div>
 
@@ -720,12 +720,12 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                     ) : order.order_payments?.length > 0 ? (
                                                         order.order_payments.map((p, i) => (
                                                             <div key={i} className="d-flex justify-content-between w-100">
-                                                                <span>{p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Naməlum")}</span>
+                                                                <span>{p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? t("odenissiz") : t("unknown"))}</span>
                                                                 <span className="ms-2">{Number(p.paid).toFixed(2)} {getCurrencySymbol()}</span>
                                                             </div>
                                                         ))
                                                     ) : (
-                                                        "Gözləyir"
+                                                        t("gozleyir")
                                                     )}
                                                 </div>
                                             </div>
@@ -791,7 +791,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                                     </div>
                                                                     <div className="d-flex align-items-center gap-1">
                                                                         <i className="bi bi-person text-secondary opacity-75"></i>
-                                                                        <span>{log.waiterName || "Naməlum"}</span>
+                                                                        <span>{log.waiterName || t("unknown")}</span>
                                                                     </div>
                                                                 </div>
                                                                 {log.terminal_id && (
@@ -990,7 +990,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 <div style={{ fontSize: "12px", fontWeight: 500, opacity: 0.92, marginTop: "2px" }}>{t("tekrar_vergi_satisi")}</div>
                             </div>
                         </div>
-                        <button type="button" className="btn-close-custom" disabled={taxLoading} onClick={() => setShowTaxResendModal(false)} aria-label="Bağla">
+                        <button type="button" className="btn-close-custom" disabled={taxLoading} onClick={() => setShowTaxResendModal(false)} aria-label={t("bagla")}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>

@@ -111,7 +111,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
       profile_id: profileId,
       terminal_id: terminalId,
       sale_type: "dine_in",
-      sale_type_name: "Restoranda",
+      sale_type_name: t("dine_in"),
       table_id: table.id,
       guest_count: Number(guestCount),
       status: 1,

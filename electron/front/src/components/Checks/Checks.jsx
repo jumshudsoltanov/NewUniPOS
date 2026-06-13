@@ -48,7 +48,7 @@ const CheckListItem = React.memo(({ check, onClick, roomNumber }) => (
           <span className="checks-check-badge checks-badge-open">{t("aciq")}</span>
         ) : (
           <span className={`checks-check-badge ${check.status === 3 ? "warning" : ""}`}>
-            {check.status === 2 ? "Bağlanmış" : "Silinib"}
+            {check.status === 2 ? t("baglanmis") : t("silinib")}
           </span>
         )}
         {check.sale_type && (
@@ -69,7 +69,7 @@ const CheckListItem = React.memo(({ check, onClick, roomNumber }) => (
           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10z" />
           </svg>
-          {check?.waiter?.name || "Naməlum"}
+          {check?.waiter?.name || t("unknown")}
         </span>
         {(check.is_timer_status === 1 || Number(check.rate_per_minute || 0) > 0) && (
           <span className="timer-pill ms-2" style={{
@@ -98,7 +98,7 @@ const CheckListItem = React.memo(({ check, onClick, roomNumber }) => (
         <div className="mt-1 d-flex flex-wrap justify-content-end">
           {check.order_payments.map((p, idx) => (
             <span key={idx} className="payment-method-tag">
-              {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? "Ödənişsiz" : "Naməlum")}
+              {p.payment_method?.name || p.tag?.name || (p.without_payment_method_id ? t("odenissiz") : t("unknown"))}
             </span>
           ))}
         </div>
@@ -187,7 +187,7 @@ const Checks = () => {
       }
       const generatedUuid = crypto.randomUUID();
       const waiterName =
-        loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+        loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
       localStorage.setItem(`hotel_room_order_${room.id}`, generatedUuid);
 
@@ -220,7 +220,7 @@ const Checks = () => {
       dispatch(
         saveLog({
           orderId: generatedUuid,
-          action: "Yeni otaq sifarişi yaradıldı",
+          action: t("yeni_otaq_sifarisi_yaradildi"),
           waiterName,
           details: `Otaq: ${room.room_number || ""}, Qonaq: ${room.guest_name || "—"}`,
         })

@@ -118,7 +118,7 @@ const Rooms = () => {
       }
 
       const generatedUuid = crypto.randomUUID();
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
       const optimisticOrder = {
         uuid: generatedUuid,
@@ -127,7 +127,7 @@ const Rooms = () => {
         profile_id: profileIdVal,
         terminal_id: terminalId,
         sale_type: "dine_in",
-        sale_type_name: "Restoranda",
+        sale_type_name: t("dine_in"),
         guest_count: 1,
         status: 1,
         is_selected: 1,
@@ -215,7 +215,7 @@ const Rooms = () => {
         reserved: "Bu otaq bron edilib",
         maintenance: "Bu otaq təmirdədir",
       };
-      toast.info(statusLabels[room.status] || "Bu otaq mövcud deyil");
+      toast.info(statusLabels[room.status] || t("bu_otaq_movcud_deyil"));
     },
     [loginedWaiter, loginedProfileData, navigate, dispatch, handleHotelOrderCreate, books]
   );

@@ -83,41 +83,41 @@ const buildShiftPrintHtml = ({
 </style>
 ${logoSrc ? `<div class="logo-wrap"><img src="${logoSrc}" alt="logo"/></div>` : ""}
 ${profileName ? `<div class="profile">${escapeHtml(profileName)}</div>` : ""}
-<div class="title">{t("satis_novbesi̇_hesabati")}</div>
+<div class="title">${t("satis_novbesi̇_hesabati")}</div>
 <hr class="divider"/>
-<div class="kv"><span class="kv-label">{t("acilis")}</span><span class="kv-value">${escapeHtml(openedAt || "—")}</span></div>
-<div class="kv"><span class="kv-label">{t("baglanma")}</span><span class="kv-value">${escapeHtml(closedAt || "—")}</span></div>
-<div class="kv"><span class="kv-label">{t("terminal")}</span><span class="kv-value">${escapeHtml(terminalLabel || "Hamısı")}</span></div>
-<div class="kv"><span class="kv-label">{t("acan")}</span><span class="kv-value">${escapeHtml(openedBy || "—")}</span></div>
-<div class="kv"><span class="kv-label">{t("baglayan")}</span><span class="kv-value">${escapeHtml(closedBy || "—")}</span></div>
-${Number(startingCash) > 0 ? `<div class="kv"><span class="kv-label">{t("baslangic_qaliq")}</span><span class="kv-value">${money(startingCash)} &#8380;</span></div>` : ""}
+<div class="kv"><span class="kv-label">${t("acilis")}</span><span class="kv-value">${escapeHtml(openedAt || "—")}</span></div>
+<div class="kv"><span class="kv-label">${t("baglanma")}</span><span class="kv-value">${escapeHtml(closedAt || "—")}</span></div>
+<div class="kv"><span class="kv-label">${t("terminal")}</span><span class="kv-value">${escapeHtml(terminalLabel || t("all"))}</span></div>
+<div class="kv"><span class="kv-label">${t("acan")}</span><span class="kv-value">${escapeHtml(openedBy || "—")}</span></div>
+<div class="kv"><span class="kv-label">${t("baglayan")}</span><span class="kv-value">${escapeHtml(closedBy || "—")}</span></div>
+${Number(startingCash) > 0 ? `<div class="kv"><span class="kv-label">${t("baslangic_qaliq")}</span><span class="kv-value">${money(startingCash)} &#8380;</span></div>` : ""}
 <hr class="divider"/>
-<div class="section-title">{t("umumi")}</div>
-<div class="kv"><span class="kv-label">{t("baglanmis_cek")}</span><span class="kv-value">${summary?.checksCount ?? 0}</span></div>
-<div class="total-row"><span class="total-label">{t("cem_mebleg")}</span><span class="total-amount">${money(summary?.grossTotal)} &#8380;</span></div>
+<div class="section-title">${t("umumi")}</div>
+<div class="kv"><span class="kv-label">${t("baglanmis_cek")}</span><span class="kv-value">${summary?.checksCount ?? 0}</span></div>
+<div class="total-row"><span class="total-label">${t("cem_mebleg")}</span><span class="total-amount">${money(summary?.grossTotal)} &#8380;</span></div>
 <hr class="divider" style="margin-top:8px"/>
-<div class="section-title">{t("satis_hesabati")}</div>
-<div class="kv"><span class="kv-label">{t("cem")}</span><span class="kv-value">${money(summary?.total_amount)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">Vergi</span><span class="kv-value">${money(summary?.total_tax)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">{t("i̇kram")}</span><span class="kv-value">${money(summary?.total_gift)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">{t("xidmet")}</span><span class="kv-value">${money(summary?.total_service)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">Endirim</span><span class="kv-value">${money(summary?.total_discount)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">{t("catdirilma_haqqi")}</span><span class="kv-value">${money(summary?.delivery_fee)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">{t("refund")}</span><span class="kv-value">${money(summary?.total_refund)} &#8380;</span></div>
-<div class="kv"><span class="kv-label">{t("silinmeler")}</span><span class="kv-value">${money(summary?.total_deleted)} &#8380;</span></div>
-${(Number(summary?.total_paid || 0) > 0 || Number(summary?.total_unpaid || 0) > 0) ? `<div class="kv" style="border-top:1px dashed #000;margin-top:3px;padding-top:3px"><span class="kv-label">{t("odenisli_baglamalar")}</span><span class="kv-value">${money(summary?.total_paid)} &#8380;</span></div><div class="kv"><span class="kv-label">{t("odenissiz_baglamalar")}</span><span class="kv-value">${money(summary?.total_unpaid)} &#8380;</span></div>` : ""}
-<div class="total-row" style="margin-top:3px"><span class="total-label">Yekun</span><span class="total-amount">${money(summary?.net_total)} &#8380;</span></div>
-${Number(summary?.guest_count || 0) > 0 ? `<div class="kv" style="margin-top:3px"><span class="kv-label">{t("guest_count")}</span><span class="kv-value">${summary?.guest_count ?? 0}</span></div>` : ""}
+<div class="section-title">${t("satis_hesabati")}</div>
+<div class="kv"><span class="kv-label">${t("cem")}</span><span class="kv-value">${money(summary?.total_amount)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">${t("vergi")}</span><span class="kv-value">${money(summary?.total_tax)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">${t("i̇kram")}</span><span class="kv-value">${money(summary?.total_gift)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">${t("xidmet")}</span><span class="kv-value">${money(summary?.total_service)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">${t("endirim")}</span><span class="kv-value">${money(summary?.total_discount)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">${t("catdirilma_haqqi")}</span><span class="kv-value">${money(summary?.delivery_fee)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">${t("refund")}</span><span class="kv-value">${money(summary?.total_refund)} &#8380;</span></div>
+<div class="kv"><span class="kv-label">${t("silinmeler")}</span><span class="kv-value">${money(summary?.total_deleted)} &#8380;</span></div>
+${(Number(summary?.total_paid || 0) > 0 || Number(summary?.total_unpaid || 0) > 0) ? `<div class="kv" style="border-top:1px dashed #000;margin-top:3px;padding-top:3px"><span class="kv-label">${t("odenisli_baglamalar")}</span><span class="kv-value">${money(summary?.total_paid)} &#8380;</span></div><div class="kv"><span class="kv-label">${t("odenissiz_baglamalar")}</span><span class="kv-value">${money(summary?.total_unpaid)} &#8380;</span></div>` : ""}
+<div class="total-row" style="margin-top:3px"><span class="total-label">${t("yekun")}</span><span class="total-amount">${money(summary?.net_total)} &#8380;</span></div>
+${Number(summary?.guest_count || 0) > 0 ? `<div class="kv" style="margin-top:3px"><span class="kv-label">${t("guest_count")}</span><span class="kv-value">${summary?.guest_count ?? 0}</span></div>` : ""}
 <hr class="divider" style="margin-top:8px"/>
-<div class="section-title">{t("ofisiant_uzre")}</div>
-<table><thead><tr><th>Ad</th><th class="r">{t("cek")}</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+<div class="section-title">${t("ofisiant_uzre")}</div>
+<table><thead><tr><th>Ad</th><th class="r">${t("cek")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
 <hr class="divider"/>
-<div class="section-title">{t("satis_tipi_1")}</div>
-<table><thead><tr><th>{t("type")}</th><th class="r">Say</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
-${payRows ? `<hr class="divider"/><div class="section-title">{t("odenis_usullari")}</div><table><thead><tr><th>{t("usul")}</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${payRows}</tbody></table>` : ""}
-${unpaidRows ? `<hr class="divider"/><div class="section-title">{t("odenissiz_baglamalar")}</div><table><thead><tr><th>{t("usul")}</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${unpaidRows}</tbody></table>` : ""}
-${tagRows ? `<hr class="divider"/><div class="section-title">{t("etiketler")}</div><table><thead><tr><th>Etiket</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
-${catRows ? `<hr class="divider"/><div class="section-title">{t("kateqoriya_hesabati")}</div><table><thead><tr><th>Kateqoriya</th><th class="r">Say</th><th class="r">{t("mebleg")}</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
+<div class="section-title">${t("satis_tipi_1")}</div>
+<table><thead><tr><th>${t("type")}</th><th class="r">Say</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+${payRows ? `<hr class="divider"/><div class="section-title">${t("odenis_usullari")}</div><table><thead><tr><th>${t("usul")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${payRows}</tbody></table>` : ""}
+${unpaidRows ? `<hr class="divider"/><div class="section-title">${t("odenissiz_baglamalar")}</div><table><thead><tr><th>${t("usul")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${unpaidRows}</tbody></table>` : ""}
+${tagRows ? `<hr class="divider"/><div class="section-title">${t("etiketler")}</div><table><thead><tr><th>Etiket</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
+${catRows ? `<hr class="divider"/><div class="section-title">${t("kateqoriya_hesabati")}</div><table><thead><tr><th>Kateqoriya</th><th class="r">Say</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
 ${footerNote ? `<div class="footer-note">${escapeHtml(footerNote)}</div>` : ""}`;
 };
 
@@ -158,7 +158,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
     return (
         <div className="ssd-body-inner">
             <div className="ssd-center-title">
-                <h4>{profileName || "Bağlanmış növbə"}</h4>
+                <h4>{profileName || t("baglanmis_novbe")}</h4>
                 <div className="ssd-status-pill">
                     <span className="ssd-status-pill-dot" aria-hidden />{t("arxiv_·_bagli")}</div>
             </div>
@@ -218,10 +218,10 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                         <div className="ssd-card-title">
                             <i className="bi bi-receipt" aria-hidden />{t("satis_hesabati")}</div>
                         <div className="ssd-kv"><span>{t("cem")}</span><span>{money(s.total_amount)} {getCurrencySymbol()}</span></div>
-                        <div className="ssd-kv"><span>Vergi</span><span>{money(s.total_tax)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>{t("vergi")}</span><span>{money(s.total_tax)} {getCurrencySymbol()}</span></div>
                         <div className="ssd-kv"><span>{t("i̇kram")}</span><span>{money(s.total_gift)} {getCurrencySymbol()}</span></div>
                         <div className="ssd-kv"><span>{t("xidmet")}</span><span>{money(s.total_service)} {getCurrencySymbol()}</span></div>
-                        <div className="ssd-kv"><span>Endirim</span><span>{money(s.total_discount)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-kv"><span>{t("endirim")}</span><span>{money(s.total_discount)} {getCurrencySymbol()}</span></div>
                         <div className="ssd-kv"><span>{t("catdirilma_haqqi")}</span><span>{money(s.delivery_fee)} {getCurrencySymbol()}</span></div>
                         <div className="ssd-kv"><span>{t("refund")}</span><span>{money(s.total_refund)} {getCurrencySymbol()}</span></div>
                         <div className="ssd-kv"><span>{t("silinmeler")}</span><span>{money(s.total_deleted)} {getCurrencySymbol()}</span></div>
@@ -231,7 +231,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                                 <div className="ssd-kv"><span>{t("odenissiz_baglamalar")}</span><span>{money(s.total_unpaid)} {getCurrencySymbol()}</span></div>
                             </>
                         )}
-                        <div className="ssd-total-row"><span>Yekun</span><span>{money(s.net_total)} {getCurrencySymbol()}</span></div>
+                        <div className="ssd-total-row"><span>{t("yekun")}</span><span>{money(s.net_total)} {getCurrencySymbol()}</span></div>
                     </div>
                     {(s.guest_count > 0) && (
                         <div className="ssd-card">
@@ -488,7 +488,7 @@ const SalesShiftModal = ({ show, onHide }) => {
             await fetchHistory();
         } catch (e) {
             console.error(e);
-            toastShiftError(e, "Növbə məlumatı alınmadı");
+            toastShiftError(e, t("novbe_melumati_alinmadi"));
         } finally {
             setLoading(false);
         }
@@ -588,12 +588,12 @@ const SalesShiftModal = ({ show, onHide }) => {
             logoSrc,
             openedAt: snapshot.openedAt,
             closedAt: snapshot.closedAt,
-            terminalLabel: snapshot.terminalId || "Hamısı",
+            terminalLabel: snapshot.terminalId || t("all"),
             openedBy: shiftRow?.opened_by_name || "—",
             closedBy: shiftRow?.closed_by_name || "—",
             startingCash: snapshot.startingCash || Number(shiftRow?.starting_cash) || 0,
             summary: snapshot.summary,
-            footerNote: isReprint ? "TƏKRAR ÇAP" : "",
+            footerNote: isReprint ? t("tekrar_cap") : "",
             baseFontPx: baseReceiptFont,
         });
         await printToCashier(html);
@@ -620,7 +620,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                 toast.warning(t("bu_terminal_ucun_artiq_aciq_novbe_var"));
                 await refreshAll();
             } else {
-                toastShiftError(e, "Növbə açılmadı");
+                toastShiftError(e, t("novbe_acilmadi"));
             }
         } finally {
             setLoading(false);
@@ -656,7 +656,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                 await fetchCurrent();
             }
         } catch (e) {
-            toastShiftError(e, "Növbə bağlanmadı");
+            toastShiftError(e, t("novbe_baglanmadi"));
         } finally {
             setLoading(false);
         }
@@ -810,10 +810,10 @@ const SalesShiftModal = ({ show, onHide }) => {
                         <i className="bi bi-receipt" aria-hidden />{t("satis_hesabati")}</div>
                     <div className="ssm-info-card">
                         <div className="ssm-info-row"><span className="ssm-info-label">{t("cem")}</span><span className="ssm-info-value">{money(summary.total_amount)} {getCurrencySymbol()}</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">Vergi</span><span className="ssm-info-value">{money(summary.total_tax)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("vergi")}</span><span className="ssm-info-value">{money(summary.total_tax)} {getCurrencySymbol()}</span></div>
                         <div className="ssm-info-row"><span className="ssm-info-label">{t("i̇kram")}</span><span className="ssm-info-value">{money(summary.total_gift)} {getCurrencySymbol()}</span></div>
                         <div className="ssm-info-row"><span className="ssm-info-label">{t("xidmet")}</span><span className="ssm-info-value">{money(summary.total_service)} {getCurrencySymbol()}</span></div>
-                        <div className="ssm-info-row"><span className="ssm-info-label">Endirim</span><span className="ssm-info-value">{money(summary.total_discount)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row"><span className="ssm-info-label">{t("endirim")}</span><span className="ssm-info-value">{money(summary.total_discount)} {getCurrencySymbol()}</span></div>
                         <div className="ssm-info-row"><span className="ssm-info-label">{t("catdirilma_haqqi")}</span><span className="ssm-info-value">{money(summary.delivery_fee)} {getCurrencySymbol()}</span></div>
                         <div className="ssm-info-row"><span className="ssm-info-label">{t("refund")}</span><span className="ssm-info-value">{money(summary.total_refund)} {getCurrencySymbol()}</span></div>
                         <div className="ssm-info-row"><span className="ssm-info-label">{t("silinmeler")}</span><span className="ssm-info-value">{money(summary.total_deleted)} {getCurrencySymbol()}</span></div>
@@ -823,7 +823,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                 <div className="ssm-info-row"><span className="ssm-info-label">{t("odenissiz_baglamalar")}</span><span className="ssm-info-value">{money(summary.total_unpaid)} {getCurrencySymbol()}</span></div>
                             </>
                         )}
-                        <div className="ssm-info-row ssm-total-row"><span>Yekun</span><span>{money(summary.net_total)} {getCurrencySymbol()}</span></div>
+                        <div className="ssm-info-row ssm-total-row"><span>{t("yekun")}</span><span>{money(summary.net_total)} {getCurrencySymbol()}</span></div>
                     </div>
                     <div className="ssm-info-card">
                         <div className="ssm-info-row"><span className="ssm-info-label">{t("guest_count")}</span><span className="ssm-info-value">{summary.guest_count ?? 0}</span></div>
@@ -1021,7 +1021,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                 <div
                     className="sales-shift-history-strip"
                     role="list"
-                    aria-label="Keçmiş satış növbələri"
+                    aria-label={t("kecmis_satis_novbeleri")}
                 >
                     {history.map((h) => {
                         const snap = getSnapshotForHistoryRow(h);
@@ -1046,8 +1046,8 @@ const SalesShiftModal = ({ show, onHide }) => {
                                             {h.terminal_id != null && h.terminal_id !== ""
                                                 ? ` · Term. ${h.terminal_id}`
                                                 : ""}
-                                            {checks != null && ` · Çek ${checks}`}
-                                            {gross != null && ` · ${money(gross)} ₼`}
+                                            {checks != null && t("cek_checks", { count: checks })}
+                                            {gross != null && t("cek_checks", { count: gross })}
                                         </div>
                                     </div>
                                     {gross != null && (
@@ -1098,10 +1098,10 @@ const SalesShiftModal = ({ show, onHide }) => {
                         <span
                             className={`sales-shift-header-status ${currentShift ? "sales-shift-header-status--open" : "sales-shift-header-status--closed"
                                 }`}
-                            title={currentShift ? "Bu terminalda növbə açıqdır" : "Açıq növbə yoxdur"}
+                            title={currentShift ? t("bu_terminalda_novbe_aciqdir") : t("aciq_novbe_yoxdur")}
                         >
                             <span className="sales-shift-header-status-dot" aria-hidden />
-                            {currentShift ? "Açıq" : "Bağlı"}
+                            {currentShift ? t("shift_aciq") : t("shift_bagli")}
                         </span>
                     </div>
                 </Modal.Header>

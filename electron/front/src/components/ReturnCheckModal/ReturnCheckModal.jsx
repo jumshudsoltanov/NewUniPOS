@@ -89,7 +89,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
 
     // Handle return confirmation
     const handleReturnConfirm = async ({ reason, orderId }) => {
-        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
         const taxConfigs = loginedProfileData?.data?.taxes || [];
 
         // 1. Fiskal geri qaytarma — fiskal_id varsa və cihaz tapılırsa
@@ -305,7 +305,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
                                                 <tbody>
                                                     {order.orders_items?.map((item, i) => (
                                                         <tr key={i}>
-                                                            <td>{item.product?.name || "Məhsul"}</td>
+                                                            <td>{item.product?.name || t("product")}</td>
                                                             <td>{item.count}</td>
                                                             <td>{Number(item.price).toFixed(2)}</td>
                                                             <td className="text-end">

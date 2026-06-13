@@ -107,7 +107,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
         setShowCustomerDropdown(false);
       }
     } catch (err) {
-      toast.error(err?.error || "Müştəri yaradılmadı");
+      toast.error(err?.error || t("musteri_yaradilmadi"));
     } finally {
       setIsCreatingCustomer(false);
     }
@@ -190,7 +190,7 @@ const ReservationModal = ({ show, onHide, preselectedRoom, onSuccess }) => {
       const bookingData = result?.data || result;
       onSuccess?.(bookingData, isCheckin ? "checkin" : "reserve");
     } catch (error) {
-      toast.error(error?.error || "Əməliyyat mümkün olmadı");
+      toast.error(error?.error || t("emeliyyat_mumkun_olmadi"));
     }
   };
 

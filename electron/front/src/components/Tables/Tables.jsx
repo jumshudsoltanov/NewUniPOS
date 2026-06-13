@@ -334,8 +334,7 @@ const Tables = () => {
         try {
           const waiterName =
             loginedWaiter?.data?.name ||
-            loginedProfileData?.data?.profile?.name ||
-            "Naməlum";
+            loginedProfileData?.data?.profile?.name || t("unknown");
 
           // Find old table and hall name
           let oldTableName = "Naməlum";
@@ -358,7 +357,7 @@ const Tables = () => {
             (h) => h.id === currentHallId,
           );
           const newHallName =
-            targetHall?.name || currentHallData?.name || "Naməlum";
+            targetHall?.name || currentHallData?.name || t("unknown");
 
           await dispatch(
             updateTableOrders({
@@ -411,7 +410,7 @@ const Tables = () => {
       } else {
         const guard = await checkShiftGuard(loginedProfileData);
         if (guard.blocked) {
-          toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+          toast.error(guard.reason || t("shift_not_open"));
           return;
         }
         const skipGuest = localStorage.getItem("unipos_skip_guest_count") === "1";
@@ -421,12 +420,12 @@ const Tables = () => {
           const profileId = loginedProfileData?.data?.profile?.id;
           if (waiterId && terminalId && profileId && table?.id) {
             const generatedUuid = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+            const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
             const hallObj = currentHallData || {};
             const sv = Number(hallObj.service_fee || loginedProfileData?.data?.profile?.service_fee || 0);
             const optimisticOrder = {
               uuid: generatedUuid, id: null, waiter_id: waiterId, profile_id: profileId,
-              terminal_id: terminalId, sale_type: "dine_in", sale_type_name: "Restoranda",
+              terminal_id: terminalId, sale_type: "dine_in", sale_type_name: t("dine_in"),
               table_id: table.id, guest_count: 0, status: 1, is_selected: 1,
               orders_items: [],
               table: { id: table.id, name: table.name, hall: { name: hallObj.name || "" } },
@@ -443,7 +442,7 @@ const Tables = () => {
                 orderId: generatedUuid,
                 action: "Yeni sifariş yaradıldı",
                 waiterName,
-                details: `Masa: ${table?.name || "Naməlum"}, Qonaq sayı: 0`
+                details: `Masa: ${table?.name || t("unknown")}, Qonaq sayı: 0`
               }));
               navigate(`/check/${generatedUuid}?tableId=${table.id}`);
 
@@ -1079,7 +1078,7 @@ const Tables = () => {
               <>
                 <div style={{ fontWeight: 700, fontSize: "13px", color: "#374151" }}>
                   <i className="bi bi-cursor-fill me-1" style={{ color: "#053796" }}></i>
-                  {currentTables.find((t) => t.id === selectedEditTableId)?.name || "Seçilmiş masa"}
+                  {currentTables.find((t) => t.id === selectedEditTableId)?.name || t("selected_table")}
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <div style={{ flex: 1 }}>
@@ -1309,7 +1308,7 @@ const Tables = () => {
           const guard = await checkShiftGuard(loginedProfileData);
           if (guard.blocked) {
             toast.error(
-              guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.",
+              guard.reason || t("shift_not_open"),
             );
             return;
           }

@@ -104,7 +104,7 @@ const RoomFolio = () => {
     dispatch(sendBookingWhatsapp({ bookingId: room.booking_id, profileId }))
       .unwrap()
       .then(() => toast.success(t("whatsapp_sent")))
-      .catch((err) => toast.error(err?.error || "WhatsApp göndərilmədi"));
+      .catch((err) => toast.error(err?.error || t("whatsapp_error")));
   };
 
   const handleDepositNum = (n) => {
@@ -194,7 +194,7 @@ const RoomFolio = () => {
       toast.success(t("qebz_cap_edildi"));
     } catch (err) {
       console.error("Print error:", err);
-      toast.error("Çap xətası: " + (err.message || "Bilinməyən xəta"));
+      toast.error("Çap xətası: " + (err.message || t("unknown_error")));
     }
   };
 
@@ -208,7 +208,7 @@ const RoomFolio = () => {
     }
 
     const generatedUuid = crypto.randomUUID();
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
     const optimisticOrder = {
       uuid: generatedUuid,
@@ -217,7 +217,7 @@ const RoomFolio = () => {
       profile_id: profileIdVal,
       terminal_id: terminalId,
       sale_type: "dine_in",
-      sale_type_name: "Restoranda",
+      sale_type_name: t("dine_in"),
       guest_count: 1,
       status: 1,
       is_selected: 1,

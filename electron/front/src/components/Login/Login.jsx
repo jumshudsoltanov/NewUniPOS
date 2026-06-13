@@ -153,10 +153,10 @@ const Login = () => {
         dispatch(menuWithCategories(profileId)).unwrap(),
         dispatch(menuWithGeneralCategories(profileId)).unwrap(),
       ]);
-      toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
+      toast.success(t("data_updated"), { id: toastId });
     } catch (error) {
       console.error("Yeniləmə xətası:", error);
-      toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
+      toast.error(t("data_update_error"), { id: toastId });
     } finally {
       setIsRefreshing(false);
     }
@@ -253,7 +253,7 @@ const Login = () => {
 
       setIsError(true);
       setIsRefreshing(false);
-      toast.error(err?.data?.message || err?.message || "Login zamanı xəta baş verdi");
+      toast.error(err?.data?.message || err?.message || t("login_error"));
     }
   };
 

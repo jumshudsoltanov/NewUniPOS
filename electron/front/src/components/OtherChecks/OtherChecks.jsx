@@ -55,8 +55,8 @@ const OtherChecks = ({
 
   const resolveNames = (item) => {
     if (item.sale_type && item.sale_type !== "dine_in") {
-      if (item.sale_type === "delivery") return "Çatdırılma";
-      if (item.sale_type === "takeaway") return "Gəl götür";
+      if (item.sale_type === "delivery") return t("delivery");
+      if (item.sale_type === "takeaway") return t("takeaway");
       return item.sale_type.charAt(0).toUpperCase() + item.sale_type.slice(1);
     }
 
@@ -82,7 +82,7 @@ const OtherChecks = ({
 
   const handleMergeCheck = async (currentOrderId, newOrderId, currentCheckData, newCheckData) => {
     try {
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
       await dispatch(mergeChecks({
         currentOrderId,
         newOrderId,

@@ -137,7 +137,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
             onHide();
         } catch (error) {
             console.error(error);
-            toast.error("Xəta baş verdi: " + (error.message || "Bilinməyən xəta"));
+            toast.error("Xəta baş verdi: " + (error.message || t("unknown_error")));
         } finally {
             setIsLoading(false);
         }

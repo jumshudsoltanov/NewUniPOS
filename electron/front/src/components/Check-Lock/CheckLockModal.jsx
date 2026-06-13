@@ -21,7 +21,7 @@ const CheckLockModal = ({ show, onClose, order }) => {
   const handleUpdateStatus = useCallback(async () => {
     try {
       const newStatus = status === 0 ? 1 : 0;
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
       await dispatch(
         updateLockChecK({

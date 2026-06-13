@@ -52,7 +52,7 @@ const UpdateGuestCountModal = ({ show, onHide, order, onSuccess }) => {
             const result = await dispatch(updateGuestCountOrder(payload)).unwrap();
             if (result) {
                 // Persistent Log
-                const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
                 dispatch(saveLog({
                     orderId: order.uuid,
                     action: "Qonaq sayı dəyişdirildi",

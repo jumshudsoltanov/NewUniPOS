@@ -489,7 +489,7 @@ const CheckMain = ({ orders, table }) => {
           .map((lineId) => Number(lineId))
           .filter((lineId) => Number.isFinite(lineId) && lineId < 999999999)
       ));
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
       if (qty <= 0) {
         if (modifierCheckItem.isNew && modifierCheckItem.localQuantity > 0) {
@@ -537,7 +537,7 @@ const CheckMain = ({ orders, table }) => {
             orderId: orders.uuid,
             action: "Modifikator dəyişdirildi",
             waiterName,
-            details: modifierCheckItem.name || "Məhsul",
+            details: modifierCheckItem.name || t("product"),
           }));
         } catch (error) {
           console.error("Modifier update error:", error);

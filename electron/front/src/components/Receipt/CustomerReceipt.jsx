@@ -273,9 +273,9 @@ const CustomerReceipt = ({
 
     const getSaleTypeName = (type, typeName) => {
         if (typeName) return typeName;
-        if (type == 1 || type === "takeaway") return "Gəl götür";
-        if (type == 2 || type === "delivery") return "Çatdırılma";
-        return "Restoranda";
+        if (type == 1 || type === "takeaway") return t("takeaway");
+        if (type == 2 || type === "delivery") return t("delivery");
+        return t("dine_in");
     };
 
     const displaySaleType = getSaleTypeName(checkData?.sale_type, checkData?.sale_type_name);
@@ -512,7 +512,7 @@ const CustomerReceipt = ({
                     </div>
                 )}
 
-                {showSaleType && displaySaleType !== "Restoranda" && (
+                {showSaleType && displaySaleType !== t("dine_in") && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>{t("satis_tipi_1")}</span>
                         <span style={styles.value}>{displaySaleType}</span>
@@ -548,7 +548,7 @@ const CustomerReceipt = ({
                     const groupedMap = new Map();
                     filtered.forEach(item => {
                         const cat = findCatalogProduct(menuCatalog, item.product_id || item.id);
-                        const name = getDisplayProductName(item, cat) || "Naməlum";
+                        const name = getDisplayProductName(item, cat) || t("unknown");
                         const price = Number(item.price || 0);
                         const isGift = Number(item.is_gift || 0) === 1;
                         const comment = item.comment || '';
@@ -580,7 +580,7 @@ const CustomerReceipt = ({
                                 : [];
                         rowMods = resolveModifiersForDisplay(rowMods, rowCat);
                         const params = {
-                            name: getDisplayProductName(item, rowCat) || "Naməlum",
+                            name: getDisplayProductName(item, rowCat) || t("unknown"),
                             quantity: Number(item.quantity || item.count || 0),
                             price: Number(item.price || 0),
                             is_gift: Number(item.is_gift || 0) === 1,
@@ -705,7 +705,7 @@ const CustomerReceipt = ({
                     {displayPaymentRows.map((pay, idx) => (
                         <div key={idx} style={styles.summaryRow}>
                             <span style={{ flex: 1 }}>
-                                {pay.paymentMethodName || pay.name || pay.method_name || "Nağd"}
+                                {pay.paymentMethodName || pay.name || pay.method_name || t("nagd")}
                             </span>
                             <span style={styles.colTotal}>
                                 {renderMoney(pay._displayAmount)}

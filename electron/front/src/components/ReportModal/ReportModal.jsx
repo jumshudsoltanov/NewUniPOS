@@ -74,7 +74,7 @@ const ReportModal = ({ show, onClose }) => {
     const isMobile = window.innerWidth < 992;
 
     // Dynamic states
-    const [terminals, setTerminals] = useState([{ id: "all", name: "Hamısı" }]);
+    const [terminals, setTerminals] = useState([{ id: "all", name: t("all") }]);
     const [reportResults, setReportResults] = useState(null);
     const [reportSummary, setReportSummary] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -82,20 +82,20 @@ const ReportModal = ({ show, onClose }) => {
     const [categoryPrintInclude, setCategoryPrintInclude] = useState({});
 
     const reportTypes = [
-        { id: "simple", name: "Sadə" },
-        { id: "products", name: "Məhsullar" },
-        { id: "hall", name: "Zal" },
-        { id: "tables", name: "Masalar" },
-        { id: "checks", name: "Çek" },
-        { id: "department", name: "Şöbə" },
-        { id: "inventory", name: "Ehtiyat" },
-        { id: "sale_method", name: "Satış üsulu" },
-        { id: "employee", name: "Əməkdaş" },
-        { id: "category", name: "Kateqoriya" },
-        { id: "refunds", name: "Geri qaytarılma" },
-        { id: "gifted_products", name: "İkram olunmuş məhsul" },
-        { id: "financial", name: "Maliyyə hesabatı" },
-        { id: "customers", name: "Müştərilər" },
+        { id: "simple", name: t("sade") },
+        { id: "products", name: t("products") },
+        { id: "hall", name: t("hall") },
+        { id: "tables", name: t("tables") },
+        { id: "checks", name: t("checks") },
+        { id: "department", name: t("sobe") },
+        { id: "inventory", name: t("ehtiyat") },
+        { id: "sale_method", name: t("satis_usulu") },
+        { id: "employee", name: t("emekdas") },
+        { id: "category", name: t("categories") },
+        { id: "refunds", name: t("refund") },
+        { id: "gifted_products", name: t("i̇kram_olunmus_mehsul") },
+        { id: "financial", name: t("maliyye_hesabati") },
+        { id: "customers", name: t("customers") },
     ];
 
     const [cashierPrinters, setCashierPrinters] = useState([]);
@@ -122,7 +122,7 @@ const ReportModal = ({ show, onClose }) => {
         try {
             const response = await axios.get(`/reports/${profileId}/terminals`);
             if (response.data.status === "success") {
-                setTerminals([{ id: "all", name: "Hamısı" }, ...response.data.data]);
+                setTerminals([{ id: "all", name: t("all") }, ...response.data.data]);
             }
         } catch (error) {
             console.error("Error fetching terminals:", error);
@@ -268,7 +268,7 @@ const ReportModal = ({ show, onClose }) => {
             if (isMobile) setActiveMobileTab("result");
         } catch (error) {
             console.error("Error generating report:", error);
-            toast.error(error.response?.data?.message || error.message || "Hesabat yaradıla bilmədi");
+            toast.error(error.response?.data?.message || error.message || t("hesabat_yaradila_bilmedi"));
             setReportSummary({ ...DEFAULT_REPORT_SUMMARY });
             setReportResults(null);
         } finally {
@@ -292,7 +292,7 @@ const ReportModal = ({ show, onClose }) => {
         );
 
         const { type, data } = reportResults;
-        const terminalLabel = terminals.find((t) => String(t.id) === String(terminal))?.name || "Hamısı";
+        const terminalLabel = terminals.find((t) => String(t.id) === String(terminal))?.name || t("all");
         const activeReportLabel = reportTypes.find((t) => t.id === type)?.name || type;
 
         const formatDate = (dateStr) => {
@@ -317,7 +317,7 @@ const ReportModal = ({ show, onClose }) => {
                     <div className="report-data-time" title={t("hesabatin_cixarilma_vaxti")}>
                         <i className="bi bi-clock-fill" aria-hidden="true"></i>
                         <span>
-                            Çıxarılma: {new Date().toLocaleDateString("az-AZ")}{" "}
+                            {t("cixarilma")} {new Date().toLocaleDateString("az-AZ")}{" "}
                             {new Date().toLocaleTimeString("az-AZ", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                     </div>
@@ -339,10 +339,10 @@ const ReportModal = ({ show, onClose }) => {
             <div className="report-section mb-5">
                 <div className="section-title">{t("satis_hesabati")}</div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.sumTotal}><span>{t("cem")}</span><div className="dots"></div><span className="value">{(reportSummary.total_amount || 0).toFixed(2)}</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.tax}><span>Vergi</span><div className="dots"></div><span className="value">{(reportSummary.total_tax || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.tax}><span>{t("vergi")}</span><div className="dots"></div><span className="value">{(reportSummary.total_tax || 0).toFixed(2)}</span></div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.gift}><span>{t("i̇kram")}</span><div className="dots"></div><span className="value">{(reportSummary.total_gift || 0).toFixed(2)}</span></div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.service}><span>{t("xidmet")}</span><div className="dots"></div><span className="value">{(reportSummary.total_service || 0).toFixed(2)}</span></div>
-                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.discount}><span>Endirim</span><div className="dots"></div><span className="value">{(reportSummary.total_discount || 0).toFixed(2)}</span></div>
+                <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.discount}><span>{t("endirim")}</span><div className="dots"></div><span className="value">{(reportSummary.total_discount || 0).toFixed(2)}</span></div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.delivery}><span>{t("catdirilma_haqqi")}</span><div className="dots"></div><span className="value">0.00</span></div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.refund}><span>{t("refund")}</span><div className="dots"></div><span className="value">{(reportSummary.total_refund || 0).toFixed(2)}</span></div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.deleted}><span>{t("silinmeler")}</span><div className="dots"></div><span className="value">{(reportSummary.total_deleted || 0).toFixed(2)}</span></div>
@@ -356,7 +356,7 @@ const ReportModal = ({ show, onClose }) => {
                         </div>
                     </>
                 )}
-                <div className="receipt-row total-line report-row-with-hint" title={REPORT_HINTS.net}><span>Yekun:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
+                <div className="receipt-row total-line report-row-with-hint" title={REPORT_HINTS.net}><span>{t("yekun")}:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
 
                 <div className="section-title mt-4">{t("diger_detallar")}</div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openCount}><span>{t("aciq_ceklerin_sayi")}</span><div className="dots"></div><span className="value">{reportSummary.open_orders_count || 0}</span></div>
@@ -544,7 +544,7 @@ const ReportModal = ({ show, onClose }) => {
                                             setCategoryPrintInclude(next);
                                         }}
                                         title={t("all")}
-                                        aria-label="Bütün kateqoriyaları çap üçün seç"
+                                        aria-label={t("butun_kateqoriyalari_cap_ucun_sec")}
                                     />
                                 </th>
                                 <th>{t("kateqoriya_/_mehsul")}</th>
@@ -612,8 +612,8 @@ const ReportModal = ({ show, onClose }) => {
                             <tr>
                                 <th>ID</th>
                                 <th>{t("table")}</th>
-                                <th>Ofisant</th>
-                                {showTransactions && <th>Etiket</th>}
+                                <th>{t("ofisant")}</th>
+                                {showTransactions && <th>{t("etiket")}</th>}
                                 <th className="text-end">{t("mebleg")}</th>
                             </tr>
                         </thead>
@@ -634,7 +634,7 @@ const ReportModal = ({ show, onClose }) => {
                 return (
                     <Table responsive className="custom-report-table list-table">
                         <thead>
-                            <tr><th>ID</th><th>Ofisant</th><th className="text-end">{t("mebleg")}</th></tr>
+                            <tr><th>ID</th><th>{t("ofisant")}</th><th className="text-end">{t("mebleg")}</th></tr>
                         </thead>
                         <tbody>
                             {data.map((item, i) => (
@@ -712,7 +712,7 @@ const ReportModal = ({ show, onClose }) => {
                         <tbody>
                             {data.map((item, i) => {
                                 const matchedCustomer = customers.find(c => c.id === item.customer_id);
-                                const displayName = matchedCustomer ? (matchedCustomer.name || matchedCustomer.phone_number) : 'Bilinməyən müştəri';
+                                const displayName = matchedCustomer ? (matchedCustomer.name || matchedCustomer.phone_number) : 't("bilinmeyen_musteri")';
                                 return (
                                     <tr key={i}>
                                         <td>{displayName}</td>
@@ -751,7 +751,7 @@ const ReportModal = ({ show, onClose }) => {
                             <span>{t("print")}</span>
                         </button>
                     )}
-                    <button type="button" className="report-modal-close-btn" onClick={onClose} aria-label="Bağla">
+                    <button type="button" className="report-modal-close-btn" onClick={onClose} aria-label={t("bagla")}>
                         <i className="bi bi-x-lg" aria-hidden="true"></i>
                     </button>
                 </div>
@@ -763,13 +763,13 @@ const ReportModal = ({ show, onClose }) => {
                         className={`report-mobile-tab ${activeMobileTab === "filters" ? "active" : ""}`}
                         onClick={() => setActiveMobileTab("filters")}
                     >
-                        Ayarlar
+                        {t("ayarlar")}
                     </div>
                     <div
                         className={`report-mobile-tab ${activeMobileTab === "result" ? "active" : ""}`}
                         onClick={() => setActiveMobileTab("result")}
                     >
-                        Nəticə {reportResults && !loading && <span className="tab-dot"></span>}
+                        {t("netice")} {reportResults && !loading && <span className="tab-dot"></span>}
                     </div>
                 </div>
             )}
@@ -828,7 +828,7 @@ const ReportModal = ({ show, onClose }) => {
 
                                 <div className="mobile-group-title mt-4">{t("nov_ve_filtr")}</div>
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Terminallar</Form.Label>
+                                    <Form.Label>{t("terminallar")}</Form.Label>
                                     <Form.Select
                                         value={terminal}
                                         onChange={(e) => setTerminal(e.target.value)}
@@ -856,7 +856,7 @@ const ReportModal = ({ show, onClose }) => {
                                         <Form.Check
                                             type="switch"
                                             id="transactions-switch"
-                                            label="Əməliyyatlarla"
+                                            label={t("emeliyyatlarla")}
                                             checked={showTransactions}
                                             onChange={(e) => setShowTransactions(e.target.checked)}
                                         />
@@ -866,7 +866,7 @@ const ReportModal = ({ show, onClose }) => {
                                         <Form.Check
                                             type="switch"
                                             id="accounts-switch"
-                                            label="Hesablar"
+                                            label={t("hesablar")}
                                             checked={showAccounts}
                                             onChange={(e) => setShowAccounts(e.target.checked)}
                                         />
@@ -882,7 +882,7 @@ const ReportModal = ({ show, onClose }) => {
                                     disabled={loading}
                                 >
                                     <i className="bi bi-file-earmark-bar-graph-fill me-2"></i>
-                                    {loading ? "Yüklənir..." : "Hesabat yarat"}
+                                    {loading ? t("yuklenir") : t("hesabat_yarat")}
                                 </button>
                             </div>
                         </Col>

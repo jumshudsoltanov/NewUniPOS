@@ -42,7 +42,7 @@ const SalesShiftStatusPill = ({ profileId, variant = "header", className = "", o
           : isOpen
             ? t("novbe_aciq")
             : t("novbe_bagli");
-    const labelShort = loading ? "…" : fetchFailed ? "—" : isOpen ? t("aciq") : t("bagli");
+    const labelShort = loading ? "…" : fetchFailed ? "—" : isOpen ? t("shift_aciq") : t("shift_bagli");
 
     const rootClass = [
         "sales-shift-pill",

@@ -126,7 +126,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
     ];
 
     // Find label for current sales type
-    const currentSalesTypeLabel = salesTypes.find(t => t.id === selectedSalesType)?.label || "Yerində";
+    const currentSalesTypeLabel = salesTypes.find(t => t.id === selectedSalesType)?.label || t("yerinde");
 
     return (
         <>

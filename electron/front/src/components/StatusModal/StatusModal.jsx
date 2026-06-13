@@ -331,7 +331,7 @@ const StatusModal = ({ show, onHide }) => {
             setPendingDetails(res.data);
             setShowPendingDetails(true);
         } catch (e) {
-            const msg = e?.response?.data?.message || e?.message || "Bilinməyən xəta";
+            const msg = e?.response?.data?.message || e?.message || t("unknown_error");
             toast.error(`Pending məlumatları alınmadı: ${msg}`);
         }
     };

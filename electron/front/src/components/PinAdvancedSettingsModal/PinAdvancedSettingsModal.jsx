@@ -186,13 +186,13 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       try {
          const { data } = await apiConfig.post("/sync/force-delete-remote", { remoteId: remoteCheckId.trim() });
          if (data?.success) {
-            toast.success(data.message || "Bağlanma əmri göndərildi");
+            toast.success(data.message || t("baglanma_emri_gonderildi"));
             setRemoteCheckId("");
          } else {
-            toast.error(data?.message || "Xəta baş verdi");
+            toast.error(data?.message || t("error_occurred"));
          }
       } catch (err) {
-         toast.error(err?.response?.data?.message || err?.message || "Xəta baş verdi");
+         toast.error(err?.response?.data?.message || err?.message || t("error_occurred"));
       } finally {
          setForcingRemote(false);
       }
@@ -208,10 +208,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                toast.success(msg);
                loadStuckOrders();
            } else {
-               toast.error(data?.message || "Xəta baş verdi");
+               toast.error(data?.message || t("error_occurred"));
            }
        } catch (err) {
-           toast.error(err?.response?.data?.message || err?.message || "Serverlə əlaqə yaradıla bilmədi.");
+           toast.error(err?.response?.data?.message || err?.message || t("serverle_elaqe_yaradila_bilmedi"));
        } finally {
            setAutoFixGhostsLoading(false);
        }
@@ -224,7 +224,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                toast.success(t("cek_yeniden_gonderildi"));
                loadStuckOrders();
            } else {
-               toast.error(data.message || "Xəta baş verdi");
+               toast.error(data.message || t("error_occurred"));
            }
        } catch (e) {
            toast.error(t("sebeke_xetasi"));
@@ -349,7 +349,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     if (window.electronAPI?.setAutoUpdateEnabled) {
       await window.electronAPI.setAutoUpdateEnabled(val);
     }
-    toast.success(val ? "Avto-yeniləmə aktiv edildi" : "Avto-yeniləmə söndürüldü");
+    toast.success(val ? t("avto_yenileme_aktiv_edildi") : t("avto_yenileme_sonduruldu"));
   };
 
   const handleToggleManualUpdate = (val) => {
@@ -443,11 +443,11 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
         setDenyPrefixes(data.denyPrefixes || []);
         setBlockEmptyCheckDelete(data.blockEmptyCheckDelete === true);
       } else {
-        toast.error("WhatsApp ayarları yüklənə bilmədi: " + (data?.message || "Naməlum xəta"));
+        toast.error("WhatsApp ayarları yüklənə bilmədi: " + (data?.message || t("namelum_xeta")));
       }
     } catch (err) {
       console.error("[WhatsApp Load]", err);
-      toast.error("WhatsApp ayarları yüklənə bilmədi: " + (err?.response?.data?.message || err?.message || "Naməlum xəta"));
+      toast.error("WhatsApp ayarları yüklənə bilmədi: " + (err?.response?.data?.message || err?.message || t("namelum_xeta")));
     } finally {
       setWaLoading(false);
     }
@@ -467,10 +467,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     try {
       const { data } = await apiConfig.post("/admin/whatsapp-settings", { denyActions, denyPrefixes, blockEmptyCheckDelete });
       if (data?.ok) { toast.success(t("whatsapp_ayarlari_saxlanildi")); setView("main"); }
-      else toast.error(data?.message || "Saxlama xətası");
+      else toast.error(data?.message || t("saxlama_xetasi"));
     } catch (err) {
       console.error("[WhatsApp Save]", err);
-      toast.error("WhatsApp ayarları saxlanıla bilmədi: " + (err?.response?.data?.message || err?.message || "Naməlum xəta"));
+      toast.error("WhatsApp ayarları saxlanıla bilmədi: " + (err?.response?.data?.message || err?.message || t("namelum_xeta")));
     }
     finally { setWaSaving(false); }
   };
@@ -481,9 +481,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     try {
       const { data } = await apiConfig.get(`/admin/system-users?profile_id=${profileId}`);
       if (data?.ok) setSystemUsers(data.data || []);
-      else toast.error(data?.message || "İstifadəçilər yüklənmədi");
+      else toast.error(data?.message || t("i̇stifadeciler_yuklenmedi"));
     } catch (err) {
-      toast.error("İstifadəçilər yüklənmədi: " + (err?.message || "Xəta"));
+      toast.error("İstifadəçilər yüklənmədi: " + (err?.message || t("xeta")));
     } finally {
       setSuLoading(false);
     }
@@ -501,9 +501,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
         toast.success(t("i̇stifadeci_yaradildi"));
         setSuNewName(""); setSuNewPin("");
         await loadSystemUsers();
-      } else toast.error(data?.message || "Xəta");
+      } else toast.error(data?.message || t("xeta"));
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Xəta");
+      toast.error(err?.response?.data?.message || t("xeta"));
     } finally { setSuSaving(false); }
   };
 
@@ -519,9 +519,9 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
         toast.success(t("yadda_saxlanildi"));
         setSuEditingId(null); setSuEditName(""); setSuEditPin("");
         await loadSystemUsers();
-      } else toast.error(data?.message || "Xəta");
+      } else toast.error(data?.message || t("xeta"));
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Xəta");
+      toast.error(err?.response?.data?.message || t("xeta"));
     } finally { setSuSaving(false); }
   };
 
@@ -530,7 +530,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     try {
       const { data } = await apiConfig.delete(`/admin/system-users/${id}`);
       if (data?.ok) { toast.success("Silindi"); await loadSystemUsers(); }
-      else toast.error(data?.message || "Xəta");
+      else toast.error(data?.message || t("xeta"));
     } catch (err) {
       toast.error(t("silme_xetasi"));
     } finally { setSuSaving(false); }
@@ -543,7 +543,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     }
     const res = await window.electronAPI.openDevToolsDetached();
     if (res?.ok) toast.success(t("developer_tools_acildi"));
-    else toast.error(res?.message || "DevTools açıla bilmədi.");
+    else toast.error(res?.message || t("devtools_acila_bilmedi"));
     onClose();
   };
 
@@ -552,10 +552,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     try {
       const { data } = await apiConfig.post("/admin/reset-local-database");
       if (data?.ok) {
-        toast.success(data.message || "Baza sıfırlandı.");
+        toast.success(data.message || t("baza_sifirlandi"));
         try { localStorage.removeItem("profile"); localStorage.removeItem("authResult"); localStorage.removeItem("authlogin"); } catch {}
         setView("main"); onClose(); window.location.reload();
-      } else { toast.error(data?.message || "Sıfırlama alınmadı."); }
+      } else { toast.error(data?.message || t("sifirlama_alinmadi")); }
     } catch { toast.error(t("servere_qosula_bilmedi")); }
     finally { setResettingDb(false); }
   };
@@ -608,7 +608,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
 
   const mockCustomerProps = {
       profileData: { data: { profile: { restaurant_name: "Nümunə Restoran", address: "Bakı ş., Nümunə küç.", phone: "0123456789" }, terminal: { qr_on_check: 0 } } },
-      checkData: { id: "1024", customerName: "Əli Əliyev", customerPhone: "+994 55 555 55 55", customerAddress: "Bakı ş., Nizami küç. 15", startDate: new Date().toISOString(), endDate: new Date().toISOString(), waiter_name: "Zaur", guest_count: 2, sale_type_name: "Restoranda" },
+      checkData: { id: "1024", customerName: "Əli Əliyev", customerPhone: "+994 55 555 55 55", customerAddress: "Bakı ş., Nizami küç. 15", startDate: new Date().toISOString(), endDate: new Date().toISOString(), waiter_name: "Zaur", guest_count: 2, sale_type_name: t("dine_in") },
       hallName: "Zal 1",
       tableName: "Masa 5",
       orderedItems: [
@@ -623,7 +623,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       waiter: "Zaur",
       hallName: "Zal 1",
       table: "Masa 5",
-      typeName: "Restoranda",
+      typeName: t("dine_in"),
       orderedItems: [
           { name: "Mərci Şorbası", quantity: 2 },
           { name: "Lülə Kabab", quantity: 1 }

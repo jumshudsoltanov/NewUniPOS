@@ -402,7 +402,7 @@ const CheckOver = () => {
     const handleConfirmClose = async (selectedTaxForPrint = null) => {
         const profileId = loginedProfileData?.data?.profile?.id;
         const waiterId = currentOrder?.waiter_id || loginedWaiter?.data?.id;
-        const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || "Naməlum";
+        const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || t("unknown");
 
         if (!profileId || !waiterId || !id) return;
 

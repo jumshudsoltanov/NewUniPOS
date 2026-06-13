@@ -9,9 +9,9 @@ import TableGroupsModal from "../TableGroupsModal/TableGroupsModal";
 import { t } from "../../utils/translations";
 
 const saleTypes = [
-  { id: "dine_in",   name: "Yerində",    icon: "bi bi-house-door" },
-  { id: "delivery",  name: "Çatdırılma", icon: "bi bi-bicycle" },
-  { id: "takeaway",  name: "Gəl götür",   icon: "bi bi-bag" },
+  { id: "dine_in",   name: t("yerinde"),    icon: "bi bi-house-door" },
+  { id: "delivery",  name: t("delivery"), icon: "bi bi-bicycle" },
+  { id: "takeaway",  name: t("takeaway"),   icon: "bi bi-bag" },
 ];
 
 const ChangeSaleTypeModal = ({ show, onClose, order }) => {

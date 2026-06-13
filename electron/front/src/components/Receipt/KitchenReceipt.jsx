@@ -28,7 +28,7 @@ const KitchenReceipt = ({
         const groups = new Map();
 
         items.forEach(item => {
-            const itemName = item.product_name || item.name || item.product?.name || "Naməlum";
+            const itemName = item.product_name || item.name || item.product?.name || t("unknown");
             
             // Normalize modifiers for key generation
             let mods = [];
@@ -247,7 +247,7 @@ const KitchenReceipt = ({
                 {showSaleType && (
                     <div style={styles.infoRow}>
                         <span style={styles.label}>{t("satis_tipi_2")}</span>
-                        <span style={styles.value}>{typeName || "Restoranda"}</span>
+                        <span style={styles.value}>{typeName || t("dine_in")}</span>
                     </div>
                 )}
 
@@ -272,7 +272,7 @@ const KitchenReceipt = ({
 
             {/* STATUS */}
             <div style={styles.status}>
-                {hasDecrease ? "SİLİNƏN MƏHSULLAR" : "YENİ SİFARİŞ"}
+                {hasDecrease ? t("si̇li̇nen_mehsullar") : t("yeni̇_si̇fari̇s")}
             </div>
 
             <div style={styles.line}></div>
@@ -320,7 +320,7 @@ const KitchenReceipt = ({
                                 )}
                                 {mods.length > 0 && (
                                     <div style={styles.modifier}>
-                                        + {mods.map((m) => (m.count > 0 ? `${m.name || m.product_name || "Adsız"} (x${m.count})` : m.name || m.product_name || "Adsız")).join(", ")}
+                                        + {mods.map((m) => (m.count > 0 ? `${m.name || m.product_name || t("adsiz")} (x${m.count})` : m.name || m.product_name || t("adsiz"))).join(", ")}
                                     </div>
                                 )}
                             </div>

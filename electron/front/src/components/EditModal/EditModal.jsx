@@ -304,7 +304,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
       createNewOrder: createNewOrder // Pass the flag
     };
 
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
     try {
       const result = await dispatch(
         splitOrder({
@@ -364,7 +364,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
       const orderId = orders?.uuid || orderUuidFromUrl;
       const itemId = product?.id || product?.firstId;
 
@@ -394,7 +394,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
       onClose();
     } catch (error) {
       console.error("Discount error detail:", error);
-      const errorMsg = error?.error || error?.message || "Xəta baş verdi";
+      const errorMsg = error?.error || error?.message || t("error_occurred");
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -415,7 +415,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
         {/* Header moved to top level */}
         <div className="edit-header">
           <div className="edit-product-title">
-            {product?.name || "Məhsul adı"}
+            {product?.name || t("mehsul_adi")}
           </div>
           <button className="btn-close-custom" onClick={onClose}>
             <i className="bi bi-x-lg"></i>
@@ -679,7 +679,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         }
                         // Log quantity change for new items too
                         if (qty !== (product.count || 0)) {
-                          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                          const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
                           dispatch(saveLog({
                             orderId: orders.uuid,
                             action: "Miqdar dəyişdirildi",
@@ -691,7 +691,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         return;
                       } else {
                         // For existing items, handle price change immediately
-                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
                         // Check if price changed - only price goes to backend immediately
                         if (
@@ -917,7 +917,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       }
                       if (isSubmitting) return;
                       setIsSubmitting(true);
-                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
                       dispatch(giftItem({
                         orderId: orders.uuid,
                         itemId: product?.id || product?.firstId,
@@ -959,7 +959,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       }
                       if (isSubmitting) return;
                       setIsSubmitting(true);
-                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
+                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
                       dispatch(giftItem({
                         orderId: orders.uuid,
                         itemId: product?.id || product?.firstId,

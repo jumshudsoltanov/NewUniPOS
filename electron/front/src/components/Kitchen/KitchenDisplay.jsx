@@ -84,7 +84,7 @@ const KitchenDisplay = () => {
             }
         } catch (error) {
             console.error("KDS Fetch Error:", error);
-            setLoadError(error?.response?.data?.message || "KDS sifarişlərini yükləmək mümkün olmadı");
+            setLoadError(error?.response?.data?.message || t("kds_sifarislerini_yuklemek_mumkun_olmadi"));
         } finally {
             setLoading(false);
         }
@@ -146,7 +146,7 @@ const KitchenDisplay = () => {
     const groupItemsByCategories = (items) => {
         const groups = {};
         items.forEach(item => {
-            const catName = item.product?.category?.name || "Digər";
+            const catName = item.product?.category?.name || t("diger");
             if (!groups[catName]) groups[catName] = [];
             groups[catName].push(item);
         });
@@ -184,8 +184,8 @@ const KitchenDisplay = () => {
         if (!type) return null;
         const labels = {
             dine_in: "Məkanda",
-            takeaway: "Gəl götür",
-            delivery: "Çatdırılma",
+            takeaway: t("takeaway"),
+            delivery: t("delivery"),
             bolt_food: "Bolt Food",
             uber_eats: "Uber Eats",
             wolt: "Wolt",
@@ -269,11 +269,11 @@ const KitchenDisplay = () => {
                                         )}
                                     </div>
                                     <div className="kds-card-meta">
-                                        <span>{order.waiter?.name || "Xidmətçi"}</span>
+                                        <span>{order.waiter?.name || t("xidmetci")}</span>
                                         <span className="kds-meta-sep">/</span>
                                         <span>{order.table?.hall?.name || "Zal"}</span>
                                         <span className="kds-meta-sep">/</span>
-                                        <span>{order.table?.name || "Masa"}</span>
+                                        <span>{order.table?.name || t("table")}</span>
                                     </div>
                                 </div>
 

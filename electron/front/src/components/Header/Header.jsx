@@ -509,7 +509,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                       }
                       const guard = await checkShiftGuard(loginedProfileData);
                       if (guard.blocked) {
-                        toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                        toast.error(guard.reason || t("shift_not_open"));
                         return;
                       }
                       setOnShowSalesTypeModal(true);
@@ -765,7 +765,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                   onClick={async () => {
                     const guard = await checkShiftGuard(loginedProfileData);
                     if (guard.blocked) {
-                      toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+                      toast.error(guard.reason || t("shift_not_open"));
                       return;
                     }
                     setOnShowSalesTypeModal(true);

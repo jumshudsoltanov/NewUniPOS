@@ -17,6 +17,7 @@ import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { checkShiftGuard } from "../../utils/shiftGuard";
+import { t } from "../../utils/translations";
 const CheckHeader = ({
   orders,
   hall,
@@ -60,7 +61,7 @@ const CheckHeader = ({
     if (onBeforeCreateOrder) await onBeforeCreateOrder();
     const guard = await checkShiftGuard(loginedProfileData);
     if (guard.blocked) {
-      toast.error(guard.reason || "Növbə açılmayıb. Əvvəlcə növbəni açın.");
+      toast.error(guard.reason || t("shift_not_open"));
       return;
     }
     const waiterId = loginedWaiter?.data?.id;
@@ -100,8 +101,7 @@ const CheckHeader = ({
 
     const waiterName =
       loginedWaiter?.data?.name ||
-      loginedProfileData?.data?.profile?.name ||
-      "Naməlum";
+      loginedProfileData?.data?.profile?.name || t("unknown");
     const optimisticOrder = {
       uuid: generatedUuid,
       id: nextId ?? null,
@@ -109,7 +109,7 @@ const CheckHeader = ({
       profile_id: profileId,
       terminal_id: terminalId,
       sale_type: "dine_in",
-      sale_type_name: "Restoranda",
+      sale_type_name: t("dine_in"),
       table_id: table?.id,
       guest_count: 0,
       status: 1,
@@ -144,7 +144,7 @@ const CheckHeader = ({
         orderId: generatedUuid,
         action: "Yeni sifariş yaradıldı (Header)",
         waiterName,
-        details: `Masa: ${table?.name || "Naməlum"}`,
+        details: `Masa: ${table?.name || t("unknown")}`,
       }),
     );
     navigate(`/check/${generatedUuid}?tableId=${table?.id}`);
@@ -218,11 +218,11 @@ const CheckHeader = ({
                 ? `${hotelRoom?.room_number || orders?.room_number || "?"}`
                 : isDineIn &&
                   (effectiveTableName || effectiveHallName || orders?.table_id)
-                  ? effectiveTableName || "Masa"
+                  ? effectiveTableName || t("table")
                   : effectiveSaleType === "delivery"
-                    ? "Çatdırılma"
+                    ? t("delivery")
                     : effectiveSaleType === "takeaway"
-                      ? "Gəl götür"
+                      ? t("takeaway")
                       : "Yeni Sifariş";
               return (
                 <span className="header-title">{mainLine}</span>

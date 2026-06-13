@@ -64,7 +64,7 @@ const RoomDetailModal = ({ show, onHide, room }) => {
     dispatch(sendBookingWhatsapp({ bookingId: room.booking_id, profileId }))
       .unwrap()
       .then(() => toast.success(t("whatsapp_mesaji_gonderildi")))
-      .catch((err) => toast.error(err?.error || "WhatsApp göndərilmədi"));
+      .catch((err) => toast.error(err?.error || t("whatsapp_error")));
   };
 
   const handleDepositNumClick = (num) => {

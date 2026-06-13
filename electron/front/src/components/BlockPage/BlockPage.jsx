@@ -121,7 +121,7 @@ const BlockPage = () => {
                 dispatch(setLoginData(merged));
                 toast.error(t("pos_hele_de_bloklanmis_veziyyetdedir"));
             } else {
-                toast.error(error?.data?.message || "Yeniləmə zamanı xəta baş verdi");
+                toast.error(error?.data?.message || t("yenileme_zamani_xeta_bas_verdi"));
             }
         } finally {
             setIsRefreshing(false);
@@ -145,7 +145,7 @@ const BlockPage = () => {
             setPaymentSent(true);
             toast.success(t("bildiris_gonderildi_zehmet_olmasa_telefonunuzu_yoxlayin"));
         } catch (err) {
-            toast.error(err?.response?.data?.message || "Bildiriş göndərilmədi");
+            toast.error(err?.response?.data?.message || t("bildiris_gonderilmedi"));
         } finally {
             setPaymentSending(false);
         }
