@@ -29,6 +29,7 @@ const REPORT_HINTS = {
     paymentMethod: "Bu ödəniş üsulu ilə bağlanmış çeklərdə ödənilən məbləğ.",
     unpaidTag: "Ödənişsiz bağlama ilə bağlanmış çeklərin məbləği.",
     tagRow: "Bu etiketlə bağlanmış çeklərin məbləği.",
+    paymentDiff: "Yekun cəm ilə ödənilmiş məbləğ arasındakı fərq. Səbəbləri: artıq ödəniş, yuvarlaqlaşdırma, depozit, taymer, çatdırılma haqqı və s.",
 };
 
 const DEFAULT_REPORT_SUMMARY = {
@@ -354,9 +355,61 @@ const ReportModal = ({ show, onClose }) => {
                         <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.unpaidClose}>
                             <span>{t("odenissiz_baglamalar")}</span><div className="dots"></div><span className="value">{(reportSummary.total_unpaid || 0).toFixed(2)}</span>
                         </div>
+                        {(() => {
+                          const odemeCemi = (reportSummary.total_paid || 0) + (reportSummary.total_unpaid || 0);
+                          const ferq = (reportSummary.net_total || 0) - odemeCemi;
+                          if (Math.abs(ferq) < 0.005) return null;
+                          return (
+                            <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.paymentDiff} style={{ borderTop: '1px dashed #e5e7eb', paddingTop: 4, marginTop: 2, color: ferq > 0 ? '#dc2626' : '#d97706' }}>
+                              <span style={{ fontWeight: 500 }}>
+                                <i className={`bi ${ferq > 0 ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}`} style={{ marginRight: 4 }}></i>
+                                {t("odeme_ferqi")}
+                              </span>
+                              <div className="dots"></div>
+                              <span className="value" style={{ color: ferq > 0 ? '#dc2626' : '#d97706', fontWeight: 600 }}>
+                                {ferq > 0 ? '-' : '+'}{Math.abs(ferq).toFixed(2)}
+                              </span>
+                            </div>
+                          );
+                        })()}
                     </>
                 )}
                 <div className="receipt-row total-line report-row-with-hint" title={REPORT_HINTS.net}><span>{t("yekun")}:</span><span className="value">{(reportSummary.net_total || 0).toFixed(2)}</span></div>
+
+                {reportSummary.discrepancy && (reportSummary.discrepancy.overpaid_count > 0 || reportSummary.discrepancy.underpaid_count > 0) && (
+                  <div className="discrepancy-details" style={{ marginTop: 8, padding: '10px 12px', background: '#fff8f0', borderRadius: 6, border: '1px solid #fde68a' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#92400e', marginBottom: 6 }}>
+                      <i className="bi bi-search" style={{ marginRight: 4 }}></i>
+                      {t("odeme_ferqi")} — təhlil
+                    </div>
+                    {reportSummary.discrepancy.overpaid_count > 0 && (
+                      <div className="receipt-row" style={{ fontSize: '0.85rem', marginBottom: 2, color: '#d97706' }}>
+                        <span><i className="bi bi-arrow-up-circle" style={{ marginRight: 4 }}></i>Artıq ödənilmiş çeklər</span>
+                        <div className="dots"></div>
+                        <span className="value" style={{ fontSize: '0.85rem', color: '#d97706' }}>{reportSummary.discrepancy.overpaid_count} çek / +{reportSummary.discrepancy.overpaid_total.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {reportSummary.discrepancy.underpaid_count > 0 && (
+                      <div className="receipt-row" style={{ fontSize: '0.85rem', marginBottom: 2, color: '#dc2626' }}>
+                        <span><i className="bi bi-arrow-down-circle" style={{ marginRight: 4 }}></i>Əskik ödənilmiş çeklər</span>
+                        <div className="dots"></div>
+                        <span className="value" style={{ fontSize: '0.85rem', color: '#dc2626' }}>{reportSummary.discrepancy.underpaid_count} çek / -{reportSummary.discrepancy.underpaid_total.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {reportSummary.discrepancy.examples && reportSummary.discrepancy.examples.length > 0 && (
+                      <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#666', lineHeight: 1.6 }}>
+                        <div style={{ fontWeight: 500, marginBottom: 2 }}>Nümunələr:</div>
+                        {reportSummary.discrepancy.examples.map((ex, i) => (
+                          <div key={i} style={{ fontFamily: 'monospace', paddingLeft: 4 }}>{ex}</div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 6, fontSize: '0.78rem', color: '#888', fontStyle: 'italic' }}>
+                      <i className="bi bi-info-circle" style={{ marginRight: 3 }}></i>
+                      Hər çekin sistem cəmi ilə ödəniş cəmi müqayisə edilir. Fərq yuvarlaqlaşdırma, depozit, taymer və ya əl ilə daxil edilmiş məbləğdən yarana bilər.
+                    </div>
+                  </div>
+                )}
 
                 <div className="section-title mt-4">{t("diger_detallar")}</div>
                 <div className="receipt-row report-row-with-hint" title={REPORT_HINTS.openCount}><span>{t("aciq_ceklerin_sayi")}</span><div className="dots"></div><span className="value">{reportSummary.open_orders_count || 0}</span></div>

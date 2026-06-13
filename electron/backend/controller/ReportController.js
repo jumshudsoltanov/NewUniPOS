@@ -108,6 +108,7 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
         giftItems,       // İkram məhsulları
         payments,        // Ödənişlər
         closedTagOrders, // Etiket hesablaması üçün bağlı sifarişlər
+        discrepancyOrders, // Ödəniş uyğunsuzluq təhlili
     ] = await Promise.all([
         // 0. Profil (vergi faizi)
         LoginModel.findOne({ where: { id: profileId }, attributes: ['id', 'tax_percent'] }),
@@ -206,6 +207,16 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
                 include: [{ model: TagsModel, as: 'tag', required: false, attributes: ['name'] }],
             }],
         }),
+
+        // 7. Ödəniş uyğunsuzluq təhlili — hər sifarişdə total vs ödənilən məbləğ
+        OrdersModel.findAll({
+            where: closedWhere,
+            attributes: ['id', 'total'],
+            include: [{
+                model: OrderPaymentsModel, as: 'order_payments', required: false,
+                attributes: ['paid', 'without_payment_method_id'],
+            }],
+        }),
     ]);
 
     const taxPercent = parseFloat(profile?.tax_percent || 0);
@@ -286,6 +297,33 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
         });
     });
 
+    // Ödəniş uyğunsuzluq təhlili — hər sifarişin total-ı ilə ödəniş cəmini müqayisə et
+    let overpaidCount = 0, overpaidTotal = 0;
+    let underpaidCount = 0, underpaidTotal = 0;
+    let discrepancyExamples = [];
+    discrepancyOrders.forEach(order => {
+        const total = parseFloat(order.total || 0);
+        const paidSum = (order.order_payments || [])
+            .filter(p => !p.without_payment_method_id || p.without_payment_method_id === 0)
+            .reduce((s, p) => s + parseFloat(p.paid || 0), 0);
+        const diff = paidSum - total;
+        if (Math.abs(diff) > 0.005) {
+            if (diff > 0) {
+                overpaidCount++;
+                overpaidTotal += diff;
+            } else {
+                underpaidCount++;
+                underpaidTotal += Math.abs(diff);
+            }
+            if (discrepancyExamples.length < 5) {
+                const absDiff = Math.abs(diff);
+                discrepancyExamples.push(
+                    `#${order.id}: total ${total.toFixed(2)}, ödənilən ${paidSum.toFixed(2)}, fərq ${diff > 0 ? '+' : '-'}${absDiff.toFixed(2)}`
+                );
+            }
+        }
+    });
+
     return {
         total_amount: parseFloat(aggRow.sum_amount || 0) + parseFloat(aggRow.sum_timer || 0),
         total_discount: parseFloat(aggRow.sum_discount || 0),
@@ -305,6 +343,13 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
         payments: paymentsMap,
         unpaid_payments: unpaidMap,
         tags,
+        discrepancy: {
+            overpaid_count: overpaidCount,
+            overpaid_total: parseFloat(overpaidTotal.toFixed(2)),
+            underpaid_count: underpaidCount,
+            underpaid_total: parseFloat(underpaidTotal.toFixed(2)),
+            examples: discrepancyExamples,
+        },
     };
 };
 
