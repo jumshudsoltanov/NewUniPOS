@@ -1441,6 +1441,46 @@ export const OrderSlice = createSlice({
 
       const qty = Number.isFinite(normalizedQuantity) && normalizedQuantity > 0 ? normalizedQuantity : 1;
 
+      // Eyni product_id + price + modifiers olan varsa quantity artır, yeni sətir açma
+      // Modifiers müqayisəsi üçün CheckMain.jsx-dəki normalization tətbiq olunur
+      const normalizeMods = (mods) => {
+        if (!mods) return '[]';
+        const arr = Array.isArray(mods) ? mods : [];
+        return JSON.stringify(
+          [...arr]
+            .map(m => ({ id: m.id, count: m.count || m.quantity || 1 }))
+            .sort((a, b) => (a.id || 0) - (b.id || 0))
+        );
+      };
+
+      const isOwnSetPrice = incomingProduct.own_set_price === 1 || incomingProduct.isOwnSetPrice === 1;
+      if (!isOwnSetPrice) {
+        const prodId = incomingProduct.product_id || incomingProduct.id;
+        const isGift = incomingProduct.is_gift === 1 || incomingProduct.is_gift === true;
+        const priceStr = String(parsedPrice || '');
+        const modStr = normalizeMods(incomingProduct.modifiers);
+
+        const existingIdx = state.products.findIndex(p => {
+          if (p.own_set_price === 1 || p.isOwnSetPrice === 1) return false;
+          const pId = p.product_id || p.id;
+          const pGift = p.is_gift === 1 || p.is_gift === true;
+          const pPrice = String(parseFloat(p.price) || '');
+          const pModStr = normalizeMods(p.modifiers);
+          return pId === prodId && pGift === isGift && pPrice === priceStr && pModStr === modStr;
+        });
+
+        if (existingIdx !== -1) {
+          const existing = state.products[existingIdx];
+          const existingQty = Number(existing.quantity || existing.count || 0);
+          state.products[existingIdx] = {
+            ...existing,
+            quantity: existingQty + qty,
+            newOrder: (Number(existing.newOrder || 0)) + qty,
+          };
+          return;
+        }
+      }
+
       state.products.push({
         ...incomingProduct,
         quantity: qty,

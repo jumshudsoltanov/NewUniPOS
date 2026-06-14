@@ -22,7 +22,8 @@ import {
   addPendingDeletion,
   startTimer,
   stopTimer,
-  resetTimer
+  resetTimer,
+  addProducts,
 } from "../../redux/Slices/OrdersSlice";
 import { updateProduct } from "../../redux/Slices/ProductSlice";
 import { useDispatch, useSelector } from "react-redux";

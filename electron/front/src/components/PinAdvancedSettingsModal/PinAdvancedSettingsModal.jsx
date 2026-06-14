@@ -160,6 +160,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     () => localStorage.getItem("pos_ai_module_enabled") === "true"
   );
 
+  const [emptyCheckAutoDelete, setEmptyCheckAutoDelete] = useState(
+    () => localStorage.getItem("pos_empty_check_auto_delete") !== "false"
+  );
+
   const [resettingDb, setResettingDb] = useState(false);
 
   const [syncTroubleshootLoading, setSyncTroubleshootLoading] = useState(false);
@@ -290,6 +294,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       setHideImages(localStorage.getItem("pos_hide_images") === "true");
       setTouchScrollEnabled(localStorage.getItem("pos_touch_scroll") === "true");
       setAutoPaymentEnabled(localStorage.getItem("pos_auto_payment_enabled") === "true");
+      setEmptyCheckAutoDelete(localStorage.getItem("pos_empty_check_auto_delete") !== "false");
       try {
         const savedReceipt = JSON.parse(localStorage.getItem("pos_receipt_settings"));
         if (savedReceipt) setReceiptSettings(normalizePosReceiptSettings(savedReceipt));
@@ -1469,6 +1474,28 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                     setAiModuleEnabled(newVal);
                     localStorage.setItem("pos_ai_module_enabled", newVal ? "true" : "false");
                     window.dispatchEvent(new CustomEvent("aiModuleChanged", { detail: newVal }));
+                  }}
+                  style={{ cursor: "pointer", flexShrink: 0 }}
+                >
+                  <div className="wa-toggle-thumb" />
+                </div>
+              </div>
+            </div>
+
+            {/* Boş çek avtomatik silmə */}
+            <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>{t("bos_cek_avtomatik_silme")}</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("son_mehsul_silnende_bos_cek_ucun_tesdiq_modalini_goster")}</div>
+                </div>
+                <div
+                  className={`wa-toggle ${emptyCheckAutoDelete ? "wa-toggle-on" : ""}`}
+                  onClick={() => {
+                    const newVal = !emptyCheckAutoDelete;
+                    setEmptyCheckAutoDelete(newVal);
+                    localStorage.setItem("pos_empty_check_auto_delete", newVal ? "true" : "false");
+                    window.dispatchEvent(new CustomEvent("emptyCheckAutoDeleteChanged", { detail: newVal }));
                   }}
                   style={{ cursor: "pointer", flexShrink: 0 }}
                 >

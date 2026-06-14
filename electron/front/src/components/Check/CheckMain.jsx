@@ -300,7 +300,8 @@ const CheckMain = ({ orders, table }) => {
     const combinedLocal = [...products, ...(sentProducts || [])];
 
     combinedLocal.forEach((item, idx) => {
-      const prodId = Number(item.id || item.product_id);
+      // product_id birinci (EditModal-dan gələn klonlanmış item-lərdə id=DB row ID ola bilər)
+      const prodId = Number(item.product_id || item.id);
       const isGift = item.is_gift ? 1 : 0;
       const price = parseFloat(item.price || 0).toFixed(2);
       

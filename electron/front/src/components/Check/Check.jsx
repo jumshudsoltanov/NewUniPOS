@@ -1154,6 +1154,14 @@ const Check = () => {
       const profileId = loginedProfileData?.data?.profile?.id;
       const orderId = currentOrder.uuid;
 
+      // Yeni tənzimləmə: "boş çek avtomatik silinməsi" söndürülübsə modal göstərmə
+      const autoDeleteEnabled = localStorage.getItem("pos_empty_check_auto_delete") !== "false";
+      if (!autoDeleteEnabled) {
+        if (targetPath === -1) { goTables(); return; }
+        navigate(targetPath);
+        return;
+      }
+
       // Təsdiq modalı üçün məlumatları ref-də saxla
       emptyCheckDataRef.current = {
         orderId,
@@ -3269,15 +3277,9 @@ const Check = () => {
       {/* Boş çek silmə təsdiq modalı — CustomersModal stilində */}
       <Modal
         show={showEmptyCheckConfirm}
-        onHide={() => {
-          setShowEmptyCheckConfirm(false);
-          const d = emptyCheckDataRef.current;
-          if (d) {
-            if (d.targetPath === -1) goTables(true, true);
-            else navigate(d.targetPath, { replace: true });
-          }
-        }}
+        onHide={() => setShowEmptyCheckConfirm(false)}
         centered
+        backdrop="static"
         animation={false}
         dialogClassName="empty-check-modal"
         contentClassName="custom-modal-content"
@@ -3291,7 +3293,7 @@ const Check = () => {
               </div>
               <div className="customers-modal-title">{t("masa_bosdur")}</div>
             </div>
-            <button className="btn-close-custom" onClick={() => { setShowEmptyCheckConfirm(false); const d = emptyCheckDataRef.current; if (d) { if (d.targetPath === -1) goTables(true, true); else navigate(d.targetPath, { replace: true }); } }}>
+            <button className="btn-close-custom" onClick={() => setShowEmptyCheckConfirm(false)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -3303,13 +3305,14 @@ const Check = () => {
           <div className="customers-modal-body">
             <div style={{ textAlign: "center", padding: "20px 8px 12px" }}>
               <div style={{ fontSize: "42px", color: "#4F85F4", marginBottom: "12px" }}>
-                <i className="bi bi-trash3"></i>
+                <i className="bi bi-question-circle"></i>
               </div>
               <p style={{ fontSize: "17px", color: "#333", margin: "0 0 8px", fontWeight: 500 }}>{t("bu_masada_hec_bir_mehsul_yoxdur")}</p>
               <p style={{ fontSize: "15px", color: "#666", margin: 0 }}>{t("masani_silmek_istediyinize_eminsiniz")}</p>
             </div>
 
             <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+              {/* 1. Geri — masani aciq saxla */}
               <button
                 className="customers-save-btn"
                 style={{ flex: 1, backgroundColor: "#e5e7eb", color: "#333", boxShadow: "none", height: "48px" }}
@@ -3322,9 +3325,10 @@ const Check = () => {
                   }
                 }}
               >
-                <i className="bi bi-x-lg" style={{ fontSize: "1.2rem", marginRight: "6px" }}></i>
-                {t("cancel")}
+                <i className="bi bi-folder2-open" style={{ fontSize: "1.1rem", marginRight: "6px" }}></i>
+                {t("masani_aciq_saxla")}
               </button>
+              {/* 2. Sil */}
               <button
                 className="customers-save-btn"
                 style={{ flex: 1, height: "48px" }}
@@ -3376,8 +3380,8 @@ const Check = () => {
                   }
                 }}
               >
-                <i className="bi bi-trash3" style={{ fontSize: "1.2rem", marginRight: "6px" }}></i>
-                Sil
+                <i className="bi bi-trash3" style={{ fontSize: "1.1rem", marginRight: "6px" }}></i>
+                {t("sil")}
               </button>
             </div>
           </div>
