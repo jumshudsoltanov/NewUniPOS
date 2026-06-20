@@ -35,7 +35,7 @@ const OrderLogsModal = ({ show, onHide, order }) => {
         >
             <Modal.Header closeButton style={{ backgroundColor: '#4F85F4', color: 'white', borderBottom: 'none', padding: '15px 20px', borderRadius: 0, borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
                 <Modal.Title style={{ fontSize: '1.2rem', fontWeight: '600' }}>
-                    Çek tarixçəsi №{order?.id || ''}
+                    {t("cek_tarixcesi")} №{order?.id || ''}
                 </Modal.Title>
             </Modal.Header>
             <Modal.Body className="p-0" style={{ backgroundColor: '#f0f4ff', height: '450px', display: 'flex', flexDirection: 'column' }}>
@@ -85,7 +85,7 @@ const OrderLogsModal = ({ show, onHide, order }) => {
                                             <div className="d-flex align-items-center justify-content-between mb-2">
                                                 <div className="fw-bold d-flex align-items-center gap-2" style={{ fontSize: '0.95rem', color: isError ? '#C53030' : '#1e293b' }}>
                                                     <i className={`bi ${isError ? 'bi-exclamation-octagon-fill' : 'bi-info-circle-fill'}`}></i>
-                                                    {log.action || 'Əməliyyat'}
+                                                    {log.action ? t(log.action) : t("emeliyyat")}
                                                 </div>
                                                 <div className="text-secondary" style={{ fontSize: '0.75rem', fontWeight: '500' }}>
                                                     {new Date(log.time || log.createdAt).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}
@@ -95,7 +95,7 @@ const OrderLogsModal = ({ show, onHide, order }) => {
                                             {/* Show details - Compact block */}
                                             {log.details && (
                                                 <div className="log-details mb-2" style={{ fontSize: '0.85rem', color: '#475569', lineHeight: '1.4' }}>
-                                                    {log.details}
+                                                    {log.details ? t(log.details) : ''}
                                                 </div>
                                             )}
 

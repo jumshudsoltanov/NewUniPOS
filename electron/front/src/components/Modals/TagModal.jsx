@@ -89,7 +89,7 @@ const TagModal = ({ show, onClose, order }) => {
           onClick={handleUpdateTags}
           style={{ backgroundColor: "#4F85F4" }}
         >
-          Saxla
+          {t("saxla")}
         </Button>
         </Modal.Footer>
       </Modal>

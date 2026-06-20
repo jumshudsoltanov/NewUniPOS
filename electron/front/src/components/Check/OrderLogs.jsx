@@ -38,12 +38,12 @@ const OrderLogs = ({ order }) => {
                         <div className="timeline-marker" style={{ borderColor: index === 0 ? '#053796' : '#9CA3AF' }}></div>
                         <div className="timeline-content">
                             <div className="timeline-header">
-                                <span className="log-action">{log.action}</span>
+                                <span className="log-action">{log.action ? t(log.action) : t("emeliyyat")}</span>
                                 <span className="log-time">
                                     {new Date(log.time || log.createdAt).toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
-                            {log.details && <div className="log-details">{log.details}</div>}
+                            {log.details && <div className="log-details">{t(log.details)}</div>}
                             {log.waiterName && (
                                 <div className="log-waiter">
                                     <i className="bi bi-person"></i> {log.waiterName}

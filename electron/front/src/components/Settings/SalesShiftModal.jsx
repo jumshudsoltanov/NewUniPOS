@@ -110,14 +110,14 @@ ${(Number(summary?.total_paid || 0) > 0 || Number(summary?.total_unpaid || 0) > 
 ${Number(summary?.guest_count || 0) > 0 ? `<div class="kv" style="margin-top:3px"><span class="kv-label">${t("guest_count")}</span><span class="kv-value">${summary?.guest_count ?? 0}</span></div>` : ""}
 <hr class="divider" style="margin-top:8px"/>
 <div class="section-title">${t("ofisiant_uzre")}</div>
-<table><thead><tr><th>Ad</th><th class="r">${t("cek")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+<table><thead><tr><th>${t("ad_name")}</th><th class="r">${t("cek")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
 <hr class="divider"/>
 <div class="section-title">${t("satis_tipi_1")}</div>
-<table><thead><tr><th>${t("type")}</th><th class="r">Say</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+<table><thead><tr><th>${t("type")}</th><th class="r">${t("say_count")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
 ${payRows ? `<hr class="divider"/><div class="section-title">${t("odenis_usullari")}</div><table><thead><tr><th>${t("usul")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${payRows}</tbody></table>` : ""}
 ${unpaidRows ? `<hr class="divider"/><div class="section-title">${t("odenissiz_baglamalar")}</div><table><thead><tr><th>${t("usul")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${unpaidRows}</tbody></table>` : ""}
-${tagRows ? `<hr class="divider"/><div class="section-title">${t("etiketler")}</div><table><thead><tr><th>Etiket</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
-${catRows ? `<hr class="divider"/><div class="section-title">${t("kateqoriya_hesabati")}</div><table><thead><tr><th>Kateqoriya</th><th class="r">Say</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
+${tagRows ? `<hr class="divider"/><div class="section-title">${t("etiketler")}</div><table><thead><tr><th>${t("etiket_tag")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
+${catRows ? `<hr class="divider"/><div class="section-title">${t("kateqoriya_hesabati")}</div><table><thead><tr><th>${t("kateqoriya_category")}</th><th class="r">${t("say_count")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
 ${footerNote ? `<div class="footer-note">${escapeHtml(footerNote)}</div>` : ""}`;
 };
 
@@ -247,7 +247,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Ad</th>
+                                        <th>{t("ad_name")}</th>
                                         <th className="num">{t("cek")}</th>
                                         <th className="num">{t("mebleg")}</th>
                                     </tr>
@@ -280,7 +280,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                                 <thead>
                                     <tr>
                                         <th>{t("type")}</th>
-                                        <th className="num">Say</th>
+                                        <th className="num">{t("say_count")}</th>
                                         <th className="num">{t("mebleg")}</th>
                                     </tr>
                                 </thead>
@@ -349,7 +349,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                             <i className="bi bi-bookmark-fill" aria-hidden />{t("etiketler")}</div>
                         <div className="ssd-table-wrap">
                             <table>
-                                <thead><tr><th>Etiket</th><th className="num">Say</th><th className="num">{t("mebleg")}</th></tr></thead>
+                                <thead><tr><th>{t("etiket_tag")}</th><th className="num">{t("say_count")}</th><th className="num">{t("mebleg")}</th></tr></thead>
                                 <tbody>
                                     {Object.keys(s.tags || {}).length ? (
                                         Object.entries(s.tags).map(([tag, details]) => (
@@ -369,7 +369,7 @@ function ShiftHistoryDetailBody({ row, snapshot, profileName }) {
                             <i className="bi bi-grid-fill" aria-hidden />{t("kateqoriya_hesabati")}</div>
                         <div className="ssd-table-wrap">
                             <table>
-                                <thead><tr><th>{t("kateqoriya_/_mehsul")}</th><th className="num">Say</th><th className="num">{t("mebleg")}</th></tr></thead>
+                                <thead><tr><th>{t("kateqoriya_/_mehsul")}</th><th className="num">{t("say_count")}</th><th className="num">{t("mebleg")}</th></tr></thead>
                                 <tbody>
                                     {(s.byCategory || []).length ? (
                                         s.byCategory.map((cat) => (
@@ -584,7 +584,7 @@ const SalesShiftModal = ({ show, onHide }) => {
         const logoSrc =
             resolveLogoUrl(terminalInfo?.logoPrint) || resolveLogoUrl(profile?.logo) || null;
         const html = buildShiftPrintHtml({
-            profileName: profile?.company_name || profile?.name || `Profil #${profileId}`,
+            profileName: profile?.company_name || profile?.name || `${t("profil_profile")} #${profileId}`,
             logoSrc,
             openedAt: snapshot.openedAt,
             closedAt: snapshot.closedAt,
@@ -836,7 +836,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                         <table className="ssm-table">
                             <thead>
                                 <tr>
-                                    <th>Ad</th>
+                                    <th>{t("ad_name")}</th>
                                     <th className="num">{t("cek")}</th>
                                     <th className="num">{t("mebleg")}</th>
                                 </tr>
@@ -867,7 +867,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                             <thead>
                                 <tr>
                                     <th>{t("type")}</th>
-                                    <th className="num">Say</th>
+                                    <th className="num">{t("say_count")}</th>
                                     <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
@@ -948,8 +948,8 @@ const SalesShiftModal = ({ show, onHide }) => {
                         <table className="ssm-table">
                             <thead>
                                 <tr>
-                                    <th>Etiket</th>
-                                    <th className="num">Say</th>
+                                    <th>{t("etiket_tag")}</th>
+                                    <th className="num">{t("say_count")}</th>
                                     <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
@@ -977,7 +977,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                             <thead>
                                 <tr>
                                     <th>{t("kateqoriya_/_mehsul")}</th>
-                                    <th className="num">Say</th>
+                                    <th className="num">{t("say_count")}</th>
                                     <th className="num">{t("mebleg")}</th>
                                 </tr>
                             </thead>
@@ -1041,7 +1041,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                             {h.closed_at ? new Date(h.closed_at).toLocaleString("az-AZ") : "—"}
                                         </div>
                                         <div className="sales-shift-history-sub">
-                                            Açılış:{" "}
+                                            {t("acilis")}:{" "}
                                             {h.opened_at ? new Date(h.opened_at).toLocaleString("az-AZ") : "—"}
                                             {h.terminal_id != null && h.terminal_id !== ""
                                                 ? ` · Term. ${h.terminal_id}`
@@ -1062,7 +1062,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                         disabled={loading}
                                     >
                                         <i className="bi bi-layout-text-sidebar-reverse" aria-hidden />
-                                        Detallar
+                                        {t("detallar_details")}
                                     </Button>
                                     <Button
                                         variant="primary"
@@ -1121,7 +1121,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                             <div className="sales-shift-col-right">
                                 <h6 className="sales-shift-panel-title">
                                     <i className="bi bi-clock-history" aria-hidden />
-                                    Keçmiş növbələr
+                                    {t("kecmis_satis_novbeleri")}
                                     {history.length > 0 && (
                                         <span className="ssm-history-count">{history.length}</span>
                                     )}
@@ -1139,7 +1139,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                                             />
                                         </div>
                                         <div className="ssm-history-filter-field">
-                                            <label htmlFor="historyTo">Son</label>
+                                            <label htmlFor="historyTo">{t("son_end")}</label>
                                             <input
                                                 id="historyTo"
                                                 type="date"

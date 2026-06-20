@@ -317,7 +317,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                   </svg>
                 </button>
                 <span className="checks-page-title">
-                  {showBack ? "" : "Çeklər"}
+                  {showBack ? "" : t("checks")}
                 </span>
               </div>
             ) : (
@@ -411,7 +411,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                   </svg>
                 </button>
               )}
-              {isChecksPage ? "Çeklər" : (!showBack && !hideWaiterName && loginedWaiter?.data?.name)}
+              {isChecksPage ? t("checks") : (!showBack && !hideWaiterName && loginedWaiter?.data?.name)}
             </div>
             <div className="d-flex align-items-center gap-2">
               {Number(loginedProfileData?.data?.profile?.queue_sales_module) === 1 &&

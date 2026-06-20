@@ -19,7 +19,7 @@ const statusOptions = [
 ];
 
 const sortOptions = [
-  { value: "", label: "Standart" },
+  { value: "", label: t("standart") },
   { value: "id_asc", label: "ID ↑" },
   { value: "id_desc", label: "ID ↓" },
   { value: "amount_asc", label: t("mebleg_↑") },
@@ -91,7 +91,7 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
               <line x1="17" y1="16" x2="23" y2="16" />
             </svg>
           </div>
-          <span className="af-hdr-title">Filter</span>
+          <span className="af-hdr-title">{t("filter")}</span>
         </div>
         <button className="af-close" onClick={onHide}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -159,7 +159,7 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Status</label>
+                <label>{t("status")}</label>
                 <div className="af-chips">
                   {statusOptions.map(o => {
                     const isActive = f.filterStatus === o.value;
@@ -208,19 +208,19 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
                 </div>
               </div>
               <div className="af-fld">
-                <label>Endirim</label>
+                <label>{t("endirim")}</label>
                 <Form.Select value={f.filterDiscount} onChange={e => upd("filterDiscount", e.target.value)}>
                   <option value="">{t("all")}</option>
-                  <option value="yes">Endirim olanlar</option>
-                  <option value="no">Endirim olmayanlar</option>
+                  <option value="yes">{t("endirim_olanlar")}</option>
+                  <option value="no">{t("endirim_olmayanlar")}</option>
                 </Form.Select>
               </div>
               <div className="af-fld">
-                <label>Qeyd</label>
+                <label>{t("qeyd")}</label>
                 <Form.Select value={f.filterHasNote} onChange={e => upd("filterHasNote", e.target.value)}>
                   <option value="">{t("all")}</option>
-                  <option value="yes">Qeydi olanlar</option>
-                  <option value="no">Qeydsiz</option>
+                  <option value="yes">{t("qeydi_olanlar")}</option>
+                  <option value="no">{t("qeydsiz")}</option>
                 </Form.Select>
               </div>
               <div className="af-fld">

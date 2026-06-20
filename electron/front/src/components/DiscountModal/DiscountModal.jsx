@@ -141,7 +141,7 @@ const DiscountModal = React.memo(({ show, onClose, order }) => {
                 />
               </svg>
             </div>
-            <span className="header-title">Endirim</span>
+            <span className="header-title">{t("endirim")}</span>
           </div>
           <button className="close-btn" onClick={onClose}>
             <svg

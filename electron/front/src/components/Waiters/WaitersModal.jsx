@@ -169,7 +169,7 @@ const WaitersModal = ({ show, onClose, order }) => {
                   <span className="waiter-name">{waiter.name}</span>
                   {order?.waiter?.id === waiter.id && (
                     <span className="current-waiter-badge">
-                      Cari ofisiant
+                      {t("cari_ofisiant")}
                     </span>
                   )}
                 </div>

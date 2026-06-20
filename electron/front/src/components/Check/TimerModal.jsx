@@ -91,7 +91,7 @@ const TimerModal = ({ show, onHide, order, table }) => {
                   <polyline points="12 6 12 12 16 14"></polyline>
                </svg>
             </div>
-            <span className="header-title" style={{ fontSize: '18px', fontWeight: '600', color: '#fff' }}>Timer</span>
+            <span className="header-title" style={{ fontSize: '18px', fontWeight: '600', color: '#fff' }}>{t("timer")}</span>
           </div>
           <button className="close-btn" onClick={onHide} style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

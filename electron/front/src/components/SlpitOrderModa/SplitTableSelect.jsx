@@ -114,7 +114,7 @@ const SplitTableSelect = ({ show, onClose, onSelect }) => {
                             })}
                         </div>
                     ) : (
-                        <p className="split-ts-empty">Bu zalda masa yoxdur.</p>
+                        <p className="split-ts-empty">{t("bu_zalda_masa_yoxdur")}</p>
                     )}
                 </div>
             </div>

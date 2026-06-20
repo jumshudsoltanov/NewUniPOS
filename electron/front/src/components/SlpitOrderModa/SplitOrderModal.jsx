@@ -150,7 +150,7 @@ export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit
                     {/* Column Headers */}
                     <div className="split-list-header">
                         <div className="col-product">{t("products")}</div>
-                        <div className="col-qty">Miqdar</div>
+                        <div className="col-qty">{t("miqdar")}</div>
                         <div className="col-action">{t("bolmek")}</div>
                     </div>
 

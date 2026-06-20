@@ -508,9 +508,9 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     };
 
     const saleTypeLabels = {
-        dine_in: "Restoranda",
-        takeaway: "Gəl götür",
-        delivery: "Çatdırılma",
+        dine_in: t("dine_in"),
+        takeaway: t("takeaway"),
+        delivery: t("delivery"),
     };
 
     return (
@@ -585,7 +585,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 gap: '6px'
                             }}
                         >
-                            <i className="bi bi-arrow-return-left"></i> Vergi Qaytar
+                            <i className="bi bi-arrow-return-left"></i> {t("vergi_qaytar")}
                         </button>
                     </div>
                 )}
@@ -605,7 +605,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 className={`mobile-tab-item flex-grow-1 text-center py-3 ${mobileActiveTab === 'history' ? 'active' : ''}`}
                                 onClick={() => setMobileActiveTab('history')}
                             >
-                                Tarixçə
+                                {t("tarixce")}
                             </div>
                         </div>
                     )}
@@ -692,7 +692,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                     </svg>
                                                 </div>
                                                 <div className="meta-content-col">
-                                                    <div className="meta-label" style={{ color: '#053796' }}>TAYMER</div>
+                                                    <div className="meta-label" style={{ color: '#053796' }}>{t("taymer_uc")}</div>
                                                     <div className="meta-value" style={{ fontWeight: '700' }}>
                                                         {order.is_timer_clock}
                                                         {order.is_timer_status === 1 ? ' (Aktiv)' : ' (Dayandırılıb)'}
@@ -716,7 +716,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 <div className="meta-label">{t("odeni̇s_usulu")}</div>
                                                 <div className="meta-value">
                                                     {order.status === 3 ? (
-                                                        <span className="text-danger">Silinib</span>
+                                                        <span className="text-danger">{t("silinib")}</span>
                                                     ) : order.order_payments?.length > 0 ? (
                                                         order.order_payments.map((p, i) => (
                                                             <div key={i} className="d-flex justify-content-between w-100">
@@ -762,7 +762,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             >
                                                 <option value="all">{t("siyahi_hamisi")}</option>
                                                 {logTypes.map((type, idx) => (
-                                                    <option key={idx} value={type}>{type}</option>
+                                                    <option key={idx} value={type}>{t(type)}</option>
                                                 ))}
                                             </Form.Select>
                                         </div>
@@ -782,7 +782,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                             </div>
                                                             <div style={{ paddingBottom: '20px', flex: 1 }}>
                                                                 <div className="fw-bold text-dark mb-1" style={{ fontSize: '14px' }}>
-                                                                    {log.action}
+                                                                    {log.action ? t(log.action) : t("emeliyyat")}
                                                                 </div>
                                                                 <div className="d-flex align-items-center gap-3 text-secondary mb-1" style={{ fontSize: '12px' }}>
                                                                     <div className="d-flex align-items-center gap-1">
@@ -823,8 +823,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                     <table className="table table-borderless table-sm order-items-table">
                                         <thead>
                                             <tr>
-                                                <th className="text-muted fw-normal">Ad</th>
-                                                <th className="text-muted fw-normal">Miq</th>
+                                                <th className="text-muted fw-normal">{t("ad_name")}</th>
+                                                <th className="text-muted fw-normal">{t("miq")}</th>
                                                 <th className="text-muted fw-normal">{t("qiymet")}</th>
                                                 <th className="text-muted fw-normal text-end">{t("cem")}</th>
                                             </tr>
@@ -874,7 +874,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
                                     {Number(order.discount || 0) !== 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
-                                            <span className="summary-label text-muted">Endirim ({discountPercentage}%):</span>
+                                            <span className="summary-label text-muted">{t("endirim")} ({discountPercentage}%):</span>
                                             <span className="summary-value text-danger fw-bold">
                                                 {Number(order.discount) > 0 ? '-' : ''}{Math.abs(Number(order.discount)).toFixed(2)} {getCurrencySymbol()}
                                             </span>
@@ -883,14 +883,14 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
                                     {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
-                                            <span className="summary-label text-muted">Depozit (Minimal):</span>
+                                            <span className="summary-label text-muted">{t("depozit_minimal")}:</span>
                                             <span className="summary-value fw-bold">{Number(order.deposit).toFixed(2)} {getCurrencySymbol()}</span>
                                         </div>
                                     )}
 
                                     {Number(order.service_charge || 0) !== 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
-                                            <span className="summary-label text-muted">Servis haqqı ({servicePercentage}%):</span>
+                                            <span className="summary-label text-muted">{t("servis_haqqi")} ({servicePercentage}%):</span>
                                             <span className="summary-value fw-bold">{Number(order.service_charge).toFixed(2)} {getCurrencySymbol()}</span>
                                         </div>
                                     )}
@@ -904,14 +904,14 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
                                     {Number(order.rate_per_minute || 0) > 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
-                                            <span className="summary-label text-muted">Taymer:</span>
+                                            <span className="summary-label text-muted">{t("taymer")}:</span>
                                             <span className="summary-value fw-bold">{Number(order.rate_per_minute).toFixed(2)} {getCurrencySymbol()}</span>
                                         </div>
                                     )}
 
                                     <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top mt-2">
                                         <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>
-                                            {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? 'Minimal məbləğ:' : 'Yekun:'}
+                                            {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? t("minimal_mebleg_2") : t("yekun_2")}
                                         </span>
                                         <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
                                             {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0) + Number(order.rate_per_minute || 0)).toFixed(2)} {getCurrencySymbol()}
@@ -932,7 +932,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                     style={{ color: "#0d6efd", background: "transparent", fontWeight: 500 }}
                                 >
                                     <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me-2 fs-5`}></i>
-                                    {currentView === "details" ? "TARİXÇƏ" : "ÇEK MƏLUMATLARI"}
+                                    {currentView === "details" ? t("tarixce_uc") : t("cek_melumatlari_uc")}
                                 </Button>
                             </div>
                         )}

@@ -86,7 +86,7 @@ const CommentModal = React.memo(({ show, onClose, order }) => {
           <button className="comment-cancel-btn" onClick={onClose}>{t("bagla")}</button>
           <button className="comment-save-btn" onClick={handleUpdateComment}>
             <i className="bi bi-check2 me-2" style={{ fontSize: '1.2rem' }}></i>
-            Saxla
+            {t("saxla")}
           </button>
         </div>
       </div>

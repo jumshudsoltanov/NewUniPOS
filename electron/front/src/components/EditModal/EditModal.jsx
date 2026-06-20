@@ -461,7 +461,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   onClick={() => { setActiveTab("discount"); setTransferQty(1); }}
                 >
                   <i className="bi bi-percent"></i>
-                  <span>Endirim</span>
+                  <span>{t("endirim")}</span>
                 </button>
               )}
 
@@ -512,7 +512,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   }}
                 >
                   <i className="bi bi-trash3-fill"></i>
-                  <span>Sil</span>
+                  <span>{t("sil")}</span>
                 </button>
               )}
             </div>
@@ -790,7 +790,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   ) : (
                     <>
                       <i className={`bi ${qty === 0 ? 'bi-trash3-fill' : 'bi-check-lg'}`}></i>
-                      {qty === 0 ? 'Sil' : 'Saxla'}
+                      {qty === 0 ? t("sil") : t("saxla")}
                     </>
                   )}
                 </button>
@@ -831,7 +831,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   {/* Table Select */}
                   {selectedSalesType === "dine_in" && (
                     <div className="custom-select-box" onClick={() => setShowTableSelect(true)}>
-                      <span>{selectedTable ? `${selectedTable.hall_name || ''} - ${selectedTable.number || selectedTable.name}` : "Masa seç"}</span>
+                      <span>{selectedTable ? `${selectedTable.hall_name || ''} - ${selectedTable.number || selectedTable.name}` : t("masa_sec")}</span>
                       <i className="bi bi-grid-3x3-gap-fill"></i>
                     </div>
                   )}
@@ -1080,12 +1080,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       <div className="edit-hourly-live-metrics">
                         <div className="edit-hourly-metric">
                           <i className="bi bi-cash-stack" aria-hidden />
-                          <span className="edit-hourly-metric-label">Qazanc</span>
+                          <span className="edit-hourly-metric-label">{t("qazanc")}</span>
                           <span className="edit-hourly-metric-val">{Number(timerChargeLive).toFixed(2)} {getCurrencySymbol()}</span>
                         </div>
                         <div className="edit-hourly-metric">
                           <i className="bi bi-tag" aria-hidden />
-                          <span className="edit-hourly-metric-label">Tarif</span>
+                          <span className="edit-hourly-metric-label">{t("tarif")}</span>
                           <span className="edit-hourly-metric-val">{Number(displayTariffRate).toFixed(2)} ₼/saat</span>
                         </div>
                       </div>

@@ -54,11 +54,11 @@ const CheckListItem = React.memo(({ check, onClick, roomNumber }) => (
         {check.sale_type && (
           <span className={`checks-check-badge checks-badge-${check.sale_type}`}>
             {check.sale_type === "dine_in"
-              ? "Restoranda"
+              ? t("dine_in")
               : check.sale_type === "takeaway"
-                ? "Gəl götür"
+                ? t("takeaway")
                 : check.sale_type === "delivery"
-                  ? "Çatdırılma"
+                  ? t("delivery")
                   : (check.sale_type?.charAt(0).toUpperCase() + check.sale_type?.slice(1))}
           </span>
         )}
@@ -198,7 +198,7 @@ const Checks = () => {
         profile_id: pid,
         terminal_id: terminalId,
         sale_type: "dine_in",
-        sale_type_name: "Restoranda",
+        sale_type_name: t("dine_in"),
         guest_count: 1,
         status: 1,
         is_selected: 1,
@@ -642,13 +642,13 @@ const Checks = () => {
           className={`checks-nav-tab ${activeTab === "archive" ? "active" : ""}`}
           onClick={() => setActiveTab("archive")}
         >
-          Arxiv
+          {t("arxiv")}
         </button>
         <button
           className={`checks-nav-tab ${activeTab === "offline" ? "active" : ""}`}
           onClick={() => setActiveTab("offline")}
         >
-          Offline arxiv
+          {t("offline_arxiv")}
         </button>
       </div>
 

@@ -96,8 +96,8 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                         <table className="receipt-items-table">
                             <thead>
                                 <tr>
-                                    <th>Ad</th>
-                                    <th>Miq</th>
+                                    <th>{t("ad_name")}</th>
+                                    <th>{t("miq")}</th>
                                     <th>{t("qiymet")}</th>
                                     <th>{t("cem")}</th>
                                 </tr>
@@ -156,7 +156,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                         </div>
                         {discount > 0 && (
                             <div className="receipt-total-row">
-                                <span className="receipt-total-label">Endirim</span>
+                                <span className="receipt-total-label">{t("endirim")}</span>
                                 <span className="receipt-total-value" style={{ color: '#e74c3c' }}>-{formatMoney(discount)} {getCurrencySymbol()}</span>
                             </div>
                         )}
@@ -167,7 +167,7 @@ const CheckReceiptModal = ({ show, onClose, order }) => {
                             </div>
                         )}
                         <div className="receipt-total-row grand-total">
-                            <span className="receipt-total-label">Yekun</span>
+                            <span className="receipt-total-label">{t("yekun")}</span>
                             <span className="receipt-total-value">{formatMoney(grandTotal)} {getCurrencySymbol()}</span>
                         </div>
                     </div>

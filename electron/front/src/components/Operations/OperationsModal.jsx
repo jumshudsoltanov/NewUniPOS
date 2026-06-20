@@ -4,20 +4,20 @@ import { t } from "../../utils/translations";
 import "./OperationsModal.css";
 
 const DEFAULT_OPERATION_NAMES = {
-  "split": "Çeki böl",
-  "history": "Əməliyyat Tarixçəsi",
-  "comment": "Çekə şərh yaz",
-  "customers": "Müştəri bazası",
-  "clear": "Çeki təmizləmə",
-  "discount": "Endirim",
-  "merge": "Çeki birləşdir",
-  "saleType": "Satış üsulunu dəyiş",
-  "waiter": "Əməkdaş dəyiş",
-  "serviceFee": "Xidmət haqqı əlavə et",
-  "table": "Masanı dəyiş",
-  "delete": "Çeki sil",
-  "deposit": "Depozit",
-  "guestCount": "Qonaq sayını dəyiş",
+  get "split"() { return t("ceki_bol"); },
+  get "history"() { return t("emeliyyat_tarixcesi"); },
+  get "comment"() { return t("ceke_serh_yaz"); },
+  get "customers"() { return t("musteri_bazasi"); },
+  get "clear"() { return t("ceki_temizleme"); },
+  get "discount"() { return t("endirim"); },
+  get "merge"() { return t("ceki_birlesdir"); },
+  get "saleType"() { return t("satis_usulunu_deyis"); },
+  get "waiter"() { return t("emekdas_deyis"); },
+  get "serviceFee"() { return t("xidmet_haqqi_elave_et"); },
+  get "table"() { return t("masani_deyis"); },
+  get "delete"() { return t("ceki_sil"); },
+  get "deposit"() { return t("depozit"); },
+  get "guestCount"() { return t("qonaq_sayini_deyis"); },
 };
 
 export { DEFAULT_OPERATION_NAMES };
@@ -47,7 +47,18 @@ const OperationsModal = React.memo(({
     } catch { return {}; }
   }, [show]);
 
-  const n = (key) => customNames[key] || DEFAULT_OPERATION_NAMES[key];
+  const n = (key) => {
+    const val = customNames[key];
+    const oldDefaults = {
+      "split": "Çeki böl", "history": "Əməliyyat Tarixçəsi", "comment": "Çekə şərh yaz",
+      "customers": "Müştəri bazası", "clear": "Çeki təmizləmə", "discount": "Endirim",
+      "merge": "Çeki birləşdir", "saleType": "Satış üsulunu dəyiş", "waiter": "Əməkdaş dəyiş",
+      "serviceFee": "Xidmət haqqı əlavə et", "table": "Masanı dəyiş", "delete": "Çeki sil",
+      "deposit": "Depozit", "guestCount": "Qonaq sayını dəyiş"
+    };
+    if (val && val !== oldDefaults[key]) return val;
+    return DEFAULT_OPERATION_NAMES[key];
+  };
 
   const operations = useMemo(() => [
     { icon: "bi-arrows-angle-expand", text: n("split"), functions: handleOpenSplitModel, permissions: loginedWaiter?.data?.can_split_receipt },

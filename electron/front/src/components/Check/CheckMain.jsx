@@ -679,7 +679,7 @@ const CheckMain = ({ orders, table }) => {
 
         <div className="order-table-header">
           <div className="header-col col-name-header">{t("product")}</div>
-          <div className="header-col col-qty-header">Say</div>
+          <div className="header-col col-qty-header">{t("say")}</div>
           <div className="header-col col-total-header">{t("cem")}</div>
         </div>
 
@@ -799,7 +799,7 @@ const CheckMain = ({ orders, table }) => {
 
                         {isDiscounted && !isGift && (
                           <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
-                            Endirim: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
+                            {t("endirim")}: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
                           </span>
                         )}
 

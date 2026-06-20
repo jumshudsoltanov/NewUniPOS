@@ -471,7 +471,7 @@ const CheckBottom = ({
           )}
           {selectedCustomer?.group && (
             <div className="summary-row">
-              <span>Qrup:</span>
+              <span>{t("qrup")}:</span>
               <span>
                 {selectedCustomer.group.name}{" "}
                 {selectedCustomer.group.discount > 0
@@ -486,7 +486,7 @@ const CheckBottom = ({
           </div>
           {Number(calcTotal.discountAmount) > 0 && (
             <div className="summary-row">
-              <span>Endirim:</span>
+              <span>{t("endirim")}:</span>
               <span>
                 -{calcTotal.discountAmount} ₼ (
                 {calcTotal.discountType === "percent"
@@ -512,7 +512,7 @@ const CheckBottom = ({
             </div>
           )}
           <div className="summary-row" style={{ fontWeight: 700 }}>
-            <span>{calcTotal.isDepositFloor ? "Minimal məbləğ:" : "Cəm:"}</span>
+            <span>{calcTotal.isDepositFloor ? t("minimal_mebleg") : t("cem")}:</span>
             <span>{calcTotal.sumTotal} {getCurrencySymbol()}</span>
           </div>
           {Number(calcTotal.depositAmount) > 0 && (
@@ -525,7 +525,7 @@ const CheckBottom = ({
                 paddingTop: "2px",
               }}
             >
-              <span>Depozit:</span>
+              <span>{t("depozit")}:</span>
               <span>{calcTotal.depositAmount} {getCurrencySymbol()}</span>
             </div>
           )}

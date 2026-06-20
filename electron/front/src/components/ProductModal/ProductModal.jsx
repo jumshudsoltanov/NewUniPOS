@@ -357,7 +357,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                         ) : (
                             <>
                                 <i className="bi bi-check-lg"></i>
-                                Yadda Saxla
+                                {t("yadda_saxla")}
                             </>
                         )}
                     </button>
