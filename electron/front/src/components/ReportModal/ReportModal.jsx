@@ -148,14 +148,23 @@ const ReportModal = ({ show, onClose }) => {
         clone.querySelectorAll('.report-print-exclude').forEach((el) => el.remove());
         clone.querySelectorAll('.report-category-print-col').forEach((el) => el.remove());
 
-        // Müştəri çeki (CustomerReceipt) ilə eyni ölçü: customer_receipt ofseti + termal üçün kiçik px
-        const baseFont = Number(terminalInfo?.customer_receipt || profile?.customer_receipt || 0);
+        let savedSettings = {};
+        try {
+            const parsed = JSON.parse(localStorage.getItem("pos_receipt_settings") || "{}");
+            if (parsed.report) {
+                savedSettings = parsed.report;
+            }
+        } catch(e) {}
+        
+        const baseFont = savedSettings.fontSizeOffset ?? Number(terminalInfo?.customer_receipt || profile?.customer_receipt || 0);
         const fs = (baseSize) => `${baseSize + baseFont * 2}px`;
+        const fontFamily = savedSettings.fontFamily || "'Courier New', 'Courier', monospace";
+        const paperWidth = savedSettings.paperWidth === 58 ? "58mm" : "80mm";
 
         const html = `
             <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', 'Courier', monospace; color: #000 !important; }
-                .report-view { width: 100%; max-width: 80mm; padding: 0 3mm; font-size: ${fs(14)}; line-height: 1.35; }
+                * { box-sizing: border-box; margin: 0; padding: 0; font-family: ${fontFamily}; color: #000 !important; }
+                .report-view { width: 100%; max-width: ${paperWidth}; padding: 0 3mm; font-size: ${fs(14)}; line-height: 1.35; margin: 0 auto; }
                 .report-data-header { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; text-align: left; }
                 .report-data-info p { font-size: ${fs(13)}; margin-bottom: 4px; font-weight: 700; line-height: 1.35; }
                 .report-data-info p span { font-weight: bold; margin-right: 5px; }
@@ -187,7 +196,7 @@ const ReportModal = ({ show, onClose }) => {
                 const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
                 const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
                 const printerSettings = {
-                    paper_size: cashierPrinter.paper_size || '80',
+                    paper_size: savedSettings.paperWidth ? String(savedSettings.paperWidth) : (cashierPrinter.paper_size || '80'),
                     cut_mode: cashierPrinter.cut_mode || 'full',
                     sound_notify: cashierPrinter.sound_notify || 0,
                     cash_drawer: cashierPrinter.cash_drawer || 0,

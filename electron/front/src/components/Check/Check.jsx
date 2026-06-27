@@ -1157,8 +1157,45 @@ const Check = () => {
       // Yeni tənzimləmə: "boş çek avtomatik silinməsi" söndürülübsə modal göstərmə
       const autoDeleteEnabled = localStorage.getItem("pos_empty_check_auto_delete") !== "false";
       if (!autoDeleteEnabled) {
-        if (targetPath === -1) { goTables(); return; }
-        navigate(targetPath);
+        // Modal olmadan avtomatik silmə
+        dispatch(removeOrderOptimisticFromTables(orderId));
+        dispatch(removeOrderOptimistic(orderId));
+        if (targetPath === -1) goTables(true, true);
+        else navigate(targetPath, { replace: true });
+        setTimeout(() => toast.info(t("masa_bos_oldugu_ucun_silindi")), 0);
+
+        dispatch(deleteCheck({
+          orderId,
+          reason: 0,
+          reasonText: "Masa boş olduğu üçün silindi",
+          waiterName,
+          forceDestroy: !hadOrderItems,
+        })).unwrap().then(() => {
+          const socket = getSocket();
+          if (socket?.connected) socket.emit("order_deleted", { orderId });
+          if (profileId) {
+            setTimeout(() => {
+              dispatch(clearDeletedOrderId(orderId));
+              dispatch(clearDeletedOrderIdBooks(orderId));
+              dispatch(getTableGroups(profileId));
+              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+            }, 600);
+          } else {
+            setTimeout(() => {
+              dispatch(clearDeletedOrderId(orderId));
+              dispatch(clearDeletedOrderIdBooks(orderId));
+            }, 5000);
+          }
+        }).catch((error) => {
+          console.error("Auto-delete error:", error);
+          dispatch(clearDeletedOrderId(orderId));
+          dispatch(clearDeletedOrderIdBooks(orderId));
+          if (profileId) {
+            dispatch(getTableGroups(profileId));
+            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+          }
+        });
+
         return;
       }
 
@@ -1182,6 +1219,20 @@ const Check = () => {
       navigate(targetPath);
     }
   }
+
+  const handleAutoSaveAndExitRef = useRef(handleAutoSaveAndExit);
+  handleAutoSaveAndExitRef.current = handleAutoSaveAndExit;
+
+  useEffect(() => {
+    window.__pos_active_check_save_and_exit = (path) => {
+      if (handleAutoSaveAndExitRef.current) {
+        handleAutoSaveAndExitRef.current(path);
+      }
+    };
+    return () => {
+      delete window.__pos_active_check_save_and_exit;
+    };
+  }, []);
 
   const handleShowOperationsTab = useCallback(() => {
     setShowOperationsModal(true);
@@ -3277,7 +3328,10 @@ const Check = () => {
       {/* Boş çek silmə təsdiq modalı — CustomersModal stilində */}
       <Modal
         show={showEmptyCheckConfirm}
-        onHide={() => setShowEmptyCheckConfirm(false)}
+        onHide={() => {
+          setShowEmptyCheckConfirm(false);
+          isExitingRef.current = false;
+        }}
         centered
         backdrop="static"
         animation={false}
@@ -3293,7 +3347,10 @@ const Check = () => {
               </div>
               <div className="customers-modal-title">{t("masa_bosdur")}</div>
             </div>
-            <button className="btn-close-custom" onClick={() => setShowEmptyCheckConfirm(false)}>
+            <button className="btn-close-custom" onClick={() => {
+              setShowEmptyCheckConfirm(false);
+              isExitingRef.current = false;
+            }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>

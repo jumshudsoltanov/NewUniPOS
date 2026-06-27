@@ -45,14 +45,31 @@ const ModifierModal = ({
     const getModifierGroups = (prod) => {
         const groups = prod?.modifier_groups;
         let parsedGroups = [];
-        if (Array.isArray(groups)) parsedGroups = groups;
-        if (typeof groups === 'string') {
-            try { parsedGroups = JSON.parse(groups) || []; } catch { parsedGroups = []; }
-        }
-        if (groups && typeof groups === 'object') {
+        
+        if (Array.isArray(groups)) {
+            parsedGroups = groups;
+        } else if (typeof groups === 'string') {
+            try { 
+                const parsed = JSON.parse(groups);
+                if (Array.isArray(parsed)) {
+                    parsedGroups = parsed;
+                } else if (parsed && typeof parsed === 'object') {
+                    parsedGroups = Object.values(parsed);
+                }
+            } catch { 
+                parsedGroups = []; 
+            }
+        } else if (groups && typeof groups === 'object') {
             parsedGroups = Object.values(groups);
         }
-        if (parsedGroups.length > 0) return parsedGroups;
+
+        if (Array.isArray(parsedGroups) && parsedGroups.length > 0) {
+            // Ensure at least one group looks valid (has a name or items)
+            const isValid = parsedGroups.some(g => g && (g.name || (g.items && g.items.length > 0)));
+            if (isValid) {
+                return parsedGroups;
+            }
+        }
 
         let existingModifiers = [];
         try {
@@ -91,7 +108,8 @@ const ModifierModal = ({
     useEffect(() => {
         if (show) {
             // Set first group as active
-            const firstGroup = modifierGroups.length > 0 ? normalizeGroup(modifierGroups[0]) : null;
+            const safeGroups = Array.isArray(modifierGroups) ? modifierGroups : [];
+            const firstGroup = safeGroups.length > 0 ? normalizeGroup(safeGroups[0]) : null;
             setActiveGroupId(firstGroup?.id || null);
             setActiveItemId(null);
             setQtyStr(String(product?.count || product?.quantity || 1));
@@ -351,7 +369,7 @@ const ModifierModal = ({
                 {/* Left Sidebar with Groups and Clear button */}
                 <div className="modifier-v2-sidebar">
                     <div className="sidebar-nav">
-                        {(modifierGroups || []).map(rawGroup => {
+                        {(Array.isArray(modifierGroups) ? modifierGroups : []).map(rawGroup => {
                             const group = normalizeGroup(rawGroup);
                             const isActive = group.id === activeGroupId;
                             const hasError = errors.includes(group.id);

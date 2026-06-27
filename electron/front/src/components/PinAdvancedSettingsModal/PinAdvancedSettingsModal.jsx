@@ -15,14 +15,20 @@ const WHATSAPP_NUMBER = "994775012507";
 const DEFAULT_POS_RECEIPT_SETTINGS = {
   customer: { fontSizeOffset: 0, paperWidth: 80 },
   kitchen: { fontSizeOffset: 0, paperWidth: 80 },
+  salesshift: { fontSizeOffset: 0, paperWidth: 80 },
+  report: { fontSizeOffset: 0, paperWidth: 80 },
 };
 
 function normalizePosReceiptSettings(raw) {
   const cIn = raw?.customer && typeof raw.customer === "object" ? raw.customer : {};
   const kIn = raw?.kitchen && typeof raw.kitchen === "object" ? raw.kitchen : {};
+  const sIn = raw?.salesshift && typeof raw.salesshift === "object" ? raw.salesshift : {};
+  const rIn = raw?.report && typeof raw.report === "object" ? raw.report : {};
   return {
     customer: { ...DEFAULT_POS_RECEIPT_SETTINGS.customer, ...cIn },
     kitchen: { ...DEFAULT_POS_RECEIPT_SETTINGS.kitchen, ...kIn },
+    salesshift: { ...DEFAULT_POS_RECEIPT_SETTINGS.salesshift, ...sIn },
+    report: { ...DEFAULT_POS_RECEIPT_SETTINGS.report, ...rIn },
   };
 }
 
@@ -988,14 +994,26 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                          type="button"
                          className={`pin-adv-viewmode-btn ${receiptType === "customer" ? "active" : ""}`}
                          onClick={() => setReceiptType("customer")}
-                         style={{ flex: 1, justifyContent: "center" }}
+                         style={{ flex: 1, justifyContent: "center", padding: "4px 2px", fontSize: "12px" }}
                       >{t("musteri_ceki")}</button>
                       <button
                          type="button"
                          className={`pin-adv-viewmode-btn ${receiptType === "kitchen" ? "active" : ""}`}
                          onClick={() => setReceiptType("kitchen")}
-                         style={{ flex: 1, justifyContent: "center" }}
+                         style={{ flex: 1, justifyContent: "center", padding: "4px 2px", fontSize: "12px" }}
                       >{t("metbex_ceki")}</button>
+                      <button
+                         type="button"
+                         className={`pin-adv-viewmode-btn ${receiptType === "salesshift" ? "active" : ""}`}
+                         onClick={() => setReceiptType("salesshift")}
+                         style={{ flex: 1, justifyContent: "center", padding: "4px 2px", fontSize: "12px" }}
+                      >{t("novbe")}</button>
+                      <button
+                         type="button"
+                         className={`pin-adv-viewmode-btn ${receiptType === "report" ? "active" : ""}`}
+                         onClick={() => setReceiptType("report")}
+                         style={{ flex: 1, justifyContent: "center", padding: "4px 2px", fontSize: "12px" }}
+                      >{t("hesabatlar")}</button>
                   </div>
                   
                   <div className="pin-adv-catview-section" style={{ padding: '10px', background: '#f5f7fa', borderRadius: '8px', marginBottom: '15px' }}>
@@ -1043,39 +1061,45 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                           <option value="'Roboto', sans-serif">Roboto</option>
                       </select>
 
-                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>{t("alt_yazi_footer")}</span>
-                      <input
-                          type="text"
-                          value={receiptSettings[receiptType]?.footerText ?? ""}
-                          placeholder={receiptType === "customer" ? "Təşəkkür edirik!" : "Mətbəxə uğurlar!"}
-                          onChange={e => updateReceiptSetting(receiptType, "footerText", e.target.value)}
-                          style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px', marginBottom: '15px' }}
-                      />
+                      {(receiptType === "customer" || receiptType === "kitchen") && (
+                          <>
+                              <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>{t("alt_yazi_footer")}</span>
+                              <input
+                                  type="text"
+                                  value={receiptSettings[receiptType]?.footerText ?? ""}
+                                  placeholder={receiptType === "customer" ? "Təşəkkür edirik!" : "Mətbəxə uğurlar!"}
+                                  onChange={e => updateReceiptSetting(receiptType, "footerText", e.target.value)}
+                                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px', marginBottom: '15px' }}
+                              />
 
-                      <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>{t("kenar_bosluqlar_px")}</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          {[
-                              { key: 'paddingTop', label: t("ustden_↑") },
-                              { key: 'paddingBottom', label: 'Altdan ↓' },
-                              { key: 'paddingLeft', label: 'Soldan ←' },
-                              { key: 'paddingRight', label: t("sagdan_→") },
-                          ].map(({ key, label }) => (
-                              <div key={key}>
-                                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '3px' }}>{label}</div>
-                                  <input
-                                      type="number"
-                                      min="0"
-                                      max="60"
-                                      value={receiptSettings[receiptType]?.[key] ?? 0}
-                                      onChange={e => updateReceiptSetting(receiptType, key, parseInt(e.target.value) || 0)}
-                                      style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px', textAlign: 'center' }}
-                                  />
+                              <span className="pin-adv-catview-label" style={{ marginBottom: '8px', display: 'block' }}>{t("kenar_bosluqlar_px")}</span>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                  {[
+                                      { key: 'paddingTop', label: t("ustden_↑") },
+                                      { key: 'paddingBottom', label: 'Altdan ↓' },
+                                      { key: 'paddingLeft', label: 'Soldan ←' },
+                                      { key: 'paddingRight', label: t("sagdan_→") },
+                                  ].map(({ key, label }) => (
+                                      <div key={key}>
+                                          <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '3px' }}>{label}</div>
+                                          <input
+                                              type="number"
+                                              min="0"
+                                              max="60"
+                                              value={receiptSettings[receiptType]?.[key] ?? 0}
+                                              onChange={e => updateReceiptSetting(receiptType, key, parseInt(e.target.value) || 0)}
+                                              style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '13px', textAlign: 'center' }}
+                                          />
+                                      </div>
+                                  ))}
                               </div>
-                          ))}
-                      </div>
+                          </>
+                      )}
                   </div>
 
-                  <div className="pin-adv-catview-label" style={{ marginTop: '10px', marginBottom: '10px' }}>{t("melumatlarin_gorunusu")}</div>
+                  {(receiptType === "customer" || receiptType === "kitchen") && (
+                      <div className="pin-adv-catview-label" style={{ marginTop: '10px', marginBottom: '10px' }}>{t("melumatlarin_gorunusu")}</div>
+                  )}
                   
                   {receiptType === "customer" ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1103,7 +1127,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                             </div>
                          ))}
                       </div>
-                  ) : (
+                  ) : receiptType === "kitchen" ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                          {[
                             { key: 'showWaiter', label: t("waiter") },
@@ -1122,7 +1146,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                             </div>
                          ))}
                       </div>
-                  )}
+                  ) : null}
                   </div>
 
                   <div className="wa-settings-actions" style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px solid #e5e7eb", flexShrink: 0 }}>
@@ -1158,12 +1182,21 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                          menuCatalog={[]}
                          previewSettings={receiptSettings.customer}
                        />
-                    ) : (
+                    ) : receiptType === "kitchen" ? (
                        <KitchenReceipt
                          key={`kr-${receiptSettings.kitchen?.fontSizeOffset ?? 0}-${receiptSettings.kitchen?.paperWidth ?? 80}-${receiptSettings.kitchen?.fontFamily ?? ""}`}
                          {...mockKitchenProps}
                          previewSettings={receiptSettings.kitchen}
                        />
+                    ) : (
+                       <div style={{ fontFamily: receiptSettings[receiptType]?.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace", fontSize: `${12 + (receiptSettings[receiptType]?.fontSizeOffset || 0)}px`, textAlign: 'center', padding: '10px' }}>
+                          <h3 style={{ fontSize: `${14 + (receiptSettings[receiptType]?.fontSizeOffset || 0)}px` }}>{receiptType === "salesshift" ? "SATIŞ NÖVBƏSİ HESABATI" : "HESABAT"}</h3>
+                          <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }}></div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Açılış:</span> <span>10:00</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Bağlanma:</span> <span>22:00</span></div>
+                          <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }}></div>
+                          <div>...</div>
+                       </div>
                     )}
                  </div>
               </div>

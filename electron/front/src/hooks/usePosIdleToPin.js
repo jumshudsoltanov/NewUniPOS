@@ -61,7 +61,11 @@ export function usePosIdleToPin({ disabled }) {
             const p = getPathForLock();
             if (!shouldArmIdleLock(p)) return;
             if (getLockDelayMs() == null) return;
-            navigate("/pin", { replace: true });
+            if (typeof window.__pos_active_check_save_and_exit === "function") {
+                window.__pos_active_check_save_and_exit("/pin");
+            } else {
+                navigate("/pin", { replace: true });
+            }
         }, delay);
     }, [navigate, disabled, clearTimer]);
 

@@ -102,6 +102,12 @@ const OperationsModal = React.memo(({
     openDepositModal, openGuestCountModal, loginedWaiter, customNames
   ]);
 
+  const permittedOperations = operations.filter(op => op.permissions);
+
+  if (permittedOperations.length === 0) {
+    return null;
+  }
+
   return (
     <Modal
       show={show}
@@ -113,7 +119,7 @@ const OperationsModal = React.memo(({
     >
       <Modal.Body className="p-3 position-relative">
         <Row className="g-2">
-          {operations.filter(op => op.permissions).map((op, index) => (
+          {permittedOperations.map((op, index) => (
             <Col xs={12} md={6} key={index}>
               <div
                 className="operation-item d-flex align-items-center gap-2 py-2 px-2 rounded cursor-pointer"

@@ -36,6 +36,8 @@ const buildShiftPrintHtml = ({
     summary,
     footerNote,
     baseFontPx,
+    fontFamily = "'Consolas', 'Courier New', monospace",
+    paperWidth = 80,
 }) => {
     const fs = (baseSize) => `${baseSize + (Number(baseFontPx) || 0)}px`;
     const empRows = (summary?.byEmployee || [])
@@ -60,26 +62,26 @@ const buildShiftPrintHtml = ({
     return `
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; color: #000; }
-  body { font-family: 'Consolas', 'Courier New', monospace; font-size: ${fs(9)}; color: #000; }
+  body { font-family: ${fontFamily}; font-size: ${fs(12)}; color: #000; width: ${paperWidth === 80 ? '300px' : '200px'}; margin: 0 auto; padding: 10px; }
   .divider { border: none; border-top: 1px solid #000; margin: 3px 0; }
   .logo-wrap { text-align: center; margin-bottom: 4px; }
   .logo-wrap img { max-width: 60px; max-height: 40px; object-fit: contain; }
-  .title { font-size: ${fs(10)}; font-weight: 900; text-align: center; margin-bottom: 1px; letter-spacing: 1px; }
-  .profile { font-size: ${fs(9)}; font-weight: 700; text-align: center; margin-bottom: 2px; }
-  .kv { display: flex; justify-content: space-between; font-size: ${fs(8)}; margin-bottom: 2px; }
+  .title { font-size: ${fs(14)}; font-weight: 900; text-align: center; margin-bottom: 1px; letter-spacing: 1px; }
+  .profile { font-size: ${fs(12)}; font-weight: 700; text-align: center; margin-bottom: 2px; }
+  .kv { display: flex; justify-content: space-between; font-size: ${fs(11)}; margin-bottom: 2px; }
   .kv-label { color: #000; }
   .kv-value { font-weight: 700; color: #000; text-align: right; }
-  .section-title { font-size: ${fs(8)}; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin: 4px 0 2px; }
-  table { width: 100%; border-collapse: collapse; font-size: ${fs(8)}; color: #000; margin-bottom: 2px; }
-  th { font-weight: 900; text-align: left; padding: 2px 1px; border-bottom: 1px solid #000; font-size: ${fs(7)}; text-transform: uppercase; color: #000; }
+  .section-title { font-size: ${fs(11)}; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin: 4px 0 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: ${fs(11)}; color: #000; margin-bottom: 2px; }
+  th { font-weight: 900; text-align: left; padding: 2px 1px; border-bottom: 1px solid #000; font-size: ${fs(10)}; text-transform: uppercase; color: #000; }
   td { padding: 2px 1px; border-bottom: 1px dashed #000; color: #000; }
   tbody tr:last-child td { border-bottom: none; }
   .r { text-align: right; }
   .cat-row td { font-weight: 900; border-bottom: 1px solid #000; }
   .total-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; padding-top: 2px; border-top: 2px solid #000; }
-  .total-label { font-size: ${fs(9)}; font-weight: 900; text-transform: uppercase; color: #000; }
-  .total-amount { font-size: ${fs(10)}; font-weight: 900; color: #000; }
-  .footer-note { text-align: center; font-size: ${fs(7)}; margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; }
+  .total-label { font-size: ${fs(12)}; font-weight: 900; text-transform: uppercase; color: #000; }
+  .total-amount { font-size: ${fs(14)}; font-weight: 900; color: #000; }
+  .footer-note { text-align: center; font-size: ${fs(10)}; margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; }
 </style>
 ${logoSrc ? `<div class="logo-wrap"><img src="${logoSrc}" alt="logo"/></div>` : ""}
 ${profileName ? `<div class="profile">${escapeHtml(profileName)}</div>` : ""}
@@ -520,7 +522,7 @@ const SalesShiftModal = ({ show, onHide }) => {
         return () => clearInterval(t);
     }, [show, currentShift, fetchLive]);
 
-    const printToCashier = async (html) => {
+    const printToCashier = async (html, overrideSettings = {}) => {
         if (!window.electronAPI?.printReceipt || !cashierPrinters.length) {
             toast.warning(t("kassa_printeri_tapilmadi_ve_ya_electron_capi_yoxdur"));
             return;
@@ -530,7 +532,7 @@ const SalesShiftModal = ({ show, onHide }) => {
             const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
             const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
             const printerSettings = {
-                paper_size: cashierPrinter.paper_size || '80',
+                paper_size: overrideSettings.paperWidth ? String(overrideSettings.paperWidth) : (cashierPrinter.paper_size || '80'),
                 cut_mode: cashierPrinter.cut_mode || 'full',
                 sound_notify: cashierPrinter.sound_notify || 0,
                 cash_drawer: cashierPrinter.cash_drawer || 0,
@@ -583,6 +585,16 @@ const SalesShiftModal = ({ show, onHide }) => {
         };
         const logoSrc =
             resolveLogoUrl(terminalInfo?.logoPrint) || resolveLogoUrl(profile?.logo) || null;
+        let savedSettings = {};
+        try {
+            const parsed = JSON.parse(localStorage.getItem("pos_receipt_settings") || "{}");
+            if (parsed.salesshift) {
+                savedSettings = parsed.salesshift;
+            }
+        } catch(e) {}
+        
+        const overrideFontPx = savedSettings.fontSizeOffset ?? baseReceiptFont;
+        
         const html = buildShiftPrintHtml({
             profileName: profile?.company_name || profile?.name || `${t("profil_profile")} #${profileId}`,
             logoSrc,
@@ -594,9 +606,11 @@ const SalesShiftModal = ({ show, onHide }) => {
             startingCash: snapshot.startingCash || Number(shiftRow?.starting_cash) || 0,
             summary: snapshot.summary,
             footerNote: isReprint ? t("tekrar_cap") : "",
-            baseFontPx: baseReceiptFont,
+            baseFontPx: overrideFontPx,
+            fontFamily: savedSettings.fontFamily,
+            paperWidth: savedSettings.paperWidth,
         });
-        await printToCashier(html);
+        await printToCashier(html, { paperWidth: savedSettings.paperWidth });
     };
 
     const handleOpenShift = async () => {
