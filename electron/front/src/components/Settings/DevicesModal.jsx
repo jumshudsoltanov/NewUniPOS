@@ -18,7 +18,7 @@ import { t } from "../../utils/translations";
 import "./DevicesModal.css";
 
 
-const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField, systemPrinters, systemPrintersLoading, onRefreshSystemPrinters, comPorts, networkScanResults, networkScanning, onBack, onSave, onTestPrint, onScan, profileLogo }) => {
+const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField, systemPrinters, systemPrintersLoading, onRefreshSystemPrinters, comPorts, networkScanResults, networkScanning, onBack, onSave, onTestPrint, onScan, profileLogo, allDepartments }) => {
     const ct = printer.connection_type || 'network';
     const isNetwork = ct !== 'usb' && ct !== 'com';
     const [pingStatus, setPingStatus] = React.useState(null); // null | 'checking' | 'online' | 'offline'
@@ -59,14 +59,39 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
 
             {/* Tabs */}
             <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', marginBottom: '20px', gap: '4px' }}>
-                {["connection", "settings"].map(t => (
+                {["departments", "connection", "settings"].map(t => (
                     <button key={t} onClick={() => setPrinterTab(t)} style={{ padding: '8px 16px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: printerTab === t ? 600 : 400, color: printerTab === t ? '#3b82f6' : '#64748b', borderBottom: printerTab === t ? '2px solid #3b82f6' : '2px solid transparent', marginBottom: '-2px' }}>
-                        {t === "connection" ? "Əlaqə" : "Tənzimləmələr"}
+                        {t === "connection" ? "Əlaqə" : t === "settings" ? "Tənzimləmələr" : "Şöbələr"}
                     </button>
                 ))}
             </div>
 
-            {printerTab === "connection" ? (
+            {printerTab === "departments" ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {allDepartments && allDepartments.map(dept => {
+                        const currentNamesList = (printer.local_name || "").split(',').map(s => s.trim()).filter(Boolean);
+                        const currentNamesLower = currentNamesList.map(s => s.toLowerCase());
+                        const isActive = currentNamesLower.includes(dept.toLowerCase());
+                        return (
+                            <div key={dept} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+                                <span style={{ fontSize: '14px', color: '#334155', fontWeight: 500 }}>{dept}</span>
+                                <div
+                                    className={`wa-toggle ${isActive ? 'wa-toggle-on' : ''}`}
+                                    onClick={() => {
+                                        let newNames;
+                                        if (isActive) newNames = currentNamesList.filter(n => n.toLowerCase() !== dept.toLowerCase());
+                                        else newNames = [...currentNamesList, dept];
+                                        updatePrinterField('local_name', newNames.join(', '));
+                                    }}
+                                    style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                                >
+                                    <div className="wa-toggle-thumb" />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : printerTab === "connection" ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div className="connection-toggle">
                         <button className={`conn-btn ${isNetwork ? 'active' : ''}`} onClick={() => updatePrinterField('connection_type', 'network')}>Network (IP)</button>
@@ -1307,7 +1332,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                         key={printer.id || index}
                                                         className="printer-edit-card"
                                                         style={{ cursor: 'pointer', border: '1px solid #e2e8f0', boxShadow: 'none' }}
-                                                        onClick={() => { setSelectedPrinterIndex(index); setPrinterTab("connection"); }}
+                                                        onClick={() => { setSelectedPrinterIndex(index); setPrinterTab("departments"); }}
                                                     >
                                                         <div className="printer-card-header">
                                                             <div className="printer-card-icon" style={{ background: '#eff6ff', color: '#3b82f6', position: 'relative' }}>
@@ -1345,8 +1370,25 @@ const DevicesModal = ({ show, onHide }) => {
                                             })}
                                         </div>
                                     </>
-                                ) : selectedPrinterIndex !== null && printers[selectedPrinterIndex] ? (
+                                ) : selectedPrinterIndex !== null && printers[selectedPrinterIndex] ? (() => {
+                                    const allDeptsMap = new Map();
+                                    printers.forEach(p => {
+                                        if (p.local_name) {
+                                            p.local_name.split(',').forEach(s => {
+                                                const trimmed = s.trim();
+                                                if (trimmed && !allDeptsMap.has(trimmed.toLowerCase())) {
+                                                    allDeptsMap.set(trimmed.toLowerCase(), trimmed);
+                                                }
+                                            });
+                                        }
+                                        if (p.name && !allDeptsMap.has(p.name.toLowerCase())) {
+                                            allDeptsMap.set(p.name.toLowerCase(), p.name);
+                                        }
+                                    });
+                                    const allDepartments = Array.from(allDeptsMap.values());
+                                    return (
                                     <PrinterDetail
+                                        allDepartments={allDepartments}
                                         printer={printers[selectedPrinterIndex]}
                                         printerTab={printerTab}
                                         setPrinterTab={setPrinterTab}
@@ -1363,7 +1405,8 @@ const DevicesModal = ({ show, onHide }) => {
                                         onScan={handleNetworkScan}
                                         profileLogo={loginedProfileData?.data?.profile?.logo || null}
                                     />
-                                ) : null}
+                                    );
+                                })() : null}
                             </div>
                         ) : activeTab === "printSettings" ? (
                             <div className="display-settings">

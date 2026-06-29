@@ -62,6 +62,15 @@ export function cashierPrinterPrefStorageKey() {
  * Bir neçə aktiv kassa printeri olanda: Cihazlar → bu terminal üçün seçim və ya "hamısı".
  * Boş = köhnə davranış — yalnız ilk `is_cashier` printeri.
  */
+export function matchPrinterName(printer, targetName) {
+  if (!targetName) return false;
+  if (printer.local_name) {
+    const names = printer.local_name.split(',').map(s => s.trim());
+    if (names.includes(targetName)) return true;
+  }
+  return printer.name === targetName || printer.local_name === targetName;
+}
+
 export function resolveCashierPrintersForPrint(printers) {
   const cashiers = (printers || []).filter((p) => Number(p.is_cashier) === 1);
   if (!cashiers.length) return [];
@@ -187,10 +196,16 @@ export const processAndPrintOrders = async (
       continue;
     }
 
-    // Support multi-copy: Instead of deduplicating, we assign to different batches
     // items with repeated printers will go to separate print jobs
     const itemPrinters = printers
-      .map((p) => (typeof p === "object" ? p.local_name || p.name : p))
+      .map((p) => {
+        if (typeof p === "object") {
+           // Provide the matched name if possible, otherwise first local_name
+           if (p.local_name) return p.local_name.split(',')[0].trim();
+           return p.name;
+        }
+        return p;
+      })
       .filter(Boolean);
 
     const printerOccurrence = {};
@@ -287,11 +302,11 @@ export const processAndPrintOrders = async (
           const delegateProfilePrinters =
             orderData.profileData?.data?.printers || [];
           let printerObj = groupItems[0]?.printer_details?.find(
-            (p) => (p.local_name || p.name) === printerName,
+            (p) => matchPrinterName(p, printerName),
           );
           if (!printerObj?.ip && !printerObj?.usb_name) {
             const fromProfile = delegateProfilePrinters.find(
-              (p) => (p.local_name || p.name) === printerName,
+              (p) => matchPrinterName(p, printerName),
             );
             if (fromProfile) printerObj = fromProfile;
           }
@@ -329,7 +344,7 @@ export const processAndPrintOrders = async (
               open_drawer_without_print: printerObj.open_drawer_without_print || 0,
               paper_size: printerObj.paper_size || "80",
               font_family: printerObj.font_family || "Arial",
-              usb_name: isComDel ? null : (printerObj.usb_name && printerObj.usb_name !== "RASTER" ? printerObj.usb_name : (printerObj.local_name || printerObj.name || null)),
+              usb_name: isComDel ? null : (printerObj.usb_name && printerObj.usb_name !== "RASTER" ? printerObj.usb_name : (printerObj.local_name ? printerObj.local_name.split(',')[0].trim() : (printerObj.name || null))),
               fast_print: printerObj.fast_print ? 1 : 0,
               print_logo: printerObj.print_logo != null ? Number(printerObj.print_logo) : 1,
               rotate_180: printerObj.rotate_180 ? 1 : 0,
@@ -337,12 +352,12 @@ export const processAndPrintOrders = async (
               connection_type: _connType1 || null,
               com_port: isComDel ? printerObj.usb_name || null : null,
               printer_label:
-                printerObj?.local_name || printerObj?.name || printerName || "",
+                (printerObj?.local_name ? printerObj.local_name.split(',')[0].trim() : (printerObj?.name || printerName || "")),
           } : {};
           const safeDelSettings = JSON.parse(JSON.stringify(delPrinterSettings));
           const resolvedDelUsbName = printerObj?.usb_name && printerObj.usb_name !== "RASTER"
             ? printerObj.usb_name
-            : (printerObj?.local_name || printerObj?.name || printerName);
+            : (printerObj?.local_name ? printerObj.local_name.split(',')[0].trim() : (printerObj?.name || printerName));
           const delegatePayload =
             isNet && printerObj?.ip && !hasUsb
               ? {
@@ -375,12 +390,12 @@ export const processAndPrintOrders = async (
         const profilePrinters = orderData.profileData?.data?.printers || [];
         // 1. printer_details-dan adla tap
         let printerObj = groupItems[0]?.printer_details?.find(
-          (p) => (p.local_name || p.name) === printerName,
+          (p) => matchPrinterName(p, printerName),
         );
         // 2. profile printers-dan adla tap (lokal ip/connection_type olan versiya)
         if (!printerObj?.ip && !printerObj?.usb_name) {
           const fromProfile = profilePrinters.find(
-            (p) => (p.local_name || p.name) === printerName,
+            (p) => matchPrinterName(p, printerName),
           );
           if (fromProfile) printerObj = fromProfile;
         }
@@ -388,7 +403,7 @@ export const processAndPrintOrders = async (
         if (!printerObj?.ip && !printerObj?.usb_name) {
           const detailPrinter =
             groupItems[0]?.printer_details?.find(
-              (p) => (p.local_name || p.name) === printerName,
+              (p) => matchPrinterName(p, printerName),
             ) || groupItems[0]?.printer_details?.[0];
           if (detailPrinter?.id) {
             const byId = profilePrinters.find((p) => p.id === detailPrinter.id);
@@ -423,7 +438,7 @@ export const processAndPrintOrders = async (
           ? (printerObj?.usb_name || printerName || "")
           : (printerObj?.usb_name && printerObj.usb_name !== "RASTER")
             ? printerObj.usb_name
-            : (printerObj?.local_name || printerObj?.name || printerName || "");
+            : (printerObj?.local_name ? printerObj.local_name.split(',')[0].trim() : (printerObj?.name || printerName || ""));
         const targetPrinter = resolvedUsbName;
         const printerSettings = printerObj
           ? {
@@ -455,7 +470,7 @@ export const processAndPrintOrders = async (
               connection_type: _connType2 || null,
               com_port: isCom2 ? printerObj.usb_name || null : null,
               printer_label:
-                printerObj.local_name || printerObj.name || printerName || "",
+                (printerObj?.local_name ? printerObj.local_name.split(',')[0].trim() : (printerObj?.name || printerName || "")),
             }
           : {};
         const safeSettings = JSON.parse(JSON.stringify(printerSettings));
