@@ -1154,69 +1154,7 @@ const Check = () => {
     // Bu halda silmə — server-də artıq məhsullar var.
     const actualResultingItemCount = hadPendingProducts ? Math.max(resultingItemCount, 1) : resultingItemCount;
 
-    if (!isHotelMode && actualResultingItemCount === 0 && currentOrder?.uuid && !isTimerActiveOrHasBalance) {
-      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
-      const profileId = loginedProfileData?.data?.profile?.id;
-      const orderId = currentOrder.uuid;
 
-      // Yeni tənzimləmə: "boş çek avtomatik silinməsi" söndürülübsə modal göstərmə
-      const autoDeleteEnabled = localStorage.getItem("pos_empty_check_auto_delete") !== "false";
-      if (!autoDeleteEnabled) {
-        // Modal olmadan avtomatik silmə
-        dispatch(removeOrderOptimisticFromTables(orderId));
-        dispatch(removeOrderOptimistic(orderId));
-        if (targetPath === -1) goTables(true, true);
-        else navigate(targetPath, { replace: true });
-        setTimeout(() => toast.info(t("masa_bos_oldugu_ucun_silindi")), 0);
-
-        dispatch(deleteCheck({
-          orderId,
-          reason: 0,
-          reasonText: "Masa boş olduğu üçün silindi",
-          waiterName,
-          forceDestroy: !hadOrderItems,
-        })).unwrap().then(() => {
-          const socket = getSocket();
-          if (socket?.connected) socket.emit("order_deleted", { orderId });
-          if (profileId) {
-            setTimeout(() => {
-              dispatch(clearDeletedOrderId(orderId));
-              dispatch(clearDeletedOrderIdBooks(orderId));
-              dispatch(getTableGroups(profileId));
-              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
-            }, 600);
-          } else {
-            setTimeout(() => {
-              dispatch(clearDeletedOrderId(orderId));
-              dispatch(clearDeletedOrderIdBooks(orderId));
-            }, 5000);
-          }
-        }).catch((error) => {
-          console.error("Auto-delete error:", error);
-          dispatch(clearDeletedOrderId(orderId));
-          dispatch(clearDeletedOrderIdBooks(orderId));
-          if (profileId) {
-            dispatch(getTableGroups(profileId));
-            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
-          }
-        });
-
-        return;
-      }
-
-      // Təsdiq modalı üçün məlumatları ref-də saxla
-      emptyCheckDataRef.current = {
-        orderId,
-        waiterName,
-        profileId,
-        targetPath,
-        hadOrderItems,
-        isMasterSlaveActive: loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1,
-      };
-
-      setShowEmptyCheckConfirm(true);
-      return;
-    }
 
     if (targetPath === -1) {
       goTables();
@@ -1612,6 +1550,70 @@ const Check = () => {
       console.error("Split order error:", error);
     }
   }, [dispatch, loginedProfileData, tableGroups, navigate]);
+
+  const handleDirectDeleteEmptyCheck = useCallback(() => {
+    if (orderEditLocked) {
+      toast.error(orderEditLockedToast());
+      return;
+    }
+
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
+    const profileId = loginedProfileData?.data?.profile?.id;
+    const orderId = currentOrder?.uuid;
+
+    if (currentOrder?.is_timer_status === 1) {
+      let seconds = 0;
+      if (currentOrder.is_timer_clock && String(currentOrder.is_timer_clock).includes(':')) {
+        const p = currentOrder.is_timer_clock.split(':').map(Number);
+        if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+      }
+      dispatch(stopTimer({ 
+        orderId: currentOrder.uuid,
+        elapsedSeconds: seconds,
+        clockStr: currentOrder.is_timer_clock 
+      }));
+    }
+
+    const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
+    navigate(isPacksOnly ? "/checks" : "/tables", { replace: true });
+    dispatch(removeOrderOptimisticFromTables(orderId));
+    dispatch(removeOrderOptimistic(orderId));
+    setTimeout(() => toast.info(t("masa_bos_oldugu_ucun_silindi", "Masa boş olduğu üçün silindi")), 0);
+
+    const hadOrderItems = currentOrder?.orders_items?.length > 0;
+
+    dispatch(deleteCheck({
+      orderId,
+      reason: 0,
+      reasonText: "Masa boş olduğu üçün silindi",
+      waiterName,
+      forceDestroy: !hadOrderItems,
+    })).unwrap().then(() => {
+      const socket = getSocket();
+      if (socket?.connected) socket.emit("order_deleted", { orderId });
+      if (profileId) {
+        setTimeout(() => {
+          dispatch(clearDeletedOrderId(orderId));
+          dispatch(clearDeletedOrderIdBooks(orderId));
+          dispatch(getTableGroups(profileId));
+          dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+        }, 600);
+      } else {
+        setTimeout(() => {
+          dispatch(clearDeletedOrderId(orderId));
+          dispatch(clearDeletedOrderIdBooks(orderId));
+        }, 5000);
+      }
+    }).catch((error) => {
+      console.error("Auto-delete error:", error);
+      dispatch(clearDeletedOrderId(orderId));
+      dispatch(clearDeletedOrderIdBooks(orderId));
+      if (profileId) {
+        dispatch(getTableGroups(profileId));
+        dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+      }
+    });
+  }, [currentOrder, orderEditLocked, dispatch, loginedProfileData, loginedWaiter, navigate]);
 
   const handleDeleteCheckModal = useCallback(() => {
     if (orderEditLocked) {
@@ -2401,7 +2403,7 @@ const Check = () => {
               />
 
               <CheckMain orders={currentOrder} table={currentTable} />
-              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} openDepositModal={openDepositModal} />
+              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} openDepositModal={openDepositModal} handleDirectDeleteEmptyCheck={handleDirectDeleteEmptyCheck} />
               <TimerModal show={showTimerModal} onHide={() => setShowTimerModal(false)} order={currentOrder} table={currentTable} />
               {showKitchenBlockModal && (
                 <KitchenPrintBlockModal 

@@ -51,6 +51,7 @@ const CheckBottom = ({
   printToKitchen,
   setPrintToKitchen,
   openDepositModal,
+  handleDirectDeleteEmptyCheck,
 }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions, menu } = useSelector(
@@ -451,6 +452,7 @@ const CheckBottom = ({
   ]);
 
   const totalChanges = products.length + (pendingDeletions?.length || 0);
+  const isCheckEmpty = products.length === 0 && (!orders?.orders_items || orders.orders_items.length === 0);
 
   return (
     <>
@@ -621,10 +623,17 @@ const CheckBottom = ({
           </div>
 
           {canCloseCheck ? (
-            <button className="btn-pay" onClick={goCloseCheck}>
-              <i className="bi bi-check2-all"></i>
-              <span>{calcTotal.sumTotal} {getCurrencySymbol()}</span>
-            </button>
+            isCheckEmpty ? (
+              <button className="btn-pay" onClick={handleDirectDeleteEmptyCheck}>
+                <i className="bi bi-trash-fill"></i>
+                <span>Çeki ləğv et</span>
+              </button>
+            ) : (
+              <button className="btn-pay" onClick={goCloseCheck}>
+                <i className="bi bi-check2-all"></i>
+                <span>{calcTotal.sumTotal} {getCurrencySymbol()}</span>
+              </button>
+            )
           ) : null}
         </div>
       </div>
@@ -720,10 +729,17 @@ const CheckBottom = ({
         </button>
         )}
         {canCloseCheck ? (
-          <button className="mobile-pay-btn" onClick={goCloseCheck}>
-            <i className="bi bi-check2-all fs-4 text-white"></i>
-            <span className="pay-amount">{calcTotal.sumTotal} {getCurrencySymbol()}</span>
-          </button>
+          isCheckEmpty ? (
+            <button className="mobile-pay-btn" onClick={handleDirectDeleteEmptyCheck}>
+              <i className="bi bi-trash-fill fs-4 text-white"></i>
+              <span className="pay-amount text-white">Çeki ləğv et</span>
+            </button>
+          ) : (
+            <button className="mobile-pay-btn" onClick={goCloseCheck}>
+              <i className="bi bi-check2-all fs-4 text-white"></i>
+              <span className="pay-amount">{calcTotal.sumTotal} {getCurrencySymbol()}</span>
+            </button>
+          )
         ) : null}
       </div>
 

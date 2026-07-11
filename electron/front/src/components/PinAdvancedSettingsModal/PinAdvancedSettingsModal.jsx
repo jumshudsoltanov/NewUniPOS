@@ -1519,27 +1519,6 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
               </div>
             </div>
 
-            {/* Boş çek avtomatik silmə */}
-            <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>{t("bos_cek_avtomatik_silme")}</span>
-                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("son_mehsul_silnende_bos_cek_ucun_tesdiq_modalini_goster")}</div>
-                </div>
-                <div
-                  className={`wa-toggle ${emptyCheckAutoDelete ? "wa-toggle-on" : ""}`}
-                  onClick={() => {
-                    const newVal = !emptyCheckAutoDelete;
-                    setEmptyCheckAutoDelete(newVal);
-                    localStorage.setItem("pos_empty_check_auto_delete", newVal ? "true" : "false");
-                    window.dispatchEvent(new CustomEvent("emptyCheckAutoDeleteChanged", { detail: newVal }));
-                  }}
-                  style={{ cursor: "pointer", flexShrink: 0 }}
-                >
-                  <div className="wa-toggle-thumb" />
-                </div>
-              </div>
-            </div>
 
             {/* Admin Override */}
             <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>

@@ -2561,6 +2561,22 @@ ipcMain.handle("set-static-master-ip", async (event, ip) => {
   }
 });
 
+ipcMain.handle("clear-print-spooler", async () => {
+  return new Promise((resolve) => {
+    const { exec } = require("child_process");
+    const cmd = `powershell -Command "Start-Process cmd -ArgumentList '/c net stop spooler & del /Q /F /S \\"%systemroot%\\System32\\Spool\\Printers\\*.*\\" & net start spooler' -Verb RunAs -WindowStyle Hidden -Wait"`;
+    exec(cmd, (error) => {
+      if (error) {
+        console.error("Clear spooler error:", error);
+        resolve({ success: false, error: error.message });
+      } else {
+        resolve({ success: true });
+      }
+    });
+  });
+});
+
+
 ipcMain.handle("scan-master", async () => {
   return new Promise((resolve) => {
     let resolved = false;

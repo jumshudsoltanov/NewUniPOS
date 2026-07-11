@@ -472,6 +472,25 @@ const DevicesModal = ({ show, onHide }) => {
     const [comPorts, setComPorts] = useState([]);
     const [networkScanResults, setNetworkScanResults] = useState([]);
     const [networkScanning, setNetworkScanning] = useState(false);
+    const [isClearingSpooler, setIsClearingSpooler] = useState(false);
+    const [showSpoolerModal, setShowSpoolerModal] = useState(false);
+
+    const handleClearSpooler = async () => {
+        setIsClearingSpooler(true);
+        try {
+            const res = await window.electronAPI.clearPrintSpooler();
+            if (res.success) {
+                setShowSpoolerModal(true);
+                onHide();
+            } else {
+                toast.error(t("xeta_bas_verdi", "Xəta baş verdi: ") + res.error);
+            }
+        } catch (e) {
+            toast.error(t("xeta_bas_verdi", "Xəta baş verdi: ") + e.message);
+        } finally {
+            setIsClearingSpooler(false);
+        }
+    };
     const [masterModes, setMasterModes] = useState({
         cashier: false,
         product: false
@@ -1186,6 +1205,7 @@ const DevicesModal = ({ show, onHide }) => {
     };
 
     return (
+        <>
         <Modal show={show} onHide={onHide} centered size="xl" className="devices-modal">
             <Modal.Header closeButton>
                 <Modal.Title>{t("cihazlar_ve_printerler")}</Modal.Title>
@@ -1314,11 +1334,22 @@ const DevicesModal = ({ show, onHide }) => {
                             <div className="display-settings">
                                 {selectedPrinterIndex === null ? (
                                     <>
-                                        <div style={{ marginBottom: '16px' }}>
-                                            <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>{t("printerler")}</h4>
-                                            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>{t("cihaza_klikleyerek_tenzimlemeleri_edin")}</p>
+                                        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <div>
+                                                <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>{t("printerler")}</h4>
+                                                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>{t("cihaza_klikleyerek_tenzimlemeleri_edin")}</p>
+                                            </div>
+                                            <button 
+                                                className="btn-save-printer"
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: isClearingSpooler ? 0.7 : 1 }}
+                                                onClick={handleClearSpooler}
+                                                disabled={isClearingSpooler}
+                                            >
+                                                {isClearingSpooler ? <i className="bi bi-arrow-repeat spin"></i> : <i className="bi bi-eraser-fill"></i>}
+                                                {isClearingSpooler ? "Təmizlənir..." : "Spooleri Təmizlə"}
+                                            </button>
                                         </div>
-                                        <div className="printers-grid">
+                                        <div className="printers-grid" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                             {printers.map((printer, index) => {
                                                 const connType = printer.connection_type;
                                                 const isNet = connType === 'network' || (!connType && printer.ip);
@@ -1869,6 +1900,20 @@ const DevicesModal = ({ show, onHide }) => {
                 </div>
             </Modal.Body>
         </Modal >
+
+        <Modal show={showSpoolerModal} onHide={() => setShowSpoolerModal(false)} centered>
+            <div className="modal-content-wrapper" style={{ padding: '24px', textAlign: 'center' }}>
+                <div style={{ width: '64px', height: '64px', background: '#dcfce7', color: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 16px' }}>
+                    <i className="bi bi-check-lg"></i>
+                </div>
+                <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600, marginBottom: '8px' }}>Təmizləndi!</h4>
+                <p style={{ color: '#64748b', marginBottom: '24px' }}>Print spooler uğurla təmizləndi və yenidən başladıldı.</p>
+                <button onClick={() => setShowSpoolerModal(false)} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px', width: '100%', fontWeight: 500 }}>
+                    Tamam
+                </button>
+            </div>
+        </Modal>
+        </>
     );
 };
 
