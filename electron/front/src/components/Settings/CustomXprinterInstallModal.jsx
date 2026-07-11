@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal } from 'react-bootstrap';
+import { Offcanvas } from 'react-bootstrap';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
@@ -43,14 +43,14 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
     };
 
     return (
-        <Modal show={show} onHide={() => !isInstalling && onHide()} centered size="md">
-            <Modal.Header closeButton={!isInstalling} style={{ borderBottom: '1px solid #f1f5f9', padding: '20px 24px' }}>
-                <Modal.Title style={{ fontSize: '18px', fontWeight: 600, color: '#0f172a' }}>
-                    XPrinter Quraşdır
-                </Modal.Title>
-            </Modal.Header>
-            <form onSubmit={handleSubmit}>
-                <Modal.Body style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <Offcanvas show={show} onHide={() => !isInstalling && onHide()} placement="end" style={{ width: '500px' }}>
+            <Offcanvas.Header closeButton={!isInstalling} closeVariant="white" style={{ background: '#4F85F4', padding: '20px 24px', borderBottom: 'none' }}>
+                <Offcanvas.Title style={{ fontSize: '18px', fontWeight: 600, color: '#fff' }}>
+                    Yeni Printer Quraşdır
+                </Offcanvas.Title>
+            </Offcanvas.Header>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Offcanvas.Body style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', flex: '1 1 auto' }}>
                     
                     {/* Model & Connection Type in a row */}
                     <div style={{ display: 'flex', gap: '16px' }}>
@@ -63,7 +63,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                                 value={model}
                                 onChange={(e) => setModel(e.target.value)}
                                 disabled={isInstalling}
-                                style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%' }}
+                                style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }}
                             >
                                 {models.map(m => (
                                     <option key={m} value={m}>{m}</option>
@@ -80,7 +80,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                                 value={connectionType}
                                 onChange={(e) => setConnectionType(e.target.value)}
                                 disabled={isInstalling}
-                                style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%' }}
+                                style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }}
                             >
                                 <option value="USB">USB Bağlantı</option>
                                 <option value="Network">Şəbəkə (LAN/WiFi)</option>
@@ -103,7 +103,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                                 disabled={isInstalling}
                                 placeholder="192.168.1.100"
                                 required
-                                style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%' }}
+                                style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }}
                             />
                         </div>
                     )}
@@ -121,7 +121,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                                 disabled={isInstalling}
                                 placeholder="COM1"
                                 required
-                                style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%' }}
+                                style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }}
                             />
                         </div>
                     )}
@@ -138,7 +138,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                             disabled={isInstalling}
                             placeholder="Məsələn: Kassa Printeri"
                             required
-                            style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%' }}
+                            style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }}
                         />
                     </div>
                     
@@ -153,28 +153,29 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                         <i className="bi bi-gear-fill" style={{ marginTop: '2px' }}></i>
                         <div>Quraşdırma bitdikdən dərhal sonra Səs (Beeper) və Kassa (Cash Drawer) ayarlarını etməyiniz üçün rəsmi ayarlar pəncərəsi avtomatik açılacaqdır.</div>
                     </div>
-                </Modal.Body>
+                </Offcanvas.Body>
 
-                <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '12px', background: '#f8fafc', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' }}>
+                <div style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '12px', background: '#f8fafc' }}>
                     <button 
                         type="button" 
                         onClick={onHide} 
                         disabled={isInstalling}
-                        style={{ height: '40px', padding: '0 20px', fontSize: '14px', background: 'white', border: '1px solid #cbd5e1', color: '#475569', borderRadius: '8px', fontWeight: 500 }}
+                        className="btn-test"
                     >
                         Ləğv et
                     </button>
                     <button 
                         type="submit" 
                         disabled={isInstalling}
-                        style={{ height: '40px', padding: '0 24px', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', background: '#4F85F4', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 500 }}
+                        className="btn-save-printer"
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                         {isInstalling ? <i className="bi bi-arrow-repeat spin"></i> : <i className="bi bi-printer-fill"></i>}
                         {isInstalling ? 'Quraşdırılır...' : 'Quraşdır'}
                     </button>
                 </div>
             </form>
-        </Modal>
+        </Offcanvas>
     );
 };
 

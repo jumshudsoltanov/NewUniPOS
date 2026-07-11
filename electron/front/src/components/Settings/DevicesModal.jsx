@@ -1353,7 +1353,7 @@ const DevicesModal = ({ show, onHide }) => {
                                                     onClick={handleInstallXprinter}
                                                 >
                                                     <i className="bi bi-gear-fill"></i>
-                                                    XPrinter Qur (Xüsusi)
+                                                    Yeni Printer Quraşdır
                                                 </button>
                                                 <button 
                                                     className="btn-save-printer"
