@@ -170,6 +170,10 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     () => localStorage.getItem("pos_empty_check_auto_delete") !== "false"
   );
 
+  const [adminOverrideEnabled, setAdminOverrideEnabled] = useState(
+    () => localStorage.getItem("pos_admin_override_enabled") === "true"
+  );
+
   const [resettingDb, setResettingDb] = useState(false);
 
   const [syncTroubleshootLoading, setSyncTroubleshootLoading] = useState(false);
@@ -1536,6 +1540,30 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                 </div>
               </div>
             </div>
+
+            {/* Admin Override */}
+            <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>{t("Əməliyyatlarda Admin şifrəsi tələb et")}</span>
+                  <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("Yetkisiz əməliyyatlar üçün admin PİN-i tələb edir")}</div>
+                </div>
+                <div
+                  className={`wa-toggle ${adminOverrideEnabled ? "wa-toggle-on" : ""}`}
+                  onClick={() => {
+                    const newVal = !adminOverrideEnabled;
+                    setAdminOverrideEnabled(newVal);
+                    localStorage.setItem("pos_admin_override_enabled", newVal ? "true" : "false");
+                    window.dispatchEvent(new CustomEvent("adminOverrideEnabledChanged", { detail: newVal }));
+                  }}
+                  style={{ cursor: "pointer", flexShrink: 0 }}
+                >
+                  <div className="wa-toggle-thumb" />
+                </div>
+              </div>
+            </div>
+
+
 
             {/* POS Blok Ödəniş Üsulu */}
             <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>

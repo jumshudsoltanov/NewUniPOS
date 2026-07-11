@@ -1420,6 +1420,24 @@ export const OrderSlice = createSlice({
         });
       }
     },
+    splitProductQuantity: (state, action) => {
+      const { firstId, portions } = action.payload;
+      if (!portions || portions.length === 0) return;
+      if (firstId !== undefined && firstId >= 999999999) {
+        const idx = firstId - 999999999;
+        if (idx < state.products.length) {
+          const originalProduct = state.products[idx];
+          // Do NOT split the Redux item physically. 
+          // Just store the portions so the POS cart keeps it as one line.
+          // handleSendOrders will expand these portions into separate items for the backend.
+          originalProduct.commentPortions = portions;
+          // Set the main comment to the first portion's comment so it displays something
+          if (portions[0] && portions[0].comment) {
+            originalProduct.comment = portions[0].comment;
+          }
+        }
+      }
+    },
     removeLocalProductByFirstId: (state, action) => {
       const firstId = action.payload;
       if (firstId !== undefined && firstId >= 999999999) {
@@ -1720,6 +1738,7 @@ export const {
   removeProductByIdAndPrice,
   removeLocalProductByFirstId,
   replaceProductQuantity,
+  splitProductQuantity,
   sendOrders,
   clearOrders,
   updateCount,

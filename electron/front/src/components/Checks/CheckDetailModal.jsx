@@ -191,25 +191,31 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         };
 
         try {
-            const result = await printCustomerReceipt(receiptOrderData, loginedProfileData, {
+            printCustomerReceipt(receiptOrderData, loginedProfileData, {
                 dispatch,
                 loginedWaiter,
-            });
-            if (result.success) {
-                toast.success(t("cek_cap_edildi"));
+            }).then(result => {
+                if (result.success) {
+                    toast.success(t("cek_cap_edildi"));
 
-                // Log print event
-                dispatch(saveLog({
-                    orderId: order.uuid,
-                    action: "Çek çap edildi",
-                    waiterName,
-                    details: "Arxivdən təkrar çap"
-                }));
-            }
+                    // Log print event
+                    dispatch(saveLog({
+                        orderId: order.uuid,
+                        action: "Çek çap edildi",
+                        waiterName,
+                        details: "Arxivdən təkrar çap"
+                    }));
+                }
+            }).catch(error => {
+                console.error("Print error:", error);
+                toast.error(t("cap_zamani_xeta_bas_verdi"));
+            });
+
+            setTimeout(() => {
+                setIsPrinting(false);
+            }, 300);
         } catch (error) {
-            console.error("Print error:", error);
-            toast.error(t("cap_zamani_xeta_bas_verdi"));
-        } finally {
+            console.error("Print setup error:", error);
             setIsPrinting(false);
         }
     };

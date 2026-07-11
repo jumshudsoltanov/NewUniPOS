@@ -167,6 +167,7 @@ const Check = () => {
               ao.discount_value !== bo.discount_value ||
               ao.service_charge !== bo.service_charge ||
               ao.service_value !== bo.service_value ||
+              ao.deposit !== bo.deposit ||
               ao.total !== bo.total ||
               ao.amount !== bo.amount ||
               ao.status !== bo.status ||
@@ -197,6 +198,7 @@ const Check = () => {
           ao.discount_value !== bo.discount_value ||
           ao.service_charge !== bo.service_charge ||
           ao.service_value !== bo.service_value ||
+          ao.deposit !== bo.deposit ||
           ao.total !== bo.total ||
           ao.amount !== bo.amount ||
           ao.status !== bo.status ||
@@ -849,24 +851,6 @@ const Check = () => {
     }
   };
 
-  const handleSendOrders = async (itemComments = {}, modCommentsMap = {}) => {
-    try {
-      if (isSendingRef.current) return;
-      if (orderEditLocked) {
-        toast.error(orderEditLockedToast());
-        return;
-      }
-
-      const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || t("unknown");
-
-      const getSaleTypeName = (type, typeName) => {
-        if (typeName) return typeName;
-        if (type == 1 || type === "takeaway") return t("takeaway");
-        if (type == 2 || type === "delivery") return t("delivery");
-        return t("dine_in");
-      };
-      const displaySaleType = getSaleTypeName(currentOrder?.sale_type, currentOrder?.sale_type_name);
-
       const getAllPrintersForItem = (item) => {
         const menuRef = menu?.find(m => m.id == (item.product_id || item.itemId || item.id));
         const categoryId = menuRef?.category_id || item.category_id;
@@ -890,6 +874,24 @@ const Check = () => {
         const printers = productPrinters.length > 0 ? productPrinters : categoryPrinters;
         return { printers, categoryId };
       };
+
+  const handleSendOrders = async (itemComments = {}, modCommentsMap = {}) => {
+    try {
+      if (isSendingRef.current) return;
+      if (orderEditLocked) {
+        toast.error(orderEditLockedToast());
+        return;
+      }
+
+      const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || t("unknown");
+
+      const getSaleTypeName = (type, typeName) => {
+        if (typeName) return typeName;
+        if (type == 1 || type === "takeaway") return t("takeaway");
+        if (type == 2 || type === "delivery") return t("delivery");
+        return t("dine_in");
+      };
+      const displaySaleType = getSaleTypeName(currentOrder?.sale_type, currentOrder?.sale_type_name);
 
       const hasDeletions = pendingDeletions && pendingDeletions.length > 0;
       const hasNewProducts = products && products.length > 0;
@@ -985,7 +987,10 @@ const Check = () => {
       if (hasNewProducts) {
         const productsWithComments = products.flatMap((p, idx) => {
           const { printers, categoryId } = getAllPrintersForItem(p);
-          const commentVal = itemComments[idx] !== undefined ? itemComments[idx] : p.comment;
+          let commentVal = itemComments[idx] !== undefined ? itemComments[idx] : p.comment;
+          if (p.commentPortions && p.commentPortions.length > 0) {
+            commentVal = p.commentPortions.flatMap(port => Array(port.qty || 1).fill(port.comment || ""));
+          }
           const qty = p.count || p.quantity || 1;
           const safePrice = Number.isFinite(parseFloat(p.price)) ? parseFloat(p.price) : 0;
           
@@ -1639,30 +1644,35 @@ const Check = () => {
 
    console.log(loginedProfileData)
 
-    // 1. Instant navigation + optimistic state removal (UI instantly shows table as empty)
-    const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
-    // Hotel mode: localStorage UUID-ni təmizlə ki, otağa təkrar girəndə silinmiş çek açılmasın
+    // 1. Dərhal UI-ı yeniləyir və masalara qayıdırıq (heç bir gecikmə olmasın deyə)
     if (isHotelMode && hotelRoomId) {
       localStorage.removeItem(`hotel_room_order_${hotelRoomId}`);
     }
+    const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
     navigate(isPacksOnly ? "/checks" : "/tables", { replace: true });
     dispatch(removeOrderOptimisticFromTables(orderId));
     dispatch(removeOrderOptimistic(orderId));
     toast.success(t("check_deleted"));
 
-    // 2. Background execution block
+    // 2. Çap və Server silinməsini asinxron şəkildə arxa planda edirik
     const performBackgroundDeletion = async () => {
-      // a. Kitchen Print + API delete run in PARALLEL
       const printPromise = (async () => {
         if (currentOrder?.orders_items && currentOrder.orders_items.length > 0) {
-          const itemsToPrint = currentOrder.orders_items.map(item => {
+          const sentItems = currentOrder.orders_items.filter(item => 
+            item.is_print === 1 || item.print_count > 0 || item.is_print === true || item.is_print === "1"
+          );
+          const targetItems = sentItems.length > 0 ? sentItems : currentOrder.orders_items;
+
+          const itemsToPrint = targetItems.map(item => {
             const menuRef = menu?.find(m => m.id == (item.product_id || item.id));
+            const { printers, categoryId } = getAllPrintersForItem(item);
+            
             return {
               ...item,
               name: menuRef?.name || item.product?.name || item.name || t("product"),
               quantity: Number(item.count || item.quantity || 0),
-              printer_details: menuRef?.printer_details || item.printer_details || [],
-              category_id: menuRef?.category_id || item.category_id,
+              printer_details: printers,
+              category_id: categoryId,
               changeType: 'decrease'
             };
           });
@@ -1707,9 +1717,7 @@ const Check = () => {
           if (socket?.connected) {
             socket.emit("order_deleted", { orderId });
           }
-          // Skip immediate getTableGroups — optimistic removal already cleared the UI.
-          // A delayed refresh ensures the DB commit is fully processed before re-fetching,
-          // preventing the table from briefly flashing back to "occupied".
+          
           if (profileId) {
             setTimeout(() => {
               dispatch(clearDeletedOrderId(orderId));
@@ -1734,7 +1742,7 @@ const Check = () => {
 
     // Execute background logic without awaiting
     performBackgroundDeletion();
-  }
+  };
 
   const handleDeleteProduct = async () => {
     if (!productToDelete) return;
@@ -2234,7 +2242,8 @@ const Check = () => {
                             return;
                           }
                           const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
-                          const result = await printCustomerReceipt({
+                          
+                          printCustomerReceipt({
                             items: currentOrder?.orders_items || [],
                             checkData: {
                               ...currentOrder,
@@ -2251,18 +2260,25 @@ const Check = () => {
                             hallName: currentHall?.name,
                             waiterName,
                             menuCatalog: menu,
-                          }, loginedProfileData, { dispatch, loginedWaiter, autoLockCheckAfterPrint: true });
+                          }, loginedProfileData, { dispatch, loginedWaiter, autoLockCheckAfterPrint: true })
+                          .then(result => {
+                            if (result.success) {
+                              toast.success(t("on_cap_ugurla_tamamlandi"));
+                              const profileId = loginedProfileData?.data?.profile?.id;
+                              dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName }));
+                              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+                              if (tableGroups?.data) dispatch(getTableGroups(profileId));
+                            }
+                          })
+                          .catch(error => {
+                            console.error("Print Check Error:", error);
+                          });
 
-                          if (result.success) {
-                            toast.success(t("on_cap_ugurla_tamamlandi"));
-                            const profileId = loginedProfileData?.data?.profile?.id;
-                            dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName }));
-                            dispatch(getActiveOrders({ profileId, silentRefresh: true }));
-                            if (tableGroups?.data) dispatch(getTableGroups(profileId));
-                          }
+                          setTimeout(() => {
+                            setIsPrintingCheck(false);
+                          }, 300);
                         } catch (error) {
-                          console.error("Print Check Error:", error);
-                        } finally {
+                          console.error("Print Setup Error:", error);
                           setIsPrintingCheck(false);
                         }
                       }
@@ -2385,7 +2401,7 @@ const Check = () => {
               />
 
               <CheckMain orders={currentOrder} table={currentTable} />
-              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} />
+              <CheckBottom orders={currentOrder} table={currentTable} hall={currentHall} selectedCustomer={selectedCustomer} handleSendOrders={handleSendOrders} isSending={isSending} clearCheck={clearCheck} openDepositModal={openDepositModal} />
               <TimerModal show={showTimerModal} onHide={() => setShowTimerModal(false)} order={currentOrder} table={currentTable} />
               {showKitchenBlockModal && (
                 <KitchenPrintBlockModal 

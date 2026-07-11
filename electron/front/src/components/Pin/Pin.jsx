@@ -748,7 +748,7 @@ const Pin = () => {
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                       </svg>
                     </div>
-                    <span className="warning-text">{t("subscription_expires")}<strong>{daysLeft === 0 ? "Bu gün" : `${daysLeft} gün`}</strong>{t("qalib")}</span>
+                    <span className="warning-text">{t("subscription_expires")} <strong>{daysLeft === 0 ? "Bu gün" : `${daysLeft} gün`}</strong> {t("qalib")}</span>
                   </div>
                 );
               })()}

@@ -382,37 +382,18 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                                     <button
                                                                         className="item-action-btn tag-btn mod-action-btn"
                                                                         onClick={() => setTagsModalMod({ item, modId: mod.id || modIdx, modName: mod.name, modKey })}
-                                                                        title={t("serh_sec")}
+                                                                        title={t("serh_sec") || "Şərh"}
                                                                     >
-                                                                        <i className="bi bi-tag-fill"></i>
-                                                                    </button>
-                                                                    <button
-                                                                        className={`item-action-btn edit-btn mod-action-btn ${isModEditing ? 'active' : ''}`}
-                                                                        onClick={() => setOpenModComments(prev => ({ ...prev, [modKey]: !prev[modKey] }))}
-                                                                        title={t("serh_yaz")}
-                                                                    >
-                                                                        <i className="bi bi-pencil"></i>
+                                                                        <i className="bi bi-chat-dots-fill"></i>
                                                                     </button>
                                                                 </div>
                                                             </div>
-                                                            {hasModComment && !isModEditing && (
+                                                            {hasModComment && (
                                                                 <div
                                                                     className="item-comment-display mod-comment-display"
-                                                                    onClick={() => setOpenModComments(prev => ({ ...prev, [modKey]: true }))}
+                                                                    onClick={() => setTagsModalMod({ item, modId: mod.id || modIdx, modName: mod.name, modKey })}
                                                                 >
                                                                     {modComment}
-                                                                </div>
-                                                            )}
-                                                            {isModEditing && (
-                                                                <div className="item-comment-section">
-                                                                    <textarea
-                                                                        className="item-comment-input"
-                                                                        value={modComment}
-                                                                        onChange={(e) => setModComments(prev => ({ ...prev, [modKey]: e.target.value }))}
-                                                                        placeholder={`${mod.name} üçün şərh`}
-                                                                        rows={1}
-                                                                        autoFocus
-                                                                    />
                                                                 </div>
                                                             )}
                                                         </div>
@@ -432,25 +413,12 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                         return (
                                             <div key="single" className="item-comment-row">
                                                 <div className="item-comment-inner">
-                                                    {hasComment && !isEditing ? (
+                                                    {hasComment && (
                                                         <div
                                                             className="item-comment-display"
-                                                            onClick={() => toggleComment(item.mergedIndex, -1)}
+                                                            onClick={() => { setTagsModalItem(item); setTagsModalPortion(0); }}
                                                         >
                                                             {commentVal}
-                                                        </div>
-                                                    ) : null}
-                                                    {isEditing && (
-                                                        <div className="item-comment-section">
-                                                            <textarea
-                                                                className="item-comment-input"
-                                                                value={commentVal}
-                                                                onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, 0)}
-                                                                onFocus={() => setActiveInput({ mergedIndex: item.mergedIndex, portionIndex: 0 })}
-                                                                placeholder={t("aciqlama_1")}
-                                                                rows={2}
-                                                                autoFocus
-                                                            />
                                                         </div>
                                                     )}
                                                 </div>
@@ -479,19 +447,13 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                                     <button type="button" className="counter-btn" onClick={() => setGroupQty(item.mergedIndex, gIdx, 1)} disabled={(g.qty || 1) >= portions - (groups.length - 1)}>+</button>
                                                                 </div>
                                                                 <div className="portion-actions">
-                                                                    <button className="item-action-btn tag-btn" onClick={() => { setTagsModalItem(item); setTagsModalPortion(gIdx); }} title={t("serh_sec")}><i className="bi bi-tag-fill"></i></button>
-                                                                    <button className={`item-action-btn edit-btn ${isEditing ? 'active' : ''}`} onClick={() => toggleComment(item.mergedIndex, gIdx)} title={t("serh_yaz")}><i className="bi bi-pencil"></i></button>
+                                                                    <button className="item-action-btn tag-btn" onClick={() => { setTagsModalItem(item); setTagsModalPortion(gIdx); }} title={t("serh_sec") || "Şərh"}><i className="bi bi-chat-dots-fill"></i></button>
                                                                     {groups.length > 1 && <button className="item-action-btn delete-btn" onClick={() => removeGroup(item.mergedIndex, gIdx)} title="Sil"><i className="bi bi-x-lg"></i></button>}
                                                                 </div>
                                                             </div>
-                                                            {hasComment && !isEditing ? (
-                                                                <div className="item-comment-display" onClick={() => toggleComment(item.mergedIndex, gIdx)}>{dispVal}</div>
+                                                            {hasComment ? (
+                                                                <div className="item-comment-display" onClick={() => { setTagsModalItem(item); setTagsModalPortion(gIdx); }}>{dispVal}</div>
                                                             ) : null}
-                                                            {isEditing && (
-                                                                <div className="item-comment-section">
-                                                                    <textarea className="item-comment-input" value={dispVal} onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, gIdx)} onFocus={() => setActiveInput({ mergedIndex: item.mergedIndex, portionIndex: gIdx })} placeholder={t("aciqlama_1")} rows={1} autoFocus />
-                                                                </div>
-                                                            )}
                                                         </div>
                                                     );
                                                 })}
@@ -596,6 +558,17 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
             onClose={() => setTagsModalItem(null)}
             item={tagsModalItem}
             portionIndex={tagsModalPortion}
+            initialComment={(() => {
+                if (!tagsModalItem) return "";
+                const qty = tagsModalItem.count || tagsModalItem.quantity || tagsModalItem.portion || 1;
+                const isSep = separatedItems[tagsModalItem.mergedIndex];
+                if (qty > 1 && isSep) {
+                    const groups = Array.isArray(comments[tagsModalItem.mergedIndex]) ? comments[tagsModalItem.mergedIndex] : [{ qty, comment: "" }];
+                    return groups[tagsModalPortion]?.comment || "";
+                }
+                const val = comments[tagsModalItem.mergedIndex];
+                return (typeof val === 'string' ? val : (Array.isArray(val) && val[0]?.comment) || "");
+            })()}
             onSave={handleCommentTagSave}
         />
         <ProductCommentTagsModal
@@ -603,6 +576,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
             onClose={() => setTagsModalMod(null)}
             item={tagsModalMod?.item}
             portionIndex={0}
+            initialComment={tagsModalMod ? (modComments[tagsModalMod.modKey] || "") : ""}
             onSave={(item, tagName) => handleModTagSave(tagName)}
         />
         </>

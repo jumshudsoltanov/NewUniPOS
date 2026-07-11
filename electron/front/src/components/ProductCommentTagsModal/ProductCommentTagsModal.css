@@ -6,6 +6,12 @@
     box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.15);
 }
 
+.modal-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
+}
+
 .product-comment-tags-modal .modal-dialog {
     max-width: 480px !important;
     margin: 1.75rem auto;
@@ -82,7 +88,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-    max-height: 320px;
+    max-height: 220px;
     overflow-y: auto;
 }
 

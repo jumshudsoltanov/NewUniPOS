@@ -428,6 +428,27 @@ const TablesSlice = createSlice({
       });
     });
 
+    // Optimistic deposit update
+    builder.addCase("orders/updateDeposit/pending", (state, action) => {
+      const { orderId, depositValue } = action.meta.arg;
+      if (!state.tableGroups?.data) return;
+      state.tableGroups.data.forEach((hall) => {
+        if (!hall.tables) return;
+        hall.tables.forEach((table) => {
+          if (!table.orders) return;
+          const idx = table.orders.findIndex(o => String(o.uuid) === String(orderId));
+          if (idx !== -1) {
+            table.orders[idx] = {
+              ...table.orders[idx],
+              deposit: depositValue,
+            };
+          }
+        });
+      });
+    });
+
+
+
     builder.addCase("orders/split/fulfilled", (state, action) => {
       const inner = action.payload?.data || action.payload;
       const originalOrder = inner?.originalOrder;
@@ -471,6 +492,27 @@ const TablesSlice = createSlice({
       }
     });
 
+    builder.addCase("orders/updateTags/fulfilled", (state, action) => {
+      const orderId = action.meta?.arg?.orderId;
+      const tags = action.meta?.arg?.tags;
+      if (!orderId) return;
+
+      Object.values(state.tableGroups).forEach((group) => {
+        if (group.tables) {
+          group.tables.forEach((table) => {
+            if (table.orders) {
+              const idx = table.orders.findIndex(
+                (o) => o.uuid === orderId || String(o.uuid) === String(orderId)
+              );
+              if (idx !== -1) {
+                table.orders[idx] = { ...table.orders[idx], tags };
+              }
+            }
+          });
+        }
+      });
+    });
+
     builder.addMatcher(
       (action) =>
         action.type === "orders/deleteCheck/fulfilled" ||
@@ -506,6 +548,7 @@ const TablesSlice = createSlice({
         action.type === "orders/itemDiscount/fulfilled" ||
         action.type === "orders/delete-item/fulfilled" ||
         action.type === "orders/updateItemPrice/fulfilled" ||
+        action.type === "orders/updateDeposit/fulfilled" ||
         action.type === "orders/incrementPrintCount/fulfilled",
       (state, action) => {
         const updatedOrder = action.payload?.data || action.payload;

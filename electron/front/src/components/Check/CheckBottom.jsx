@@ -50,6 +50,7 @@ const CheckBottom = ({
   clearCheck,
   printToKitchen,
   setPrintToKitchen,
+  openDepositModal,
 }) => {
   const dispatch = useDispatch();
   const { products, sentProducts, pendingDeletions, menu } = useSelector(
@@ -523,10 +524,14 @@ const CheckBottom = ({
                 borderTop: "1px dashed rgba(255,255,255,0.1)",
                 marginTop: "2px",
                 paddingTop: "2px",
+                cursor: "pointer",
               }}
+              onClick={() => openDepositModal && openDepositModal()}
             >
               <span>{t("depozit")}:</span>
-              <span>{calcTotal.depositAmount} {getCurrencySymbol()}</span>
+              <span>
+                {calcTotal.depositAmount} {getCurrencySymbol()}
+              </span>
             </div>
           )}
           {Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 &&

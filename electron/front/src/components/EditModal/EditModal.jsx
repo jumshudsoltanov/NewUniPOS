@@ -24,6 +24,8 @@ import {
   stopTimer,
   resetTimer,
   addProducts,
+  updateComments,
+  splitProductQuantity,
 } from "../../redux/Slices/OrdersSlice";
 import { updateProduct } from "../../redux/Slices/ProductSlice";
 import { useDispatch, useSelector } from "react-redux";
@@ -34,6 +36,9 @@ import SplitWaiterSelect from "../SlpitOrderModa/SplitWaiterSelect";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
+import AdminOverrideModal from "../Modals/AdminOverrideModal";
+import "../NewItemsModal/NewItemsModal.css";
+import ProductCommentTagsModal from "../ProductCommentTagsModal/ProductCommentTagsModal";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
 import { t } from "../../utils/translations";
@@ -51,6 +56,7 @@ const removeLocalProduct = (dispatch, product) => {
 const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialTab = "edit" }) => {
   const [activeTab, setActiveTab] = useState(initialTab || "edit");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 576);
+  const [adminOverrideProps, setAdminOverrideProps] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 576);
@@ -82,20 +88,65 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
   const [selectedWaiter, setSelectedWaiter] = useState(null);
   const [createNewOrder, setCreateNewOrder] = useState(false);
   const [showResetTimerConfirm, setShowResetTimerConfirm] = useState(false);
+  
+  const [productComment, setProductComment] = useState("");
+  const [showCommentTagsModal, setShowCommentTagsModal] = useState(false);
 
   useEffect(() => {
     if (!show) setShowResetTimerConfirm(false);
   }, [show]);
 
   useEffect(() => {
-    if (show) setActiveTab(initialTab || "edit");
-  }, [show, initialTab]);
+    if (show) {
+      setActiveTab(initialTab || "edit");
+      setProductComment(product?.comment || "");
+      setQtyStr(String(product?.count || 1));
+      setTransferQty(1);
+      setShowTableSelect(false);
+      setShowWaiterSelect(false);
+      setShowSalesTypeSelect(false);
+      setSelectedSalesType('dine_in');
+      setSelectedTable(null);
+      setSelectedWaiter(null);
+      setCreateNewOrder(false);
+      setShowResetTimerConfirm(false);
+    }
+  }, [show, initialTab, product]);
 
   const { id: orderUuidFromUrl } = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { tableGroups } = useSelector((state) => state.TablesSlice);
-  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+  const [unlockedPermissions, setUnlockedPermissions] = useState({});
+
+  const [adminOverrideEnabled, setAdminOverrideEnabled] = useState(
+    () => localStorage.getItem("pos_admin_override_enabled") === "true"
+  );
+  
+  useEffect(() => {
+    const handleOverrideChange = (e) => {
+      setAdminOverrideEnabled(e.detail);
+    };
+    window.addEventListener("adminOverrideEnabledChanged", handleOverrideChange);
+    return () => window.removeEventListener("adminOverrideEnabledChanged", handleOverrideChange);
+  }, []);
+
+  const requirePermission = (permissionKey, operationName, action) => {
+    if (Number(loginedWaiter?.data?.[permissionKey]) === 1 || unlockedPermissions[permissionKey]) {
+      action();
+    } else {
+      setAdminOverrideProps({
+        permissionKey,
+        operationName,
+        onApprove: () => {
+          setUnlockedPermissions(prev => ({ ...prev, [permissionKey]: true }));
+          action();
+        }
+      });
+    }
+  };
   const navigate = useNavigate();
 
   // Lookup product info from menu to ensure we have flags
@@ -435,33 +486,63 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 <span>{t("deyismek")}</span>
               </button>
 
-              {Number(loginedWaiter?.data?.can_transfer_product) === 1 && (
+              {(Number(loginedWaiter?.data?.can_transfer_product) === 1 || unlockedPermissions["can_transfer_product"] || adminOverrideEnabled) && (
                 <button
                   className={`sidebar-btn ${activeTab === "transfer" ? "active" : ""}`}
-                  onClick={() => { setActiveTab("transfer"); setTransferQty(1); }}
+                  onClick={() => {
+                    requirePermission("can_transfer_product", t("kocurme"), () => {
+                      setActiveTab("transfer");
+                      setTransferQty(1);
+                    });
+                  }}
                 >
-                  <i className="bi bi-arrow-left-right"></i>
-                  <span>{t("kocurme")}</span>
+                  <div style={{ position: "relative", display: "inline-block", marginBottom: "6px" }}>
+                    <i className="bi bi-arrow-left-right" style={{ opacity: (Number(loginedWaiter?.data?.can_transfer_product) === 1 || unlockedPermissions["can_transfer_product"]) ? 1 : 0.5, marginBottom: 0 }}></i>
+                    {!(Number(loginedWaiter?.data?.can_transfer_product) === 1 || unlockedPermissions["can_transfer_product"]) && (
+                      <i className="bi bi-lock-fill" style={{ position: "absolute", top: "-2px", right: "-12px", fontSize: "11px", margin: 0, opacity: 0.8 }}></i>
+                    )}
+                  </div>
+                  <span style={{ opacity: (Number(loginedWaiter?.data?.can_transfer_product) === 1 || unlockedPermissions["can_transfer_product"]) ? 1 : 0.5 }}>{t("kocurme")}</span>
                 </button>
               )}
 
-              {Number(loginedWaiter?.data?.can_give_treats) === 1 && (
+              {(Number(loginedWaiter?.data?.can_give_treats) === 1 || unlockedPermissions["can_give_treats"] || adminOverrideEnabled) && (
                 <button
                   className={`sidebar-btn ${activeTab === "gift" ? "active" : ""}`}
-                  onClick={() => { setActiveTab("gift"); setTransferQty(1); }}
+                  onClick={() => {
+                    requirePermission("can_give_treats", t("i̇kram"), () => {
+                      setActiveTab("gift");
+                      setTransferQty(1);
+                    });
+                  }}
                 >
-                  <i className="bi bi-gift-fill"></i>
-                  <span>{t("i̇kram")}</span>
+                  <div style={{ position: "relative", display: "inline-block", marginBottom: "6px" }}>
+                    <i className="bi bi-gift-fill" style={{ opacity: (Number(loginedWaiter?.data?.can_give_treats) === 1 || unlockedPermissions["can_give_treats"]) ? 1 : 0.5, marginBottom: 0 }}></i>
+                    {!(Number(loginedWaiter?.data?.can_give_treats) === 1 || unlockedPermissions["can_give_treats"]) && (
+                      <i className="bi bi-lock-fill" style={{ position: "absolute", top: "-2px", right: "-12px", fontSize: "11px", margin: 0, opacity: 0.8 }}></i>
+                    )}
+                  </div>
+                  <span style={{ opacity: (Number(loginedWaiter?.data?.can_give_treats) === 1 || unlockedPermissions["can_give_treats"]) ? 1 : 0.5 }}>{t("i̇kram")}</span>
                 </button>
               )}
 
-              {Number(loginedWaiter?.data?.can_give_product_discount) === 1 && (
+              {(Number(loginedWaiter?.data?.can_give_product_discount) === 1 || unlockedPermissions["can_give_product_discount"] || adminOverrideEnabled) && (
                 <button
                   className={`sidebar-btn ${activeTab === "discount" ? "active" : ""}`}
-                  onClick={() => { setActiveTab("discount"); setTransferQty(1); }}
+                  onClick={() => {
+                    requirePermission("can_give_product_discount", t("endirim"), () => {
+                      setActiveTab("discount");
+                      setTransferQty(1);
+                    });
+                  }}
                 >
-                  <i className="bi bi-percent"></i>
-                  <span>{t("endirim")}</span>
+                  <div style={{ position: "relative", display: "inline-block", marginBottom: "6px" }}>
+                    <i className="bi bi-percent" style={{ opacity: (Number(loginedWaiter?.data?.can_give_product_discount) === 1 || unlockedPermissions["can_give_product_discount"]) ? 1 : 0.5, marginBottom: 0 }}></i>
+                    {!(Number(loginedWaiter?.data?.can_give_product_discount) === 1 || unlockedPermissions["can_give_product_discount"]) && (
+                      <i className="bi bi-lock-fill" style={{ position: "absolute", top: "-2px", right: "-12px", fontSize: "11px", margin: 0, opacity: 0.8 }}></i>
+                    )}
+                  </div>
+                  <span style={{ opacity: (Number(loginedWaiter?.data?.can_give_product_discount) === 1 || unlockedPermissions["can_give_product_discount"]) ? 1 : 0.5 }}>{t("endirim")}</span>
                 </button>
               )}
 
@@ -476,6 +557,15 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
               )}
 
               <button
+                className={`sidebar-btn`}
+                onClick={() => setShowCommentTagsModal(true)}
+              >
+                <div style={{ position: "relative", display: "inline-block", marginBottom: "6px" }}>
+                  <i className="bi bi-chat-dots-fill" style={{ marginBottom: 0 }}></i>
+                </div>
+                <span>{t("şərh") || "Şərh"}</span>
+              </button>
+              <button
                 className={`d-none sidebar-btn ${activeTab === "seller" ? "active" : ""}`}
                 onClick={() => setActiveTab("seller")}
               >
@@ -485,34 +575,33 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
             </div>
 
             <div className="sidebar-bottom">
-              {(product?.isNew || Number(loginedWaiter?.data?.can_delete_product) === 1) && (
+              {(product?.isNew || Number(loginedWaiter?.data?.can_delete_product) === 1 || unlockedPermissions["can_delete_product"] || adminOverrideEnabled) && (
                 <button
                   className="sidebar-btn btn-delete"
                   onClick={() => {
-                    const productId = Number(product.product_id || product.id);
-                    if (product.isNew && product.localQuantity > 0) {
-                      // Remove the local (unsaved) portion immediately — no reason needed
+                    if (product?.isNew && product?.localQuantity > 0) {
                       removeLocalProduct(dispatch, product);
                       if (!product.savedQuantity || product.savedQuantity <= 0) {
-                        // No DB items at all — just close
                         onClose();
                       } else {
-                        // DB items still remain — icazə yoxla
-                        if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                          toast.error(t("yalniz_yeni_elave_edilmis_mehsullar_silindi_gonderilmis_mehsullari_silmek_icazeniz_yoxdur"));
-                          onClose();
-                          return;
-                        }
-                        onOpenDeleteModal('full', { ...product, localQuantity: 0, isNew: false, count: product.savedQuantity });
+                        requirePermission('can_delete_product', t("sil"), () => {
+                          onOpenDeleteModal('full', { ...product, localQuantity: 0, isNew: false, count: product.savedQuantity });
+                        });
                       }
                     } else {
-                      // DB-only item — reason required
-                      onOpenDeleteModal('full', product);
+                      requirePermission('can_delete_product', t("sil"), () => {
+                        onOpenDeleteModal('full', product);
+                      });
                     }
                   }}
                 >
-                  <i className="bi bi-trash3-fill"></i>
-                  <span>{t("sil")}</span>
+                  <div style={{ position: "relative", display: "inline-block", marginBottom: "6px" }}>
+                    <i className="bi bi-trash3-fill" style={{ opacity: (product?.isNew || Number(loginedWaiter?.data?.can_delete_product) === 1 || unlockedPermissions["can_delete_product"]) ? 1 : 0.5, marginBottom: 0 }}></i>
+                    {!(product?.isNew || Number(loginedWaiter?.data?.can_delete_product) === 1 || unlockedPermissions["can_delete_product"]) && (
+                      <i className="bi bi-lock-fill" style={{ position: "absolute", top: "-2px", right: "-12px", fontSize: "11px", margin: 0, opacity: 0.8 }}></i>
+                    )}
+                  </div>
+                  <span style={{ opacity: (product?.isNew || Number(loginedWaiter?.data?.can_delete_product) === 1 || unlockedPermissions["can_delete_product"]) ? 1 : 0.5 }}>{t("sil")}</span>
                 </button>
               )}
             </div>
@@ -526,22 +615,15 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 <div className="edit-form-wrapper">
                   {/* Price / Input Display */}
                   <div className="input-display-box" onClick={() => {
-                    if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) {
-                      toast.error(t("sizin_qiymet_deyismek_icazeniz_yoxdur"));
-                      return;
-                    }
-                    setNumpadTarget("price");
+                    requirePermission("can_change_product_price", t("qiymet_deyismek"), () => {
+                      setNumpadTarget("price");
+                    });
                   }} style={{ outline: numpadTarget === "price" ? "2px solid #3b82f6" : undefined, borderRadius: 8 }}>
                     <input
                       type="text"
                       className="super-input"
                       value={inputValue}
-                      disabled={Number(loginedWaiter?.data?.can_change_product_price) !== 1}
-                      onChange={(e) => {
-                        if (Number(loginedWaiter?.data?.can_change_product_price) !== 1) return;
-                        setInputValue(e.target.value);
-                      }}
-
+                      readOnly
                     />
                     <div className="currency-icon">{getCurrencySymbol()}</div>
                   </div>
@@ -553,11 +635,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       onClick={() => {
                         const newQty = Math.max(0, qty - 1);
                         const savedQty = product.savedQuantity || 0;
-                        if (newQty < savedQty && Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                          toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
-                          return;
+                        if (newQty < savedQty) {
+                          requirePermission('can_delete_product', t("sil"), () => {
+                            setQtyStr(String(newQty));
+                          });
+                        } else {
+                          setQtyStr(String(newQty));
                         }
-                        setQtyStr(String(newQty));
                       }}
                     >
                       <i className="bi bi-dash"></i>
@@ -608,7 +692,6 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     if (isSubmitting) return;
                     setIsSubmitting(true);
                     try {
-                      // If qty is 0, trigger full delete
                       if (qty === 0) {
                         const productId = Number(product.product_id || product.id);
                         if (product.isNew && product.localQuantity > 0) {
@@ -616,19 +699,16 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                           if (!product.savedQuantity || product.savedQuantity <= 0) {
                             onClose();
                           } else {
-                            if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                              toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
-                              return;
-                            }
-                            onOpenDeleteModal('full', { ...product, localQuantity: 0, isNew: false, count: product.savedQuantity });
+                            requirePermission('can_delete_product', t("sil"), () => {
+                              onOpenDeleteModal('full', { ...product, localQuantity: 0, isNew: false, count: product.savedQuantity });
+                            });
                           }
                         } else {
-                          if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                            toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
-                            return;
-                          }
-                          onOpenDeleteModal('full', product);
+                          requirePermission('can_delete_product', t("sil"), () => {
+                            onOpenDeleteModal('full', product);
+                          });
                         }
+                        setIsSubmitting(false);
                         return;
                       }
 
@@ -636,16 +716,16 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       const newLocalQty = qty - savedQty;
 
                       if (newLocalQty < 0) {
-                        if (Number(loginedWaiter?.data?.can_delete_product) !== 1) {
-                          toast.error(t("sizin_mehsul_silmek_icazeniz_yoxdur"));
-                          setQtyStr(String(savedQty));
-                          return;
-                        }
-                        if (product.isNew && product.localQuantity > 0) {
-                          dispatch(removeAllProductsById(Number(product.product_id || product.id)));
-                        }
-                        const dbReduction = Math.abs(newLocalQty);
-                        onOpenDeleteModal('partial', { ...product, localQuantity: 0, isNew: false, count: savedQty }, dbReduction);
+                        requirePermission('can_delete_product', t("sil"), () => {
+                          if (product.isNew && product.localQuantity > 0) {
+                            dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+                            const payload = { ...product, isNew: false, count: savedQty, localQuantity: 0 };
+                            dispatch(addProducts(payload));
+                          }
+                          const dbReduction = Math.abs(newLocalQty);
+                          onOpenDeleteModal('partial', { ...product, localQuantity: 0, isNew: false, count: savedQty }, dbReduction);
+                          setIsSubmitting(false);
+                        });
                         return;
                       }
 
@@ -675,7 +755,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                             price: resolvedBaseStr,
                             firstId: product.firstId,
                             modifiers: product.modifiers,
-                            comment: product.comment
+                            comment: productComment
                           }));
                         }
                         // Log quantity change for new items too
@@ -736,7 +816,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                               price: resolvedBaseStr,
                               firstId: product.firstId,
                               modifiers: product.modifiers,
-                              comment: product.comment
+                              comment: productComment
                             }));
                           } else {
                             const localItem = {
@@ -747,14 +827,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                               savedQuantity: 0,
                               localQuantity: newLocalQty,
                               price: resolvedBaseStr,
+                              comment: productComment
                             };
                             dispatch(addProducts(localItem));
                           }
                         } else {
                           if (product.isNew && product.localQuantity > 0) {
-                            // If it had local quantity but now local quantity is 0, we must remove the local item by firstId
-                            // replaceProductQuantity with newQty=0 could work, but currently we just replace.
-                            // Let's use replaceProductQuantity with 0.
                             dispatch(replaceProductQuantity({
                                 productId: Number(product.product_id || product.id),
                                 newQty: 0,
@@ -762,6 +840,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                             }));
                           }
                         }
+                        
                         // Log quantity change
                         if (qty !== (product.count || 0)) {
                           dispatch(saveLog({
@@ -858,8 +937,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   disabled={isSubmitting}
                   style={{ opacity: isSubmitting ? 0.7 : 1 }}
                   onClick={() => {
-                    if (!Number(loginedWaiter?.data?.can_transfer_product)) return;
-                    handleTransfer();
+                    requirePermission("can_transfer_product", t("kocurme"), () => {
+                      handleTransfer();
+                    });
                   }}
                 >
                   {isSubmitting ? (
@@ -916,25 +996,27 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         toast.info(t("gozleyen_mehsulun_ikramini_legv_etmek_ucun_evvelce_gonder_duymesini_sixin"));
                         return;
                       }
-                      if (isSubmitting) return;
-                      setIsSubmitting(true);
-                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
-                      dispatch(giftItem({
-                        orderId: orders.uuid,
-                        itemId: product?.id || product?.firstId,
-                        allIds: product?.allIds,
-                        qty: transferQty,
-                        isGift: false,
-                        productName: product.name || product.product?.name,
-                        waiterName
-                      })).then((res) => {
-                        setIsSubmitting(false);
-                        if (res.type.endsWith('fulfilled')) {
-                          onClose();
-                          toast.success(t("i̇kram_legv_edildi"));
-                        } else {
-                          toast.error(t("error_occurred"));
-                        }
+                      requirePermission("can_give_treats", t("i̇krami_legv_et"), () => {
+                        if (isSubmitting) return;
+                        setIsSubmitting(true);
+                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
+                        dispatch(giftItem({
+                          orderId: orders.uuid,
+                          itemId: product?.id || product?.firstId,
+                          allIds: product?.allIds,
+                          qty: transferQty,
+                          isGift: false,
+                          productName: product.name || product.product?.name,
+                          waiterName
+                        })).then((res) => {
+                          setIsSubmitting(false);
+                          if (res.type.endsWith('fulfilled')) {
+                            onClose();
+                            toast.success(t("i̇kram_legv_edildi"));
+                          } else {
+                            toast.error(t("error_occurred"));
+                          }
+                        });
                       });
                     }}
                   >
@@ -958,25 +1040,27 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         toast.info(t("gozleyen_mehsulu_ikram_etmek_ucun_evvelce_gonder_duymesini_sixin"));
                         return;
                       }
-                      if (isSubmitting) return;
-                      setIsSubmitting(true);
-                      const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
-                      dispatch(giftItem({
-                        orderId: orders.uuid,
-                        itemId: product?.id || product?.firstId,
-                        allIds: product?.allIds,
-                        qty: transferQty,
-                        isGift: true,
-                        productName: product.name || product.product?.name,
-                        waiterName
-                      })).then((res) => {
-                        setIsSubmitting(false);
-                        if (res.type.endsWith('fulfilled')) {
-                          onClose();
-                          toast.success(t("mehsul_ikram_edildi"));
-                        } else {
-                          toast.error(t("error_occurred"));
-                        }
+                      requirePermission("can_give_treats", t("i̇kram_et"), () => {
+                        if (isSubmitting) return;
+                        setIsSubmitting(true);
+                        const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
+                        dispatch(giftItem({
+                          orderId: orders.uuid,
+                          itemId: product?.id || product?.firstId,
+                          allIds: product?.allIds,
+                          qty: transferQty,
+                          isGift: true,
+                          productName: product.name || product.product?.name,
+                          waiterName
+                        })).then((res) => {
+                          setIsSubmitting(false);
+                          if (res.type.endsWith('fulfilled')) {
+                            onClose();
+                            toast.success(t("mehsul_ikram_edildi"));
+                          } else {
+                            toast.error(t("error_occurred"));
+                          }
+                        });
                       });
                     }}
                   >
@@ -1045,7 +1129,11 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
 
                   <button
                     className="save-action-btn"
-                    onClick={handleApplyDiscount}
+                    onClick={() => {
+                      requirePermission("can_give_product_discount", t("endirim"), () => {
+                        handleApplyDiscount();
+                      });
+                    }}
                     disabled={isSubmitting}
                     style={{ opacity: isSubmitting ? 0.7 : 1 }}
                   >
@@ -1232,6 +1320,30 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
         </div>
       </Modal.Body>
     </Modal>
+
+    <ProductCommentTagsModal
+      show={showCommentTagsModal}
+      onClose={() => setShowCommentTagsModal(false)}
+      item={product}
+      initialComment={productComment}
+      onSave={(item, tagStr) => {
+        setProductComment(tagStr);
+        setShowCommentTagsModal(false);
+      }}
+    />
+
+      {adminOverrideProps && (
+        <AdminOverrideModal
+          show={true}
+          onHide={() => setAdminOverrideProps(null)}
+          onSuccess={() => {
+            adminOverrideProps.onApprove();
+            setAdminOverrideProps(null);
+          }}
+          requiredPermissionKey={adminOverrideProps.permissionKey}
+          operationName={adminOverrideProps.operationName}
+        />
+      )}
     </>
   );
 };

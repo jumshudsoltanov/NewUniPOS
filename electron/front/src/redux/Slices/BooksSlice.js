@@ -257,6 +257,33 @@ const BooksSlice = createSlice({
       }
     });
 
+    // Optimistic deposit update
+    builder.addCase("orders/updateDeposit/pending", (state, action) => {
+      const { orderId, depositValue } = action.meta.arg;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
+      if (idx !== -1) {
+        ordersList[idx] = {
+          ...ordersList[idx],
+          deposit: depositValue,
+        };
+      }
+    });
+
+    // Deposit fulfilled
+    builder.addCase("orders/updateDeposit/fulfilled", (state, action) => {
+      const updatedOrder = action.payload;
+      if (!updatedOrder?.uuid) return;
+      let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
+      if (!ordersList) return;
+      const idx = ordersList.findIndex(o => String(o.uuid) === String(updatedOrder.uuid));
+      if (idx !== -1) {
+        ordersList[idx] = { ...ordersList[idx], ...updatedOrder };
+      }
+    });
+
+
     // Optimistic discount update — discount dərhal hesablansın
     builder.addCase("pos/discount/pending", (state, action) => {
       const { orderId, discountValue, discountType } = action.meta.arg;

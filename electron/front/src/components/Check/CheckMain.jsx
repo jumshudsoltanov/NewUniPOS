@@ -259,13 +259,10 @@ const CheckMain = ({ orders, table }) => {
           existing.price = orderItem.price || orderItem.amount;
           existing.sortTime = Math.min(existing.sortTime ?? rowSort, rowSort);
           if (orderItem.comment) {
-            existing.commentsList = existing.commentsList || (existing.comment ? [existing.comment] : []);
-            existing.commentsList.push(orderItem.comment);
-            existing.comment = [...new Set(existing.commentsList.filter(Boolean))].join(", ");
+            // we purposefully ignore comments for saved items so they disappear after sending to kitchen
           }
         } else {
           const menuItem = findCatalogProduct(menu, prodId);
-          const comment = orderItem.comment || '';
           groupedMap.set(key, {
             ...orderItem,
             product_id: prodId,
@@ -281,8 +278,8 @@ const CheckMain = ({ orders, table }) => {
             allIds: [orderItem.id],
             printer_details: menuItem?.printer_details || [],
             modifiers: orderItem.modifiers,
-            comment,
-            commentsList: comment ? [comment] : []
+            comment: '',
+            commentsList: []
           });
         }
       });
@@ -316,8 +313,9 @@ const CheckMain = ({ orders, table }) => {
 
       const isOwnSetPrice = item.own_set_price === 1;
       const uniqueKeyPart = isOwnSetPrice ? `-local-idx-${idx}` : '';
-      const key = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
-      const existing = groupedMap.get(key);
+      
+      const finalKey = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
+      const existing = groupedMap.get(finalKey);
 
       const qtyToAdd = Number(item.quantity || item.count || 1);
 
@@ -325,6 +323,7 @@ const CheckMain = ({ orders, table }) => {
         existing.count += qtyToAdd;
         existing.localQuantity = (existing.localQuantity || 0) + qtyToAdd;
         existing.isNew = true;
+        existing.localFirstId = 999999999 + idx;
         if (item.comment) {
           existing.commentsList = existing.commentsList || (existing.comment ? [existing.comment] : []);
           existing.commentsList.push(item.comment);
@@ -332,7 +331,7 @@ const CheckMain = ({ orders, table }) => {
         }
       } else {
         const comment = item.comment || '';
-        groupedMap.set(key, {
+        groupedMap.set(finalKey, {
           product_id: prodId,
           name: item.name,
           count: qtyToAdd,
@@ -708,7 +707,7 @@ const CheckMain = ({ orders, table }) => {
 
               const isDiscounted = item.discount_value > 0 && !isNoDiscount;
               const isGift = item.is_gift === 1;
-              const rowStyle = item.isDeleted ? { textDecoration: 'line-through', color: 'red', opacity: 0.7 } : {};
+              const rowStyle = item.isDeleted ? { opacity: 0.6 } : {};
               const hourlyLine = Number(productInfo?.hourly_price ?? item.product?.hourly_price ?? 0);
               const showInlineProductTimer =
                 Number(profileInfo?.is_timer || 0) === 1 &&
@@ -763,15 +762,16 @@ const CheckMain = ({ orders, table }) => {
                   >
                     <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                       <div className="d-flex align-items-center flex-wrap gap-1">
-                        <span className="fw-semibold">{displayProductName}</span>
+                        <span className={`fw-semibold ${item.isDeleted ? 'text-danger' : ''}`} style={item.isDeleted ? { textDecoration: 'line-through' } : {}}>
+                          {displayProductName}
+                        </span>
                         {item.isDeleted && (
-                          <span className="pending-delete-badge full" title={t("silinecek")}>
-                            <i className="bi bi-trash3-fill"></i>
+                          <span className="pending-delete-badge full ms-2" title={t("silinecek")}>
+                            {t("silinecek")}
                           </span>
                         )}
                         {item.partialDelete > 0 && !item.isDeleted && (
-                          <span className="pending-delete-badge partial" title={`−${item.partialDelete} silinəcək`}>
-                            <i className="bi bi-dash-circle-fill"></i>
+                          <span className="pending-delete-badge partial ms-2" title={`−${item.partialDelete} silinəcək`}>
                             −{item.partialDelete}
                           </span>
                         )}
@@ -860,24 +860,22 @@ const CheckMain = ({ orders, table }) => {
         </div>
       </div>
 
-      {editItemModal && (
-        <EditModal
-          show={editItemModal}
-          onClose={async () => {
-            setEditItemModal(false);
-          }}
-          product={selectedProduct}
-          orders={orders}
-          initialTab={editInitialTab}
-          onOpenDeleteModal={(type, product, qty) => {
-            setEditItemModal(false);
-            setDeleteActionType(type);
-            setProductToDelete(product);
-            setQtyToReduce(qty);
-            setOpenDeleteProductModal(true);
-          }}
-        />
-      )}
+      <EditModal
+        show={editItemModal}
+        onClose={async () => {
+          setEditItemModal(false);
+        }}
+        product={selectedProduct}
+        orders={orders}
+        initialTab={editInitialTab}
+        onOpenDeleteModal={(type, product, qty) => {
+          setEditItemModal(false);
+          setDeleteActionType(type);
+          setProductToDelete(product);
+          setQtyToReduce(qty);
+          setOpenDeleteProductModal(true);
+        }}
+      />
 
       {showModifierModal && (
         <ModifierModal

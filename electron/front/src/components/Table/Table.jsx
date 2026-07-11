@@ -1,5 +1,6 @@
 
 import React from "react";
+import { useSelector } from "react-redux";
 import "./Table.css";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
 import { computeOrderCardMeta } from "../../utils/orderDisplayTotal";
@@ -10,6 +11,17 @@ import { formatPrice } from "../../utils/formatPrice";
 const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }) => {
   const { name, orders } = table || {};
   const shape_type = normalizeTableShape(table?.shape_type);
+
+  const { books } = useSelector((state) => state.BooksSlice || {});
+
+  const liveOrder = React.useMemo(() => {
+    const o = orders?.[0];
+    if (!o) return null;
+    const list = Array.isArray(books) ? books : books?.data;
+    return list?.find(b => b.id === o.id || String(b.uuid) === String(o.uuid));
+  }, [books, orders]);
+
+  const tagText = liveOrder?.tags || orders?.[0]?.tags;
 
   const hasOrders = React.useMemo(() => orders && orders.length > 0, [orders]);
 
@@ -132,6 +144,22 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
               <i className="bi bi-people"></i>
               <span>{orders?.[0]?.waiter?.name || "—"}</span>
             </div>
+
+            {tagText && (
+              <div
+                className={`table-waiter-info ${statusClass}`}
+                style={{ marginTop: '2px', opacity: 0.9 }}
+              >
+                <i className="bi bi-tag-fill"></i>
+                <span 
+                  style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}
+                >{tagText}</span>
+              </div>
+            )}
 
             {hasMultipleChecks && (
               <div className="table-multi-checks-badge">

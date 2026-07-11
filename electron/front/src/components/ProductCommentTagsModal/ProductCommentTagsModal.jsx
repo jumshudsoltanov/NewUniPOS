@@ -5,8 +5,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { getTagsList } from "../../redux/Slices/TagsSlice";
 import { t } from "../../utils/translations";
 
-const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave }) => {
+const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, initialComment = "", onSave }) => {
     const [selectedTags, setSelectedTags] = useState([]);
+    const [manualComment, setManualComment] = useState("");
     const [tagsListData, setTagsListData] = useState([]);
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
@@ -26,11 +27,33 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
         getTagsData();
     }, [loginedProfileData, dispatch]);
 
-    useEffect(() => {
-        if (!show) setSelectedTags([]);
-    }, [show]);
-
     const tags = tagsListData?.filter((t) => Number(t.type) === 2) ?? [];
+
+    useEffect(() => {
+        if (!show) {
+            setSelectedTags([]);
+            setManualComment("");
+        } else {
+            if (initialComment) {
+                const parts = initialComment.split(",").map(s => s.trim());
+                const foundTags = [];
+                const remaining = [];
+                parts.forEach(part => {
+                    const matchedTag = tags.find(t => t.name.trim().toLowerCase() === part.toLowerCase());
+                    if (matchedTag) {
+                        foundTags.push(matchedTag.id);
+                    } else if (part) {
+                        remaining.push(part);
+                    }
+                });
+                setSelectedTags(foundTags);
+                setManualComment(remaining.join(", "));
+            } else {
+                setSelectedTags([]);
+                setManualComment("");
+            }
+        }
+    }, [show, initialComment, item, tagsListData]);
 
     const toggleTag = (tagId) => {
         setSelectedTags(prev =>
@@ -45,7 +68,13 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
                 return tagObj?.name || tagObj?.text || "";
             })
             .filter(Boolean);
-        const tagNameStr = tagNames.join(", ");
+            
+        let finalArr = [...tagNames];
+        if (manualComment.trim()) {
+            finalArr.push(manualComment.trim());
+        }
+        
+        const tagNameStr = finalArr.join(", ");
         onSave?.(item, tagNameStr, portionIndex);
         onClose?.();
     };
@@ -104,6 +133,17 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, onSave
                             <span>{t("serh_taglari_tapilmadi")}</span>
                         </div>
                     )}
+                    
+                    <div className="product-comment-manual-input mt-3 px-3 pb-3">
+                        <textarea
+                            className="form-control"
+                            rows="2"
+                            placeholder={t("serh_yaz") || "Şərh yazın..."}
+                            value={manualComment}
+                            onChange={(e) => setManualComment(e.target.value)}
+                            style={{ resize: "none", fontSize: "1.05rem", borderRadius: "10px", padding: "12px", border: "2px solid #ebf2fe" }}
+                        />
+                    </div>
                 </div>
 
                 <div className="product-comment-tags-modal-footer">

@@ -224,8 +224,25 @@ const CheckHeader = ({
                     : effectiveSaleType === "takeaway"
                       ? t("takeaway")
                       : "Yeni Sifariş";
+              const tagText = liveOrder?.tags || orders?.tags;
+
               return (
-                <span className="header-title">{mainLine}</span>
+                <>
+                  <span className="header-title">{mainLine}</span>
+                  {tagText && (
+                    <span 
+                      className="header-title" 
+                      style={{ 
+                        fontSize: "0.75rem", 
+                        textTransform: "none", 
+                        opacity: 0.8,
+                        marginTop: "-2px"
+                      }}
+                    >
+                      {tagText}
+                    </span>
+                  )}
+                </>
               );
             })()}
           </div>
