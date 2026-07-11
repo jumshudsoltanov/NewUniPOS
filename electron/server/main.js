@@ -2564,8 +2564,11 @@ ipcMain.handle("set-static-master-ip", async (event, ip) => {
 ipcMain.handle("clear-print-spooler", async () => {
   return new Promise((resolve) => {
     const { exec } = require("child_process");
-    const cmd = `powershell -Command "Start-Process cmd -ArgumentList '/c net stop spooler & del /Q /F /S \\"%systemroot%\\System32\\Spool\\Printers\\*.*\\" & net start spooler' -Verb RunAs -WindowStyle Hidden -Wait"`;
-    exec(cmd, (error) => {
+    const scriptBlock = `Stop-Service -Name Spooler -Force; Remove-Item -Path "$env:windir\\System32\\spool\\PRINTERS\\*.*" -Force -Recurse; Start-Service -Name Spooler`;
+    const encodedCommand = Buffer.from(scriptBlock, 'utf16le').toString('base64');
+    const cmd = `powershell.exe -WindowStyle Hidden -Command "Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-ExecutionPolicy Bypass -EncodedCommand ${encodedCommand}' -Verb RunAs -Wait"`;
+    
+    exec(cmd, { windowsHide: true }, (error) => {
       if (error) {
         console.error("Clear spooler error:", error);
         resolve({ success: false, error: error.message });
@@ -2576,6 +2579,87 @@ ipcMain.handle("clear-print-spooler", async () => {
   });
 });
 
+ipcMain.handle("install-xprinter-driver", async () => {
+  return new Promise((resolve) => {
+    const { exec } = require("child_process");
+    const path = require("path");
+    const fs = require("fs");
+    
+    // Check paths for the driver
+    const devPath = path.join(__dirname, "..", "source", "XPrinter Driver Setup V7.77.exe");
+    const prodPath = path.join(process.resourcesPath, "source", "XPrinter Driver Setup V7.77.exe");
+    
+    let targetPath = fs.existsSync(prodPath) ? prodPath : (fs.existsSync(devPath) ? devPath : null);
+    
+    if (!targetPath) {
+      return resolve({ success: false, error: "XPrinter Driver Setup V7.77.exe faylı tapılmadı." });
+    }
+    
+    const cmd = `"${targetPath}"`;
+    exec(cmd, (error) => {
+      if (error) {
+        console.error("XPrinter install error:", error);
+        resolve({ success: false, error: error.message });
+      } else {
+        resolve({ success: true });
+      }
+    });
+  });
+});
+
+ipcMain.handle("custom-install-xprinter", async (event, config) => {
+  return new Promise((resolve) => {
+    const { exec } = require("child_process");
+    const path = require("path");
+    const os = require("os");
+    const fs = require("fs");
+
+    try {
+      const is64 = os.arch() === "x64";
+      const driverFolder = is64 ? "Windows x64" : "Windows NT x86";
+      const infFile = is64 ? "XPDRVx64.INF" : "XPDRVx86.INF";
+
+      const devPath = path.join(__dirname, "..", "source", "driver");
+      const prodPath = path.join(process.resourcesPath, "source", "driver");
+      const baseDriverPath = fs.existsSync(prodPath) ? prodPath : (fs.existsSync(devPath) ? devPath : null);
+
+      if (!baseDriverPath) {
+        return resolve({ success: false, error: "Drayver qovluğu (source/driver) tapılmadı!" });
+      }
+
+      const infPath = path.join(baseDriverPath, driverFolder, infFile);
+      const psScriptPath = path.join(baseDriverPath, "install-printer.ps1");
+
+      if (!fs.existsSync(infPath)) {
+        return resolve({ success: false, error: "INF faylı tapılmadı: " + infPath });
+      }
+
+      // Generate a script block to execute the ps1 file safely with paths containing spaces
+      const scriptBlock = `& '${psScriptPath}' -infPath '${infPath}' -model '${config.model}' -connectionType '${config.connectionType}' -ipAddress '${config.ipAddress || ''}' -comPort '${config.comPort || ''}' -printerName '${config.printerName}'`;
+      
+      // Convert to UTF-16LE Base64 for EncodedCommand
+      const encodedCommand = Buffer.from(scriptBlock, 'utf16le').toString('base64');
+
+      // We run PowerShell with elevated privileges using Start-Process, and Hidden window
+      const command = `powershell.exe -Command "Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-ExecutionPolicy Bypass -EncodedCommand ${encodedCommand}' -Verb RunAs -Wait -PassThru"`;
+
+      exec(command, { windowsHide: true }, (error, stdout, stderr) => {
+        if (error) {
+          console.error("XPrinter custom install error:", error);
+          return resolve({ success: false, error: error.message || stderr });
+        }
+        
+        // Auto-open Printer Properties so user can configure Cash Drawer and Beeper
+        const propertiesCmd = `rundll32 printui.dll,PrintUIEntry /p /n "${config.printerName}"`;
+        exec(propertiesCmd);
+
+        resolve({ success: true });
+      });
+    } catch (err) {
+      resolve({ success: false, error: err.message });
+    }
+  });
+});
 
 ipcMain.handle("scan-master", async () => {
   return new Promise((resolve) => {

@@ -1,0 +1,120 @@
+;
+;	Printer Installation File
+;
+;	 List of supported printers, manufacturers
+;
+
+[Version]
+Signature="$Windows NT$"
+Provider=%XP%
+ClassGUID={4D36E979-E325-11CE-BFC1-08002BE10318}
+Class=Printer
+CatalogFile=XPDRVx64.cat
+
+;
+; Manufacturer section.
+;
+; This section lists all of the manufacturers
+; that we will display in the Dialog box
+;
+
+[Manufacturer]
+"XP"=XP, NTamd64
+
+;
+; Model Specifications Section
+;
+
+[XP]
+"XP-58"     = XP58.GPD
+"XP-58C"    = XP58C.GPD
+"XP-80"     = XP80.GPD
+"XP-80C"    = XP80C.GPD
+"XP-90"     = XP90.GPD
+"XP-76"     = XP76.GPD
+"XP-76C"    = XP76C.GPD
+
+[XP.NTamd64]
+"XP-58"     = XP58.GPD
+"XP-58C"    = XP58C.GPD
+"XP-80"     = XP80.GPD
+"XP-80C"    = XP80C.GPD
+"XP-90"     = XP90.GPD
+"XP-76"     = XP76.GPD
+"XP-76C"    = XP76C.GPD
+
+;
+; Installer section(s) referenced above.
+;
+
+[XP58.GPD]
+CopyFiles=@XP58.DLL,@XP58.GPD
+DataSection=UNIDRV_DATA
+DataFile=XP58.GPD
+Include=NTPRINT.INF
+Needs=UNIDRV.OEM
+
+[XP58C.GPD]
+CopyFiles=@XP58.DLL,@XP58C.GPD
+DataSection=UNIDRV_DATA
+DataFile=XP58C.GPD
+Include=NTPRINT.INF
+Needs=UNIDRV.OEM
+
+[XP80.GPD]
+CopyFiles=@XP80.DLL,@XP80.GPD
+DataSection=UNIDRV_DATA
+DataFile=XP80.GPD
+Include=NTPRINT.INF
+Needs=UNIDRV.OEM
+
+[XP80C.GPD]
+CopyFiles=@XP80.DLL,@XP80C.GPD
+DataSection=UNIDRV_DATA
+DataFile=XP80C.GPD
+Include=NTPRINT.INF
+Needs=UNIDRV.OEM
+
+[XP90.GPD]
+CopyFiles=@XP90.DLL,@XP90.GPD
+DataSection=UNIDRV_DATA
+DataFile=XP90.GPD
+Include=NTPRINT.INF
+Needs=UNIDRV.OEM
+
+[XP76.GPD]
+CopyFiles=@XP76.DLL,@XP76.GPD
+DataSection=UNIDRV_DATA
+DataFile=XP76.GPD
+Include=NTPRINT.INF
+Needs=UNIDRV.OEM
+
+[XP76C.GPD]
+CopyFiles=@XP76.DLL,@XP76C.GPD
+DataSection=UNIDRV_DATA
+DataFile=XP76C.GPD
+Include=NTPRINT.INF
+Needs=UNIDRV.OEM
+
+[DestinationDirs]
+DefaultDestDir=66000
+
+[SourceDisksNames.amd64]
+1 = %disk1%,,,
+
+[SourceDisksFiles]
+XP58.DLL     = 1
+XP80.DLL     = 1
+XP90.DLL     = 1
+XP76.DLL     = 1
+XP58.GPD     = 1
+XP58C.GPD    = 1
+XP80.GPD     = 1
+XP80C.GPD    = 1
+XP90.GPD     = 1
+XP76.GPD     = 1
+XP76C.GPD    = 1
+
+[Strings]
+PrinterClassName="Printers"
+disk1="XINYE Printer Driver Setup Disk"

@@ -24,6 +24,20 @@ set "DB_NAME=unipos-new"
 set "DB_PASS=$2a$12$9IuwxtJ27i1RGqV/3m/OB.Lr2tilbrHvVPHUv06MmTMwDSwHTExW."
 :: ------------------------------
 
+if exist "%DATA_DIR%\mysql" (
+    echo [INFO] MariaDB is already installed.
+    echo [INFO] Skipping installation to prevent data loss.
+    
+    :: Ensure service is running just in case
+    sc config MariaDB start= auto >nul 2>&1
+    net start MariaDB >nul 2>&1
+    
+    echo ===================================================
+    echo [SUCCESS] MariaDB is ready and running!
+    echo ===================================================
+    exit /b 0
+)
+
 if not exist "%SOURCE_FOLDER%" (
     echo [ERROR] Source folder '%SOURCE_FOLDER%' not found!
     exit /b

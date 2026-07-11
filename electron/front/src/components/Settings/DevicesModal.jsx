@@ -14,6 +14,8 @@ import {
     getPrinterDiagnosticLabel,
     getPrinterKey,
 } from "../../utils/printerDiagnostics";
+
+import CustomXprinterInstallModal from './CustomXprinterInstallModal';
 import { t } from "../../utils/translations";
 import "./DevicesModal.css";
 
@@ -474,6 +476,11 @@ const DevicesModal = ({ show, onHide }) => {
     const [networkScanning, setNetworkScanning] = useState(false);
     const [isClearingSpooler, setIsClearingSpooler] = useState(false);
     const [showSpoolerModal, setShowSpoolerModal] = useState(false);
+    const [showCustomInstallModal, setShowCustomInstallModal] = useState(false);
+
+    const handleInstallXprinter = () => {
+        setShowCustomInstallModal(true);
+    };
 
     const handleClearSpooler = async () => {
         setIsClearingSpooler(true);
@@ -1206,7 +1213,7 @@ const DevicesModal = ({ show, onHide }) => {
 
     return (
         <>
-        <Modal show={show} onHide={onHide} centered size="xl" className="devices-modal">
+        <Modal show={show && !showCustomInstallModal} onHide={onHide} centered size="xl" className="devices-modal">
             <Modal.Header closeButton>
                 <Modal.Title>{t("cihazlar_ve_printerler")}</Modal.Title>
             </Modal.Header>
@@ -1339,15 +1346,25 @@ const DevicesModal = ({ show, onHide }) => {
                                                 <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600 }}>{t("printerler")}</h4>
                                                 <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>{t("cihaza_klikleyerek_tenzimlemeleri_edin")}</p>
                                             </div>
-                                            <button 
-                                                className="btn-save-printer"
-                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: isClearingSpooler ? 0.7 : 1 }}
-                                                onClick={handleClearSpooler}
-                                                disabled={isClearingSpooler}
-                                            >
-                                                {isClearingSpooler ? <i className="bi bi-arrow-repeat spin"></i> : <i className="bi bi-eraser-fill"></i>}
-                                                {isClearingSpooler ? "Təmizlənir..." : "Spooleri Təmizlə"}
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button 
+                                                    className="btn-test"
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '38px', borderRadius: '6px' }}
+                                                    onClick={handleInstallXprinter}
+                                                >
+                                                    <i className="bi bi-gear-fill"></i>
+                                                    XPrinter Qur (Xüsusi)
+                                                </button>
+                                                <button 
+                                                    className="btn-save-printer"
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: isClearingSpooler ? 0.7 : 1 }}
+                                                    onClick={handleClearSpooler}
+                                                    disabled={isClearingSpooler}
+                                                >
+                                                    {isClearingSpooler ? <i className="bi bi-arrow-repeat spin"></i> : <i className="bi bi-eraser-fill"></i>}
+                                                    {isClearingSpooler ? "Təmizlənir..." : "Spooleri Təmizlə"}
+                                                </button>
+                                            </div>
                                         </div>
                                         <div className="printers-grid" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                             {printers.map((printer, index) => {
@@ -1908,11 +1925,17 @@ const DevicesModal = ({ show, onHide }) => {
                 </div>
                 <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600, marginBottom: '8px' }}>Təmizləndi!</h4>
                 <p style={{ color: '#64748b', marginBottom: '24px' }}>Print spooler uğurla təmizləndi və yenidən başladıldı.</p>
-                <button onClick={() => setShowSpoolerModal(false)} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px', width: '100%', fontWeight: 500 }}>
+                <button onClick={() => setShowSpoolerModal(false)} style={{ background: '#4F85F4', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px', width: '100%', fontWeight: 500 }}>
                     Tamam
                 </button>
             </div>
         </Modal>
+
+        <CustomXprinterInstallModal 
+            show={showCustomInstallModal}
+            onHide={() => setShowCustomInstallModal(false)}
+            onInstallSuccess={() => handleRefreshSystemPrinters()}
+        />
         </>
     );
 };

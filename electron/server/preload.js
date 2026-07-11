@@ -41,4 +41,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     listComPorts: () => ipcRenderer.invoke("list-com-ports"),
     onModifierGroupsUpdated: (callback) => ipcRenderer.on("modifier-groups-updated", (event, data) => callback(data)),
     clearPrintSpooler: () => ipcRenderer.invoke("clear-print-spooler"),
+    installXprinterDriver: () => ipcRenderer.invoke("install-xprinter-driver"),
+    customInstallXprinter: (config) => ipcRenderer.invoke("custom-install-xprinter", config),
 });
