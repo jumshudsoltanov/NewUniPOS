@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.2.84",
+  "version": "2.2.85",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -54,7 +54,11 @@
       "!electron/mobile/**/*"
     ],
     "extraResources": [
-      ".env"
+      ".env",
+      {
+        "from": "electron/source",
+        "to": "source"
+      }
     ],
     "asar": true,
     "asarUnpack": [
@@ -86,7 +90,8 @@
       "createDesktopShortcut": true,
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false,
-      "warningsAsErrors": false
+      "warningsAsErrors": false,
+      "include": "scripts/installer.nsh"
     },
     "portable": {
       "artifactName": "UniPOS-Portable-${version}.${ext}"
