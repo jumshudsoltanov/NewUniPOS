@@ -34,8 +34,47 @@ const ModifierModal = ({
     // Helper to normalize group properties as they might vary from API/DB
     const normalizeGroup = (group) => {
         if (!group) return {};
+        
+        let rawItems = 
+            group.items || 
+            group.modifiers || 
+            group.modifier_items || 
+            group.products ||
+            null;
+
+        if (typeof rawItems === 'string') {
+            try { rawItems = JSON.parse(rawItems); } catch { rawItems = null; }
+        }
+
+        if (!rawItems || (Array.isArray(rawItems) && rawItems.length === 0)) {
+            for (const key of Object.keys(group)) {
+                if (['id','name','group_name','title','selection_type','type','is_required','required','max_selection','max_count','max'].includes(key)) continue;
+                const val = group[key];
+                if (typeof val === 'string' && val.length > 2) {
+                    try {
+                        const parsed = JSON.parse(val);
+                        if (Array.isArray(parsed) && parsed.length > 0) { rawItems = parsed; break; }
+                        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) { rawItems = Object.values(parsed); break; }
+                    } catch { /* not JSON */ }
+                }
+                if (Array.isArray(val) && val.length > 0) { rawItems = val; break; }
+                if (val && typeof val === 'object' && !Array.isArray(val)) {
+                    const vals = Object.values(val);
+                    if (vals.length > 0 && typeof vals[0] === 'object') { rawItems = vals; break; }
+                }
+            }
+        }
+
+        if (!rawItems) rawItems = [];
+        if (typeof rawItems === 'object' && !Array.isArray(rawItems)) {
+            rawItems = Object.values(rawItems);
+        }
+        if (!Array.isArray(rawItems)) rawItems = [];
+
         return {
             ...group,
+            name: group.name || group.group_name || group.title || "Modifikator",
+            items: rawItems,
             selection_type: group.selection_type || group.type || 'multiple',
             is_required: group.is_required === 1 || group.required === 1 || group.required === true,
             max_selection: parseInt(group.max_selection || group.max_count || 0)
@@ -50,22 +89,39 @@ const ModifierModal = ({
             parsedGroups = groups;
         } else if (typeof groups === 'string') {
             try { 
-                const parsed = JSON.parse(groups);
+                let parsed = JSON.parse(groups);
+                if (typeof parsed === 'string') {
+                    try { parsed = JSON.parse(parsed); } catch { /* ignore */ }
+                }
                 if (Array.isArray(parsed)) {
                     parsedGroups = parsed;
                 } else if (parsed && typeof parsed === 'object') {
                     parsedGroups = Object.values(parsed);
+                } else if (typeof parsed === 'string' && parsed.length > 5 && parsed !== '[]') {
+                    parsedGroups = [parsed];
                 }
             } catch { 
-                parsedGroups = []; 
+                if (groups.length > 5 && groups !== '[]' && groups !== 'null') {
+                    parsedGroups = [groups];
+                } else {
+                    parsedGroups = []; 
+                }
             }
         } else if (groups && typeof groups === 'object') {
             parsedGroups = Object.values(groups);
         }
 
         if (Array.isArray(parsedGroups) && parsedGroups.length > 0) {
-            // Ensure at least one group looks valid (has a name or items)
-            const isValid = parsedGroups.some(g => g && (g.name || (g.items && g.items.length > 0)));
+            // Ensure at least one group looks valid (has a name or items/modifiers)
+            const isValid = parsedGroups.some(g => g && (
+                g.name || g.group_name || g.title ||
+                (g.items && g.items.length > 0) || 
+                (g.modifiers && g.modifiers.length > 0) || 
+                (g.modifier_items && g.modifier_items.length > 0) ||
+                (g.products && g.products.length > 0) ||
+                (typeof g === 'string' && g.length > 5) ||
+                (typeof g === 'object' && Object.keys(g).some(k => typeof g[k] === 'object' || Array.isArray(g[k])))
+            ));
             if (isValid) {
                 return parsedGroups;
             }

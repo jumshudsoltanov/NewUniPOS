@@ -6,8 +6,18 @@ export function getCatalogModifierGroups(product) {
   if (Array.isArray(g)) return g;
   if (typeof g === "string") {
     try {
-      return JSON.parse(g) || [];
+      let parsed = JSON.parse(g);
+      if (typeof parsed === 'string') {
+        try { parsed = JSON.parse(parsed); } catch { /* ignore */ }
+      }
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return Object.values(parsed);
+      if (typeof parsed === 'string' && parsed.length > 5 && parsed !== '[]') {
+        return [parsed];
+      }
+      return [];
     } catch {
+      if (g.length > 5 && g !== '[]' && g !== 'null') return [g];
       return [];
     }
   }
@@ -18,7 +28,15 @@ export function getCatalogModifierGroups(product) {
 export function buildModifierIdLookupFromCatalog(catalogProduct) {
   const map = new Map();
   getCatalogModifierGroups(catalogProduct).forEach((group) => {
-    (group.items || []).forEach((item) => {
+    let items = group.items || group.modifiers || group.modifier_items || group.products || [];
+    if (typeof items === 'string') {
+        try { items = JSON.parse(items); } catch { items = []; }
+    }
+    if (!Array.isArray(items)) {
+        if (typeof items === 'object') items = Object.values(items);
+        else items = [];
+    }
+    items.forEach((item) => {
       const id = Number(item.id);
       if (!Number.isNaN(id)) map.set(id, item);
     });

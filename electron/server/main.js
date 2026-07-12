@@ -2917,6 +2917,9 @@ function ensureFirewallRule() {
 }
 
 app.whenReady().then(() => {
+  // Avtomatik startup
+  app.setLoginItemSettings({ openAtLogin: true });
+
   ensureFirewallRule();
   createWindow();
 

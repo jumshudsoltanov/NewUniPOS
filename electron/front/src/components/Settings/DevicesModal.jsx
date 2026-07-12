@@ -643,13 +643,32 @@ const DevicesModal = ({ show, onHide }) => {
             const prRes = await apiConfig.get(`/pos/printers/${profileId}`);
 
             const rawPrinters = prRes.data.data || [];
-            const normalizedPrinters = rawPrinters.map(p => {
+            let normalizedPrinters = rawPrinters.map(p => {
                 const ct = p.connection_type || 'network';
                 const isNet = ct !== 'usb' && ct !== 'com';
                 const autoName = isNet && p.ip ? `UNIPOS_${String(p.ip).replace(/\./g, '_')}` : null;
                 const usbName = p.usb_name && p.usb_name.trim() ? p.usb_name : (autoName || '');
                 return { ...p, connection_type: ct, usb_name: usbName };
             });
+
+            try {
+                const cachedRaw = localStorage.getItem("unipos_printers_cache");
+                if (cachedRaw) {
+                    const cached = JSON.parse(cachedRaw);
+                    if (String(cached.profileId) === String(profileId) && Array.isArray(cached.printers)) {
+                        normalizedPrinters = normalizedPrinters.map(serverPrinter => {
+                            const localMatch = cached.printers.find(lp => Number(lp.id) === Number(serverPrinter.id));
+                            if (localMatch) {
+                                return { ...serverPrinter, ...localMatch, connection_status: serverPrinter.connection_status };
+                            }
+                            return serverPrinter;
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to load printers cache:", err);
+            }
+
             setPrinters(normalizedPrinters);
 
             const authStr = localStorage.getItem("authResult");
@@ -701,8 +720,12 @@ const DevicesModal = ({ show, onHide }) => {
     };
 
     const updatePrinterField = useCallback((field, value) => {
-        setPrinters(prev => prev.map((p, i) => i === selectedPrinterIndex ? { ...p, [field]: value } : p));
-    }, [selectedPrinterIndex]);
+        setPrinters(prev => {
+            const updated = prev.map((p, i) => i === selectedPrinterIndex ? { ...p, [field]: value } : p);
+            savePrintersToStorage(profileId, updated);
+            return updated;
+        });
+    }, [selectedPrinterIndex, profileId]);
 
     const handleRefreshSystemPrinters = async () => {
         setSystemPrintersLoading(true);
@@ -739,10 +762,10 @@ const DevicesModal = ({ show, onHide }) => {
 
     const handleUpdatePrinter = async (printer) => {
         try {
-            await apiConfig.put(`/printers/${printer.id}`, printer);
-            // Cache-i təmizlə ki növbəti çapdа yeni parametrlər götürülsün
-            clearPrintersCache();
-            // Redux store-dakı printers siyahısını da yenilə
+            // Her halda mövcud printers siyahısını (DevicesModal state-dən) cache-ə yazaq
+            const updatedPrinters = printers.map(p => Number(p.id) === Number(printer.id) ? { ...p, ...printer } : p);
+            savePrintersToStorage(profileId, updatedPrinters);
+
             try {
                 const authStr = localStorage.getItem("authResult");
                 if (authStr) {
@@ -751,11 +774,14 @@ const DevicesModal = ({ show, onHide }) => {
                         auth.data.printers = auth.data.printers.map(p => Number(p.id) === Number(printer.id) ? { ...p, ...printer } : p);
                         localStorage.setItem("authResult", JSON.stringify(auth));
                         dispatch(setLoginData(auth));
-                        // Printer məlumatlarını localStorage cache-ə yaz (şəbəkə kəsildikdə istifadə üçün)
-                        savePrintersToStorage(auth.data.profile?.id, auth.data.printers);
                     }
                 }
             } catch (e) { /* non-critical */ }
+
+            await apiConfig.put(`/printers/${printer.id}`, printer);
+            // Cache-i təmizlə ki növbəti çapdа yeni parametrlər götürülsün
+            clearPrintersCache();
+            
             toast.success(`${printer.local_name || printer.name} yadda saxlandı`);
         } catch (error) {
             toast.error("Xəta baş verdi: " + (error?.response?.data?.message || error.message));
@@ -1388,13 +1414,19 @@ const DevicesModal = ({ show, onHide }) => {
                                                                 <span className={`printer-status-dot printer-status-dot--${statusClass}`}></span>
                                                             </div>
                                                             <div className="printer-card-title">
-                                                                <h5>{printer.local_name || printer.name}</h5>
+                                                                <h5>{printer.name || "Printer"}</h5>
                                                                 <span>
                                                                     {printer.is_cashier === 1 ? "Kassa Printeri" : "Mətbəx Printeri"}
                                                                     {printer.connection_type === 'usb' && printer.usb_name ? ` • USB: ${printer.usb_name}` : ''}
                                                                     {printer.connection_type === 'com' && printer.usb_name ? ` • COM: ${printer.usb_name}` : ''}
                                                                     {isNet && printer.ip ? ` • ${printer.ip}` : ''}
                                                                 </span>
+                                                                {printer.local_name && (
+                                                                    <div style={{ marginTop: '4px', fontSize: '12px', color: '#3b82f6', fontWeight: 500 }}>
+                                                                        <i className="bi bi-diagram-3" style={{ marginRight: '4px' }}></i>
+                                                                        Bağlı şöbələr: {printer.local_name}
+                                                                    </div>
+                                                                )}
                                                                 {showDiagnosticDetail && (
                                                                     <small className="printer-diagnostic-detail">
                                                                         {[statusLabel, diagnostic?.detail, queuedText ? `Növbə: ${diagnostic.queuedJobs}` : ""].filter(Boolean).join(" • ")}
@@ -1420,6 +1452,7 @@ const DevicesModal = ({ show, onHide }) => {
                                     </>
                                 ) : selectedPrinterIndex !== null && printers[selectedPrinterIndex] ? (() => {
                                     const allDeptsMap = new Map();
+                                    // 1. Collect from all printers' local_name (comma-separated dept names)
                                     printers.forEach(p => {
                                         if (p.local_name) {
                                             p.local_name.split(',').forEach(s => {
@@ -1429,8 +1462,24 @@ const DevicesModal = ({ show, onHide }) => {
                                                 }
                                             });
                                         }
+                                        // Also add printer's own name as a department
                                         if (p.name && !allDeptsMap.has(p.name.toLowerCase())) {
                                             allDeptsMap.set(p.name.toLowerCase(), p.name);
+                                        }
+                                    });
+                                    // 2. Also collect from profileData printers (authoritative department list)
+                                    const profilePrinters = loginedProfileData?.data?.printers || [];
+                                    profilePrinters.forEach(p => {
+                                        if (p.name && !allDeptsMap.has(p.name.toLowerCase())) {
+                                            allDeptsMap.set(p.name.toLowerCase(), p.name);
+                                        }
+                                        if (p.local_name) {
+                                            p.local_name.split(',').forEach(s => {
+                                                const trimmed = s.trim();
+                                                if (trimmed && !allDeptsMap.has(trimmed.toLowerCase())) {
+                                                    allDeptsMap.set(trimmed.toLowerCase(), trimmed);
+                                                }
+                                            });
                                         }
                                     });
                                     const allDepartments = Array.from(allDeptsMap.values());

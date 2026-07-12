@@ -435,11 +435,27 @@ const CheckMain = ({ orders, table }) => {
     if (item.isDeleted) return; // Prevent clicking deleted items
 
     const catalogProduct = findCatalogProduct(menu, item.product_id);
-    const hasGroups = catalogProduct?.modifier_groups && (
-      (Array.isArray(catalogProduct.modifier_groups) && catalogProduct.modifier_groups.length > 0) ||
-      (typeof catalogProduct.modifier_groups === 'object' && Object.keys(catalogProduct.modifier_groups).length > 0) ||
-      (typeof catalogProduct.modifier_groups === 'string' && catalogProduct.modifier_groups.length > 5)
+
+    // Check if catalog product has non-empty modifier groups
+    const catalogGroups = catalogProduct?.modifier_groups;
+    const hasValidCatalogGroups = catalogGroups && (
+      (Array.isArray(catalogGroups) && catalogGroups.length > 0) ||
+      (typeof catalogGroups === 'string' && catalogGroups.length > 5 && catalogGroups !== '[]' && catalogGroups !== 'null') ||
+      (typeof catalogGroups === 'object' && !Array.isArray(catalogGroups) && Object.keys(catalogGroups).length > 0)
     );
+
+    // Check if item itself has modifier_groups stored (JSON string from when order was made)
+    const itemGroups = item.modifier_groups;
+    const hasValidItemGroups = itemGroups && (
+      (Array.isArray(itemGroups) && itemGroups.length > 0) ||
+      (typeof itemGroups === 'string' && itemGroups.length > 5 && itemGroups !== '[]' && itemGroups !== 'null') ||
+      (typeof itemGroups === 'object' && !Array.isArray(itemGroups) && Object.keys(itemGroups).length > 0)
+    );
+
+    const hasGroups = hasValidCatalogGroups || hasValidItemGroups;
+
+    // Use non-empty modifier_groups: prefer fresh catalog, fallback to stored item data
+    const resolvedModifierGroups = hasValidCatalogGroups ? catalogGroups : (itemGroups || catalogGroups);
 
     if (hasGroups || (item.modifiers && item.modifiers.length > 0)) {
       const editableModifierProduct = {
@@ -449,7 +465,7 @@ const CheckMain = ({ orders, table }) => {
         product_id: item.product_id || catalogProduct?.id || item.id,
         name: getDisplayProductName(item, catalogProduct),
         price: item.price ?? catalogProduct?.price ?? 0,
-        modifier_groups: catalogProduct?.modifier_groups ?? item.modifier_groups,
+        modifier_groups: resolvedModifierGroups,
         modifiers: item.modifiers,
         count: item.count,
         quantity: item.count,

@@ -245,14 +245,27 @@ const Menu = ({
 
     const getModifierGroups = (prod) => {
       if (!prod?.modifier_groups) return [];
-      if (Array.isArray(prod.modifier_groups)) return prod.modifier_groups;
-      if (typeof prod.modifier_groups === "string") {
+      const g = prod.modifier_groups;
+      if (Array.isArray(g)) return g;
+      if (typeof g === "string") {
         try {
-          return JSON.parse(prod.modifier_groups) || [];
+          let parsed = JSON.parse(g);
+          if (typeof parsed === 'string') {
+              try { parsed = JSON.parse(parsed); } catch { /* ignore */ }
+          }
+          if (Array.isArray(parsed)) return parsed;
+          if (parsed && typeof parsed === 'object') return Object.values(parsed);
+          // If it's still a string but has content, maybe it's just poorly formatted
+          if (typeof parsed === 'string' && parsed.length > 5 && parsed !== '[]') {
+              return [parsed];
+          }
+          return [];
         } catch {
+          if (g.length > 5 && g !== '[]' && g !== 'null') return [g];
           return [];
         }
       }
+      if (typeof g === 'object') return Object.values(g);
       return [];
     };
     if (getModifierGroups(product).length > 0) {

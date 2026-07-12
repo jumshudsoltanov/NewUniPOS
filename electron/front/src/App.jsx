@@ -395,7 +395,20 @@ function AppContent() {
               localStorage.setItem("authResult", JSON.stringify(data));
               // Printer məlumatlarını localStorage-a yaz (şəbəkə kəsildikdə istifadə üçün)
               if (data?.data?.printers?.length && data?.data?.profile?.id) {
-                savePrintersToStorage(data.data.profile.id, data.data.printers);
+                let mergedPrinters = data.data.printers;
+                try {
+                  const cachedRaw = localStorage.getItem("unipos_printers_cache");
+                  if (cachedRaw) {
+                    const cached = JSON.parse(cachedRaw);
+                    if (String(cached.profileId) === String(data.data.profile.id) && Array.isArray(cached.printers)) {
+                      mergedPrinters = mergedPrinters.map(serverPrinter => {
+                        const localMatch = cached.printers.find(lp => Number(lp.id) === Number(serverPrinter.id));
+                        return localMatch ? { ...serverPrinter, ...localMatch, connection_status: serverPrinter.connection_status } : serverPrinter;
+                      });
+                    }
+                  }
+                } catch(e) {}
+                savePrintersToStorage(data.data.profile.id, mergedPrinters);
               }
 
               // authPos LoginModel-i yenilədi — backend rolunu yenidən yoxlasın (Master/Slave)
