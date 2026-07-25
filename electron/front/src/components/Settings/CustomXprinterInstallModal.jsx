@@ -44,7 +44,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
 
     return (
         <Offcanvas show={show} onHide={() => !isInstalling && onHide()} placement="end" style={{ width: '600px', borderLeft: 'none', boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}>
-            <Offcanvas.Header closeButton={!isInstalling} closeVariant="white" style={{ background: '#1e293b', padding: '24px 32px', borderBottom: 'none' }}>
+            <Offcanvas.Header closeButton={!isInstalling} closeVariant="white" style={{ background: '#053796', padding: '24px 32px', borderBottom: 'none' }}>
                 <Offcanvas.Title style={{ fontSize: '20px', fontWeight: 600, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <i className="bi bi-printer"></i> Yeni Printer Quraşdır
                 </Offcanvas.Title>

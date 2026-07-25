@@ -21,6 +21,7 @@ import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from "r
 import Login from "./components/Login/Login";
 import Layout from "./components/Layout/Layout";
 import PinBackground from "./assets/images/PinContainerImagesDefault.jpg";
+import uniposLogo from "./assets/images/unipos_logo.png";
 import Toastify from "./components/Toastify/Toastify";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -460,11 +461,13 @@ function AppContent() {
       } catch (globalErr) {
         console.error("Critical boot error:", globalErr);
       } finally {
-        setShowInitialLoading(false);
+        setTimeout(() => {
+          setShowInitialLoading(false);
+        }, 1500);
       }
     };
 
-    initApp().then(() => setShowInitialLoading(false));
+    initApp();
   }, [dispatch, navigate]);
 
   // Preload Check komponenti — Pin/Tables/Checks açılanda arxa planda yüklə (yeni sifariş tez açılsın)
@@ -479,25 +482,24 @@ function AppContent() {
     return (
       <>
         <div className="loading-overlay-transparent">
-          <div className="loading-overlay-inner">
-            <img src="/favicon.png" alt="UniPOS" style={{ width: 64, height: 64, marginBottom: 16, borderRadius: 8 }} />
-            <div className="premium-loader">
-              <div className="loader-ring"></div>
-              <div className="loader-dot"></div>
+          <div className="cool-spinner-container">
+            <div className="cool-spinner-logo-wrapper">
+              <div className="cool-spinner-ring"></div>
+              <img 
+                src={uniposLogo} 
+                alt="UniPOS" 
+                className="cool-spinner-logo"
+                onError={(e) => { if (e.target.src !== window.location.origin + "/favicon.png") e.target.src = "/favicon.png"; }}
+              />
             </div>
-            <p className="loadingText">Sistem yüklənir...</p>
+            <p className="cool-loading-text">Sistem yüklənir...</p>
           </div>
         </div>
       </>
     );
   }
 
-  // Hotel mode: show Rooms instead of Tables
-  function TablesOrRooms() {
-    const isHotelMode = Number(authResultRedux?.data?.profile?.is_hotel_mode) === 1;
-    if (isHotelMode) return <Rooms />;
-    return <Tables />;
-  }
+  // Removed TablesOrRooms from here to prevent re-mounting
 
   return (
     <>
@@ -514,8 +516,8 @@ function AppContent() {
         <Route path="/kitchen" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><KitchenDisplay /></Suspense>} />
 
         <Route element={<Layout />}>
-          <Route path="/tables" element={<TablesOrRooms />} />
-          <Route path="/tables/:id" element={<TablesOrRooms />} />
+          <Route path="/tables" element={Number(authResultRedux?.data?.profile?.is_hotel_mode) === 1 ? <Rooms /> : <Tables />} />
+          <Route path="/tables/:id" element={Number(authResultRedux?.data?.profile?.is_hotel_mode) === 1 ? <Rooms /> : <Tables />} />
           <Route path="/checks" element={<Checks />} />
         </Route>
 

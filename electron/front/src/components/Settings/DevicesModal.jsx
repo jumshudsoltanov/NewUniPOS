@@ -43,10 +43,10 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                     </button>
                     <div>
                         <div style={{ fontWeight: 700, fontSize: '15px', color: '#1e293b' }}>
-                            {ct === 'usb' ? 'USB / System' : ct === 'com' ? 'COM Port' : 'Network'}
+                            {printer.name || (ct === 'usb' ? 'USB / System' : ct === 'com' ? 'COM Port' : 'Network')}
                         </div>
                         <div style={{ fontSize: '13px', color: '#64748b' }}>
-                            {ct === 'com' ? (printer.usb_name || '—') : (printer.ip || printer.usb_name || printer.local_name || printer.name)}
+                            {ct === 'usb' ? `USB: ${printer.usb_name || 'Təyin edilməyib'}` : ct === 'com' ? `COM: ${printer.usb_name || '—'}` : `IP: ${printer.ip || '—'}`}
                         </div>
                     </div>
                 </div>

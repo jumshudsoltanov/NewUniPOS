@@ -1445,8 +1445,8 @@ function getEscPosRasterCompat(printerName, settings) {
     L.includes("ZJPRINT");
   if (!zj) {
     return {
-      chunkRows: 24,
-      cutFeedLines: 6,
+      chunkRows: 8,
+      cutFeedLines: 4,
       trailingExtraLines: 0,
       receiptWidthPx: null,
       leftInsetPx: 0,
@@ -1891,7 +1891,7 @@ ipcMain.handle(
         if (hasBlack) { lastBlackRow = y; break; }
       }
       
-      const trimmedH = Math.min(imgH, lastBlackRow + 10); // 10px əlavə boşluq qalsın
+      const trimmedH = Math.min(imgH, lastBlackRow + 60); // 60px əlavə boşluq qalsın
       console.log(`[RASTER] Trim: OriginalH=${imgH}, TrimmedH=${trimmedH}`);
 
       // Kiçik chunk: bəzi printerlər böyük GS v0 raster bloklarını buffer overflow edir

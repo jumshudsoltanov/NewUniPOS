@@ -232,9 +232,11 @@ const CustomerReceipt = ({
             display: "flex",
             marginTop: "6px",
             paddingTop: "4px",
+            paddingBottom: "30px",
             fontWeight: "900",
+            alignItems: "center",
         },
-        qr: { width: "60px" },
+        qr: { width: "80px", minWidth: "80px", minHeight: "80px", flexShrink: 0 },
         thanks: {
             flex: 1,
             paddingLeft: isQrHidden ? "0" : "6px",
@@ -743,7 +745,7 @@ const CustomerReceipt = ({
             <div style={styles.footer}>
                 {!isQrHidden && (
                     <div style={styles.qr}>
-                        <QRCode value={qrCodeValue} size={60} level="H" />
+                        <QRCode value={qrCodeValue} size={80} level="H" style={{ width: "80px", height: "80px", minWidth: "80px", minHeight: "80px" }} />
                     </div>
                 )}
 

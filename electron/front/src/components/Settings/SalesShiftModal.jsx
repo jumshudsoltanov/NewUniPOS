@@ -62,26 +62,33 @@ const buildShiftPrintHtml = ({
     return `
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; color: #000; }
-  body { font-family: ${fontFamily}; font-size: ${fs(12)}; color: #000; width: ${paperWidth === 80 ? '300px' : '200px'}; margin: 0 auto; padding: 10px; }
+  body { font-family: ${fontFamily}; font-size: ${fs(12)}; color: #000; width: 100%; margin: 0; padding: 0; overflow: hidden; overflow-wrap: break-word; word-wrap: break-word; }
   .divider { border: none; border-top: 1px solid #000; margin: 3px 0; }
   .logo-wrap { text-align: center; margin-bottom: 4px; }
   .logo-wrap img { max-width: 60px; max-height: 40px; object-fit: contain; }
   .title { font-size: ${fs(14)}; font-weight: 900; text-align: center; margin-bottom: 1px; letter-spacing: 1px; }
   .profile { font-size: ${fs(12)}; font-weight: 700; text-align: center; margin-bottom: 2px; }
-  .kv { display: flex; justify-content: space-between; font-size: ${fs(11)}; margin-bottom: 2px; }
-  .kv-label { color: #000; }
-  .kv-value { font-weight: 700; color: #000; text-align: right; }
+  .kv { display: flex; justify-content: space-between; font-size: ${fs(11)}; margin-bottom: 2px; align-items: flex-start; }
+  .kv-label { color: #000; flex-shrink: 0; margin-right: 5px; }
+  .kv-value { font-weight: 700; color: #000; text-align: right; word-wrap: break-word; overflow-wrap: break-word; max-width: 65%; }
   .section-title { font-size: ${fs(11)}; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin: 4px 0 2px; }
-  table { width: 100%; border-collapse: collapse; font-size: ${fs(11)}; color: #000; margin-bottom: 2px; }
+  table { width: 100%; max-width: 100%; border-collapse: collapse; font-size: ${fs(11)}; color: #000; margin-bottom: 2px; table-layout: fixed; word-wrap: break-word; }
+  td, th { word-wrap: break-word; overflow-wrap: break-word; }
+  table.t-3 th:nth-child(1), table.t-3 td:nth-child(1) { width: 45%; }
+  table.t-3 th:nth-child(2), table.t-3 td:nth-child(2) { width: 20%; text-align: center; }
+  table.t-3 th:nth-child(3), table.t-3 td:nth-child(3) { width: 35%; text-align: right; }
+  table.t-2 th:nth-child(1), table.t-2 td:nth-child(1) { width: 60%; }
+  table.t-2 th:nth-child(2), table.t-2 td:nth-child(2) { width: 40%; text-align: right; }
   th { font-weight: 900; text-align: left; padding: 2px 1px; border-bottom: 1px solid #000; font-size: ${fs(10)}; text-transform: uppercase; color: #000; }
   td { padding: 2px 1px; border-bottom: 1px dashed #000; color: #000; }
   tbody tr:last-child td { border-bottom: none; }
   .r { text-align: right; }
   .cat-row td { font-weight: 900; border-bottom: 1px solid #000; }
   .total-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; padding-top: 2px; border-top: 2px solid #000; }
-  .total-label { font-size: ${fs(12)}; font-weight: 900; text-transform: uppercase; color: #000; }
-  .total-amount { font-size: ${fs(14)}; font-weight: 900; color: #000; }
+  .total-label { font-size: ${fs(12)}; font-weight: 900; text-transform: uppercase; color: #000; flex-shrink: 0; }
+  .total-amount { font-size: ${fs(14)}; font-weight: 900; color: #000; word-wrap: break-word; overflow-wrap: break-word; text-align: right; }
   .footer-note { text-align: center; font-size: ${fs(10)}; margin-top: 4px; border-top: 1px dashed #000; padding-top: 4px; }
+  .powered-by { text-align: center; font-size: ${fs(9)}; margin-top: 8px; padding-top: 4px; border-top: 1px dashed #000; color: #555; letter-spacing: 0.5px; }
 </style>
 ${logoSrc ? `<div class="logo-wrap"><img src="${logoSrc}" alt="logo"/></div>` : ""}
 ${profileName ? `<div class="profile">${escapeHtml(profileName)}</div>` : ""}
@@ -112,15 +119,16 @@ ${(Number(summary?.total_paid || 0) > 0 || Number(summary?.total_unpaid || 0) > 
 ${Number(summary?.guest_count || 0) > 0 ? `<div class="kv" style="margin-top:3px"><span class="kv-label">${t("guest_count")}</span><span class="kv-value">${summary?.guest_count ?? 0}</span></div>` : ""}
 <hr class="divider" style="margin-top:8px"/>
 <div class="section-title">${t("ofisiant_uzre")}</div>
-<table><thead><tr><th>${t("ad_name")}</th><th class="r">${t("cek")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+<table class="t-3"><thead><tr><th>${t("ad_name")}</th><th class="r">${t("cek")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${empRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
 <hr class="divider"/>
 <div class="section-title">${t("satis_tipi_1")}</div>
-<table><thead><tr><th>${t("type")}</th><th class="r">${t("say_count")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
-${payRows ? `<hr class="divider"/><div class="section-title">${t("odenis_usullari")}</div><table><thead><tr><th>${t("usul")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${payRows}</tbody></table>` : ""}
-${unpaidRows ? `<hr class="divider"/><div class="section-title">${t("odenissiz_baglamalar")}</div><table><thead><tr><th>${t("usul")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${unpaidRows}</tbody></table>` : ""}
-${tagRows ? `<hr class="divider"/><div class="section-title">${t("etiketler")}</div><table><thead><tr><th>${t("etiket_tag")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
-${catRows ? `<hr class="divider"/><div class="section-title">${t("kateqoriya_hesabati")}</div><table><thead><tr><th>${t("kateqoriya_category")}</th><th class="r">${t("say_count")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
-${footerNote ? `<div class="footer-note">${escapeHtml(footerNote)}</div>` : ""}`;
+<table class="t-3"><thead><tr><th>${t("type")}</th><th class="r">${t("say_count")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${smRows || "<tr><td colspan='3' style='text-align:center'>—</td></tr>"}</tbody></table>
+${payRows ? `<hr class="divider"/><div class="section-title">${t("odenis_usullari")}</div><table class="t-2"><thead><tr><th>${t("usul")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${payRows}</tbody></table>` : ""}
+${unpaidRows ? `<hr class="divider"/><div class="section-title">${t("odenissiz_baglamalar")}</div><table class="t-2"><thead><tr><th>${t("usul")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${unpaidRows}</tbody></table>` : ""}
+${tagRows ? `<hr class="divider"/><div class="section-title">${t("etiketler")}</div><table class="t-2"><thead><tr><th>${t("etiket_tag")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${tagRows}</tbody></table>` : ""}
+${catRows ? `<hr class="divider"/><div class="section-title">${t("kateqoriya_hesabati")}</div><table class="t-3"><thead><tr><th>${t("kateqoriya_category")}</th><th class="r">${t("say_count")}</th><th class="r">${t("mebleg")}</th></tr></thead><tbody>${catRows}</tbody></table>` : ""}
+${footerNote ? `<div class="footer-note">${escapeHtml(footerNote)}</div>` : ""}
+<div class="powered-by">Powered by UniPOS</div>`;
 };
 
 function escapeHtml(s) {
@@ -532,7 +540,7 @@ const SalesShiftModal = ({ show, onHide }) => {
             const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
             const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
             const printerSettings = {
-                paper_size: overrideSettings.paperWidth ? String(overrideSettings.paperWidth) : (cashierPrinter.paper_size || '80'),
+                paper_size: String(cashierPrinter.paper_size || '80'),
                 cut_mode: cashierPrinter.cut_mode || 'full',
                 sound_notify: cashierPrinter.sound_notify || 0,
                 cash_drawer: cashierPrinter.cash_drawer || 0,
@@ -594,9 +602,10 @@ const SalesShiftModal = ({ show, onHide }) => {
         } catch(e) {}
         
         const overrideFontPx = savedSettings.fontSizeOffset ?? baseReceiptFont;
+        const actualPaperSize = String(cashierPrinters?.[0]?.paper_size || '80');
         
         const html = buildShiftPrintHtml({
-            profileName: profile?.company_name || profile?.name || `${t("profil_profile")} #${profileId}`,
+            profileName: profile?.restaurant_name || profile?.company_name || terminalInfo?.filial || profile?.name || profileDisplayName || `${t("profil_profile")} #${profileId}`,
             logoSrc,
             openedAt: snapshot.openedAt,
             closedAt: snapshot.closedAt,
@@ -608,9 +617,9 @@ const SalesShiftModal = ({ show, onHide }) => {
             footerNote: isReprint ? t("tekrar_cap") : "",
             baseFontPx: overrideFontPx,
             fontFamily: savedSettings.fontFamily,
-            paperWidth: savedSettings.paperWidth,
+            paperWidth: actualPaperSize,
         });
-        await printToCashier(html, { paperWidth: savedSettings.paperWidth });
+        await printToCashier(html, { paperWidth: actualPaperSize });
     };
 
     const handleOpenShift = async () => {

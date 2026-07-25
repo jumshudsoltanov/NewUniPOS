@@ -367,7 +367,7 @@ export const processAndPrintOrders = async (
                 open_drawer_without_print: printerObj.open_drawer_without_print || 0,
                 paper_size: printerObj.paper_size || "80",
                 font_family: printerObj.font_family || "Arial",
-                usb_name: isComDel ? null : (printerObj.usb_name && printerObj.usb_name !== "RASTER" ? printerObj.usb_name : (printerObj.name || null)),
+                usb_name: isComDel ? null : hasUsb ? printerObj.usb_name : (isNet ? null : (printerObj.name || null)),
                 fast_print: printerObj.fast_print ? 1 : 0,
                 print_logo: printerObj.print_logo != null ? Number(printerObj.print_logo) : 1,
                 rotate_180: printerObj.rotate_180 ? 1 : 0,
@@ -378,9 +378,9 @@ export const processAndPrintOrders = async (
                   (printerObj?.local_name ? printerObj.local_name.trim() : (printerObj?.name || printerName || "")),
             } : {};
             const safeDelSettings = JSON.parse(JSON.stringify(delPrinterSettings));
-            const resolvedDelUsbName = printerObj?.usb_name && printerObj.usb_name !== "RASTER"
+            const resolvedDelUsbName = hasUsb
               ? printerObj.usb_name
-              : (printerObj?.name ? printerObj.name.trim() : (printerName || ""));
+              : (isNet ? "" : (printerObj?.name ? printerObj.name.trim() : (printerName || "")));
             const delegatePayload =
               isNet && printerObj?.ip && !hasUsb
                 ? {
@@ -456,9 +456,9 @@ export const processAndPrintOrders = async (
           // usb_name konfiqurasiya edilməyibsə name → printerName sıra ilə istifadə et (local_name route üçündür)
           const resolvedUsbName = isCom2
             ? (printerObj?.usb_name || printerName || "")
-            : (printerObj?.usb_name && printerObj.usb_name !== "RASTER")
+            : hasUsbName
               ? printerObj.usb_name
-              : (printerObj?.name ? printerObj.name.trim() : (printerName || ""));
+              : (isNetwork ? "" : (printerObj?.name ? printerObj.name.trim() : (printerName || "")));
           const targetPrinter = resolvedUsbName;
           const printerSettings = printerObj
             ? {
@@ -589,41 +589,40 @@ export const printCustomerReceipt = async (
   profileData,
   options = {},
 ) => {
-  let printers = profileData?.data?.printers;
   const profileId = profileData?.data?.profile?.id;
-
+  
+  // ALWAYS prefer the local cache because it contains the user's manual settings (usb_name, local_name, etc.)
+  let printers = loadPrintersFromStorage(profileId);
+  
   if (!printers || !Array.isArray(printers) || printers.length === 0) {
-    if (
-      _printersCache.profileId === profileId &&
-      _printersCache.printers?.length
-    ) {
-      printers = _printersCache.printers;
-    } else {
-      try {
-        if (profileId) {
-          const response = await axios.get(`/pos/printers/${profileId}`);
-          if (response.data && Array.isArray(response.data.data)) {
-            printers = response.data.data;
-            _printersCache = { profileId, printers };
-            savePrintersToStorage(profileId, printers);
+    printers = profileData?.data?.printers;
+    
+    if (!printers || !Array.isArray(printers) || printers.length === 0) {
+      if (
+        _printersCache.profileId === profileId &&
+        _printersCache.printers?.length
+      ) {
+        printers = _printersCache.printers;
+      } else {
+        try {
+          if (profileId) {
+            const response = await axios.get(`/pos/printers/${profileId}`);
+            if (response.data && Array.isArray(response.data.data)) {
+              printers = response.data.data;
+              _printersCache = { profileId, printers };
+              savePrintersToStorage(profileId, printers);
+            }
           }
-        }
-      } catch (error) {
-        console.error("Error fetching printers:", error);
-        // DB-dən gəlmədisə localStorage-dan oxu
-        const stored = loadPrintersFromStorage(profileId);
-        if (stored) {
-          printers = stored;
-          _printersCache = { profileId, printers };
-          console.warn(
-            "[PRINTER] DB-dən printer yükləmə uğursuz, localStorage cache istifadə edilir",
-          );
+        } catch (error) {
+          console.error("Error fetching printers:", error);
+          const stored = loadPrintersFromStorage(profileId);
+          if (stored) {
+            printers = stored;
+            _printersCache = { profileId, printers };
+          }
         }
       }
     }
-  } else if (profileId) {
-    _printersCache = { profileId, printers };
-    savePrintersToStorage(profileId, printers);
   }
 
   const cashierPrinters = resolveCashierPrintersForPrint(printers);
