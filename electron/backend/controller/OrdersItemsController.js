@@ -20,6 +20,7 @@ const WASTE_API_FALLBACK = "http://46.224.8.157:35627/api/pos/write-off";
  * Admin anbar API-yə tullantı məlumatı göndər.
  * waste items: [{ product_id, qty, price, reason_id, comment }]
  */
+
 const sendWasteToAdmin = async (profileId, wasteItems) => {
   if (!wasteItems || !wasteItems.length) return;
   const payload = { profile_id: profileId, items: wasteItems };
@@ -45,6 +46,7 @@ const syncNowAndQueue = async (orderIds = []) => {
   await Promise.allSettled(uniqueIds.map((id) => SyncService.triggerSync(id)));
   uniqueIds.forEach((id) => SyncService.queueSync(id));
 };
+
 
 /**
  * Helper to attach live timer status to an order object for responses.
@@ -90,6 +92,7 @@ const attachLiveTimerToOrder = (order) => {
  * məhsul + taymer (işləyəndə canlı hesab, dayananda DB-dəki rate_per_minute).
  * onStopTimer ilə eyni məntiqi izləyir.
  */
+
 const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
   const tx = transaction || undefined;
   const listOfProducts = await OrdersItemsModel.findAll({
@@ -1130,7 +1133,7 @@ const onSplitOrder = async (req, res) => {
     if (transaction) {
       try {
         await transaction.rollback();
-      } catch (e) {}
+      } catch (e) { }
     }
     console.error("Split Order Error:", error);
     res.status(500).json({ message: "Split failed", error: error.message });
@@ -1365,7 +1368,7 @@ const onGiftItem = async (req, res) => {
     if (transaction) {
       try {
         await transaction.rollback();
-      } catch (e) {}
+      } catch (e) { }
     }
     console.error("Gift Error:", error);
     res.status(500).json({ message: "Error", error: error.message });
@@ -1743,7 +1746,7 @@ const onCloseOrder = async (req, res) => {
     if (transaction) {
       try {
         await transaction.rollback();
-      } catch (e) {}
+      } catch (e) { }
     }
     console.error("Close Order Error:", error);
     res
@@ -1988,15 +1991,7 @@ const onDeleteItemWithReason = async (req, res) => {
       Math.max(total - discount + service, parseFloat(ord.deposit || 0)) +
       Number(ord.delivery_fee || 0);
 
-    // Son məhsul silinəndə (boş çek) — avtomatik status=3, admin panelə sync olunsun
-    // Guard: print_count > 0 olan çeklər bağlanmasın — artıq çap olunub, müştəri üçün açıq qalmalıdır
-    const isEmptyCheck = allItems.length === 0;
-    const shouldAutoClose = isEmptyCheck && Number(ord?.print_count || 0) === 0;
-    if (isEmptyCheck && !shouldAutoClose) {
-      console.warn(
-        `[DELETE_ITEM_GUARD] Empty check ${orderId} NOT auto-closed — print_count=${ord?.print_count}`,
-      );
-    }
+    // Son məhsul silinəndə çek açıq qalır — istifadəçi özü "Çeki ləğv et" düyməsi ilə silməlidir
     await OrdersModel.update(
       {
         amount: total,
@@ -2004,7 +1999,6 @@ const onDeleteItemWithReason = async (req, res) => {
         discount,
         service_charge: service,
         is_synced: 0,
-        ...(shouldAutoClose ? { status: 3, end_date: new Date() } : {}),
       },
       { where: { uuid: orderId }, transaction },
     );
@@ -2023,7 +2017,7 @@ const onDeleteItemWithReason = async (req, res) => {
     if (transaction) {
       try {
         await transaction.rollback();
-      } catch (e) {}
+      } catch (e) { }
     }
     console.error("Delete Item Error:", error);
     res
@@ -2964,15 +2958,7 @@ module.exports = {
         Math.max(total - discount + service, parseFloat(ord?.deposit || 0)) +
         Number(ord?.delivery_fee || 0);
 
-      // Son məhsul silinəndə (boş çek) — avtomatik status=3, admin panelə sync olunsun
-      const isEmptyCheck = allItems.length === 0;
-      const shouldAutoClose = isEmptyCheck && Number(ord?.print_count || 0) === 0;
-      if (isEmptyCheck && !shouldAutoClose) {
-        console.warn(
-          `[BATCH_DELETE_GUARD] Empty check ${orderId} NOT auto-closed — print_count=${ord?.print_count}`,
-        );
-      }
-
+      // Son məhsul silinəndə çek açıq qalır — istifadəçi özü "Çeki ləğv et" düyməsi ilə silməlidir
       await OrdersModel.update(
         {
           amount: total,
@@ -2980,7 +2966,6 @@ module.exports = {
           discount,
           service_charge: service,
           is_synced: 0,
-          ...(shouldAutoClose ? { status: 3, end_date: new Date() } : {}),
         },
         { where: { uuid: orderId }, transaction },
       );
@@ -3012,7 +2997,7 @@ module.exports = {
     } catch (error) {
       try {
         await transaction.rollback();
-      } catch (e) {}
+      } catch (e) { }
       console.error("Batch Delete Error:", error);
       res
         .status(500)

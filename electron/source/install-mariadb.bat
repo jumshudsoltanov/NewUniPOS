@@ -24,17 +24,37 @@ set "DB_NAME=unipos-new"
 set "DB_PASS=$2a$12$9IuwxtJ27i1RGqV/3m/OB.Lr2tilbrHvVPHUv06MmTMwDSwHTExW."
 :: ------------------------------
 
-if exist "%DATA_DIR%\mysql" (
-    echo [INFO] MariaDB is already installed.
-    echo [INFO] Skipping installation to prevent data loss.
-    
-    :: Ensure service is running just in case
+:: Check if port 3306 is already in use
+netstat -ano | findstr ":3306 " >nul
+if %errorlevel% equ 0 (
+    echo [INFO] Port 3306 is already in use (MariaDB or MySQL might be running).
+    echo [INFO] Skipping installation to prevent conflicts.
+    exit /b 0
+)
+
+:: Check if MariaDB service exists
+sc query MariaDB >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [INFO] MariaDB service is already installed on the system.
+    echo [INFO] Skipping installation.
     sc config MariaDB start= auto >nul 2>&1
     net start MariaDB >nul 2>&1
-    
-    echo ===================================================
-    echo [SUCCESS] MariaDB is ready and running!
-    echo ===================================================
+    exit /b 0
+)
+
+:: Check if MySQL service exists
+sc query MySQL >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [INFO] MySQL service is already installed on the system.
+    echo [INFO] Skipping installation.
+    sc config MySQL start= auto >nul 2>&1
+    net start MySQL >nul 2>&1
+    exit /b 0
+)
+
+if exist "%DATA_DIR%\mysql" (
+    echo [INFO] MariaDB files already exist in %DATA_DIR%.
+    echo [INFO] Skipping installation to prevent data loss.
     exit /b 0
 )
 

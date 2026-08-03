@@ -215,7 +215,7 @@ const BooksSlice = createSlice({
       }
     });
 
-    // batchDeleteOrderItems fulfilled — getActiveOrders ilə yenilənir (socket table_updated)
+
 
     // getArchivedOrders
     builder.addCase(getArchivedOrders.pending, (state) => {

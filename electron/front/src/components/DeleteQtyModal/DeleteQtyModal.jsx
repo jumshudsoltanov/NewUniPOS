@@ -5,21 +5,29 @@ import "../DiscountModal/DiscountModal.css";
 
 const DeleteQtyModal = React.memo(({ show, onClose, onConfirm, product }) => {
   const [value, setValue] = useState("1");
+  const [isFirstKeypress, setIsFirstKeypress] = useState(true);
   const maxQty = Number(product?.count || 1);
 
   useEffect(() => {
     if (show) {
       setValue("1");
+      setIsFirstKeypress(true);
     }
   }, [show]);
 
   const handleNumClick = (num) => {
     let newVal;
-    if (value === "0") {
+    if (isFirstKeypress) {
       newVal = num.toString();
+      setIsFirstKeypress(false);
     } else {
-      newVal = value + num.toString();
+      if (value === "0") {
+        newVal = num.toString();
+      } else {
+        newVal = value + num.toString();
+      }
     }
+    
     const valNum = parseInt(newVal, 10);
     if (valNum > maxQty) {
       setValue(String(maxQty));

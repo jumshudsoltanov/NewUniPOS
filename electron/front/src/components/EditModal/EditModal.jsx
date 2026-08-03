@@ -64,6 +64,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   const [qtyStr, setQtyStr] = useState(String(product?.count || 1));
+  const [isFirstKeypress, setIsFirstKeypress] = useState(true);
   const qty = parseFloat(qtyStr) || 0;
   const [numpadTarget, setNumpadTarget] = useState("qty"); // "qty" | "price"
   const [price, setPrice] = useState(product?.price || 0);
@@ -101,6 +102,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
       setActiveTab(initialTab || "edit");
       setProductComment(product?.comment || "");
       setQtyStr(String(product?.count || 1));
+      setIsFirstKeypress(true);
+      setPrice(product?.price || 0);
       setTransferQty(1);
       setShowTableSelect(false);
       setShowWaiterSelect(false);
@@ -400,7 +403,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
       } else if (val === ".") {
         setInputValue((prev) => (prev.includes(".") ? prev : prev + "."));
       } else {
-        setInputValue((prev) => (prev === "0" ? String(val) : prev + val));
+        setInputValue((prev) => {
+          if (isFirstKeypress) {
+            setIsFirstKeypress(false);
+            return String(val);
+          }
+          return prev === "0" ? String(val) : prev + val;
+        });
       }
     } else {
       if (val === "backspace") {
@@ -411,7 +420,13 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
       } else if (val === ".") {
         setQtyStr((prev) => (prev.includes(".") ? prev : prev + "."));
       } else {
-        setQtyStr((prev) => (prev === "0" ? String(val) : prev + val));
+        setQtyStr((prev) => {
+          if (isFirstKeypress) {
+            setIsFirstKeypress(false);
+            return String(val);
+          }
+          return prev === "0" ? String(val) : prev + val;
+        });
       }
     }
   };
