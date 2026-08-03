@@ -78,6 +78,60 @@ const Tables = () => {
   const [selectedEditTableId, setSelectedEditTableId] = useState(null);
   const [singleW, setSingleW] = useState("200");
   const [singleH, setSingleH] = useState("200");
+  const [singleX, setSingleX] = useState("0");
+  const [singleY, setSingleY] = useState("0");
+  const [singleRotation, setSingleRotation] = useState(0);
+
+  // Settings modal state
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // Theme color states — localStorage-dan yüklə
+  const [themeHeaderColor, setThemeHeaderColor] = useState(
+    () => localStorage.getItem("unipos_theme_header") || "#053796"
+  );
+  const [themeBgColor, setThemeBgColor] = useState(
+    () => localStorage.getItem("unipos_theme_bg") || "#E2E5EB"
+  );
+  const [themeTableColor, setThemeTableColor] = useState(
+    () => localStorage.getItem("unipos_theme_table") || "#ffffff"
+  );
+  const [themeFabColor, setThemeFabColor] = useState(
+    () => localStorage.getItem("unipos_theme_fab") || "#053796"
+  );
+
+  // Apply theme colors via CSS custom properties
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--Surface-Default", themeHeaderColor);
+    root.style.setProperty("--unipos-bg-color", themeBgColor);
+    root.style.setProperty("--unipos-table-surface", themeTableColor);
+    root.style.setProperty("--unipos-fab-color", themeFabColor);
+  }, [themeHeaderColor, themeBgColor, themeTableColor, themeFabColor]);
+
+  const handleSaveTheme = () => {
+    localStorage.setItem("unipos_theme_header", themeHeaderColor);
+    localStorage.setItem("unipos_theme_bg", themeBgColor);
+    localStorage.setItem("unipos_theme_table", themeTableColor);
+    localStorage.setItem("unipos_theme_fab", themeFabColor);
+    toast.success("Rənglər saxlanıldı!");
+  };
+
+  const handleResetTheme = () => {
+    setThemeHeaderColor("#053796");
+    setThemeBgColor("#E2E5EB");
+    setThemeTableColor("#ffffff");
+    setThemeFabColor("#053796");
+    localStorage.removeItem("unipos_theme_header");
+    localStorage.removeItem("unipos_theme_bg");
+    localStorage.removeItem("unipos_theme_table");
+    localStorage.removeItem("unipos_theme_fab");
+    const root = document.documentElement;
+    root.style.setProperty("--Surface-Default", "#053796");
+    root.style.setProperty("--unipos-bg-color", "#E2E5EB");
+    root.style.setProperty("--unipos-table-surface", "#ffffff");
+    root.style.setProperty("--unipos-fab-color", "#053796");
+    toast.success("Rənglər sıfırlandı!");
+  };
 
   // Custom Layout Interaction State
   const containerRef = useRef(null);
@@ -103,7 +157,7 @@ const Tables = () => {
     if (!isTableEditMode) setSelectedEditTableId(null);
   }, [isTableEditMode]);
 
-  // Sync singleW/singleH when a table is selected in edit mode
+  // Sync singleW/singleH/singleX/singleY/singleRotation when a table is selected in edit mode
   useEffect(() => {
     if (!selectedEditTableId) return;
     const hallLayouts = tempTableLayouts[String(currentHallId)] || tableLayouts[String(currentHallId)] || {};
@@ -115,6 +169,9 @@ const Tables = () => {
     const rawH = existing.h;
     setSingleW(String(rawW && rawW >= 150 ? rawW : defSz.w));
     setSingleH(String(rawH && rawH >= 150 ? rawH : defSz.h));
+    setSingleX(String(Math.round(existing.x || 0)));
+    setSingleY(String(Math.round(existing.y || 0)));
+    setSingleRotation(existing.rotation || 0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEditTableId]);
 
@@ -680,6 +737,19 @@ const Tables = () => {
         if (!dragMoveRef.current && interactionState.type === "drag" && interactionState.tableId) {
           setSelectedEditTableId(interactionState.tableId);
         }
+        // Re-sync singleX/singleY/singleW/singleH after drag/resize
+        if (dragMoveRef.current && interactionState.tableId) {
+          const tid = String(interactionState.tableId);
+          const updatedLayouts = { ...(tempTableLayouts[String(currentHallId)] || {}), ...(activeLayouts || {}) };
+          const latest = updatedLayouts[tid];
+          if (latest && selectedEditTableId === interactionState.tableId) {
+            setSingleX(String(Math.round(latest.x || 0)));
+            setSingleY(String(Math.round(latest.y || 0)));
+            if (latest.w && latest.w >= 150) setSingleW(String(latest.w));
+            if (latest.h && latest.h >= 150) setSingleH(String(latest.h));
+            setSingleRotation(latest.rotation || 0);
+          }
+        }
         dragMoveRef.current = false;
         setInteractionState({ type: null, tableId: null });
       }
@@ -758,17 +828,16 @@ const Tables = () => {
     if (!selectedEditTableId) return;
     const w = parseInt(singleW, 10) || 200;
     const h = parseInt(singleH, 10) || 200;
-    const hallLayouts = tempTableLayouts[String(currentHallId)] || {};
-    const defLayout = generatedLayout[selectedEditTableId] || { x: 20, y: 20 };
-    const existing = hallLayouts[String(selectedEditTableId)] || defLayout;
+    const x = parseInt(singleX, 10) || 0;
+    const y = parseInt(singleY, 10) || 0;
     dispatch(
       setTempTableLayout({
         hallId: currentHallId,
         layout: {
           [String(selectedEditTableId)]: {
-            x: existing.x ?? defLayout.x,
-            y: existing.y ?? defLayout.y,
-            rotation: existing.rotation || 0,
+            x,
+            y,
+            rotation: singleRotation,
             w,
             h,
           },
@@ -865,6 +934,74 @@ const Tables = () => {
               minHeight: "80vh",
             }}
           >
+            {/* Distance Lines SVG Overlay */}
+            {isTableEditMode && selectedEditTableId && (() => {
+              const selLayout = activeLayouts?.[String(selectedEditTableId)] || generatedLayout[selectedEditTableId] || { x: 0, y: 0 };
+              const selTbl = currentTables.find((t) => t.id === selectedEditTableId);
+              const selDefSz = defaultSizeForTableShape(selTbl?.shape_type);
+              const selW = (selLayout.w && selLayout.w >= 150) ? selLayout.w : selDefSz.w;
+              const selH = (selLayout.h && selLayout.h >= 150) ? selLayout.h : selDefSz.h;
+              const selCX = (selLayout.x || 0) + selW / 2;
+              const selCY = (selLayout.y || 0) + selH / 2;
+
+              // Calculate distances to all other tables
+              const distances = currentTables
+                .filter((t) => t.id !== selectedEditTableId)
+                .map((t) => {
+                  const tLayout = activeLayouts?.[String(t.id)] || generatedLayout[t.id] || { x: 0, y: 0 };
+                  const tDefSz = defaultSizeForTableShape(t.shape_type);
+                  const tW = (tLayout.w && tLayout.w >= 150) ? tLayout.w : tDefSz.w;
+                  const tH = (tLayout.h && tLayout.h >= 150) ? tLayout.h : tDefSz.h;
+                  const tCX = (tLayout.x || 0) + tW / 2;
+                  const tCY = (tLayout.y || 0) + tH / 2;
+                  const dist = Math.round(Math.sqrt(Math.pow(selCX - tCX, 2) + Math.pow(selCY - tCY, 2)));
+                  return { id: t.id, cx: tCX, cy: tCY, dist, name: t.name };
+                })
+                .sort((a, b) => a.dist - b.dist)
+                .slice(0, 4);
+
+              return (
+                <svg className="distance-lines-overlay">
+                  {distances.map((d) => {
+                    const midX = (selCX + d.cx) / 2;
+                    const midY = (selCY + d.cy) / 2;
+                    const label = `${d.dist}px`;
+                    const labelWidth = label.length * 7 + 12;
+                    return (
+                      <g key={d.id}>
+                        <line
+                          x1={selCX} y1={selCY}
+                          x2={d.cx} y2={d.cy}
+                          stroke="#053796"
+                          strokeWidth="1.5"
+                          strokeDasharray="6 4"
+                          opacity="0.6"
+                        />
+                        <rect
+                          className="distance-label-bg"
+                          x={midX - labelWidth / 2}
+                          y={midY - 10}
+                          width={labelWidth}
+                          height={20}
+                          rx="6"
+                          ry="6"
+                          opacity="0.9"
+                        />
+                        <text
+                          className="distance-label-text"
+                          x={midX}
+                          y={midY + 4}
+                          textAnchor="middle"
+                        >
+                          {label}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              );
+            })()}
+
             {currentTables.map((table) => {
               const defaultLayout = generatedLayout[table.id] || {
                 x: 20,
@@ -1091,162 +1228,295 @@ const Tables = () => {
           </Row>
         )}
 
-        {/* Bulk Edit Panel */}
+        {/* Settings FAB & Modal */}
         {isTableEditMode && (
-          <div
-            style={{
-              position: "fixed",
-              bottom: "20px",
-              left: "20px",
-              zIndex: 1000,
-              background: "white",
-              borderRadius: "14px",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
-              padding: "14px 16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              minWidth: "210px",
-            }}
-          >
-            {selectedEditTableId ? (
-              <>
-                <div style={{ fontWeight: 700, fontSize: "13px", color: "#374151" }}>
-                  <i className="bi bi-cursor-fill me-1" style={{ color: "#053796" }}></i>
-                  {currentTables.find((t) => t.id === selectedEditTableId)?.name || t("selected_table")}
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>{t("width_px")}</div>
-                    <input
-                      type="number"
-                      value={singleW}
-                      onChange={(e) => setSingleW(e.target.value)}
-                      min={100}
-                      max={600}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      style={{
-                        width: "100%",
-                        padding: "5px 8px",
-                        borderRadius: "8px",
-                        border: "1px solid #053796",
-                        fontSize: "13px",
-                        outline: "none",
-                      }}
-                    />
+          <>
+            {/* Settings FAB Button */}
+            <button
+              className="tsm-settings-fab"
+              onClick={() => setShowSettingsModal(true)}
+              title="Tənzimləmələr"
+              style={{ background: themeFabColor }}
+            >
+              <i className="bi bi-sliders"></i>
+            </button>
+
+            {/* Settings Modal */}
+            {showSettingsModal && (
+              <div
+                className="table-settings-modal-overlay"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) setShowSettingsModal(false);
+                }}
+              >
+                <div className="table-settings-modal">
+                  {/* Header */}
+                  <div className="tsm-modal-header">
+                    <div className="tsm-modal-header-left">
+                      <div className="tsm-modal-header-icon">
+                        <i className="bi bi-sliders"></i>
+                      </div>
+                      <span className="tsm-modal-title">Masa Tənzimləmələri</span>
+                    </div>
+                    <button
+                      className="tsm-modal-close"
+                      onClick={() => setShowSettingsModal(false)}
+                    >
+                      <i className="bi bi-x-lg"></i>
+                    </button>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>{t("height_px")}</div>
-                    <input
-                      type="number"
-                      value={singleH}
-                      onChange={(e) => setSingleH(e.target.value)}
-                      min={100}
-                      max={600}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      style={{
-                        width: "100%",
-                        padding: "5px 8px",
-                        borderRadius: "8px",
-                        border: "1px solid #053796",
-                        fontSize: "13px",
-                        outline: "none",
-                      }}
-                    />
+
+                  {/* Body */}
+                  <div className="tsm-modal-body">
+                    {/* Selected Table Section */}
+                    <div className="tsm-section">
+                      <div className="tsm-section-title">
+                        <i className="bi bi-cursor-fill"></i>
+                        Seçilmiş masa
+                      </div>
+
+                      {selectedEditTableId ? (
+                        <>
+                          <div className="tsm-selected-name">
+                            <span className="name-badge">
+                              {currentTables.find((t) => t.id === selectedEditTableId)?.name || t("selected_table")}
+                            </span>
+                          </div>
+
+                          {/* Position Inputs */}
+                          <div className="tsm-input-grid">
+                            <div className="tsm-input-group">
+                              <span className="tsm-input-label">X (px)</span>
+                              <input
+                                type="number"
+                                className="tsm-input primary"
+                                value={singleX}
+                                onChange={(e) => setSingleX(e.target.value)}
+                              />
+                            </div>
+                            <div className="tsm-input-group">
+                              <span className="tsm-input-label">Y (px)</span>
+                              <input
+                                type="number"
+                                className="tsm-input primary"
+                                value={singleY}
+                                onChange={(e) => setSingleY(e.target.value)}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Size Inputs */}
+                          <div className="tsm-input-grid" style={{ marginTop: "10px" }}>
+                            <div className="tsm-input-group">
+                              <span className="tsm-input-label">En (px)</span>
+                              <input
+                                type="number"
+                                className="tsm-input"
+                                value={singleW}
+                                onChange={(e) => setSingleW(e.target.value)}
+                                min={100}
+                                max={600}
+                              />
+                            </div>
+                            <div className="tsm-input-group">
+                              <span className="tsm-input-label">Hünd. (px)</span>
+                              <input
+                                type="number"
+                                className="tsm-input"
+                                value={singleH}
+                                onChange={(e) => setSingleH(e.target.value)}
+                                min={100}
+                                max={600}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Rotation */}
+                          <div style={{ marginTop: "10px" }}>
+                            <span className="tsm-input-label">Fırlanma</span>
+                            <div className="tsm-rotation-row">
+                              <button
+                                className="tsm-rotation-btn"
+                                onClick={() => setSingleRotation((prev) => (prev - 90 + 360) % 360)}
+                              >
+                                <i className="bi bi-arrow-counterclockwise"></i>
+                              </button>
+                              <span className="tsm-rotation-value">{singleRotation}°</span>
+                              <button
+                                className="tsm-rotation-btn"
+                                onClick={() => setSingleRotation((prev) => (prev + 90) % 360)}
+                              >
+                                <i className="bi bi-arrow-clockwise"></i>
+                              </button>
+                            </div>
+                          </div>
+
+                          <button
+                            className="tsm-btn tsm-btn-primary"
+                            onClick={handleApplySingleSize}
+                            style={{ marginTop: "12px" }}
+                          >
+                            <i className="bi bi-check-lg"></i>
+                            Tətbiq et
+                          </button>
+                        </>
+                      ) : (
+                        <div className="tsm-empty-state">
+                          <i className="bi bi-hand-index-thumb"></i>
+                          Masa seçin
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="tsm-divider" />
+
+                    {/* Bulk Adjust Section */}
+                    <div className="tsm-section">
+                      <div className="tsm-section-title">
+                        <i className="bi bi-grid-3x3-gap-fill"></i>
+                        Toplu tənzimləmə
+                      </div>
+
+                      <div className="tsm-input-grid">
+                        <div className="tsm-input-group">
+                          <span className="tsm-input-label">En (px)</span>
+                          <input
+                            type="number"
+                            className="tsm-input"
+                            value={bulkW}
+                            onChange={(e) => setBulkW(e.target.value)}
+                          />
+                        </div>
+                        <div className="tsm-input-group">
+                          <span className="tsm-input-label">Hünd. (px)</span>
+                          <input
+                            type="number"
+                            className="tsm-input"
+                            value={bulkH}
+                            onChange={(e) => setBulkH(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        className="tsm-btn tsm-btn-primary"
+                        onClick={handleApplyBulkSize}
+                        style={{ marginTop: "10px" }}
+                      >
+                        <i className="bi bi-arrows-fullscreen"></i>
+                        Hamısına tətbiq et
+                      </button>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <button
+                        className="tsm-btn tsm-btn-green"
+                        onClick={handleAutoArrange}
+                      >
+                        <i className="bi bi-layout-wtf"></i>
+                        Avtomatik düzülüş
+                      </button>
+                      <button
+                        className="tsm-btn tsm-btn-red"
+                        onClick={() => dispatch(clearHallLayout(currentHallId))}
+                      >
+                        <i className="bi bi-arrow-counterclockwise"></i>
+                        Sıfırla
+                      </button>
+                    </div>
+
+                    <div className="tsm-divider" />
+
+                    {/* Color Customization Section */}
+                    <div className="tsm-section">
+                      <div className="tsm-section-title">
+                        <i className="bi bi-palette-fill"></i>
+                        Rəng tənzimləmə
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {/* Header Color */}
+                        <div className="tsm-color-row">
+                          <span className="tsm-input-label">Header rəngi</span>
+                          <div className="tsm-color-picker-wrap">
+                            <input
+                              type="color"
+                              className="tsm-color-input"
+                              value={themeHeaderColor}
+                              onChange={(e) => setThemeHeaderColor(e.target.value)}
+                            />
+                            <span className="tsm-color-hex">{themeHeaderColor}</span>
+                          </div>
+                        </div>
+
+                        {/* Background Color */}
+                        <div className="tsm-color-row">
+                          <span className="tsm-input-label">Arxa plan rəngi</span>
+                          <div className="tsm-color-picker-wrap">
+                            <input
+                              type="color"
+                              className="tsm-color-input"
+                              value={themeBgColor}
+                              onChange={(e) => setThemeBgColor(e.target.value)}
+                            />
+                            <span className="tsm-color-hex">{themeBgColor}</span>
+                          </div>
+                        </div>
+
+                        {/* Table Surface Color */}
+                        <div className="tsm-color-row">
+                          <span className="tsm-input-label">Masa rəngi</span>
+                          <div className="tsm-color-picker-wrap">
+                            <input
+                              type="color"
+                              className="tsm-color-input"
+                              value={themeTableColor}
+                              onChange={(e) => setThemeTableColor(e.target.value)}
+                            />
+                            <span className="tsm-color-hex">{themeTableColor}</span>
+                          </div>
+                        </div>
+
+                        {/* FAB Button Color */}
+                        <div className="tsm-color-row">
+                          <span className="tsm-input-label">Düymə rəngi</span>
+                          <div className="tsm-color-picker-wrap">
+                            <input
+                              type="color"
+                              className="tsm-color-input"
+                              value={themeFabColor}
+                              onChange={(e) => setThemeFabColor(e.target.value)}
+                            />
+                            <span className="tsm-color-hex">{themeFabColor}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                        <button
+                          className="tsm-btn tsm-btn-primary"
+                          onClick={handleSaveTheme}
+                          style={{ flex: 1 }}
+                        >
+                          <i className="bi bi-check-lg"></i>
+                          Saxla
+                        </button>
+                        <button
+                          className="tsm-btn tsm-btn-outline"
+                          onClick={handleResetTheme}
+                          style={{ flex: 1 }}
+                        >
+                          <i className="bi bi-arrow-counterclockwise"></i>
+                          Defolt
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <button
-                  className="btn btn-sm"
-                  onClick={handleApplySingleSize}
-                  style={{
-                    background: "#053796",
-                    color: "white",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                    padding: "6px 10px",
-                  }}
-                >
-                  <i className="bi bi-check-lg me-1"></i>{t("apply")}</button>
-                <div style={{ borderTop: "1px solid #e5e7eb", margin: "2px 0" }} />
-              </>
-            ) : (
-              <div style={{ fontSize: "12px", color: "#9ca3af", textAlign: "center" }}>{t("select_table")}</div>
+              </div>
             )}
-            <div style={{ fontWeight: 700, fontSize: "13px", color: "#053796" }}>
-              <i className="bi bi-grid-3x3-gap-fill me-1"></i>{t("bulk_adjust")}</div>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>{t("width_px")}</div>
-                <input
-                  type="number"
-                  value={bulkW}
-                  onChange={(e) => setBulkW(e.target.value)}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  style={{
-                    width: "100%",
-                    padding: "5px 8px",
-                    borderRadius: "8px",
-                    border: "1px solid #d1d5db",
-                    fontSize: "13px",
-                    outline: "none",
-                  }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px" }}>{t("height_px")}</div>
-                <input
-                  type="number"
-                  value={bulkH}
-                  onChange={(e) => setBulkH(e.target.value)}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  style={{
-                    width: "100%",
-                    padding: "5px 8px",
-                    borderRadius: "8px",
-                    border: "1px solid #d1d5db",
-                    fontSize: "13px",
-                    outline: "none",
-                  }}
-                />
-              </div>
-            </div>
-            <button
-              className="btn btn-sm"
-              onClick={handleApplyBulkSize}
-              style={{
-                background: "#053796",
-                color: "white",
-                borderRadius: "8px",
-                fontSize: "13px",
-                padding: "6px 10px",
-              }}
-            >
-              <i className="bi bi-arrows-fullscreen me-1"></i>{t("apply_all")}</button>
-            <button
-              className="btn btn-sm"
-              onClick={handleAutoArrange}
-              style={{
-                background: "#059669",
-                color: "white",
-                borderRadius: "8px",
-                fontSize: "13px",
-                padding: "6px 10px",
-              }}
-            >
-              <i className="bi bi-layout-wtf me-1"></i>{t("auto_arrange")}</button>
-            <button
-              className="btn btn-sm"
-              onClick={() => dispatch(clearHallLayout(currentHallId))}
-              style={{
-                background: "#dc2626",
-                color: "white",
-                borderRadius: "8px",
-                fontSize: "13px",
-                padding: "6px 10px",
-              }}
-            >
-              <i className="bi bi-arrow-counterclockwise me-1"></i>{t("reset_all")}</button>
-          </div>
+          </>
         )}
 
         {/* Floating Edit Button / Save Bar */}

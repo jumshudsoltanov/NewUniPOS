@@ -137,14 +137,18 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
     if (Number(loginedWaiter?.data?.[permissionKey]) === 1 || unlockedPermissions[permissionKey]) {
       action();
     } else {
-      setAdminOverrideProps({
-        permissionKey,
-        operationName,
-        onApprove: () => {
-          setUnlockedPermissions(prev => ({ ...prev, [permissionKey]: true }));
-          action();
-        }
-      });
+      if (adminOverrideEnabled) {
+        setAdminOverrideProps({
+          permissionKey,
+          operationName,
+          onApprove: () => {
+            setUnlockedPermissions(prev => ({ ...prev, [permissionKey]: true }));
+            action();
+          }
+        });
+      } else {
+        toast.error(t("selahiyyetiniz_yoxdur") === "selahiyyetiniz_yoxdur" ? "Səlahiyyətiniz yoxdur!" : t("selahiyyetiniz_yoxdur"));
+      }
     }
   };
   const navigate = useNavigate();

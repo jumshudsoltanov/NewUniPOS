@@ -242,7 +242,7 @@ async function sendBulkMessage(receiver, message) {
   try {
     const response = await axios.post(url, payload, {
       headers: { "Content-Type": "application/json" },
-      timeout: 5000,
+      timeout: 15000,
     });
     logWhatsappDebug("OK", response.status);
     const tail = clean.length > 4 ? `***${clean.slice(-4)}` : "****";

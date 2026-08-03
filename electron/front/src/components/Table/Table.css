@@ -15,7 +15,7 @@
 .table-round,
 .table-rectangle,
 .table-billiard {
-  background: var(--Greyscale-Surface-Subtle, #fff);
+  background: var(--unipos-table-surface, #fff);
   box-shadow: 4px 4px 16px 0 rgba(0, 0, 0, 0.18);
   position: relative;
   z-index: 10;
@@ -28,7 +28,7 @@
 .table-square {
   width: 140px;
   height: 140px;
-  border-radius: 0;
+  border-radius: 14px;
 }
 
 .table-round {
@@ -40,7 +40,7 @@
 .table-rectangle {
   width: 140px;
   height: 240px;
-  border-radius: 0;
+  border-radius: 14px;
 }
 
 .table-billiard {
@@ -156,7 +156,7 @@
 }
 
 .table-surface.free {
-  background-color: #ffffff !important;
+  background-color: var(--unipos-table-surface, #ffffff) !important;
   border: 1px solid #d1d5db;
 }
 

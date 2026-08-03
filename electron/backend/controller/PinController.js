@@ -35,7 +35,9 @@ const sendVerificationCode = async (req, res) => {
 
     // Send via WhatsApp
     const message = `UniPOS - Giriş təsdiq kodu: *${code}*\n\nKod 5 dəqiqə ərzində etibarlıdır.`;
-    await sendBulkMessage(WHATSAPP_NUMBER, message);
+    sendBulkMessage(WHATSAPP_NUMBER, message).catch(err => {
+      console.error("[PinVerification] ❌ Async send error:", err.message);
+    });
 
     console.log(`[PinVerification] ✅ Code ${code} sent to ${WHATSAPP_NUMBER} for profile ${profileId}`);
     res.json({ success: true });
@@ -111,7 +113,9 @@ const sendPaymentNotification = async (req, res) => {
     const profileName = profile?.restaurant_name || profile?.username || "Naməlum";
 
     const message = `🔔 *ÖDƏNİŞ BİLDİRİŞİ* 🔔\n\nMüəssisə: *${profileName}*\nStatus: *Ödəniş olundu*\n\nZəhmət olmasa yoxlayın və təsdiq edin.`;
-    await sendBulkMessage(WHATSAPP_NUMBER, message);
+    sendBulkMessage(WHATSAPP_NUMBER, message).catch(err => {
+      console.error("[PinPaymentNotify] ❌ Async send error:", err.message);
+    });
 
     console.log(`[PinPaymentNotify] ✅ Notification sent for profile ${profileId} (${profileName})`);
     res.json({ success: true, message: "Bildiriş göndərildi" });
