@@ -323,9 +323,9 @@ export const processAndPrintOrders = async (
           orderData.profileData?.data?.profile,
         );
         const isMasterProductPrinting =
-          profile.is_master_product_printing === 1;
-        const isMaster = profile.is_master === 1;
-        const isMasterSlaveActive = profile.is_master_slave_active === 1;
+          Number(profile.is_master_product_printing) === 1 || profile.is_master_product_printing === true;
+        const isMaster = Number(profile.is_master) === 1 || profile.is_master === true;
+        const isMasterSlaveActive = Number(profile.is_master_slave_active) === 1 || profile.is_master_slave_active === true;
 
         // Mərkəzi printer Master-dadır: Slave mərkəzi açıq olduqda Master-a göndərir, Master özündə çap edir
         const socket = getSocket();
@@ -675,9 +675,9 @@ export const printCustomerReceipt = async (
       profileData,
       profileData?.data?.profile,
     );
-    const isMasterCashierPrinting = profile.is_master_cashier_printing === 1;
-    const isMaster = profile.is_master === 1;
-    const isMasterSlaveActive = profile.is_master_slave_active === 1;
+    const isMasterCashierPrinting = Number(profile.is_master_cashier_printing) === 1 || profile.is_master_cashier_printing === true;
+    const isMaster = Number(profile.is_master) === 1 || profile.is_master === true;
+    const isMasterSlaveActive = Number(profile.is_master_slave_active) === 1 || profile.is_master_slave_active === true;
 
     const socket = getSocket();
     const canDelegate = socket && socket.connected;

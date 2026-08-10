@@ -1508,12 +1508,29 @@ function concatNativeImagesVertically(images) {
   });
 }
 
-ipcMain.handle(
-  "print-receipt",
-  async (
-    event,
-    { html, printerName, printerIp, printerPort, printerSettings } = {},
-  ) => {
+let _printReceiptRunning = false;
+const _printReceiptQueue = [];
+
+async function processPrintReceiptQueue() {
+  if (_printReceiptRunning || _printReceiptQueue.length === 0) return;
+  _printReceiptRunning = true;
+  
+  while (_printReceiptQueue.length > 0) {
+    const job = _printReceiptQueue.shift();
+    try {
+      const result = await executePrintReceipt(job.event, job.data);
+      job.resolve(result);
+    } catch (err) {
+      job.resolve({ success: false, error: String(err.message || err) });
+    }
+  }
+  _printReceiptRunning = false;
+}
+
+async function executePrintReceipt(
+  event,
+  { html, printerName, printerIp, printerPort, printerSettings } = {},
+) {
     log.info(`[PRINT-RECEIPT] Yeni çap istəyi: ${printerName}, IP: ${printerIp}, Connection: ${printerSettings?.connection_type}`);
     const settings = printerSettings || {};
 
@@ -2250,8 +2267,14 @@ ipcMain.handle(
       if (!printWindow.isDestroyed()) printWindow.close();
       return { success: false, error: String(error) };
     }
-  },
-);
+}
+
+ipcMain.handle("print-receipt", (event, data) => {
+  return new Promise((resolve) => {
+    _printReceiptQueue.push({ event, data, resolve });
+    processPrintReceiptQueue();
+  });
+});
 
 ipcMain.handle("get-usb-printers", async () => {
   if (!usb) return [];

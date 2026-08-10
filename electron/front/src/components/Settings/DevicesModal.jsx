@@ -465,8 +465,8 @@ const DevicesModal = ({ show, onHide }) => {
 
     const [activeTab, setActiveTab] = useState("printers");
     const isMobile = window.innerWidth < 992;
-    const isMaster = loginedProfileData?.data?.terminal?.is_master === 1 || loginedProfileData?.data?.profile?.is_master === 1;
-    const isSlave = !isMaster && (loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1);
+    const isMaster = Number(loginedProfileData?.data?.terminal?.is_master) === 1 || Number(loginedProfileData?.data?.profile?.is_master) === 1;
+    const isSlave = !isMaster && (Number(loginedProfileData?.data?.terminal?.is_master_slave_active) === 1 || Number(loginedProfileData?.data?.profile?.is_master_slave_active) === 1);
     const [localIp, setLocalIp] = useState("");
     const [printers, setPrinters] = useState([]);
     const [systemPrinters, setSystemPrinters] = useState([]);
@@ -676,8 +676,8 @@ const DevicesModal = ({ show, onHide }) => {
             const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
             const merged = { ...authProfile, ...storedProfile };
             setMasterModes({
-                cashier: merged.is_master_cashier_printing === 1,
-                product: merged.is_master_product_printing === 1
+                cashier: Number(merged.is_master_cashier_printing) === 1 || merged.is_master_cashier_printing === true,
+                product: Number(merged.is_master_product_printing) === 1 || merged.is_master_product_printing === true
             });
             setCustomerReceiptAutoPrint(merged.is_customer_receipt_auto_print === 1);
             setSalesShiftRequired(merged.queue_sales_module === 1);
