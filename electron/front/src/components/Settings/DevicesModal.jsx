@@ -675,9 +675,15 @@ const DevicesModal = ({ show, onHide }) => {
             const authProfile = authStr ? (JSON.parse(authStr)?.data?.profile || {}) : {};
             const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
             const merged = { ...authProfile, ...storedProfile };
+            
+            const localCashierOverride = localStorage.getItem("local_override_is_master_cashier_printing");
+            const localProductOverride = localStorage.getItem("local_override_is_master_product_printing");
+            const cashierVal = localCashierOverride !== null ? Number(localCashierOverride) : merged.is_master_cashier_printing;
+            const productVal = localProductOverride !== null ? Number(localProductOverride) : merged.is_master_product_printing;
+
             setMasterModes({
-                cashier: Number(merged.is_master_cashier_printing) === 1 || merged.is_master_cashier_printing === true,
-                product: Number(merged.is_master_product_printing) === 1 || merged.is_master_product_printing === true
+                cashier: Number(cashierVal) === 1 || cashierVal === true,
+                product: Number(productVal) === 1 || productVal === true
             });
             setCustomerReceiptAutoPrint(merged.is_customer_receipt_auto_print === 1);
             setSalesShiftRequired(merged.queue_sales_module === 1);
@@ -817,6 +823,7 @@ const DevicesModal = ({ show, onHide }) => {
     };
 
     const persistMasterPrintingToStorage = (field, value) => {
+        localStorage.setItem(`local_override_${field}`, value);
         const storedProfile = JSON.parse(localStorage.getItem("profile") || "{}");
         storedProfile[field] = value;
         localStorage.setItem("profile", JSON.stringify(storedProfile));

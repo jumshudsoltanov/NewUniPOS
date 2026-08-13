@@ -1,16 +1,22 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./ProductCommentTagsModal.css";
 import { useDispatch, useSelector } from "react-redux";
 import { getTagsList } from "../../redux/Slices/TagsSlice";
 import { t } from "../../utils/translations";
+import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 
 const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, initialComment = "", onSave }) => {
     const [selectedTags, setSelectedTags] = useState([]);
     const [manualComment, setManualComment] = useState("");
     const [tagsListData, setTagsListData] = useState([]);
+    const [keyboardOpen, setKeyboardOpen] = useState(false);
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+
+    const posKeyboardEnabled = useMemo(() => {
+        try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
+    }, []);
 
     useEffect(() => {
         const getTagsData = async () => {
@@ -33,6 +39,7 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, initia
         if (!show) {
             setSelectedTags([]);
             setManualComment("");
+            setKeyboardOpen(false);
         } else {
             if (initialComment) {
                 const parts = initialComment.split(",").map(s => s.trim());
@@ -80,6 +87,7 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, initia
     };
 
     return (
+        <>
         <Modal
             show={show}
             onHide={() => onClose?.()}
@@ -141,6 +149,8 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, initia
                             placeholder={t("serh_yaz") || "Şərh yazın..."}
                             value={manualComment}
                             onChange={(e) => setManualComment(e.target.value)}
+                            onFocus={() => { if (posKeyboardEnabled) setKeyboardOpen(true); }}
+                            onBlur={() => { if (!posKeyboardEnabled) setKeyboardOpen(false); }}
                             style={{ resize: "none", fontSize: "1.05rem", borderRadius: "10px", padding: "12px", border: "2px solid #ebf2fe" }}
                         />
                     </div>
@@ -155,6 +165,15 @@ const ProductCommentTagsModal = ({ show, onClose, item, portionIndex = 0, initia
                 </div>
             </div>
         </Modal>
+
+        {posKeyboardEnabled && keyboardOpen && (
+            <VirtualKeyboard
+                onKeyPress={(key) => setManualComment(prev => prev + key)}
+                onBackspace={() => setManualComment(prev => prev.slice(0, -1))}
+                onClose={() => setKeyboardOpen(false)}
+            />
+        )}
+        </>
     );
 };
 

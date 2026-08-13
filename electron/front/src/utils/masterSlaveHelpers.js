@@ -10,7 +10,7 @@ export const checkIsSlaveTerminal = () => {
         const authResult = JSON.parse(authResultStr);
         const profileData = authResult?.data?.profile || {};
         const terminalData = authResult?.data?.terminal || {};
-        const isMaster = parseInt(terminalData.is_master) === 1 || parseInt(profileData.is_master) === 1;
+        const isMaster = terminalData.is_master !== undefined ? parseInt(terminalData.is_master) === 1 : parseInt(profileData.is_master) === 1;
         const active = parseInt(terminalData.is_master_slave_active) === 1 || parseInt(profileData.is_master_slave_active) === 1;
         return !isMaster && active;
     } catch {

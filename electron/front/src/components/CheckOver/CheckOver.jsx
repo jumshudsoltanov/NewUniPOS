@@ -352,7 +352,8 @@ const CheckOver = () => {
     const remainingBalance = useMemo(() => {
         const paid = Number(calcValue || totalPaidInMethods || 0);
         const toPay = Number(calcTotal.sumTotal);
-        return (paid - toPay).toFixed(2);
+        const diff = paid - toPay;
+        return diff > 0 ? diff.toFixed(2) : "0.00";
     }, [calcValue, totalPaidInMethods, calcTotal.sumTotal]);
 
     const isSplitActive = selectedMethods.length > 1;
@@ -379,8 +380,12 @@ const CheckOver = () => {
                 ? Number(totalPaidInMethods)
                 : Number(calcValue || totalPaidInMethods || 0);
             const toPay = Number(calcTotal.sumTotal);
-            if (paid < toPay) {
-                toast.error(`Ödəniş çatışmır! ${(toPay - paid).toFixed(2)} ₼ əskikdir`);
+            
+            const paidFixed = Number(paid.toFixed(2));
+            const toPayFixed = Number(toPay.toFixed(2));
+
+            if (paidFixed < toPayFixed) {
+                toast.error(`Ödəniş çatışmır! ${(toPayFixed - paidFixed).toFixed(2)} ₼ əskikdir`);
                 return;
             }
         }
@@ -415,7 +420,7 @@ const CheckOver = () => {
                 payment_method_id: m.id,
                 name: m.name,
                 type: m.type,
-                amount: m.amount || (selectedMethods.length === 1 ? calcTotal.sumTotal : 0),
+                amount: selectedMethods.length === 1 ? calcTotal.sumTotal : (Number(m.amount) || 0),
                 ...(m.room_id ? { room_id: m.room_id, room_number: m.room_number } : {})
             }));
         } else {

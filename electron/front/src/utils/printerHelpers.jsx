@@ -143,21 +143,26 @@ const getProfileForPrinting = (profileData, orderProfile) => {
       }
     })();
     // Mərkəzi çap: DevicesModal-da dəyişiklik dərhal tətbiq olunsun – auth/stored üstünlük ver
-    const isMasterProductPrinting =
-      authProfile.is_master_product_printing ??
-      storedProfile.is_master_product_printing ??
-      fromProfile.is_master_product_printing;
-    const isMasterCashierPrinting =
-      authProfile.is_master_cashier_printing ??
-      storedProfile.is_master_cashier_printing ??
-      fromProfile.is_master_cashier_printing;
+    const localProductOverride = localStorage.getItem("local_override_is_master_product_printing");
+    const localCashierOverride = localStorage.getItem("local_override_is_master_cashier_printing");
+
+    const isMasterProductPrinting = localProductOverride !== null 
+      ? Number(localProductOverride) 
+      : (authProfile.is_master_product_printing ??
+        storedProfile.is_master_product_printing ??
+        fromProfile.is_master_product_printing);
+
+    const isMasterCashierPrinting = localCashierOverride !== null 
+      ? Number(localCashierOverride) 
+      : (authProfile.is_master_cashier_printing ??
+        storedProfile.is_master_cashier_printing ??
+        fromProfile.is_master_cashier_printing);
     return {
       ...authProfile,
       ...fromProfile,
       is_master:
-        fromProfile.is_master ??
-        authTerminal.is_master ??
-        authProfile.is_master,
+        authTerminal.is_master !== undefined ? authTerminal.is_master :
+        (fromProfile.is_master ?? authProfile.is_master),
       is_master_slave_active:
         fromProfile.is_master_slave_active ??
         authTerminal.is_master_slave_active ??

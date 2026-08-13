@@ -302,10 +302,16 @@ const getSimpleReport = async (profileId, baseWhere, startStr, endStr) => {
     let underpaidCount = 0, underpaidTotal = 0;
     let discrepancyExamples = [];
     discrepancyOrders.forEach(order => {
+        // Əgər tamamilə ödənişsiz bağlanıbsa (bütün ödənişlər without_payment_method_id > 0-dırsa), bunu xəta kimi sayma.
+        const isFullyUnpaid = order.order_payments && order.order_payments.length > 0 && 
+            order.order_payments.every(p => p.without_payment_method_id > 0);
+        if (isFullyUnpaid) return;
+
         const total = parseFloat(order.total || 0);
         const paidSum = (order.order_payments || [])
             .filter(p => !p.without_payment_method_id || p.without_payment_method_id === 0)
             .reduce((s, p) => s + parseFloat(p.paid || 0), 0);
+        
         const diff = paidSum - total;
         if (Math.abs(diff) > 0.005) {
             if (diff > 0) {

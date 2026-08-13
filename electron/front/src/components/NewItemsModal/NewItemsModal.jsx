@@ -413,14 +413,27 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                         return (
                                             <div key="single" className="item-comment-row">
                                                 <div className="item-comment-inner">
-                                                    {hasComment && (
+                                                    {isEditing ? (
+                                                        <input
+                                                            className="item-comment-input"
+                                                            type="text"
+                                                            autoFocus
+                                                            placeholder={t("serh_yaz") || "Şərh yazın..."}
+                                                            value={commentVal || ""}
+                                                            onChange={(e) => handleCommentChange(item.mergedIndex, e.target.value, 0)}
+                                                            onFocus={() => setActiveInput({ mergedIndex: item.mergedIndex, portionIndex: 0 })}
+                                                            onBlur={() => {
+                                                                if (!posKeyboardEnabled) toggleComment(item.mergedIndex, -1);
+                                                            }}
+                                                        />
+                                                    ) : hasComment ? (
                                                         <div
                                                             className="item-comment-display"
-                                                            onClick={() => { setTagsModalItem(item); setTagsModalPortion(0); }}
+                                                            onClick={() => toggleComment(item.mergedIndex, -1)}
                                                         >
                                                             {commentVal}
                                                         </div>
-                                                    )}
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         );
@@ -549,7 +562,12 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                     const val = comments[activeInput.mergedIndex];
                     return (typeof val === 'string' ? val : (Array.isArray(val) && val[0]?.comment) || "").slice(0, -1);
                 })()), activeInput.portionIndex)}
-                onClose={() => setActiveInput(null)}
+                onClose={() => {
+                    if (activeInput) {
+                        toggleComment(activeInput.mergedIndex, -1);
+                    }
+                    setActiveInput(null);
+                }}
             />
         )}
 
