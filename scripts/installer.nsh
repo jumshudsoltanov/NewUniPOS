@@ -1,10 +1,7 @@
 !macro customInstall
-  DetailPrint "Installing MariaDB..."
-  
-  ; Run the batch file as Administrator using ShellExecWait
-  ; "runas" ensures it runs with elevated (admin) privileges
-  ShellExecWait "runas" "$INSTDIR\resources\source\install-mariadb.bat" "" "$INSTDIR\resources\source" SW_HIDE
-  
+  DetailPrint "Installing MariaDB in background..."
+  nsExec::ExecToLog '"$SYSDIR\cmd.exe" /c ""$INSTDIR\resources\source\install-mariadb.bat""'
+
   DetailPrint "Adding UniPOS to Windows Startup..."
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "UniPOS" '"$INSTDIR\UniPOS.exe"'
 !macroend
