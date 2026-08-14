@@ -12,6 +12,14 @@ import UpdateNotification from "./components/UpdateNotification/UpdateNotificati
 void printDevConsoleBrand();
 initIosViewportFix();
 
+// Mute all console logs as requested by the user
+if (import.meta.env.PROD || true) {
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+  console.info = () => {};
+}
+
 createRoot(document.getElementById("root")).render(
   <Provider store={store}>
     <App />

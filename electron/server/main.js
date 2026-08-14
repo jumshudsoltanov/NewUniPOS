@@ -520,7 +520,7 @@ function createWindow() {
       };
 
       await performCheck(); // Run once immediately
-      customerDisplayInterval = setInterval(performCheck, 10000); // Poll every 10 seconds
+      customerDisplayInterval = setInterval(performCheck, 30000); // Poll every 30 seconds
     } catch (err) {
       console.error(
         "[ELECTRON] Auto-start Customer Display Error:",
@@ -2703,13 +2703,13 @@ ipcMain.handle("scan-master", async () => {
       resolve(ip);
     };
 
-    // Ümumi timeout — 12 saniyədən sonra tapılmasa null qaytar
+    // Ümumi timeout — 20 saniyədən sonra tapılmasa null qaytar
     let overallTimeout = setTimeout(() => {
       if (!resolved) {
-        console.log("[SLAVE SCAN] 12s timeout — Master tapılmadı");
+        console.log("[SLAVE SCAN] 20s timeout — Master tapılmadı");
         finishScan(null);
       }
-    }, 12000);
+    }, 20000);
 
     // --- 1. UDP Listener ---
     const dgram = require("dgram");
@@ -2765,12 +2765,12 @@ ipcMain.handle("scan-master", async () => {
               }
               // Ümumi broadcast da göndər
               probeSender.send(probeMsg, 0, probeMsg.length, 44444, "255.255.255.255", () => {});
-              console.log("[SLAVE UDP] slave_probe göndərildi");
+              // console.log("[SLAVE UDP] slave_probe göndərildi");
             };
 
-            // Dərhal göndər, sonra hər 800ms-dən bir
+            // Dərhal göndər, sonra hər 3000ms-dən bir
             sendProbes();
-            probeInterval = setInterval(sendProbes, 800);
+            probeInterval = setInterval(sendProbes, 3000);
           });
         } catch (e) {
           console.warn("[SLAVE UDP] Probe sender xətası:", e.message);

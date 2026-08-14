@@ -219,7 +219,7 @@ function AppContent() {
     const timerInt = setInterval(() => {
       dispatch(tickBooks());
       dispatch(tickTables());
-    }, 1000);
+    }, 60000);
  
     return () => {
       window.removeEventListener("online", handleConnectivity);

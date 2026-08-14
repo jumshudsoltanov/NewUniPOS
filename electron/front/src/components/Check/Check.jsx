@@ -1406,7 +1406,7 @@ const Check = () => {
     updateCount();
     window.addEventListener("newNotification", updateCount);
 
-    const clockInt = setInterval(() => setCurrentTime(new Date()), 2000);
+    const clockInt = setInterval(() => setCurrentTime(new Date()), 60000);
 
     return () => {
       window.removeEventListener("newNotification", updateCount);

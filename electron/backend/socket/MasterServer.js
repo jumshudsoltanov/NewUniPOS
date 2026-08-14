@@ -356,7 +356,7 @@ const startBroadcasting = () => {
           /* ignore */
         }
       }
-    }, 500);
+    }, 3000);
   });
 };
 
