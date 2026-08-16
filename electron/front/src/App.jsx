@@ -9,7 +9,7 @@ import Checks from "./components/Checks/Checks";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
-import { savePrintersToStorage } from "./utils/printerHelpers.jsx";
+import { savePrintersToStorage, resolveAndPrintKitchenReceiptLocally } from "./utils/printerHelpers.jsx";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "./redux/Slices/CustomersSlice";
 import { updateSyncStatus, resetSyncedBadge, updateConnectivity, updateSocketStatus } from "./redux/Slices/SyncSlice";
 import { getTableGroups } from "./redux/Slices/TablesSlice";
@@ -247,6 +247,17 @@ function AppContent() {
       console.warn("[MASTER] Mərkəzi çap dinləyicisi aktiv (Slave-dən gələn çap)");
 
       const handleDelegatedPrint = async (data) => {
+        if (data.isRawDelegation) {
+          console.warn("🖨️ Mərkəzi mətbəx çapı Master tərəfindən həll edilir:", data.printerName);
+          try {
+            await resolveAndPrintKitchenReceiptLocally(data.html, data.printerName, data.rawPrinters, data.orderData, true);
+          } catch (e) {
+            console.error("Master resolving delegated kitchen print failed:", e);
+            setTimeout(() => toast.error("Slave-dən gələn mətbəx çapı uğursuz oldu"), 0);
+          }
+          return;
+        }
+
         console.warn("🖨️ Mərkəzi çap qəbul edildi:", data.printerName);
         try {
           const result = await window.electronAPI.printReceipt(data);

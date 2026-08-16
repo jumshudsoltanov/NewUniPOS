@@ -18,11 +18,24 @@ set "DB_PASS=$2a$12$9IuwxtJ27i1RGqV/3m/OB.Lr2tilbrHvVPHUv06MmTMwDSwHTExW."
 echo [INFO] SOURCE: %SOURCE_FOLDER% >> "C:\MariaDB_Install_Log.txt"
 
 :: ============================================================
-:: STEP 1: Check if MariaDB is already FULLY WORKING
-::         (service running + port 3306 active)
-::         If yes - skip everything, no need to reinstall
+:: STEP 1: Check if MariaDB is already INSTALLED or WORKING
+::         If data directory exists, skip installation to PREVENT DATA LOSS.
 :: ============================================================
-echo [INFO] Checking if MariaDB is already working... >> "C:\MariaDB_Install_Log.txt"
+echo [INFO] Checking if MariaDB is already installed... >> "C:\MariaDB_Install_Log.txt"
+
+if exist "%DATA_DIR%\mysql" (
+    echo [INFO] MariaDB data directory exists at %DATA_DIR%. Database is already installed! >> "C:\MariaDB_Install_Log.txt"
+    echo [INFO] Skipping fresh installation to prevent DATA LOSS. >> "C:\MariaDB_Install_Log.txt"
+    :: Try to start the service just in case it was stopped
+    net start MariaDB >nul 2>&1
+    exit /b 0
+)
+
+if exist "%DATA_DIR%" (
+    echo [INFO] MariaDB data folder exists. Skipping installation to prevent data loss. >> "C:\MariaDB_Install_Log.txt"
+    net start MariaDB >nul 2>&1
+    exit /b 0
+)
 
 set "MARIADB_RUNNING=0"
 sc query MariaDB >nul 2>&1
@@ -32,11 +45,8 @@ if %errorlevel% equ 0 (
     )
 )
 if "%MARIADB_RUNNING%"=="1" (
-    netstat -ano | findstr ":3306 " >nul 2>&1
-    if %errorlevel% equ 0 (
-        echo [INFO] MariaDB is already RUNNING on port 3306. Skipping installation. >> "C:\MariaDB_Install_Log.txt"
-        exit /b 0
-    )
+    echo [INFO] MariaDB is already RUNNING. Skipping installation. >> "C:\MariaDB_Install_Log.txt"
+    exit /b 0
 )
 
 set "MYSQL_RUNNING=0"
@@ -47,14 +57,11 @@ if %errorlevel% equ 0 (
     )
 )
 if "%MYSQL_RUNNING%"=="1" (
-    netstat -ano | findstr ":3306 " >nul 2>&1
-    if %errorlevel% equ 0 (
-        echo [INFO] MySQL is already RUNNING on port 3306. Skipping installation. >> "C:\MariaDB_Install_Log.txt"
-        exit /b 0
-    )
+    echo [INFO] MySQL is already RUNNING. Skipping installation. >> "C:\MariaDB_Install_Log.txt"
+    exit /b 0
 )
 
-echo [INFO] No working DB found. Proceeding with fresh MariaDB install... >> "C:\MariaDB_Install_Log.txt"
+echo [INFO] No working DB found and no data directory exists. Proceeding with fresh MariaDB install... >> "C:\MariaDB_Install_Log.txt"
 
 :: ============================================================
 :: STEP 2: Check VC++ 2019 x86 (required for MariaDB 10.4)
@@ -102,10 +109,16 @@ timeout /t 2 >nul
 
 echo [+] Removing old MariaDB files from %TARGET_DIR%... >> "C:\MariaDB_Install_Log.txt"
 if exist "%TARGET_DIR%" (
-    rmdir /s /q "%TARGET_DIR%" >nul 2>&1
-    timeout /t 2 >nul
+    if exist "%DATA_DIR%" (
+        echo [WARNING] Data directory exists! We will NOT delete %TARGET_DIR% to protect data. >> "C:\MariaDB_Install_Log.txt"
+    ) else (
+        rmdir /s /q "%TARGET_DIR%" >nul 2>&1
+        timeout /t 2 >nul
+        mkdir "%TARGET_DIR%"
+    )
+) else (
+    mkdir "%TARGET_DIR%"
 )
-mkdir "%TARGET_DIR%"
 echo [OK] Cleanup done. >> "C:\MariaDB_Install_Log.txt"
 
 :: ============================================================

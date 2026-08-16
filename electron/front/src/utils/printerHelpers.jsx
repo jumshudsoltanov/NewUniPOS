@@ -97,7 +97,10 @@ export function findPhysicalPrinters(printerName, profilePrinters, rawPrinters) 
 
   // 3. Fallback to raw database details
   if (matches.length === 0 && rawPrinters && rawPrinters.length > 0) {
-    let rawMatch = rawPrinters.find((p) => matchPrinterName(p, printerName)) || rawPrinters[0];
+    let rawMatch = rawPrinters.find((p) => matchPrinterName(p, printerName));
+    if (!rawMatch) {
+      rawMatch = rawPrinters.find((p) => Number(p.is_cashier) === 0) || rawPrinters[0];
+    }
     if (rawMatch?.id) {
       const byId = profilePrinters?.find((p) => p.id === rawMatch.id);
       if (byId) rawMatch = byId;
@@ -342,65 +345,15 @@ export const processAndPrintOrders = async (
           canDelegate &&
           (forceDelegate || (isMasterProductPrinting && isSlave))
         ) {
-          const delegateProfilePrinters =
-            orderData.profileData?.data?.printers || [];
-          let printerObjs = findPhysicalPrinters(printerName, delegateProfilePrinters, groupItems[0]?.printer_details);
-          
-          for (const printerObj of printerObjs) {
-            const _connType1 = printerObj?.connection_type;
-            const isNet =
-              _connType1 === "network" ||
-              (_connType1 !== "usb" && _connType1 !== "com" && !!printerObj?.ip);
-            const hasUsb = !!(
-              printerObj?.usb_name &&
-              printerObj.usb_name.trim() &&
-              printerObj.usb_name !== "RASTER"
-            );
-            const isComDel = _connType1 === "com";
-            const delPrinterSettings = printerObj ? {
-                encoding: printerObj.encoding || "utf8",
-                copies: printerObj.copies || 1,
-                darkness: printerObj.darkness || 5,
-                cut_mode: printerObj.cut_mode || "full",
-                trailing_space: printerObj.trailing_space || 0,
-                receipt_header: printerObj.receipt_header || null,
-                receipt_footer: printerObj.receipt_footer || null,
-                bold_header: printerObj.bold_header || 0,
-                double_height_header: printerObj.double_height_header || 0,
-                sound_notify: printerObj.sound_notify || 0,
-                cash_drawer: printerObj.cash_drawer || 0,
-                open_drawer_without_print: printerObj.open_drawer_without_print || 0,
-                paper_size: printerObj.paper_size || "80",
-                font_family: printerObj.font_family || "Arial",
-                usb_name: isComDel ? null : hasUsb ? printerObj.usb_name : (isNet ? null : (printerObj.name || null)),
-                fast_print: printerObj.fast_print ? 1 : 0,
-                print_logo: printerObj.print_logo != null ? Number(printerObj.print_logo) : 1,
-                rotate_180: printerObj.rotate_180 ? 1 : 0,
-                baud_rate: printerObj.baud_rate || "9600",
-                connection_type: _connType1 || null,
-                com_port: isComDel ? printerObj.usb_name || null : null,
-                printer_label:
-                  (printerObj?.local_name ? printerObj.local_name.trim() : (printerObj?.name || printerName || "")),
-            } : {};
-            const safeDelSettings = JSON.parse(JSON.stringify(delPrinterSettings));
-            const resolvedDelUsbName = hasUsb
-              ? printerObj.usb_name
-              : (isNet ? "" : (printerObj?.name ? printerObj.name.trim() : (printerName || "")));
-            const delegatePayload =
-              isNet && printerObj?.ip && !hasUsb
-                ? {
-                    html,
-                    printerName: "",
-                    printerIp: printerObj.ip,
-                    printerPort: printerObj.port || 9100,
-                    printerSettings: safeDelSettings,
-                  }
-                : { html, printerName: resolvedDelUsbName, printerSettings: safeDelSettings };
-            console.warn(
-              `[PRINTER] Mərkəzi mətbəx çapı Slave-dən Master-a göndərilir: ${printerName} -> ${resolvedDelUsbName || printerObj?.ip}`,
-            );
-            socket.emit("delegate_print", delegatePayload);
-          }
+          const delegatePayload = {
+            isRawDelegation: true,
+            html,
+            printerName,
+            rawPrinters: groupItems[0]?.printer_details,
+            orderData
+          };
+          console.warn(`[PRINTER] Mərkəzi mətbəx çapı Master-a həvalə edilir: ${printerName}`);
+          socket.emit("delegate_print", delegatePayload);
           continue;
         } else if (forceDelegate && !canDelegate) {
           const displayId = orderData.checkData?.id || orderData.orderId;
@@ -415,159 +368,7 @@ export const processAndPrintOrders = async (
           continue; // Skip local print since it's mobile
         }
 
-        // Local Print Logic — printer_details və ya profile printers-dan tam printer obyektini al
-        let profilePrinters = [];
-        let authResultFallback = null;
-        try { authResultFallback = JSON.parse(localStorage.getItem("authResult") || "{}"); } catch { }
-        
-        const profileId = orderData.profileData?.data?.profile?.id || authResultFallback?.data?.profile?.id;
-        const cached = profileId ? loadPrintersFromStorage(profileId) : null;
-        
-        if (cached && cached.length > 0) {
-          // Əgər lokal cache-də (DevicesModal-da dəyişdirilmiş) printerlər varsa, onları istifadə et
-          profilePrinters = cached;
-        } else {
-          // Yoxdursa (və ya profileId tapılmadısa), Redux/authResult-dan gələn printerləri yoxla
-          profilePrinters = orderData.profileData?.data?.printers || [];
-          if (profilePrinters.length === 0 && Array.isArray(authResultFallback?.data?.printers) && authResultFallback.data.printers.length > 0) {
-            profilePrinters = authResultFallback.data.printers;
-          }
-        }
-        
-        // 1. printer_details-dan adla tap
-        let printerObjs = findPhysicalPrinters(printerName, profilePrinters, groupItems[0]?.printer_details);
-        
-        // 4. Hələ tapılmadısa — is_cashier=0 olan ilk mətbəx printeri götür
-        if (printerObjs.length === 0 && profilePrinters.length > 0) {
-          const fallbackKitchen = profilePrinters.find((p) => Number(p.is_cashier) === 0);
-          if (fallbackKitchen) printerObjs.push(fallbackKitchen);
-        }
-
-        for (const printerObj of printerObjs) {
-          const _connType2 = printerObj?.connection_type;
-          const isCom2 = _connType2 === "com";
-          const isNetwork =
-            _connType2 === "network" ||
-            (_connType2 !== "usb" && _connType2 !== "com" && !!printerObj?.ip);
-          const hasUsbName =
-            !isCom2 &&
-            !!(
-              printerObj?.usb_name &&
-              printerObj.usb_name.trim() &&
-              printerObj.usb_name !== "RASTER"
-            );
-          
-          // printerName — printer_details-dan alınmış display adı (həmişə dolu)
-          // usb_name konfiqurasiya edilməyibsə name → printerName sıra ilə istifadə et (local_name route üçündür)
-          const resolvedUsbName = isCom2
-            ? (printerObj?.usb_name || printerName || "")
-            : hasUsbName
-              ? printerObj.usb_name
-              : (isNetwork ? "" : (printerObj?.name ? printerObj.name.trim() : (printerName || "")));
-          const targetPrinter = resolvedUsbName;
-          const printerSettings = printerObj
-            ? {
-                encoding: printerObj.encoding || "utf8",
-                copies: printerObj.copies || 1,
-                darkness: printerObj.darkness || 5,
-                cut_mode: printerObj.cut_mode || "full",
-                trailing_space: printerObj.trailing_space || 0,
-                receipt_header: printerObj.receipt_header || null,
-                receipt_footer: printerObj.receipt_footer || null,
-                bold_header: printerObj.bold_header || 0,
-                double_height_header: printerObj.double_height_header || 0,
-                sound_notify: printerObj.sound_notify || 0,
-                cash_drawer: printerObj.cash_drawer || 0,
-                open_drawer_without_print:
-                  printerObj.open_drawer_without_print || 0,
-                paper_size: printerObj.paper_size || "80",
-                font_family: printerObj.font_family || "Arial",
-                usb_name: isCom2
-                  ? null
-                  : resolvedUsbName || null,
-                fast_print: printerObj.fast_print ? 1 : 0,
-                print_logo:
-                  printerObj.print_logo != null
-                    ? Number(printerObj.print_logo)
-                    : 1,
-                rotate_180: printerObj.rotate_180 ? 1 : 0,
-                baud_rate: printerObj.baud_rate || "9600",
-                connection_type: _connType2 || null,
-                com_port: isCom2 ? printerObj.usb_name || null : null,
-                printer_label:
-                  (printerObj?.local_name ? printerObj.local_name.trim() : (printerObj?.name || printerName || "")),
-              }
-            : {};
-          const safeSettings = JSON.parse(JSON.stringify(printerSettings));
-
-          if (!isNetwork && !targetPrinter) {
-            const errMsg =
-              "Printer konfiqurasiyası natamamdır: local/USB printer adı tapılmadı";
-            const displayId = orderData.checkData?.id || orderData.orderId;
-            addNotification("Çap Xətası", `${printerName} üçün ${errMsg}`, {
-              orderId: displayId,
-              printerName,
-              category: "system",
-              type: "error",
-            });
-            await sendRemoteLog(
-              orderData,
-              "Mətbəx Çapı Xətası",
-              `${printerName}: ${errMsg}`,
-            );
-            continue;
-          }
-
-          const printPayload = {
-            html,
-            printerName: isNetwork && printerObj?.ip && !hasUsbName ? "" : String(targetPrinter || ""),
-            printerIp: printerObj?.ip ? String(printerObj.ip) : null,
-            printerPort: printerObj?.port ? Number(printerObj.port) : 9100,
-            printerSettings: safeSettings,
-          };
-
-          if (window.electronAPI && window.electronAPI.printReceipt) {
-            const printPromise = window.electronAPI.printReceipt(printPayload);
-            const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(
-                () => reject(new Error("Çap vaxtı bitdi (Timeout)")),
-                15000,
-              ),
-            );
-
-            const result = await Promise.race([printPromise, timeoutPromise]);
-
-            if (!result || !result.success) {
-              const errMsg = result?.error || "Bilinməyən xəta";
-              const displayId = orderData.checkData?.id || orderData.orderId;
-              addNotification(
-                "Çap Xətası",
-                `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`,
-                {
-                  orderId: displayId,
-                  printerName,
-                  category: "system",
-                  type: "error",
-                },
-              );
-              await sendRemoteLog(
-                orderData,
-                "Mətbəx Çapı Xətası",
-                `${printerName}: ${errMsg}`,
-              );
-            }
-          } else {
-            const errMsg = "Electron API tapılmadı";
-            const displayId = orderData.checkData?.id || orderData.orderId;
-            addNotification("Sistem Xətası", errMsg, {
-              orderId: displayId,
-              printerName,
-              category: "system",
-              type: "error",
-            });
-            await sendRemoteLog(orderData, "Sistem Xətası", errMsg);
-          }
-        }
+        await resolveAndPrintKitchenReceiptLocally(html, printerName, groupItems[0]?.printer_details, orderData);
 
         // Minimal delay between print jobs for speed while maintaining stability
         await new Promise((r) => setTimeout(r, 50));
@@ -735,9 +536,9 @@ export const printCustomerReceipt = async (
           }
         : {};
       const safeSettings = JSON.parse(JSON.stringify(printerSettings));
-      const targetName = isCom
-        ? printer.usb_name || printerName || ""
-        : printer.usb_name || printerName || "";
+        const targetName = isCom
+          ? printer.usb_name || printerName || ""
+          : (printer?.local_name && printer.local_name.trim() ? printer.local_name.trim() : (printer.usb_name || printerName || ""));
 
       return {
         html,
@@ -878,4 +679,160 @@ export const printCustomerReceipt = async (
       }
     }
   }
+};
+
+export const resolveAndPrintKitchenReceiptLocally = async (html, printerName, rawPrinters, orderData, isDelegated = false) => {
+    let profilePrinters = [];
+    let authResultFallback = null;
+    try { authResultFallback = JSON.parse(localStorage.getItem("authResult") || "{}"); } catch { }
+    
+    const profileId = isDelegated 
+      ? authResultFallback?.data?.profile?.id 
+      : (orderData?.profileData?.data?.profile?.id || authResultFallback?.data?.profile?.id);
+
+    const cached = profileId ? loadPrintersFromStorage(profileId) : null;
+    
+    if (cached && cached.length > 0) {
+      profilePrinters = cached;
+    } else {
+      profilePrinters = isDelegated 
+        ? authResultFallback?.data?.printers || []
+        : (orderData?.profileData?.data?.printers || authResultFallback?.data?.printers || []);
+      
+      if (profilePrinters.length === 0 && Array.isArray(authResultFallback?.data?.printers) && authResultFallback.data.printers.length > 0) {
+        profilePrinters = authResultFallback.data.printers;
+      }
+    }
+    
+    let printerObjs = findPhysicalPrinters(printerName, profilePrinters, rawPrinters);
+    
+    if (printerObjs.length === 0 && profilePrinters.length > 0) {
+      const fallbackKitchen = profilePrinters.find((p) => Number(p.is_cashier) === 0);
+      if (fallbackKitchen) printerObjs.push(fallbackKitchen);
+    }
+
+    for (const printerObj of printerObjs) {
+      const _connType2 = printerObj?.connection_type;
+      const isCom2 = _connType2 === "com";
+      const isNetwork =
+        _connType2 === "network" ||
+        (_connType2 !== "usb" && _connType2 !== "com" && !!printerObj?.ip);
+      const hasUsbName =
+        !isCom2 &&
+        !!(
+          printerObj?.usb_name &&
+          printerObj.usb_name.trim() &&
+          printerObj.usb_name !== "RASTER"
+        );
+      
+      const resolvedUsbName = isCom2
+        ? (printerObj?.usb_name || printerName || "")
+        : (isNetwork ? "" : (printerObj?.local_name && printerObj.local_name.trim() ? printerObj.local_name.trim() : (hasUsbName ? printerObj.usb_name : (printerObj?.name ? printerObj.name.trim() : (printerName || "")))));
+      const targetPrinter = resolvedUsbName;
+      const printerSettings = printerObj
+        ? {
+            encoding: printerObj.encoding || "utf8",
+            copies: printerObj.copies || 1,
+            darkness: printerObj.darkness || 5,
+            cut_mode: printerObj.cut_mode || "full",
+            trailing_space: printerObj.trailing_space || 0,
+            receipt_header: printerObj.receipt_header || null,
+            receipt_footer: printerObj.receipt_footer || null,
+            bold_header: printerObj.bold_header || 0,
+            double_height_header: printerObj.double_height_header || 0,
+            sound_notify: printerObj.sound_notify || 0,
+            cash_drawer: printerObj.cash_drawer || 0,
+            open_drawer_without_print:
+              printerObj.open_drawer_without_print || 0,
+            paper_size: printerObj.paper_size || "80",
+            font_family: printerObj.font_family || "Arial",
+            usb_name: isCom2
+              ? null
+              : resolvedUsbName || null,
+            fast_print: printerObj.fast_print ? 1 : 0,
+            print_logo:
+              printerObj.print_logo != null
+                ? Number(printerObj.print_logo)
+                : 1,
+            rotate_180: printerObj.rotate_180 ? 1 : 0,
+            baud_rate: printerObj.baud_rate || "9600",
+            connection_type: _connType2 || null,
+            com_port: isCom2 ? printerObj.usb_name || null : null,
+            printer_label:
+              (printerObj?.local_name ? printerObj.local_name.trim() : (printerObj?.name || printerName || "")),
+          }
+        : {};
+      const safeSettings = JSON.parse(JSON.stringify(printerSettings));
+
+      if (!isNetwork && !targetPrinter) {
+        const errMsg =
+          "Printer konfiqurasiyası natamamdır: local/USB printer adı tapılmadı";
+        const displayId = orderData?.checkData?.id || orderData?.orderId;
+        addNotification("Çap Xətası", `${printerName} üçün ${errMsg}`, {
+          orderId: displayId,
+          printerName,
+          category: "system",
+          type: "error",
+        });
+        await sendRemoteLog(
+          orderData,
+          "Mətbəx Çapı Xətası",
+          `${printerName}: ${errMsg}`,
+        );
+        continue;
+      }
+
+      const printPayload = {
+        html,
+        printerName: isNetwork && printerObj?.ip && !hasUsbName ? "" : String(targetPrinter || ""),
+        printerIp: printerObj?.ip ? String(printerObj.ip) : null,
+        printerPort: printerObj?.port ? Number(printerObj.port) : 9100,
+        printerSettings: safeSettings,
+      };
+
+      const displayIdentifier = printerObj?.local_name || printerObj?.name || printPayload.printerName || printPayload.printerIp;
+      console.warn(`[RESOLVED PRINTER] Mətbəx çapı son olaraq bu fiziki printerə göndərilir: ${displayIdentifier} ${isNetwork ? '(Network: ' + printPayload.printerIp + ')' : ''}`);
+
+      if (window.electronAPI && window.electronAPI.printReceipt) {
+        const printPromise = window.electronAPI.printReceipt(printPayload);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Çap vaxtı bitdi (Timeout)")),
+            15000,
+          ),
+        );
+
+        const result = await Promise.race([printPromise, timeoutPromise]).catch(e => ({ success: false, error: e.message }));
+
+        if (!result || !result.success) {
+          const errMsg = result?.error || "Bilinməyən xəta";
+          const displayId = orderData?.checkData?.id || orderData?.orderId;
+          addNotification(
+            "Çap Xətası",
+            `${printerName} printerinə çap göndərilmədi. Xəta: ${errMsg}`,
+            {
+              orderId: displayId,
+              printerName,
+              category: "system",
+              type: "error",
+            },
+          );
+          await sendRemoteLog(
+            orderData,
+            "Mətbəx Çapı Xətası",
+            `${printerName}: ${errMsg}`,
+          );
+        }
+      } else {
+        const errMsg = "Electron API tapılmadı";
+        const displayId = orderData?.checkData?.id || orderData?.orderId;
+        addNotification("Sistem Xətası", errMsg, {
+          orderId: displayId,
+          printerName,
+          category: "system",
+          type: "error",
+        });
+        await sendRemoteLog(orderData, "Sistem Xətası", errMsg);
+      }
+    }
 };
