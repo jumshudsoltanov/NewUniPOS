@@ -321,6 +321,9 @@ const getProducts = async (passedProfileId) => {
     const hourlyPriceMap = {};
     const freeCountMap = {};
     const barcodeMap = {};
+    const productTypeMap = {};
+    const timerIntervalsMap = {};
+    const areOrdersIncludedMap = {};
     if (v2Result.status === "fulfilled") {
       const items = v2Result.value.data?.items || [];
       items.forEach((item) => {
@@ -337,6 +340,12 @@ const getProducts = async (passedProfileId) => {
           freeCountMap[item.id] = Number(item.free_count) === 1 ? 1 : 0;
         if (item.barcode)
           barcodeMap[item.id] = item.barcode.toString();
+        if (item.product_type)
+          productTypeMap[item.id] = item.product_type;
+        if (item.timer_intervals !== undefined)
+          timerIntervalsMap[item.id] = item.timer_intervals;
+        if (item.are_orders_included !== undefined)
+          areOrdersIncludedMap[item.id] = item.are_orders_included;
       });
     } else {
       console.error("[ProductsData] V2 API xətası:", v2Result.reason?.message);
@@ -463,6 +472,9 @@ const getProducts = async (passedProfileId) => {
         if (hourlyPriceMap[p.id] != null) p.hourly_price = hourlyPriceMap[p.id];
         if (freeCountMap[p.id] != null) p.free_count = freeCountMap[p.id];
         if (barcodeMap[p.id] != null) p.barcode = barcodeMap[p.id];
+        if (productTypeMap[p.id] != null) p.product_type = productTypeMap[p.id];
+        p.timer_intervals = timerIntervalsMap[p.id] !== undefined ? timerIntervalsMap[p.id] : (p.timer_intervals ?? null);
+        p.are_orders_included = areOrdersIncludedMap[p.id] !== undefined ? areOrdersIncludedMap[p.id] : (p.are_orders_included ?? 0);
         // /modifiers API-də bu məhsul üçün qrup varsa ondan istifadə et; yoxdursa V1/V3-dən gələn JSON terkib saxlanılır
         const pidNum = Number(p.id);
         if (Number.isFinite(pidNum) && Object.prototype.hasOwnProperty.call(modifierMap, pidNum)) {
@@ -503,7 +515,8 @@ const getProducts = async (passedProfileId) => {
           (key) =>
             ProductsModel.rawAttributes[key] &&
             key !== "ordering" &&
-            key !== "modifier_groups",
+            key !== "modifier_groups" &&
+            key !== "timer_intervals",
         );
         await ProductsModel.bulkCreate(productsWithOrder, {
           updateOnDuplicate: updateKeys,
@@ -519,6 +532,20 @@ const getProducts = async (passedProfileId) => {
           }
           await ProductsModel.update(
             { modifier_groups: value },
+            { where: { id: p.id, profile_id } },
+          );
+        }
+
+        // timer_intervals JSON
+        for (const p of productsWithOrder) {
+          if (p.timer_intervals === undefined) continue;
+          let timerVal = null;
+          const ti = p.timer_intervals;
+          if (ti !== null && ti !== "") {
+            timerVal = typeof ti === "string" ? ti : JSON.stringify(ti);
+          }
+          await ProductsModel.update(
+            { timer_intervals: timerVal },
             { where: { id: p.id, profile_id } },
           );
         }

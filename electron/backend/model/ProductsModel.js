@@ -116,6 +116,18 @@ const ProductsModel = db.sequelize.define(
       type: DataTypes.JSON,
       allowNull: true,
     },
+    
+    timer_intervals: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    
+    are_orders_included: {
+      type: DataTypes.TINYINT,
+      allowNull: true,
+      defaultValue: 0,
+    },
+
 
     barcode: {
       type: DataTypes.STRING,

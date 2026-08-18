@@ -91,6 +91,7 @@ const getTables = async (req, res) => {
             const liveStatus = TimerService.calculateLiveStatus(activeOrder, effHp);
             activeOrder.dataValues.rate_per_minute = liveStatus.charge;
             activeOrder.dataValues.is_timer_clock = liveStatus.clockStr;
+            if (liveStatus.isTimerRunning) activeOrder.dataValues.is_timer_status = 1;
 
             // amount DB-də bəzən artıq taymer daxil olur — cəm üçün sətirlər üzrə məhsul cəmi
             const plainItems = activeOrder.orders_items || [];

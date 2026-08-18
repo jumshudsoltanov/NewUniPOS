@@ -13,7 +13,7 @@ import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import apiConfig, { TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
 import { addNotification } from "../../utils/notificationService";
-import { sumOrderItemsLinesTotal, getOrderItemLineTotal, buildFiscalLineItemsFromOrderItems, mapOrderPaymentForTax, computeFiscalCheckTotalsFromOrder } from "../../utils/orderItemLineTotal";
+import { sumOrderItemsLinesTotal, getOrderItemLineTotal, buildFiscalLineItemsFromOrderItems, mapOrderPaymentForTax, computeFiscalCheckTotalsFromOrder, getTimerElapsedSeconds } from "../../utils/orderItemLineTotal";
 import { t } from "../../utils/translations";
 import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 
@@ -98,9 +98,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             const price = Number(item.price || 0);
             const modifiers = parseMods(item);
             const modKey = JSON.stringify(modifiers);
-            const key = `${name}__${price}__${modKey}`;
+            const isTimer = String(item.product_type || item.product?.product_type || '').toLowerCase() === 'timer' || !!(item.timer_intervals || item.product?.timer_intervals);
+            const key = isTimer ? `${name}__${price}__${modKey}__${item.id}` : `${name}__${price}__${modKey}`;
             const cnt = Number(item.count || 0);
-            const lineTotal = getOrderItemLineTotal(item);
+            const lineTotal = getOrderItemLineTotal(item, order);
             if (map[key]) {
                 map[key].count += cnt;
                 map[key].lineTotal += lineTotal;
@@ -112,11 +113,12 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     price,
                     modifiers,
                     lineTotal,
+                    isTimer,
                 };
             }
         });
         return Object.values(map);
-    }, [order?.orders_items]);
+    }, [order?.orders_items, order]);
 
     const discountPercentage = useMemo(() => {
         if (order?.discount_percentage) return order.discount_percentage;
@@ -845,7 +847,19 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 return (
                                                 <tr key={i}>
                                                     <td>
-                                                        <div>{item.name}</div>
+                                                        <div style={{ fontWeight: item.isTimer ? 600 : 400 }}>{item.name}</div>
+                                                        {item.isTimer && (
+                                                            <div className="text-muted" style={{ fontSize: '12px', marginTop: '2px' }}>
+                                                                <i className="bi bi-clock me-1"></i>
+                                                                {(() => {
+                                                                    const secs = getTimerElapsedSeconds(item, order);
+                                                                    const h = Math.floor(secs / 3600);
+                                                                    const m = Math.floor((secs % 3600) / 60);
+                                                                    const s = secs % 60;
+                                                                    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                                                                })()}
+                                                            </div>
+                                                        )}
                                                         {item.modifiers && item.modifiers.length > 0 && (
                                                             <div className="check-detail-item-modifiers">
                                                                 {item.modifiers.map((m, mi) => {

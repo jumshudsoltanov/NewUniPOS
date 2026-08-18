@@ -1176,10 +1176,11 @@ export const incrementPrintCount = createAsyncThunk(
 
 export const startTimer = createAsyncThunk(
   "orders/startTimer",
-  async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, itemId, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/timer-start`,
+        { itemId }
       );
 
       const state = thunkAPI.getState();
@@ -1195,7 +1196,7 @@ export const startTimer = createAsyncThunk(
           orderId,
           action: "Taymer başladıldı",
           waiterName,
-          details: "Taymer saymağa başladı",
+          details: `Taymer saymağa başladı${itemId ? ' (Məhsul)' : ''}`,
         }),
       );
 
@@ -1209,13 +1210,14 @@ export const startTimer = createAsyncThunk(
 export const stopTimer = createAsyncThunk(
   "orders/stopTimer",
   async (
-    { orderId, elapsedSeconds, clockStr, waiterName: passedWaiterName },
+    { orderId, itemId, elapsedSeconds, clockStr, waiterName: passedWaiterName },
     thunkAPI,
   ) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/timer-stop`,
         {
+          itemId,
           elapsedSeconds,
           clockStr,
         },
@@ -1234,7 +1236,7 @@ export const stopTimer = createAsyncThunk(
           orderId,
           action: "Taymer dayandırıldı",
           waiterName,
-          details: `Vaxt: ${clockStr || "00:00:00"}`,
+          details: `Taymer dayandırıldı${itemId ? ' (Məhsul)' : ''}. Vaxt: ${clockStr}`,
         }),
       );
 
@@ -1247,10 +1249,11 @@ export const stopTimer = createAsyncThunk(
 
 export const resetTimer = createAsyncThunk(
   "orders/resetTimer",
-  async ({ orderId, waiterName: passedWaiterName }, thunkAPI) => {
+  async ({ orderId, itemId, waiterName: passedWaiterName }, thunkAPI) => {
     try {
       const response = await axios.patch(
         `/orders-items/${orderId}/timer-reset`,
+        { itemId }
       );
 
       const state = thunkAPI.getState();
@@ -1266,7 +1269,7 @@ export const resetTimer = createAsyncThunk(
           orderId,
           action: "Taymer sıfırlandı",
           waiterName,
-          details: "Taymer vaxtı 00:00:00 edildi",
+          details: `Taymer sıfırlandı${itemId ? ' (Məhsul)' : ''}`,
         }),
       );
 
@@ -1472,7 +1475,38 @@ export const OrderSlice = createSlice({
       };
 
       const isOwnSetPrice = incomingProduct.own_set_price === 1 || incomingProduct.isOwnSetPrice === 1;
-      if (!isOwnSetPrice) {
+      
+      let pHourly = Number(incomingProduct.hourly_price || incomingProduct.product?.hourly_price || 0);
+      let pIntervals = incomingProduct.timer_intervals || incomingProduct.product?.timer_intervals || [];
+      
+      if (state.menu && Array.isArray(state.menu)) {
+        const catItem = state.menu.find(m => Number(m.id) === Number(incomingProduct.product_id || incomingProduct.id));
+        if (catItem) {
+          pHourly = pHourly || Number(catItem.hourly_price || 0);
+          if (!pIntervals || (Array.isArray(pIntervals) && pIntervals.length === 0) || (typeof pIntervals === 'string' && pIntervals.length <= 2)) {
+            pIntervals = catItem.timer_intervals || [];
+          }
+        }
+      }
+
+      // Fallback: check existing products in state (already-added items carry the info)
+      if (pHourly === 0 && !(Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]"))) {
+        const existingInState = [...(state.products || []), ...(state.sentProducts || [])].find(
+          p => Number(p.product_id || p.id) === Number(incomingProduct.product_id || incomingProduct.id)
+        );
+        if (existingInState) {
+          pHourly = pHourly || Number(existingInState.hourly_price || existingInState.product?.hourly_price || 0);
+          if (!pIntervals || (Array.isArray(pIntervals) && pIntervals.length === 0)) {
+            pIntervals = existingInState.timer_intervals || existingInState.product?.timer_intervals || [];
+          }
+        }
+      }
+
+      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      const isTimerProduct = pHourly > 0 || intervalsValid || String(incomingProduct.product_type || '').toLowerCase() === 'timer' || String(incomingProduct.product?.product_type || '').toLowerCase() === 'timer';
+      
+      // Timer məhsulları HEÇ VAXT qruplaşmaz - hər biri ayrı saatı olan ayrı sətirdir
+      if (!isOwnSetPrice && !isTimerProduct) {
         const prodId = incomingProduct.product_id || incomingProduct.id;
         const isGift = incomingProduct.is_gift === 1 || incomingProduct.is_gift === true;
         const priceStr = String(parsedPrice || '');
@@ -1499,12 +1533,21 @@ export const OrderSlice = createSlice({
         }
       }
 
-      state.products.push({
+      const finalProduct = {
         ...incomingProduct,
+        uuid: window.crypto.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
         quantity: qty,
         newOrder: incomingProduct.newOrder !== undefined ? incomingProduct.newOrder : qty,
         price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
-      });
+      };
+
+      if (isTimerProduct) {
+        finalProduct.is_timer_status = 0;
+        finalProduct.is_timer_clock = "00:00:00";
+        finalProduct.timer_last_started_at = null;
+      }
+
+      state.products.push(finalProduct);
     },
 
     sendOrders: (state, action) => {

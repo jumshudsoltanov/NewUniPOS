@@ -11,14 +11,9 @@ export function selectLiveTimerData(state, orderUuid) {
     ? state.BooksSlice.books
     : state.BooksSlice.books?.data;
   if (booksData) {
-    const order = booksData.find((o) => String(o.uuid) === String(orderUuid));
+    const order = booksData.find((o) => String(o.uuid) === String(orderUuid) || String(o.id) === String(orderUuid));
     if (order) {
-      fromBooks = {
-        is_timer_status: order.is_timer_status,
-        is_timer_clock: order.is_timer_clock,
-        rate_per_minute: order.rate_per_minute,
-        is_active_timer: order.is_active_timer,
-      };
+      fromBooks = order;
     }
   }
 
@@ -27,14 +22,9 @@ export function selectLiveTimerData(state, orderUuid) {
   if (tg) {
     for (const hall of tg) {
       for (const t of hall.tables || []) {
-        const order = t.orders?.find((o) => String(o.uuid) === String(orderUuid));
+        const order = t.orders?.find((o) => String(o.uuid) === String(orderUuid) || String(o.id) === String(orderUuid));
         if (order) {
-          fromTables = {
-            is_timer_status: order.is_timer_status,
-            is_timer_clock: order.is_timer_clock,
-            rate_per_minute: order.rate_per_minute,
-            is_active_timer: order.is_active_timer,
-          };
+          fromTables = order;
           break;
         }
       }
@@ -50,7 +40,8 @@ export function selectLiveTimerData(state, orderUuid) {
       Number(fromTables.rate_per_minute || 0) > 0 ||
       (fromTables.is_timer_clock &&
         String(fromTables.is_timer_clock) !== "" &&
-        fromTables.is_timer_clock !== "00:00:00");
+        fromTables.is_timer_clock !== "00:00:00") ||
+      (fromTables.orders_items && fromTables.orders_items.some(item => Number(item.is_timer_status) === 1));
     if (tablesLooksLive) {
       return fromTables;
     }

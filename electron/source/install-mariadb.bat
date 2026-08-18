@@ -20,8 +20,9 @@ echo [INFO] SOURCE: %SOURCE_FOLDER% >> "C:\MariaDB_Install_Log.txt"
 :: ============================================================
 :: STEP 1: Check if MariaDB is already INSTALLED or WORKING
 ::         If data directory exists, skip installation to PREVENT DATA LOSS.
+::         HƏR İKİ port (3306 VƏ 3307) yoxlanilir — varsa təkrar qurulmur.
 :: ============================================================
-echo [INFO] Checking if MariaDB is already installed... >> "C:\MariaDB_Install_Log.txt"
+echo [INFO] Checking if MariaDB is already installed (ports 3306/3307)... >> "C:\MariaDB_Install_Log.txt"
 
 if exist "%DATA_DIR%\mysql" (
     echo [INFO] MariaDB data directory exists at %DATA_DIR%. Database is already installed! >> "C:\MariaDB_Install_Log.txt"
@@ -37,31 +38,25 @@ if exist "%DATA_DIR%" (
     exit /b 0
 )
 
-set "MARIADB_RUNNING=0"
-sc query MariaDB >nul 2>&1
+:: Port 3306-da dinlənən proses varsa demək MariaDB artıq quraşdırılıb/işləyir — təkrar qurmuruq
+netstat -ano | findstr /c:":3306" | findstr /c:"LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
-    for /f "tokens=3" %%s in ('sc query MariaDB ^| findstr /i "STATE"') do (
-        if /i "%%s"=="RUNNING" set "MARIADB_RUNNING=1"
-    )
-)
-if "%MARIADB_RUNNING%"=="1" (
-    echo [INFO] MariaDB is already RUNNING. Skipping installation. >> "C:\MariaDB_Install_Log.txt"
+    echo [INFO] Port 3306 artıq istifadə olunur — MariaDB artıq işləyir. Skipping installation. >> "C:\MariaDB_Install_Log.txt"
+    :: Try to start the service just in case it was stopped
+    net start MariaDB >nul 2>&1
     exit /b 0
 )
 
-set "MYSQL_RUNNING=0"
-sc query MySQL >nul 2>&1
+:: Port 3307-də dinlənən proses varsa demək MariaDB artıq quraşdırılıb/işləyir — təkrar qurmuruq
+netstat -ano | findstr /c:":3307" | findstr /c:"LISTENING" >nul 2>&1
 if %errorlevel% equ 0 (
-    for /f "tokens=3" %%s in ('sc query MySQL ^| findstr /i "STATE"') do (
-        if /i "%%s"=="RUNNING" set "MYSQL_RUNNING=1"
-    )
-)
-if "%MYSQL_RUNNING%"=="1" (
-    echo [INFO] MySQL is already RUNNING. Skipping installation. >> "C:\MariaDB_Install_Log.txt"
+    echo [INFO] Port 3307 artıq istifadə olunur — MariaDB artıq işləyir. Skipping installation. >> "C:\MariaDB_Install_Log.txt"
+    :: Try to start the service just in case it was stopped
+    net start MariaDB >nul 2>&1
     exit /b 0
 )
 
-echo [INFO] No working DB found and no data directory exists. Proceeding with fresh MariaDB install... >> "C:\MariaDB_Install_Log.txt"
+echo [INFO] No working DB found on ports 3306/3307 and no data directory exists. Proceeding with fresh MariaDB install... >> "C:\MariaDB_Install_Log.txt"
 
 :: ============================================================
 :: STEP 2: Check VC++ 2019 x86 (required for MariaDB 10.4)

@@ -141,13 +141,27 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
 
   let timerCharge = 0;
   const effHourly = TimerService.getEffectiveHourlyPrice(orderPlain);
-  if (Number(currentOrder.is_timer_status) === 1 && effHourly > 0) {
+  
+  // Əgər masanın saatlığı yoxdursa və heç bir timer məhsulu qalmayıbsa, taymeri sıfırla
+  let isTimerStatus = Number(currentOrder.is_timer_status);
+  let isTimerClock = currentOrder.is_timer_clock;
+  let timerLastStartedAt = currentOrder.timer_last_started_at;
+  let ratePerMinute = parseFloat(currentOrder.rate_per_minute || 0) || 0;
+  
+  if (effHourly === 0 && (isTimerStatus === 1 || isTimerClock !== "00:00:00" || ratePerMinute > 0)) {
+    isTimerStatus = 0;
+    isTimerClock = "00:00:00";
+    timerLastStartedAt = null;
+    ratePerMinute = 0;
+  }
+
+  if (effHourly > 0) {
     timerCharge = TimerService.calculateLiveStatus(
       orderPlain,
       effHourly,
     ).charge;
   } else {
-    timerCharge = parseFloat(currentOrder.rate_per_minute || 0) || 0;
+    timerCharge = ratePerMinute;
   }
 
   const total = itemsSum + timerCharge;
@@ -155,8 +169,7 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
   let discount = 0;
   let service = 0;
   const deposit = parseFloat(currentOrder.deposit || 0);
-  const { discount_value, discount_type, service_value, service_type } =
-    currentOrder;
+  const { discount_value, discount_type, service_value, service_type } = currentOrder;
   if (parseFloat(discount_value || 0) > 0) {
     discount =
       discount_type === "percent"
@@ -179,6 +192,10 @@ const recalculateOrderTotalsWithTimer = async (orderId, transaction = null) => {
       discount: discount,
       service_charge: service,
       total: netTotal,
+      rate_per_minute: timerCharge,
+      is_timer_status: isTimerStatus,
+      is_timer_clock: isTimerClock,
+      timer_last_started_at: timerLastStartedAt,
     },
     { where: { uuid: orderId }, transaction: tx },
   );
@@ -219,12 +236,12 @@ const sendOrdersItemsToDb = async (req, res) => {
     const [listOfProducts, orderRow] = await Promise.all([
       OrdersItemsModel.findAll({
         where: { order_id: orderId },
-        attributes: ["count", "price", "product_id", "modifiers"],
+        attributes: ["id", "count", "price", "product_id", "modifiers", "is_timer_status", "is_timer_clock", "timer_last_started_at"],
         include: [
           {
             model: ProductsModel,
             as: "product",
-            attributes: ["hourly_price", "no_service_fee"],
+            attributes: ["hourly_price", "no_service_fee", "product_type", "timer_intervals"],
           },
         ],
       }),
@@ -261,7 +278,42 @@ const sendOrdersItemsToDb = async (req, res) => {
     const effHourlyAuto =
       TimerService.getEffectiveHourlyPrice(orderPlainForAuto);
 
-    // Only auto-start timer if:
+    // Məhsul səviyyəsində yeni əlavə olunan taymerləri avtomatik başlat
+    const newItemsIds = savedItems.map((si) => si.id);
+    console.log("[TIMER AUTO-START DEBUG] savedItems IDs:", newItemsIds);
+    
+    const newTimerItemsPlain = orderPlainForAuto.orders_items.filter((item) => {
+      if (!newItemsIds.includes(item.id)) return false;
+      const product_type = item.product?.product_type || "";
+      const hasIntervals = !!item.product?.timer_intervals;
+      const hourlyPrice = parseFloat(item.product?.hourly_price || 0);
+      
+      console.log(`[TIMER AUTO-START DEBUG] Checking plain item id ${item.id} - product_type: ${product_type}, hasIntervals: ${hasIntervals}, hourlyPrice: ${hourlyPrice}`);
+      
+      return String(product_type).toLowerCase() === "timer" || hasIntervals || hourlyPrice > 0;
+    });
+
+    console.log("[TIMER AUTO-START DEBUG] newTimerItems found:", newTimerItemsPlain.map(i => i.id));
+
+    if (newTimerItemsPlain.length > 0) {
+      await OrdersItemsModel.update(
+        {
+          is_timer_status: 1,
+          timer_last_started_at: new Date(),
+        },
+        {
+          where: {
+            id: newTimerItemsPlain.map((i) => i.id),
+          },
+        }
+      );
+      newTimerItemsPlain.forEach((item) => {
+        item.is_timer_status = 1;
+        item.timer_last_started_at = new Date();
+      });
+    }
+
+    // Only auto-start order-level timer if:
     // 1. There's an hourly rate (table or product)
     // 2. Timer is not currently running
     // 3. Timer was never stopped before (no accumulated time) OR timer was reset
@@ -2547,19 +2599,30 @@ const incrementPrintCount = async (req, res) => {
 
 const onStartTimer = async (req, res) => {
   const { orderId } = req.params;
+  const { itemId } = req.body;
   try {
     const order = await OrdersModel.findOne({ where: { uuid: orderId } });
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    await OrdersModel.update(
-      {
-        is_timer_status: 1,
-        is_active_timer: 1,
-        timer_last_started_at: new Date(),
-        is_synced: 0,
-      },
-      { where: { uuid: orderId } },
-    );
+    if (itemId) {
+      await OrdersItemsModel.update(
+        {
+          is_timer_status: 1,
+          timer_last_started_at: new Date(),
+        },
+        { where: { id: itemId, order_id: orderId } }
+      );
+    } else {
+      await OrdersModel.update(
+        {
+          is_timer_status: 1,
+          is_active_timer: 1,
+          timer_last_started_at: new Date(),
+          is_synced: 0,
+        },
+        { where: { uuid: orderId } },
+      );
+    }
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -2586,14 +2649,16 @@ const onStartTimer = async (req, res) => {
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
-    res.json({ success: true, message: "Timer started", data: updatedOrder });
-  } catch (e) {
-    res.status(500).json({ message: e.message });
+    res.status(200).json({ message: "Timer started successfully", data: updatedOrder });
+  } catch (error) {
+    console.error("Start Timer Error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 const onStopTimer = async (req, res) => {
   const { orderId } = req.params;
+  const { itemId } = req.body;
   try {
     const order = await OrdersModel.findOne({
       where: { uuid: orderId },
@@ -2615,97 +2680,64 @@ const onStopTimer = async (req, res) => {
     });
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const hourlyPrice = TimerService.getEffectiveHourlyPrice(order);
-
-    // Always calculate server-side using timer_last_started_at for accuracy
-    const liveStatus = TimerService.calculateLiveStatus(order, hourlyPrice);
-    const timerCharge = liveStatus.charge;
-    const finalClockStr = liveStatus.clockStr;
-
-    await OrdersModel.update(
-      {
-        is_timer_status: 0,
-        is_active_timer: 0,
-        is_timer_clock: finalClockStr,
-        rate_per_minute: timerCharge,
-        is_synced: 0,
-      },
-      { where: { uuid: orderId } },
-    );
-
-    // Recalculate total
-    const [listOfProducts, currentOrder] = await Promise.all([
-      OrdersItemsModel.findAll({
-        where: { order_id: orderId },
-        attributes: ["count", "price", "modifiers"],
-        include: [
+    if (itemId) {
+      // Find item with loose type checking since itemId could be string or number
+      const item = order.orders_items.find(i => String(i.id) === String(itemId));
+      if (item) {
+        const reqClockStr = req.body.clockStr;
+        let finalClockStr = reqClockStr;
+        
+        console.log(`[TIMER DEBUG] onStopTimer itemId: ${itemId}, req.body.clockStr: ${reqClockStr}`);
+        
+        if (!finalClockStr) {
+          const liveStatus = TimerService.calculateLiveStatus(item, 0); 
+          finalClockStr = liveStatus.clockStr;
+          console.log(`[TIMER DEBUG] No reqClockStr! Fallback to liveStatus.clockStr: ${finalClockStr}`);
+        }
+        
+        console.log(`[TIMER DEBUG] Updating OrdersItemsModel with is_timer_clock: ${finalClockStr}`);
+        
+        await OrdersItemsModel.update(
           {
-            model: ProductsModel,
-            as: "product",
-            attributes: ["no_service_fee"],
+            is_timer_status: 0,
+            is_timer_clock: finalClockStr,
           },
-        ],
-      }),
-      OrdersModel.findOne({
-        where: { uuid: orderId },
-        attributes: [
-          "discount_value",
-          "discount_type",
-          "service_value",
-          "service_type",
-          "deposit",
-          "rate_per_minute",
-          "delivery_fee",
-        ],
-      }),
-    ]);
-
-    const total =
-      sumOrderItemsLineTotal(listOfProducts) +
-      (parseFloat(currentOrder?.rate_per_minute) || 0);
-
-    const serviceFeeBaseStop = serviceableItemsSum(listOfProducts);
-
-    let discount = 0;
-    let service = 0;
-    if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } =
-        currentOrder;
-      if (parseFloat(discount_value) > 0) {
-        discount =
-          discount_type === "percent"
-            ? (total * parseFloat(discount_value)) / 100
-            : parseFloat(discount_value);
+          { where: { id: itemId, order_id: orderId } }
+        );
       }
-      if (parseFloat(service_value) > 0) {
-        service =
-          service_type === "percent"
-            ? (serviceFeeBaseStop * parseFloat(service_value)) / 100
-            : parseFloat(service_value);
-      }
+    } else {
+      const hourlyPrice = TimerService.getEffectiveHourlyPrice(order);
+      const liveStatus = TimerService.calculateLiveStatus(order, hourlyPrice);
+      const timerCharge = liveStatus.charge;
+      const reqClockStr = req.body.clockStr;
+      const finalClockStr = reqClockStr || liveStatus.clockStr;
+
+      await OrdersModel.update(
+        {
+          is_timer_status: 0,
+          is_active_timer: 0,
+          is_timer_clock: finalClockStr,
+          rate_per_minute: timerCharge,
+          is_synced: 0,
+        },
+        { where: { uuid: orderId } },
+      );
     }
-    const netTotal =
-      Math.max(
-        total - discount + service,
-        parseFloat(currentOrder?.deposit || 0),
-      ) + Number(currentOrder?.delivery_fee || 0);
 
-    await OrdersModel.update(
-      {
-        amount: total,
-        total: netTotal,
-        discount: discount,
-        service_charge: service,
-        is_synced: 0,
-      },
-      { where: { uuid: orderId } },
-    );
+    await recalculateOrderTotalsWithTimer(orderId);
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
       include: [
         { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        { model: OrdersItemsModel, as: "orders_items", separate: true },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
+        },
         {
           model: TablesModel,
           as: "table",
@@ -2719,104 +2751,56 @@ const onStopTimer = async (req, res) => {
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
-    res.json({
-      success: true,
-      message: "Timer stopped",
-      charge: timerCharge,
-      data: updatedOrder,
-    });
-  } catch (e) {
-    res.status(500).json({ message: e.message });
+    res.status(200).json({ message: "Timer stopped successfully", data: updatedOrder });
+  } catch (error) {
+    console.error("Stop Timer Error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
 const onResetTimer = async (req, res) => {
   const { orderId } = req.params;
+  const { itemId } = req.body;
   try {
-    await OrdersModel.update(
-      {
-        is_timer_status: 0,
-        is_timer_clock: "00:00:00",
-        is_active_timer: 0,
-        rate_per_minute: 0,
-        is_synced: 0,
-      },
-      { where: { uuid: orderId } },
-    );
+    const order = await OrdersModel.findOne({ where: { uuid: orderId } });
+    if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Recalculate total after reset
-    const [listOfProducts, currentOrder] = await Promise.all([
-      OrdersItemsModel.findAll({
-        where: { order_id: orderId },
-        attributes: ["count", "price", "modifiers"],
-        include: [
-          {
-            model: ProductsModel,
-            as: "product",
-            attributes: ["no_service_fee"],
-          },
-        ],
-      }),
-      OrdersModel.findOne({
-        where: { uuid: orderId },
-        attributes: [
-          "discount_value",
-          "discount_type",
-          "service_value",
-          "service_type",
-          "deposit",
-          "rate_per_minute",
-          "delivery_fee",
-        ],
-      }),
-    ]);
-
-    const total =
-      sumOrderItemsLineTotal(listOfProducts) +
-      (parseFloat(currentOrder?.rate_per_minute) || 0);
-
-    const serviceFeeBaseReset = serviceableItemsSum(listOfProducts);
-
-    let discount = 0;
-    let service = 0;
-    if (currentOrder) {
-      const { discount_value, discount_type, service_value, service_type } =
-        currentOrder;
-      if (parseFloat(discount_value) > 0) {
-        discount =
-          discount_type === "percent"
-            ? (total * parseFloat(discount_value)) / 100
-            : parseFloat(discount_value);
-      }
-      if (parseFloat(service_value) > 0) {
-        service =
-          service_type === "percent"
-            ? (serviceFeeBaseReset * parseFloat(service_value)) / 100
-            : parseFloat(service_value);
-      }
+    if (itemId) {
+      await OrdersItemsModel.update(
+        {
+          is_timer_status: 0,
+          is_timer_clock: "00:00:00",
+          timer_last_started_at: null,
+        },
+        { where: { id: itemId, order_id: orderId } }
+      );
+    } else {
+      await OrdersModel.update(
+        {
+          is_timer_status: 0,
+          is_timer_clock: "00:00:00",
+          is_active_timer: 0,
+          rate_per_minute: 0,
+          is_synced: 0,
+        },
+        { where: { uuid: orderId } },
+      );
     }
-    const netTotal =
-      Math.max(
-        total - discount + service,
-        parseFloat(currentOrder?.deposit || 0),
-      ) + Number(currentOrder?.delivery_fee || 0);
 
-    await OrdersModel.update(
-      {
-        amount: total,
-        total: netTotal,
-        discount: discount,
-        service_charge: service,
-        is_synced: 0,
-      },
-      { where: { uuid: orderId } },
-    );
+    await recalculateOrderTotalsWithTimer(orderId);
 
     const updatedOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
       include: [
         { model: WaitersModel, as: "waiter", attributes: ["id", "name"] },
-        { model: OrdersItemsModel, as: "orders_items", separate: true },
+        {
+          model: OrdersItemsModel,
+          as: "orders_items",
+          separate: true,
+          include: [
+            { model: require("../model/ProductsModel"), as: "product" },
+          ],
+        },
         {
           model: TablesModel,
           as: "table",
@@ -2830,9 +2814,10 @@ const onResetTimer = async (req, res) => {
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) getIo().emit("table_updated", { orderId });
 
-    res.json({ success: true, message: "Timer reset", data: updatedOrder });
-  } catch (e) {
-    res.status(500).json({ message: e.message });
+    res.status(200).json({ message: "Timer reset successfully", data: updatedOrder });
+  } catch (error) {
+    console.error("Reset Timer Error:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 

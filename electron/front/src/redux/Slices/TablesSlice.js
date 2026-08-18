@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../utils/apiConfig";
 import axiosRaw from "axios";
-import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
+import { getEffectiveHourlyPrice, getLiveTimerCharge } from "../../utils/orderHourlyPrice";
 
 const ADMIN_API = "https://api.unipos.tech/api";
 
@@ -212,7 +212,7 @@ const TablesSlice = createSlice({
         }
       }
     },
-    tickTimer: (state) => {
+    tickTimer: (state, action) => {
       if (!state.tableGroups?.data) return;
       state.tableGroups.data = state.tableGroups.data.map((hall) => {
         if (!hall.tables) return hall;
@@ -220,15 +220,35 @@ const TablesSlice = createSlice({
           if (!table.orders || table.orders.length === 0) return table;
 
           const newOrders = table.orders.map((order) => {
-            if (order.is_timer_status !== 1) return order;
-
             const orderForEff = {
               ...order,
               table: { ...(order.table || {}), hourly_price: table.hourly_price },
               orders_items: order.orders_items || [],
             };
             const effH = getEffectiveHourlyPrice(orderForEff);
-            if (effH <= 0) return order;
+            
+            const hasTimerProduct = (orderForEff.orders_items || []).some(it => {
+              const pHourly = Number(it.product?.hourly_price || 0);
+              const pIntervals = it.product?.timer_intervals || [];
+              const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+              
+              let menuHourly = 0;
+              let menuIntervalsValid = false;
+              if (action.payload && action.payload.length > 0) {
+                const catItem = action.payload.find(m => Number(m.id) === Number(it.product_id || it.id));
+                if (catItem) {
+                  menuHourly = Number(catItem.hourly_price || 0);
+                  const mInt = catItem.timer_intervals || [];
+                  menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+                }
+              }
+              return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
+            });
+
+            // Tick if the table timer is active OR if the order contains a timer product
+            if (Number(order.is_timer_status) !== 1 && !hasTimerProduct) {
+              return order;
+            }
 
             let totalSeconds = 0;
             if (order.is_timer_clock && String(order.is_timer_clock).includes(":")) {
@@ -247,7 +267,7 @@ const TablesSlice = createSlice({
             const ss = totalSeconds % 60;
             const clockStr = [hh, mm, ss].map((v) => (v < 10 ? "0" + v : v)).join(":");
 
-            const charge = parseFloat(((effH / 3600) * totalSeconds).toFixed(2));
+            const { charge } = getLiveTimerCharge(orderForEff, totalSeconds, effH, action.payload);
 
             return {
               ...order,
@@ -371,7 +391,7 @@ const TablesSlice = createSlice({
 
     // Optimistic timer start in tables
     builder.addCase("orders/startTimer/pending", (state, action) => {
-      const { orderId } = action.meta.arg;
+      const { orderId, itemId } = action.meta.arg;
       if (!state.tableGroups?.data) return;
       state.tableGroups.data.forEach((hall) => {
         if (!hall.tables) return;
@@ -379,7 +399,17 @@ const TablesSlice = createSlice({
           if (!table.orders) return;
           const idx = table.orders.findIndex(o => String(o.uuid) === String(orderId));
           if (idx !== -1) {
-            table.orders[idx] = { ...table.orders[idx], is_timer_status: 1, is_active_timer: 1 };
+            const order = table.orders[idx];
+            if (itemId && order.orders_items) {
+              const itemIdx = order.orders_items.findIndex(i => i.id === itemId);
+              if (itemIdx !== -1) {
+                order.orders_items[itemIdx].is_timer_status = 1;
+                order.orders_items[itemIdx].timer_last_started_at = new Date().toISOString();
+              }
+            } else if (!itemId) {
+              order.is_timer_status = 1;
+              order.is_active_timer = 1;
+            }
           }
         });
       });
@@ -387,7 +417,7 @@ const TablesSlice = createSlice({
 
     // Optimistic timer stop in tables
     builder.addCase("orders/stopTimer/pending", (state, action) => {
-      const { orderId, clockStr } = action.meta.arg;
+      const { orderId, itemId, clockStr } = action.meta.arg;
       if (!state.tableGroups?.data) return;
       state.tableGroups.data.forEach((hall) => {
         if (!hall.tables) return;
@@ -395,12 +425,18 @@ const TablesSlice = createSlice({
           if (!table.orders) return;
           const idx = table.orders.findIndex(o => String(o.uuid) === String(orderId));
           if (idx !== -1) {
-            table.orders[idx] = {
-              ...table.orders[idx],
-              is_timer_status: 0,
-              is_active_timer: 0,
-              is_timer_clock: clockStr || table.orders[idx].is_timer_clock,
-            };
+            const order = table.orders[idx];
+            if (itemId && order.orders_items) {
+              const itemIdx = order.orders_items.findIndex(i => i.id === itemId);
+              if (itemIdx !== -1) {
+                order.orders_items[itemIdx].is_timer_status = 0;
+                if (clockStr) order.orders_items[itemIdx].is_timer_clock = clockStr;
+              }
+            } else if (!itemId) {
+              order.is_timer_status = 0;
+              order.is_active_timer = 0;
+              if (clockStr) order.is_timer_clock = clockStr;
+            }
           }
         });
       });
@@ -408,7 +444,7 @@ const TablesSlice = createSlice({
 
     // Optimistic timer reset in tables
     builder.addCase("orders/resetTimer/pending", (state, action) => {
-      const { orderId } = action.meta.arg;
+      const { orderId, itemId } = action.meta.arg;
       if (!state.tableGroups?.data) return;
       state.tableGroups.data.forEach((hall) => {
         if (!hall.tables) return;
@@ -416,13 +452,19 @@ const TablesSlice = createSlice({
           if (!table.orders) return;
           const idx = table.orders.findIndex(o => String(o.uuid) === String(orderId));
           if (idx !== -1) {
-            table.orders[idx] = {
-              ...table.orders[idx],
-              is_timer_status: 0,
-              is_active_timer: 0,
-              is_timer_clock: "00:00:00",
-              rate_per_minute: 0,
-            };
+            const order = table.orders[idx];
+            if (itemId && order.orders_items) {
+              const itemIdx = order.orders_items.findIndex(i => i.id === itemId);
+              if (itemIdx !== -1) {
+                order.orders_items[itemIdx].is_timer_status = 0;
+                order.orders_items[itemIdx].is_timer_clock = "00:00:00";
+              }
+            } else if (!itemId) {
+              order.is_timer_status = 0;
+              order.is_active_timer = 0;
+              order.is_timer_clock = "00:00:00";
+              order.rate_per_minute = 0;
+            }
           }
         });
       });
@@ -589,11 +631,20 @@ export const {
   setTempTableLayout,
   clearHallLayout,
   tickTimer,
+  updateActiveCheckLocal,
+  localSyncOrder,
   removeOrderOptimistic: tablesRemoveOrderOptimistic,
   addOrderToTableOptimistic,
   clearDeletedOrderId,
   updateLocalLayoutsFromServer
 } = TablesSlice.actions;
+
+export const tickTablesThunk = () => (dispatch, getState) => {
+  const state = getState();
+  const menuData = state.OrderSlice?.menu || state.MenuSlice?.data || [];
+  dispatch(tickTimer(menuData));
+};
+
 export { tablesRemoveOrderOptimistic as removeOrderOptimisticFromTables };
 export default TablesSlice.reducer;
 

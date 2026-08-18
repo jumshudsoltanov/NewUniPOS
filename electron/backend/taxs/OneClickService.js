@@ -40,6 +40,39 @@ class OneClickService {
         return headers;
     }
 
+    /**
+     * Vergi cihazı yalnız Azərbaycan latın əlifbası + əsas ASCII simvollarını qəbul edir.
+     * Tipografik simvollar (tək sitatlar, çertyojka, ellipsis, ₼ və s.), kiril hərfləri
+     * və digər Unicode simvollar cihazda "illegal character" xətası yaradır.
+     * Əvvəlcə onlar təhlükəsiz ekvivalentlərlə əvəz edilir, qalan icazəsiz simvollar silinir.
+     */
+    _sanitizeText(value, maxLen = 64) {
+        const original = String(value ?? '');
+        const replacements = {
+            '‘': "'", '’': "'", '‚': "'", '‛': "'",  // ' ' ‚ ‛
+            '“': '"', '”': '"', '„': '"', '‟': '"',  // " " „ ‟
+            '‒': '-', '–': '-', '—': '-', '―': '-',  // ‒ – — ―
+            '…': '...',                                            // …
+            '•': '-', '‧': '-',                               // • ‧
+            '№': 'No',                                             // №
+            '×': 'x',                                              // ×
+            '°': '',                                               // °
+            '₼': 'AZN',                                            // ₼ manat
+            '«': '"', '»': '"',                               // « »
+            ' ': ' '                                               // bölünməz boşluq
+        };
+        let str = original.replace(/[\r\n\t]+/g, ' ');
+        for (const [from, to] of Object.entries(replacements)) {
+            str = str.split(from).join(to);
+        }
+        str = str.replace(/[^a-zA-Z0-9ƏəĞğİıÖöŞşÜüÇç .,:;!?()'"+\/=*%#@&_\-]/g, '');
+        const result = str.replace(/\s+/g, ' ').trim().substring(0, maxLen);
+        if (original !== result) {
+            console.warn(`[ONECLICK] Simvol sanitizasiyası: "${original}" → "${result}"`);
+        }
+        return result;
+    }
+
     async _request(method, path, body = null) {
         try {
             const config = {
@@ -129,9 +162,9 @@ class OneClickService {
             const price = Number(item.price || 0);
             const sum = Number((qty * price).toFixed(2));
             return {
-                itemName: (item.product?.name || item.name || 'Məhsul').substring(0, 64),
+                itemName: this._sanitizeText(item.product?.name || item.name || 'Məhsul') || 'Məhsul',
                 itemCodeType: 0,
-                itemCode: String(item.barcode || item.product_id || item.id || '0'),
+                itemCode: this._sanitizeText(String(item.barcode || item.product_id || item.id || '0'), 64),
                 itemQuantityType: 0,
                 itemQuantity: Number(qty.toFixed(3)),
                 itemPrice: Number(price.toFixed(2)),
@@ -169,7 +202,7 @@ class OneClickService {
         const changeSum = Number(Math.max(0, incomingSum - totalSum).toFixed(2));
 
         return this._request('POST', '/kas_sale', {
-            cashier: (cashierName || 'Cashier').substring(0, 64),
+            cashier: this._sanitizeText(cashierName || 'Cashier') || 'Cashier',
             currency: 'AZN',
             items: saleItems,
             sum: totalSum,
@@ -193,9 +226,9 @@ class OneClickService {
             const price = Number(item.price || 0);
             const sum = Number((qty * price).toFixed(2));
             return {
-                itemName: (item.product?.name || item.name || 'Məhsul').substring(0, 64),
+                itemName: this._sanitizeText(item.product?.name || item.name || 'Məhsul') || 'Məhsul',
                 itemCodeType: 0,
-                itemCode: String(item.barcode || item.product_id || item.id || '0'),
+                itemCode: this._sanitizeText(String(item.barcode || item.product_id || item.id || '0'), 64),
                 itemQuantityType: 0,
                 itemQuantity: Number(qty.toFixed(3)),
                 itemPrice: Number(price.toFixed(2)),
@@ -228,7 +261,7 @@ class OneClickService {
         }
 
         return this._request('POST', '/kas_moneyback', {
-            cashier: (cashierName || 'Cashier').substring(0, 64),
+            cashier: this._sanitizeText(cashierName || 'Cashier') || 'Cashier',
             currency: 'AZN',
             items: returnItems,
             sum: totalSum,
@@ -237,9 +270,9 @@ class OneClickService {
             prepaymentSum: 0,
             creditSum: 0,
             bonusSum: 0,
-            parentDocument: parentFiscalId || '',
-            refund_document_number: String(documentNumber || ''),
-            refund_short_document_id: shortDocId || '',
+            parentDocument: this._sanitizeText(parentFiscalId || '', 128),
+            refund_document_number: this._sanitizeText(String(documentNumber || ''), 128),
+            refund_short_document_id: this._sanitizeText(shortDocId || '', 128),
             vatAmounts: [{ vatPercent, vatSum: totalSum }]
         });
     }

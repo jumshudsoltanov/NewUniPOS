@@ -59,10 +59,12 @@ const getAllActiveOrders = async (req, res) => {
     });
 
     const updatedOrders = orders.map(order => {
-      if (order.is_timer_status === 1) {
+      const hasTimer = order.is_timer_status === 1 || !!order.is_timer_clock || (order.orders_items && order.orders_items.some(it => String(it.product_type || (it.product && it.product.product_type)).toLowerCase() === 'timer'));
+      if (hasTimer) {
         const liveStatus = TimerService.calculateLiveStatus(order, TimerService.getEffectiveHourlyPrice(order));
         order.dataValues.rate_per_minute = liveStatus.charge;
         order.dataValues.is_timer_clock = liveStatus.clockStr;
+        if (liveStatus.isTimerRunning) order.dataValues.is_timer_status = 1;
         
         const itemsTotal = sumOrderItemsLineTotal(order.orders_items || []);
         const newTotal = itemsTotal + liveStatus.charge;
@@ -251,11 +253,13 @@ const getOrderById = async (req, res) => {
 
     if (order) {
       // Automatic timer calculation for active timers
-      if (order.is_timer_status === 1) {
+      const hasTimer = order.is_timer_status === 1 || !!order.is_timer_clock || (order.orders_items && order.orders_items.some(it => String(it.product_type || (it.product && it.product.product_type)).toLowerCase() === 'timer'));
+      if (hasTimer) {
         const liveStatus = TimerService.calculateLiveStatus(order, TimerService.getEffectiveHourlyPrice(order));
         
         order.dataValues.rate_per_minute = liveStatus.charge;
         order.dataValues.is_timer_clock = liveStatus.clockStr;
+        if (liveStatus.isTimerRunning) order.dataValues.is_timer_status = 1;
         
         // Also update total in response
         const itemsTotal = sumOrderItemsLineTotal(order.orders_items || []);

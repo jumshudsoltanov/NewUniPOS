@@ -215,6 +215,10 @@ const Menu = ({
   };
 
   const handleProductClick = (product) => {
+    if (String(product?.product_type || '').toLowerCase() === 'timer' || product?.timer_intervals) {
+      console.log("=== Timer Product Debug (Menu) ===");
+      console.log(product);
+    }
     if (isDragMode) return; // Prevent adding in drag mode
     if (orderEditLocked) {
       toast.error(orderEditLockedToast());
@@ -641,16 +645,27 @@ const Menu = ({
             ?.filter((item) => item && item.name)
             .map((item, index) => {
               let effectivePrice = Number(item.price);
-              if (item.discount && Number(item.discount) > 0) {
-                effectivePrice = Number(item.discount);
-              } else if (
-                item.categoryDiscount &&
-                Number(item.categoryDiscount) > 0
-              ) {
-                const discountValue =
-                  (Number(item.price) * Number(item.categoryDiscount)) / 100;
-                effectivePrice = Number(item.price) - discountValue;
-                effectivePrice = Math.round(effectivePrice * 100) / 100;
+              if (String(item.product_type || '').toLowerCase() === 'timer') {
+                let intervals = item.timer_intervals;
+                while (typeof intervals === 'string') {
+                  try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
+                }
+                if (intervals && Array.isArray(intervals) && intervals.length > 0) {
+                  const sorted = [...intervals].sort((a, b) => (Number(a.after) || 0) - (Number(b.after) || 0));
+                  effectivePrice = Number(sorted[0].price || 0);
+                }
+              } else {
+                if (item.discount && Number(item.discount) > 0) {
+                  effectivePrice = Number(item.discount);
+                } else if (
+                  item.categoryDiscount &&
+                  Number(item.categoryDiscount) > 0
+                ) {
+                  const discountValue =
+                    (Number(item.price) * Number(item.categoryDiscount)) / 100;
+                  effectivePrice = Number(item.price) - discountValue;
+                  effectivePrice = Math.round(effectivePrice * 100) / 100;
+                }
               }
 
               const isDragging = isDragMode && draggedIndex === index;
@@ -776,16 +791,27 @@ const Menu = ({
 
               // Calculate effective price
               let effectivePrice = Number(item.price);
-              if (item.discount && Number(item.discount) > 0) {
-                effectivePrice = Number(item.discount);
-              } else if (
-                item.categoryDiscount &&
-                Number(item.categoryDiscount) > 0
-              ) {
-                const discountValue =
-                  (Number(item.price) * Number(item.categoryDiscount)) / 100;
-                effectivePrice = Number(item.price) - discountValue;
-                effectivePrice = Math.round(effectivePrice * 100) / 100;
+              if (String(item.product_type || '').toLowerCase() === 'timer') {
+                let intervals = item.timer_intervals;
+                while (typeof intervals === 'string') {
+                  try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
+                }
+                if (intervals && Array.isArray(intervals) && intervals.length > 0) {
+                  const sorted = [...intervals].sort((a, b) => (Number(a.after) || 0) - (Number(b.after) || 0));
+                  effectivePrice = Number(sorted[0].price || 0);
+                }
+              } else {
+                if (item.discount && Number(item.discount) > 0) {
+                  effectivePrice = Number(item.discount);
+                } else if (
+                  item.categoryDiscount &&
+                  Number(item.categoryDiscount) > 0
+                ) {
+                  const discountValue =
+                    (Number(item.price) * Number(item.categoryDiscount)) / 100;
+                  effectivePrice = Number(item.price) - discountValue;
+                  effectivePrice = Math.round(effectivePrice * 100) / 100;
+                }
               }
 
               const isDragging = isDragMode && draggedIndex === index;

@@ -16,7 +16,7 @@ import {
   useSearchParams,
   useLocation,
 } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, shallowEqual } from "react-redux";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import CheckLockModal from "../Check-Lock/CheckLockModal";
 import CommentModal from "../CommentModal/CommentModal";
@@ -644,7 +644,7 @@ const Check = () => {
       if (o) return { active: o.is_timer_status === 1 || o.is_active_timer === 1 };
     }
     return null;
-  });
+  }, shallowEqual);
 
   useEffect(() => {
     const profileId = loginedProfileData?.data?.profile?.id;
@@ -745,8 +745,29 @@ const Check = () => {
         hourly_price: currentOrder?.table?.hourly_price ?? currentTable?.hourly_price,
       },
     };
-    return getTableHourlyPrice(merged) > 0 && getProductHourlySum(merged) === 0;
-  }, [currentOrder, currentTable, loginedProfileData]);
+    const tableHourly = getTableHourlyPrice(merged);
+    const hasTimerProduct = (merged.orders_items || []).some((it) => {
+      const pHourly = Number(it.product?.hourly_price || 0);
+      const pIntervals = it.product?.timer_intervals || [];
+      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      
+      let menuHourly = 0;
+      let menuIntervalsValid = false;
+      if (menu && menu.length > 0) {
+        const catItem = menu.find(m => Number(m.id) === Number(it.product_id || it.id));
+        if (catItem) {
+          menuHourly = Number(catItem.hourly_price || 0);
+          const mInt = catItem.timer_intervals || [];
+          menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+        }
+      }
+      return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
+    });
+    
+    // As per user request: if there is a product timer, hide the sidebar button.
+    // If there is no product timer, but table has hourly price, show the button.
+    return tableHourly > 0 && !hasTimerProduct;
+  }, [currentOrder, currentTable, loginedProfileData, menu]);
 
   const selectedCustomer = useMemo(() => {
     if (currentOrder?.customer_id) {
@@ -2224,7 +2245,7 @@ const Check = () => {
                         setIsPrintingCheck(true);
                         const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
-                        // Auto-stop timer when printing customer receipt
+                        // Auto-stop ORDER-level timer when printing customer receipt
                         if (currentOrder?.is_timer_status === 1) {
                           let seconds = 0;
                           if (currentOrder.is_timer_clock && String(currentOrder.is_timer_clock).includes(':')) {
@@ -2236,6 +2257,28 @@ const Check = () => {
                             elapsedSeconds: seconds,
                             clockStr: currentOrder.is_timer_clock 
                           }));
+                        }
+
+                        // Auto-stop PRODUCT-level timers when printing customer receipt
+                        if (currentOrder?.orders_items) {
+                          currentOrder.orders_items.forEach((item) => {
+                            if (Number(item.is_timer_status) === 1 && item.id) {
+                              let itemSeconds = 0;
+                              if (item.is_timer_clock && String(item.is_timer_clock).includes(':')) {
+                                const p = String(item.is_timer_clock).split(':').map(Number);
+                                if (p.length === 3) itemSeconds = p[0] * 3600 + p[1] * 60 + p[2];
+                              }
+                              if (item.timer_last_started_at) {
+                                const diffSec = Math.max(0, Math.floor((Date.now() - new Date(item.timer_last_started_at).getTime()) / 1000));
+                                itemSeconds += diffSec;
+                              }
+                              const hh = Math.floor(itemSeconds / 3600);
+                              const mm = Math.floor((itemSeconds % 3600) / 60);
+                              const ss = itemSeconds % 60;
+                              const clockStr = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+                              dispatch(stopTimer({ orderId: currentOrder.uuid, itemId: item.id, elapsedSeconds: itemSeconds, clockStr }));
+                            }
+                          });
                         }
 
                         try {

@@ -60,6 +60,19 @@ const OrdersItemsModel = db.sequelize.define(
       defaultValue: 0
     },
 
+    is_timer_status: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    is_timer_clock: {
+      type: DataTypes.STRING(255),
+      defaultValue: "00:00:00",
+    },
+    timer_last_started_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
     original_price: {
       type: DataTypes.FLOAT,
       allowNull: true,

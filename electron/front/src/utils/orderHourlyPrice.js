@@ -1,5 +1,7 @@
+import { getTimerElapsedSeconds } from "./orderItemLineTotal";
+
 /**
- * Masa timeri: yalnız table.hourly_price
+ * Masa timeri: yalniz table.hourly_price
  */
 export function getTableHourlyPrice(order) {
     if (!order) return 0;
@@ -7,33 +9,120 @@ export function getTableHourlyPrice(order) {
     return Number.isNaN(v) ? 0 : v;
 }
 
+let globalMenuData = [];
+export const setTimerMenuData = (data) => {
+    globalMenuData = data || [];
+};
+
 /**
- * Məhsul timeri: Σ(hourly_price × say)
+ * Taymer ucun effektiv saatliq
  */
-export function getProductHourlySum(order) {
-    if (!order) return 0;
-    let sum = 0;
+export function getEffectiveHourlyPrice(order, menuData = null) {
+    const tableH = Number(order?.table?.hourly_price || 0);
+    let itemH = 0;
+    
+    const dataToUse = menuData && menuData.length > 0 ? menuData : globalMenuData;
+
     (order?.orders_items || []).forEach((it) => {
-        const hp = Number(it?.product?.hourly_price || 0);
-        if (hp > 0) sum += hp * Number(it.count || 0);
+        const pType = String(it.product_type || it?.product?.product_type || '').toLowerCase();
+        let intervals = it.timer_intervals || it?.product?.timer_intervals;
+        
+        if (!intervals && dataToUse.length > 0) {
+            const catItem = dataToUse.find(m => Number(m.id) === Number(it.product_id || it.id));
+            if (catItem) {
+                intervals = catItem.timer_intervals;
+            }
+        }
+
+        while (typeof intervals === 'string') {
+            try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
+        }
+        
+        const hasIntervals = !!(intervals && Array.isArray(intervals) && intervals.length > 0);
+        
+        if (pType === 'timer' || hasIntervals) {
+            const hp = Number(it.product?.hourly_price || it.hourly_price || 0);
+            if (hp > 0 && !hasIntervals) {
+                itemH += hp * Number(it.count || it.quantity || 1);
+            }
+        }
     });
-    return sum;
+
+    return itemH > 0 ? itemH : tableH;
 }
 
-/**
- * Taymer üçün effektiv saatlıq: məhsul saatlığı cəmi > 0 olarsa yalnız məhsul (masa timeri ilə cəmlənmir).
- * Əks halda masa saatlığı.
- */
-export function getEffectiveHourlyPrice(order) {
-    if (!order) return 0;
-    const ps = getProductHourlySum(order);
-    if (ps > 0) return ps;
-    return getTableHourlyPrice(order);
+export function getProductHourlySum(order) {
+    return getEffectiveHourlyPrice(order); // Legacy, just maps to new
 }
 
-/**
- * @deprecated Əvvəl cəm üçün istifadə olunurdu; indi getEffectiveHourlyPrice ilə eyni (məhsul üstünlüyü, sonra masa).
- */
 export function getTotalTimerHourlyRate(order) {
     return getEffectiveHourlyPrice(order);
+}
+
+export function getLiveTimerCharge(order, totalSeconds, effH, menuData = null) {
+    let charge = 0;
+    let hasProductTimer = false;
+    let hasIntervalTimer = false;
+    
+    const dataToUse = menuData && menuData.length > 0 ? menuData : globalMenuData;
+
+    (order?.orders_items || []).forEach((it) => {
+        const pType = String(it.product_type || it?.product?.product_type || '').toLowerCase();
+        let intervals = it.timer_intervals || it?.product?.timer_intervals;
+        
+        if (!intervals && dataToUse.length > 0) {
+            const catItem = dataToUse.find(m => Number(m.id) === Number(it.product_id || it.id));
+            if (catItem) {
+                intervals = catItem.timer_intervals;
+            }
+        }
+
+        while (typeof intervals === 'string') {
+            try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
+        }
+        
+        const hasIntervals = !!(intervals && Array.isArray(intervals) && intervals.length > 0);
+        
+        if (pType === 'timer' || hasIntervals) {
+            hasProductTimer = true;
+            if (hasIntervals) hasIntervalTimer = true;
+
+            const count = Number(it.count || it.quantity || 1);
+            let itemElapsedSeconds = getTimerElapsedSeconds(it, order);
+
+            if (!hasIntervals) {
+                const hp = Number(it.product?.hourly_price || it.hourly_price || 0);
+                if (hp > 0) {
+                    charge += (hp / 3600) * itemElapsedSeconds * count;
+                }
+            } else {
+                const itemElapsedMinutes = Math.max(1, Math.ceil(itemElapsedSeconds / 60));
+                const sorted = [...intervals].sort((a, b) => (Number(a.after) || 0) - (Number(b.after) || 0));
+                let intCharge = 0;
+
+                for (let i = 0; i < sorted.length; i++) {
+                    const cur = sorted[i];
+                    const next = sorted[i + 1];
+                    const after = Number(cur.after) || 0;
+                    const duration = Math.max(1, Number(cur.duration) || 1);
+                    const price = Number(cur.price) || 0;
+
+                    if (itemElapsedMinutes <= after) continue;
+
+                    const maxMins = next ? (Number(next.after) || 0) - after : Infinity;
+                    const minsInInterval = Math.min(itemElapsedMinutes - after, maxMins);
+                    if (minsInInterval > 0) {
+                        intCharge += Math.ceil(minsInInterval / duration) * price;
+                    }
+                }
+                charge += count * intCharge;
+            }
+        }
+    });
+
+    if (!hasProductTimer && effH > 0) {
+        charge = (effH / 3600) * totalSeconds;
+    }
+
+    return { charge: parseFloat(charge.toFixed(2)), hasIntervalTimer };
 }

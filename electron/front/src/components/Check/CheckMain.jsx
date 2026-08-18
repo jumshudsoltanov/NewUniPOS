@@ -18,6 +18,7 @@ import {
 import { toast } from "react-toastify"; // Import toast
 import { useParams, useSearchParams } from "react-router-dom";
 import { getProductHourlySum } from "../../utils/orderHourlyPrice";
+import { getTimerElapsedSeconds, computeTimerItemTotal } from "../../utils/orderItemLineTotal";
 import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
@@ -188,7 +189,10 @@ const CheckMain = ({ orders, table }) => {
         price: item.price, 
         modifiers: item.modifiers || [], 
         comment: item.comment,
-        own_set_price: item.own_set_price
+        own_set_price: item.own_set_price,
+        hourly_price: item.hourly_price || item.product?.hourly_price || 0,
+        timer_intervals: item.timer_intervals || item.product?.timer_intervals,
+        product_type: item.product_type || item.product?.product_type,
       }));
     } else if (diff < -120) {
       // Full left swipe -> decrease/delete one item.
@@ -247,7 +251,16 @@ const CheckMain = ({ orders, table }) => {
           .sort((a, b) => a.id - b.id);
         const normalizedModifiersStr = JSON.stringify(sortedMods);
 
-        const uniqueKeyPart = isOwnSetPrice ? `-${orderItem.id}` : '';
+        // Timer məhsulları HEÇ VAXT birləşməz - hər sıra öz ID-si ilə unikaldır
+        const itemHourly = Number(orderItem.product?.hourly_price || orderItem.hourly_price || 0);
+        const itemIntervals = orderItem.product?.timer_intervals || orderItem.timer_intervals;
+        const menuForItem = findCatalogProduct(menu, prodId);
+        const menuHourly = Number(menuForItem?.hourly_price || 0);
+        const menuIntervals = menuForItem?.timer_intervals;
+        const isTimerItem = itemHourly > 0 || menuHourly > 0 ||
+          (Array.isArray(itemIntervals) ? itemIntervals.length > 0 : (typeof itemIntervals === 'string' && itemIntervals.length > 2 && itemIntervals !== '[]')) ||
+          (Array.isArray(menuIntervals) ? menuIntervals.length > 0 : (typeof menuIntervals === 'string' && menuIntervals.length > 2 && menuIntervals !== '[]'));
+        const uniqueKeyPart = isOwnSetPrice ? `-${orderItem.id}` : (isTimerItem ? `-timer-${orderItem.id}` : '');
         const key = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
         const existing = groupedMap.get(key);
         const rowSort = sortTimeFromSavedRow(orderItem);
@@ -312,7 +325,17 @@ const CheckMain = ({ orders, table }) => {
       const normalizedModifiersStr = JSON.stringify(sortedMods);
 
       const isOwnSetPrice = item.own_set_price === 1;
-      const uniqueKeyPart = isOwnSetPrice ? `-local-idx-${idx}` : '';
+
+      // Timer məhsulları HEÇ VAXT birləşməz - hər sıra öz uuid-i ilə unikaldır
+      const localItemHourly = Number(item.hourly_price || item.product?.hourly_price || 0);
+      const localItemIntervals = item.timer_intervals || item.product?.timer_intervals;
+      const localMenuForItem = findCatalogProduct(menu, prodId);
+      const localMenuHourly = Number(localMenuForItem?.hourly_price || 0);
+      const localMenuIntervals = localMenuForItem?.timer_intervals;
+      const isLocalTimerItem = localItemHourly > 0 || localMenuHourly > 0 ||
+        (Array.isArray(localItemIntervals) ? localItemIntervals.length > 0 : (typeof localItemIntervals === 'string' && localItemIntervals.length > 2 && localItemIntervals !== '[]')) ||
+        (Array.isArray(localMenuIntervals) ? localMenuIntervals.length > 0 : (typeof localMenuIntervals === 'string' && localMenuIntervals.length > 2 && localMenuIntervals !== '[]'));
+      const uniqueKeyPart = isOwnSetPrice ? `-local-idx-${idx}` : (isLocalTimerItem ? `-local-timer-${item.uuid || idx}` : '');
       
       const finalKey = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
       const existing = groupedMap.get(finalKey);
@@ -405,14 +428,43 @@ const CheckMain = ({ orders, table }) => {
 
   const usesProductTimer = useMemo(() => {
     if (!orderForTimer) return false;
-    return getProductHourlySum(orderForTimer) > 0;
-  }, [orderForTimer]);
+    return (orderForTimer.orders_items || []).some((it) => {
+      const pHourly = Number(it.product?.hourly_price || 0);
+      const pIntervals = it.product?.timer_intervals || [];
+      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      
+      let menuHourly = 0;
+      let menuIntervalsValid = false;
+      if (menu && menu.length > 0) {
+        const catItem = menu.find(m => Number(m.id) === Number(it.product_id || it.id));
+        if (catItem) {
+          menuHourly = Number(catItem.hourly_price || 0);
+          const mInt = catItem.timer_intervals || [];
+          menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+        }
+      }
+      return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
+    });
+  }, [orderForTimer, menu]);
 
   const firstHourlyProductRowIndex = useMemo(() => {
     if (!usesProductTimer) return -1;
     return allItems.findIndex((item) => {
-      const pi = menu.find((m) => m.id === item.product_id);
-      return Number(pi?.hourly_price ?? item.product?.hourly_price ?? 0) > 0;
+      const pHourly = Number(item.product?.hourly_price || 0);
+      const pIntervals = item.product?.timer_intervals || [];
+      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      
+      let menuHourly = 0;
+      let menuIntervalsValid = false;
+      if (menu && menu.length > 0) {
+        const catItem = menu.find(m => Number(m.id) === Number(item.product_id || item.id));
+        if (catItem) {
+          menuHourly = Number(catItem.hourly_price || 0);
+          const mInt = catItem.timer_intervals || [];
+          menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+        }
+      }
+      return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
     });
   }, [allItems, menu, usesProductTimer]);
 
@@ -725,12 +777,51 @@ const CheckMain = ({ orders, table }) => {
               const isGift = item.is_gift === 1;
               const rowStyle = item.isDeleted ? { opacity: 0.6 } : {};
               const hourlyLine = Number(productInfo?.hourly_price ?? item.product?.hourly_price ?? 0);
+              const hasIntervals = !!(item?.timer_intervals || item?.product?.timer_intervals || productInfo?.timer_intervals);
+              const isTimerProduct = String(item?.product_type || '').toLowerCase() === 'timer' || 
+                                     String(item?.product?.product_type || '').toLowerCase() === 'timer' || 
+                                     String(productInfo?.product_type || '').toLowerCase() === 'timer' || 
+                                     hasIntervals || hourlyLine > 0;
+
+              let itemClockStr = "00:00:00";
+              let itemTimerCharge = 0;
+
+              if (isTimerProduct && orders) {
+                const rawOrderClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
+                const orderWithLiveClockBase = { ...orders, is_timer_clock: rawOrderClock };
+                
+                let liveItem = item;
+                if (liveTimerData?.orders_items) {
+                   const found = liveTimerData.orders_items.find(i => 
+                     (i.id && item.id && i.id === item.id) ||
+                     (i.uuid && item.uuid && i.uuid === item.uuid) ||
+                     (i.id && item.firstId && Number(i.id) === Number(item.firstId))
+                   );
+                   if (found) liveItem = { ...item, ...found }; // Merge to keep allItems properties but override with live ones
+                }
+
+                const displaySeconds = getTimerElapsedSeconds(liveItem, orderWithLiveClockBase);
+                const h = Math.floor(displaySeconds / 3600);
+                const m = Math.floor((displaySeconds % 3600) / 60);
+                const s = displaySeconds % 60;
+                itemClockStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+                const orderWithLiveClock = { ...orders, is_timer_clock: itemClockStr };
+                const lineTotal = computeTimerItemTotal(liveItem, orderWithLiveClock);
+                const chargePerUnit = Number(item.count) > 0 ? lineTotal / Number(item.count) : lineTotal;
+
+                const basePrice = Number(item.price || 0);
+                let modifiersList = [];
+                try {
+                  modifiersList = typeof item?.modifiers === 'string' ? JSON.parse(item?.modifiers) : (item?.modifiers || []);
+                } catch (e) { }
+                const modsTotal = (Array.isArray(modifiersList) ? modifiersList : []).reduce((acc, mod) => acc + Number(mod.price || 0) * Number(mod.count || 1), 0);
+                itemTimerCharge = Math.max(0, chargePerUnit - basePrice - modsTotal);
+              }
+
               const showInlineProductTimer =
                 Number(profileInfo?.is_timer || 0) === 1 &&
-                usesProductTimer &&
-                hourlyLine > 0 &&
-                index === firstHourlyProductRowIndex &&
-                firstHourlyProductRowIndex >= 0 &&
+                isTimerProduct &&
                 !!orders?.uuid;
 
               const itemKey = `${item.product_id}-${item.is_gift}-${index}`;
@@ -833,11 +924,11 @@ const CheckMain = ({ orders, table }) => {
                           >
                             <span className="check-item-timer-lite-sep">
                               <i className="bi bi-stopwatch" aria-hidden />
-                              <span className="check-item-timer-lite-mono">{timerClock}</span>
+                              <span className="check-item-timer-lite-mono">{itemClockStr}</span>
                             </span>
                             <span className="check-item-timer-lite-sep">
                               <i className="bi bi-plus-circle" aria-hidden />
-                              <span className="check-item-timer-lite-mono">{Number(timerCharge).toFixed(2)} {getCurrencySymbol()}</span>
+                              <span className="check-item-timer-lite-mono">{Number(itemTimerCharge).toFixed(2)} {getCurrencySymbol()}</span>
                             </span>
                           </div>
                         )}

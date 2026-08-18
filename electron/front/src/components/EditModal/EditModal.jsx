@@ -28,7 +28,7 @@ import {
   splitProductQuantity,
 } from "../../redux/Slices/OrdersSlice";
 import { updateProduct } from "../../redux/Slices/ProductSlice";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, shallowEqual } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
@@ -40,7 +40,7 @@ import AdminOverrideModal from "../Modals/AdminOverrideModal";
 import "../NewItemsModal/NewItemsModal.css";
 import ProductCommentTagsModal from "../ProductCommentTagsModal/ProductCommentTagsModal";
 import { getEffectiveHourlyPrice } from "../../utils/orderHourlyPrice";
-import { getModifiersTotalPerUnit } from "../../utils/orderItemLineTotal";
+import { getModifiersTotalPerUnit, getTimerElapsedSeconds, computeTimerItemTotal } from "../../utils/orderItemLineTotal";
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
 
@@ -99,6 +99,10 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
 
   useEffect(() => {
     if (show) {
+      if (String(product?.product_type || '').toLowerCase() === 'timer' || product?.timer_intervals || product?.product?.timer_intervals) {
+        console.log("=== Timer Product Debug (EditModal) ===");
+        console.log(product);
+      }
       setActiveTab(initialTab || "edit");
       setProductComment(product?.comment || "");
       setQtyStr(String(product?.count || 1));
@@ -164,6 +168,12 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
   const hasHourlyProduct = catalogHourly > 0;
 
   const orderIdLive = orders?.uuid || orderUuidFromUrl;
+  
+  const hasIntervals = !!(product?.timer_intervals || product?.product?.timer_intervals || productInfo?.timer_intervals);
+  const isTimerProduct = String(product?.product_type || '').toLowerCase() === 'timer' || 
+                         String(product?.product?.product_type || '').toLowerCase() === 'timer' || 
+                         String(productInfo?.product_type || '').toLowerCase() === 'timer' || 
+                         hasIntervals;
 
   const parsedModifiers = useMemo(() => {
     try {
@@ -210,26 +220,14 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
     const booksData = Array.isArray(state.BooksSlice.books) ? state.BooksSlice.books : state.BooksSlice.books?.data;
     if (booksData) {
       const o = booksData.find((x) => String(x.uuid) === String(orderIdLive));
-      if (o) {
-        return {
-          is_timer_status: o.is_timer_status,
-          is_timer_clock: o.is_timer_clock,
-          rate_per_minute: o.rate_per_minute,
-        };
-      }
+      if (o) return o;
     }
     const tg = state.TablesSlice.tableGroups?.data;
     if (tg) {
       for (const hall of tg) {
         for (const t of hall.tables || []) {
           const o = t.orders?.find((x) => String(x.uuid) === String(orderIdLive));
-          if (o) {
-            return {
-              is_timer_status: o.is_timer_status,
-              is_timer_clock: o.is_timer_clock,
-              rate_per_minute: o.rate_per_minute,
-            };
-          }
+          if (o) return o;
         }
       }
     }
@@ -238,18 +236,87 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
 
   const orderForTimer = useMemo(() => {
     if (!orders) return null;
-    return { ...orders, table: orders.table || {} };
+    return {
+      ...orders,
+      table: {
+        ...(orders.table || {}),
+        hourly_price: orders?.table?.hourly_price,
+      },
+    };
   }, [orders]);
 
-  const timerClockLive = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
-  const timerChargeLive = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
-  const isTimerRunning = (liveTimerData?.is_timer_status === 1) || (orders?.is_timer_status == 1);
+  const liveProduct = useMemo(() => {
+    const itemsToSearch = liveTimerData?.orders_items || orders?.orders_items;
+    if (!itemsToSearch) return product;
+    // Match by exact ID/uuid/firstId only - NEVER match by product_id alone
+    // because two identical timer products would both match the same product_id
+    const found = itemsToSearch.find(i => 
+      (i.id && product?.id && i.id === product.id) || 
+      (i.uuid && product?.uuid && i.uuid === product.uuid) ||
+      (i.id && product?.firstId && Number(i.id) === Number(product.firstId))
+    );
+    return found || product;
+  }, [liveTimerData, orders, product]);
+
+  const isUnsavedTimer = useMemo(() => {
+    if (!orders?.orders_items) return true;
+    return !orders.orders_items.some(i => 
+      (i.id && product?.id && i.id === product.id) || 
+      (i.uuid && product?.uuid && i.uuid === product.uuid) ||
+      (i.id && product?.firstId && Number(i.id) === Number(product.firstId))
+    );
+  }, [orders, product]);
+
+  const { timerClockLive, timerChargeLive } = useMemo(() => {
+    const rawOrderClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
+    const orderWithLiveClockBase = orderForTimer ? { ...orderForTimer, is_timer_clock: rawOrderClock } : orderForTimer;
+    
+    // Məhsulun öz elapsed seconds-u hesablanır (created_at fərqi nəzərə alınır)
+    const displaySeconds = getTimerElapsedSeconds(liveProduct, orderWithLiveClockBase);
+    const h = Math.floor(displaySeconds / 3600);
+    const m = Math.floor((displaySeconds % 3600) / 60);
+    const s = displaySeconds % 60;
+    const itemClockStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+    // Item xüsusi timerCharge hesablanır
+    const orderWithLiveClock = orderForTimer ? { ...orderForTimer, is_timer_clock: itemClockStr } : orderForTimer;
+    const lineTotal = computeTimerItemTotal(liveProduct, orderWithLiveClock);
+    const count = Number(liveProduct?.count || liveProduct?.quantity || 1);
+    const chargePerUnit = count > 0 ? lineTotal / count : lineTotal;
+
+    const basePrice = Number(liveProduct?.price || 0);
+    let modifiers = [];
+    try {
+      modifiers = typeof liveProduct?.modifiers === 'string' ? JSON.parse(liveProduct?.modifiers) : (liveProduct?.modifiers || []);
+    } catch (e) { }
+    const modsTotal = modifiers.reduce((acc, mod) => acc + Number(mod.price || 0) * Number(mod.count || 1), 0);
+    const timerCharge = chargePerUnit - basePrice - modsTotal;
+
+    return { timerClockLive: itemClockStr, timerChargeLive: Math.max(0, timerCharge) };
+  }, [liveProduct, orderForTimer, liveTimerData, orders]);
+
+  // isTimerRunning: only check the specific product's timer status (never order-level for product timers)
+  const isTimerRunning = Number(liveProduct?.is_timer_status) === 1;
+
+  const timerIntervalInfo = useMemo(() => {
+    let intervalsStr = liveProduct?.timer_intervals || productInfo?.timer_intervals || liveProduct?.product?.timer_intervals;
+    if (intervalsStr) {
+      try {
+        const parsed = typeof intervalsStr === 'string' ? JSON.parse(intervalsStr) : intervalsStr;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return { price: Number(parsed[0].price) || 0, duration: Number(parsed[0].duration) || 0 };
+        }
+      } catch (e) {}
+    }
+    return null;
+  }, [liveProduct, productInfo]);
 
   const displayTariffRate = useMemo(() => {
+    if (timerIntervalInfo) return timerIntervalInfo.price;
     const eff = orderForTimer ? getEffectiveHourlyPrice(orderForTimer) : 0;
     if (eff > 0) return eff;
     return parseFloat(String(hourlyInput).replace(",", ".")) || 0;
-  }, [orderForTimer, hourlyInput]);
+  }, [orderForTimer, hourlyInput, timerIntervalInfo]);
 
   useEffect(() => {
     if (!show || !product) return;
@@ -294,20 +361,22 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
 
   const handleStartOrderTimer = () => {
     if (!orders?.uuid) return;
-    dispatch(startTimer({ orderId: orders.uuid }));
+    dispatch(startTimer({ orderId: orders.uuid, itemId: liveProduct?.id }));
     toast.info(t("taymer_basladi"));
   };
 
   const handleStopOrderTimer = () => {
     if (!orders?.uuid) return;
-    const clockSrc = timerClockLive || orders.is_timer_clock;
+    const clockSrc = timerClockLive; 
     let seconds = 0;
     if (clockSrc && String(clockSrc).includes(":")) {
       const p = clockSrc.split(":").map(Number);
       if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
     }
+    console.log(`[FRONTEND TIMER DEBUG] handleStopOrderTimer: liveProduct.id=${liveProduct?.id}, clockSrc=${clockSrc}, seconds=${seconds}`);
     dispatch(stopTimer({
       orderId: orders.uuid,
+      itemId: liveProduct?.id,
       elapsedSeconds: seconds,
       clockStr: clockSrc
     }));
@@ -321,7 +390,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
 
   const confirmResetOrderTimer = () => {
     if (!orders?.uuid) return;
-    dispatch(resetTimer({ orderId: orders.uuid }));
+    dispatch(resetTimer({ orderId: orders.uuid, itemId: liveProduct?.id }));
     toast.info(t("taymer_sifirlandi"));
     setShowResetTimerConfirm(false);
   };
@@ -505,7 +574,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 <span>{t("deyismek")}</span>
               </button>
 
-              {(Number(loginedWaiter?.data?.can_transfer_product) === 1 || unlockedPermissions["can_transfer_product"] || adminOverrideEnabled) && (
+              {!isTimerProduct && (Number(loginedWaiter?.data?.can_transfer_product) === 1 || unlockedPermissions["can_transfer_product"] || adminOverrideEnabled) && (
                 <button
                   className={`sidebar-btn ${activeTab === "transfer" ? "active" : ""}`}
                   onClick={() => {
@@ -525,7 +594,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 </button>
               )}
 
-              {(Number(loginedWaiter?.data?.can_give_treats) === 1 || unlockedPermissions["can_give_treats"] || adminOverrideEnabled) && (
+              {!isTimerProduct && (Number(loginedWaiter?.data?.can_give_treats) === 1 || unlockedPermissions["can_give_treats"] || adminOverrideEnabled) && (
                 <button
                   className={`sidebar-btn ${activeTab === "gift" ? "active" : ""}`}
                   onClick={() => {
@@ -545,7 +614,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 </button>
               )}
 
-              {(Number(loginedWaiter?.data?.can_give_product_discount) === 1 || unlockedPermissions["can_give_product_discount"] || adminOverrideEnabled) && (
+              {!isTimerProduct && (Number(loginedWaiter?.data?.can_give_product_discount) === 1 || unlockedPermissions["can_give_product_discount"] || adminOverrideEnabled) && (
                 <button
                   className={`sidebar-btn ${activeTab === "discount" ? "active" : ""}`}
                   onClick={() => {
@@ -575,15 +644,17 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 </button>
               )}
 
-              <button
-                className={`sidebar-btn`}
-                onClick={() => setShowCommentTagsModal(true)}
-              >
-                <div style={{ position: "relative", display: "inline-block", marginBottom: "6px" }}>
-                  <i className="bi bi-chat-dots-fill" style={{ marginBottom: 0 }}></i>
-                </div>
-                <span>{t("şərh") || "Şərh"}</span>
-              </button>
+              {!isTimerProduct && (
+                <button
+                  className={`sidebar-btn`}
+                  onClick={() => setShowCommentTagsModal(true)}
+                >
+                  <div style={{ position: "relative", display: "inline-block", marginBottom: "6px" }}>
+                    <i className="bi bi-chat-dots-fill" style={{ marginBottom: 0 }}></i>
+                  </div>
+                  <span>{t("şərh") || "Şərh"}</span>
+                </button>
+              )}
               <button
                 className={`d-none sidebar-btn ${activeTab === "seller" ? "active" : ""}`}
                 onClick={() => setActiveTab("seller")}
@@ -1193,7 +1264,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                         <div className="edit-hourly-metric">
                           <i className="bi bi-tag" aria-hidden />
                           <span className="edit-hourly-metric-label">{t("tarif")}</span>
-                          <span className="edit-hourly-metric-val">{Number(displayTariffRate).toFixed(2)} ₼/saat</span>
+                          <span className="edit-hourly-metric-val">
+                            {Number(displayTariffRate).toFixed(2)} {timerIntervalInfo ? `₼ / ${timerIntervalInfo.duration} dəq` : '₼/saat'}
+                          </span>
                         </div>
                       </div>
                       <div className="edit-hourly-tile-grid">
@@ -1201,8 +1274,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                           type="button"
                           className="edit-hourly-tile edit-hourly-tile-brand"
                           onClick={handleStartOrderTimer}
-                          disabled={isTimerRunning}
-                          title={isTimerRunning ? "Artıq işləyir" : "Başlat"}
+                          disabled={isTimerRunning || isUnsavedTimer}
+                          title={isUnsavedTimer ? t("evvelce_mehsulu_gonderin") : (isTimerRunning ? "Artıq işləyir" : "Başlat")}
                         >
                           <i className="bi bi-play-fill" />
                           <span>{t("baslat")}</span>
@@ -1211,8 +1284,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                           type="button"
                           className="edit-hourly-tile edit-hourly-tile-primary"
                           onClick={handleStopOrderTimer}
-                          disabled={!isTimerRunning}
-                          title={t("dayandir")}
+                          disabled={!isTimerRunning || isUnsavedTimer}
+                          title={isUnsavedTimer ? t("evvelce_mehsulu_gonderin") : t("dayandir")}
                         >
                           <i className="bi bi-pause-fill" />
                           <span>{t("dayandir")}</span>
@@ -1221,7 +1294,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                           type="button"
                           className="edit-hourly-tile edit-hourly-tile-outline"
                           onClick={handleResetOrderTimer}
-                          title={t("sifirla")}
+                          disabled={isUnsavedTimer}
+                          title={isUnsavedTimer ? t("evvelce_mehsulu_gonderin") : t("sifirla")}
                         >
                           <i className="bi bi-arrow-counterclockwise" />
                           <span>{t("sifirla")}</span>
@@ -1230,7 +1304,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     </div>
                   )}
 
-                  <div className="edit-hourly-price-card">
+                  {!isTimerProduct && (
+                    <div className="edit-hourly-price-card">
                     <div className="edit-hourly-price-card-head">
                       <i className="bi bi-currency-exchange" aria-hidden />
                       <span>{t("saatliq_qiymet_₼/saat")}</span>
@@ -1250,7 +1325,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     />
                     <p className="edit-hourly-price-hint">{t("deyisenden_sonra_asagidan_saxlayin_menyuya_yazilir")}</p>
                   </div>
+                  )}
                 </div>
+                {!isTimerProduct && (
                 <button
                   className="save-action-btn"
                   disabled={isSubmitting}
@@ -1279,6 +1356,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                       <i className="bi bi-check-lg"></i>{t("saatliq_qiymeti_saxla")}</>
                   )}
                 </button>
+                )}
               </>
             ) : (
               <div className="empty-tab-content p-4 text-center text-muted">

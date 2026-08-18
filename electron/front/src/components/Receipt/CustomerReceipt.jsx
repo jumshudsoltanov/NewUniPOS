@@ -8,6 +8,7 @@ import {
 import { getCustomerFacingServiceFeeLabel } from "../../utils/posOperationNames";
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
+import { getOrderItemLineTotal, getTimerElapsedSeconds } from "../../utils/orderItemLineTotal";
 
 const CustomerReceipt = ({
     orderedItems,
@@ -559,18 +560,31 @@ const CustomerReceipt = ({
                         if (!Array.isArray(mods)) mods = [];
                         mods = resolveModifiersForDisplay(mods, cat);
                         const modsKey = mods.map(m => `${m.name}:${m.price}:${m.count}`).sort().join('|');
-                        const key = `${name}__${price}__${isGift}__${modsKey}__${comment}`;
+                        const isTimer = String(item.product_type || item.product?.product_type || '').toLowerCase() === 'timer' || !!(item.timer_intervals || item.product?.timer_intervals || cat?.timer_intervals);
+                        const key = isTimer ? `${name}__${price}__${isGift}__${modsKey}__${comment}__${item.id}` : `${name}__${price}__${isGift}__${modsKey}__${comment}`;
+
+                        // Calculate line total for this instance
+                        const instanceLineTotal = getOrderItemLineTotal(item, checkData);
 
                         if (groupedMap.has(key)) {
-                            groupedMap.get(key)._qty += Number(item.quantity || item.count || 0);
+                            const existing = groupedMap.get(key);
+                            existing._qty += Number(item.quantity || item.count || 0);
+                            existing._lineTotal += instanceLineTotal;
                         } else {
-                            groupedMap.set(key, { ...item, _qty: Number(item.quantity || item.count || 0), modifiers: mods });
+                            groupedMap.set(key, { 
+                                ...item, 
+                                _qty: Number(item.quantity || item.count || 0), 
+                                modifiers: mods, 
+                                isTimer,
+                                _lineTotal: instanceLineTotal
+                            });
                         }
                     });
                     const grouped = Array.from(groupedMap.values()).map(item => ({
                         ...item,
                         quantity: item._qty,
                         count: item._qty,
+                        lineTotal: item._lineTotal
                     }));
 
                     return grouped.map((item, i) => {
@@ -596,7 +610,18 @@ const CustomerReceipt = ({
                                 borderBottom: i === grouped.length - 1 ? "1.5px solid #000" : styles.itemRow.borderBottom
                             }}>
                                 <div style={styles.colName}>
-                                    {params.name}
+                                    <div style={{ fontWeight: item.isTimer ? 600 : 400 }}>{params.name}</div>
+                                    {item.isTimer && (
+                                        <div style={{ fontSize: fs(10), color: "#555", marginTop: "2px" }}>
+                                            ⏱ {(() => {
+                                                const secs = getTimerElapsedSeconds(item, checkData);
+                                                const h = Math.floor(secs / 3600);
+                                                const m = Math.floor((secs % 3600) / 60);
+                                                const s = secs % 60;
+                                                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                                            })()}
+                                        </div>
+                                    )}
                                     {params.modifiers.length > 0 && (
                                         <div style={styles.modifier}>
                                             ({params.modifiers.map((m) => m.count > 0 ? `${m.name} (x${m.count})` : m.name).join(", ")})
@@ -610,12 +635,12 @@ const CustomerReceipt = ({
                                     <span style={{ ...styles.colPrice, fontSize: fs(8) }}>{t("i̇kram_1")}</span>
                                 ) : (
                                     <span style={styles.colPrice}>
-                                        {(params.price + (params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0))).toFixed(2)}
+                                        {(item.isTimer && params.quantity > 0) ? (item.lineTotal / params.quantity).toFixed(2) : (params.price + (params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0))).toFixed(2)}
                                     </span>
                                 )}
 
                                 <span style={styles.colTotal}>
-                                    {renderMoney((params.price + (params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0))) * params.quantity)}
+                                    {renderMoney(params.is_gift ? 0 : item.lineTotal)}
                                 </span>
                             </div>
                         );

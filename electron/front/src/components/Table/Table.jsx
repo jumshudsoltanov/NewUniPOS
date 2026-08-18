@@ -7,6 +7,33 @@ import { computeOrderCardMeta } from "../../utils/orderDisplayTotal";
 import { normalizeTableShape } from "../../utils/tableShape";
 import { t } from "../../utils/translations";
 import { formatPrice } from "../../utils/formatPrice";
+import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
+
+const LiveTableTimerBadge = ({ initialClock, isTimerRunning }) => {
+  const [localSeconds, setLocalSeconds] = React.useState(0);
+  React.useEffect(() => {
+    let s = 0;
+    if (initialClock && initialClock.includes(':')) {
+      const parts = initialClock.split(':').map(Number);
+      if (parts.length === 3) s = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+    setLocalSeconds(s);
+  }, [initialClock]);
+
+  React.useEffect(() => {
+    if (!isTimerRunning) return;
+    const interval = setInterval(() => {
+      setLocalSeconds(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isTimerRunning]);
+
+  const hh = Math.floor(localSeconds / 3600);
+  const mm = Math.floor((localSeconds % 3600) / 60);
+  const ss = localSeconds % 60;
+  const clockStr = [hh, mm, ss].map((v) => (v < 10 ? "0" + v : v)).join(":");
+  return <span style={{ fontVariantNumeric: 'tabular-nums', opacity: isTimerRunning ? 1 : 0.8 }}>{clockStr}</span>;
+};
 
 const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }) => {
   const { name, orders } = table || {};
@@ -20,6 +47,9 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
     const list = Array.isArray(books) ? books : books?.data;
     return list?.find(b => b.id === o.id || String(b.uuid) === String(o.uuid));
   }, [books, orders]);
+
+  const orderUuid = orders?.[0]?.uuid;
+  const liveTimerData = useSelector((state) => selectLiveTimerData(state, orderUuid));
 
   const tagText = liveOrder?.tags || orders?.[0]?.tags;
 
@@ -124,9 +154,17 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
               className={`table-amount ${statusClass}`}
             >
               {(() => {
-                const order = orders?.[0];
-                if (!order) return formatPrice(0);
-                const { displayAmount, isDepositFloor } = computeOrderCardMeta(order, table?.hourly_price);
+                const rawOrder = orders?.[0];
+                if (!rawOrder) return formatPrice(0);
+                // liveOrder (BooksSlice) daha fresh data-ya malikdir
+                const orderForDisplay = liveOrder
+                  ? { ...rawOrder, ...liveOrder, table: rawOrder.table || liveOrder.table }
+                  : { ...rawOrder };
+                // Live timer clock-u inject edirik ki, stale is_timer_clock istifadə edilməsin
+                if (liveTimerData?.is_timer_clock) {
+                  orderForDisplay.is_timer_clock = liveTimerData.is_timer_clock;
+                }
+                const { displayAmount, isDepositFloor } = computeOrderCardMeta(orderForDisplay, table?.hourly_price);
                 return (
                   <>
                     {formatPrice(displayAmount)}
@@ -191,7 +229,10 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
                 textShadow: shape_type === 'billiard' ? '0 1px 3px rgba(0,0,0,0.5)' : 'none'
               }}>
                 <i className={`bi bi-clock${orders?.[0]?.is_timer_status == 1 ? '-fill' : ''} me-1`} style={{ fontSize: '11px', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.6 }}></i>
-                <span style={{ fontVariantNumeric: 'tabular-nums', opacity: orders?.[0]?.is_timer_status == 1 ? 1 : 0.8 }}>{orders?.[0]?.is_timer_clock || "00:00:00"}</span>
+                <LiveTableTimerBadge 
+                  initialClock={orders?.[0]?.is_timer_clock || "00:00:00"} 
+                  isTimerRunning={orders?.[0]?.is_timer_status == 1} 
+                />
               </div>
             )}
           </div>

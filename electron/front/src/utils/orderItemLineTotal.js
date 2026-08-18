@@ -2,6 +2,12 @@
  * CheckBottom.jsx ilə eyni: kombo/modifikator qiymətləri sətir cəminə daxil edilir.
  * Masa kartı və çek modalları bu util ilə çek içi cəmlə uyğunlaşır.
  */
+
+let globalMenuDataLineTotal = [];
+export const setMenuDataForLineTotals = (data) => {
+    if (data && Array.isArray(data)) globalMenuDataLineTotal = data;
+};
+
 export function getModifiersTotalPerUnit(item) {
   let modifiersTotal = 0;
   try {
@@ -19,17 +25,217 @@ export function getModifiersTotalPerUnit(item) {
   return modifiersTotal;
 }
 
+/**
+ * Taymer məhsulunun elapsed dəqiqəsini hesabla.
+ * Item-in özünün localAddedAt-ı varsa onu, yoxsa order.created_at-dan is_timer_clock-u istifadə edir.
+ */
+export function getTimerElapsedSeconds(item, order) {
+  if (!item) return 0;
+  let isTimerItem = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer';
+  let hasInt = !!(item.timer_intervals || item.product?.timer_intervals);
+  let hasHourly = Number(item.hourly_price || item.product?.hourly_price || 0) > 0;
+
+  if ((!isTimerItem || !hasInt) && globalMenuDataLineTotal.length > 0) {
+      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+      if (catItem) {
+          if (!isTimerItem) isTimerItem = String(catItem.product_type || '').toLowerCase() === 'timer';
+          if (!hasInt) hasInt = !!catItem.timer_intervals;
+          if (!hasHourly) hasHourly = Number(catItem.hourly_price || 0) > 0;
+      }
+  }
+
+  if (!isTimerItem && !hasInt && !hasHourly) return 0;
+
+    let isTimerStatus = item.is_timer_status;
+    let timerClockStr = item.is_timer_clock;
+    let timerLastStartedAt = item.timer_last_started_at;
+
+    // Fallback for older orders without item-level fields
+    // If it's a newly added local item (not yet sent to DB), timerClockStr is strictly undefined.
+    if (timerClockStr === undefined) {
+      return 0; // Unsent items always start at 0
+    }
+
+    // ONLY fallback to order level if the item has a null clock string (old DB record).
+    // If the item has a clock string (even "00:00:00"), it means it is a new item with its own timer state.
+    if (timerClockStr === null || timerClockStr === "") {
+      if (order && order.is_timer_clock && order.is_timer_clock !== '00:00:00') {
+        const parts = String(order.is_timer_clock).split(':').map(Number);
+        let orderElapsedSeconds = 0;
+        if (parts.length === 3) {
+          orderElapsedSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+        }
+
+        const itemCreated = item.created_at || item.createdAt;
+        const orderCreated = order.created_at || order.createdAt;
+        if (itemCreated && orderCreated) {
+          const itemMs = new Date(itemCreated).getTime();
+          const orderMs = new Date(orderCreated).getTime();
+          if (!Number.isNaN(itemMs) && !Number.isNaN(orderMs) && itemMs > orderMs) {
+            const offsetSeconds = Math.floor((itemMs - orderMs) / 1000);
+            return Math.max(0, orderElapsedSeconds - offsetSeconds);
+          }
+        }
+        return orderElapsedSeconds;
+      }
+      return 0;
+    }
+
+    // New item-level logic
+    let itemElapsedSeconds = 0;
+    if (timerClockStr && String(timerClockStr).includes(':')) {
+      const parts = String(timerClockStr).split(':').map(Number);
+      if (parts.length === 3) {
+        itemElapsedSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      }
+    } else {
+      itemElapsedSeconds = parseInt(timerClockStr || "0", 10);
+    }
+
+    if (Number(isTimerStatus) === 1 && timerLastStartedAt) {
+      const lastStarted = new Date(timerLastStartedAt).getTime();
+      let endTime = Date.now();
+      
+      // If order is closed (2) or deleted (3), stop the timer at the end_date or updated_at
+      if (order && Number(order.status) !== 1) {
+        const orderEnd = order.end_date || order.endDate || order.updated_at || order.updatedAt;
+        if (orderEnd) {
+          const parsedEnd = new Date(orderEnd).getTime();
+          if (!Number.isNaN(parsedEnd) && parsedEnd > lastStarted) {
+            endTime = parsedEnd;
+          }
+        }
+      }
+      
+      const diffSeconds = Math.max(0, Math.floor((endTime - lastStarted) / 1000));
+      itemElapsedSeconds += diffSeconds;
+    }
+
+    return itemElapsedSeconds;
+}
+
+export function getTimerElapsedMinutes(item, order) {
+  const seconds = getTimerElapsedSeconds(item, order);
+  return Math.max(1, Math.ceil(seconds / 60));
+}
+
+/**
+
+
+/**
+ * Check if the order has any timer products with are_orders_included === 1
+ */
+export function hasFreeOrdersIncluded(order) {
+  if (!order || !order.orders_items) return false;
+  return order.orders_items.some(item => {
+    const isTimer = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer';
+    if (!isTimer) return false;
+    return Number(item.are_orders_included) === 1 || Number(item.product?.are_orders_included) === 1;
+  });
+}
+
+/**
+ * Taymer məhsulunun interval qiymətini hesabla:
+ *   base_price + interval_charges(elapsed_minutes)
+ * interval_charges: hər interval üçün Math.ceil(dəqiqə / duration) × price
+ */
+export function computeTimerItemTotal(item, order) {
+  if (!item) return 0;
+  const count = Number(item.count || item.quantity || 0);
+  // base qiymət: item.price → item.amount → item.product.price
+  const basePrice = Number(item.price || item.amount || item.product?.price || 0);
+  const modsPerUnit = getModifiersTotalPerUnit(item);
+
+  const elapsedMinutes = getTimerElapsedMinutes(item, order);
+
+  let intervals = item.timer_intervals || item.product?.timer_intervals;
+  
+  if (!intervals && globalMenuDataLineTotal.length > 0) {
+      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+      if (catItem) {
+          intervals = catItem.timer_intervals;
+      }
+  }
+
+  while (typeof intervals === 'string') {
+    try {
+      intervals = JSON.parse(intervals);
+    } catch (e) {
+      intervals = null;
+      break;
+    }
+  }
+
+  if (!intervals || !Array.isArray(intervals) || intervals.length === 0) {
+    // interval yoxdursa saatlıq qiymətlə hesabla
+    const hp = Number(item.product?.hourly_price || item.hourly_price || 0);
+    const timerCharge = (hp / 60) * elapsedMinutes;
+    return count * (basePrice + timerCharge + modsPerUnit);
+  }
+
+  // intervalları "after" ə görə sırala
+  const sorted = [...intervals].sort((a, b) => (Number(a.after) || 0) - (Number(b.after) || 0));
+
+  let intervalCharge = 0;
+  for (let i = 0; i < sorted.length; i++) {
+    const cur = sorted[i];
+    const next = sorted[i + 1];
+    const after = Number(cur.after) || 0;
+    const duration = Math.max(1, Number(cur.duration) || 1);
+    const price = Number(cur.price) || 0;
+
+    if (elapsedMinutes <= after) continue; // bu intervala hələ çatılmayıb
+
+    const maxMins = next ? (Number(next.after) || 0) - after : Infinity;
+    const minsInInterval = Math.min(elapsedMinutes - after, maxMins);
+    if (minsInInterval > 0) {
+      intervalCharge += Math.ceil(minsInInterval / duration) * price;
+    }
+  }
+
+  return count * (basePrice + intervalCharge + modsPerUnit);
+}
+
 /** Bir orders_items sətri: say × (vahid qiymət + modifikatorlar vahidə) */
-export function getOrderItemLineTotal(item) {
+export function getOrderItemLineTotal(item, order = null) {
+  let hasIntervals = !!(item.timer_intervals || item.product?.timer_intervals);
+  
+  if (!hasIntervals && globalMenuDataLineTotal.length > 0) {
+      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+      if (catItem) {
+          hasIntervals = !!catItem.timer_intervals;
+      }
+  }
+
+  let isTimer = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer' || hasIntervals;
+  
+  if (!isTimer && globalMenuDataLineTotal.length > 0) {
+      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+      if (catItem) {
+          isTimer = String(catItem.product_type || '').toLowerCase() === 'timer' || !!catItem.timer_intervals;
+      }
+  }
+
+  if (isTimer && order) {
+    return computeTimerItemTotal(item, order);
+  }
   const count = Number(item.count || item.quantity || 0);
   const price = Number(item.price || item.amount || 0);
   return count * (price + getModifiersTotalPerUnit(item));
 }
 
 /** Yadda saxlanmış sətirlərin məhsul üzrə cəmi (endirim/xidmət daxil deyil) */
-export function sumOrderItemsLinesTotal(ordersItems) {
+export function sumOrderItemsLinesTotal(ordersItems, order = null) {
   if (!ordersItems || !ordersItems.length) return 0;
-  return ordersItems.reduce((sum, it) => sum + getOrderItemLineTotal(it), 0);
+  const areOrdersFree = order ? hasFreeOrdersIncluded(order) : false;
+  return ordersItems.reduce((sum, it) => {
+    const isTimer = String(it.product_type || '').toLowerCase() === 'timer' || String(it.product?.product_type || '').toLowerCase() === 'timer';
+    let lineTotal = getOrderItemLineTotal(it, order);
+    if (areOrdersFree && !isTimer) {
+      lineTotal = 0;
+    }
+    return sum + lineTotal;
+  }, 0);
 }
 
 /**
@@ -131,14 +337,20 @@ export function computeFiscalCheckTotalsFromOrder(order) {
   }
   let total = 0;
   let totalForService = 0;
+  const areOrdersFree = hasFreeOrdersIncluded(order);
+
   (order.orders_items || []).forEach((item) => {
-    const count = Number(item.count || item.quantity || 0);
-    const price = Number(item.price || 0);
-    const modifiersPerUnit = getModifiersTotalPerUnit(item);
-    const itemTotal = count * (price + modifiersPerUnit);
+    const isTimer = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer';
+    
+    let itemTotal = getOrderItemLineTotal(item, order);
+    
+    if (areOrdersFree && !isTimer) {
+      itemTotal = 0;
+    }
+
     total += itemTotal;
     const isNoService = item.no_service_fee === 1 || item.product?.no_service_fee === 1;
-    if (!isNoService) {
+    if (!isNoService && (!areOrdersFree || isTimer)) {
       totalForService += itemTotal;
     }
   });

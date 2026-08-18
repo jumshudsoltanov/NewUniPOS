@@ -16,7 +16,9 @@ import { getTableGroups } from "./redux/Slices/TablesSlice";
 import { getActiveOrders } from "./redux/Slices/BooksSlice";
 import { menuWithCategories, menuWithGeneralCategories, updateProductModifierGroups } from "./redux/Slices/MenuSlice";
 import { tickTimer as tickBooks } from "./redux/Slices/BooksSlice";
-import { tickTimer as tickTables } from "./redux/Slices/TablesSlice";
+import { tickTablesThunk as tickTables } from "./redux/Slices/TablesSlice";
+import { setTimerMenuData } from "./utils/orderHourlyPrice";
+import { setMenuDataForLineTotals } from "./utils/orderItemLineTotal";
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Login from "./components/Login/Login";
 import Layout from "./components/Layout/Layout";
@@ -96,6 +98,12 @@ function AppContent() {
       dispatch(updateProductModifierGroups({ productId, modifier_groups }));
     });
   }, []);
+  
+  const menuData = useSelector((state) => state.OrderSlice?.menu || state.MenuSlice?.data);
+  useEffect(() => {
+    setTimerMenuData(menuData);
+    setMenuDataForLineTotals(menuData);
+  }, [menuData]);
 
   // Refs - re-render olmadan state saxlamaq üçün
   const initStarted = useRef(false);
@@ -219,7 +227,7 @@ function AppContent() {
     const timerInt = setInterval(() => {
       dispatch(tickBooks());
       dispatch(tickTables());
-    }, 60000);
+    }, 1000);
  
     return () => {
       window.removeEventListener("online", handleConnectivity);

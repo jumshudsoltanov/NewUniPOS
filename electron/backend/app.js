@@ -82,6 +82,31 @@ const ensureSchemaColumns = async () => {
       console.log("[SCHEMA] Added profiles.is_sales_shift_required");
     }
 
+    const ordersItemsDesc = await qi.describeTable("orders_items").catch(() => null);
+    if (ordersItemsDesc) {
+      if (!ordersItemsDesc.is_timer_status) {
+        await qi.addColumn("orders_items", "is_timer_status", {
+          type: db.Sequelize.DataTypes.INTEGER,
+          defaultValue: 0,
+        });
+        console.log("[SCHEMA] Added orders_items.is_timer_status");
+      }
+      if (!ordersItemsDesc.is_timer_clock) {
+        await qi.addColumn("orders_items", "is_timer_clock", {
+          type: db.Sequelize.DataTypes.STRING(255),
+          defaultValue: "00:00:00",
+        });
+        console.log("[SCHEMA] Added orders_items.is_timer_clock");
+      }
+      if (!ordersItemsDesc.timer_last_started_at) {
+        await qi.addColumn("orders_items", "timer_last_started_at", {
+          type: db.Sequelize.DataTypes.DATE,
+          allowNull: true,
+        });
+        console.log("[SCHEMA] Added orders_items.timer_last_started_at");
+      }
+    }
+
     // orders_items.count: INTEGER → FLOAT (decimal qty support)
     try {
       const itemsDesc = await qi.describeTable("orders_items");
@@ -100,6 +125,27 @@ const ensureSchemaColumns = async () => {
       }
     } catch (colErr) {
       console.warn("[SCHEMA] orders_items.count alter:", colErr?.message);
+    }
+
+    try {
+      const productsDesc = await qi.describeTable("products");
+      if (!productsDesc.timer_intervals) {
+        await qi.addColumn("products", "timer_intervals", {
+          type: db.Sequelize.DataTypes.JSON,
+          allowNull: true,
+        });
+        console.log("[SCHEMA] Added products.timer_intervals");
+      }
+      if (!productsDesc.are_orders_included) {
+        await qi.addColumn("products", "are_orders_included", {
+          type: db.Sequelize.DataTypes.TINYINT,
+          defaultValue: 0,
+          allowNull: true,
+        });
+        console.log("[SCHEMA] Added products.are_orders_included");
+      }
+    } catch (colErr) {
+      console.warn("[SCHEMA] products timer columns alter:", colErr?.message);
     }
   } catch (e) {
     if (

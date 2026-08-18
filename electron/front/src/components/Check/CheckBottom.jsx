@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, shallowEqual } from "react-redux";
 import {
   sendOrders,
   clearOrders,
@@ -39,6 +39,7 @@ import {
 } from "../../utils/orderItemDisplayHelpers";
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
+import { getOrderItemLineTotal } from "../../utils/orderItemLineTotal";
 
 const CheckBottom = ({
   orders,
@@ -68,7 +69,7 @@ const CheckBottom = ({
   );
 
   /* Taymer: TablesSlice (tickTimer) + BooksSlice — aktiv masada cədvəl mənbəsi üstünlükdə */
-  const liveTimerData = useSelector((state) => selectLiveTimerData(state, id));
+  const liveTimerData = useSelector((state) => selectLiveTimerData(state, id), shallowEqual);
 
   const timerClock =
     liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
@@ -90,8 +91,25 @@ const CheckBottom = ({
 
   const timerHourlyRates = useMemo(() => {
     if (!orderForTimer) return { usesProductTimer: false };
-    return { usesProductTimer: getProductHourlySum(orderForTimer) > 0 };
-  }, [orderForTimer]);
+    const hasHourlyProducts = (orderForTimer.orders_items || []).some((it) => {
+      const pHourly = Number(it.product?.hourly_price || 0);
+      const pIntervals = it.product?.timer_intervals || [];
+      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      
+      let menuHourly = 0;
+      let menuIntervalsValid = false;
+      if (menu && menu.length > 0) {
+        const catItem = menu.find(m => Number(m.id) === Number(it.product_id || it.id));
+        if (catItem) {
+          menuHourly = Number(catItem.hourly_price || 0);
+          const mInt = catItem.timer_intervals || [];
+          menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+        }
+      }
+      return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
+    });
+    return { usesProductTimer: hasHourlyProducts };
+  }, [orderForTimer, menu]);
 
   const effectiveHourlyPrice = useMemo(() => {
     if (!orderForTimer) return Number(table?.hourly_price || 0);
@@ -228,15 +246,42 @@ const CheckBottom = ({
       await handleSendOrders();
     }
 
-    // Auto-stop timer when moving to payment screen
+    // Auto-stop ORDER-level timer when moving to payment screen
     if (isTimerActive) {
+      let seconds = 0;
+      if (timerClock && typeof timerClock === "string" && timerClock.includes(":")) {
+        const p = timerClock.split(":").map(Number);
+        if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+      }
       dispatch(
         stopTimer({
           orderId: orders.uuid,
-          elapsedSeconds: 0,
+          elapsedSeconds: seconds,
           clockStr: timerClock,
         }),
       );
+    }
+
+    // Auto-stop PRODUCT-level timers when moving to payment screen
+    if (orders?.orders_items) {
+      orders.orders_items.forEach((item) => {
+        if (Number(item.is_timer_status) === 1 && item.id) {
+          let itemSeconds = 0;
+          if (item.is_timer_clock && String(item.is_timer_clock).includes(":")) {
+            const p = String(item.is_timer_clock).split(":").map(Number);
+            if (p.length === 3) itemSeconds = p[0] * 3600 + p[1] * 60 + p[2];
+          }
+          if (item.timer_last_started_at) {
+            const diffSec = Math.max(0, Math.floor((Date.now() - new Date(item.timer_last_started_at).getTime()) / 1000));
+            itemSeconds += diffSec;
+          }
+          const hh = Math.floor(itemSeconds / 3600);
+          const mm = Math.floor((itemSeconds % 3600) / 60);
+          const ss = itemSeconds % 60;
+          const clockStr = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+          dispatch(stopTimer({ orderId: orders.uuid, itemId: item.id, elapsedSeconds: itemSeconds, clockStr }));
+        }
+      });
     }
 
     navigate(`/closecheck/${id}`);
@@ -247,6 +292,17 @@ const CheckBottom = ({
     let total = 0;
     let totalForDiscount = 0;
     let totalForService = 0;
+    
+    let hasProductTimer = false;
+    let totalSeconds = 0;
+    if (timerClock && String(timerClock).includes(":")) {
+        const parts = timerClock.split(":").map(Number);
+        if (parts.length === 3) totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else {
+        totalSeconds = parseInt(timerClock || "0", 10);
+    }
+    const orderWithLiveClock = { ...orders, is_timer_clock: timerClock };
+    const effH = Number(orders?.table?.hourly_price || 0);
 
     const addItems = (items) => {
       if (!items) return;
@@ -270,18 +326,23 @@ const CheckBottom = ({
           /* ignore */
         }
 
-        const itemTotal = count * (price + modifiersTotal);
-
-        total += itemTotal;
-        totalForDiscount += itemTotal;
-
         const productInfo = menu?.find(
           (m) => m.id === (item.product_id || item.id),
         );
+
+        const isTimer = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer' || String(productInfo?.product_type || '').toLowerCase() === 'timer' || !!(item.timer_intervals || item.product?.timer_intervals || productInfo?.timer_intervals);
+        if (isTimer) hasProductTimer = true;
+
+        const baseTotal = count * (price + modifiersTotal);
+        const itemTotal = getOrderItemLineTotal(item, orderWithLiveClock);
+
+        total += itemTotal;
+        totalForDiscount += baseTotal;
+
         const isNoService =
           item.no_service_fee === 1 || productInfo?.no_service_fee === 1;
         if (!isNoService) {
-          totalForService += itemTotal;
+          totalForService += baseTotal;
         }
       });
     };
@@ -289,11 +350,6 @@ const CheckBottom = ({
     addItems(orders?.orders_items);
     addItems(products);
     addItems(sentProducts);
-
-    // Add Timer Charge (use live timerCharge from Redux, not stale orders prop)
-    if (timerCharge > 0) {
-      total += Number(timerCharge);
-    }
 
     if (pendingDeletions && pendingDeletions.length > 0) {
       pendingDeletions.forEach((del) => {
@@ -316,21 +372,29 @@ const CheckBottom = ({
           /* ignore */
         }
 
-        const delTotal = delQty * (delPrice + modifiersTotal);
-
-        total -= delTotal;
-        totalForDiscount -= delTotal;
-
         const productInfo = menu?.find(
           (m) => m.id === (del.product_id || del.itemId || del.id),
         );
 
+        const isTimer = String(del.product_type || '').toLowerCase() === 'timer' || String(del.product?.product_type || '').toLowerCase() === 'timer' || String(productInfo?.product_type || '').toLowerCase() === 'timer' || !!(del.timer_intervals || del.product?.timer_intervals || productInfo?.timer_intervals);
+        
+        const delItemWithQty = { ...del, count: delQty, quantity: delQty };
+        const baseTotal = delQty * (delPrice + modifiersTotal);
+        const delTotal = getOrderItemLineTotal(delItemWithQty, orderWithLiveClock);
+
+        total -= delTotal;
+        totalForDiscount -= baseTotal;
+
         const isNoService =
           del.no_service_fee === 1 || productInfo?.no_service_fee === 1;
         if (!isNoService) {
-          totalForService -= delTotal;
+          totalForService -= baseTotal;
         }
       });
+    }
+
+    if (!hasProductTimer && effH > 0) {
+        total += (effH / 3600) * totalSeconds;
     }
 
     const normalizeMoney = (value) => {
@@ -452,7 +516,7 @@ const CheckBottom = ({
   ]);
 
   const totalChanges = products.length + (pendingDeletions?.length || 0);
-  const isCheckEmpty = !isSending && products.length === 0 && (!orders?.orders_items || orders.orders_items.length === 0);
+  const isCheckEmpty = !isSending && products.length === 0 && (!orders?.orders_items || orders.orders_items.length === 0) && timerCharge === 0 && !isTimerActive;
 
   return (
     <>
@@ -667,10 +731,15 @@ const CheckBottom = ({
 
             // Auto-stop timer when printing from mobile
             if (isTimerActive) {
+              let seconds = 0;
+              if (timerClock && typeof timerClock === "string" && timerClock.includes(":")) {
+                const p = timerClock.split(":").map(Number);
+                if (p.length === 3) seconds = p[0] * 3600 + p[1] * 60 + p[2];
+              }
               dispatch(
                 stopTimer({
                   orderId: orders.uuid,
-                  elapsedSeconds: 0,
+                  elapsedSeconds: seconds,
                   clockStr: timerClock,
                 }),
               );

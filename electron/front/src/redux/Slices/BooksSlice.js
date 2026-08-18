@@ -109,7 +109,14 @@ const BooksSlice = createSlice({
     tickTimer: (state) => {
       const getUpdatedOrders = (list) => {
         return list.map((order) => {
-          if (order.is_timer_status === 1) {
+          let orderTicked = false;
+  
+          const newItems = order.orders_items || [];
+
+          let newOrderClockStr = order.is_timer_clock;
+          let newOrderRate = order.rate_per_minute;
+
+          if (Number(order.is_timer_status) === 1) {
             const effH = (() => {
               const th = Number(order.table?.hourly_price || 0);
               let s = 0;
@@ -119,7 +126,6 @@ const BooksSlice = createSlice({
               });
               return s > 0 ? s : th;
             })();
-            if (effH <= 0) return order;
 
             let totalSeconds = 0;
             if (order.is_timer_clock && String(order.is_timer_clock).includes(':')) {
@@ -134,18 +140,21 @@ const BooksSlice = createSlice({
             const hh = Math.floor(totalSeconds / 3600);
             const mm = Math.floor((totalSeconds % 3600) / 60);
             const ss = totalSeconds % 60;
-            const clockStr = [hh, mm, ss].map(v => v < 10 ? "0" + v : v).join(":");
+            newOrderClockStr = [hh, mm, ss].map(v => v < 10 ? "0" + v : v).join(":");
 
-            const charge = parseFloat(((effH / 3600) * totalSeconds).toFixed(2));
-
-            return {
-              ...order,
-              is_timer_clock: clockStr,
-              rate_per_minute: charge,
-              is_active_timer: 1
-            };
+            newOrderRate = parseFloat(((effH / 3600) * totalSeconds).toFixed(2));
+            orderTicked = true;
           }
-          return order;
+
+          if (!orderTicked) return order;
+
+          return {
+            ...order,
+            orders_items: newItems,
+            is_timer_clock: newOrderClockStr,
+            rate_per_minute: newOrderRate,
+            is_active_timer: 1
+          };
         });
       };
 
@@ -331,49 +340,67 @@ const BooksSlice = createSlice({
 
     // Optimistic timer start
     builder.addCase("orders/startTimer/pending", (state, action) => {
-      const { orderId } = action.meta.arg;
+      const { orderId, itemId } = action.meta.arg;
       let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
       if (!ordersList) return;
       const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
       if (idx !== -1) {
-        ordersList[idx] = {
-          ...ordersList[idx],
-          is_timer_status: 1,
-          is_active_timer: 1,
-        };
+        const order = ordersList[idx];
+        if (itemId && order.orders_items) {
+          const itemIdx = order.orders_items.findIndex(i => i.id === itemId);
+          if (itemIdx !== -1) {
+            order.orders_items[itemIdx].is_timer_status = 1;
+            order.orders_items[itemIdx].timer_last_started_at = new Date().toISOString();
+          }
+        } else if (!itemId) {
+          order.is_timer_status = 1;
+          order.is_active_timer = 1;
+        }
       }
     });
 
     // Optimistic timer stop
     builder.addCase("orders/stopTimer/pending", (state, action) => {
-      const { orderId, elapsedSeconds, clockStr } = action.meta.arg;
+      const { orderId, itemId, clockStr } = action.meta.arg;
       let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
       if (!ordersList) return;
       const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
       if (idx !== -1) {
-        ordersList[idx] = {
-          ...ordersList[idx],
-          is_timer_status: 0,
-          is_active_timer: 0,
-          is_timer_clock: clockStr || ordersList[idx].is_timer_clock,
-        };
+        const order = ordersList[idx];
+        if (itemId && order.orders_items) {
+          const itemIdx = order.orders_items.findIndex(i => i.id === itemId);
+          if (itemIdx !== -1) {
+            order.orders_items[itemIdx].is_timer_status = 0;
+            if (clockStr) order.orders_items[itemIdx].is_timer_clock = clockStr;
+          }
+        } else if (!itemId) {
+          order.is_timer_status = 0;
+          order.is_active_timer = 0;
+          if (clockStr) order.is_timer_clock = clockStr;
+        }
       }
     });
 
     // Optimistic timer reset
     builder.addCase("orders/resetTimer/pending", (state, action) => {
-      const { orderId } = action.meta.arg;
+      const { orderId, itemId } = action.meta.arg;
       let ordersList = Array.isArray(state.books) ? state.books : state.books?.data;
       if (!ordersList) return;
       const idx = ordersList.findIndex(o => String(o.uuid) === String(orderId));
       if (idx !== -1) {
-        ordersList[idx] = {
-          ...ordersList[idx],
-          is_timer_status: 0,
-          is_active_timer: 0,
-          is_timer_clock: "00:00:00",
-          rate_per_minute: 0,
-        };
+        const order = ordersList[idx];
+        if (itemId && order.orders_items) {
+          const itemIdx = order.orders_items.findIndex(i => i.id === itemId);
+          if (itemIdx !== -1) {
+            order.orders_items[itemIdx].is_timer_status = 0;
+            order.orders_items[itemIdx].is_timer_clock = "00:00:00";
+          }
+        } else if (!itemId) {
+          order.is_timer_status = 0;
+          order.is_active_timer = 0;
+          order.is_timer_clock = "00:00:00";
+          order.rate_per_minute = 0;
+        }
       }
     });
 
