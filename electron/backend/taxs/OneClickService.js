@@ -41,10 +41,10 @@ class OneClickService {
     }
 
     /**
-     * Vergi cihazı yalnız Azərbaycan latın əlifbası + əsas ASCII simvollarını qəbul edir.
-     * Tipografik simvollar (tək sitatlar, çertyojka, ellipsis, ₼ və s.), kiril hərfləri
-     * və digər Unicode simvollar cihazda "illegal character" xətası yaradır.
-     * Əvvəlcə onlar təhlükəsiz ekvivalentlərlə əvəz edilir, qalan icazəsiz simvollar silinir.
+     * Vergi cihazı yalnız əsas ASCII simvollarını qəbul edir ("illegal name" xətası verir).
+     * Azərbaycan latın xüsusi hərfləri (ə, ç, ö, ü, ş, ğ, ı), tipografik simvollar,
+     * kiril hərfləri və digər Unicode simvollar əvvəlcə təhlükəsiz ASCII ekvivalentlərinə
+     * transliterasiya olunur, qalan icazəsiz simvollar silinir.
      */
     _sanitizeText(value, maxLen = 64) {
         const original = String(value ?? '');
@@ -59,13 +59,21 @@ class OneClickService {
             '°': '',                                               // °
             '₼': 'AZN',                                            // ₼ manat
             '«': '"', '»': '"',                               // « »
-            ' ': ' '                                               // bölünməz boşluq
+            ' ': ' ',                                              // bölünməz boşluq
+            // Azərbaycan xüsusi hərfləri → ASCII (cihaz onları qəbul etmir)
+            'ə': 'e', 'Ə': 'E',
+            'ç': 'c', 'Ç': 'C',
+            'ğ': 'g', 'Ğ': 'G',
+            'ı': 'i', 'İ': 'I',
+            'ö': 'o', 'Ö': 'O',
+            'ş': 's', 'Ş': 'S',
+            'ü': 'u', 'Ü': 'U'
         };
         let str = original.replace(/[\r\n\t]+/g, ' ');
         for (const [from, to] of Object.entries(replacements)) {
             str = str.split(from).join(to);
         }
-        str = str.replace(/[^a-zA-Z0-9ƏəĞğİıÖöŞşÜüÇç .,:;!?()'"+\/=*%#@&_\-]/g, '');
+        str = str.replace(/[^a-zA-Z0-9 .,:;!?()'"+\/=*%#@&_\-]/g, '');
         const result = str.replace(/\s+/g, ' ').trim().substring(0, maxLen);
         if (original !== result) {
             console.warn(`[ONECLICK] Simvol sanitizasiyası: "${original}" → "${result}"`);
