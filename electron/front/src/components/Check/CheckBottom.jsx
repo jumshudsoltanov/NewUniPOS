@@ -39,7 +39,11 @@ import {
 } from "../../utils/orderItemDisplayHelpers";
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
-import { getOrderItemLineTotal } from "../../utils/orderItemLineTotal";
+import {
+  getOrderItemLineTotal,
+  sumOrderItemsLinesTotal,
+  isTimerItem
+} from "../../utils/orderItemLineTotal";
 
 const CheckBottom = ({
   orders,
@@ -327,14 +331,23 @@ const CheckBottom = ({
         }
 
         const productInfo = menu?.find(
-          (m) => m.id === (item.product_id || item.id),
+          (m) => Number(m.id) === Number(item.product_id || item.id),
         );
-
-        const isTimer = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer' || String(productInfo?.product_type || '').toLowerCase() === 'timer' || !!(item.timer_intervals || item.product?.timer_intervals || productInfo?.timer_intervals);
+        const isTimer = isTimerItem(item, menu);
         if (isTimer) hasProductTimer = true;
 
+        let liveItem = { ...item };
+        if (liveTimerData?.orders_items) {
+          const found = liveTimerData.orders_items.find(i => 
+            (i.id && item.id && i.id === item.id) ||
+            (i.uuid && item.uuid && i.uuid === item.uuid) ||
+            (i.id && item.firstId && Number(i.id) === Number(item.firstId))
+          );
+          if (found) liveItem = { ...liveItem, ...found };
+        }
+
         const baseTotal = count * (price + modifiersTotal);
-        const itemTotal = getOrderItemLineTotal(item, orderWithLiveClock);
+        const itemTotal = getOrderItemLineTotal(liveItem, orderWithLiveClock);
 
         total += itemTotal;
         totalForDiscount += baseTotal;
@@ -373,12 +386,23 @@ const CheckBottom = ({
         }
 
         const productInfo = menu?.find(
-          (m) => m.id === (del.product_id || del.itemId || del.id),
+          (m) => Number(m.id) === Number(del.product_id || del.itemId || del.id),
         );
-
-        const isTimer = String(del.product_type || '').toLowerCase() === 'timer' || String(del.product?.product_type || '').toLowerCase() === 'timer' || String(productInfo?.product_type || '').toLowerCase() === 'timer' || !!(del.timer_intervals || del.product?.timer_intervals || productInfo?.timer_intervals);
+        const isTimer = isTimerItem(del, menu);
         
-        const delItemWithQty = { ...del, count: delQty, quantity: delQty };
+        let delItemWithQty = {
+          ...del,
+          count: delQty,
+          quantity: delQty,
+        };
+        if (liveTimerData?.orders_items) {
+          const found = liveTimerData.orders_items.find(i => 
+            (i.id && del.id && i.id === del.id) ||
+            (i.uuid && del.uuid && i.uuid === del.uuid) ||
+            (i.id && del.firstId && Number(i.id) === Number(del.firstId))
+          );
+          if (found) delItemWithQty = { ...delItemWithQty, ...found };
+        }
         const baseTotal = delQty * (delPrice + modifiersTotal);
         const delTotal = getOrderItemLineTotal(delItemWithQty, orderWithLiveClock);
 
@@ -509,6 +533,8 @@ const CheckBottom = ({
     orders?.deposit,
     orders?.total,
     timerCharge,
+    timerClock,
+    liveTimerData,
     orders?.delivery_fee,
     pendingDeletions,
     menu,
@@ -516,7 +542,18 @@ const CheckBottom = ({
   ]);
 
   const totalChanges = products.length + (pendingDeletions?.length || 0);
-  const isCheckEmpty = !isSending && products.length === 0 && (!orders?.orders_items || orders.orders_items.length === 0) && timerCharge === 0 && !isTimerActive;
+  
+  const activeOrderItems = (orders?.orders_items || []).filter(
+    (item) => !pendingDeletions?.some((del) => (del.itemId || del.id) === item.id)
+  );
+  
+  const hasHourlyRate = Number(orders?.table?.hourly_price || table?.hourly_price || 0) > 0;
+  
+  const isCheckEmpty = 
+    !isSending && 
+    products.length === 0 && 
+    activeOrderItems.length === 0 &&
+    (!isTimerActive || !hasHourlyRate);
 
   return (
     <>

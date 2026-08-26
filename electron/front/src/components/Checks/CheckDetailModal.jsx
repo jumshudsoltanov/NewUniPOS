@@ -79,8 +79,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     }, [orderLogs]);
 
     const subtotal = useMemo(() => {
-        return sumOrderItemsLinesTotal(order?.orders_items || []);
-    }, [order?.orders_items]);
+        return sumOrderItemsLinesTotal(order?.orders_items || [], order);
+    }, [order?.orders_items, order]);
 
     const groupedItems = useMemo(() => {
         const map = {};
@@ -691,7 +691,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             </div>
                                         </div>
 
-                                        {(order.is_timer_status === 1 || (order.is_timer_clock && order.is_timer_clock !== "00:00:00")) && (
+                                        {(order.is_timer_status === 1 || (order.is_timer_clock && order.is_timer_clock !== "00:00:00")) && Number(order.table?.hourly_price || 0) > 0 && (
                                             <div className="meta-item-box">
                                                 <div className="meta-icon-col">
                                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="2.5">
@@ -922,7 +922,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                         </div>
                                     )}
 
-                                    {Number(order.rate_per_minute || 0) > 0 && (
+                                    {Number(order.rate_per_minute || 0) > 0 && Number(order.table?.hourly_price || 0) > 0 && (
                                         <div className="summary-row d-flex justify-content-between mb-2">
                                             <span className="summary-label text-muted">{t("taymer")}:</span>
                                             <span className="summary-value fw-bold">{Number(order.rate_per_minute).toFixed(2)} {getCurrencySymbol()}</span>
@@ -934,7 +934,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? t("minimal_mebleg_2") : t("yekun_2")}
                                         </span>
                                         <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
-                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0) + Number(order.rate_per_minute || 0)).toFixed(2)} {getCurrencySymbol()}
+                                            {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0) + (Number(order.table?.hourly_price || 0) > 0 ? Number(order.rate_per_minute || 0) : 0)).toFixed(2)} {getCurrencySymbol()}
                                         </span>
                                     </div>
                                 </div>

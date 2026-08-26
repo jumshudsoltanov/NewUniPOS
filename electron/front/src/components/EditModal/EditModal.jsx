@@ -164,16 +164,31 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
   const productInfo = menu?.find(m => m.id === (product?.product_id || product?.id));
   const isNoDiscount = (product?.no_discount === 1 || product?.product?.no_discount === 1 || productInfo?.no_discount === 1);
   const catalogHourly = Number(productInfo?.hourly_price ?? product?.product?.hourly_price ?? 0);
-  /** Yalnız kataloqda saatlıq qiyməti təyin olunmuş məhsul üçün ayrıca "Saatlıq" tabı */
-  const hasHourlyProduct = catalogHourly > 0;
+
 
   const orderIdLive = orders?.uuid || orderUuidFromUrl;
   
-  const hasIntervals = !!(product?.timer_intervals || product?.product?.timer_intervals || productInfo?.timer_intervals);
+  const checkIntervals = (val) => {
+      if (!val) return false;
+      if (Array.isArray(val)) return val.length > 0;
+      if (typeof val === 'string') {
+          const trimmed = val.trim();
+          if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
+          try {
+              const parsed = JSON.parse(trimmed);
+              if (Array.isArray(parsed)) return parsed.length > 0;
+          } catch(e) {}
+      }
+      return false;
+  };
+  const hasIntervals = checkIntervals(product?.timer_intervals) || checkIntervals(product?.product?.timer_intervals) || checkIntervals(productInfo?.timer_intervals);
   const isTimerProduct = String(product?.product_type || '').toLowerCase() === 'timer' || 
                          String(product?.product?.product_type || '').toLowerCase() === 'timer' || 
                          String(productInfo?.product_type || '').toLowerCase() === 'timer' || 
-                         hasIntervals;
+                         hasIntervals || catalogHourly > 0;
+
+  /** Saatlıq və ya İnterval taymer olan məhsullar üçün "Saatlıq" tabı göstərilir */
+  const hasHourlyProduct = isTimerProduct;
 
   const parsedModifiers = useMemo(() => {
     try {
@@ -634,16 +649,15 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                 </button>
               )}
 
-              {hasHourlyProduct && (
+              {isTimerProduct && (
                 <button
                   className={`sidebar-btn ${activeTab === "hourly" ? "active" : ""}`}
                   onClick={() => { setActiveTab("hourly"); setTransferQty(1); }}
                 >
-                  <i className="bi bi-clock-history"></i>
+                  <i className="bi bi-stopwatch-fill"></i>
                   <span>{t("saatliq")}</span>
                 </button>
               )}
-
               {!isTimerProduct && (
                 <button
                   className={`sidebar-btn`}

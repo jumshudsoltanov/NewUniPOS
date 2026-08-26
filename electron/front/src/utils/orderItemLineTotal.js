@@ -32,7 +32,20 @@ export function getModifiersTotalPerUnit(item) {
 export function getTimerElapsedSeconds(item, order) {
   if (!item) return 0;
   let isTimerItem = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer';
-  let hasInt = !!(item.timer_intervals || item.product?.timer_intervals);
+  const checkIntervals = (val) => {
+      if (!val) return false;
+      if (Array.isArray(val)) return val.length > 0;
+      if (typeof val === 'string') {
+          const trimmed = val.trim();
+          if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
+          try {
+              const parsed = JSON.parse(trimmed);
+              if (Array.isArray(parsed)) return parsed.length > 0;
+          } catch(e) {}
+      }
+      return false;
+  };
+  let hasInt = checkIntervals(item.timer_intervals) || checkIntervals(item.product?.timer_intervals);
   let hasHourly = Number(item.hourly_price || item.product?.hourly_price || 0) > 0;
 
   if ((!isTimerItem || !hasInt) && globalMenuDataLineTotal.length > 0) {
@@ -92,6 +105,7 @@ export function getTimerElapsedSeconds(item, order) {
       itemElapsedSeconds = parseInt(timerClockStr || "0", 10);
     }
 
+    // Only calculate diff if the timer is actively running
     if (Number(isTimerStatus) === 1 && timerLastStartedAt) {
       const lastStarted = new Date(timerLastStartedAt).getTime();
       let endTime = Date.now();
@@ -146,7 +160,9 @@ export function computeTimerItemTotal(item, order) {
   const basePrice = Number(item.price || item.amount || item.product?.price || 0);
   const modsPerUnit = getModifiersTotalPerUnit(item);
 
-  const elapsedMinutes = getTimerElapsedMinutes(item, order);
+  const seconds = getTimerElapsedSeconds(item, order);
+  const elapsedMinutesCeil = Math.max(1, Math.ceil(seconds / 60));
+  const elapsedMinutesFloor = Math.floor(seconds / 60);
 
   let intervals = item.timer_intervals || item.product?.timer_intervals;
   
@@ -166,11 +182,31 @@ export function computeTimerItemTotal(item, order) {
     }
   }
 
+  if (intervals && typeof intervals === 'object' && !Array.isArray(intervals)) {
+    intervals = Object.values(intervals);
+  }
+
   if (!intervals || !Array.isArray(intervals) || intervals.length === 0) {
     // interval yoxdursa saatlıq qiymətlə hesabla
-    const hp = Number(item.product?.hourly_price || item.hourly_price || 0);
-    const timerCharge = (hp / 60) * elapsedMinutes;
+    let hp = Number(item.product?.hourly_price || item.hourly_price || 0);
+    if (hp === 0 && globalMenuDataLineTotal.length > 0) {
+      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+      if (catItem) {
+        hp = Number(catItem.hourly_price || 0);
+      }
+    }
+    const timerCharge = Math.ceil(elapsedMinutesCeil / 60) * hp;
     return count * (basePrice + timerCharge + modsPerUnit);
+  }
+
+  // Interval üçün istifadə olunacaq qiymət (hər interval üçün əlavə ediləcək məbləğ):
+  // hourly_price - intervalın özündəki 'price' orijinal məhsul qiymətidir, ödəniş deyil!
+  let intervalHourlyPrice = Number(item.product?.hourly_price || item.hourly_price || 0);
+  if (intervalHourlyPrice === 0 && globalMenuDataLineTotal.length > 0) {
+    const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+    if (catItem) {
+      intervalHourlyPrice = Number(catItem.hourly_price || 0);
+    }
   }
 
   // intervalları "after" ə görə sırala
@@ -182,39 +218,74 @@ export function computeTimerItemTotal(item, order) {
     const next = sorted[i + 1];
     const after = Number(cur.after) || 0;
     const duration = Math.max(1, Number(cur.duration) || 1);
-    const price = Number(cur.price) || 0;
+    // cur.price = orijinal məhsul qiymətidir, intervalın ödəniş məbləği hourly_price-dir
+    const chargePerInterval = intervalHourlyPrice;
 
-    if (elapsedMinutes <= after) continue; // bu intervala hələ çatılmayıb
+    if (elapsedMinutesFloor < after) continue; // bu intervala hələ çatılmayıb
 
     const maxMins = next ? (Number(next.after) || 0) - after : Infinity;
-    const minsInInterval = Math.min(elapsedMinutes - after, maxMins);
-    if (minsInInterval > 0) {
-      intervalCharge += Math.ceil(minsInInterval / duration) * price;
-    }
+    const minsInInterval = Math.min(elapsedMinutesFloor - after, maxMins);
+    // after-ə çatdıqda dərhal 1 period hesablanır, sonra hər duration-da +1
+    const periodsCharged = Math.floor(minsInInterval / duration) + 1;
+    intervalCharge += periodsCharged * chargePerInterval;
   }
 
   return count * (basePrice + intervalCharge + modsPerUnit);
 }
 
+export const checkIntervals = (val) => {
+    if (!val) return false;
+    if (Array.isArray(val)) return val.length > 0;
+    
+    let parsed = val;
+    while (typeof parsed === 'string') {
+        const trimmed = parsed.trim();
+        if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
+        try {
+            parsed = JSON.parse(trimmed);
+        } catch(e) {
+            return false;
+        }
+    }
+    
+    if (Array.isArray(parsed)) return parsed.length > 0;
+    if (parsed && typeof parsed === 'object') return Object.keys(parsed).length > 0;
+    
+    return false;
+};
+
+export function isTimerItem(item, menuData = []) {
+    if (!item) return false;
+    
+    // Check if hourly_price > 0
+    let isHourly = Number(item.hourly_price || 0) > 0 || Number(item.product?.hourly_price || 0) > 0;
+    
+    let hasIntervals = checkIntervals(item.timer_intervals) || checkIntervals(item.product?.timer_intervals);
+    
+    if (!hasIntervals && menuData.length > 0) {
+        const catItem = menuData.find(m => Number(m.id) === Number(item.product_id || item.id));
+        if (catItem) {
+            hasIntervals = !!catItem.timer_intervals;
+            if (Number(catItem.hourly_price || 0) > 0) {
+                isHourly = true;
+            }
+        }
+    }
+
+    let isTimer = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer' || hasIntervals || isHourly;
+    
+    if (!isTimer && menuData.length > 0) {
+        const catItem = menuData.find(m => Number(m.id) === Number(item.product_id || item.id));
+        if (catItem) {
+            isTimer = String(catItem.product_type || '').toLowerCase() === 'timer' || !!catItem.timer_intervals || Number(catItem.hourly_price || 0) > 0;
+        }
+    }
+    return isTimer;
+}
+
 /** Bir orders_items sətri: say × (vahid qiymət + modifikatorlar vahidə) */
 export function getOrderItemLineTotal(item, order = null) {
-  let hasIntervals = !!(item.timer_intervals || item.product?.timer_intervals);
-  
-  if (!hasIntervals && globalMenuDataLineTotal.length > 0) {
-      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
-      if (catItem) {
-          hasIntervals = !!catItem.timer_intervals;
-      }
-  }
-
-  let isTimer = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer' || hasIntervals;
-  
-  if (!isTimer && globalMenuDataLineTotal.length > 0) {
-      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
-      if (catItem) {
-          isTimer = String(catItem.product_type || '').toLowerCase() === 'timer' || !!catItem.timer_intervals;
-      }
-  }
+  const isTimer = isTimerItem(item, globalMenuDataLineTotal);
 
   if (isTimer && order) {
     return computeTimerItemTotal(item, order);
@@ -229,7 +300,7 @@ export function sumOrderItemsLinesTotal(ordersItems, order = null) {
   if (!ordersItems || !ordersItems.length) return 0;
   const areOrdersFree = order ? hasFreeOrdersIncluded(order) : false;
   return ordersItems.reduce((sum, it) => {
-    const isTimer = String(it.product_type || '').toLowerCase() === 'timer' || String(it.product?.product_type || '').toLowerCase() === 'timer';
+    const isTimer = isTimerItem(it, globalMenuDataLineTotal);
     let lineTotal = getOrderItemLineTotal(it, order);
     if (areOrdersFree && !isTimer) {
       lineTotal = 0;

@@ -70,16 +70,16 @@ const CustomerReceipt = ({
     let localSettings = {};
     try {
         localSettings = JSON.parse(localStorage.getItem("pos_receipt_settings"))?.customer || {};
-    } catch(e) {}
+    } catch (e) { }
     const isReceiptPreview =
         previewSettings != null && typeof previewSettings === "object";
     if (isReceiptPreview) localSettings = previewSettings;
 
     const profileReceiptBump = Number(
         terminalInfo?.customer_receipt ??
-            profileData?.data?.customer_receipt ??
-            profileData?.data?.profile?.customer_receipt ??
-            0,
+        profileData?.data?.customer_receipt ??
+        profileData?.data?.profile?.customer_receipt ??
+        0,
     );
 
     let baseFont;
@@ -285,23 +285,49 @@ const CustomerReceipt = ({
 
     const itemsToRender = (orderedItems && orderedItems.length > 0) ? orderedItems : (checkData?.orders_items || []);
 
-    const subtotal = itemsToRender.reduce((sum, item) => {
-        const qty = Number(item.quantity || item.count || 0);
+    const rawSubtotal = itemsToRender.reduce((sum, item) => {
+        const cat = findCatalogProduct(menuCatalog, item.product_id || item.id);
         const price = Number(item.price || 0);
+        const qty = Number(item.quantity || item.count || 0);
         const isGift = Number(item.is_gift || 0) === 1;
 
-        // Modifiers
         let modifiersTotal = 0;
         try {
-            let mods = item.modifiers;
-            if (typeof mods === 'string') mods = JSON.parse(mods);
-            if (Array.isArray(mods)) {
-                modifiersTotal = mods.reduce((mSum, mod) => mSum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
+            if (item.modifiers) {
+                const mods = typeof item.modifiers === "string" ? JSON.parse(item.modifiers) : item.modifiers;
+                const resolvedMods = resolveModifiersForDisplay(mods, cat);
+                modifiersTotal = resolvedMods.reduce((mSum, m) => mSum + Number(m.price || 0) * Number(m.count || 1), 0);
             }
         } catch (e) { /* ignore */ }
 
         return sum + (isGift ? 0 : qty * (price + modifiersTotal));
-    }, 0) + (Number(checkData?.rate_per_minute) || 0);
+    }, 0);
+
+    const checkIntervals = (val) => {
+        if (!val) return false;
+        if (Array.isArray(val)) return val.length > 0;
+        if (typeof val === 'string') {
+            const trimmed = val.trim();
+            if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) return parsed.length > 0;
+            } catch(e) {}
+        }
+        return false;
+    };
+    const hasProductTimer = itemsToRender.some(item => {
+        const cat = findCatalogProduct(menuCatalog, item.product_id || item.id);
+        return String(item.product_type || item.product?.product_type || '').toLowerCase() === 'timer' ||
+            checkIntervals(item.timer_intervals) || checkIntervals(item.product?.timer_intervals) || checkIntervals(cat?.timer_intervals);
+    });
+
+    // Add rate_per_minute to subtotal ONLY if there are no product timers? Wait, no!
+    // The previous subtotal calculation did NOT include product timer costs in the `reduce`.
+    // It just did `qty * price`. So the `rate_per_minute` (which is the sum of product timers) 
+    // MUST be added to the subtotal here, regardless of whether it's a product timer or a table timer!
+    // Otherwise the subtotal will be too low.
+    const subtotal = rawSubtotal + (Number(checkData?.rate_per_minute) || 0);
 
     const calcPercent = (val, total) => {
         if (!total || total === 0 || !val) return 0;
@@ -534,15 +560,7 @@ const CustomerReceipt = ({
                     <span style={styles.colTotal}>{t("cem")}</span>
                 </div>
 
-                {checkData?.rate_per_minute &&
-                    Number(checkData?.rate_per_minute) !== 0 ? (
-                    <div style={{ ...styles.itemsGrid, ...styles.itemRow }}>
-                        <span style={styles.colName}>Timer {checkData?.is_timer_clock ? `(${checkData.is_timer_clock})` : ''}</span>
-                        <span style={styles.colQty}></span>
-                        <span style={styles.colPrice}></span>
-                        <span style={styles.colTotal}>{renderMoney(checkData.rate_per_minute)}</span>
-                    </div>
-                ) : null}
+                {/* Top timer block removed, using the bottom one */}
 
                 {(() => {
                     const filtered = itemsToRender.filter((item) => (Number(item.quantity) > 0 || Number(item.count) > 0));
@@ -560,7 +578,7 @@ const CustomerReceipt = ({
                         if (!Array.isArray(mods)) mods = [];
                         mods = resolveModifiersForDisplay(mods, cat);
                         const modsKey = mods.map(m => `${m.name}:${m.price}:${m.count}`).sort().join('|');
-                        const isTimer = String(item.product_type || item.product?.product_type || '').toLowerCase() === 'timer' || !!(item.timer_intervals || item.product?.timer_intervals || cat?.timer_intervals);
+                        const isTimer = String(item.product_type || item.product?.product_type || '').toLowerCase() === 'timer' || checkIntervals(item.timer_intervals) || checkIntervals(item.product?.timer_intervals) || checkIntervals(cat?.timer_intervals);
                         const key = isTimer ? `${name}__${price}__${isGift}__${modsKey}__${comment}__${item.id}` : `${name}__${price}__${isGift}__${modsKey}__${comment}`;
 
                         // Calculate line total for this instance
@@ -571,10 +589,10 @@ const CustomerReceipt = ({
                             existing._qty += Number(item.quantity || item.count || 0);
                             existing._lineTotal += instanceLineTotal;
                         } else {
-                            groupedMap.set(key, { 
-                                ...item, 
-                                _qty: Number(item.quantity || item.count || 0), 
-                                modifiers: mods, 
+                            groupedMap.set(key, {
+                                ...item,
+                                _qty: Number(item.quantity || item.count || 0),
+                                modifiers: mods,
                                 isTimer,
                                 _lineTotal: instanceLineTotal
                             });
@@ -612,13 +630,19 @@ const CustomerReceipt = ({
                                 <div style={styles.colName}>
                                     <div style={{ fontWeight: item.isTimer ? 600 : 400 }}>{params.name}</div>
                                     {item.isTimer && (
-                                        <div style={{ fontSize: fs(10), color: "#555", marginTop: "2px" }}>
+                                        <div style={{ fontSize: fs(10), color: "#000", marginTop: "2px" }}>
                                             ⏱ {(() => {
                                                 const secs = getTimerElapsedSeconds(item, checkData);
                                                 const h = Math.floor(secs / 3600);
                                                 const m = Math.floor((secs % 3600) / 60);
                                                 const s = secs % 60;
-                                                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                                                const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                                                
+                                                const baseModsTotal = params.price + params.modifiers.reduce((s, m) => s + (Number(m.price || 0) * Number(m.count || 1)), 0);
+                                                const timerProfit = item.lineTotal - (params.quantity * baseModsTotal);
+                                                const profitStr = timerProfit > 0 ? ` (+${timerProfit.toFixed(2)} ₼)` : '';
+                                                
+                                                return timeStr + profitStr;
                                             })()}
                                         </div>
                                     )}
@@ -648,7 +672,7 @@ const CustomerReceipt = ({
                 })()}
 
                 {/* TAYMER MƏLUMATI */}
-                {Number(checkData?.is_timer_status) === 1 && (
+                {Number(checkData?.is_timer_status) === 1 && !hasProductTimer && (
                     <div style={{
                         ...styles.itemsGrid,
                         ...styles.itemRow,
@@ -660,10 +684,8 @@ const CustomerReceipt = ({
                         <div style={styles.colName}>
                             Masa Taymeri ({checkData.is_timer_clock || "00:00:00"})
                         </div>
-                        <span style={styles.colQty}>1</span>
-                        <span style={styles.colPrice}>
-                            {(Number(checkData.rate_per_minute) || 0).toFixed(2)}
-                        </span>
+                        <span style={styles.colQty}></span>
+                        <span style={styles.colPrice}></span>
                         <span style={styles.colTotal}>{renderMoney(checkData.rate_per_minute)}</span>
                     </div>
                 )}

@@ -47,7 +47,8 @@ class OneClickService {
      * transliterasiya olunur, qalan icazəsiz simvollar silinir.
      */
     _sanitizeText(value, maxLen = 64) {
-        const original = String(value ?? '');
+        // Unicode normallaşdırma (məs., "e" və "̈" ayrılıqda gələrsə birləşdirir)
+        const original = String(value ?? '').normalize('NFC');
         const replacements = {
             '‘': "'", '’': "'", '‚': "'", '‛': "'",  // ' ' ‚ ‛
             '“': '"', '”': '"', '„': '"', '‟': '"',  // " " „ ‟
@@ -67,7 +68,46 @@ class OneClickService {
             'ı': 'i', 'İ': 'I',
             'ö': 'o', 'Ö': 'O',
             'ş': 's', 'Ş': 'S',
-            'ü': 'u', 'Ü': 'U'
+            'ü': 'u', 'Ü': 'U',
+            // Kiril hərfləri (istifadəçilər bəzən səhvən kiril "ə", "o", "e" yazır)
+            'ә': 'e', 'Ә': 'E', // Kiril ə
+            'ө': 'o', 'Ө': 'O', // Kiril ö
+            'ү': 'u', 'Ү': 'U', // Kiril ü
+            'ғ': 'g', 'Ғ': 'G', // Kiril ğ
+            'ч': 'c', 'Ч': 'C', // Kiril ç
+            'ш': 's', 'Ш': 'S', // Kiril ş
+            'а': 'a', 'А': 'A',
+            'б': 'b', 'Б': 'B',
+            'в': 'v', 'В': 'V',
+            'г': 'g', 'Г': 'G',
+            'д': 'd', 'Д': 'D',
+            'е': 'e', 'Е': 'E',
+            'ё': 'yo', 'Ё': 'Yo',
+            'ж': 'j', 'Ж': 'J',
+            'з': 'z', 'З': 'Z',
+            'и': 'i', 'И': 'I',
+            'й': 'y', 'Й': 'Y',
+            'к': 'k', 'К': 'K',
+            'л': 'l', 'Л': 'L',
+            'м': 'm', 'М': 'M',
+            'н': 'n', 'Н': 'N',
+            'о': 'o', 'О': 'O',
+            'п': 'p', 'П': 'P',
+            'р': 'r', 'Р': 'R',
+            'с': 's', 'С': 'S',
+            'т': 't', 'Т': 'T',
+            'у': 'u', 'У': 'U',
+            'ф': 'f', 'Ф': 'F',
+            'х': 'x', 'Х': 'X',
+            'ц': 'ts', 'Ц': 'Ts',
+            'щ': 'sch', 'Щ': 'Sch',
+            'ъ': '', 'Ъ': '',
+            'ы': 'i', 'Ы': 'I',
+            'ь': '', 'Ь': '',
+            'э': 'e', 'Э': 'E',
+            'ю': 'yu', 'Ю': 'Yu',
+            'я': 'ya', 'Я': 'Ya',
+            'қ': 'q', 'Қ': 'Q'
         };
         let str = original.replace(/[\r\n\t]+/g, ' ');
         for (const [from, to] of Object.entries(replacements)) {

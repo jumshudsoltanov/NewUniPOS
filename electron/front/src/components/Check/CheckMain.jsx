@@ -32,6 +32,29 @@ import {
 import { t } from "../../utils/translations";
 import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 
+const SmoothTimerClock = ({ initialSeconds, isActive }) => {
+  const [seconds, setSeconds] = useState(initialSeconds);
+
+  useEffect(() => {
+    if (Math.abs(seconds - initialSeconds) > 2) {
+      setSeconds(initialSeconds);
+    }
+  }, [initialSeconds, seconds]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const interval = setInterval(() => {
+      setSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isActive]);
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
 const parseModifierList = (modifiers) => {
   try {
     if (Array.isArray(modifiers)) return modifiers;
@@ -257,9 +280,21 @@ const CheckMain = ({ orders, table }) => {
         const menuForItem = findCatalogProduct(menu, prodId);
         const menuHourly = Number(menuForItem?.hourly_price || 0);
         const menuIntervals = menuForItem?.timer_intervals;
-        const isTimerItem = itemHourly > 0 || menuHourly > 0 ||
-          (Array.isArray(itemIntervals) ? itemIntervals.length > 0 : (typeof itemIntervals === 'string' && itemIntervals.length > 2 && itemIntervals !== '[]')) ||
-          (Array.isArray(menuIntervals) ? menuIntervals.length > 0 : (typeof menuIntervals === 'string' && menuIntervals.length > 2 && menuIntervals !== '[]'));
+        const checkIntervals = (val) => {
+            if (!val) return false;
+            if (Array.isArray(val)) return val.length > 0;
+            if (typeof val === 'string') {
+                const trimmed = val.trim();
+                if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) return parsed.length > 0;
+                } catch(e) {}
+            }
+            return false;
+        };
+        const isTimerItem = String(orderItem.product_type || '').toLowerCase() === 'timer' || String(orderItem.product?.product_type || '').toLowerCase() === 'timer' || String(menuForItem?.product_type || '').toLowerCase() === 'timer' || itemHourly > 0 || menuHourly > 0 ||
+          checkIntervals(itemIntervals) || checkIntervals(menuIntervals);
         const uniqueKeyPart = isOwnSetPrice ? `-${orderItem.id}` : (isTimerItem ? `-timer-${orderItem.id}` : '');
         const key = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
         const existing = groupedMap.get(key);
@@ -332,9 +367,21 @@ const CheckMain = ({ orders, table }) => {
       const localMenuForItem = findCatalogProduct(menu, prodId);
       const localMenuHourly = Number(localMenuForItem?.hourly_price || 0);
       const localMenuIntervals = localMenuForItem?.timer_intervals;
-      const isLocalTimerItem = localItemHourly > 0 || localMenuHourly > 0 ||
-        (Array.isArray(localItemIntervals) ? localItemIntervals.length > 0 : (typeof localItemIntervals === 'string' && localItemIntervals.length > 2 && localItemIntervals !== '[]')) ||
-        (Array.isArray(localMenuIntervals) ? localMenuIntervals.length > 0 : (typeof localMenuIntervals === 'string' && localMenuIntervals.length > 2 && localMenuIntervals !== '[]'));
+      const checkIntervals = (val) => {
+          if (!val) return false;
+          if (Array.isArray(val)) return val.length > 0;
+          if (typeof val === 'string') {
+              const trimmed = val.trim();
+              if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
+              try {
+                  const parsed = JSON.parse(trimmed);
+                  if (Array.isArray(parsed)) return parsed.length > 0;
+              } catch(e) {}
+          }
+          return false;
+      };
+      const isLocalTimerItem = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer' || String(localMenuForItem?.product_type || '').toLowerCase() === 'timer' || localItemHourly > 0 || localMenuHourly > 0 ||
+        checkIntervals(localItemIntervals) || checkIntervals(localMenuIntervals);
       const uniqueKeyPart = isOwnSetPrice ? `-local-idx-${idx}` : (isLocalTimerItem ? `-local-timer-${item.uuid || idx}` : '');
       
       const finalKey = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
@@ -771,13 +818,33 @@ const CheckMain = ({ orders, table }) => {
               modifiers = resolveModifiersForDisplay(modifiers, productInfo);
 
               const modifiersTotal = modifiers.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
-              const totalAmount = ((currentPrice + modifiersTotal) * Number(item.count)).toFixed(2);
+              let totalAmount = ((currentPrice + modifiersTotal) * Number(item.count));
 
               const isDiscounted = item.discount_value > 0 && !isNoDiscount;
               const isGift = item.is_gift === 1;
               const rowStyle = item.isDeleted ? { opacity: 0.6 } : {};
               const hourlyLine = Number(productInfo?.hourly_price ?? item.product?.hourly_price ?? 0);
-              const hasIntervals = !!(item?.timer_intervals || item?.product?.timer_intervals || productInfo?.timer_intervals);
+              const checkIntervals = (val) => {
+                  if (!val) return false;
+                  if (Array.isArray(val)) return val.length > 0;
+                  
+                  let parsed = val;
+                  while (typeof parsed === 'string') {
+                      const trimmed = parsed.trim();
+                      if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
+                      try {
+                          parsed = JSON.parse(trimmed);
+                      } catch(e) {
+                          return false;
+                      }
+                  }
+                  
+                  if (Array.isArray(parsed)) return parsed.length > 0;
+                  if (parsed && typeof parsed === 'object') return Object.keys(parsed).length > 0;
+                  
+                  return false;
+              };
+              const hasIntervals = checkIntervals(item?.timer_intervals) || checkIntervals(item?.product?.timer_intervals) || checkIntervals(productInfo?.timer_intervals);
               const isTimerProduct = String(item?.product_type || '').toLowerCase() === 'timer' || 
                                      String(item?.product?.product_type || '').toLowerCase() === 'timer' || 
                                      String(productInfo?.product_type || '').toLowerCase() === 'timer' || 
@@ -785,6 +852,8 @@ const CheckMain = ({ orders, table }) => {
 
               let itemClockStr = "00:00:00";
               let itemTimerCharge = 0;
+              let itemDisplaySeconds = 0;
+              let liveItemStatus = item.is_timer_status;
 
               if (isTimerProduct && orders) {
                 const rawOrderClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
@@ -801,13 +870,15 @@ const CheckMain = ({ orders, table }) => {
                 }
 
                 const displaySeconds = getTimerElapsedSeconds(liveItem, orderWithLiveClockBase);
+                itemDisplaySeconds = displaySeconds;
+                liveItemStatus = liveItem.is_timer_status;
+                
                 const h = Math.floor(displaySeconds / 3600);
                 const m = Math.floor((displaySeconds % 3600) / 60);
                 const s = displaySeconds % 60;
                 itemClockStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
-                const orderWithLiveClock = { ...orders, is_timer_clock: itemClockStr };
-                const lineTotal = computeTimerItemTotal(liveItem, orderWithLiveClock);
+                const lineTotal = computeTimerItemTotal(liveItem, orderWithLiveClockBase);
                 const chargePerUnit = Number(item.count) > 0 ? lineTotal / Number(item.count) : lineTotal;
 
                 const basePrice = Number(item.price || 0);
@@ -817,7 +888,10 @@ const CheckMain = ({ orders, table }) => {
                 } catch (e) { }
                 const modsTotal = (Array.isArray(modifiersList) ? modifiersList : []).reduce((acc, mod) => acc + Number(mod.price || 0) * Number(mod.count || 1), 0);
                 itemTimerCharge = Math.max(0, chargePerUnit - basePrice - modsTotal);
+                totalAmount += (itemTimerCharge * Number(item.count));
               }
+
+              totalAmount = totalAmount.toFixed(2);
 
               const showInlineProductTimer =
                 Number(profileInfo?.is_timer || 0) === 1 &&
@@ -910,11 +984,11 @@ const CheckMain = ({ orders, table }) => {
                           </span>
                         )}
 
-                        {hourlyLine > 0 && (
-                          <div style={{ fontSize: "0.75rem", color: "#053796", fontWeight: 600, lineHeight: "1.2" }}>
-                            Saatlıq: {formatPrice(hourlyLine)}/saat
+                        {!hasIntervals && hourlyLine > 0 ? (
+                          <div style={{ fontSize: "0.75rem", color: "#003b7a", fontWeight: "600", marginTop: "1px" }}>
+                            {t("saatliq")}: {hourlyLine.toFixed(2)} {getCurrencySymbol()}/{t("saat")}
                           </div>
-                        )}
+                        ) : null}
 
                         {showInlineProductTimer && (
                           <div
@@ -924,7 +998,9 @@ const CheckMain = ({ orders, table }) => {
                           >
                             <span className="check-item-timer-lite-sep">
                               <i className="bi bi-stopwatch" aria-hidden />
-                              <span className="check-item-timer-lite-mono">{itemClockStr}</span>
+                              <span className="check-item-timer-lite-mono">
+                                <SmoothTimerClock initialSeconds={itemDisplaySeconds} isActive={Number(liveItemStatus) === 1} />
+                              </span>
                             </span>
                             <span className="check-item-timer-lite-sep">
                               <i className="bi bi-plus-circle" aria-hidden />

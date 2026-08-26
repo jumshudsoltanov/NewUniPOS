@@ -71,7 +71,7 @@ const CheckListItem = React.memo(({ check, onClick, roomNumber }) => (
           </svg>
           {check?.waiter?.name || t("unknown")}
         </span>
-        {(check.is_timer_status === 1 || Number(check.rate_per_minute || 0) > 0) && (
+        {(check.is_timer_status === 1 || Number(check.rate_per_minute || 0) > 0) && Number(check.table?.hourly_price || 0) > 0 && (
           <span className="timer-pill ms-2" style={{
             fontSize: '11px',
             background: check.is_timer_status === 1 ? '#053796' : '#e2e8f0',

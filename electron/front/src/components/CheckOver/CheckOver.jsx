@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import axios from "axios";
 import apiConfig, { getSocket, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
-import { getModifiersTotalPerUnit, mapOrderPaymentForTax } from "../../utils/orderItemLineTotal";
+import { getModifiersTotalPerUnit, mapOrderPaymentForTax, isTimerItem, getOrderItemLineTotal, computeTimerItemTotal, getTimerElapsedSeconds } from "../../utils/orderItemLineTotal";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { isPosBlocked, isPaymentExpired } from "../../utils/dateHelpers";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
@@ -122,11 +122,21 @@ const CheckOver = () => {
 
         let total = 0;
         let totalForService = 0;
+        const hasProductTimer = (currentOrder.orders_items || []).some(it => isTimerItem(it, menuCatalog || []));
+
         currentOrder.orders_items?.forEach((item) => {
             const count = Number(item.count || item.quantity || 0);
             const price = Number(item.price || 0);
             const modifiersPerUnit = getModifiersTotalPerUnit(item);
-            const itemTotal = count * (price + modifiersPerUnit);
+            const isTimer = isTimerItem(item, menuCatalog || []);
+
+            let itemTotal;
+            if (isTimer) {
+                // Timer məhsulunu düzgün hesabla
+                itemTotal = getOrderItemLineTotal(item, currentOrder);
+            } else {
+                itemTotal = count * (price + modifiersPerUnit);
+            }
             total += itemTotal;
 
             const isNoService = (item.no_service_fee === 1 || item.product?.no_service_fee === 1);
@@ -135,8 +145,8 @@ const CheckOver = () => {
             }
         });
 
-        // Add Timer Charge
-        if (currentOrder.rate_per_minute) {
+        // Yalnız ORDER-level timer varsa (məhsul timer yoxdursa) rate_per_minute əlavə et
+        if (!hasProductTimer && currentOrder.rate_per_minute) {
             total += Number(currentOrder.rate_per_minute);
         }
 
@@ -170,7 +180,7 @@ const CheckOver = () => {
 
         const depositAmount = Number(currentOrder.deposit || 0);
         const deliveryFee = Number(currentOrder.delivery_fee || 0);
-        // Backend və Table.jsx ilə eyni: depozit cəmə əlavə deyil — max(subtotal+service, depozit)+çatdırılma
+        // Backend və Table.jsx ilə eynı: depozit cəmə əlavə deyil — max(subtotal+service, depozit)+çatdırılma
         const baseTotal = total - discountAmount + serviceAmount;
         let sumTotal = Math.max(baseTotal, depositAmount) + deliveryFee;
         if (sumTotal < 0) sumTotal = 0;
@@ -182,7 +192,8 @@ const CheckOver = () => {
             serviceAmount: serviceAmount.toFixed(2),
             depositAmount: depositAmount.toFixed(2)
         };
-    }, [currentOrder]);
+    }, [currentOrder, menuCatalog]);
+
 
     // Auto-select payment method (only when POS is blocked + auto mode)
     const autoSelectedRef = useRef(false);
