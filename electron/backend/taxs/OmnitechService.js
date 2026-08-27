@@ -362,17 +362,30 @@ class OmnitechService {
     }
 
     // check_type: 1
-    async createSale({ items, payments, cashierName, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0 }) {
+    async createSale({ items, payments, cashierName, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
         // Always re-login before sale — Omnitech token expires after navigation
         this.accessToken = null;
         const token = await this._ensureToken();
 
-        const { omniItems, totalSum, vatAmounts } = this._buildOmniSaleItemsPayload(
+        let { omniItems, totalSum, vatAmounts } = this._buildOmniSaleItemsPayload(
             items,
             discountAmount,
             serviceFee,
             deliveryFee
         );
+
+        const otRaw = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : NaN;
+        if (!Number.isNaN(otRaw) && otRaw > 0 && omniItems.length > 0) {
+            const diff = Number((otRaw - totalSum).toFixed(2));
+            if (Math.abs(diff) >= 0.01) {
+                const last = omniItems[omniItems.length - 1];
+                last.itemSum = Number((last.itemSum + diff).toFixed(2));
+                const q = Number(last.itemQuantity) || 0;
+                last.itemPrice = q > 0 ? Number((last.itemSum / q).toFixed(2)) : last.itemPrice;
+                totalSum = Number(omniItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+                vatAmounts = this._vatAmountsFromOmniItems(omniItems);
+            }
+        }
 
         let cashSum = 0;
         let cashlessSum = 0;
@@ -386,12 +399,30 @@ class OmnitechService {
                     cashSum += amount;
                 }
             });
-        } else {
-            cashSum = totalSum;
         }
 
         cashSum = Number(cashSum.toFixed(2));
         cashlessSum = Number(cashlessSum.toFixed(2));
+
+        if (cashSum === 0 && cashlessSum === 0) {
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
+        } else {
+            const paySum = Number((cashSum + cashlessSum).toFixed(2));
+            if (paySum > 0 && Math.abs(paySum - totalSum) > 0.02) {
+                cashSum = Number((cashSum * totalSum / paySum).toFixed(2));
+            }
+        }
+        // Həmişə sum = cashSum + cashlessSum
+        cashlessSum = Number((totalSum - cashSum).toFixed(2));
+        if (cashlessSum < 0) {
+            cashlessSum = 0;
+            cashSum = Number(totalSum.toFixed(2));
+        }
+        if (cashSum > totalSum + 0.01) {
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
+        }
 
         const incomingSum = cashSum > 0 ? cashSum : 0;
 

@@ -303,6 +303,7 @@ export const processAndPrintOrders = async (
               typeName={orderData.typeName}
               checkData={orderData.checkData}
               isDecrease={orderData.isDecrease}
+              menuCatalog={menuDataWithCategories?.data || []}
             />,
           );
           // React-in asinxron render etməsini gözləyirik (flushSync əvəzinə, çünki navigate edərkən xəta verir)

@@ -201,28 +201,93 @@ class OneClickService {
         });
     }
 
-    async createSale({ items, payments, cashierName, orderId }) {
-        await this._ensureToken();
+    _buildOneClickSaleItemsPayload(items, discountAmount, serviceFee, deliveryFee) {
         const vatPercent = this.taxPercent;
+        const rawItemsTotal = items.reduce((acc, item) => {
+            const qty = Number(item.count || item.quantity || 1);
+            const price = Number(item.price || 0);
+            return acc + qty * price;
+        }, 0);
+
+        const discAmt = Number(discountAmount) || 0;
+        const svcFee = Number(serviceFee) || 0;
+        const dlvFee = Number(deliveryFee) || 0;
 
         const saleItems = items.map(item => {
             const qty = Number(item.count || item.quantity || 1);
             const price = Number(item.price || 0);
-            const sum = Number((qty * price).toFixed(2));
+            const lineTotal = qty * price;
+
+            let itemDiscount = 0;
+            if (discAmt > 0 && rawItemsTotal > 0) {
+                itemDiscount = Number(((discAmt * lineTotal) / rawItemsTotal).toFixed(2));
+            }
+
+            const discountedLineTotal = Number((lineTotal - itemDiscount).toFixed(2));
+            const discountedPrice = qty > 0 ? Number((discountedLineTotal / qty).toFixed(2)) : 0;
+
             return {
                 itemName: this._sanitizeText(item.product?.name || item.name || 'Məhsul') || 'Məhsul',
                 itemCodeType: 0,
                 itemCode: this._sanitizeText(String(item.barcode || item.product_id || item.id || '0'), 64),
                 itemQuantityType: 0,
                 itemQuantity: Number(qty.toFixed(3)),
-                itemPrice: Number(price.toFixed(2)),
-                itemSum: sum,
+                itemPrice: discountedPrice,
+                itemSum: discountedLineTotal,
                 itemVatPercent: vatPercent,
                 discount: 0
             };
         });
 
+        if (svcFee > 0) {
+            saleItems.push({
+                itemName: 'Servis haqqi',
+                itemCodeType: 0,
+                itemCode: '0',
+                itemQuantityType: 0,
+                itemQuantity: 1,
+                itemPrice: Number(svcFee.toFixed(2)),
+                itemSum: Number(svcFee.toFixed(2)),
+                itemVatPercent: vatPercent,
+                discount: 0
+            });
+        }
+
+        if (dlvFee > 0) {
+            saleItems.push({
+                itemName: 'Catdirilma haqqi',
+                itemCodeType: 0,
+                itemCode: '0',
+                itemQuantityType: 0,
+                itemQuantity: 1,
+                itemPrice: Number(dlvFee.toFixed(2)),
+                itemSum: Number(dlvFee.toFixed(2)),
+                itemVatPercent: vatPercent,
+                discount: 0
+            });
+        }
+
         const totalSum = Number(saleItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+        return { saleItems, totalSum, vatAmounts: [{ vatPercent, vatSum: totalSum }] };
+    }
+
+    async createSale({ items, payments, cashierName, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
+        await this._ensureToken();
+        
+        let { saleItems, totalSum, vatAmounts } = this._buildOneClickSaleItemsPayload(items, discountAmount, serviceFee, deliveryFee);
+
+        const otRaw = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : NaN;
+        if (!Number.isNaN(otRaw) && otRaw > 0 && saleItems.length > 0) {
+            const diff = Number((otRaw - totalSum).toFixed(2));
+            if (Math.abs(diff) >= 0.01) {
+                const last = saleItems[saleItems.length - 1];
+                last.itemSum = Number((last.itemSum + diff).toFixed(2));
+                const q = Number(last.itemQuantity) || 0;
+                last.itemPrice = q > 0 ? Number((last.itemSum / q).toFixed(2)) : last.itemPrice;
+                totalSum = Number(saleItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+                vatAmounts = [{ vatPercent: this.taxPercent, vatSum: totalSum }];
+            }
+        }
 
         let cashSum = 0;
         let cashlessSum = 0;
@@ -240,14 +305,41 @@ class OneClickService {
                     cashSum += amount;
                 }
             });
-        } else {
-            cashSum = totalSum;
         }
 
-        cashSum = Number(cashSum.toFixed(2));
-        cashlessSum = Number(cashlessSum.toFixed(2));
-        const incomingSum = cashSum > 0 ? cashSum : 0;
-        const changeSum = Number(Math.max(0, incomingSum - totalSum).toFixed(2));
+        const rawCashSum = Number(cashSum.toFixed(2));
+        const rawCashlessSum = Number(cashlessSum.toFixed(2));
+        const rawPaySum = Number((rawCashSum + rawCashlessSum).toFixed(2));
+
+        const incomingSum = rawCashSum > 0 ? rawCashSum : 0;
+        const changeSum = Number(Math.max(0, rawPaySum - totalSum).toFixed(2));
+
+        if (rawPaySum === 0) {
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
+        } else if (rawPaySum > 0 && Math.abs(rawPaySum - totalSum) > 0.02) {
+            if (rawPaySum > totalSum) {
+                cashSum = Number((totalSum - rawCashlessSum).toFixed(2));
+                if (cashSum < 0) {
+                    cashSum = 0;
+                    cashlessSum = Number(totalSum.toFixed(2));
+                }
+            } else {
+                cashSum = Number((rawCashSum * totalSum / rawPaySum).toFixed(2));
+            }
+        } else {
+            cashSum = rawCashSum;
+        }
+
+        cashlessSum = Number((totalSum - cashSum).toFixed(2));
+        if (cashlessSum < 0) {
+            cashlessSum = 0;
+            cashSum = Number(totalSum.toFixed(2));
+        }
+        if (cashSum > totalSum + 0.01) {
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
+        }
 
         return this._request('POST', '/kas_sale', {
             cashier: this._sanitizeText(cashierName || 'Cashier') || 'Cashier',
@@ -261,32 +353,27 @@ class OneClickService {
             bonusSum: 0,
             incomingSum,
             changeSum,
-            vatAmounts: [{ vatPercent, vatSum: totalSum }]
+            vatAmounts
         });
     }
 
-    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId }) {
+    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
         await this._ensureToken();
-        const vatPercent = this.taxPercent;
+        
+        let { saleItems: returnItems, totalSum, vatAmounts } = this._buildOneClickSaleItemsPayload(items, discountAmount, serviceFee, deliveryFee);
 
-        const returnItems = items.map(item => {
-            const qty = Number(item.count || item.quantity || 1);
-            const price = Number(item.price || 0);
-            const sum = Number((qty * price).toFixed(2));
-            return {
-                itemName: this._sanitizeText(item.product?.name || item.name || 'Məhsul') || 'Məhsul',
-                itemCodeType: 0,
-                itemCode: this._sanitizeText(String(item.barcode || item.product_id || item.id || '0'), 64),
-                itemQuantityType: 0,
-                itemQuantity: Number(qty.toFixed(3)),
-                itemPrice: Number(price.toFixed(2)),
-                itemSum: sum,
-                itemVatPercent: vatPercent,
-                discount: 0
-            };
-        });
-
-        const totalSum = Number(returnItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+        const otRaw = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : NaN;
+        if (!Number.isNaN(otRaw) && otRaw > 0 && returnItems.length > 0) {
+            const diff = Number((otRaw - totalSum).toFixed(2));
+            if (Math.abs(diff) >= 0.01) {
+                const last = returnItems[returnItems.length - 1];
+                last.itemSum = Number((last.itemSum + diff).toFixed(2));
+                const q = Number(last.itemQuantity) || 0;
+                last.itemPrice = q > 0 ? Number((last.itemSum / q).toFixed(2)) : last.itemPrice;
+                totalSum = Number(returnItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
+                vatAmounts = [{ vatPercent: this.taxPercent, vatSum: totalSum }];
+            }
+        }
 
         let cashSum = 0;
         let cashlessSum = 0;
@@ -304,8 +391,37 @@ class OneClickService {
                     cashSum += amount;
                 }
             });
+        }
+
+        const rawCashSum = Number(cashSum.toFixed(2));
+        const rawCashlessSum = Number(cashlessSum.toFixed(2));
+        const rawPaySum = Number((rawCashSum + rawCashlessSum).toFixed(2));
+
+        if (rawPaySum === 0) {
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
+        } else if (rawPaySum > 0 && Math.abs(rawPaySum - totalSum) > 0.02) {
+            if (rawPaySum > totalSum) {
+                cashSum = Number((totalSum - rawCashlessSum).toFixed(2));
+                if (cashSum < 0) {
+                    cashSum = 0;
+                    cashlessSum = Number(totalSum.toFixed(2));
+                }
+            } else {
+                cashSum = Number((rawCashSum * totalSum / rawPaySum).toFixed(2));
+            }
         } else {
-            cashSum = totalSum;
+            cashSum = rawCashSum;
+        }
+
+        cashlessSum = Number((totalSum - cashSum).toFixed(2));
+        if (cashlessSum < 0) {
+            cashlessSum = 0;
+            cashSum = Number(totalSum.toFixed(2));
+        }
+        if (cashSum > totalSum + 0.01) {
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
         }
 
         return this._request('POST', '/kas_moneyback', {
@@ -321,7 +437,7 @@ class OneClickService {
             parentDocument: this._sanitizeText(parentFiscalId || '', 128),
             refund_document_number: this._sanitizeText(String(documentNumber || ''), 128),
             refund_short_document_id: this._sanitizeText(shortDocId || '', 128),
-            vatAmounts: [{ vatPercent, vatSum: totalSum }]
+            vatAmounts
         });
     }
 

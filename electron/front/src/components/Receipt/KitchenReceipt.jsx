@@ -1,5 +1,9 @@
 import React from "react";
 import { t } from "../../utils/translations";
+import {
+    findCatalogProduct,
+    getDisplayProductName,
+} from "../../utils/orderItemDisplayHelpers";
 
 const KitchenReceipt = ({
     orderedItems = [],
@@ -13,6 +17,7 @@ const KitchenReceipt = ({
     selectedCustomer,
     isDecrease,
     previewSettings,
+    menuCatalog = [],
 }) => {
     const now = new Date();
     const currentTime = `${now.getFullYear()}-${String(
@@ -28,7 +33,8 @@ const KitchenReceipt = ({
         const groups = new Map();
 
         items.forEach(item => {
-            const itemName = item.product_name || item.name || item.product?.name || t("unknown");
+            const cat = findCatalogProduct(menuCatalog, item.product_id || item.id);
+            const itemName = getDisplayProductName(item, cat) || t("unknown");
             
             // Normalize modifiers for key generation
             let mods = [];

@@ -1,0 +1,848 @@
+{
+	"info": {
+		"_postman_id": "54e1e873-62b6-4d3e-beda-984d244b759c",
+		"name": "OneClick APİ Commands",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "20751783",
+		"_collection_link": "https://speeding-equinox-303028.postman.co/workspace/My-Workspace~ae38765d-d5a8-46c0-880e-15ad314064e4/collection/20751783-54e1e873-62b6-4d3e-beda-984d244b759c?action=share&source=collection_link&creator=20751783"
+	},
+	"item": [
+		{
+			"name": "kas_info",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_info",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_info"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_login",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_login",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_shift",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_shift",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_shift"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_openShift",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_openshift",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_openshift"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_depo",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"Abbas\",\n    \"currency\": \"AZN\",\n    \"sum\": 120.00\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_depo",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_depo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_sale",
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {
+					"content-type": true
+				}
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json; charset=UTF-8"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"ADMINISTRATOR\",\n    \"currency\": \"AZN\",\n    \"items\": [\n        {\n            \"itemName\": \"SIBIR GILEMEYVESI\",\n            \"itemCodeType\": 1,\n            \"itemCode\": \"48\",\n            \"itemQuantityType\": 0,\n            \"itemQuantity\": 2,\n            \"itemDiscountPrice\": 1,\n            \"itemPrice\": 5,\n            \"itemSum\": 10,\n            \"itemVatPercent\": 18\n        }\n    ],\n    \"sum\": 10,\n    \"cashSum\": 10,\n    \"cashlessSum\": 0.0,\n    \"prepaymentSum\": 0,\n    \"creditSum\": 0,\n    \"bonusSum\": 0,\n    \"incomingSum\": 15,\n    \"changeSum\": 5,\n    \"vatAmounts\": [\n        {\n            \"vatPercent\": 18,\n            \"vatSum\": 10\n        }\n    ],\n    \"useTerminalBank\": false\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_sale",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_sale"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_sale with itemMarkingCode",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "",
+						"value": "",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"kassa1\",\n    \"currency\": \"AZN\",\n    \"items\": [\n        {\n            \"itemName\": \"icki\",\n            \"itemCodeType\": 1,\n            \"itemCode\": \"14633\",\n            \"itemMarkingCode\": \"jksenm45SD4ar2g5sfdljsfe\",\n            \"itemQuantityType\": 0,\n            \"itemQuantity\": 1,\n            \"itemPrice\": 0.75,\n            \"itemSum\": 0.75,\n            \"itemVatPercent\": 18\n        }\n    ],\n    \"sum\": 0.75,\n    \"cashSum\":0.75,\n    \"cashlessSum\": 0,\n    \"prepaymentSum\": 0,\n    \"creditSum\": 0,\n    \"bonusSum\": 0,\n    \"changeSum\": 0.0,\n    \"incomingSum\": 0.75,\n    \"vatAmounts\": [\n        {\n            \"vatSum\": 0.75,\n            \"vatPercent\": 18\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_sale",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_sale"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_sale with itemMarkingCodes",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "",
+						"value": "",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"kassa1\",\n    \"currency\": \"AZN\",\n    \"items\": [\n        {\n            \"itemName\": \"Siqaret\",\n            \"itemCodeType\": 1,\n            \"itemCode\": \"14633\",\n            \"itemQuantityType\": 0,\n            \"itemMarkingCodes\": [\n                \"bjarnlk4nalnka1651lsvmad\",\n                \"a65s161asdv61a6r1g6a0sdv61a65s1\",\n                \"as15aseg15aerg1a6sg1aseg15\"\n            ],\n            \"itemQuantity\": 3,\n            \"itemPrice\": 1.0,\n            \"itemSum\": 3.0,\n            \"itemVatPercent\": 18\n        }\n    ],\n    \"sum\": 3.0,\n    \"cashSum\": 3.0,\n    \"cashlessSum\": 0.0,\n    \"prepaymentSum\": 0,\n    \"creditSum\": 0,\n    \"bonusSum\": 0,\n    \"changeSum\": 0.0,\n    \"incomingSum\":3.0,\n    \"vatAmounts\": [\n        {\n            \"vatSum\": 3.0,\n            \"vatPercent\": 18\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_sale",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_sale"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_sale_prepay",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"İlqar s\",\n    \"currency\": \"AZN\",\n    \"parents\": [\n        \"8WeXvkDsiLtP7Xs2uLzMdzCBZmxWPkP68QZ2W4ZLfhhhoM3\"\n    ],\n    \"items\": [\n        {\n            \"itemName\": \"qutu testi\",\n            \"itemCodeType\": 1,\n            \"itemCode\": \"23681000\",\n            \"itemQuantityType\": 0,\n            \"itemQuantity\": 1.0,\n            \"itemPrice\": 22.0,\n            \"itemSum\": 22.0,\n            \"itemVatPercent\": 18.0\n        }\n    ],\n    \"sum\": 0.0,\n    \"cashSum\": 0.0,\n    \"cashlessSum\": 0.0,\n    \"prepaymentSum\": 22.0,\n    \"creditSum\": 0.0,\n    \"bonusSum\": 0.0,\n    \"changeSum\": 0.0,\n    \"incomingSum\": 0.0,\n    \"vatAmounts\": [\n        {\n            \"vatSum\": 0.0,\n            \"vatPercent\": 18.0\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_sale",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_sale"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_sale_credit",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"İlqar s\",\n    \"currency\": \"AZN\",\n    \"creditContract\":\"lasbdnılnsDnlsDv\",\n    \"items\": [\n        {\n            \"itemName\": \"Lays Hediyyeli qutu\",\n            \"itemCodeType\": 1,\n            \"itemCode\": \"465168543\",\n            \"itemQuantityType\": 0,\n            \"itemQuantity\": 6.0,\n            \"itemPrice\": 3.77,\n            \"itemSum\": 22.62,\n            \"itemVatPercent\": 18.0\n        }\n    ],\n    \"sum\": 12.62,\n    \"cashSum\": 12.62,\n    \"cashlessSum\": 0.0,\n    \"prepaymentSum\": 0.0,\n    \"creditSum\": 10.0,\n    \"bonusSum\": 0.0,\n    \"changeSum\": 0.0,\n    \"incomingSum\": 12.62,\n    \"vatAmounts\": [\n        {\n            \"vatSum\": 12.62,\n            \"vatPercent\": 18.0\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_sale",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_sale"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_rollback",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"Nazim\",\n    \"currency\": \"AZN\",\n    \"parentDocument\": \"396V4hCQPhKqsnBZfoF8AE8RNzvvPeuqPUFAxi8XgTUA\",\n     \"sum\": 50.0,\n    \"cashSum\": 50.0,\n    \"cashlessSum\":0.0,\n    \"prepaymentSum\": 0.0,\n    \"creditSum\": 0.0,\n    \"bonusSum\": 0.0,\n    \"vatAmounts\": [\n        {\n            \"vatSum\": 50.0,\n            \"vatPercent\": 8.0\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_rollback",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_rollback"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_moneyback",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"kassa1\",\n    \"currency\": \"AZN\",\n    \"parentDocument\": \"HWAb9gwcLff6uAf5grNPfW9KHj17mCBqj8K762eg6pDS\",\n    \"changeSum\": 0,\n    \"cashlessSum\": 0,\n    \"sum\": 8,\n    \"incomingSum\": 8,\n    \"creditSum\": 0,\n    \"prepaymentSum\": 0,\n    \"items\": [\n        {\n            \"itemName\": \"Sirab 0.75\",\n            \"itemCode\": \"114\",\n            \"itemQuantityType\": 0,\n            \"itemPrice\": 8,\n            \"itemQuantity\": 1,\n            \"itemVatPercent\": 8,\n            \"itemCodeType\": 0,\n            \"itemSum\": 8\n        }\n    ],\n    \"bonusSum\": 0,\n    \"cashSum\": 8,\n    \"vatAmounts\": [\n        {\n            \"vatPercent\": 8,\n            \"vatSum\": 8\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_moneyback",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_moneyback"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_withdraw",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"cashier\": \"Masha\",\n    \"currency\": \"AZN\",\n    \"sum\": 100.00\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_withdraw",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_withdraw"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_correction",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"cashier\": \"Nazim\",\r\n    \"firstOperationAtUtc\": \"2024-10-13T18:24:00Z\",\r\n    \"lastOperationAtUtc\": \"2024-10-13T19:24:00Z\",\r\n    \"currency\": \"AZN\",\r\n    \"sum\": 10.0,\r\n    \"cashSum\": 0.0,\r\n    \"cashlessSum\": 10.0,\r\n    \"prepaymentSum\": 0.0,\r\n    \"creditSum\": 0.0,\r\n    \"bonusSum\": 0.0,\r\n    \"vatAmounts\": [\r\n        {\r\n            \"vatSum\": 10.0,\r\n            \"vatPercent\": 20.0\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_correction",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_correction"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_xreport",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_xreport",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_xreport"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_closeshift",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_closeshift",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_closeshift"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_periodic_z",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"from\":\"2024-09-01T00:00:01Z\", \"to\":\"2026-09-30T23:59:59Z\"}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_periodic_z",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_periodic_z"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_controltape",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_controltape",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_controltape"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_logout",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_logout",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_logout"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_lastDocument",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_lastDocument",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_lastDocument"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_credit",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"cashier\": \"İlqar s\",\r\n    \"currency\": \"AZN\",\r\n    \"parentDocument\": \"E5zuJdo1UTHrCBvWovwb1A4nt89YiykxGAr6YVQa7XQZ\",\r\n    \"creditContract\": \"fff\",\r\n    \"paymentNumber\": 1,\r\n    \"creditPayer\": \"bbb\",\r\n    \"items\": [\r\n        {\r\n            \"itemName\": \"Lays Hediyyeli quteu\",\r\n            \"itemCodeType\": 1,\r\n            \"itemCode\": \"465168543\",\r\n            \"itemQuantityType\": 0,\r\n            \"itemQuantity\": 1.0,\r\n            \"itemPrice\": 50,\r\n            \"itemSum\": 50.00,\r\n            \"itemVatPercent\": 18.0\r\n        }\r\n    ],\r\n    \"sum\": 50.0,\r\n    \"cashSum\": 50.0,\r\n    \"cashlessSum\": 0.0,\r\n    \"prepaymentSum\": 0.0,\r\n    \"creditSum\": 0.0,\r\n    \"residue\": 120.0,\r\n    \"bonusSum\": 0.0,\r\n    \"changeSum\": 0.0,\r\n    \"incomingSum\": 50.0,\r\n    \"vatAmounts\": [\r\n        {\r\n            \"vatSum\": 50.0,\r\n            \"vatPercent\": 18.0\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_sale_credit",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_sale_credit"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_prepay",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"cashier\": \"İlqar s\",\r\n    \"currency\": \"AZN\",\r\n    \"items\": [\r\n        {\r\n            \"itemName\": \"Hediyye karti\",\r\n            \"itemCodeType\": 1,\r\n            \"itemCode\": \"3333333333333\",\r\n            \"itemQuantityType\": 0,\r\n            \"itemQuantity\": 1.0,\r\n            \"itemPrice\": 50.0,\r\n            \"itemSum\": 50.0,\r\n            \"itemVatPercent\": 18.0\r\n        }\r\n    ],\r\n    \"sum\": 50.0,\r\n    \"cashSum\": 50.0,\r\n    \"cashlessSum\": 0.0,\r\n    \"prepaymentSum\": 0.0,\r\n    \"creditSum\": 0.0,\r\n    \"bonusSum\": 0.0,\r\n    \"changeSum\": 0.0,\r\n    \"incomingSum\": 50.0,\r\n    \"vatAmounts\": [\r\n        {\r\n            \"vatSum\": 50.0,\r\n            \"vatPercent\": 18.0\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_sale_prepay",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_sale_prepay"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_get_salebyid",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"receiptCheckId\":1707660285090\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_get_salebyid",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_get_salebyid"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_recieptCopy",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"fiscalId\":\"8BBDT3eNZZUtjCZod1XftUw33uawxXbZa6VKGbBb6A3Dnn\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_receipt_copy",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_receipt_copy"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "kas_checkdocExists",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"document_id\": \"7XpJwc7ymNJ123JYnKZ5Sn37mjkVCFtqWPHdHEWjjjmmsyv\",\r\n    \"document_type\": \"sale\",\r\n    \"total_sum\": 50.0\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{kassam_ip}}:9876/api/kas_checkdocExists",
+					"host": [
+						"{{kassam_ip}}"
+					],
+					"port": "9876",
+					"path": [
+						"api",
+						"kas_checkdocExists"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"",
+					"const CryptoJS = require('crypto-js');",
+					"",
+					"function generateRandomNonce(length = 8) {",
+					"    const characters = 'abcdefghijklmnopqrstuvwxyz0123456789'; ",
+					"    let nonce = '';",
+					"    for (let i = 0; i < length; i++) {",
+					"        const randomIndex = Math.floor(Math.random() * characters.length);",
+					"        nonce += characters[randomIndex];",
+					"    }",
+					"    return nonce;",
+					"}",
+					"",
+					"function getCurrentDatetimeUTCPlus4() {",
+					"    const now = new Date();",
+					"    now.setUTCHours(now.getUTCHours() + 4); ",
+					"    const year = now.getUTCFullYear();",
+					"    const month = String(now.getUTCMonth() + 1).padStart(2, '0');",
+					"    const day = String(now.getUTCDate()).padStart(2, '0');",
+					"    const hours = String(now.getUTCHours()).padStart(2, '0');",
+					"    const minutes = String(now.getUTCMinutes()).padStart(2, '0');",
+					"    const seconds = String(now.getUTCSeconds()).padStart(2, '0');",
+					"    return `${year}${month}${day}${hours}${minutes}${seconds}`;",
+					"}",
+					"",
+					"function sha256(input) {",
+					"    return CryptoJS.SHA256(input).toString(CryptoJS.enc.Hex);",
+					"}",
+					"",
+					"(function generateHash() {",
+					"    const dt = getCurrentDatetimeUTCPlus4();",
+					"    const nonce = generateRandomNonce();",
+					"    const key = \"test\";",
+					"",
+					"    const dtHash = sha256(dt);",
+					"    const combinedString = `${dtHash}:${nonce}:${key}`;",
+					"    const finalHash = sha256(combinedString);",
+					"",
+					"    pm.request.headers.add({key:'token',value:finalHash});",
+					"",
+					"    pm.request.headers.add({key:'dt', value:dt});",
+					"",
+					"    pm.request.headers.add({key:'nonce',value:nonce});",
+					"",
+					"    console.log(\"Datetime (UTC+4):\", dt);",
+					"    console.log(\"First Hash (dt):\", dtHash);",
+					"    console.log(\"Combined String:\", combinedString);",
+					"    console.log(\"Final Hash:\", finalHash);",
+					"})();",
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "kassam_ip",
+			"value": "192.168.31.12",
+			"type": "string",
+			"disabled": true
+		},
+		{
+			"key": "kassam_ip",
+			"value": "172.16.80.36",
+			"type": "string"
+		},
+		{
+			"key": "kassam_ip",
+			"value": "10.21.141.115",
+			"type": "string",
+			"disabled": true
+		}
+	]
+}
