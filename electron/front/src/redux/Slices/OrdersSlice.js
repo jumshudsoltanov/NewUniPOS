@@ -1668,10 +1668,8 @@ export const OrderSlice = createSlice({
         }
       })
       .addCase(batchDeleteOrderItems.fulfilled, (state, action) => {
-        const deletedIds = action.payload?.deletedItems || [];
-        state.pendingDeletions = state.pendingDeletions.filter(
-          (item) => !deletedIds.includes(Number(item.itemId)),
-        );
+        // Do nothing here. We must keep pendingDeletions until getActiveOrders is fetched
+        // to prevent UI flicker. Check.jsx explicitly clears it afterwards.
       })
       .addCase(batchDeleteOrderItems.rejected, (state) => {
         // Keep pendingDeletions so user can retry

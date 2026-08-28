@@ -31,7 +31,7 @@ import OtherChecks from "../OtherChecks/OtherChecks";
 import VoiceOrderButton from "../VoiceOrderButton/VoiceOrderButton";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer, clearOrders, addProducts } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer, clearOrders, addProducts, clearPendingDeletions } from "../../redux/Slices/OrdersSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
@@ -943,6 +943,7 @@ const Check = () => {
           }, {})
         );
 
+        let batchDeleteSuccess = false;
         // Single batch request — all items deleted in ONE backend transaction
         await dispatch(batchDeleteOrderItems({
           orderId: id,
@@ -958,7 +959,9 @@ const Check = () => {
             price: d.price,
           })),
           waiterName,
-        })).unwrap().catch(err => {
+        })).unwrap().then(() => {
+          batchDeleteSuccess = true;
+        }).catch(err => {
           console.error("Batch Delete Error:", err);
         });
 
@@ -970,6 +973,10 @@ const Check = () => {
           if (isHotelMode) {
             dispatch(fetchRooms(profileId));
           }
+        }
+
+        if (batchDeleteSuccess) {
+          dispatch(clearPendingDeletions());
         }
 
         const deletedItemsForPrint = pendingDeletions.map(d => {

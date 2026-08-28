@@ -250,19 +250,28 @@ const CheckMain = ({ orders, table }) => {
     const groupedMap = new Map();
 
     /** Sıra: əlavə vaxtı (created_at) — DB id bəzən combo/modifikator üçün ardıcıllığı pozur */
-    const sortTimeFromSavedRow = (orderItem) => {
+    const sortTimeFromSavedRow = (orderItem, index) => {
       const c = orderItem.created_at || orderItem.createdAt;
       if (c) {
         const ms = new Date(c).getTime();
-        if (!Number.isNaN(ms)) return ms;
+        if (!Number.isNaN(ms)) return ms + (index * 0.0001);
       }
       const id = Number(orderItem.id);
-      return Number.isNaN(id) ? 0 : id;
+      return Number.isNaN(id) ? index : id;
     };
 
     // 1. Process Saved items (check-də birləşdir - şərh fərqi sayı bölməsin, yalnız mətbəxə göndərərkən ayrılsın)
     if (orders?.orders_items) {
-      orders.orders_items.forEach((orderItem) => {
+      const stableOrdersItems = [...orders.orders_items].sort((a, b) => {
+        const timeA = new Date(a.created_at || a.createdAt).getTime();
+        const timeB = new Date(b.created_at || b.createdAt).getTime();
+        if (timeA !== timeB && !Number.isNaN(timeA) && !Number.isNaN(timeB)) {
+          return timeA - timeB;
+        }
+        return Number(a.id) - Number(b.id);
+      });
+
+      stableOrdersItems.forEach((orderItem, index) => {
         const prodId = Number(orderItem.product_id);
         const isGift = orderItem.is_gift ? 1 : 0;
         const price = parseFloat(orderItem.price || orderItem.amount || 0).toFixed(2);
@@ -298,7 +307,7 @@ const CheckMain = ({ orders, table }) => {
         const uniqueKeyPart = isOwnSetPrice ? `-${orderItem.id}` : (isTimerItem ? `-timer-${orderItem.id}` : '');
         const key = `${prodId}-${isGift}-${price}-${normalizedModifiersStr}${uniqueKeyPart}`;
         const existing = groupedMap.get(key);
-        const rowSort = sortTimeFromSavedRow(orderItem);
+        const rowSort = sortTimeFromSavedRow(orderItem, index);
 
         if (existing) {
           existing.count += Number(orderItem.count);

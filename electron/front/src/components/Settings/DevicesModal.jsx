@@ -213,7 +213,9 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     {/* Raster seçimi */}
                                     {(() => {
-                                        const isRaster = printer.usb_name === '' || printer.usb_name === null || printer.usb_name === undefined || printer.usb_name === 'RASTER'; return (
+                                        const usbStr = String(printer.usb_name || '').trim().toUpperCase();
+                                        const isRaster = !printer.usb_name || ['NULL', 'UNDEFINED', 'RASTER'].includes(usbStr); 
+                                        return (
                                             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isRaster ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isRaster ? '#eff6ff' : '#fff' }}>
                                                 <input type="radio" name={`ptype_${printer.id}`} checked={isRaster} onChange={() => updatePrinterField('usb_name', 'RASTER')} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
                                                 <div>
@@ -224,9 +226,12 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                     })()}
                                     {/* Windows Driver seçimi */}
                                     {(() => {
-                                        const isWin = printer.usb_name && printer.usb_name !== 'RASTER'; return (
+                                        const usbStr = String(printer.usb_name || '').trim().toUpperCase();
+                                        const isRaster = !printer.usb_name || ['NULL', 'UNDEFINED', 'RASTER'].includes(usbStr);
+                                        const isWin = !isRaster;
+                                        return (
                                             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isWin ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isWin ? '#eff6ff' : '#fff' }}>
-                                                <input type="radio" name={`ptype_${printer.id}`} checked={!!isWin} onChange={() => { const autoName = printer.ip ? `UNIPOS_${String(printer.ip).replace(/\./g, '_')}` : (systemPrinters[0]?.name || 'UNIPOS_PRINTER'); updatePrinterField('usb_name', autoName); }} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
+                                                <input type="radio" name={`ptype_${printer.id}`} checked={isWin} onChange={() => { const autoName = printer.ip ? `UNIPOS_${String(printer.ip).replace(/\./g, '_')}` : (systemPrinters[0]?.name || 'UNIPOS_PRINTER'); updatePrinterField('usb_name', autoName); }} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
                                                 <div>
                                                     <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{t("windows_driver_vasitesile")}</div>
                                                     <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{t("bu_printerin_windowsda_qurulu_olmasi_lazimdir_asagidan_adini_secin")}</div>

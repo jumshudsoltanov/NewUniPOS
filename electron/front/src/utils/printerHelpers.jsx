@@ -538,8 +538,8 @@ export const printCustomerReceipt = async (
         : {};
       const safeSettings = JSON.parse(JSON.stringify(printerSettings));
         const targetName = isCom
-          ? printer.usb_name || printerName || ""
-          : (printer?.local_name && printer.local_name.trim() ? printer.local_name.trim() : (printer.usb_name || printerName || ""));
+        ? printer.usb_name || printerName || ""
+        : (hasUsbName ? printer.usb_name : (printer?.local_name && printer.local_name.trim() ? printer.local_name.trim() : (printerName || "")));
 
       return {
         html,
@@ -728,7 +728,7 @@ export const resolveAndPrintKitchenReceiptLocally = async (html, printerName, ra
       
       const resolvedUsbName = isCom2
         ? (printerObj?.usb_name || printerName || "")
-        : (isNetwork ? "" : (printerObj?.local_name && printerObj.local_name.trim() ? printerObj.local_name.trim() : (hasUsbName ? printerObj.usb_name : (printerObj?.name ? printerObj.name.trim() : (printerName || "")))));
+        : (isNetwork ? "" : (hasUsbName ? printerObj.usb_name : (printerObj?.local_name && printerObj.local_name.trim() ? printerObj.local_name.trim() : (printerObj?.name ? printerObj.name.trim() : (printerName || "")))));
       const targetPrinter = resolvedUsbName;
       const printerSettings = printerObj
         ? {
