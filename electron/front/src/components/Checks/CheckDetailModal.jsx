@@ -186,8 +186,9 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 waiter_name: order.waiter?.name || order.waiter_name,
                 payments: mappedPayments
             },
-            tableName: order.table?.name || t("table"),
+            tableName: order.table?.name || "",
             hallName: order.table?.hall?.name || "",
+            hall: order.table?.hall,
             waiterName: waiterName,
             menuCatalog,
         };

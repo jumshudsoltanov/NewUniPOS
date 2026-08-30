@@ -56,12 +56,49 @@ export function getOrderItemsAndTimerSubtotal(order, tableHourlyFallback) {
 export function computeOrderCardMeta(order, tableHourlyFallback) {
   if (!order) return { displayAmount: 0, isDepositFloor: false };
 
-  const discount = Number(order.discount || 0);
+  let discountAmount = 0;
+  const discountValue = Number(order.discount_value || 0);
+  const discountType = order.discount_type || "percent";
+
+  if (discountValue > 0) {
+    let totalForDiscount = 0;
+    (order.orders_items || []).forEach(item => {
+      const isNoDiscount = Number(item.no_discount) === 1 || Number(item.product?.no_discount) === 1;
+      if (!isNoDiscount) {
+        const count = Number(item.count || item.quantity || 0);
+        const price = Number(item.price || item.amount || 0);
+        let modsTotal = 0;
+        try {
+          const mods = typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : (item.modifiers || []);
+          modsTotal = mods.reduce((s, m) => s + Number(m.price || 0) * Number(m.count || 1), 0);
+        } catch { /* ignore */ }
+        totalForDiscount += count * (price + modsTotal);
+      }
+    });
+    if (discountType === "percent") {
+      discountAmount = (totalForDiscount * discountValue) / 100;
+    } else {
+      discountAmount = discountValue;
+    }
+  }
+
+  if (discountAmount === 0 && Number(order.discount) > 0) {
+    discountAmount = Number(order.discount);
+  }
+
+  const normalizeMoney = (value) => {
+    const n = Number(value || 0);
+    const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+    return Math.abs(rounded) < 0.005 ? 0 : rounded;
+  };
+
+  discountAmount = normalizeMoney(discountAmount);
+
   const deposit = Number(order.deposit || 0);
   const deliveryFee = Number(order.delivery_fee || 0);
 
-  const gross = getOrderItemsAndTimerSubtotal(order, tableHourlyFallback);
-  const subtotalAfterDiscount = gross - discount;
+  const gross = normalizeMoney(getOrderItemsAndTimerSubtotal(order, tableHourlyFallback));
+  const subtotalAfterDiscount = gross - discountAmount;
 
   // Service charge: CheckBottom ilə eyni məntiq (service_value % × base items)
   let serviceAmount = 0;
@@ -98,7 +135,9 @@ export function computeOrderCardMeta(order, tableHourlyFallback) {
     serviceAmount = Number(order.service_charge);
   }
 
-  const displayAmount = Math.max(subtotalAfterDiscount, deposit) + serviceAmount + deliveryFee;
+  serviceAmount = normalizeMoney(serviceAmount);
+
+  const displayAmount = normalizeMoney(Math.max(subtotalAfterDiscount, deposit) + serviceAmount + deliveryFee);
   const isDepositFloor = deposit > subtotalAfterDiscount;
   return { displayAmount, isDepositFloor };
 }

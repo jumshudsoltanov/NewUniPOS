@@ -15,6 +15,7 @@ import {
   removeAllProductsById,
   removeProductByIdAndPrice,
   removeLocalProductByFirstId,
+  removeLocalProductByUuid,
   replaceProductQuantity,
   updateCount,
   saveLog,
@@ -46,7 +47,16 @@ import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const removeLocalProduct = (dispatch, product) => {
   const productId = Number(product.product_id || product.id);
-  if (product.own_set_price === 1) {
+  if (product.uuid) {
+    dispatch(removeLocalProductByUuid({ 
+      uuid: product.uuid, 
+      productId 
+    }));
+  } else if (product.isTimerProduct || String(product.product_type || '').toLowerCase() === 'timer' || String(product.product?.product_type || '').toLowerCase() === 'timer') {
+    if (product.firstId) {
+      dispatch(removeLocalProductByFirstId(product.firstId));
+    }
+  } else if (product.own_set_price === 1) {
     dispatch(removeProductByIdAndPrice({ product_id: productId, price: Number(product.price) }));
   } else {
     dispatch(removeAllProductsById(productId));
@@ -919,7 +929,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                               newQty: newLocalQty,
                               price: resolvedBaseStr,
                               firstId: product.firstId,
-                              modifiers: product.modifiers,
+                              uuid: product.uuid,
+                              modifiers: parsedModifiers,
                               comment: productComment
                             }));
                           } else {
@@ -940,7 +951,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                             dispatch(replaceProductQuantity({
                                 productId: Number(product.product_id || product.id),
                                 newQty: 0,
-                                firstId: product.firstId
+                                firstId: product.firstId,
+                                uuid: product.uuid
                             }));
                           }
                         }

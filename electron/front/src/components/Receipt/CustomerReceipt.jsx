@@ -247,10 +247,10 @@ const CustomerReceipt = ({
         link: { fontSize: fs(10), wordBreak: "break-word", fontWeight: "900" },
         note: { fontSize: fs(11), fontStyle: "italic", fontWeight: "700", marginTop: "3px" },
         modifier: {
-            fontSize: fs(9),
+            fontSize: fs(11),
             fontStyle: "italic",
             marginTop: "1px",
-            fontWeight: "500",
+            fontWeight: "bold",
         },
         statusBox: {
             textAlign: "center",
@@ -286,21 +286,7 @@ const CustomerReceipt = ({
     const itemsToRender = (orderedItems && orderedItems.length > 0) ? orderedItems : (checkData?.orders_items || []);
 
     const rawSubtotal = itemsToRender.reduce((sum, item) => {
-        const cat = findCatalogProduct(menuCatalog, item.product_id || item.id);
-        const price = Number(item.price || 0);
-        const qty = Number(item.quantity || item.count || 0);
-        const isGift = Number(item.is_gift || 0) === 1;
-
-        let modifiersTotal = 0;
-        try {
-            if (item.modifiers) {
-                const mods = typeof item.modifiers === "string" ? JSON.parse(item.modifiers) : item.modifiers;
-                const resolvedMods = resolveModifiersForDisplay(mods, cat);
-                modifiersTotal = resolvedMods.reduce((mSum, m) => mSum + Number(m.price || 0) * Number(m.count || 1), 0);
-            }
-        } catch (e) { /* ignore */ }
-
-        return sum + (isGift ? 0 : qty * (price + modifiersTotal));
+        return sum + getOrderItemLineTotal(item, checkData);
     }, 0);
 
     const checkIntervals = (val) => {
@@ -335,47 +321,100 @@ const CustomerReceipt = ({
         return p % 1 === 0 ? p.toFixed(0) : p.toFixed(1);
     };
 
-    const maxDiscountAmount = subtotal;
-
-    // Helper to extract financial values safely
     const getDiscountInfo = () => {
-        const type = checkData.discount_type || checkData.discountType || "";
-        const value = Number(checkData.discountValue || checkData.discount_value || checkData.discount || 0);
+        const type = checkData.discount_type || "percent";
+        const value = Number(checkData.discount_value || 0);
 
-        let rawAmount;
-        if (type === "percent") {
-            rawAmount = (subtotal * value) / 100;
-        } else {
-            rawAmount = value;
+        const totalForDiscount = itemsToRender.reduce((sum, item) => {
+            const rowCat = findCatalogProduct(menuCatalog, item.product_id || item.id);
+            const isNoDiscount = item.no_discount === 1 || rowCat?.no_discount === 1;
+            if (isNoDiscount) return sum;
+            
+            const qty = Number(item.quantity) > 0 ? Number(item.quantity) : Number(item.count || 0);
+            const price = parseFloat(item.price || item.amount || 0);
+            const isGift = item.is_gift ? 1 : 0;
+            
+            let modifiersTotal = 0;
+            try {
+                let mods = typeof item.modifiers === "string" ? JSON.parse(item.modifiers) : item.modifiers;
+                if (Array.isArray(mods)) {
+                    modifiersTotal = mods.reduce((mSum, m) => mSum + Number(m.price || 0) * Number(m.count || 1), 0);
+                }
+            } catch (e) { }
+            
+            const baseTotal = isGift ? 0 : qty * (price + modifiersTotal);
+            return sum + baseTotal;
+        }, 0);
+
+        let rawAmount = 0;
+        if (value > 0) {
+            if (type === "percent") {
+                rawAmount = (totalForDiscount * value) / 100;
+            } else {
+                rawAmount = value;
+            }
+        } else if (Number(checkData.discount) > 0) {
+            rawAmount = Number(checkData.discount);
         }
-        // Endirim cəmdən (subtotal) artıq olmasın
+
+        const maxDiscountAmount = totalForDiscount;
         const amount = Math.min(rawAmount, maxDiscountAmount);
         return {
             amount,
             percent: calcPercent(amount, subtotal),
-            isPercent: type === "percent"
+            isPercent: type === "percent",
+            rawValue: value
         };
     };
 
     const getServiceInfo = () => {
-        const type = checkData.serviceFeeType || checkData.service_fee_type || "";
-        const value = Number(checkData.serviceFeeValue || checkData.service_fee_value || checkData.serviceFee || checkData.service_charge || 0);
+        const type = checkData.serviceFeeType || checkData.service_type || "percent";
+        const value = Number(checkData.serviceFeeValue || checkData.service_value || 0);
 
-        // Base for service calculation should be the items' subtotal
-        const serviceBase = subtotal;
+        const totalForService = itemsToRender.reduce((sum, item) => {
+            const rowCat = findCatalogProduct(menuCatalog, item.product_id || item.id);
+            const isNoService = item.no_service_fee === 1 || rowCat?.no_service_fee === 1;
+            if (isNoService) return sum;
+            
+            const qty = Number(item.quantity) > 0 ? Number(item.quantity) : Number(item.count || 0);
+            const price = parseFloat(item.price || item.amount || 0);
+            const isGift = item.is_gift ? 1 : 0;
+            
+            let modifiersTotal = 0;
+            try {
+                let mods = typeof item.modifiers === "string" ? JSON.parse(item.modifiers) : item.modifiers;
+                if (Array.isArray(mods)) {
+                    modifiersTotal = mods.reduce((mSum, m) => mSum + Number(m.price || 0) * Number(m.count || 1), 0);
+                }
+            } catch (e) { }
+            
+            const baseTotal = isGift ? 0 : qty * (price + modifiersTotal);
+            return sum + baseTotal;
+        }, 0);
 
-        if (type === "percent") {
-            return {
-                amount: (serviceBase * value) / 100,
-                percent: value,
-                isPercent: true
-            };
+        let amount = 0;
+        let percent = 0;
+        let isPercent = false;
+
+        if (value > 0) {
+            if (type === "percent") {
+                amount = (totalForService * value) / 100;
+                percent = value;
+                isPercent = true;
+            } else {
+                amount = value;
+                percent = calcPercent(value, totalForService);
+            }
+        } else if (Number(checkData.service_charge) > 0) {
+            amount = Number(checkData.service_charge);
+            percent = calcPercent(amount, totalForService);
+        } else if (hall && Number(hall.service_fee) > 0) {
+            amount = (totalForService * Number(hall.service_fee)) / 100;
+            percent = Number(hall.service_fee);
+            isPercent = true;
         }
-        return {
-            amount: value,
-            percent: calcPercent(value, subtotal),
-            isPercent: false
-        };
+
+        return { amount, percent, isPercent, rawValue: value };
     };
 
     const discountInfo = getDiscountInfo();
@@ -622,16 +661,14 @@ const CustomerReceipt = ({
                         };
 
                         return (
-                            <div key={i} style={{
-                                ...styles.itemsGrid,
-                                ...styles.itemRow,
-                                borderBottom: i === grouped.length - 1 ? "1.5px solid #000" : styles.itemRow.borderBottom
-                            }}>
+                            <div key={i} style={{ ...styles.itemsGrid, ...styles.itemRow, borderBottom: i === grouped.length - 1 ? "1.5px solid #000" : styles.itemRow.borderBottom }}>
                                 <div style={styles.colName}>
-                                    <div style={{ fontWeight: item.isTimer ? 600 : 400 }}>{params.name}</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span>{params.name}</span>
+                                    </div>
                                     {item.isTimer && (
-                                        <div style={{ fontSize: fs(10), color: "#000", marginTop: "2px" }}>
-                                            ⏱ {(() => {
+                                        <div style={{ fontSize: fs(11), color: "#000", marginTop: "2px", fontWeight: "bold" }}>
+                                            {(() => {
                                                 const secs = getTimerElapsedSeconds(item, checkData);
                                                 const h = Math.floor(secs / 3600);
                                                 const m = Math.floor((secs % 3600) / 60);
@@ -672,7 +709,7 @@ const CustomerReceipt = ({
                 })()}
 
                 {/* TAYMER MƏLUMATI */}
-                {Number(checkData?.is_timer_status) === 1 && !hasProductTimer && (
+                {(Number(checkData?.is_timer_status) === 1 || (checkData?.is_timer_clock && checkData?.is_timer_clock !== "00:00:00" && Number(checkData?.rate_per_minute) > 0)) && !hasProductTimer && (
                     <div style={{
                         ...styles.itemsGrid,
                         ...styles.itemRow,
@@ -686,7 +723,13 @@ const CustomerReceipt = ({
                         </div>
                         <span style={styles.colQty}></span>
                         <span style={styles.colPrice}></span>
-                        <span style={styles.colTotal}>{renderMoney(checkData.rate_per_minute)}</span>
+                        <span style={styles.colTotal}>{renderMoney(
+                            (() => {
+                                const parts = String(checkData?.is_timer_clock || "00:00:00").split(":").map(Number);
+                                const effH = (parts[0] || 0) + (parts[1] || 0) / 60 + (parts[2] || 0) / 3600;
+                                return effH * Number(checkData?.rate_per_minute || 0) * 60;
+                            })()
+                        )}</span>
                     </div>
                 )}
             </div>
@@ -705,10 +748,10 @@ const CustomerReceipt = ({
                 {discountInfo.amount > 0 && (
                     <div style={styles.summaryRow}>
                         <span style={{ flex: 1 }}>
-                            Endirim ({discountInfo.percent}%)
+                            Endirim {discountInfo.isPercent ? `(${discountInfo.rawValue}%)` : ""}
                         </span>
                         <span style={styles.colTotal}>
-                            {renderMoney(discountInfo.amount)}
+                            -{renderMoney(discountInfo.amount)}
                         </span>
                     </div>
                 )}
@@ -716,10 +759,10 @@ const CustomerReceipt = ({
                 {serviceInfo.amount > 0 && (
                     <div style={styles.summaryRow}>
                         <span style={{ flex: 1 }}>
-                            {getCustomerFacingServiceFeeLabel()} ({serviceInfo.percent}%)
+                            {getCustomerFacingServiceFeeLabel()} {serviceInfo.isPercent ? `(${serviceInfo.rawValue}%)` : ""}
                         </span>
                         <span style={styles.colTotal}>
-                            {renderMoney(serviceInfo.amount)}
+                            +{renderMoney(serviceInfo.amount)}
                         </span>
                     </div>
                 )}

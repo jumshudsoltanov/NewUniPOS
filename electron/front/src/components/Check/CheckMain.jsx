@@ -10,6 +10,7 @@ import {
   removeAllProductsById,
   removeProductByIdAndPrice,
   removeLocalProductByFirstId,
+  removeLocalProductByUuid,
   replaceProductQuantity,
   addProducts,
   updateItemCount,
@@ -123,14 +124,21 @@ const CheckMain = ({ orders, table }) => {
   const isOwnPriceSwipeItem = (item) =>
     item.product?.own_set_price === 1 || item.own_set_price === 1;
 
+  const isTimerSwipeItem = (item) => {
+    return item.isTimerProduct;
+  };
+
   const removeLocalSwipeItem = (item) => {
     const productId = getSwipeItemProductId(item);
-    if (isOwnPriceSwipeItem(item)) {
-      if (Number(item.firstId) >= 999999999) {
-        dispatch(removeLocalProductByFirstId(item.firstId));
-      } else {
-        dispatch(removeProductByIdAndPrice({ product_id: productId, price: Number(item.price) }));
-      }
+    if (item.uuid) {
+      dispatch(removeLocalProductByUuid({ 
+        uuid: item.uuid, 
+        productId 
+      }));
+    } else if (isTimerSwipeItem(item)) {
+      dispatch(removeAllProductsById(productId));
+    } else if (isOwnPriceSwipeItem(item)) {
+      dispatch(removeProductByIdAndPrice({ product_id: productId, price: Number(item.price) }));
     } else {
       dispatch(removeAllProductsById(productId));
     }
@@ -149,7 +157,8 @@ const CheckMain = ({ orders, table }) => {
       productId,
       newQty: nextQty,
       price: Number(item.price).toFixed(2),
-      ...(isOwnPriceSwipeItem(item) && Number(item.firstId) >= 999999999 ? { firstId: item.firstId } : {}),
+      uuid: item.uuid,
+      ...((isOwnPriceSwipeItem(item) || isTimerSwipeItem(item)) && Number(item.firstId) >= 999999999 ? { firstId: item.firstId } : {}),
     }));
   };
 
@@ -417,6 +426,8 @@ const CheckMain = ({ orders, table }) => {
           savedQuantity: 0,
           localQuantity: qtyToAdd,
           price: item.price,
+          uuid: item.uuid,
+          isTimerProduct: isLocalTimerItem,
           isNew: true,
           is_gift: isGift,
           own_set_price: item.own_set_price,
@@ -972,7 +983,7 @@ const CheckMain = ({ orders, table }) => {
                       <div className="d-flex flex-column gap-1 mt-1">
                         {modifiers.length > 0 && (
                           <div className="check-item-modifiers-inline" style={{ display: 'block', fontSize: '0.8rem', color: '#4B5563', marginTop: '2px', lineHeight: '1.3', whiteSpace: 'normal' }}>
-                            <span style={{fontWeight: 500}}>{displayProductName}:</span> {modifiers.map((m, i) => (
+                            {modifiers.map((m, i) => (
                               <span key={i}>
                                 {m.name} {m.count > 0 ? `x${m.count}` : ""}{i < modifiers.length - 1 ? ", " : ""}
                               </span>
@@ -1128,7 +1139,7 @@ const CheckMain = ({ orders, table }) => {
           const product = productToDelete;
 
           const pId = product.product_id || product.id;
-          const productInfo = menu.find(m => m.id === pId);
+          const productInfo = findCatalogProduct(menu, pId);
           const finalCategoryId = product.category_id || productInfo?.category_id;
           const finalPrinters = (product.printer_details && product.printer_details.length > 0)
             ? product.printer_details
@@ -1137,20 +1148,43 @@ const CheckMain = ({ orders, table }) => {
           if (deleteActionType === 'full') {
             // If item has local (unsaved) portion, remove those from local state too
             if (product.isNew && product.localQuantity > 0) {
+              const pId = Number(product.product_id || product.id);
               const isOwnPrice = product.product?.own_set_price === 1 || product.own_set_price === 1;
-              if (isOwnPrice) {
+              const isTimer = product.isTimerProduct;
+
+              if (product.uuid) {
+                dispatch(removeLocalProductByUuid({ 
+                  uuid: product.uuid, 
+                  productId: pId
+                }));
+              } else if (isTimer) {
+                if (product.firstId) {
+                  dispatch(removeLocalProductByFirstId(product.firstId));
+                }
+              } else if (isOwnPrice) {
                 // Serbest qiymətli məhsullar üçün yalnız eyni qiymətli birini sil
-                dispatch(removeProductByIdAndPrice({ product_id: Number(product.product_id || product.id), price: Number(product.price) }));
+                dispatch(removeProductByIdAndPrice({ product_id: pId, price: Number(product.price) }));
               } else {
-                dispatch(removeAllProductsById(Number(product.product_id || product.id)));
+                dispatch(removeAllProductsById(pId));
               }
+            }
+
+            const isPureLocal = product.isNew && (!product.savedQuantity || product.savedQuantity <= 0);
+            if (isPureLocal) {
+              toast.success(t("mehsul_silindi"));
+              return; // Həm UI həm DB üçün heç nə etməyə ehtiyac yoxdur, lokal silindi
             }
 
             const idsToDelete = (product.allIds && product.allIds.length > 0)
               ? product.allIds
-              : [product?.id || product?.firstId];
+              : (product.savedQuantity > 0 ? [product.firstId] : []);
+              
             idsToDelete.filter(Boolean).forEach(itemId => {
-               // Find the specific row to get its real count, or assume 1 if not found.
+              // Gözləyən silinmə (pending deletion) YALNIZ bazada (DB) olan məhsullar üçündür!
+              // Lokal (isNew) məhsullar onsuz da yuxarıda Redux-dan silinib. Əlavə etsək, id sürüşməsinə görə digər lokal məhsulları gizlədər!
+              if (Number(itemId) >= 999999999) return;
+
+              // Find the specific row to get its real count, or assume 1 if not found.
               const row = orders?.orders_items?.find(oi => oi.id === itemId);
               const realCount = row ? Number(row.count) : 1;
 

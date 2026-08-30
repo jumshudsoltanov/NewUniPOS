@@ -112,13 +112,24 @@ const CheckOver = () => {
         fetchData();
     }, [dispatch, loginedProfileData?.data?.profile?.id]);
 
+    const { orders: reduxOrder } = useSelector((state) => state.OrderSlice);
+
     const currentOrder = useMemo(() => {
+        if (reduxOrder && reduxOrder.uuid === id) {
+            return reduxOrder;
+        }
         if (!books?.data) return null;
         return books.data.find(o => o.uuid === id);
-    }, [books, id]);
+    }, [books, reduxOrder, id]);
 
     const calcTotal = useMemo(() => {
-        if (!currentOrder) return { total: 0, sumTotal: "0.00" };
+        if (!currentOrder) return { total: "0.00", sumTotal: "0.00", discountAmount: "0.00", serviceAmount: "0.00", depositAmount: "0.00" };
+
+        const normalizeMoney = (value) => {
+            const n = Number(value || 0);
+            const rounded = Math.round((n + Number.EPSILON) * 100) / 100;
+            return Math.abs(rounded) < 0.005 ? 0 : rounded;
+        };
 
         let total = 0;
         let totalForService = 0;
@@ -132,7 +143,6 @@ const CheckOver = () => {
 
             let itemTotal;
             if (isTimer) {
-                // Timer məhsulunu düzgün hesabla
                 itemTotal = getOrderItemLineTotal(item, currentOrder);
             } else {
                 itemTotal = count * (price + modifiersPerUnit);
@@ -145,10 +155,10 @@ const CheckOver = () => {
             }
         });
 
-        // Yalnız ORDER-level timer varsa (məhsul timer yoxdursa) rate_per_minute əlavə et
         if (!hasProductTimer && currentOrder.rate_per_minute) {
             total += Number(currentOrder.rate_per_minute);
         }
+        total = normalizeMoney(total);
 
         const discountValue = Number(currentOrder.discount_value || 0);
         const discountType = currentOrder.discount_type || "percent";
@@ -163,6 +173,7 @@ const CheckOver = () => {
         } else if (currentOrder.discount) {
             discountAmount = Number(currentOrder.discount);
         }
+        discountAmount = normalizeMoney(discountAmount);
 
         let serviceValue = Number(currentOrder.service_value || 0);
         let serviceType = currentOrder.service_type || "percent";
@@ -177,12 +188,13 @@ const CheckOver = () => {
         } else if (currentOrder.service_charge) {
             serviceAmount = Number(currentOrder.service_charge);
         }
+        serviceAmount = normalizeMoney(serviceAmount);
 
-        const depositAmount = Number(currentOrder.deposit || 0);
-        const deliveryFee = Number(currentOrder.delivery_fee || 0);
-        // Backend və Table.jsx ilə eynı: depozit cəmə əlavə deyil — max(subtotal+service, depozit)+çatdırılma
-        const baseTotal = total - discountAmount + serviceAmount;
-        let sumTotal = Math.max(baseTotal, depositAmount) + deliveryFee;
+        const depositAmount = normalizeMoney(Number(currentOrder.deposit || 0));
+        const deliveryFee = normalizeMoney(Number(currentOrder.delivery_fee || 0));
+        
+        const baseTotal = normalizeMoney(total - discountAmount + serviceAmount);
+        let sumTotal = normalizeMoney(Math.max(baseTotal, depositAmount) + deliveryFee);
         if (sumTotal < 0) sumTotal = 0;
 
         return {
@@ -658,6 +670,7 @@ const CheckOver = () => {
                     },
                     tableName: receiptTableName,
                     hallName: receiptHallName,
+                    hall: currentOrder?.table?.hall,
                     waiterName,
                     menuCatalog,
                 }, loginedProfileData, { dispatch, loginedWaiter }).catch(err => {

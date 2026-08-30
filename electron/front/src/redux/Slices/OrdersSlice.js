@@ -1333,7 +1333,26 @@ export const OrderSlice = createSlice({
       if (idx !== -1) state.products.splice(idx, 1);
     },
     replaceProductQuantity: (state, action) => {
-      const { productId, newQty, price, firstId, modifiers, comment } = action.payload;
+      const { productId, newQty, price, firstId, uuid, modifiers, comment } = action.payload;
+
+      // FIRST try to match by uuid if it's a new item (very reliable)
+      if (uuid) {
+        const idx = state.products.findIndex(p => p.uuid === uuid);
+        if (idx !== -1) {
+          if (newQty <= 0) {
+            state.products.splice(idx, 1);
+          } else {
+            const p = state.products[idx];
+            p.quantity = newQty;
+            p.count = newQty;
+            p.newOrder = newQty;
+            if (price !== undefined) p.price = parseFloat(price);
+            if (modifiers !== undefined) p.modifiers = modifiers;
+            if (comment !== undefined) p.comment = comment;
+          }
+          return;
+        }
+      }
 
       if (firstId !== undefined && firstId >= 999999999) {
         const idx = firstId - 999999999;
@@ -1453,6 +1472,29 @@ export const OrderSlice = createSlice({
             state.sentProducts.splice(sentIdx, 1);
           }
         }
+      }
+    },
+    removeLocalProductByUuid: (state, action) => {
+      const payload = action.payload;
+      if (!payload) return;
+      const uuid = typeof payload === 'object' ? payload.uuid : payload;
+      const productId = typeof payload === 'object' ? payload.productId : null;
+      
+      let deleted = false;
+      if (uuid) {
+        const initialLen = state.products.length;
+        state.products = state.products.filter(p => p.uuid !== uuid && p.id !== uuid);
+        if (state.products.length < initialLen) deleted = true;
+      }
+      
+      if (!deleted && productId) {
+        // Fallback: delete exactly ONE item with this productId
+        const idx = state.products.findIndex(p => Number(p.product_id || p.id) === Number(productId));
+        if (idx !== -1) state.products.splice(idx, 1);
+      }
+      
+      if (state.sentProducts && uuid) {
+        state.sentProducts = state.sentProducts.filter(p => p.uuid !== uuid && p.id !== uuid);
       }
     },
     addProducts: (state, action) => {
@@ -1778,6 +1820,7 @@ export const {
   removeAllProductsById,
   removeProductByIdAndPrice,
   removeLocalProductByFirstId,
+  removeLocalProductByUuid,
   replaceProductQuantity,
   splitProductQuantity,
   sendOrders,

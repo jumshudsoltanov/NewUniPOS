@@ -2296,7 +2296,6 @@ const Check = () => {
                             return;
                           }
                           const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
-                          
                           printCustomerReceipt({
                             items: currentOrder?.orders_items || [],
                             checkData: {
@@ -2312,6 +2311,7 @@ const Check = () => {
                             },
                             tableName: currentTable?.name,
                             hallName: currentHall?.name,
+                            hall: currentHall,
                             waiterName,
                             menuCatalog: menu,
                           }, loginedProfileData, { dispatch, loginedWaiter, autoLockCheckAfterPrint: true })

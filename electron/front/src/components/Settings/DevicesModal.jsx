@@ -214,12 +214,12 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                     {/* Raster seçimi */}
                                     {(() => {
                                         const usbStr = String(printer.usb_name || '').trim().toUpperCase();
-                                        const isRaster = !printer.usb_name || ['NULL', 'UNDEFINED', 'RASTER'].includes(usbStr); 
+                                        const isRaster = usbStr === 'RASTER'; 
                                         return (
                                             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isRaster ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isRaster ? '#eff6ff' : '#fff' }}>
                                                 <input type="radio" name={`ptype_${printer.id}`} checked={isRaster} onChange={() => updatePrinterField('usb_name', 'RASTER')} style={{ marginTop: 2, accentColor: '#3b82f6' }} />
                                                 <div>
-                                                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{t("tam_dizayn_capi_raster")}<span style={{ fontSize: 11, background: '#dcfce7', color: '#16a34a', padding: '1px 7px', borderRadius: 20, marginLeft: 4 }}>{t("tovsiye")}</span></div>
+                                                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>{t("tam_dizayn_capi_raster")}</div>
                                                     <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{t("html_cek_dizayni_sekil_kimi_cap_olunur_windows_driver_lazim_deyil_birbasa_ipye_gonderilir")}</div>
                                                 </div>
                                             </label>);
@@ -227,7 +227,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                                     {/* Windows Driver seçimi */}
                                     {(() => {
                                         const usbStr = String(printer.usb_name || '').trim().toUpperCase();
-                                        const isRaster = !printer.usb_name || ['NULL', 'UNDEFINED', 'RASTER'].includes(usbStr);
+                                        const isRaster = usbStr === 'RASTER';
                                         const isWin = !isRaster;
                                         return (
                                             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '10px 12px', borderRadius: 8, border: isWin ? '2px solid #3b82f6' : '1px solid #e2e8f0', background: isWin ? '#eff6ff' : '#fff' }}>
@@ -242,7 +242,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                             </div>
 
                             {/* Windows Driver seçilibsə — sistem printer adı + Qur düyməsi */}
-                            {(printer.usb_name && printer.usb_name.trim() && printer.usb_name !== 'RASTER') ? (
+                            {(String(printer.usb_name || '').trim().toUpperCase() !== 'RASTER') ? (
                                 <div className="printer-form-group">
                                     <label>{t("windows_sistem_printer_adi")}</label>
                                     <select className="printer-select" value={printer.usb_name || ""} onChange={e => updatePrinterField('usb_name', e.target.value)}>
@@ -1474,17 +1474,10 @@ const DevicesModal = ({ show, onHide }) => {
                                                 }
                                             });
                                         }
-                                        // Also add printer's own name as a department
-                                        if (p.name && !allDeptsMap.has(p.name.toLowerCase())) {
-                                            allDeptsMap.set(p.name.toLowerCase(), p.name);
-                                        }
                                     });
                                     // 2. Also collect from profileData printers (authoritative department list)
                                     const profilePrinters = loginedProfileData?.data?.printers || [];
                                     profilePrinters.forEach(p => {
-                                        if (p.name && !allDeptsMap.has(p.name.toLowerCase())) {
-                                            allDeptsMap.set(p.name.toLowerCase(), p.name);
-                                        }
                                         if (p.local_name) {
                                             p.local_name.split(',').forEach(s => {
                                                 const trimmed = s.trim();
