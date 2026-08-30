@@ -1,4 +1,4 @@
-import { Modal, Button, Row, Col, Form } from "react-bootstrap";
+import { Modal, Offcanvas, Button, Row, Col, Form } from "react-bootstrap";
 import "./CheckDetailModal.css";
 import "./TaxCashPickerModal.css";
 import "../Customers-Modal/CustomersModal.css";
@@ -524,10 +524,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
     return (
         <>
-            <Modal show={show} onHide={onClose} size="lg" centered className="check-detail-modal-custom">
-                <Modal.Header closeButton className="justify-content-center position-relative">
-                    <Modal.Title className="w-100 text-center pe-4">Çek #{order.id}</Modal.Title>
-                </Modal.Header>
+            <Offcanvas show={show} onHide={onClose} placement="end" className="check-detail-offcanvas-custom">
+                <Offcanvas.Header closeButton className="justify-content-center position-relative" style={{ background: '#053796', color: '#fff', borderRadius: 0, padding: '1.25rem 1.5rem' }}>
+                    <Offcanvas.Title className="w-100 text-center pe-4" style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em' }}>Çek #{order.id}</Offcanvas.Title>
+                </Offcanvas.Header>
                 {hasTax && taxConfigs.length > 0 && (
                     <div style={{
                         display: 'flex',
@@ -594,11 +594,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 gap: '6px'
                             }}
                         >
-                            <i className="bi bi-arrow-return-left"></i> {t("vergi_qaytar")}
                         </button>
                     </div>
                 )}
-                <Modal.Body className="p-0 border-0">
+                <Offcanvas.Body className="p-0 border-0 d-flex flex-column" style={{ overflow: 'hidden' }}>
                     {/* Mobile Tabs Navigation */}
                     {isMobileSize && (
                         <div className="mobile-tabs-nav d-flex border-bottom">
@@ -619,7 +618,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                         </div>
                     )}
 
-                    <div className="d-flex flex-column flex-lg-row modal-body-split">
+                    <div className="d-flex flex-column flex-lg-row offcanvas-body-split">
                         {/* Left Sidebar: Meta Info OR History (Desktop) / Mobile Conditional */}
                         {(!isMobileSize || mobileActiveTab === 'info' || mobileActiveTab === 'history') && (
                             <div className={`sidebar-section border-end-lg ${isMobileSize && mobileActiveTab === 'history' ? 'flex-grow-1' : ''}`}
@@ -761,7 +760,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="history-section bg-white p-0">
+                                    <div className="history-section bg-white p-0 d-flex flex-column h-100">
                                         <div className="history-filter-bar p-3 px-4">
                                             <div className="filter-label mb-2 text-muted" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t("fi̇ltrle")}</div>
                                             <Form.Select
@@ -776,7 +775,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                             </Form.Select>
                                         </div>
 
-                                        <div className="history-timeline-container overflow-auto" style={{ maxHeight: isMobileSize ? 'none' : '460px', scrollbarWidth: 'thin' }}>
+                                        <div className="history-timeline-container overflow-auto flex-grow-1" style={{ scrollbarWidth: 'thin' }}>
                                             <div style={{ padding: '16px 20px' }}>
                                                 {filteredLogs.length === 0 ? (
                                                     <div className="text-center py-5 text-muted">{t("hereket_tapilmadi")}</div>
@@ -942,53 +941,53 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                             </div>
                         )}
                     </div>
-                    {/* Custom Flush Footer - Hidden on Mobile if we use Bottom Tabs or refined actions */}
-                    <div className="w-100 d-flex gap-0" style={{ background: "#f8f9fa", borderTop: "1px solid #dee2e6" }}>
-                        {!isMobileSize && (
-                            <div className="footer-left" style={{ width: "40%", borderRight: "1px solid #dee2e6" }}>
-                                <Button
-                                    variant="light"
-                                    className="w-100 h-100 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
-                                    onClick={() => setCurrentView(currentView === "details" ? "history" : "details")}
-                                    style={{ color: "#0d6efd", background: "transparent", fontWeight: 500 }}
-                                >
-                                    <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me-2 fs-5`}></i>
-                                    {currentView === "details" ? t("tarixce_uc") : t("cek_melumatlari_uc")}
-                                </Button>
-                            </div>
-                        )}
-                        {/* Foot Right: Actions */}
-                        <div className={`footer-right d-flex ${isMobileSize ? 'w-100' : 'flex-grow-1'}`}>
+                </Offcanvas.Body>
+                {/* Custom Flush Footer - Hidden on Mobile if we use Bottom Tabs or refined actions */}
+                <div className="w-100 d-flex gap-0 mt-auto footer-action-bar" style={{ background: "#f8f9fa", borderTop: "1px solid #dee2e6", flexShrink: 0 }}>
+                    {!isMobileSize && (
+                        <div className="footer-left" style={{ width: "280px", borderRight: "1px solid #dee2e6", flexShrink: 0 }}>
                             <Button
-                                variant="warning"
-                                className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
-                                onClick={() => {
-                                    if (Number(loginedWaiter?.data?.can_return_receipt) !== 1) return;
-                                    setShowReasonModal(true);
-                                }}
-                                style={{ backgroundColor: "#f39c12", color: "#fff" }}
+                                variant="light"
+                                className="w-100 h-100 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
+                                onClick={() => setCurrentView(currentView === "details" ? "history" : "details")}
+                                style={{ color: "#0d6efd", background: "transparent", fontWeight: 500 }}
                             >
-                                <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i>{t("ceki̇_qaytar")}</Button>
-                            <Button
-                                variant="primary"
-                                className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
-                                onClick={handlePrint}
-                                disabled={isPrinting}
-                                style={{ backgroundColor: "#0d6efd", opacity: isPrinting ? 0.7 : 1 }}
-                            >
-                                {isPrinting ? (
-                                    <>
-                                        <div className="spinner-border spinner-border-sm me-2" role="status"></div>{t("cap_1")}</>
-                                ) : (
-                                    <>
-                                        <i className="bi bi-printer me-2 fs-5"></i>{t("cap")}</>
-                                )}
+                                <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me-2 fs-5`}></i>
+                                {currentView === "details" ? t("tarixce_uc") : t("cek_melumatlari_uc")}
                             </Button>
-
                         </div>
+                    )}
+                    {/* Foot Right: Actions */}
+                    <div className={`footer-right d-flex ${isMobileSize ? 'w-100' : 'flex-grow-1'}`}>
+                        <Button
+                            variant="warning"
+                            className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
+                            onClick={() => {
+                                if (Number(loginedWaiter?.data?.can_return_receipt) !== 1) return;
+                                setShowReasonModal(true);
+                            }}
+                            style={{ backgroundColor: "#f39c12", color: "#fff" }}
+                        >
+                            <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i>{t("ceki̇_qaytar")}</Button>
+                        <Button
+                            variant="primary"
+                            className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
+                            onClick={handlePrint}
+                            disabled={isPrinting}
+                            style={{ backgroundColor: "#0d6efd", opacity: isPrinting ? 0.7 : 1 }}
+                        >
+                            {isPrinting ? (
+                                <>
+                                    <div className="spinner-border spinner-border-sm me-2" role="status"></div>{t("cap_1")}</>
+                            ) : (
+                                <>
+                                    <i className="bi bi-printer me-2 fs-5"></i>{t("cap")}</>
+                            )}
+                        </Button>
+
                     </div>
-                </Modal.Body>
-            </Modal>
+                </div>
+            </Offcanvas>
 
             <Modal
                 show={showTaxResendModal}
