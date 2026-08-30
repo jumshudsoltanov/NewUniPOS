@@ -308,13 +308,19 @@ const CustomerReceipt = ({
             checkIntervals(item.timer_intervals) || checkIntervals(item.product?.timer_intervals) || checkIntervals(cat?.timer_intervals);
     });
 
-    // Add rate_per_minute to subtotal ONLY if there are no product timers? Wait, no!
-    // The previous subtotal calculation did NOT include product timer costs in the `reduce`.
-    // It just did `qty * price`. So the `rate_per_minute` (which is the sum of product timers) 
-    // MUST be added to the subtotal here, regardless of whether it's a product timer or a table timer!
-    // Otherwise the subtotal will be too low.
-    const subtotal = rawSubtotal + (Number(checkData?.rate_per_minute) || 0);
-
+    let tableTimerCharge = 0;
+    const effH = Number(checkData?.table?.hourly_price || 0);
+    if (effH > 0) {
+        let totalSeconds = 0;
+        if (checkData.is_timer_clock && String(checkData.is_timer_clock).includes(':')) {
+            const parts = String(checkData.is_timer_clock).split(':').map(Number);
+            if (parts.length === 3) totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+        } else {
+            totalSeconds = parseInt(checkData.is_timer_clock || "0", 10);
+        }
+        tableTimerCharge = (effH / 3600) * totalSeconds;
+    }
+    const subtotal = rawSubtotal + tableTimerCharge;
     const calcPercent = (val, total) => {
         if (!total || total === 0 || !val) return 0;
         const p = (val / total) * 100;
@@ -709,7 +715,7 @@ const CustomerReceipt = ({
                 })()}
 
                 {/* TAYMER MƏLUMATI */}
-                {(Number(checkData?.is_timer_status) === 1 || (checkData?.is_timer_clock && checkData?.is_timer_clock !== "00:00:00" && Number(checkData?.rate_per_minute) > 0)) && !hasProductTimer && (
+                {tableTimerCharge > 0 && (
                     <div style={{
                         ...styles.itemsGrid,
                         ...styles.itemRow,
@@ -723,13 +729,7 @@ const CustomerReceipt = ({
                         </div>
                         <span style={styles.colQty}></span>
                         <span style={styles.colPrice}></span>
-                        <span style={styles.colTotal}>{renderMoney(
-                            (() => {
-                                const parts = String(checkData?.is_timer_clock || "00:00:00").split(":").map(Number);
-                                const effH = (parts[0] || 0) + (parts[1] || 0) / 60 + (parts[2] || 0) / 3600;
-                                return effH * Number(checkData?.rate_per_minute || 0) * 60;
-                            })()
-                        )}</span>
+                        <span style={styles.colTotal}>{renderMoney(tableTimerCharge)}</span>
                     </div>
                 )}
             </div>

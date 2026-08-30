@@ -764,9 +764,8 @@ const Check = () => {
       return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
     });
     
-    // As per user request: if there is a product timer, hide the sidebar button.
-    // If there is no product timer, but table has hourly price, show the button.
-    return tableHourly > 0 && !hasTimerProduct;
+    // As per user request: ALWAYS show the table timer button if table has hourly price
+    return tableHourly > 0;
   }, [currentOrder, currentTable, loginedProfileData, menu]);
 
   const selectedCustomer = useMemo(() => {
@@ -1170,7 +1169,7 @@ const Check = () => {
     const hasTimerOnTable = effectiveHourlyPrice > 0 && profileHasTimer;
     const isTimerActiveOrHasBalance =
       hasTimerOnTable &&
-      (currentOrder?.is_timer_status === 1 ||
+      (currentOrder?.is_timer_status === 1 || currentOrder?.is_active_timer === 1 ||
         Number(currentOrder?.rate_per_minute || 0) > 0 ||
         (currentOrder?.is_timer_clock && currentOrder?.is_timer_clock !== "00:00:00"));
 
@@ -1589,7 +1588,7 @@ const Check = () => {
     const profileId = loginedProfileData?.data?.profile?.id;
     const orderId = currentOrder?.uuid;
 
-    if (currentOrder?.is_timer_status === 1) {
+    if (currentOrder?.is_timer_status === 1 || currentOrder?.is_active_timer === 1) {
       let seconds = 0;
       if (currentOrder.is_timer_clock && String(currentOrder.is_timer_clock).includes(':')) {
         const p = currentOrder.is_timer_clock.split(':').map(Number);
@@ -1661,7 +1660,7 @@ const Check = () => {
     const profileId = loginedProfileData?.data?.profile?.id;
 
     // Auto-stop timer if active when deleting check
-    if (currentOrder?.is_timer_status === 1) {
+    if (currentOrder?.is_timer_status === 1 || currentOrder?.is_active_timer === 1) {
       let seconds = 0;
       if (currentOrder.is_timer_clock && String(currentOrder.is_timer_clock).includes(':')) {
         const p = currentOrder.is_timer_clock.split(':').map(Number);
@@ -2253,7 +2252,7 @@ const Check = () => {
                         const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
 
                         // Auto-stop ORDER-level timer when printing customer receipt
-                        if (currentOrder?.is_timer_status === 1) {
+                        if (currentOrder?.is_timer_status === 1 || currentOrder?.is_active_timer === 1) {
                           let seconds = 0;
                           if (currentOrder.is_timer_clock && String(currentOrder.is_timer_clock).includes(':')) {
                             const p = currentOrder.is_timer_clock.split(':').map(Number);

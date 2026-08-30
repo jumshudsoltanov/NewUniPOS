@@ -80,7 +80,7 @@ const CheckBottom = ({
   const timerCharge =
     liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
   const isTimerActive =
-    liveTimerData?.is_timer_status === 1 || orders?.is_timer_status == 1;
+    liveTimerData?.is_timer_status === 1 || orders?.is_timer_status == 1 || liveTimerData?.is_active_timer === 1 || orders?.is_active_timer == 1;
 
   const orderForTimer = useMemo(() => {
     if (!orders) return null;
@@ -417,7 +417,7 @@ const CheckBottom = ({
       });
     }
 
-    if (!hasProductTimer && effH > 0) {
+    if (effH > 0) {
         total += (effH / 3600) * totalSeconds;
     }
 
@@ -553,6 +553,7 @@ const CheckBottom = ({
     !isSending && 
     products.length === 0 && 
     activeOrderItems.length === 0 &&
+    Number(calcTotal.sumTotal) === 0 &&
     (!isTimerActive || !hasHourlyRate);
 
   return (
@@ -638,8 +639,7 @@ const CheckBottom = ({
             </div>
           )}
           {Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 &&
-            effectiveHourlyPrice > 0 &&
-            !timerHourlyRates.usesProductTimer && (
+            effectiveHourlyPrice > 0 && (
               <div
                 className="timer-detailed-summary mt-2 pt-2"
                 style={{
@@ -651,7 +651,7 @@ const CheckBottom = ({
                   className="d-flex justify-content-between align-items-center mb-1"
                   style={{ fontSize: "0.8rem", opacity: 0.9 }}
                 >
-                  <span>{t("masa_saatliq")}</span>
+                  <span>{timerHourlyRates.usesProductTimer ? "Taymer (saatlıq)" : t("masa_saatliq")}</span>
                   <span>{Number(effectiveHourlyPrice).toFixed(2)} {getCurrencySymbol()}</span>
                 </div>
                 <div

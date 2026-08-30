@@ -155,8 +155,16 @@ const CheckOver = () => {
             }
         });
 
-        if (!hasProductTimer && currentOrder.rate_per_minute) {
-            total += Number(currentOrder.rate_per_minute);
+        const effH = Number(currentOrder.table?.hourly_price || 0);
+        if (effH > 0) {
+            let totalSeconds = 0;
+            if (currentOrder.is_timer_clock && String(currentOrder.is_timer_clock).includes(':')) {
+                const parts = currentOrder.is_timer_clock.split(':').map(Number);
+                if (parts.length === 3) totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+            } else {
+                totalSeconds = parseInt(currentOrder.is_timer_clock || "0", 10);
+            }
+            total += (effH / 3600) * totalSeconds;
         }
         total = normalizeMoney(total);
 

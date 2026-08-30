@@ -48,11 +48,38 @@ export function getEffectiveHourlyPrice(order, menuData = null) {
         }
     });
 
-    return itemH > 0 ? itemH : tableH;
+    return tableH + itemH;
 }
 
-export function getProductHourlySum(order) {
-    return getEffectiveHourlyPrice(order); // Legacy, just maps to new
+export function getProductHourlySum(order, menuData = null) {
+    let itemH = 0;
+    const dataToUse = menuData && menuData.length > 0 ? menuData : globalMenuData;
+
+    (order?.orders_items || []).forEach((it) => {
+        const pType = String(it.product_type || it?.product?.product_type || '').toLowerCase();
+        let intervals = it.timer_intervals || it?.product?.timer_intervals;
+        
+        if (!intervals && dataToUse.length > 0) {
+            const catItem = dataToUse.find(m => Number(m.id) === Number(it.product_id || it.id));
+            if (catItem) {
+                intervals = catItem.timer_intervals;
+            }
+        }
+
+        while (typeof intervals === 'string') {
+            try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
+        }
+        
+        const hasIntervals = !!(intervals && Array.isArray(intervals) && intervals.length > 0);
+        
+        if (pType === 'timer' || hasIntervals) {
+            const hp = Number(it.product?.hourly_price || it.hourly_price || 0);
+            if (hp > 0 && !hasIntervals) {
+                itemH += hp * Number(it.count || it.quantity || 1);
+            }
+        }
+    });
+    return itemH;
 }
 
 export function getTotalTimerHourlyRate(order) {
@@ -63,6 +90,7 @@ export function getLiveTimerCharge(order, totalSeconds, effH, menuData = null) {
     let charge = 0;
     let hasProductTimer = false;
     let hasIntervalTimer = false;
+    const tableH = Number(order?.table?.hourly_price || 0);
     
     const dataToUse = menuData && menuData.length > 0 ? menuData : globalMenuData;
 
@@ -120,8 +148,8 @@ export function getLiveTimerCharge(order, totalSeconds, effH, menuData = null) {
         }
     });
 
-    if (!hasProductTimer && effH > 0) {
-        charge = (effH / 3600) * totalSeconds;
+    if (tableH > 0) {
+        charge += (tableH / 3600) * totalSeconds;
     }
 
     return { charge: parseFloat(charge.toFixed(2)), hasIntervalTimer };
