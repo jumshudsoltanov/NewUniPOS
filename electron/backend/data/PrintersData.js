@@ -90,9 +90,9 @@ const getPrinters = async (passedProfileId) => {
                 await PrintersModel.bulkCreate(merged, {
                     updateOnDuplicate: updateKeys,
                 });
+                console.log("[PrintersData] DB-yə yazılan merged printers:", JSON.stringify(merged, null, 2));
             }
 
-                console.log("[PrintersData] DB-yə yazılan merged printers:", JSON.stringify(merged ?? apiPrinters, null, 2));
             console.log("Printers DB sync olundu: insert/update + silindi");
         }
 

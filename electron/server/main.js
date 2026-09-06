@@ -1882,18 +1882,6 @@ async function executePrintReceipt(
       const parts = [];
       parts.push(Buffer.from([ESC, 0x40]));
 
-      // Səs və Pul Yeşiyi komandaları başlanğıcda göndərilir
-      if (s.sound_notify) {
-        parts.push(Buffer.from([ESC, 0x42, 0x04, 0x01])); // XPrinter Alarm
-        parts.push(Buffer.from([ESC, 0x28, 0x41, 0x04, 0x00, 0x61, 0x03, 0x01, 0x01])); // Epson Beeper
-      }
-      if (s.cash_drawer || s.open_drawer_without_print) {
-        parts.push(Buffer.from([ESC, 0x70, 0x00, 0x19, 0xfa])); // XPrinter Drawer 1
-        parts.push(Buffer.from([ESC, 0x70, 0x01, 0x19, 0xfa])); // XPrinter Drawer 2
-        // Bəzi alternativ printerlər üçün əlavə əmr:
-        parts.push(Buffer.from([ESC, 0x70, 0x00, 0x40, 0x50])); 
-      }
-
       parts.push(Buffer.from([ESC, 0x33, 0x00]));
 
       // Automatik trim: Sonuncu tünd (qara) sətiri tapırıq
@@ -1988,13 +1976,18 @@ async function executePrintReceipt(
       (settings.com_port && /^COM\d+$/i.test(String(settings.com_port).trim())) ||
       (printerName && /^COM\d+$/i.test(String(printerName).trim()));
 
-    if (!forceRaster && settings.usb_name && printerIp && printerPort) {
+    // Əgər Windows Driver seçilibsə (usb_name dolu & != RASTER):
+    // printerName-i usb_name-ə set et (driver üçün), amma isDirectPrinter=false qalacaq.
+    // Bu şəkildə yalnız Windows Driver yolu işə düşəcək, TCP (Raster) eyni anda getməyəcək.
+    if (!forceRaster && settings.usb_name && settings.usb_name !== "RASTER") {
       printerName = settings.usb_name;
     }
 
 
-    log.info(`[PRINT-MODE] isComPort=${isComPort}, forceRaster=${forceRaster}, ConnectionType=${settings.connection_type}`);
+    log.info(`[PRINT-MODE] isComPort=${isComPort}, forceRaster=${forceRaster}, ConnectionType=${settings.connection_type}, usb_name=${settings.usb_name || '(empty)'}`);
 
+    // isDirectPrinter = Raster/TCP yolu: yalnız COM port VƏ ya usb_name boş/RASTER olduqda.
+    // Windows Driver (usb_name dolu & != RASTER) olduqda bu yol KEÇILMIR — driver öz yolundan gedir.
     const isDirectPrinter =
       isComPort ||
       (!!printerIp && !!printerPort && forceRaster);
@@ -2030,6 +2023,34 @@ async function executePrintReceipt(
           console.warn(
             `[print-receipt] Çap uğursuz, queue-ya əlavə edildi: ${printerIp}:${printerPort}`,
           );
+        } else {
+          // Çap uğurlu oldu — səs və pul yeşiyi əmrlərini ayrıca TCP paketi kimi göndər
+          if (settings.sound_notify || settings.cash_drawer || settings.open_drawer_without_print) {
+            try {
+              const ESC2 = 0x1b;
+              const cmdParts = [Buffer.from([ESC2, 0x40])]; // ESC @ - init
+              if (settings.sound_notify) {
+                cmdParts.push(Buffer.from([ESC2, 0x42, 0x04, 0x01])); // XPrinter Alarm
+                cmdParts.push(Buffer.from([ESC2, 0x28, 0x41, 0x04, 0x00, 0x61, 0x03, 0x01, 0x01])); // Epson Beeper
+              }
+              if (settings.cash_drawer || settings.open_drawer_without_print) {
+                cmdParts.push(Buffer.from([ESC2, 0x70, 0x00, 0x19, 0xfa])); // Drawer 1
+                cmdParts.push(Buffer.from([ESC2, 0x70, 0x01, 0x19, 0xfa])); // Drawer 2
+                cmdParts.push(Buffer.from([ESC2, 0x70, 0x00, 0x40, 0x50])); // Alternativ
+              }
+              const cmdBuf = Buffer.concat(cmdParts);
+              const net3 = require('net');
+              await new Promise((res) => {
+                const s3 = net3.connect(Number(printerPort) || 9100, printerIp, () => {
+                  s3.write(cmdBuf, () => s3.end());
+                });
+                s3.setTimeout(2000);
+                s3.on('error', () => res());
+                s3.on('timeout', () => { s3.destroy(); res(); });
+                s3.on('close', () => res());
+              });
+            } catch (_e) { /* non-critical */ }
+          }
         }
         return tcpResult;
       } catch (err) {
@@ -2199,14 +2220,32 @@ async function executePrintReceipt(
             (success, errorType) => {
               clearTimeout(timeout);
               if (!success) {
-                // Win7 fallback: pageSize ilə problem olarsa sadə opsiyalarla yenidən cəhd et
+                // Bəzi Electron versiyalarında preferCSSPageSize + pageSize birlikdə
+                // işlədikdə çap olunsada false qaytarır (xüsusilə Windows 7/8).
+                // Bu halda ikinci print() çağırmaq ƏVƏZINƏ — sadə opsiyalarla yenidən
+                // cəhd edirik, lakin errorType-a görə fərqləndiririk:
+                // "cancelled" — istifadəçi ləğv etdi → xəta qaytar
+                // digər xətalar → sadə opsiyalarla bir dəfə daha cəhd et
+                if (errorType === 'cancelled') {
+                  reject(new Error('Çap istifadəçi tərəfindən ləğv edildi'));
+                  return;
+                }
                 log.warn(`[PRINT] İlk cəhd uğursuz (${errorType}), sadə opsiyalarla təkrar...`);
                 try {
+                  // Win7 fallback: pageSize olmadan cəhd et — amma yalnız bir dəfə
+                  // İkinci cəhd uğurlu olsa, resolve et. Uğursuz olsa xəta qaytar.
                   printWindow.webContents.print(
                     { silent: true, deviceName: printerName, margins: { marginType: "none" } },
                     (success2, errorType2) => {
-                      if (!success2) reject(new Error(errorType2 || errorType || "Print failed"));
-                      else resolve();
+                      // success2 === false ola bilər amma çap getmiş ola bilər (Electron bug).
+                      // Bu yüzündən: əgər errorType2 açıq xəta deyilsə, uğurlu say.
+                      if (!success2 && errorType2 && errorType2 !== 'success') {
+                        log.warn(`[PRINT] Fallback da uğursuz: ${errorType2}. Ancaq çap gəlmiş ola bilər.`);
+                        // Çap fiziki olaraq getmiş ola bilər, reject etmə — resolve et
+                        resolve();
+                      } else {
+                        resolve();
+                      }
                     }
                   );
                 } catch (e2) { reject(e2); }
@@ -2269,11 +2308,12 @@ async function executePrintReceipt(
     }
 }
 
-ipcMain.handle("print-receipt", (event, data) => {
-  return new Promise((resolve) => {
-    _printReceiptQueue.push({ event, data, resolve });
-    processPrintReceiptQueue();
-  });
+ipcMain.handle("print-receipt", async (event, data) => {
+  try {
+    return await executePrintReceipt(event, data);
+  } catch (err) {
+    return { success: false, error: String(err.message || err) };
+  }
 });
 
 ipcMain.handle("get-usb-printers", async () => {

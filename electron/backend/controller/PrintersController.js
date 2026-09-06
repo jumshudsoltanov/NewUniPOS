@@ -49,15 +49,28 @@ const updatePrinter = async (req, res) => {
         );
 
         // Network printer saxlananda avtomatik Windows-a qur
+        // Lakin: istifadəçi 'RASTER' seçibsə auto-install etmə
         const ct = connection_type || 'network';
         const isNetwork = ct !== 'usb' && ct !== 'com';
-        const userExplicitlyChoseRaster = req.body.hasOwnProperty('usb_name') && (usb_name === '' || usb_name === null);
+        // 'RASTER' seçilibsə — TCP/Raster yolu, Windows auto-install lazım deyil
+        const isRasterMode = usb_name === 'RASTER';
+        // İstifadəçi açıqca RASTER seçib göndəribsə ötür
+        const userExplicitlyChoseRaster = isRasterMode || (req.body.hasOwnProperty('usb_name') && (usb_name === '' || usb_name === null));
         if (isNetwork && ip && !userExplicitlyChoseRaster) {
             const autoName = `UNIPOS_${String(ip).replace(/\./g, '_')}`;
-            const needsAuto = !usb_name || usb_name === autoName;
-            if (needsAuto) {
-                autoInstallWindowsPrinter(autoName, ip, port);
-                await PrintersModel.update({ usb_name: autoName }, { where: { id } });
+            // BUG FIX: İstifadəçi özü usb_name seçibsə (autoName-dən fərqli bir şey)
+            // onu ÉZMƏMƏLİYİK. Yalnız usb_name həqiqətən boşdursa autoName ilə doldururuq.
+            const isUserSetCustomName = usb_name && usb_name !== autoName && usb_name !== 'RASTER';
+            if (isUserSetCustomName) {
+                // İstifadəçi öz adını seçib — auto-install-da bu adla qur, usb_name-i əzmə
+                autoInstallWindowsPrinter(usb_name, ip, port);
+            } else {
+                // usb_name boşdur ya da autoName-ə bərabərdir — normal auto-install
+                const needsAuto = !usb_name || usb_name === autoName;
+                if (needsAuto) {
+                    autoInstallWindowsPrinter(autoName, ip, port);
+                    await PrintersModel.update({ usb_name: autoName }, { where: { id } });
+                }
             }
         }
 

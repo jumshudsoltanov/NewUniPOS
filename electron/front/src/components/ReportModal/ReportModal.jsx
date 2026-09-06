@@ -81,6 +81,7 @@ const ReportModal = ({ show, onClose }) => {
     const [loading, setLoading] = useState(false);
     /** Kateqoriya hesabatı: hansı kateqoriyalar printerə getsin (indeks → true/false, default true) */
     const [categoryPrintInclude, setCategoryPrintInclude] = useState({});
+    const [isPrinting, setIsPrinting] = useState(false);
 
     const reportTypes = [
         { id: "simple", name: t("sade") },
@@ -141,91 +142,97 @@ const ReportModal = ({ show, onClose }) => {
     };
 
     const handlePrint = async () => {
-        const reportEl = document.querySelector('.report-view');
-        if (!reportEl) return;
-
-        const clone = reportEl.cloneNode(true);
-        clone.querySelectorAll('.report-print-exclude').forEach((el) => el.remove());
-        clone.querySelectorAll('.report-category-print-col').forEach((el) => el.remove());
-
-        let savedSettings = {};
+        if (isPrinting) return;
+        setIsPrinting(true);
         try {
-            const parsed = JSON.parse(localStorage.getItem("pos_receipt_settings") || "{}");
-            if (parsed.report) {
-                savedSettings = parsed.report;
-            }
-        } catch(e) {}
-        
-        const baseFont = savedSettings.fontSizeOffset ?? Number(terminalInfo?.customer_receipt || profile?.customer_receipt || 0);
-        const fs = (baseSize) => `${baseSize + baseFont * 2}px`;
-        const fontFamily = savedSettings.fontFamily || "'Courier New', 'Courier', monospace";
-        const paperWidth = savedSettings.paperWidth === 58 ? "58mm" : "80mm";
+            const reportEl = document.querySelector('.report-view');
+            if (!reportEl) return;
 
-        const html = `
-            <style>
-                * { box-sizing: border-box; margin: 0; padding: 0; font-family: ${fontFamily}; color: #000 !important; }
-                .report-view { width: 100%; max-width: ${paperWidth}; padding: 0 3mm; font-size: ${fs(14)}; line-height: 1.35; margin: 0 auto; }
-                .report-data-header { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; text-align: left; }
-                .report-data-info p { font-size: ${fs(13)}; margin-bottom: 4px; font-weight: 700; line-height: 1.35; }
-                .report-data-info p span { font-weight: bold; margin-right: 5px; }
-                .report-data-time { margin-top: 6px; }
-                .report-data-time span { font-size: ${fs(13)}; font-weight: 700; }
-                .section-title { font-weight: 900; font-size: ${fs(14)}; border-bottom: 1px solid #000; padding-bottom: 4px; margin: 12px 0 8px; text-transform: uppercase; text-align: center; line-height: 1.3; }
-                .receipt-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #666; align-items: center; }
-                .receipt-row > span:first-child { font-size: ${fs(13)}; font-weight: 700; }
-                .receipt-row .dots { display: none; }
-                .receipt-row .value { font-size: ${fs(13)}; font-weight: 700; }
-                .total-line { border-top: 2px solid #000; border-bottom: 2px double #000; margin-top: 8px; padding: 6px 0; }
-                .total-line > span:first-child { font-size: ${fs(14)} !important; font-weight: 900 !important; text-transform: uppercase; }
-                .total-line .value { font-size: ${fs(15)} !important; font-weight: 900 !important; }
-                .report-details-section { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #000; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: ${fs(13)}; }
-                th { border-bottom: 1px solid #000; padding: 4px 2px; font-size: ${fs(13)}; font-weight: 700; text-align: left; text-transform: uppercase; line-height: 1.25; }
-                td { border-bottom: 1px dashed #666; padding: 4px 2px; font-size: ${fs(13)}; font-weight: 700; word-break: break-word; line-height: 1.35; }
-                .text-end { text-align: right; }
-                .text-center { text-align: center; }
-                .alert { display: none; }
-                i, svg, button, input { display: none !important; }
-            </style>
-            ${clone.innerHTML}
-        `;
+            const clone = reportEl.cloneNode(true);
+            clone.querySelectorAll('.report-print-exclude').forEach((el) => el.remove());
+            clone.querySelectorAll('.report-category-print-col').forEach((el) => el.remove());
 
-        if (window.electronAPI?.printReceipt && cashierPrinters.length) {
-            for (const cashierPrinter of cashierPrinters) {
-                const connType = cashierPrinter.connection_type;
-                const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
-                const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
-                const printerSettings = {
-                    paper_size: savedSettings.paperWidth ? String(savedSettings.paperWidth) : (cashierPrinter.paper_size || '80'),
-                    cut_mode: cashierPrinter.cut_mode || 'full',
-                    sound_notify: cashierPrinter.sound_notify || 0,
-                    cash_drawer: cashierPrinter.cash_drawer || 0,
-                    encoding: cashierPrinter.encoding || 'utf8',
-                    copies: cashierPrinter.copies || 1,
-                    darkness: cashierPrinter.darkness || 5,
-                    trailing_space: cashierPrinter.trailing_space || 0,
-                    receipt_header: cashierPrinter.receipt_header || null,
-                    receipt_footer: cashierPrinter.receipt_footer || null,
-                    bold_header: cashierPrinter.bold_header || 0,
-                    double_height_header: cashierPrinter.double_height_header || 0,
-                    font_family: cashierPrinter.font_family || 'Arial',
-                    fast_print: cashierPrinter.fast_print ? 1 : 0,
-                    print_logo: cashierPrinter.print_logo != null ? Number(cashierPrinter.print_logo) : 1,
-                    rotate_180: cashierPrinter.rotate_180 ? 1 : 0,
-                    usb_name: hasUsbName ? cashierPrinter.usb_name : null,
-                    printer_label: cashierPrinter.local_name || cashierPrinter.name || "",
-                };
-                let payload;
-                if (isNetwork && cashierPrinter.ip && !hasUsbName) {
-                    payload = { html, printerName: "", printerIp: String(cashierPrinter.ip), printerPort: Number(cashierPrinter.port) || 9100, printerSettings };
-                } else {
-                    const targetPrinter = hasUsbName ? cashierPrinter.usb_name : (cashierPrinter.local_name || cashierPrinter.name);
-                    payload = { html, printerName: String(targetPrinter || ""), printerSettings };
+            let savedSettings = {};
+            try {
+                const parsed = JSON.parse(localStorage.getItem("pos_receipt_settings") || "{}");
+                if (parsed.report) {
+                    savedSettings = parsed.report;
                 }
-                await window.electronAPI.printReceipt(payload);
+            } catch(e) {}
+            
+            const baseFont = savedSettings.fontSizeOffset ?? Number(terminalInfo?.customer_receipt || profile?.customer_receipt || 0);
+            const fs = (baseSize) => `${baseSize + baseFont * 2}px`;
+            const fontFamily = savedSettings.fontFamily || "'Courier New', 'Courier', monospace";
+            const paperWidth = savedSettings.paperWidth === 58 ? "58mm" : "80mm";
+
+            const html = `
+                <style>
+                    * { box-sizing: border-box; margin: 0; padding: 0; font-family: ${fontFamily}; color: #000 !important; }
+                    .report-view { width: 100%; max-width: ${paperWidth}; padding: 0 3mm; font-size: ${fs(14)}; line-height: 1.35; margin: 0 auto; }
+                    .report-data-header { border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 10px; text-align: left; }
+                    .report-data-info p { font-size: ${fs(13)}; margin-bottom: 4px; font-weight: 700; line-height: 1.35; }
+                    .report-data-info p span { font-weight: bold; margin-right: 5px; }
+                    .report-data-time { margin-top: 6px; }
+                    .report-data-time span { font-size: ${fs(13)}; font-weight: 700; }
+                    .section-title { font-weight: 900; font-size: ${fs(14)}; border-bottom: 1px solid #000; padding-bottom: 4px; margin: 12px 0 8px; text-transform: uppercase; text-align: center; line-height: 1.3; }
+                    .receipt-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #666; align-items: center; }
+                    .receipt-row > span:first-child { font-size: ${fs(13)}; font-weight: 700; }
+                    .receipt-row .dots { display: none; }
+                    .receipt-row .value { font-size: ${fs(13)}; font-weight: 700; }
+                    .total-line { border-top: 2px solid #000; border-bottom: 2px double #000; margin-top: 8px; padding: 6px 0; }
+                    .total-line > span:first-child { font-size: ${fs(14)} !important; font-weight: 900 !important; text-transform: uppercase; }
+                    .total-line .value { font-size: ${fs(15)} !important; font-weight: 900 !important; }
+                    .report-details-section { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #000; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: ${fs(13)}; }
+                    th { border-bottom: 1px solid #000; padding: 4px 2px; font-size: ${fs(13)}; font-weight: 700; text-align: left; text-transform: uppercase; line-height: 1.25; }
+                    td { border-bottom: 1px dashed #666; padding: 4px 2px; font-size: ${fs(13)}; font-weight: 700; word-break: break-word; line-height: 1.35; }
+                    .text-end { text-align: right; }
+                    .text-center { text-align: center; }
+                    .alert { display: none; }
+                    i, svg, button, input { display: none !important; }
+                </style>
+                ${clone.innerHTML}
+            `;
+
+            if (window.electronAPI?.printReceipt && cashierPrinters.length) {
+                for (const cashierPrinter of cashierPrinters) {
+                    const connType = cashierPrinter.connection_type;
+                    const isNetwork = connType === "network" || (connType !== "usb" && connType !== "com" && !!cashierPrinter.ip);
+                    const hasUsbName = !!(cashierPrinter.usb_name && cashierPrinter.usb_name.trim() && cashierPrinter.usb_name !== 'RASTER');
+                    const printerSettings = {
+                        paper_size: savedSettings.paperWidth ? String(savedSettings.paperWidth) : (cashierPrinter.paper_size || '80'),
+                        cut_mode: cashierPrinter.cut_mode || 'full',
+                        sound_notify: cashierPrinter.sound_notify || 0,
+                        cash_drawer: cashierPrinter.cash_drawer || 0,
+                        encoding: cashierPrinter.encoding || 'utf8',
+                        copies: cashierPrinter.copies || 1,
+                        darkness: cashierPrinter.darkness || 5,
+                        trailing_space: cashierPrinter.trailing_space || 0,
+                        receipt_header: cashierPrinter.receipt_header || null,
+                        receipt_footer: cashierPrinter.receipt_footer || null,
+                        bold_header: cashierPrinter.bold_header || 0,
+                        double_height_header: cashierPrinter.double_height_header || 0,
+                        font_family: cashierPrinter.font_family || 'Arial',
+                        fast_print: cashierPrinter.fast_print ? 1 : 0,
+                        print_logo: cashierPrinter.print_logo != null ? Number(cashierPrinter.print_logo) : 1,
+                        rotate_180: cashierPrinter.rotate_180 ? 1 : 0,
+                        usb_name: hasUsbName ? cashierPrinter.usb_name : null,
+                        printer_label: cashierPrinter.name || "",
+                    };
+                    let payload;
+                    if (isNetwork && cashierPrinter.ip && !hasUsbName) {
+                        payload = { html, printerName: "", printerIp: String(cashierPrinter.ip), printerPort: Number(cashierPrinter.port) || 9100, printerSettings };
+                    } else {
+                        const targetPrinter = hasUsbName ? cashierPrinter.usb_name : cashierPrinter.name;
+                        payload = { html, printerName: String(targetPrinter || ""), printerSettings };
+                    }
+                    await window.electronAPI.printReceipt(payload);
+                }
+            } else {
+                window.print();
             }
-        } else {
-            window.print();
+        } finally {
+            setIsPrinting(false);
         }
     };
 
@@ -808,8 +815,12 @@ const ReportModal = ({ show, onClose }) => {
                 <h2 className="report-modal-title" id="report-modal-title">Hesabat</h2>
                 <div className="report-header-actions">
                     {reportResults && !loading && (
-                        <button type="button" className="report-print-btn" onClick={handlePrint} title={t("print")}>
-                            <i className="bi bi-printer-fill" aria-hidden="true"></i>
+                        <button type="button" className="report-print-btn" onClick={handlePrint} title={t("print")} disabled={isPrinting}>
+                            {isPrinting ? (
+                                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ marginRight: '5px' }}></span>
+                            ) : (
+                                <i className="bi bi-printer-fill" aria-hidden="true"></i>
+                            )}
                             <span>{t("print")}</span>
                         </button>
                     )}

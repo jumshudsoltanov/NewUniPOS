@@ -571,7 +571,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                     printerSettings,
                 };
             } else {
-                const targetPrinter = hasUsbName ? cashierPrinter.usb_name : (cashierPrinter.local_name || cashierPrinter.name);
+                const targetPrinter = hasUsbName ? cashierPrinter.usb_name : cashierPrinter.name;
                 payload = { html, printerName: targetPrinter, printerSettings };
             }
 

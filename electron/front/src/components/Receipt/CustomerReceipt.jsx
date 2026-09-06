@@ -16,6 +16,7 @@ const CustomerReceipt = ({
     profileData,
     tableName,
     hallName,
+    hall,
     previewSettings,
     menuCatalog,
 }) => {
@@ -328,8 +329,10 @@ const CustomerReceipt = ({
     };
 
     const getDiscountInfo = () => {
+        const discountValueRaw = checkData.discount_value;
+        const hasExplicitDiscountValue = discountValueRaw !== null && discountValueRaw !== undefined;
         const type = checkData.discount_type || "percent";
-        const value = Number(checkData.discount_value || 0);
+        const value = Number(discountValueRaw || 0);
 
         const totalForDiscount = itemsToRender.reduce((sum, item) => {
             const rowCat = findCatalogProduct(menuCatalog, item.product_id || item.id);
@@ -359,7 +362,7 @@ const CustomerReceipt = ({
             } else {
                 rawAmount = value;
             }
-        } else if (Number(checkData.discount) > 0) {
+        } else if (!hasExplicitDiscountValue && Number(checkData.discount) > 0) {
             rawAmount = Number(checkData.discount);
         }
 
@@ -374,8 +377,10 @@ const CustomerReceipt = ({
     };
 
     const getServiceInfo = () => {
+        const serviceValueRaw = checkData.serviceFeeValue ?? checkData.service_value;
+        const hasExplicitServiceValue = serviceValueRaw !== null && serviceValueRaw !== undefined;
         const type = checkData.serviceFeeType || checkData.service_type || "percent";
-        const value = Number(checkData.serviceFeeValue || checkData.service_value || 0);
+        const value = Number(serviceValueRaw || 0);
 
         const totalForService = itemsToRender.reduce((sum, item) => {
             const rowCat = findCatalogProduct(menuCatalog, item.product_id || item.id);
@@ -411,10 +416,10 @@ const CustomerReceipt = ({
                 amount = value;
                 percent = calcPercent(value, totalForService);
             }
-        } else if (Number(checkData.service_charge) > 0) {
+        } else if (!hasExplicitServiceValue && Number(checkData.service_charge) > 0) {
             amount = Number(checkData.service_charge);
             percent = calcPercent(amount, totalForService);
-        } else if (hall && Number(hall.service_fee) > 0) {
+        } else if (!hasExplicitServiceValue && hall && Number(hall.service_fee) > 0) {
             amount = (totalForService * Number(hall.service_fee)) / 100;
             percent = Number(hall.service_fee);
             isPercent = true;

@@ -302,7 +302,10 @@ function AppContent() {
         socket.off("kitchen_item_ready");
       };
     }
-  }, [isMasterTerminal, isSocketConnected]);
+  // isSocketConnected burada dependency deyil — socket.off()+socket.on() cütlüyü
+  // artıq listener duplikatını önləyir. isSocketConnected-in buraya daxil edilməsi
+  // hər socket reconnect-ında effect-i yenidən işlədib ikinci listener əlavə edirdi.
+  }, [isMasterTerminal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pin yeniləmə: digər terminal (Master/Slave) yeniləyəndə bu terminal da məlumatı yeniləsin
   useEffect(() => {

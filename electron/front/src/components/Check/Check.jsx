@@ -2319,7 +2319,7 @@ const Check = () => {
                               toast.success(t("on_cap_ugurla_tamamlandi"));
                               const profileId = loginedProfileData?.data?.profile?.id;
                               dispatch(incrementPrintCount({ orderId: currentOrder.uuid, waiterName }));
-                              dispatch(getActiveOrders({ profileId, silentRefresh: true }));
+                              // dispatch(getActiveOrders({ profileId, silentRefresh: true }));
                               if (tableGroups?.data) dispatch(getTableGroups(profileId));
                             }
                           })
@@ -2394,9 +2394,7 @@ const Check = () => {
                         />
                       </svg>
                     )}
-                    {!isPrintingCheck && (
-                      <span className="icon-badge">{currentOrder?.print_count || 0}</span>
-                    )}
+                    <span className="icon-badge">{currentOrder?.print_count || 0}</span>
                     {!isPrintingCheck && printerDiagnosticSummary.problemCount > 0 && (
                       <span className={`printer-health-badge printer-health-badge--${printerDiagnosticBadgeClass}`}>!</span>
                     )}

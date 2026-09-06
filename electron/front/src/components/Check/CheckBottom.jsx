@@ -435,7 +435,9 @@ const CheckBottom = ({
     totalForDiscount = normalizeMoney(totalForDiscount);
     totalForService = normalizeMoney(totalForService);
 
-    const discountValue = Number(orders?.discount_value || 0);
+    const discountValueRaw = orders?.discount_value;
+    const hasExplicitDiscountValue = discountValueRaw !== null && discountValueRaw !== undefined;
+    const discountValue = Number(discountValueRaw || 0);
     const discountType = orders?.discount_type || "percent";
     let discountAmount = 0;
 
@@ -447,7 +449,7 @@ const CheckBottom = ({
       }
     }
     // Fallback: use saved discount field directly if discount_value not set
-    if (discountAmount === 0 && Number(orders?.discount) > 0) {
+    if (discountAmount === 0 && !hasExplicitDiscountValue && Number(orders?.discount) > 0) {
       discountAmount = Number(orders.discount);
     }
     discountAmount = normalizeMoney(discountAmount);
@@ -469,7 +471,7 @@ const CheckBottom = ({
       }
     }
     // Fallback: use saved service_charge field directly if service_value not set
-    if (serviceAmount === 0 && Number(orders?.service_charge) > 0) {
+    if (serviceAmount === 0 && !hasExplicitServiceValue && Number(orders?.service_charge) > 0) {
       serviceAmount = Number(orders.service_charge);
     }
     // Fallback: hall default service fee — only if service_value was never explicitly set

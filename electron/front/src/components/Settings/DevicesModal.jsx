@@ -53,7 +53,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                 <div className="printer-detail-actions" style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                     <button className="btn-test" onClick={() => {
                         if (isNetwork && printer.ip) onTestPrint(null, printer.ip, printer.port || 9100);
-                        else onTestPrint(printer.usb_name || printer.local_name || printer.name);
+                        else onTestPrint(printer.usb_name || printer.name);
                     }}>Test çapı</button>
                     <button className="btn-save-printer" onClick={onSave}>{t("save")}</button>
                 </div>
@@ -652,8 +652,11 @@ const DevicesModal = ({ show, onHide }) => {
                 const ct = p.connection_type || 'network';
                 const isNet = ct !== 'usb' && ct !== 'com';
                 const autoName = isNet && p.ip ? `UNIPOS_${String(p.ip).replace(/\./g, '_')}` : null;
-                const usbName = p.usb_name && p.usb_name.trim() ? p.usb_name : (autoName || '');
-                return { ...p, connection_type: ct, usb_name: usbName };
+                // BUG FIX: usb_name boş gəlirsə AVTOMATIK autoName QOYMA.
+                // Əvvəl: usbName = p.usb_name || (autoName || '') — bu hər printer-i "Windows Driver" kimi göstərirdi.
+                // İndi: server-dən nə gəlirsə olduğu kimi saxla. Yalnız cache-dən gələnlər üstünlük qazanacaq.
+                const usbName = (p.usb_name && p.usb_name.trim()) ? p.usb_name : '';
+                return { ...p, connection_type: ct, usb_name: usbName, _autoName: autoName };
             });
 
             try {
@@ -661,10 +664,22 @@ const DevicesModal = ({ show, onHide }) => {
                 if (cachedRaw) {
                     const cached = JSON.parse(cachedRaw);
                     if (String(cached.profileId) === String(profileId) && Array.isArray(cached.printers)) {
+                        // Yalnız lokal parametrləri mənimsə — ad (name, local_name) həmişə serverdən gəlsin
+                        const LOCAL_ONLY_FIELDS = [
+                            'usb_name', 'encoding', 'cut_mode', 'paper_size', 'font_family',
+                            'trailing_space', 'copies', 'darkness', 'receipt_header', 'receipt_footer',
+                            'bold_header', 'double_height_header', 'sound_notify', 'cash_drawer',
+                            'fast_print', 'print_logo', 'rotate_180', 'connection_type', 'com_port',
+                            'baud_rate', 'open_drawer_without_print',
+                        ];
                         normalizedPrinters = normalizedPrinters.map(serverPrinter => {
                             const localMatch = cached.printers.find(lp => Number(lp.id) === Number(serverPrinter.id));
                             if (localMatch) {
-                                return { ...serverPrinter, ...localMatch, connection_status: serverPrinter.connection_status };
+                                const localOverrides = {};
+                                LOCAL_ONLY_FIELDS.forEach(f => {
+                                    if (localMatch[f] !== undefined) localOverrides[f] = localMatch[f];
+                                });
+                                return { ...serverPrinter, ...localOverrides, connection_status: serverPrinter.connection_status };
                             }
                             return serverPrinter;
                         });
