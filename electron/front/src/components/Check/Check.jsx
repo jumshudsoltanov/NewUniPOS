@@ -989,23 +989,61 @@ const Check = () => {
           };
         });
 
+        const standaloneDeletedMods = [];
+        deletedItemsForPrint.forEach(d => {
+          let mods = d.modifiers;
+          if (typeof mods === 'string') {
+            try { mods = JSON.parse(mods); } catch { mods = []; }
+          }
+          if (mods && Array.isArray(mods)) {
+            mods.forEach(mod => {
+              const hasOwnPrinter = mod.printer_details && mod.printer_details.length > 0;
+              const hasCategoryPrinter = !!mod.category_id;
+              if (hasOwnPrinter || hasCategoryPrinter) {
+                // Approximate quantity for partial deletion
+                const modQty = d.type === 'partial' && d.originalQty > 0 
+                  ? Math.ceil((d.qty / d.originalQty) * (mod.count || 1)) 
+                  : (mod.count || 1);
+                standaloneDeletedMods.push({
+                  ...mod,
+                  product_name: mod.name || mod.product_name,
+                  count: modQty,
+                  quantity: modQty,
+                  isModifierStandalone: true,
+                  parentName: d.name,
+                  changeType: 'decrease'
+                });
+              }
+            });
+          }
+        });
+
         try {
           const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
+          const printCtx = {
+            table: currentTable?.name || currentOrder?.table_name || t("table"),
+            waiter: orderWaiter,
+            hallName: currentHall?.name || "",
+            orderId: currentOrder?.uuid || id,
+            terminalInfo: loginedProfileData?.data?.terminal || {},
+            typeName: displaySaleType,
+            checkData: currentOrder,
+            isDecrease: true,
+            profileData: loginedProfileData,
+          };
           processAndPrintOrders(
             deletedItemsForPrint,
-            {
-              table: currentTable?.name || currentOrder?.table_name || t("table"),
-              waiter: orderWaiter,
-              hallName: currentHall?.name || "",
-              orderId: currentOrder?.uuid || id,
-              terminalInfo: loginedProfileData?.data?.terminal || {},
-              typeName: displaySaleType,
-              checkData: currentOrder,
-              isDecrease: true,
-              profileData: loginedProfileData,
-            },
+            printCtx,
             menuDataWithCategories
           ).catch(printError => console.error("Deletion Printing Error:", printError));
+
+          if (standaloneDeletedMods.length > 0) {
+            processAndPrintOrders(
+              standaloneDeletedMods,
+              printCtx,
+              menuDataWithCategories
+            ).catch(printError => console.error("Deletion Mod Printing Error:", printError));
+          }
         } catch (printError) {
           console.error("Deletion Printing Setup Error:", printError);
         }
@@ -1708,6 +1746,31 @@ const Check = () => {
             };
           });
 
+          const standaloneDeletedMods = [];
+          itemsToPrint.forEach(item => {
+            let mods = item.modifiers;
+            if (typeof mods === 'string') {
+              try { mods = JSON.parse(mods); } catch { mods = []; }
+            }
+            if (mods && Array.isArray(mods)) {
+              mods.forEach(mod => {
+                const hasOwnPrinter = mod.printer_details && mod.printer_details.length > 0;
+                const hasCategoryPrinter = !!mod.category_id;
+                if (hasOwnPrinter || hasCategoryPrinter) {
+                  standaloneDeletedMods.push({
+                    ...mod,
+                    product_name: mod.name || mod.product_name,
+                    count: mod.count || 1,
+                    quantity: mod.count || 1,
+                    isModifierStandalone: true,
+                    parentName: item.name,
+                    changeType: 'decrease'
+                  });
+                }
+              });
+            }
+          });
+
           const menuDataWithCategoriesObj = { data: menu || [], categories: categories || [] };
 
           const getSaleTypeNameTemp = (type, typeName) => {
@@ -1719,21 +1782,31 @@ const Check = () => {
 
           try {
             const orderWaiter = currentOrder?.waiter?.name || currentOrder?.waiter_name || waiterName;
+            const printCtx = {
+              table: currentOrder?.table_name || currentTable?.name || t("table"),
+              waiter: orderWaiter,
+              hallName: currentHall?.name || "",
+              orderId: currentOrder?.uuid,
+              terminalInfo: loginedProfileData?.data?.terminal || {},
+              typeName: getSaleTypeNameTemp(currentOrder?.sale_type, currentOrder?.sale_type_name),
+              checkData: currentOrder,
+              isDecrease: true,
+              profileData: loginedProfileData,
+            };
+            
             await processAndPrintOrders(
               itemsToPrint,
-              {
-                table: currentOrder?.table_name || currentTable?.name || t("table"),
-                waiter: orderWaiter,
-                hallName: currentHall?.name || "",
-                orderId: currentOrder?.uuid,
-                terminalInfo: loginedProfileData?.data?.terminal || {},
-                typeName: getSaleTypeNameTemp(currentOrder?.sale_type, currentOrder?.sale_type_name),
-                checkData: currentOrder,
-                isDecrease: true,
-                profileData: loginedProfileData,
-              },
+              printCtx,
               menuDataWithCategories || menuDataWithCategoriesObj
             );
+            
+            if (standaloneDeletedMods.length > 0) {
+              await processAndPrintOrders(
+                standaloneDeletedMods,
+                printCtx,
+                menuDataWithCategories || menuDataWithCategoriesObj
+              );
+            }
           } catch (printErr) {
             console.error("Delete Check Printing Error:", printErr);
           }
