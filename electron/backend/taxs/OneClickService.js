@@ -6,9 +6,27 @@ class OneClickService {
         this.ip = config.ip_addr;
         this.port = config.port_addr || 9876;
         this.baseUrl = `http://${this.ip}:${this.port}/api`;
-        this.key = config.password || 'aaaa';
+        this.key = config.password || 'unipos';
         this.taxPercent = config.tax_percent || 18;
+        this.useTerminalBank = config.use_terminal_bank === true || config.use_terminal_bank === 1 || config.useTerminalBank === true;
         this.accessToken = null;
+    }
+
+    updateConfig(config) {
+        if (!config) return;
+        this.ip = config.ip_addr || this.ip;
+        this.port = config.port_addr || this.port || 9876;
+        this.baseUrl = `http://${this.ip}:${this.port}/api`;
+        if (config.password && config.password !== this.key) {
+            this.key = config.password;
+            this.accessToken = null;
+        }
+        if (config.tax_percent != null) {
+            this.taxPercent = config.tax_percent;
+        }
+        if (config.use_terminal_bank !== undefined || config.useTerminalBank !== undefined) {
+            this.useTerminalBank = config.use_terminal_bank === true || config.use_terminal_bank === 1 || config.useTerminalBank === true;
+        }
     }
 
     _sha256(input) {
@@ -131,16 +149,21 @@ class OneClickService {
             };
             if (body) config.data = body;
 
+            console.log(`[ONECLICK REQUEST] ${method} ${path}:`, body ? JSON.stringify(body) : '');
             const response = await axios(config);
             const data = response.data;
+            console.log(`[ONECLICK RESPONSE] ${path}:`, JSON.stringify(data));
             if (String(data.code) !== '0') {
                 throw new Error(`[ONECLICK] API error ${data.code}: ${data.message}`);
             }
             return data;
         } catch (error) {
             if (error.response) {
-                throw new Error(`[ONECLICK] HTTP ${error.response.status}: ${JSON.stringify(error.response.data)}`);
+                console.error(`[ONECLICK ERROR RESPONSE] ${path}:`, JSON.stringify(error.response.data));
+                const serverMsg = error.response.data?.message || (typeof error.response.data === 'string' ? error.response.data : JSON.stringify(error.response.data));
+                throw new Error(`[ONECLICK] HTTP ${error.response.status}: ${serverMsg}`);
             }
+            console.error(`[ONECLICK ERROR] ${path}:`, error.message);
             throw error;
         }
     }
@@ -201,8 +224,50 @@ class OneClickService {
         });
     }
 
+    _resolveItemVatPercent(item) {
+        if (item?.tax_percent != null && !isNaN(Number(item.tax_percent))) {
+            return Number(item.tax_percent);
+        }
+        if (item?.vatType != null) {
+            const vt = Number(item.vatType);
+            if (vt === 0 || vt === 1) return 0;
+            if (vt === 2) return 18;
+            if (vt === 3) return 2;
+        }
+        return Number(this.taxPercent) || 18;
+    }
+
+    _buildVatAmounts(saleItems) {
+        const vatMap = {};
+        saleItems.forEach(i => {
+            const vp = i.itemVatPercent != null ? i.itemVatPercent : 18;
+            vatMap[vp] = Number(((vatMap[vp] || 0) + i.itemSum).toFixed(2));
+        });
+        return Object.keys(vatMap).map(vp => ({
+            vatPercent: Number(vp),
+            vatSum: vatMap[vp]
+        }));
+    }
+
+    _extractFiscalIds(result) {
+        if (!result) return { message: 'OK' };
+        const d = result.data || result;
+        const longId = d.document || d.document_id || d.documentId || d.fiscal_id || d.fiscalId || d.long_id || '';
+        const shortId = d.shortDocument || d.short_document_id || d.shortDocumentId || d.short_id || d.shortId || '';
+        const docNum = d.docNumber || d.document_number || d.documentNumber || d.doc_number || d.number || '';
+        const qr = d.qr || d.qrCode || d.qr_code || '';
+
+        return {
+            ...result,
+            long_id: String(longId || '').trim(),
+            short_id: String(shortId || '').trim(),
+            document_number: String(docNum || '').trim(),
+            qr: String(qr || '').trim(),
+            message: result.message || 'OK'
+        };
+    }
+
     _buildOneClickSaleItemsPayload(items, discountAmount, serviceFee, deliveryFee) {
-        const vatPercent = this.taxPercent;
         const rawItemsTotal = items.reduce((acc, item) => {
             const qty = Number(item.count || item.quantity || 1);
             const price = Number(item.price || 0);
@@ -225,6 +290,7 @@ class OneClickService {
 
             const discountedLineTotal = Number((lineTotal - itemDiscount).toFixed(2));
             const discountedPrice = qty > 0 ? Number((discountedLineTotal / qty).toFixed(2)) : 0;
+            const vatPercent = this._resolveItemVatPercent(item);
 
             return {
                 itemName: this._sanitizeText(item.product?.name || item.name || 'Məhsul') || 'Məhsul',
@@ -239,6 +305,8 @@ class OneClickService {
             };
         });
 
+        const defaultVat = Number(this.taxPercent) || 18;
+
         if (svcFee > 0) {
             saleItems.push({
                 itemName: 'Servis haqqi',
@@ -248,7 +316,7 @@ class OneClickService {
                 itemQuantity: 1,
                 itemPrice: Number(svcFee.toFixed(2)),
                 itemSum: Number(svcFee.toFixed(2)),
-                itemVatPercent: vatPercent,
+                itemVatPercent: defaultVat,
                 discount: 0
             });
         }
@@ -262,18 +330,142 @@ class OneClickService {
                 itemQuantity: 1,
                 itemPrice: Number(dlvFee.toFixed(2)),
                 itemSum: Number(dlvFee.toFixed(2)),
-                itemVatPercent: vatPercent,
+                itemVatPercent: defaultVat,
                 discount: 0
             });
         }
 
         const totalSum = Number(saleItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
-        return { saleItems, totalSum, vatAmounts: [{ vatPercent, vatSum: totalSum }] };
+        const vatAmounts = this._buildVatAmounts(saleItems);
+        return { saleItems, totalSum, vatAmounts };
+    }
+
+    _normalizePaymentLabel(s) {
+        if (s == null || s === '') return '';
+        return String(s)
+            .normalize('NFC')
+            .toLowerCase()
+            .replace(/ə/g, 'e')
+            .replace(/ı/g, 'i')
+            .replace(/ğ/g, 'g')
+            .replace(/ö/g, 'o')
+            .replace(/ü/g, 'u')
+            .replace(/ş/g, 's')
+            .replace(/ç/g, 'c')
+            .trim();
+    }
+
+    /**
+     * Ödənişin nağdsız (cashless/card) olub-olmadığını müəyyən et.
+     * Prioritet: explicit isCashless -> cashless keywords in type/name -> cash.
+     */
+    _isCashlessPayment(p) {
+        if (!p) return false;
+        if (p.isCashless === true) return true;
+        if (p.isCashless === false) return false;
+
+        const nameRaw = String(p?.name ?? '');
+        const typeRaw = p?.type != null && p.type !== '' ? String(p.type) : '';
+        const t = this._normalizePaymentLabel(typeRaw);
+        const n = this._normalizePaymentLabel(nameRaw);
+
+        // 1. Nağdsız açar sözləri (həm ad, həm də tip üzrə)
+        const cashlessTerms = [
+            'nagdsiz', 'negdsiz', 'cashless', 'card', 'kart', 'bank',
+            'pos', 'terminal', 'm10', 'birbank', 'birkart', 'tamkart',
+            'pulpal', 'payriff', 'wolt', 'bolt', 'online', 'kocurme',
+            'qeyri-nagd', 'qeyri-negd', 'hesab', 'kapital', 'pasha', 'leobank'
+        ];
+
+        for (const term of cashlessTerms) {
+            if (t === term || t.includes(term) || n.includes(term)) {
+                return true;
+            }
+        }
+
+        // 2. Kredit açar sözü
+        if (t === 'kredit' || t === 'credit' || (n.includes('kredit') && !/kart|pos|terminal/i.test(n))) {
+            return true;
+        }
+
+        // 3. Açıq nağd tipi və ya adı
+        if (t === 'nagd' || t === 'negd' || t === 'cash' || n === 'nagd' || n === 'cash') {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Nağd və Nağdsız məbləğləri ayırır və totalSum ilə tam balanslaşdırır.
+     */
+    _resolvePaymentSums(payments, totalSum) {
+        let rawCashSum = 0;
+        let rawCashlessSum = 0;
+
+        if (Array.isArray(payments) && payments.length > 0) {
+            payments.forEach(p => {
+                const amount = Number(p?.amount != null ? p.amount : p?.paid != null ? p.paid : p?.sum != null ? p.sum : 0) || 0;
+                if (this._isCashlessPayment(p)) {
+                    rawCashlessSum += amount;
+                } else {
+                    rawCashSum += amount;
+                }
+            });
+        }
+
+        rawCashSum = Number(rawCashSum.toFixed(2));
+        rawCashlessSum = Number(rawCashlessSum.toFixed(2));
+        const rawPaySum = Number((rawCashSum + rawCashlessSum).toFixed(2));
+
+        let cashSum = 0;
+        let cashlessSum = 0;
+
+        if (rawPaySum === 0) {
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
+        } else if (rawCashSum === 0 && rawCashlessSum > 0) {
+            // 100% Nağdsız ödəniş
+            cashSum = 0;
+            cashlessSum = Number(totalSum.toFixed(2));
+        } else if (rawCashlessSum === 0 && rawCashSum > 0) {
+            // 100% Nağd ödəniş
+            cashSum = Number(totalSum.toFixed(2));
+            cashlessSum = 0;
+        } else {
+            // Qarışıq ödəniş (Nağd + Nağdsız)
+            if (Math.abs(rawPaySum - totalSum) > 0.02) {
+                cashSum = Number(((rawCashSum * totalSum) / rawPaySum).toFixed(2));
+            } else {
+                cashSum = rawCashSum;
+            }
+            cashlessSum = Number((totalSum - cashSum).toFixed(2));
+            if (cashlessSum < 0) {
+                cashlessSum = 0;
+                cashSum = Number(totalSum.toFixed(2));
+            }
+            if (cashSum > totalSum) {
+                cashSum = Number(totalSum.toFixed(2));
+                cashlessSum = 0;
+            }
+        }
+
+        const changeSum = Number(Math.max(0, rawCashSum - cashSum).toFixed(2));
+        const incomingSum = cashSum > 0 ? Number((cashSum + changeSum).toFixed(2)) : 0;
+
+        console.log(`[ONECLICK PAYMENTS] rawCashSum=${rawCashSum}, rawCashlessSum=${rawCashlessSum}, totalSum=${totalSum} => cashSum=${cashSum}, cashlessSum=${cashlessSum}, incomingSum=${incomingSum}, changeSum=${changeSum}`);
+
+        return {
+            cashSum: Number(cashSum.toFixed(2)),
+            cashlessSum: Number(cashlessSum.toFixed(2)),
+            incomingSum,
+            changeSum
+        };
     }
 
     async createSale({ items, payments, cashierName, orderId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
         await this._ensureToken();
-        
+
         let { saleItems, totalSum, vatAmounts } = this._buildOneClickSaleItemsPayload(items, discountAmount, serviceFee, deliveryFee);
 
         const otRaw = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : NaN;
@@ -289,59 +481,9 @@ class OneClickService {
             }
         }
 
-        let cashSum = 0;
-        let cashlessSum = 0;
+        const { cashSum, cashlessSum, incomingSum, changeSum } = this._resolvePaymentSums(payments, totalSum);
 
-        if (payments && payments.length > 0) {
-            payments.forEach(p => {
-                const name = (p.name || '').toLowerCase();
-                const type = (p.type || '').toLowerCase();
-                const amount = Number(p.amount || 0);
-                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
-                    name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('bank');
-                if (isCashless) {
-                    cashlessSum += amount;
-                } else {
-                    cashSum += amount;
-                }
-            });
-        }
-
-        const rawCashSum = Number(cashSum.toFixed(2));
-        const rawCashlessSum = Number(cashlessSum.toFixed(2));
-        const rawPaySum = Number((rawCashSum + rawCashlessSum).toFixed(2));
-
-        const incomingSum = rawCashSum > 0 ? rawCashSum : 0;
-        const changeSum = Number(Math.max(0, rawPaySum - totalSum).toFixed(2));
-
-        if (rawPaySum === 0) {
-            cashSum = Number(totalSum.toFixed(2));
-            cashlessSum = 0;
-        } else if (rawPaySum > 0 && Math.abs(rawPaySum - totalSum) > 0.02) {
-            if (rawPaySum > totalSum) {
-                cashSum = Number((totalSum - rawCashlessSum).toFixed(2));
-                if (cashSum < 0) {
-                    cashSum = 0;
-                    cashlessSum = Number(totalSum.toFixed(2));
-                }
-            } else {
-                cashSum = Number((rawCashSum * totalSum / rawPaySum).toFixed(2));
-            }
-        } else {
-            cashSum = rawCashSum;
-        }
-
-        cashlessSum = Number((totalSum - cashSum).toFixed(2));
-        if (cashlessSum < 0) {
-            cashlessSum = 0;
-            cashSum = Number(totalSum.toFixed(2));
-        }
-        if (cashSum > totalSum + 0.01) {
-            cashSum = Number(totalSum.toFixed(2));
-            cashlessSum = 0;
-        }
-
-        return this._request('POST', '/kas_sale', {
+        const result = await this._request('POST', '/kas_sale', {
             cashier: this._sanitizeText(cashierName || 'Cashier') || 'Cashier',
             currency: 'AZN',
             items: saleItems,
@@ -353,13 +495,20 @@ class OneClickService {
             bonusSum: 0,
             incomingSum,
             changeSum,
+            useTerminalBank: this.useTerminalBank || false,
             vatAmounts
         });
+        return this._extractFiscalIds(result);
     }
 
-    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal }) {
+    async moneyBack({ items, payments, cashierName, parentFiscalId, documentNumber, shortDocId, serviceFee = 0, discountAmount = 0, deliveryFee = 0, orderTotal, orderId }) {
         await this._ensureToken();
-        
+
+        const parentDoc = String(parentFiscalId || shortDocId || documentNumber || '').trim();
+        if (!parentDoc) {
+            throw new Error('[ONECLICK/VIZAR] Geri qaytarma üçün orijinal satışın fiskal ID-si (parentDocument) tələb olunur.');
+        }
+
         let { saleItems: returnItems, totalSum, vatAmounts } = this._buildOneClickSaleItemsPayload(items, discountAmount, serviceFee, deliveryFee);
 
         const otRaw = orderTotal != null && orderTotal !== '' ? Number(orderTotal) : NaN;
@@ -371,79 +520,63 @@ class OneClickService {
                 const q = Number(last.itemQuantity) || 0;
                 last.itemPrice = q > 0 ? Number((last.itemSum / q).toFixed(2)) : last.itemPrice;
                 totalSum = Number(returnItems.reduce((acc, i) => acc + i.itemSum, 0).toFixed(2));
-                vatAmounts = [{ vatPercent: this.taxPercent, vatSum: totalSum }];
+                vatAmounts = this._buildVatAmounts(returnItems);
             }
         }
 
-        let cashSum = 0;
-        let cashlessSum = 0;
+        const { cashSum, cashlessSum, incomingSum, changeSum } = this._resolvePaymentSums(payments, totalSum);
 
-        if (payments && payments.length > 0) {
-            payments.forEach(p => {
-                const name = (p.name || '').toLowerCase();
-                const type = (p.type || '').toLowerCase();
-                const amount = Number(p.amount || 0);
-                const isCashless = type === 'nağdsız' || type === 'cashless' || type === 'card' || type === 'bank' ||
-                    name.includes('kart') || name.includes('card') || name.includes('cashless') || name.includes('nağdsız') || name.includes('bank');
-                if (isCashless) {
-                    cashlessSum += amount;
-                } else {
-                    cashSum += amount;
-                }
-            });
-        }
-
-        const rawCashSum = Number(cashSum.toFixed(2));
-        const rawCashlessSum = Number(cashlessSum.toFixed(2));
-        const rawPaySum = Number((rawCashSum + rawCashlessSum).toFixed(2));
-
-        if (rawPaySum === 0) {
-            cashSum = Number(totalSum.toFixed(2));
-            cashlessSum = 0;
-        } else if (rawPaySum > 0 && Math.abs(rawPaySum - totalSum) > 0.02) {
-            if (rawPaySum > totalSum) {
-                cashSum = Number((totalSum - rawCashlessSum).toFixed(2));
-                if (cashSum < 0) {
-                    cashSum = 0;
-                    cashlessSum = Number(totalSum.toFixed(2));
-                }
-            } else {
-                cashSum = Number((rawCashSum * totalSum / rawPaySum).toFixed(2));
-            }
-        } else {
-            cashSum = rawCashSum;
-        }
-
-        cashlessSum = Number((totalSum - cashSum).toFixed(2));
-        if (cashlessSum < 0) {
-            cashlessSum = 0;
-            cashSum = Number(totalSum.toFixed(2));
-        }
-        if (cashSum > totalSum + 0.01) {
-            cashSum = Number(totalSum.toFixed(2));
-            cashlessSum = 0;
-        }
-
-        return this._request('POST', '/kas_moneyback', {
+        const payload = {
             cashier: this._sanitizeText(cashierName || 'Cashier') || 'Cashier',
             currency: 'AZN',
+            parentDocument: this._sanitizeText(parentDoc, 128),
             items: returnItems,
             sum: totalSum,
-            cashSum: Number(cashSum.toFixed(2)),
-            cashlessSum: Number(cashlessSum.toFixed(2)),
+            cashSum,
+            cashlessSum,
             prepaymentSum: 0,
             creditSum: 0,
             bonusSum: 0,
-            parentDocument: this._sanitizeText(parentFiscalId || '', 128),
-            refund_document_number: this._sanitizeText(String(documentNumber || ''), 128),
-            refund_short_document_id: this._sanitizeText(shortDocId || '', 128),
+            incomingSum,
+            changeSum,
+            useTerminalBank: this.useTerminalBank || false,
             vatAmounts
-        });
+        };
+
+        const result = await this._request('POST', '/kas_moneyback', payload);
+        return this._extractFiscalIds(result);
     }
 
-    async rollback(fiscalId) {
+    async rollback(params) {
         await this._ensureToken();
-        return this._request('POST', '/kas_rollback', { fiscalId });
+        const parentDoc = typeof params === 'string'
+            ? params
+            : (params?.parentFiscalId || params?.parentDocument || params?.fiscalId || '');
+        if (!parentDoc) {
+            throw new Error('[ONECLICK/VIZAR] Rollback üçün parentDocument lazımdır.');
+        }
+        const cashier = typeof params === 'object' ? (params.cashierName || 'Cashier') : 'Cashier';
+        const totalSum = typeof params === 'object' ? Number(params.totalSum || params.sum || 0) : 0;
+        const cashSum = typeof params === 'object' ? Number(params.cashSum || 0) : 0;
+        const cashlessSum = typeof params === 'object' ? Number(params.cashlessSum || 0) : 0;
+        const vatAmounts = typeof params === 'object' && params.vatAmounts
+            ? params.vatAmounts
+            : [{ vatPercent: this.taxPercent, vatSum: totalSum }];
+
+        const body = {
+            cashier: this._sanitizeText(cashier, 64) || 'Cashier',
+            currency: 'AZN',
+            parentDocument: this._sanitizeText(parentDoc, 128),
+            sum: totalSum,
+            cashSum,
+            cashlessSum,
+            prepaymentSum: 0,
+            creditSum: 0,
+            bonusSum: 0,
+            vatAmounts
+        };
+        const result = await this._request('POST', '/kas_rollback', body);
+        return this._extractFiscalIds(result);
     }
 
     async receiptCopy(fiscalId) {

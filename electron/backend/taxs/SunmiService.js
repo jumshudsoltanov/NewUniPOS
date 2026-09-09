@@ -21,6 +21,23 @@ class SunmiService {
         this._requestChain = Promise.resolve();
     }
 
+    updateConfig(config) {
+        if (!config) return;
+        this.ip = config.ip_addr || this.ip;
+        this.port = config.port_addr || this.port || 5544;
+        this.baseUrl = `http://${this.ip}:${this.port}`;
+        if (config.username) this.username = config.username;
+        if (config.password) this.password = config.password;
+        if (config.tax_percent != null) this.taxPercent = config.tax_percent;
+        if (config.timeout_ms) this.timeoutMs = Number(config.timeout_ms);
+        const raw = config.tax_type;
+        const n = Number(raw);
+        const validVatTypes = [1, 2, 3, 5, 6, 7];
+        if (raw != null && raw !== '' && !isNaN(n) && validVatTypes.includes(n)) {
+            this.taxType = n;
+        }
+    }
+
     /** Cihaza tək-tək sorğu — növbəni pozmur */
     _enqueueRequest(fn) {
         const p = this._requestChain.then(() => fn());
@@ -89,11 +106,29 @@ class SunmiService {
     _isCashless(name, type) {
         const n = String(name || '').toLowerCase().replace(/\s/g, '');
         const t = String(type || '').toLowerCase().replace(/\s/g, '');
-        return t === 'nağdsız' || t === 'nagdsiz' || t === 'nəğdsiz' || t === 'cashless' || t === 'card' || t === 'bank' ||
-            t === 'pos' || t === 'terminal' || t === 'kredit' || t === 'credit' ||
-            n.includes('kart') || n.includes('card') || n.includes('cashless') || n.includes('nağdsız') ||
-            n.includes('nagdsiz') || n.includes('nəğdsiz') || n.includes('bank') || n.includes('pos') ||
-            n.includes('terminal');
+
+        const cashlessTerms = [
+            'nagdsiz', 'negdsiz', 'nağdsız', 'nəğdsiz', 'cashless', 'card', 'kart', 'bank',
+            'pos', 'terminal', 'm10', 'birbank', 'birkart', 'tamkart',
+            'pulpal', 'payriff', 'wolt', 'bolt', 'online', 'kocurme',
+            'qeyri-nagd', 'qeyri-negd', 'hesab', 'kapital', 'pasha', 'leobank'
+        ];
+
+        for (const term of cashlessTerms) {
+            if (t === term || t.includes(term) || n.includes(term)) {
+                return true;
+            }
+        }
+
+        if (t === 'kredit' || t === 'credit' || (n.includes('kredit') && !/kart|pos|terminal/i.test(n))) {
+            return true;
+        }
+
+        if (t === 'nagd' || t === 'negd' || t === 'cash' || n === 'nagd' || n === 'cash') {
+            return false;
+        }
+
+        return false;
     }
 
     async _request(body, maxAttempts = 12) {

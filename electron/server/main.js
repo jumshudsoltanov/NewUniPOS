@@ -51,6 +51,13 @@ const isDev = !app.isPackaged;
 let mainWindow = null;
 let customerWindow = null;
 
+function getPreloadPath() {
+  const appPath = app.getAppPath();
+  return isDev
+    ? path.join(__dirname, "preload.js")
+    : path.join(appPath, "electron", "server", "preload.js");
+}
+
 // ─── Print Queue (TCP uğursuz olduqda saxla, qayıdanda yenidən göndər) ───────
 const PRINT_QUEUE_FILE = path.join(
   app.getPath ? app.getPath("userData") : os.tmpdir(),
@@ -350,10 +357,7 @@ if (!gotTheLock) {
 // ----------------------------
 
 function createWindow() {
-  const appPath = app.getAppPath();
-  const preloadPath = isDev
-    ? path.join(__dirname, "preload.js")
-    : path.join(appPath, "electron", "server", "preload.js");
+  const preloadPath = getPreloadPath();
 
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -527,49 +531,6 @@ function createWindow() {
         err.message,
       );
     }
-  }
-
-  function createCustomerWindow(screenId) {
-    if (customerWindow && !customerWindow.isDestroyed()) {
-      customerWindow.close();
-    }
-
-    const displays = screen.getAllDisplays();
-    const targetDisplay =
-      displays.find((d) => String(d.id) === String(screenId)) ||
-      screen.getPrimaryDisplay();
-
-    customerWindow = new BrowserWindow({
-      x: targetDisplay.bounds.x,
-      y: targetDisplay.bounds.y,
-      width: targetDisplay.bounds.width,
-      height: targetDisplay.bounds.height,
-      fullscreen: true,
-      ...browserWindowIconFields(),
-      autoHideMenuBar: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        preload: preloadPath,
-        webSecurity: false, // file:// → http://localhost sorğularına icazə ver
-      },
-    });
-
-    attachDevToolsIcon(customerWindow);
-    attachRendererRecovery(customerWindow, "customer-display");
-
-    if (isDev) {
-      customerWindow.loadURL("http://localhost:5173/#/customer");
-    } else {
-      customerWindow.loadFile(
-        path.join(app.getAppPath(), "electron", "front", "dist", "index.html"),
-        { hash: "/customer" },
-      );
-    }
-
-    customerWindow.on("closed", () => {
-      customerWindow = null;
-    });
   }
 }
 
@@ -1263,23 +1224,7 @@ ipcMain.handle("get-screens", () => {
   }));
 });
 
-ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
-  if (!active) {
-    if (customerWindow && !customerWindow.isDestroyed()) {
-      customerWindow.close();
-      customerWindow = null;
-    }
-    // Flag to true so auto-revive ignores it until turned back on
-    isCustomerDisplayManuallyClosed = true;
-    return { success: true, active: false };
-  }
-
-  isCustomerDisplayManuallyClosed = false; // Turn off the manual override flag
-
-  // Reuse the global scope function if available, but since this is outside `createWindow()`,
-  // we either move it inside, or duplicate the logic for IPCHandler. It's safer to duplicate
-  // creation here so IPC can be called from anywhere, OR we export `createCustomerWindow`.
-
+function createCustomerWindow(screenId) {
   if (customerWindow && !customerWindow.isDestroyed()) {
     customerWindow.close();
   }
@@ -1300,7 +1245,8 @@ ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: preloadPath,
+      preload: getPreloadPath(),
+      webSecurity: false, // file:// → http://localhost sorğularına icazə ver
     },
   });
 
@@ -1319,6 +1265,22 @@ ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
   customerWindow.on("closed", () => {
     customerWindow = null;
   });
+}
+
+ipcMain.handle("toggle-customer-display", (event, { active, screenId }) => {
+  if (!active) {
+    if (customerWindow && !customerWindow.isDestroyed()) {
+      customerWindow.close();
+      customerWindow = null;
+    }
+    // Flag to true so auto-revive ignores it until turned back on
+    isCustomerDisplayManuallyClosed = true;
+    return { success: true, active: false };
+  }
+
+  isCustomerDisplayManuallyClosed = false; // Turn off the manual override flag
+
+  createCustomerWindow(screenId);
 
   return { success: true, active: true };
 });

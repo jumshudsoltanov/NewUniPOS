@@ -565,6 +565,12 @@ router.post("/tax/receipt-copy", async (req, res) => {
   }
 });
 
+router.post("/tax/clear-cache", (req, res) => {
+  TaxManager.clearInstances();
+  res.json({ success: true, message: "Tax device cache cleared" });
+});
+
+
 router.post("/tax/reprint-error", async (req, res) => {
   try {
     const { taxConfig } = req.body;

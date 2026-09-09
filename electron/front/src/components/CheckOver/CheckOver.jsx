@@ -454,6 +454,15 @@ const CheckOver = () => {
                 amount: selectedMethods.length === 1 ? calcTotal.sumTotal : (Number(m.amount) || 0),
                 ...(m.room_id ? { room_id: m.room_id, room_number: m.room_number } : {})
             }));
+            if (payments.length === 0 && paymentMethods && paymentMethods.length > 0) {
+                const def = paymentMethods[0];
+                payments = [{
+                    payment_method_id: def.id,
+                    name: def.name,
+                    type: def.type,
+                    amount: calcTotal.sumTotal
+                }];
+            }
         } else {
             // Unpaid mode
             const tag = tagsListData.find(t => (t.name || t.text) === unpaidReason);

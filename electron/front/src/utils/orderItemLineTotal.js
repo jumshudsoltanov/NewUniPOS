@@ -335,7 +335,7 @@ function _normPayType(s) {
  */
 export function mapOrderPaymentForTax(p) {
   if (p == null) {
-    return { name: "Nağd", type: "cash", amount: 0 };
+    return { name: "Nağd", type: "cash", amount: 0, isCashless: false };
   }
   const safeStr = (v) => (v == null ? "" : String(v));
   const name = String(
@@ -353,44 +353,36 @@ export function mapOrderPaymentForTax(p) {
   const t = _normPayType(typeRaw != null && typeRaw !== "" ? typeRaw : "");
   const amount = Number(p.paid != null ? p.paid : p.amount) || 0;
 
-  let outType = "cash";
+  const cashlessTerms = [
+    "nagdsiz", "negdsiz", "cashless", "card", "kart", "bank",
+    "pos", "terminal", "m10", "birbank", "birkart", "tamkart",
+    "pulpal", "payriff", "wolt", "bolt", "online", "kocurme",
+    "qeyri-nagd", "qeyri-negd", "hesab", "kapital", "pasha", "leobank"
+  ];
 
-  // ── 1. TYPE sahəsi əsasında (ən etibarlı mənbə) ──────────────────────────
-  if (t === "nagd" || t === "negd" || t === "cash") {
-    // "Nağd" → nağd
-    outType = "cash";
-  } else if (
-    t === "nagdsiz" || t === "negdsiz" ||
-    t === "cashless" || t === "card" || t === "bank" ||
-    t === "pos" || t === "terminal" || t === "kart" || t === "kredit"
-  ) {
-    // "Nağdsız" / card / bank / pos → nağdsız
-    outType = t === "kredit" ? "kredit" : "nagdsiz";
-  }
+  let isCashless = false;
+  let isCredit = false;
 
-  // ── 2. AD sahəsi əsasında (type boş və ya tanınmırsa) ───────────────────
-  else if (n.includes("nagdsiz") || n.includes("negdsiz")) {
-    outType = "nagdsiz";
-  } else if (
-    n.includes("kart") || n.includes("visa") || n.includes("mastercard") ||
-    n.includes("master") || n.includes("mir") || n.includes("ameria") ||
-    n.includes("pos") || n.includes("terminal") || n.includes("kart")
-  ) {
-    outType = "nagdsiz";
-  } else if (n.includes("kredit") && !/kart|pos|terminal/i.test(n)) {
-    outType = "kredit";
+  if (t === "kredit" || t === "credit" || (n.includes("kredit") && !/kart|pos|terminal/i.test(n))) {
+    isCredit = true;
+  } else if (cashlessTerms.some(term => t === term || t.includes(term) || n.includes(term))) {
+    isCashless = true;
+  } else if (t === "nagd" || t === "negd" || t === "cash" || n === "nagd" || n === "cash") {
+    isCashless = false;
   } else {
-    // boş və ya tanınmayan → nağd (default)
-    outType = "cash";
+    isCashless = false;
   }
 
+  const outType = isCredit ? "kredit" : isCashless ? "nagdsiz" : "cash";
   const displayName = name || (outType === "nagdsiz" ? "Nağdsız" : outType === "kredit" ? "Kredit" : "Nağd");
+
   return {
     payment_method_id: p.payment_method_id,
     without_payment_method_id: p.without_payment_method_id,
     name: displayName,
     type: outType,
     amount,
+    isCashless: outType === "nagdsiz",
   };
 }
 

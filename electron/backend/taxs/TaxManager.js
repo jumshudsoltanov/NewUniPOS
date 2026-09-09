@@ -6,6 +6,7 @@ const DataPayService = require('./DataPayService');
 const serviceInstances = {};
 
 function getTaxService(taxConfig) {
+    if (!taxConfig) return null;
     const type = (taxConfig.tax_cash_type || '').toLowerCase();
     const taxType = taxConfig.tax_type != null ? String(taxConfig.tax_type) : '';
     // Eyni IP/port-da 2 fərqli kassa qeydi olanda id olmadan bir Sunmi instance bölüşürdü
@@ -17,11 +18,23 @@ function getTaxService(taxConfig) {
               : '';
     const key = `${type}_${taxConfig.ip_addr}_${taxConfig.port_addr}_${taxType}_${unique}`;
 
-    if (serviceInstances[key]) {
-        return serviceInstances[key];
+    let service = serviceInstances[key];
+    if (service) {
+        // Mövcud instance-in konfiqurasiyasını yenilə (ip, port, parol, faiz və s. dəyişibsə)
+        if (typeof service.updateConfig === 'function') {
+            service.updateConfig(taxConfig);
+        } else {
+            if (taxConfig.ip_addr) service.ip = taxConfig.ip_addr;
+            if (taxConfig.port_addr) service.port = taxConfig.port_addr;
+            if (taxConfig.password) service.key = taxConfig.password;
+            if (taxConfig.tax_percent) service.taxPercent = taxConfig.tax_percent;
+            if (taxConfig.use_terminal_bank !== undefined || taxConfig.useTerminalBank !== undefined) {
+                service.useTerminalBank = taxConfig.use_terminal_bank === true || taxConfig.use_terminal_bank === 1 || taxConfig.useTerminalBank === true;
+            }
+        }
+        return service;
     }
 
-    let service;
     if (type.includes('omnitech')) {
         service = new OmnitechService(taxConfig);
     } else if (type.includes('sunmi') || type.includes('caspos')) {
@@ -41,6 +54,7 @@ function getTaxService(taxConfig) {
 
 function clearInstances() {
     Object.keys(serviceInstances).forEach(key => delete serviceInstances[key]);
+    console.log('[TAX] Tax service instances cache cleared.');
 }
 
 const TAX_OP_TIMEOUT = 180000; // 3 dəqiqə — vergi kassası çapı uzun çəkə bilər, timeout verməsin
@@ -89,8 +103,91 @@ function formatTaxConnectionError(message, config) {
     return `${msg} — “${host}” ünvanına qoşulmaq mümkün olmadı (port açıq deyil, səhv IP və ya cihazda servis deaktiv ola bilər; DATAPAY üçün adətən 2222). Ödəniş üsulu (nağd/nağdsız) bu xətanı yaratmır.`;
 }
 
+function normalizePaymentLabel(s) {
+    if (s == null || s === '') return '';
+    return String(s)
+        .normalize('NFC')
+        .toLowerCase()
+        .replace(/ə/g, 'e')
+        .replace(/ı/g, 'i')
+        .replace(/ğ/g, 'g')
+        .replace(/ö/g, 'o')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ç/g, 'c')
+        .trim();
+}
+
+/**
+ * Ödənişin nağdsız (kart, bank, terminal, m10, wolt, bolt və s.) olub-olmadığını dəqiq təyin edir.
+ */
+function isCashlessPayment(p) {
+    if (!p) return false;
+    if (p.isCashless === true) return true;
+    if (p.isCashless === false) return false;
+
+    const nameRaw = String(p.name || p.payment_method?.name || p.tag?.name || '');
+    const typeRaw = String(p.type || p.payment_method?.type || '');
+    const n = normalizePaymentLabel(nameRaw);
+    const t = normalizePaymentLabel(typeRaw);
+
+    // 1. Nağdsız açar sözləri (həm ad, həm də tip üçün)
+    const cashlessTerms = [
+        'nagdsiz', 'negdsiz', 'cashless', 'card', 'kart', 'bank',
+        'pos', 'terminal', 'm10', 'birbank', 'birkart', 'tamkart',
+        'pulpal', 'payriff', 'wolt', 'bolt', 'online', 'kocurme',
+        'qeyri-nagd', 'qeyri-negd', 'hesab', 'kapital', 'pasha', 'leobank'
+    ];
+
+    for (const term of cashlessTerms) {
+        if (t === term || t.includes(term) || n.includes(term)) {
+            return true;
+        }
+    }
+
+    // 2. Kredit açar sözü
+    if (t === 'kredit' || t === 'credit' || (n.includes('kredit') && !/kart|pos|terminal/i.test(n))) {
+        return true;
+    }
+
+    // 3. Açıq nağd
+    if (t === 'nagd' || t === 'negd' || t === 'cash' || n === 'nagd' || n === 'cash') {
+        return false;
+    }
+
+    return false;
+}
+
+/**
+ * Fiskal xidmətlərə göndərilməzdən əvvəl ödənişləri tam normallaşdırır.
+ * Hər ödənişə aydın type ('nagdsiz' və ya 'cash') və isCashless (true/false) qoyur.
+ */
+function normalizePaymentsForTax(payments, totalSum) {
+    if (!Array.isArray(payments) || payments.length === 0) {
+        const amt = Number(totalSum) || 0;
+        return [{ name: 'Nağd', type: 'cash', amount: amt, isCashless: false }];
+    }
+
+    return payments.map(p => {
+        const amount = Number(p.amount != null ? p.amount : p.paid != null ? p.paid : p.sum != null ? p.sum : 0) || 0;
+        const cashless = isCashlessPayment(p);
+        const name = String(p.name || p.payment_method?.name || (cashless ? 'Nağdsız' : 'Nağd')).trim();
+        const type = cashless ? 'nagdsiz' : 'cash';
+        return {
+            ...p,
+            name,
+            type,
+            amount,
+            isCashless: cashless
+        };
+    });
+}
+
 async function processSale(taxConfigs, saleData) {
-    console.log('[TAX] ProcessSale Payments:', JSON.stringify(saleData.payments));
+    const rawPayments = saleData?.payments;
+    const normalizedPayments = normalizePaymentsForTax(rawPayments, saleData?.orderTotal);
+    console.log('[TAX] ProcessSale Raw Payments:', JSON.stringify(rawPayments));
+    console.log('[TAX] ProcessSale Normalized Payments:', JSON.stringify(normalizedPayments));
 
     const validItems = filterSaleItemsForTax(saleData?.items);
     if (validItems.length === 0) {
@@ -101,7 +198,7 @@ async function processSale(taxConfigs, saleData) {
             error: 'Fiskal satış üçün məhsul yoxdur (boş çek və ya bütün miqdarlar 0).',
         }));
     }
-    const saleDataPatched = { ...saleData, items: validItems };
+    const saleDataPatched = { ...saleData, items: validItems, payments: normalizedPayments };
 
     const promises = taxConfigs.map(async (config) => {
         const service = getTaxService(config);
@@ -125,7 +222,10 @@ async function processSale(taxConfigs, saleData) {
 }
 
 async function processMoneyBack(taxConfigs, moneyBackData) {
-    console.log('[TAX] ProcessMoneyBack Payments:', JSON.stringify(moneyBackData.payments));
+    const rawPayments = moneyBackData?.payments;
+    const normalizedPayments = normalizePaymentsForTax(rawPayments, moneyBackData?.orderTotal);
+    console.log('[TAX] ProcessMoneyBack Raw Payments:', JSON.stringify(rawPayments));
+    console.log('[TAX] ProcessMoneyBack Normalized Payments:', JSON.stringify(normalizedPayments));
 
     const validMbItems = filterSaleItemsForTax(moneyBackData?.items);
     if (validMbItems.length === 0) {
@@ -136,7 +236,7 @@ async function processMoneyBack(taxConfigs, moneyBackData) {
             error: 'Geri qaytarma üçün məhsul siyahısı boşdur.',
         }));
     }
-    const moneyBackPatched = { ...moneyBackData, items: validMbItems };
+    const moneyBackPatched = { ...moneyBackData, items: validMbItems, payments: normalizedPayments };
 
     const promises = taxConfigs.map(async (config) => {
         const service = getTaxService(config);
@@ -186,5 +286,8 @@ module.exports = {
     clearInstances,
     processSale,
     processMoneyBack,
-    processReceiptCopy
+    processReceiptCopy,
+    normalizePaymentsForTax,
+    isCashlessPayment
 };
+

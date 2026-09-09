@@ -556,13 +556,29 @@ class DataPayService {
     _isCashless(name, type) {
         const n = String(name || '').toLowerCase().replace(/\s/g, '');
         const t = String(type || '').toLowerCase().replace(/\s/g, '');
-        return (
-            t === 'nağdsız' || t === 'nagdsiz' || t === 'nəğdsiz' || t === 'cashless' || t === 'card' || t === 'bank' ||
-            t === 'pos' || t === 'terminal' || t === 'kredit' || t === 'credit' ||
-            n.includes('kart') || n.includes('card') || n.includes('cashless') || n.includes('nağdsız') ||
-            n.includes('nagdsiz') || n.includes('nəğdsiz') || n.includes('bank') || n.includes('pos') ||
-            n.includes('terminal') || n.includes('köçürmə') || n.includes('kocurme')
-        );
+
+        const cashlessTerms = [
+            'nagdsiz', 'negdsiz', 'nağdsız', 'nəğdsiz', 'cashless', 'card', 'kart', 'bank',
+            'pos', 'terminal', 'm10', 'birbank', 'birkart', 'tamkart',
+            'pulpal', 'payriff', 'wolt', 'bolt', 'online', 'kocurme', 'köçürmə',
+            'qeyri-nagd', 'qeyri-negd', 'hesab', 'kapital', 'pasha', 'leobank'
+        ];
+
+        for (const term of cashlessTerms) {
+            if (t === term || t.includes(term) || n.includes(term)) {
+                return true;
+            }
+        }
+
+        if (t === 'kredit' || t === 'credit' || (n.includes('kredit') && !/kart|pos|terminal/i.test(n))) {
+            return true;
+        }
+
+        if (t === 'nagd' || t === 'negd' || t === 'cash' || n === 'nagd' || n === 'cash') {
+            return false;
+        }
+
+        return false;
     }
 
     /** Kart/terminal: API-də cardSum. */
@@ -1000,12 +1016,12 @@ class DataPayService {
         const cardSum0 = r2(split.cardSum);
         const cred0 = r2(split.creditSum);
         const prep0 = r2(split.prepaymentSum || 0);
-        const bon0  = r2(split.bonusSum || 0);
+        const bon0 = r2(split.bonusSum || 0);
         let paid0 = r2(cashSum0 + cardSum0 + cred0 + prep0 + bon0);
         if (paid0 < s) {
             const d = r2(s - paid0);
             if (cardSum0 > 0) return { ...split, cardSum: r2(cardSum0 + d), paidSum: s, restSum: 0 };
-            if (cred0 > 0)    return { ...split, creditSum: r2(cred0 + d), paidSum: s, restSum: 0 };
+            if (cred0 > 0) return { ...split, creditSum: r2(cred0 + d), paidSum: s, restSum: 0 };
             return { ...split, cashSum: r2(cashSum0 + d), paidSum: s, restSum: 0 };
         }
         return { ...split, paidSum: paid0, restSum: r2(Math.max(0, paid0 - s)) };
@@ -1018,13 +1034,13 @@ class DataPayService {
     _normalizeDatapayPaymentTotals(documentSum, buckets, payments) {
         const s = this._round2(documentSum);
         const out = {
-            cashSum:      this._round2(buckets?.cashSum || 0),
-            cardSum:      this._round2(buckets?.cardSum || 0),
-            creditSum:    this._round2(buckets?.creditSum || 0),
-            prepaymentSum:this._round2(buckets?.prepaymentSum || 0),
-            bonusSum:     this._round2(buckets?.bonusSum || 0),
-            paidSum:      this._round2(buckets?.paidSum || 0),
-            restSum:      this._round2(buckets?.restSum || 0),
+            cashSum: this._round2(buckets?.cashSum || 0),
+            cardSum: this._round2(buckets?.cardSum || 0),
+            creditSum: this._round2(buckets?.creditSum || 0),
+            prepaymentSum: this._round2(buckets?.prepaymentSum || 0),
+            bonusSum: this._round2(buckets?.bonusSum || 0),
+            paidSum: this._round2(buckets?.paidSum || 0),
+            restSum: this._round2(buckets?.restSum || 0),
         };
         if (!(s > 0)) return out;
 
@@ -1076,6 +1092,7 @@ class DataPayService {
     /**
      * cashlessSum: yalnız datapay_send_cashless_sum=1 və kart nağdsız kanal kimi qeyd olunanda.
      */
+
     _datapayCashlessSumForBody(payF) {
         if (!this.datapaySendCashlessSum) return undefined;
         if (this.forceCardAsCash) return 0;

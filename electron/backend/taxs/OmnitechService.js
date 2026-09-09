@@ -10,6 +10,15 @@ class OmnitechService {
         this.merchantName = config.tax_merchant || '';
     }
 
+    updateConfig(config) {
+        if (!config) return;
+        this.ip = config.ip_addr || this.ip;
+        this.port = config.port_addr || this.port;
+        this.baseUrl = `http://${this.ip}:${this.port}/v2`;
+        if (config.tax_percent != null) this.taxPercent = config.tax_percent;
+        if (config.tax_merchant != null) this.merchantName = config.tax_merchant;
+    }
+
     async _request(data, isRetry = false) {
         try {
             console.log(`[OMNITECH REQUEST]`, JSON.stringify(data));
@@ -247,29 +256,38 @@ class OmnitechService {
      * "nagdsiz" → true  (mapOrderPaymentForTax çıxışı)
      */
     _isCashlessPayment(p) {
+        if (!p) return false;
+        if (p.isCashless === true) return true;
+        if (p.isCashless === false) return false;
+
         const nameRaw = String(p?.name ?? '');
         const typeRaw = p?.type != null && p.type !== '' ? String(p.type) : '';
-        const t = this._normalizePaymentLabel(typeRaw); // "nagdsiz", "cash", "card"…
-        const n = this._normalizePaymentLabel(nameRaw); // "nagdsiz", "nagd"…
+        const t = this._normalizePaymentLabel(typeRaw);
+        const n = this._normalizePaymentLabel(nameRaw);
 
-        // ── 1. TYPE sahəsi (ən etibarlı) ────────────────────────────────────
-        // Açıq nağd tipi → dərhal false (nağdsız yoxlamalarının önündə olmalıdır)
-        if (t === 'nagd' || t === 'negd' || t === 'cash') return false;
+        // 1. Nağdsız açar sözləri (həm ad, həm də tip üzrə)
+        const cashlessTerms = [
+            'nagdsiz', 'negdsiz', 'cashless', 'card', 'kart', 'bank',
+            'pos', 'terminal', 'm10', 'birbank', 'birkart', 'tamkart',
+            'pulpal', 'payriff', 'wolt', 'bolt', 'online', 'kocurme',
+            'qeyri-nagd', 'qeyri-negd', 'hesab', 'kapital', 'pasha', 'leobank'
+        ];
 
-        // Açıq nağdsız/card tipi
-        if (
-            t === 'nagdsiz' || t === 'negdsiz' ||
-            t === 'cashless' || t === 'card' || t === 'bank' ||
-            t === 'pos' || t === 'terminal' || t === 'kart' || t === 'kredit'
-        ) return true;
+        for (const term of cashlessTerms) {
+            if (t === term || t.includes(term) || n.includes(term)) {
+                return true;
+            }
+        }
 
-        // ── 2. AD sahəsi (type boş və ya tanınmırsa) ────────────────────────
-        if (n.includes('nagdsiz') || n.includes('negdsiz')) return true;
-        if (
-            n.includes('kart') || n.includes('visa') ||
-            n.includes('mastercard') || n.includes('mir') ||
-            n.includes('ameria') || n.includes('pos') || n.includes('terminal')
-        ) return true;
+        // 2. Kredit açar sözü
+        if (t === 'kredit' || t === 'credit' || (n.includes('kredit') && !/kart|pos|terminal/i.test(n))) {
+            return true;
+        }
+
+        // 3. Açıq nağd tipi və ya adı
+        if (t === 'nagd' || t === 'negd' || t === 'cash' || n === 'nagd' || n === 'cash') {
+            return false;
+        }
 
         return false;
     }

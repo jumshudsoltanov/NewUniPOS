@@ -229,13 +229,15 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const handleTaxMoneyBack = async () => {
         if (taxLoading || !order || taxConfigs.length === 0) return;
 
-        if (!order.fiscal_id) {
+        const fiscalRef = order.fiscal_id || order.fiscal_short_id || order.fiscal_doc_number;
+        if (!fiscalRef) {
             toast.error(t("bu_cekin_fiskal_idsi_yoxdur_geri_qaytarma_mumkun_deyil"));
             return;
         }
 
         // Yalnız orijinal satışın edildiyi cihaza göndər – digər kassalar müstəqil qalır
-        const targetConfig = taxConfigs.find((c) => taxConfigRowMatchesOrderCashId(c, order.tax_cash_id));
+        const targetConfig = taxConfigs.find((c) => taxConfigRowMatchesOrderCashId(c, order.tax_cash_id))
+            || (taxConfigs.length === 1 ? taxConfigs[0] : null);
         if (!targetConfig) {
             toast.error(t("bu_cekin_vergi_kassasi_tapilmadi_geri_qaytarma_yalniz_orijinal_kassaya_gonderile_biler"));
             return;
@@ -266,7 +268,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     items,
                     payments,
                     cashierName: waiterName,
-                    parentFiscalId: order.fiscal_id || '',
+                    parentFiscalId: order.fiscal_id || order.fiscal_short_id || order.fiscal_doc_number || '',
                     documentNumber: String(order.fiscal_doc_number || order.id || ''),
                     shortDocId: order.fiscal_short_id || '',
                     orderId: order.uuid || order.id,
@@ -285,7 +287,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     details: 'Fiskal cihazdan geri qaytarma'
                 }));
             } else {
-                toast.error(t("vergi_geri_qaytarma_xetasi"));
+                const failDetail = result.data?.results?.find((r) => !r.success)?.error || result.data?.message;
+                toast.error(failDetail ? `${t("vergi_geri_qaytarma_xetasi")}: ${failDetail}` : t("vergi_geri_qaytarma_xetasi"));
             }
         } catch (error) {
             console.error('Tax moneyback error:', error);
@@ -307,7 +310,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const handleTaxReceiptCopy = async () => {
         if (taxLoading || !order || taxConfigs.length === 0) return;
 
-        const targetConfig = taxConfigs.find((c) => taxConfigRowMatchesOrderCashId(c, order.tax_cash_id));
+        const targetConfig = taxConfigs.find((c) => taxConfigRowMatchesOrderCashId(c, order.tax_cash_id))
+            || (taxConfigs.length === 1 ? taxConfigs[0] : null);
         if (!targetConfig) {
             toast.error(t("bu_cekin_vergi_kassasi_tapilmadi_tekrar_cap_yalniz_orijinal_kassadan_edile_biler"));
             return;
@@ -330,7 +334,8 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     details: 'Fiskal çek təkrar çap edildi'
                 }));
             } else {
-                toast.error(t("vergi_tekrar_cap_xetasi"));
+                const failDetail = result.data?.results?.find((r) => !r.success)?.error || result.data?.message;
+                toast.error(failDetail ? `${t("vergi_tekrar_cap_xetasi")}: ${failDetail}` : t("vergi_tekrar_cap_xetasi"));
             }
         } catch (error) {
             console.error('Tax receipt copy error:', error);
@@ -594,6 +599,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 gap: '6px'
                             }}
                         >
+                            <i className="bi bi-arrow-counterclockwise"></i>{t("vergi_geri_qaytarma") || "Vergi geri qaytarma"}
                         </button>
                     </div>
                 )}

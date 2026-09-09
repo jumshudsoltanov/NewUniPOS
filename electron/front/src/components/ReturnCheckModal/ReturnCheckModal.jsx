@@ -93,14 +93,15 @@ const ReturnCheckModal = ({ show, onClose }) => {
         const taxConfigs = loginedProfileData?.data?.taxes || [];
 
         // 1. Fiskal geri qaytarma — fiskal_id varsa və cihaz tapılırsa
-        if (order?.fiscal_id && taxConfigs.length > 0) {
+        const fiscalRef = order?.fiscal_id || order?.fiscal_short_id || order?.fiscal_doc_number;
+        if (fiscalRef && taxConfigs.length > 0) {
             const oid = order.tax_cash_id;
             const targetConfig = taxConfigs.find((c) => {
                 if (oid == null || oid === "") return false;
                 const cid = c?.id ?? c?.tax_cash_id;
                 if (cid == null) return false;
                 return Number(cid) === Number(oid) || String(cid) === String(oid);
-            });
+            }) || (taxConfigs.length === 1 ? taxConfigs[0] : null);
             if (targetConfig) {
                 setTaxLoading(true);
                 try {
@@ -126,7 +127,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
                             items,
                             payments,
                             cashierName: waiterName,
-                            parentFiscalId: order.fiscal_id,
+                            parentFiscalId: order.fiscal_id || order.fiscal_short_id || order.fiscal_doc_number || '',
                             documentNumber: String(order.fiscal_doc_number || order.id || ''),
                             shortDocId: order.fiscal_short_id || '',
                             orderId: order.uuid || order.id,
@@ -140,7 +141,8 @@ const ReturnCheckModal = ({ show, onClose }) => {
                     if (mbResult.data?.success) {
                         toast.success(t("vergi_geri_qaytarma_ugurlu"));
                     } else {
-                        toast.warning(t("vergi_geri_qaytarma_ugursuz_oldu_lakin_cek_geri_qaytarilir"));
+                        const failDetail = mbResult.data?.results?.find(r => !r.success)?.error || mbResult.data?.message;
+                        toast.warning(failDetail ? `${t("vergi_geri_qaytarma_ugursuz_oldu_lakin_cek_geri_qaytarilir")}: ${failDetail}` : t("vergi_geri_qaytarma_ugursuz_oldu_lakin_cek_geri_qaytarilir"));
                     }
                 } catch (taxErr) {
                     console.error('Tax moneyback error:', taxErr);
