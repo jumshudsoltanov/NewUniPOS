@@ -860,7 +860,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                           dispatch(replaceProductQuantity({
                             productId: Number(product.product_id || product.id),
                             newQty: 0,
-                            firstId: product.firstId
+                            firstId: product.firstId,
+                            uuid: product.uuid,
+                            allUuids: product.allUuids
                           }));
                         } else {
                           dispatch(replaceProductQuantity({
@@ -868,6 +870,8 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                             newQty: qty,
                             price: resolvedBaseStr,
                             firstId: product.firstId,
+                            uuid: product.uuid,
+                            allUuids: product.allUuids,
                             modifiers: product.modifiers,
                             comment: productComment
                           }));
@@ -930,6 +934,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                               price: resolvedBaseStr,
                               firstId: product.firstId,
                               uuid: product.uuid,
+                              allUuids: product.allUuids,
                               modifiers: parsedModifiers,
                               comment: productComment
                             }));

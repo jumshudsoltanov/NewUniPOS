@@ -1333,7 +1333,31 @@ export const OrderSlice = createSlice({
       if (idx !== -1) state.products.splice(idx, 1);
     },
     replaceProductQuantity: (state, action) => {
-      const { productId, newQty, price, firstId, uuid, modifiers, comment } = action.payload;
+      const { productId, newQty, price, firstId, uuid, allUuids, modifiers, comment } = action.payload;
+
+      // Handle grouped local products using allUuids
+      if (allUuids && allUuids.length > 0) {
+        let firstFound = false;
+        for (let i = state.products.length - 1; i >= 0; i--) {
+          const p = state.products[i];
+          if (p.uuid && allUuids.includes(p.uuid)) {
+            if (newQty <= 0) {
+              state.products.splice(i, 1);
+            } else if (!firstFound) {
+              p.quantity = newQty;
+              p.count = newQty;
+              p.newOrder = newQty;
+              if (price !== undefined) p.price = parseFloat(price);
+              if (modifiers !== undefined) p.modifiers = modifiers;
+              if (comment !== undefined) p.comment = comment;
+              firstFound = true;
+            } else {
+              state.products.splice(i, 1);
+            }
+          }
+        }
+        if (firstFound || newQty <= 0) return;
+      }
 
       // FIRST try to match by uuid if it's a new item (very reliable)
       if (uuid) {

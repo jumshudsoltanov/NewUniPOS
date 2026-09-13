@@ -412,6 +412,7 @@ const CheckMain = ({ orders, table }) => {
         existing.localQuantity = (existing.localQuantity || 0) + qtyToAdd;
         existing.isNew = true;
         existing.localFirstId = 999999999 + idx;
+        existing.allUuids = [...(existing.allUuids || (existing.uuid ? [existing.uuid] : [])), item.uuid].filter(Boolean);
         if (item.comment) {
           existing.commentsList = existing.commentsList || (existing.comment ? [existing.comment] : []);
           existing.commentsList.push(item.comment);
@@ -427,6 +428,7 @@ const CheckMain = ({ orders, table }) => {
           localQuantity: qtyToAdd,
           price: item.price,
           uuid: item.uuid,
+          allUuids: item.uuid ? [item.uuid] : [],
           isTimerProduct: isLocalTimerItem,
           isNew: true,
           is_gift: isGift,
