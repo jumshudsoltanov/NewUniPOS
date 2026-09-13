@@ -63,18 +63,8 @@ const SalesShiftStatusPill = ({ profileId, variant = "header", className = "", o
             style={onClick ? { cursor: "pointer" } : undefined}
         >
             <span className="sales-shift-pill-dot" aria-hidden />
-            <span className="sales-shift-pill-label-full">
-                {!loading && !fetchFailed && (
-                    <i className={`bi ${isOpen ? "bi-play-fill" : "bi-stop-fill"} me-1`}></i>
-                )}
-                {labelFull}
-            </span>
-            <span className="sales-shift-pill-label-short">
-                {!loading && !fetchFailed && (
-                    <i className={`bi ${isOpen ? "bi-play-fill" : "bi-stop-fill"} me-1`}></i>
-                )}
-                {labelShort}
-            </span>
+            <span className="sales-shift-pill-label-full">{labelFull}</span>
+            <span className="sales-shift-pill-label-short">{labelShort}</span>
         </span>
     );
 };

@@ -216,12 +216,13 @@ async function sendPushNotification({ profileId, title, body, action, orderId, o
 }
 
 /**
- * @param {string} receiver
+ * Bir nömrəyə mesaj göndərir (daxili — sendBulkMessage tərəfindən çağırılır).
+ * @param {string} rawReceiver
  * @param {string} message
  */
-async function sendBulkMessage(receiver, message) {
-  const clean = sanitizeReceiver(receiver);
-  if (!clean || !message) return null;
+async function sendToSingleReceiver(rawReceiver, message) {
+  const clean = sanitizeReceiver(rawReceiver);
+  if (!clean) return null;
 
   const payload = [
     {
@@ -259,6 +260,40 @@ async function sendBulkMessage(receiver, message) {
     );
     throw err;
   }
+}
+
+/**
+ * `receiver` bir neçə nömrəni vergül (və ya nöqtəli vergül) ilə ayrılmış
+ * gətirə bilər (məs. "994501234567, 994559876543") — hər birinə ayrıca
+ * göndərilir. Əvvəllər sanitizeReceiver vergülü də silirdi, nəticədə iki
+ * nömrə bir-birinə yapışıb tək (yanlış) nömrəyə göndərilirdi.
+ * @param {string} receiver
+ * @param {string} message
+ */
+async function sendBulkMessage(receiver, message) {
+  if (!receiver || !message) return null;
+
+  const numbers = String(receiver)
+    .split(/[,;]+/)
+    .map((n) => n.trim())
+    .filter(Boolean);
+
+  if (numbers.length === 0) return null;
+
+  if (numbers.length === 1) {
+    return sendToSingleReceiver(numbers[0], message);
+  }
+
+  const results = [];
+  for (const num of numbers) {
+    try {
+      results.push(await sendToSingleReceiver(num, message));
+    } catch (err) {
+      // Bir nömrə uğursuz olsa da, digərlərinə göndərməyə davam et
+      results.push({ error: err.message });
+    }
+  }
+  return results;
 }
 
 async function notifyOrderLogWhatsapp({

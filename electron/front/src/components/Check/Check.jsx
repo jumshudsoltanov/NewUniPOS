@@ -116,6 +116,10 @@ const Check = () => {
   // Settings toolbar states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDragMode, setIsDragMode] = useState(false);
+  // Sıralamanı saxla düyməsi iki dəfə (touch bounce / sürətli klik) basılanda
+  // iki ayrı "loading" toast yaranır, yalnız biri dismiss olunur, digəri
+  // ekranda ilişib qalır — bu ref həmin təkrar basmanın qarşısını alır
+  const isSavingOrderRef = useRef(false);
   const [customOrders, setCustomOrders] = useState(() => {
     try { const s = localStorage.getItem("unipos_category_orders"); return s ? JSON.parse(s) : {}; } catch { return {}; }
   });
@@ -2980,6 +2984,8 @@ const Check = () => {
                           className="drag-mode-btn confirm"
                           title={t("tesdiqle")}
                           onClick={async () => {
+                            if (isSavingOrderRef.current) return;
+                            isSavingOrderRef.current = true;
                             const loadingToast = toast.loading("Dəyişikliklər yadda saxlanılır...");
 
                             try {
@@ -3064,6 +3070,8 @@ const Check = () => {
                               console.error("Save order error:", error);
                               toast.dismiss(loadingToast);
                               toast.error(t("error_occurred") + ": " + error.message);
+                            } finally {
+                              isSavingOrderRef.current = false;
                             }
                           }}
                         >

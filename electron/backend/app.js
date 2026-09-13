@@ -298,6 +298,13 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
+    if (!shouldRunSchemaMigration()) {
+      console.log(
+        "[Schema] Versiya dəyişməyib — sxem migrasiyası ötürülür (sürətli açılış)",
+      );
+      return;
+    }
+
     const { QueryTypes } = require("sequelize");
 
     const dropTablesFKs = async (label) => {
@@ -387,6 +394,60 @@ let creaedtToTabel = async () => {
     console.log("[Schema] scheduled_messages cədvəli sinxronizə edildi");
   } catch (e) {
     console.warn("[Schema] scheduled_messages sync:", e?.message || e);
+  }
+
+  markSchemaMigrated();
+};
+
+// Sxem migrasiyası (sync({alter}) + hər modelin describeTable-i) hər açılışda
+// bir neçə saniyə çəkə bilir, halbuki sxem adətən yalnız yeni versiya
+// quraşdırılandan sonra dəyişir. Yalnız proqram versiyası əvvəlki açılışdan
+// fərqlidirsə (və ya heç vaxt işə düşməyibsə) tam yoxlama edirik — əks halda
+// bu addımı ötürüb birbaşa məlumat sinxronizasiyasına keçirik ki, "POS özü
+// gec açılır" hiss olunmasın.
+const getSchemaVersionFilePath = () => {
+  try {
+    const electron = require("electron");
+    const userDataPath = electron?.app?.getPath?.("userData");
+    if (!userDataPath) return null;
+    return path.join(userDataPath, "schema-migration-version.json");
+  } catch {
+    return null;
+  }
+};
+
+const getCurrentAppVersion = () => {
+  try {
+    const electron = require("electron");
+    return electron?.app?.getVersion?.() || null;
+  } catch {
+    return null;
+  }
+};
+
+const shouldRunSchemaMigration = () => {
+  try {
+    const fs = require("fs");
+    const filePath = getSchemaVersionFilePath();
+    const currentVersion = getCurrentAppVersion();
+    if (!filePath || !currentVersion) return true; // əmin olmadıqda təhlükəsiz tərəfdə qal
+    if (!fs.existsSync(filePath)) return true;
+    const saved = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    return saved?.version !== currentVersion;
+  } catch {
+    return true;
+  }
+};
+
+const markSchemaMigrated = () => {
+  try {
+    const fs = require("fs");
+    const filePath = getSchemaVersionFilePath();
+    const currentVersion = getCurrentAppVersion();
+    if (!filePath || !currentVersion) return;
+    fs.writeFileSync(filePath, JSON.stringify({ version: currentVersion }), "utf8");
+  } catch (e) {
+    console.warn("[SCHEMA] Versiya faylı yazıla bilmədi:", e?.message);
   }
 };
 

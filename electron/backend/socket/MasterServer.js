@@ -245,11 +245,16 @@ const startBroadcasting = () => {
           const reply = Buffer.from(
             JSON.stringify({ type: "master_pos", ip: primary.ip, port: 55667 }),
           );
+          // Diqqət: rinfo.port slave-in probe GÖNDƏRƏN soketinin təsadüfi
+          // (ephemeral) portudur — slave orada dinləmir, öz cavab
+          // listener-ini sabit 44444 portunda açıb. Cavabı rinfo.port-a
+          // göndərsək heç kim eşitmir və slave "avto tapmır" — sabit
+          // 44444-ə göndəririk ki, slave-in əsl listener-i qəbul etsin.
           probeListener.send(
             reply,
             0,
             reply.length,
-            rinfo.port,
+            44444,
             rinfo.address,
             (err) => {
               if (!err)

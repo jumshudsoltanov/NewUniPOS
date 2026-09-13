@@ -1,3 +1,46 @@
+/* Qonaq sayı xülasə zolağı — navbarın altında, masaların üstündə, seliqeli/kompakt */
+.guest-count-summary-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px;
+    background: #f0f4ff;
+    border-bottom: 1px solid #dbe4fb;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1e3a8a;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow-x: auto;
+}
+
+.guest-count-summary-bar .gcs-hall-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #053796;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-size: 11.5px;
+}
+
+.guest-count-summary-bar .gcs-divider {
+    width: 1px;
+    height: 14px;
+    background: #c7d5f5;
+    flex-shrink: 0;
+}
+
+.guest-count-summary-bar .gcs-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.guest-count-summary-bar .gcs-item.gcs-locked {
+    color: #b91c1c;
+}
+
 .tables-scroll-container {
     height: calc(100vh - 60px);
     overflow-y: auto;

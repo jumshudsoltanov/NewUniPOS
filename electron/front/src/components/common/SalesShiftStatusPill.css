@@ -34,8 +34,10 @@
 }
 
 .sales-shift-pill-dot {
-    width: 8px;
-    height: 8px;
+    /* İkon silinib, indi status yeganə bu nöqtə ilə göstərilir — bir az
+       böyüdülüb ki, tək başına aydın görünsün */
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     flex-shrink: 0;
 }

@@ -214,7 +214,11 @@ const TablesSlice = createSlice({
     },
     tickTimer: (state, action) => {
       if (!state.tableGroups?.data) return;
-      state.tableGroups.data = state.tableGroups.data.map((hall) => {
+      // Diqqət: heç bir masada aktiv taymer yoxdursa top-level array reference-i
+      // dəyişməməlidir — əks halda hər saniyə bütün masalar lövhəsi (heç bir
+      // dəyişiklik olmasa belə) yenidən render olunur
+      let anyHallChangedTop = false;
+      const newTableGroupsData = state.tableGroups.data.map((hall) => {
         if (!hall.tables) return hall;
         const newTables = hall.tables.map((table) => {
           if (!table.orders || table.orders.length === 0) return table;
@@ -286,10 +290,15 @@ const TablesSlice = createSlice({
 
         const anyTableChanged = newTables.some((nt, i) => nt !== hall.tables[i]);
         if (anyTableChanged) {
+          anyHallChangedTop = true;
           return { ...hall, tables: newTables };
         }
         return hall;
       });
+
+      if (anyHallChangedTop) {
+        state.tableGroups.data = newTableGroupsData;
+      }
     },
   },
   extraReducers: (builder) => {

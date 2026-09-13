@@ -518,6 +518,9 @@ const DevicesModal = ({ show, onHide }) => {
     const [skipGuestCount, setSkipGuestCount] = useState(() => {
         try { return localStorage.getItem("unipos_skip_guest_count") === "1"; } catch { return false; }
     });
+    const [showGuestCountBar, setShowGuestCountBar] = useState(() => {
+        try { return localStorage.getItem("pos_show_guest_count_bar") !== "false"; } catch { return true; }
+    });
     const [posAutoLockSeconds, setPosAutoLockSeconds] = useState(() => {
         try {
             const s = localStorage.getItem("pos_auto_lock_seconds");
@@ -626,6 +629,14 @@ const DevicesModal = ({ show, onHide }) => {
         setSkipGuestCount(next);
         try { localStorage.setItem("unipos_skip_guest_count", next ? "1" : "0"); } catch {}
         toast.success(next ? "Qonaq sayı sorğusu DEAKTİV (birbaşa 0)" : "Qonaq sayı sorğusu AKTİV");
+    };
+
+    const handleToggleGuestCountBar = () => {
+        const next = !showGuestCountBar;
+        setShowGuestCountBar(next);
+        try { localStorage.setItem("pos_show_guest_count_bar", next ? "true" : "false"); } catch {}
+        window.dispatchEvent(new CustomEvent("guestCountBarSettingChanged", { detail: next }));
+        toast.success(next ? "Qonaq sayı zolağı AKTİV" : "Qonaq sayı zolağı DEAKTİV");
     };
 
     useEffect(() => {
@@ -1672,6 +1683,20 @@ const DevicesModal = ({ show, onHide }) => {
                                         <div
                                             className={`premium-switch ${skipGuestCount ? "active" : ""}`}
                                             onClick={handleToggleSkipGuestCount}
+                                        >
+                                            <div className="switch-handle"></div>
+                                        </div>
+                                    </div>
+
+                                    <div className="settings-toggle-row">
+                                        <div className="settings-toggle-icon"><i className="bi bi-people-fill"></i></div>
+                                        <div className="settings-toggle-text">
+                                            <span className="settings-toggle-label">Qonaq sayı zolağı</span>
+                                            <span className="settings-toggle-desc">Masalar ekranında, navbarın altında zalın qonaq sayını göstər</span>
+                                        </div>
+                                        <div
+                                            className={`premium-switch ${showGuestCountBar ? "active" : ""}`}
+                                            onClick={handleToggleGuestCountBar}
                                         >
                                             <div className="switch-handle"></div>
                                         </div>

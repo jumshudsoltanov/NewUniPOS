@@ -939,8 +939,17 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                               comment: productComment
                             }));
                           } else {
+                            // Diqqət: `product.id` bura qədər göndərilmiş (DB-də
+                            // saxlanmış) sətrin ID-si idi — bunu olduğu kimi
+                            // ötürsək, yeni yaranan lokal (gözləyən) sətir
+                            // özündə köhnə DB id-ni gəzdirir və sonrakı
+                            // "productId ilə tap" uyğunlaşdırmaları (p.id ||
+                            // p.product_id) səhv sətri tapır/heç nə tapmır —
+                            // nəticədə sayı azaltmaq işləmir. id-ni silirik ki,
+                            // yalnız product_id əsas götürülsün.
+                            const { id: _staleDbId, ...productWithoutStaleId } = product;
                             const localItem = {
-                              ...product,
+                              ...productWithoutStaleId,
                               quantity: newLocalQty,
                               count: newLocalQty,
                               isNew: true,
@@ -953,11 +962,16 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                           }
                         } else {
                           if (product.isNew && product.localQuantity > 0) {
+                            // Qarışıq sətir (göndərilmiş + gözləyən) üçün firstId/uuid
+                            // əslində köhnə göndərilmiş sıraya aiddir — lokal (gözləyən)
+                            // hissəni tapmaq üçün allUuids mütləq lazımdır, əks halda
+                            // reducer heç nə tapmayıb sussuzca çıxır (say azalmır)
                             dispatch(replaceProductQuantity({
                                 productId: Number(product.product_id || product.id),
                                 newQty: 0,
                                 firstId: product.firstId,
-                                uuid: product.uuid
+                                uuid: product.uuid,
+                                allUuids: product.allUuids
                             }));
                           }
                         }

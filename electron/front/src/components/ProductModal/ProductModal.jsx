@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import './ProductModal.css';
 
 import { addNotification } from '../../utils/notificationService';
+import { compressImageFile } from '../../utils/imageCompress';
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 import { t } from "../../utils/translations";
 
@@ -90,15 +91,15 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
         }));
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreview(reader.result);
-                setFormData(prev => ({ ...prev, img: reader.result }));
-            };
-            reader.readAsDataURL(file);
+        if (!file) return;
+        try {
+            const compressed = await compressImageFile(file);
+            setPreview(compressed);
+            setFormData(prev => ({ ...prev, img: compressed }));
+        } catch (err) {
+            toast.error(t("sekil_yuklenmedi") || "Şəkil yüklənmədi");
         }
     };
 

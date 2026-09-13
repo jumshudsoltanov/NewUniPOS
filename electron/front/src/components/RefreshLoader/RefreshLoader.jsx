@@ -71,7 +71,8 @@ const RefreshLoader = ({ isOpen, syncCounts, isOnline = true }) => {
     return (
         <div className="rl-overlay">
             <div className="rl-card">
-                <div className="rl-logo-wrap">
+                <div className={`rl-logo-wrap ${isDone ? "done" : "loading"}`}>
+                    <span className="rl-logo-ring" />
                     <img src={DefaultLogo} alt="UniPOS" className="rl-logo" />
                 </div>
 
@@ -101,8 +102,11 @@ const RefreshLoader = ({ isOpen, syncCounts, isOnline = true }) => {
                     )}
                 </div>
 
-                <div className="rl-progress-track">
-                    <div className="rl-progress-fill" style={{ width: `${progress}%` }} />
+                <div className="rl-progress-row">
+                    <div className="rl-progress-track">
+                        <div className="rl-progress-fill" style={{ width: `${progress}%` }} />
+                    </div>
+                    <span className="rl-progress-pct">{Math.round(progress)}%</span>
                 </div>
 
                 <div className="rl-steps">

@@ -107,61 +107,48 @@ const BooksSlice = createSlice({
       else if (state.books && Array.isArray(state.books.data)) updateList(state.books.data);
     },
     tickTimer: (state) => {
-      const getUpdatedOrders = (list) => {
-        return list.map((order) => {
-          let orderTicked = false;
-  
-          const newItems = order.orders_items || [];
+      // Diqqət: yalnız taymeri aktiv olan sifarişləri draft üzərində birbaşa
+      // dəyişdiririk (yeni array/obyekt yaratmırıq) — əks halda hər saniyə
+      // BÜTÜN siyahının reference-i dəyişir və ona bağlı hər komponent
+      // taymer olmasa belə yenidən render olunur (çeklər çoxaldıqca ağırlaşır)
+      const list = Array.isArray(state.books)
+        ? state.books
+        : state.books && Array.isArray(state.books.data)
+          ? state.books.data
+          : null;
+      if (!list || list.length === 0) return;
 
-          let newOrderClockStr = order.is_timer_clock;
-          let newOrderRate = order.rate_per_minute;
+      for (const order of list) {
+        if (Number(order.is_timer_status) !== 1) continue;
 
-          if (Number(order.is_timer_status) === 1) {
-            const effH = (() => {
-              const th = Number(order.table?.hourly_price || 0);
-              let s = 0;
-              (order.orders_items || []).forEach((it) => {
-                const hp = Number(it.product?.hourly_price || 0);
-                if (hp > 0) s += hp * Number(it.count || 0);
-              });
-              return s > 0 ? s : th;
-            })();
+        const effH = (() => {
+          const th = Number(order.table?.hourly_price || 0);
+          let s = 0;
+          (order.orders_items || []).forEach((it) => {
+            const hp = Number(it.product?.hourly_price || 0);
+            if (hp > 0) s += hp * Number(it.count || 0);
+          });
+          return s > 0 ? s : th;
+        })();
 
-            let totalSeconds = 0;
-            if (order.is_timer_clock && String(order.is_timer_clock).includes(':')) {
-              const parts = order.is_timer_clock.split(':').map(Number);
-              if (parts.length === 3) totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-            } else {
-              totalSeconds = parseInt(order.is_timer_clock || '0', 10);
-            }
+        let totalSeconds = 0;
+        if (order.is_timer_clock && String(order.is_timer_clock).includes(':')) {
+          const parts = order.is_timer_clock.split(':').map(Number);
+          if (parts.length === 3) totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+        } else {
+          totalSeconds = parseInt(order.is_timer_clock || '0', 10);
+        }
 
-            totalSeconds += 1;
+        totalSeconds += 1;
 
-            const hh = Math.floor(totalSeconds / 3600);
-            const mm = Math.floor((totalSeconds % 3600) / 60);
-            const ss = totalSeconds % 60;
-            newOrderClockStr = [hh, mm, ss].map(v => v < 10 ? "0" + v : v).join(":");
+        const hh = Math.floor(totalSeconds / 3600);
+        const mm = Math.floor((totalSeconds % 3600) / 60);
+        const ss = totalSeconds % 60;
 
-            newOrderRate = parseFloat(((effH / 3600) * totalSeconds).toFixed(2));
-            orderTicked = true;
-          }
-
-          if (!orderTicked) return order;
-
-          return {
-            ...order,
-            orders_items: newItems,
-            is_timer_clock: newOrderClockStr,
-            rate_per_minute: newOrderRate,
-            is_active_timer: 1
-          };
-        });
-      };
-
-      if (Array.isArray(state.books)) {
-        state.books = getUpdatedOrders(state.books);
-      } else if (state.books && Array.isArray(state.books.data)) {
-        state.books.data = getUpdatedOrders(state.books.data);
+        order.orders_items = order.orders_items || [];
+        order.is_timer_clock = [hh, mm, ss].map(v => v < 10 ? "0" + v : v).join(":");
+        order.rate_per_minute = parseFloat(((effH / 3600) * totalSeconds).toFixed(2));
+        order.is_active_timer = 1;
       }
     }
   },

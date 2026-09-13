@@ -3,9 +3,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import "./App.css";
 import Pin from "./components/Pin/Pin";
 import Header from "./components/Header/Header";
-import Tables from "./components/Tables/Tables";
 import CustomerModal from "./components/Customers-Modal/CustomersModal";
-import Checks from "./components/Checks/Checks";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
@@ -32,13 +30,18 @@ import { lazy, Suspense } from "react";
 import NetworkOverlay from "./components/NetworkOverlay/NetworkOverlay";
 import BlockPage from "./components/BlockPage/BlockPage";
 
-import Check from "./components/Check/Check";
-import CheckOver from "./components/CheckOver/CheckOver";
-
+// Ağır ekranlar (yüzlərlə/minlərlə sətir) — startup zamanı hamısını bir yerdə
+// parse etmək zəif komplarda açılışı yavaşladırdığı üçün lazy chunk-lara
+// bölünür; Check üçün preloadCheck() artıq bu chunk-ı arxa planda əvvəlcədən
+// yükləyir (masaya klikləyəndə gecikmə hiss olunmasın deyə)
+const Tables = lazy(() => import("./components/Tables/Tables"));
+const Checks = lazy(() => import("./components/Checks/Checks"));
+const Check = lazy(() => import("./components/Check/Check"));
+const CheckOver = lazy(() => import("./components/CheckOver/CheckOver"));
+const Settings = lazy(() => import("./components/Settings/Settings"));
+const Rooms = lazy(() => import("./components/Rooms/Rooms"));
 const CustomerDisplay = lazy(() => import('./components/CustomerDisplay/CustomerDisplay'));
 const KitchenDisplay = lazy(() => import('./components/Kitchen/KitchenDisplay'));
-import Settings from "./components/Settings/Settings";
-import Rooms from "./components/Rooms/Rooms";
 import { initNetwork, getSocket, onSocketStatusChange } from "./utils/apiConfig";
 import { preloadCheck } from "./utils/preloadCheck";
 import { isPaymentExpired, isPosBlocked } from "./utils/dateHelpers";
@@ -175,18 +178,34 @@ function AppContent() {
     }
 
     // Connectivity and Sync Polling
+    // Bir dəfəlik uğursuz internet yoxlaması (keçici gecikmə) dərhal ikonu
+    // "offline" göstərməsin deyə — yalnız 2 ardıcıl uğursuzluqdan sonra
+    // offline elan edilir; uğur isə həmişə dərhal əks olunur (sürətli bərpa)
+    const offlineStrikesRef = { current: 0 };
     const handleConnectivity = () => {
       const isOnline = navigator.onLine;
       // If browser says offline, skip the async check — instant response
       if (!isOnline) {
+        offlineStrikesRef.current = 0;
         dispatch(updateConnectivity({ isOnline: false, hasInternet: false }));
         return;
       }
       if (window.electronAPI && window.electronAPI.checkInternet) {
         window.electronAPI.checkInternet().then(hasInternet => {
-          dispatch(updateConnectivity({ isOnline, hasInternet }));
+          if (hasInternet) {
+            offlineStrikesRef.current = 0;
+            dispatch(updateConnectivity({ isOnline, hasInternet: true }));
+          } else {
+            offlineStrikesRef.current += 1;
+            if (offlineStrikesRef.current >= 2) {
+              dispatch(updateConnectivity({ isOnline, hasInternet: false }));
+            }
+          }
         }).catch(() => {
-          dispatch(updateConnectivity({ isOnline, hasInternet: false }));
+          offlineStrikesRef.current += 1;
+          if (offlineStrikesRef.current >= 2) {
+            dispatch(updateConnectivity({ isOnline, hasInternet: false }));
+          }
         });
       } else {
         dispatch(updateConnectivity({ isOnline, hasInternet: true }));
@@ -528,26 +547,28 @@ function AppContent() {
       <Toastify />
       <ToastContainer position="bottom-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick theme="light" style={{ zIndex: 99998 }} />
       <NetworkOverlay />
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/pin" element={<Pin />} />
-        <Route path="/blocked" element={<BlockPage />} />
-        <Route path="/customer" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><CustomerDisplay /></Suspense>} />
-        <Route path="/kitchen-display" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><KitchenDisplay /></Suspense>} />
-        <Route path="/kds" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><KitchenDisplay /></Suspense>} />
-        <Route path="/kitchen" element={<Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}><KitchenDisplay /></Suspense>} />
+      <Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}>
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/pin" element={<Pin />} />
+          <Route path="/blocked" element={<BlockPage />} />
+          <Route path="/customer" element={<CustomerDisplay />} />
+          <Route path="/kitchen-display" element={<KitchenDisplay />} />
+          <Route path="/kds" element={<KitchenDisplay />} />
+          <Route path="/kitchen" element={<KitchenDisplay />} />
 
-        <Route element={<Layout />}>
-          <Route path="/tables" element={Number(authResultRedux?.data?.profile?.is_hotel_mode) === 1 ? <Rooms /> : <Tables />} />
-          <Route path="/tables/:id" element={Number(authResultRedux?.data?.profile?.is_hotel_mode) === 1 ? <Rooms /> : <Tables />} />
-          <Route path="/checks" element={<Checks />} />
-        </Route>
+          <Route element={<Layout />}>
+            <Route path="/tables" element={Number(authResultRedux?.data?.profile?.is_hotel_mode) === 1 ? <Rooms /> : <Tables />} />
+            <Route path="/tables/:id" element={Number(authResultRedux?.data?.profile?.is_hotel_mode) === 1 ? <Rooms /> : <Tables />} />
+            <Route path="/checks" element={<Checks />} />
+          </Route>
 
-        <Route path="/check/:id" element={<Check />} />
-        <Route path="/closecheck/:id" element={<CheckOver />} />
-        <Route path="/room-folio/:roomId" element={<Navigate to="/tables" replace />} />
-        <Route path="/settings" element={<Settings />} />
-      </Routes>
+          <Route path="/check/:id" element={<Check />} />
+          <Route path="/closecheck/:id" element={<CheckOver />} />
+          <Route path="/room-folio/:roomId" element={<Navigate to="/tables" replace />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }

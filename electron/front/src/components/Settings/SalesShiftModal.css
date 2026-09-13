@@ -77,6 +77,146 @@
     background: #cbd5e1;
 }
 
+/* ===========================
+   Kənardan açılan panel (canvas) — Masa Tənzimləmələri ilə eyni üslub
+   =========================== */
+.sales-shift-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 1050;
+    display: flex;
+    justify-content: flex-end;
+    animation: ssm-fadeIn 0.2s ease;
+}
+
+@keyframes ssm-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes ssm-slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.sales-shift-panel {
+    background: #ffffff;
+    border-radius: 0;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    width: 560px;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: ssm-slideIn 0.25s ease;
+}
+
+.sales-shift-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+    background: var(--Surface-Default, #053796);
+    height: 80px;
+    flex-shrink: 0;
+}
+
+.sales-shift-panel-title-main {
+    color: #fff;
+    font-family: "Poppins", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.sales-shift-panel-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.sales-shift-panel-close:hover {
+    background: rgba(255, 255, 255, 0.24);
+}
+
+.sales-shift-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+@media (max-width: 600px) {
+    .sales-shift-panel {
+        width: 100vw;
+    }
+}
+
+/* Üfüqi tab-lar — Cari Növbə / Tarixçə */
+.sales-shift-tabbar {
+    display: flex;
+    gap: 4px;
+    padding: 10px 16px 0;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.sales-shift-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    border-radius: 10px 10px 0 0;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+
+.sales-shift-tab-btn:hover {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.sales-shift-tab-btn.active {
+    color: #4F85F4;
+    background: #eff6ff;
+    border-bottom-color: #4F85F4;
+}
+
+.sales-shift-tab-btn .ssm-history-count {
+    margin-left: 2px;
+}
+
+.sales-shift-col-full {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+    border-right: none !important;
+}
+
 /* Scroll — əsas modal sütunları */
 .sales-shift-col-left,
 .sales-shift-col-right {

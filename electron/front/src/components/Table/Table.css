@@ -737,18 +737,28 @@
   flex: 0 0 auto;
 }
 
-/* Kanvas (admin layout) — masa böyüdükcə mətn eyni qalır, vizual balans üçün bir qədər kiçik */
+/* Kanvas (admin layout) — masa qutusunun faktiki eninə görə miqyaslanır:
+   böyük masada mətn həddən artıq şişmir (max), kiçik masada (məs. 100px)
+   üst-üstə düşmədən kiçilir (min). Sabit px əvvəllər 100px-lik masalarda
+   mətni sığdıra bilmirdi. */
+.resizable-mode {
+  /* "size" (yalnız inline-size yox) — hündürlüyə görə (cqh) miqyaslama da
+     lazımdır, çünki stullar (seat) hər iki ölçüdə sabit px idi */
+  container-type: size;
+  container-name: table-box;
+}
+
 .resizable-mode .table-name {
-  font-size: 13px;
+  font-size: clamp(8px, 13cqw, 15px);
 }
 
 .resizable-mode .table-amount {
-  font-size: 15px;
+  font-size: clamp(9px, 15cqw, 17px);
   margin: 2px 0 5px;
 }
 
 .resizable-mode .table-waiter-info {
-  font-size: 12px;
+  font-size: clamp(7px, 11cqw, 13px);
 }
 
 .resizable-mode .table-multi-checks-badge {
@@ -764,42 +774,42 @@
 }
 
 .resizable-mode .seat-top {
-  width: 60px;
-  height: 20px;
+  width: clamp(20px, 45cqw, 60px);
+  height: clamp(8px, 15cqh, 20px);
   top: 10%;
 }
 
 .resizable-mode .seat-bottom {
-  width: 60px;
-  height: 20px;
+  width: clamp(20px, 45cqw, 60px);
+  height: clamp(8px, 15cqh, 20px);
   bottom: 10%;
 }
 
 .resizable-mode .seat-left {
-  width: 20px;
-  height: 60px;
+  width: clamp(8px, 15cqw, 20px);
+  height: clamp(20px, 45cqh, 60px);
   left: 10%;
 }
 
 .resizable-mode .seat-right {
-  width: 20px;
-  height: 60px;
+  width: clamp(8px, 15cqw, 20px);
+  height: clamp(20px, 45cqh, 60px);
   right: 10%;
 }
 
 .resizable-mode .seat-left-1,
 .resizable-mode .seat-left-2,
 .resizable-mode .seat-left-3 {
-  width: 20px;
-  height: 50px;
+  width: clamp(8px, 15cqw, 20px);
+  height: clamp(16px, 38cqh, 50px);
   left: 10%;
 }
 
 .resizable-mode .seat-right-1,
 .resizable-mode .seat-right-2,
 .resizable-mode .seat-right-3 {
-  width: 20px;
-  height: 50px;
+  width: clamp(8px, 15cqw, 20px);
+  height: clamp(16px, 38cqh, 50px);
   right: 10%;
 }
 
@@ -815,30 +825,30 @@
 
 .resizable-mode .seat.seat-billiard-top-left,
 .resizable-mode .seat.seat-billiard-top-right {
-  width: 14px;
-  height: 14px;
+  width: clamp(7px, 14cqw, 14px);
+  height: clamp(7px, 14cqh, 14px);
   top: 4%;
 }
 
 .resizable-mode .seat.seat-billiard-bottom-left,
 .resizable-mode .seat.seat-billiard-bottom-right {
-  width: 14px;
-  height: 14px;
+  width: clamp(7px, 14cqw, 14px);
+  height: clamp(7px, 14cqh, 14px);
   bottom: 4%;
 }
 
 .resizable-mode .seat.seat-billiard-top-center,
 .resizable-mode .seat.seat-billiard-bottom-center {
-  width: 28px;
-  height: 7px;
+  width: clamp(14px, 28cqw, 28px);
+  height: clamp(4px, 7cqh, 7px);
   left: 50%;
   transform: translateX(-50%);
 }
 
 .resizable-mode .seat-billiard-left,
 .resizable-mode .seat-billiard-right {
-  width: 18px;
-  height: 18px;
+  width: clamp(9px, 18cqw, 18px);
+  height: clamp(9px, 18cqh, 18px);
   left: 5%;
   right: auto;
 }

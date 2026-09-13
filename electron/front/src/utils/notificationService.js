@@ -1,3 +1,8 @@
+// Limitsiz böyüməsin deyə — hər hadisədə bütün siyahı JSON.stringify/parse
+// olunduğu üçün array böyüdükcə proqram tədricən yavaşlayır (saatlarla açıq
+// qalan POS-da min-larla bildiriş yığıla bilər)
+const MAX_STORED_NOTIFICATIONS = 300;
+
 const isSuppressedNotification = (notification) => {
   return (
     notification?.title === "Printer təyinatı yoxdur" ||
@@ -73,6 +78,9 @@ export const addNotification = (title, message, options = {}) => {
     ...(dedupeKey != null && dedupeKey !== "" ? { dedupeKey } : {}),
   };
   notifications.unshift(newNotif);
+  if (notifications.length > MAX_STORED_NOTIFICATIONS) {
+    notifications.length = MAX_STORED_NOTIFICATIONS;
+  }
   localStorage.setItem("pos_notifications", JSON.stringify(notifications));
   // Trigger a custom event so Header can update count
   window.dispatchEvent(new CustomEvent("newNotification"));

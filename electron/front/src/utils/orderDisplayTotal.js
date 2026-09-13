@@ -98,6 +98,10 @@ export function computeOrderCardMeta(order, tableHourlyFallback) {
   const deliveryFee = Number(order.delivery_fee || 0);
 
   const gross = normalizeMoney(getOrderItemsAndTimerSubtotal(order, tableHourlyFallback));
+  // Endirim heç vaxt mövcud cəmdən çox ola bilməz (məs. bütün məhsullar
+  // silinəndən sonra köhnə endirim sifarişdə qalırsa) — əks halda mənfi
+  // "subtotal" yaranır və bu, aşağıdakı depozit yoxlamasını yanlış tetikləyir.
+  discountAmount = Math.min(discountAmount, gross);
   const subtotalAfterDiscount = gross - discountAmount;
 
   // Service charge: CheckBottom ilə eyni məntiq (service_value % × base items)
@@ -138,7 +142,10 @@ export function computeOrderCardMeta(order, tableHourlyFallback) {
   serviceAmount = normalizeMoney(serviceAmount);
 
   const displayAmount = normalizeMoney(Math.max(subtotalAfterDiscount, deposit) + serviceAmount + deliveryFee);
-  const isDepositFloor = deposit > subtotalAfterDiscount;
+  // deposit > 0 şərti mütləqdir — əks halda depozit heç verilməyibsə belə
+  // (deposit=0), mənfi subtotal-a görə "0 > mənfi ədəd" doğru olub nişanı
+  // səhvən göstərirdi.
+  const isDepositFloor = deposit > 0 && deposit > subtotalAfterDiscount;
   return { displayAmount, isDepositFloor };
 }
 

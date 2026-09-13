@@ -1236,10 +1236,67 @@
   flex-shrink: 0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  /* Bu header dar bir panel içində ola bilər (məs. hotel rejimində sol
+     çek sütunu) — pəncərənin tam eni deyil, öz konteynerinin faktiki eni
+     əsas götürülməlidir ki, elementlər üst-üstə düşməsin */
+  container-type: inline-size;
+  container-name: check-header;
 }
 
 .check-header-bar-no-overlap {
   gap: 12px;
+}
+
+/* Konteyner öz eninə görə kiçilir — panel dar olanda (hotel/split layout)
+   viewport böyük olsa belə mətnlər sıxılıb üst-üstə düşməsin */
+@container check-header (max-width: 420px) {
+  .header-left-section,
+  .header-right-section {
+    gap: 6px;
+  }
+
+  .header-title {
+    font-size: 0.82rem !important;
+  }
+
+  .header-check-id {
+    max-width: 64px;
+    font-size: 0.72rem;
+  }
+
+  .header-center-section {
+    padding: 1px 6px;
+  }
+
+  .header-time {
+    font-size: 0.78rem;
+  }
+
+  .header-edit-btn,
+  .header-toggle-btn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .header-edit-btn i,
+  .header-toggle-btn i {
+    font-size: 0.72rem;
+  }
+}
+
+@container check-header (max-width: 300px) {
+  .header-title {
+    font-size: 0.72rem !important;
+  }
+
+  .header-check-id {
+    max-width: 40px;
+    font-size: 0.65rem;
+  }
+
+  .header-time {
+    font-size: 0.68rem;
+  }
 }
 
 .check-header-bar-no-overlap .header-center-section {

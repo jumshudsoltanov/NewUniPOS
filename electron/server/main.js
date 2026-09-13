@@ -18,6 +18,9 @@ const { autoUpdater } = require("electron-updater");
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = "debug";
 autoUpdater.autoInstallOnAppQuit = true;
+// Proqram günlərlə açıq qaldığı üçün log faylı limitsiz böyüməsin — 5MB-dan
+// sonra köhnə fayl arxivlənir (electron-log bunu avtomatik edir)
+log.transports.file.maxSize = 5 * 1024 * 1024;
 log.info("UniPOS Desktop Application is starting...");
 
 /**
@@ -363,6 +366,8 @@ function createWindow() {
     width: 1200,
     height: 800,
     fullscreen: true, // Start in fullscreen
+    show: false, // renderer hazır olmayana qədər ağ ekran göstərmə — aşağıda ready-to-show ilə açılır
+    backgroundColor: "#0a1e4d", // pəncərə açılan andan (renderer boyanmazdan əvvəl) belə ağ deyil, brend rənginə uyğun fon
     ...browserWindowIconFields(),
     webPreferences: {
       preload: preloadPath,
@@ -372,6 +377,19 @@ function createWindow() {
     },
   });
 
+  // Zəif komplarda renderer (React bundle) yüklənib boyanana qədər pəncərəni
+  // gizli saxlayırıq ki, "ağ ekran" fləşi görünməsin — hazır olan kimi göstərilir
+  mainWindow.once("ready-to-show", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
+  });
+  // Ehtiyat: hansısa səbəbdən ready-to-show heç vaxt gəlməsə, pəncərə əbədi
+  // gizli qalmasın deyə maksimum 4s sonra məcburi göstər
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+  }, 4000);
+
   attachDevToolsIcon(mainWindow);
   attachRendererRecovery(mainWindow, "cashier");
 
@@ -379,7 +397,7 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:5173/");
   } else {
     const indexPath = path.join(
-      appPath,
+      app.getAppPath(),
       "electron",
       "front",
       "dist",
@@ -1971,7 +1989,25 @@ async function executePrintReceipt(
                 return { success: false, error: `Yanlış COM port adı: ${comPortName}. COM port COM1, COM2 və s. formatda olmalıdır.` };
             }
           const portPath = `\\\\.\\${String(comPortName).trim().toUpperCase()}`;
-          return await sendToCom(rasterBuf, portPath, settings.baud_rate);
+          // TCP yolunda çapdan sonra səs/pul yeşiyi əmri ayrıca göndərilir, amma
+          // COM port (raster) yolu bunu heç vaxt etmirdi — ona görə "raster driver
+          // seçəndə səs çıxmır" şikayəti yaranırdı. Eyni əmrləri bura da əlavə edirik.
+          let comBuf = rasterBuf;
+          if (settings.sound_notify || settings.cash_drawer || settings.open_drawer_without_print) {
+            const ESC3 = 0x1b;
+            const extraParts = [];
+            if (settings.sound_notify) {
+              extraParts.push(Buffer.from([ESC3, 0x42, 0x04, 0x01])); // XPrinter Alarm
+              extraParts.push(Buffer.from([ESC3, 0x28, 0x41, 0x04, 0x00, 0x61, 0x03, 0x01, 0x01])); // Epson Beeper
+            }
+            if (settings.cash_drawer || settings.open_drawer_without_print) {
+              extraParts.push(Buffer.from([ESC3, 0x70, 0x00, 0x19, 0xfa])); // Drawer 1
+              extraParts.push(Buffer.from([ESC3, 0x70, 0x01, 0x19, 0xfa])); // Drawer 2
+              extraParts.push(Buffer.from([ESC3, 0x70, 0x00, 0x40, 0x50])); // Alternativ
+            }
+            comBuf = Buffer.concat([rasterBuf, ...extraParts]);
+          }
+          return await sendToCom(comBuf, portPath, settings.baud_rate);
         }
 
         const tcpResult = await sendToTcp(rasterBuf, printerIp, printerPort);
@@ -2407,7 +2443,10 @@ ipcMain.handle("get-local-ip", () => {
 ipcMain.handle("check-internet", async () => {
   const http = require("http");
   const https = require("https");
-  // Fast check: try 1.1.1.1 (Cloudflare DNS) with 1.5s timeout — no DNS resolution needed
+  // Diqqət: əvvəllər 1.5s/1.8s idi — normal şəbəkə gecikməsində (VPN, zəif
+  // WiFi anı, server bir qədər gec cavab verəndə) bu, stabil internetdə belə
+  // yanlış "offline" nəticəsinə səbəb olurdu (wifi ikonu boş yerə "itirdi").
+  // 3s/3.5s UI-ni hələ də sürətli saxlayır, amma yanlış mənfi ehtimalını azaldır.
   return new Promise((resolve) => {
     let resolved = false;
     const done = (val) => {
@@ -2418,7 +2457,7 @@ ipcMain.handle("check-internet", async () => {
     };
 
     // Try HTTPS first (1.1.1.1)
-    const req1 = https.get("https://1.1.1.1", { timeout: 1500 }, () => {
+    const req1 = https.get("https://1.1.1.1", { timeout: 3000 }, () => {
       done(true);
       req1.destroy();
     });
@@ -2428,7 +2467,7 @@ ipcMain.handle("check-internet", async () => {
     // Fallback: our sync server
     const req2 = http.get(
       "http://46.224.8.157:35627/api/discover",
-      { timeout: 1500 },
+      { timeout: 3000 },
       () => {
         done(true);
         req2.destroy();
@@ -2437,8 +2476,8 @@ ipcMain.handle("check-internet", async () => {
     req2.on("error", () => {});
     req2.on("timeout", () => req2.destroy());
 
-    // If both fail within 1.8s → offline
-    setTimeout(() => done(false), 1800);
+    // If both fail within 3.5s → offline
+    setTimeout(() => done(false), 3500);
   });
 });
 
@@ -2941,11 +2980,37 @@ function ensureFirewallRule() {
   });
 }
 
+// Master-slave auto-discovery (UDP 44444) hər iki tərəfdə də bu portda
+// dinləyir — yalnız TCP 55667 açıq olanda slave master-i UDP ilə tapa
+// bilmir, çünki inbound UDP 44444 Windows Firewall-da bağlı qalır
+function ensureUdpDiscoveryFirewallRule() {
+  if (process.platform !== "win32") return;
+  const ruleName = "UniPOS-Discovery-UDP-44444";
+  const check = `netsh advfirewall firewall show rule name="${ruleName}"`;
+  exec(check, (err, stdout) => {
+    if (stdout && stdout.includes(ruleName)) return; // rule already exists
+    const add = `netsh advfirewall firewall add rule name="${ruleName}" dir=in action=allow protocol=udp localport=44444 profile=private,domain`;
+    exec(add, (addErr) => {
+      if (addErr) {
+        log.warn(
+          "[FIREWALL] UDP 44444 qaydası əlavə edilmədi (admin deyil?):",
+          addErr.message,
+        );
+      } else {
+        log.info(
+          "[FIREWALL] Rule added: UDP 44444 now open (master-slave discovery)",
+        );
+      }
+    });
+  });
+}
+
 app.whenReady().then(() => {
   // Avtomatik startup
   app.setLoginItemSettings({ openAtLogin: true });
 
   ensureFirewallRule();
+  ensureUdpDiscoveryFirewallRule();
   createWindow();
 
   globalShortcut.register("CommandOrControl+Shift+N", () => {

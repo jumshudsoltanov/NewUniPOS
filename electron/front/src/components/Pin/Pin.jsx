@@ -6,7 +6,7 @@ import DefaultLogo from "../../assets/images/unipos_logo.png";
 import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
 import PinAdvancedSettingsModal from "../PinAdvancedSettingsModal/PinAdvancedSettingsModal";
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { resolveWaiter } from "../../redux/Slices/WaitersSlice";
@@ -232,13 +232,20 @@ const Pin = () => {
     hasInternet
   } = useSelector((state) => state.SyncSlice);
 
-  let fallbackProfileData = null;
-  try {
-    const authResultStr = localStorage.getItem("authResult");
-    if (authResultStr) fallbackProfileData = JSON.parse(authResultStr);
-  } catch (err) {
-    console.error("Error parsing authResult:", err);
-  }
+  // Diqqət: bu, əvvəllər hər render zamanı (yəni PİN-in HƏR rəqəmində) icra
+  // olunurdu — authResult (loqo/fon şəkli daxil) böyük ola bildiyi üçün hər
+  // dəfə JSON.parse etmək PİN yazarkən nəzərə çarpan gecikməyə səbəb olurdu.
+  // useMemo ilə yalnız ilk mount-da (və ya redux-dakı profil dəyişəndə) işləyir.
+  const fallbackProfileData = useMemo(() => {
+    if (loginedProfileData) return null; // redux-da varsa localStorage-a ehtiyac yoxdur
+    try {
+      const authResultStr = localStorage.getItem("authResult");
+      return authResultStr ? JSON.parse(authResultStr) : null;
+    } catch (err) {
+      console.error("Error parsing authResult:", err);
+      return null;
+    }
+  }, [loginedProfileData]);
 
   const activeProfileData = loginedProfileData || fallbackProfileData;
   const terminalInfo = activeProfileData?.data?.terminal || {};
@@ -283,7 +290,10 @@ const Pin = () => {
     try {
       const profileId = activeProfileData.data.profile.id;
       // Əvvəl serverdən DB-yə yaz — sonra GET; əks halda Promise.all yarışında köhnə məlumat gəlirdi (2 dəfə basmaq lazım idi)
-      const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`).catch((err) => {
+      // Diqqət: şəkilləri böyük profillərdə tam sinxronizasiya standart 30s-i keçə bilər —
+      // bu konkret sorğu üçün ayrıca daha uzun timeout veririk ki, backend hələ işləyərkən
+      // frontend vaxtından əvvəl "xəta" göstərməsin
+      const syncRes = await apiConfig.post(`/sync/refresh/${profileId}`, {}, { timeout: 90000 }).catch((err) => {
         console.error("Sync refresh xətası:", err?.message);
         return { data: { success: false, isOnline: false } };
       });
@@ -297,15 +307,30 @@ const Pin = () => {
         toast.warn(t("server_elcatmaz_lokal_melumatlar_yuklendi"));
       }
 
-      await Promise.all([
+      // Diqqət: əvvəllər Promise.all idi — TƏK bir sorğu (məs. bir anlıq
+      // şəbəkə gecikməsi) uğursuz olanda BÜTÜN yeniləmə "xəta verir" görünürdü,
+      // baxmayaraq ki digərləri uğurla bitmişdi. allSettled ilə hər biri
+      // müstəqil işləyir, yalnız HAMISI uğursuz olsa əsl xəta göstərilir.
+      const results = await Promise.allSettled([
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
         dispatch(menuWithCategories(profileId)).unwrap(),
         dispatch(menuWithGeneralCategories(profileId)).unwrap(),
       ]);
 
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        failed.forEach((r) => console.error("[Yenilə] Qismən uğursuz sorğu:", r.reason));
+      }
+
+      if (failed.length === results.length) {
+        throw failed[0]?.reason || new Error("Bütün sorğular uğursuz oldu");
+      }
+
       if (syncRes?.data?.counts) {
         await new Promise(resolve => setTimeout(resolve, 1800));
+      } else if (failed.length > 0) {
+        toast.warn(`Yeniləmə qismən tamamlandı (${failed.length}/${results.length} sorğu uğursuz oldu)`);
       } else {
         toast.success(t("data_updated"));
       }
@@ -315,7 +340,7 @@ const Pin = () => {
         socket.emit("pin_refresh", { profileId });
       }
     } catch (error) {
-      console.error("Yeniləmə xətası:", error);
+      console.error("Yeniləmə xətası:", error?.message || error);
       toast.error(t("data_update_error"));
     } finally {
       setIsRefreshing(false);

@@ -10,15 +10,41 @@
  */
 import data from "./translations.json";
 
+// t() tətbiqdə yüzlərlə yerdə, hər render zamanı çağırılır — hər dəfə
+// localStorage.getItem() etmək (sinxron I/O) yığılıb zəif komplarda hiss
+// olunan yavaşlıq yaradır. Dil yalnız istifadəçi Settings-də dəyişdirəndə
+// dəyişdiyi üçün keşləyib yalnız dəyişəndə yeniləyirik.
+let cachedLang = null;
+
+export function getCurrentLanguage() {
+  if (cachedLang === null) {
+    try {
+      cachedLang = localStorage.getItem("language") || "az";
+    } catch {
+      cachedLang = "az";
+    }
+  }
+  return cachedLang;
+}
+
+export function setCurrentLanguage(lang) {
+  cachedLang = lang || "az";
+  try {
+    localStorage.setItem("language", cachedLang);
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * t("açar_adı", { param1: "dəyər" })
- *  - localStorage-dan dili oxuyur
+ *  - keşlənmiş dili istifadə edir (bax: getCurrentLanguage)
  *  - Açar tapılmasa AZ versiyası fallback olaraq göstərilir
  *  - {param} kimi yerləşdiriciləri dəyərlərlə əvəz edir
  */
 export function t(key, params = {}) {
   if (!key) return "";
-  const lang = localStorage.getItem("language") || "az";
+  const lang = getCurrentLanguage();
   let text = data[lang]?.[key] ?? data.az[key] ?? key;
 
   if (params && Object.keys(params).length > 0) {

@@ -17,6 +17,8 @@ const ROWS_UPPER = [
   ["Z", "X", "C", "V", "B", "N", "M", "Ç", "Ş"],
 ];
 
+const PUNCTUATION_ROW = [".", ",", "-", "_", "@", ":", ";", "!", "?", "/"];
+
 const VirtualKeyboard = ({ onKeyPress, onBackspace, onClose }) => {
   const [isUpper, setIsUpper] = useState(false);
 
@@ -113,6 +115,18 @@ const VirtualKeyboard = ({ onKeyPress, onBackspace, onClose }) => {
               )}
             </div>
           ))}
+          {/* Durğu işarələri sətri — nöqtə, vergül və s. üçün ayrıca sıra */}
+          <div className="vk-row">
+            {PUNCTUATION_ROW.map((key) => (
+              <div
+                className="vk-key vk-key-punct"
+                key={key}
+                onClick={() => handleKeyPress(key)}
+              >
+                {key}
+              </div>
+            ))}
+          </div>
           <div className="vk-row vk-row-bottom">
             <div className="vk-key vk-key-space" onClick={handleSpace}>{t("bosluq")}</div>
           </div>

@@ -485,9 +485,11 @@ const Menu = ({
       const currentCat = (menuDataWithCategories?.data || []).find(
         (c) => c.id === selectedCat?.id,
       );
-      let items = (currentCat?.products || selectedCat?.products || []).filter(
-        (item) => item && item.name,
-      );
+      const rawProducts =
+        currentCat?.products?.length > 0
+          ? currentCat.products
+          : selectedCat?.products || [];
+      let items = rawProducts.filter((item) => item && item.name);
 
       // Inject category discount
       if (

@@ -6,6 +6,7 @@ import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
+import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 import "../ReportModal/ReportModal.css";
 import "./SalesShiftModal.css";
 
@@ -430,6 +431,11 @@ const SalesShiftModal = ({ show, onHide }) => {
     /** { row, snapshot, loading } | null */
     const [shiftDetailModal, setShiftDetailModal] = useState(null);
     const [startingCash, setStartingCash] = useState("");
+    const [isStartingCashKeyboardOpen, setIsStartingCashKeyboardOpen] = useState(false);
+    const [activeShiftTab, setActiveShiftTab] = useState("current"); // "current" | "history"
+    const posKeyboardEnabled = React.useMemo(() => {
+        try { return localStorage.getItem("pos_keyboard_enabled") === "1"; } catch { return false; }
+    }, []);
     const [historyFrom, setHistoryFrom] = useState("");
     const [historyTo, setHistoryTo] = useState("");
 
@@ -741,6 +747,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                         placeholder="0.00"
                         value={startingCash}
                         onChange={(e) => setStartingCash(e.target.value)}
+                        onFocus={() => { if (posKeyboardEnabled) setIsStartingCashKeyboardOpen(true); }}
                         disabled={loading}
                     />
                     <span className="ssm-starting-cash-currency">{getCurrencySymbol()}</span>
@@ -1105,19 +1112,18 @@ const SalesShiftModal = ({ show, onHide }) => {
     const detailRow = shiftDetailModal?.row;
     const detailSnap = shiftDetailModal?.snapshot;
 
+    if (!show) return null;
+
     return (
         <>
-            <Modal
-                show={show}
-                onHide={onHide}
-                centered
-                className="report-modal sales-shift-report-root"
-                dialogClassName="report-modal-dialog sales-shift-report-dialog"
-                contentClassName="sales-shift-modal-content"
+            <div
+                className="sales-shift-panel-overlay"
+                onClick={(e) => { if (e.target === e.currentTarget) onHide?.(); }}
             >
-                <Modal.Header className="report-modal-header" closeButton closeVariant="white">
+              <div className="sales-shift-panel">
+                <div className="sales-shift-panel-header">
                     <div className="sales-shift-main-header-inner">
-                        <Modal.Title as="h5" className="report-modal-title mb-0">{t("sales_shift")}</Modal.Title>
+                        <h5 className="sales-shift-panel-title-main mb-0">{t("sales_shift")}</h5>
                         <span
                             className={`sales-shift-header-status ${currentShift ? "sales-shift-header-status--open" : "sales-shift-header-status--closed"
                                 }`}
@@ -1127,80 +1133,114 @@ const SalesShiftModal = ({ show, onHide }) => {
                             {currentShift ? t("shift_aciq") : t("shift_bagli")}
                         </span>
                     </div>
-                </Modal.Header>
-                <Modal.Body className="p-0 d-flex flex-column flex-grow-1 min-vh-0">
+                    <button className="sales-shift-panel-close" onClick={onHide} aria-label="Bağla">
+                        <i className="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div className="sales-shift-tabbar">
+                    <button
+                        type="button"
+                        className={`sales-shift-tab-btn ${activeShiftTab === "current" ? "active" : ""}`}
+                        onClick={() => setActiveShiftTab("current")}
+                    >
+                        <i className="bi bi-lightning-charge-fill" aria-hidden />
+                        {t("cari_novbe")}
+                    </button>
+                    <button
+                        type="button"
+                        className={`sales-shift-tab-btn ${activeShiftTab === "history" ? "active" : ""}`}
+                        onClick={() => setActiveShiftTab("history")}
+                    >
+                        <i className="bi bi-clock-history" aria-hidden />
+                        {t("kecmis_satis_novbeleri")}
+                        {history.length > 0 && (
+                            <span className="ssm-history-count">{history.length}</span>
+                        )}
+                    </button>
+                </div>
+                <div className="sales-shift-panel-body">
                     <div className="sales-shift-loading-wrap">
                         {loading && (
                             <div className="sales-shift-loading-overlay">
                                 <Spinner animation="border" size="sm" variant="primary" />
                             </div>
                         )}
-                        <div className="sales-shift-modal-body">
-                            <div className="sales-shift-col-left">
-                                <h6 className="sales-shift-panel-title">
-                                    <i className="bi bi-lightning-charge-fill" aria-hidden />{t("cari_novbe")}</h6>
-                                {currentShiftBody}
-                            </div>
-                            <div className="sales-shift-col-right">
-                                <h6 className="sales-shift-panel-title">
-                                    <i className="bi bi-clock-history" aria-hidden />
-                                    {t("kecmis_satis_novbeleri")}
-                                    {history.length > 0 && (
-                                        <span className="ssm-history-count">{history.length}</span>
-                                    )}
-                                </h6>
-                                <div className="ssm-history-filter">
-                                    <div className="ssm-history-filter-row">
-                                        <div className="ssm-history-filter-field">
-                                            <label htmlFor="historyFrom">{t("baslangic")}</label>
-                                            <input
-                                                id="historyFrom"
-                                                type="date"
-                                                value={historyFrom}
-                                                onChange={(e) => setHistoryFrom(e.target.value)}
-                                                disabled={loading}
-                                            />
-                                        </div>
-                                        <div className="ssm-history-filter-field">
-                                            <label htmlFor="historyTo">{t("son_end")}</label>
-                                            <input
-                                                id="historyTo"
-                                                type="date"
-                                                value={historyTo}
-                                                onChange={(e) => setHistoryTo(e.target.value)}
-                                                disabled={loading}
-                                            />
-                                        </div>
-                                        <Button
-                                            variant="primary"
-                                            className="ssm-history-filter-btn"
-                                            disabled={loading}
-                                            onClick={() => fetchHistory(historyFrom, historyTo)}
-                                        >
-                                            <i className="bi bi-funnel-fill" aria-hidden />
-                                        </Button>
-                                        {(historyFrom || historyTo) && (
-                                            <Button
-                                                variant="outline-secondary"
-                                                className="ssm-history-filter-btn ssm-history-filter-clear"
-                                                disabled={loading}
-                                                onClick={() => {
-                                                    setHistoryFrom("");
-                                                    setHistoryTo("");
-                                                    fetchHistory("", "");
-                                                }}
-                                            >
-                                                <i className="bi bi-x-lg" aria-hidden />
-                                            </Button>
-                                        )}
-                                    </div>
+                        <div className="sales-shift-modal-body sales-shift-modal-body--tabbed">
+                            {activeShiftTab === "current" ? (
+                                <div className="sales-shift-col-left sales-shift-col-full">
+                                    {currentShiftBody}
                                 </div>
-                                {historyBody}
-                            </div>
+                            ) : (
+                                <div className="sales-shift-col-right sales-shift-col-full">
+                                    <div className="ssm-history-filter">
+                                        <div className="ssm-history-filter-row">
+                                            <div className="ssm-history-filter-field">
+                                                <label htmlFor="historyFrom">{t("baslangic")}</label>
+                                                <input
+                                                    id="historyFrom"
+                                                    type="date"
+                                                    value={historyFrom}
+                                                    onChange={(e) => setHistoryFrom(e.target.value)}
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                            <div className="ssm-history-filter-field">
+                                                <label htmlFor="historyTo">{t("son_end")}</label>
+                                                <input
+                                                    id="historyTo"
+                                                    type="date"
+                                                    value={historyTo}
+                                                    onChange={(e) => setHistoryTo(e.target.value)}
+                                                    disabled={loading}
+                                                />
+                                            </div>
+                                            <Button
+                                                variant="primary"
+                                                className="ssm-history-filter-btn"
+                                                disabled={loading}
+                                                onClick={() => fetchHistory(historyFrom, historyTo)}
+                                            >
+                                                <i className="bi bi-funnel-fill" aria-hidden />
+                                            </Button>
+                                            {(historyFrom || historyTo) && (
+                                                <Button
+                                                    variant="outline-secondary"
+                                                    className="ssm-history-filter-btn ssm-history-filter-clear"
+                                                    disabled={loading}
+                                                    onClick={() => {
+                                                        setHistoryFrom("");
+                                                        setHistoryTo("");
+                                                        fetchHistory("", "");
+                                                    }}
+                                                >
+                                                    <i className="bi bi-x-lg" aria-hidden />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {historyBody}
+                                </div>
+                            )}
                         </div>
                     </div>
-                </Modal.Body>
-            </Modal>
+                </div>
+              </div>
+            </div>
+
+            {isStartingCashKeyboardOpen && posKeyboardEnabled && (
+                <VirtualKeyboard
+                    onKeyPress={(key) => {
+                        if (!/[0-9.]/.test(key)) return;
+                        setStartingCash((prev) => {
+                            const str = String(prev ?? "");
+                            if (key === "." && str.includes(".")) return prev;
+                            return str + key;
+                        });
+                    }}
+                    onBackspace={() => setStartingCash((prev) => String(prev ?? "").slice(0, -1))}
+                    onClose={() => setIsStartingCashKeyboardOpen(false)}
+                />
+            )}
 
             <Modal
                 show={!!shiftDetailModal}

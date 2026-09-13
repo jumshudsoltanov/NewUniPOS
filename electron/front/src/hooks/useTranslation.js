@@ -18,7 +18,7 @@
  *   ]
  */
 import { useState, useCallback } from "react";
-import { t as translate } from "../utils/translations";
+import { t as translate, setCurrentLanguage } from "../utils/translations";
 
 export const languageOptions = [
   { code: "az", label: "Azərbaycan", flag: "🇦🇿" },
@@ -39,7 +39,7 @@ export function useTranslation() {
 
   const changeLanguage = useCallback((newLang) => {
     if (!newLang) return;
-    localStorage.setItem("language", newLang);
+    setCurrentLanguage(newLang);
     setLang(newLang);
   }, []);
 

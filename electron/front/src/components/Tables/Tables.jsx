@@ -40,6 +40,12 @@ const defaultSizeForTableShape = (rawShape) => {
   return { w: 200, h: 200 };
 };
 
+// Layout-da saxlanan en/hündürlük bu qədərdən kiçikdirsə etibarsız sayılır
+// (məs. köhnə/xarab sync verisi) və şəkilə uyğun default ölçüyə keçilir.
+// Əvvəllər 150px idi — istifadəçi masaları daha kiçik (məs. 100px) etmək
+// istəyəndə bu, "Hamısına tətbiq et" ilə verilən dəyəri sussuzca ləğv edirdi.
+const MIN_VALID_TABLE_SIZE = 40;
+
 const Tables = () => {
   const {
     tableGroups,
@@ -65,6 +71,16 @@ const Tables = () => {
 
   const _tProfileId = loginedProfileData?.data?.profile?.id;
 
+  // Qonaq sayı xülasə zolağı — DevicesModal-dakı checkbox ilə aç/bağla
+  const [showGuestCountBar, setShowGuestCountBar] = useState(
+    () => localStorage.getItem("pos_show_guest_count_bar") !== "false",
+  );
+  useEffect(() => {
+    const handleGuestBarSetting = (e) => setShowGuestCountBar(!!e.detail);
+    window.addEventListener("guestCountBarSettingChanged", handleGuestBarSetting);
+    return () => window.removeEventListener("guestCountBarSettingChanged", handleGuestBarSetting);
+  }, []);
+
   // Edit Mode & Ordering States (Drag indices kept local as they are transient UI state)
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -72,6 +88,44 @@ const Tables = () => {
   // Bulk edit panel state (stored as strings so user can freely type/clear)
   const [bulkW, setBulkW] = useState("200");
   const [bulkH, setBulkH] = useState("200");
+
+  // Avtomatik düzülüş: masalar az olanda blok üfüqi/şaquli harada dursun
+  // (Yuxarı — default, Ortada, Aşağı) + hər kənardan boşluq
+  const [arrangePosition, setArrangePosition] = useState(
+    () => localStorage.getItem("pos_tables_arrange_position") || "top",
+  );
+  // Diqqət: dəyərlər STRING kimi saxlanılır (bulkW/bulkH kimi) — ədəd kimi
+  // saxlasaydıq, sahəni silib boş qoymaq mümkün olmurdu (boş → 0-a çevrilib
+  // dərhal geri qayıdırdı, istifadəçi yeni rəqəm yaza bilmirdi)
+  const [arrangePadding, setArrangePadding] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("pos_tables_arrange_padding") || "null");
+      if (saved && typeof saved === "object") {
+        return {
+          top: String(saved.top ?? 20),
+          bottom: String(saved.bottom ?? 20),
+          left: String(saved.left ?? 20),
+          right: String(saved.right ?? 20),
+        };
+      }
+    } catch { /* ignore */ }
+    return { top: "20", bottom: "20", left: "20", right: "20" };
+  });
+
+  const updateArrangePosition = (pos) => {
+    setArrangePosition(pos);
+    try { localStorage.setItem("pos_tables_arrange_position", pos); } catch { /* ignore */ }
+  };
+
+  const updateArrangePadding = (side, rawValue) => {
+    // Yalnız rəqəmlərə icazə ver, amma boş sahəyə (silinmə zamanı) icazə ver
+    const value = rawValue.replace(/[^0-9]/g, "");
+    setArrangePadding((prev) => {
+      const next = { ...prev, [side]: value };
+      try { localStorage.setItem("pos_tables_arrange_padding", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   // Single table selection state
   const dragMoveRef = useRef(false);
@@ -167,8 +221,8 @@ const Tables = () => {
     const defSz = defaultSizeForTableShape(tbl?.shape_type);
     const rawW = existing.w;
     const rawH = existing.h;
-    setSingleW(String(rawW && rawW >= 150 ? rawW : defSz.w));
-    setSingleH(String(rawH && rawH >= 150 ? rawH : defSz.h));
+    setSingleW(String(rawW && rawW >= MIN_VALID_TABLE_SIZE ? rawW : defSz.w));
+    setSingleH(String(rawH && rawH >= MIN_VALID_TABLE_SIZE ? rawH : defSz.h));
     setSingleX(String(Math.round(existing.x || 0)));
     setSingleY(String(Math.round(existing.y || 0)));
     setSingleRotation(existing.rotation || 0);
@@ -264,42 +318,38 @@ const Tables = () => {
     }
     prevAutoLayoutSigRef.current = layoutSig;
 
-    const w = window.innerWidth;
-    let cols = 2; // xs
-    if (w >= 1200)
-      cols = 5; // xl
-    else if (w >= 992)
-      cols = 4; // lg
-    else if (w >= 768)
-      cols = 3; // md
-    else if (w >= 576) cols = 3; // sm
-
-    const containerW = containerRef.current?.offsetWidth || w;
-    const colWidth = containerW / cols;
+    // Diqqət: əvvəllər ekran eni sabit sütun sayına (məs. 1920px-də 5 sütun)
+    // bölünürdü — masa özü 200px olsa belə, sütun 380px+ olduğu üçün aralarda
+    // süni, çox böyük boşluq yaranırdı. İndi masalar öz enlərinə görə, sabit
+    // kiçik boşluqla (16px) sıra ilə düzülür — "Avto düzləş" düyməsindəki
+    // məntiqin eynisi.
+    const containerW = containerRef.current?.offsetWidth || window.innerWidth;
+    const GAP = 16;
+    const PADDING = 20;
 
     const layout = {};
-    let currentRow = 0;
-    let currentY = 20;
+    let currentX = PADDING;
+    let currentY = PADDING;
     let rowMaxH = 0;
 
-    currentTables.forEach((table, index) => {
-      const col = index % cols;
-      const h = defaultSizeForTableShape(table.shape_type).h;
+    currentTables.forEach((table) => {
+      const { w: tW, h: tH } = defaultSizeForTableShape(table.shape_type);
 
-      if (col === 0 && index !== 0) {
-        currentY += rowMaxH + 20;
+      if (currentX > PADDING && currentX + tW > containerW - PADDING) {
+        currentX = PADDING;
+        currentY += rowMaxH + GAP;
         rowMaxH = 0;
       }
 
-      rowMaxH = Math.max(rowMaxH, h);
-      const offsetX = Math.max(0, (colWidth - 200) / 2);
-
       layout[table.id] = {
-        x: col * colWidth + offsetX,
+        x: currentX,
         y: currentY,
         w: undefined,
         h: undefined,
       };
+
+      currentX += tW + GAP;
+      rowMaxH = Math.max(rowMaxH, tH);
     });
 
     setGeneratedLayout(layout);
@@ -312,6 +362,21 @@ const Tables = () => {
       tableGroups.data[0]
     );
   }, [tableGroups, currentHallId]);
+
+  // Cari zalın masalarındakı qonaq sayı — açıq (open) və kilidli (locked) çeklər ayrı cəmlənir
+  const guestCountSummary = useMemo(() => {
+    let open = 0;
+    let locked = 0;
+    currentTables.forEach((table) => {
+      (table.orders || []).forEach((order) => {
+        const gc = Number(order?.guest_count || 0);
+        if (!gc) return;
+        if (Number(order?.is_locked) === 1) locked += gc;
+        else open += gc;
+      });
+    });
+    return { open, locked, total: open + locked };
+  }, [currentTables]);
 
   // Debug logging for mobile white-screen investigation
   useEffect(() => {
@@ -652,8 +717,8 @@ const Tables = () => {
     const { w: defaultW, h: defaultH } = defaultSizeForTableShape(table.shape_type);
 
     // Ignore admin small sizes (< 150px), use POS defaults
-    const currentW = layout.w && layout.w >= 150 ? layout.w : defaultW;
-    const currentH = layout.h && layout.h >= 150 ? layout.h : defaultH;
+    const currentW = layout.w && layout.w >= MIN_VALID_TABLE_SIZE ? layout.w : defaultW;
+    const currentH = layout.h && layout.h >= MIN_VALID_TABLE_SIZE ? layout.h : defaultH;
 
     setInteractionState({
       type,
@@ -745,8 +810,8 @@ const Tables = () => {
           if (latest && selectedEditTableId === interactionState.tableId) {
             setSingleX(String(Math.round(latest.x || 0)));
             setSingleY(String(Math.round(latest.y || 0)));
-            if (latest.w && latest.w >= 150) setSingleW(String(latest.w));
-            if (latest.h && latest.h >= 150) setSingleH(String(latest.h));
+            if (latest.w && latest.w >= MIN_VALID_TABLE_SIZE) setSingleW(String(latest.w));
+            if (latest.h && latest.h >= MIN_VALID_TABLE_SIZE) setSingleH(String(latest.h));
             setSingleRotation(latest.rotation || 0);
           }
         }
@@ -867,37 +932,63 @@ const Tables = () => {
 
   const handleAutoArrange = () => {
     const containerW = containerRef.current?.offsetWidth || window.innerWidth;
-    const vw = window.innerWidth;
-    let cols = 2;
-    if (vw >= 1200) cols = 5;
-    else if (vw >= 992) cols = 4;
-    else if (vw >= 768) cols = 3;
-    else if (vw >= 576) cols = 3;
+    const containerH = containerRef.current?.offsetHeight || window.innerHeight;
+    // Masalar arası sabit, kiçik boşluq — sütunu tam enə bölmək əvəzinə,
+    // masaların öz eninə görə sıx düzülür (əvvəlki üsul böyük boş sahə
+    // yaradırdı, xüsusən masa ölçüsü sütun enindən kiçik olanda)
+    const GAP = 16;
+    // arrangePadding string kimi saxlanılır (input boş qala bilsin deyə) — burada ədədə çeviririk
+    const padTop = parseInt(arrangePadding.top, 10) || 0;
+    const padBottom = parseInt(arrangePadding.bottom, 10) || 0;
+    const padLeft = parseInt(arrangePadding.left, 10) || 0;
+    const padRight = parseInt(arrangePadding.right, 10) || 0;
 
-    const colWidth = containerW / cols;
     const layoutUpdates = {};
-    let currentY = 20;
+    let currentX = padLeft;
+    let currentY = padTop;
     let rowMaxH = 0;
 
-    currentTables.forEach((table, index) => {
-      const col = index % cols;
-      const { w: tW, h: tH } = defaultSizeForTableShape(table.shape_type);
+    currentTables.forEach((table) => {
+      const defaultLayout = generatedLayout[table.id] || { x: 0, y: 0 };
+      const existingLayout = activeLayouts?.[String(table.id)] || defaultLayout;
+      const { w: defaultW, h: defaultH } = defaultSizeForTableShape(table.shape_type);
+      // İstifadəçinin özü verdiyi ölçü saxlanılır — avto düzləş yenidən
+      // böyütmür/kiçiltmir, yalnız yerini dəyişir
+      const tW = existingLayout.w && existingLayout.w >= MIN_VALID_TABLE_SIZE ? existingLayout.w : defaultW;
+      const tH = existingLayout.h && existingLayout.h >= MIN_VALID_TABLE_SIZE ? existingLayout.h : defaultH;
 
-      if (col === 0 && index !== 0) {
-        currentY += rowMaxH + 20;
+      if (currentX > padLeft && currentX + tW > containerW - padRight) {
+        currentX = padLeft;
+        currentY += rowMaxH + GAP;
         rowMaxH = 0;
       }
-      rowMaxH = Math.max(rowMaxH, tH);
 
-      const offsetX = Math.max(0, (colWidth - tW) / 2);
       layoutUpdates[String(table.id)] = {
-        x: col * colWidth + offsetX,
+        x: currentX,
         y: currentY,
         w: tW,
         h: tH,
         rotation: 0,
       };
+
+      currentX += tW + GAP;
+      rowMaxH = Math.max(rowMaxH, tH);
     });
+
+    // Bütün blokun şaquli mövqeyi: Yuxarı (default, heç bir sürüşmə yoxdur),
+    // Ortada və ya Aşağı — hər kənardan verilən boşluqlar nəzərə alınır
+    if (arrangePosition !== "top") {
+      const contentBottom = currentY + rowMaxH;
+      const contentHeight = contentBottom - padTop;
+      const availableHeight = Math.max(0, containerH - padTop - padBottom);
+      const extraSpace = availableHeight - contentHeight;
+      if (extraSpace > 0) {
+        const offsetY = arrangePosition === "center" ? extraSpace / 2 : extraSpace; // "bottom"
+        Object.values(layoutUpdates).forEach((layout) => {
+          layout.y += offsetY;
+        });
+      }
+    }
 
     dispatch(setTempTableLayout({ hallId: currentHallId, layout: layoutUpdates }));
     dispatch(setTempTableOrder({ hallId: currentHallId, order: currentTables.map((t) => t.id) }));
@@ -919,6 +1010,25 @@ const Tables = () => {
 
   return (
     <>
+      {showGuestCountBar && guestCountSummary.total > 0 && (
+        <div className="guest-count-summary-bar">
+          <span className="gcs-hall-name">
+            <i className="bi bi-door-open-fill"></i>
+            {currentHallData?.name || t("zal")}
+          </span>
+          <span className="gcs-divider" />
+          <span className="gcs-item">
+            <i className="bi bi-people-fill"></i>
+            {guestCountSummary.open} {t("qonaq")}
+          </span>
+          {guestCountSummary.locked > 0 && (
+            <span className="gcs-item gcs-locked">
+              <i className="bi bi-lock-fill"></i>
+              {guestCountSummary.locked} {t("qonaq")}
+            </span>
+          )}
+        </div>
+      )}
       <Container
         fluid
         className="tables-scroll-container position-relative"
@@ -939,8 +1049,8 @@ const Tables = () => {
               const selLayout = activeLayouts?.[String(selectedEditTableId)] || generatedLayout[selectedEditTableId] || { x: 0, y: 0 };
               const selTbl = currentTables.find((t) => t.id === selectedEditTableId);
               const selDefSz = defaultSizeForTableShape(selTbl?.shape_type);
-              const selW = (selLayout.w && selLayout.w >= 150) ? selLayout.w : selDefSz.w;
-              const selH = (selLayout.h && selLayout.h >= 150) ? selLayout.h : selDefSz.h;
+              const selW = (selLayout.w && selLayout.w >= MIN_VALID_TABLE_SIZE) ? selLayout.w : selDefSz.w;
+              const selH = (selLayout.h && selLayout.h >= MIN_VALID_TABLE_SIZE) ? selLayout.h : selDefSz.h;
               const selCX = (selLayout.x || 0) + selW / 2;
               const selCY = (selLayout.y || 0) + selH / 2;
 
@@ -950,8 +1060,8 @@ const Tables = () => {
                 .map((t) => {
                   const tLayout = activeLayouts?.[String(t.id)] || generatedLayout[t.id] || { x: 0, y: 0 };
                   const tDefSz = defaultSizeForTableShape(t.shape_type);
-                  const tW = (tLayout.w && tLayout.w >= 150) ? tLayout.w : tDefSz.w;
-                  const tH = (tLayout.h && tLayout.h >= 150) ? tLayout.h : tDefSz.h;
+                  const tW = (tLayout.w && tLayout.w >= MIN_VALID_TABLE_SIZE) ? tLayout.w : tDefSz.w;
+                  const tH = (tLayout.h && tLayout.h >= MIN_VALID_TABLE_SIZE) ? tLayout.h : tDefSz.h;
                   const tCX = (tLayout.x || 0) + tW / 2;
                   const tCY = (tLayout.y || 0) + tH / 2;
                   const dist = Math.round(Math.sqrt(Math.pow(selCX - tCX, 2) + Math.pow(selCY - tCY, 2)));
@@ -1017,8 +1127,8 @@ const Tables = () => {
               // Ignore admin small sizes (< 150px), use POS shape-based defaults
               const rawW = layout.w;
               const rawH = layout.h;
-              const posW = rawW && rawW >= 150 ? rawW : defaultW;
-              const posH = rawH && rawH >= 150 ? rawH : defaultH;
+              const posW = rawW && rawW >= MIN_VALID_TABLE_SIZE ? rawW : defaultW;
+              const posH = rawH && rawH >= MIN_VALID_TABLE_SIZE ? rawH : defaultH;
 
               const isSelected = isTableEditMode && selectedEditTableId === table.id;
               const style = {
@@ -1406,6 +1516,73 @@ const Tables = () => {
                         <i className="bi bi-arrows-fullscreen"></i>
                         Hamısına tətbiq et
                       </button>
+                    </div>
+
+                    {/* Auto-arrange: position + edge padding */}
+                    <div className="tsm-section">
+                      <div className="tsm-section-title">
+                        <i className="bi bi-align-center"></i>
+                        Mövqe (Avtomatik düzülüş)
+                      </div>
+
+                      <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+                        {[
+                          { key: "top", label: "Yuxarı" },
+                          { key: "center", label: "Ortada" },
+                          { key: "bottom", label: "Aşağı" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.key}
+                            className={`tsm-btn ${arrangePosition === opt.key ? "tsm-btn-primary" : "tsm-btn-outline"}`}
+                            style={{ flex: 1, padding: "8px 6px" }}
+                            onClick={() => updateArrangePosition(opt.key)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="tsm-input-label" style={{ marginBottom: "6px" }}>
+                        Kənarlardan boşluq (px)
+                      </div>
+                      <div className="tsm-input-grid">
+                        <div className="tsm-input-group">
+                          <span className="tsm-input-label">Yuxarı</span>
+                          <input
+                            type="number"
+                            className="tsm-input"
+                            value={arrangePadding.top}
+                            onChange={(e) => updateArrangePadding("top", e.target.value)}
+                          />
+                        </div>
+                        <div className="tsm-input-group">
+                          <span className="tsm-input-label">Aşağı</span>
+                          <input
+                            type="number"
+                            className="tsm-input"
+                            value={arrangePadding.bottom}
+                            onChange={(e) => updateArrangePadding("bottom", e.target.value)}
+                          />
+                        </div>
+                        <div className="tsm-input-group">
+                          <span className="tsm-input-label">Sol</span>
+                          <input
+                            type="number"
+                            className="tsm-input"
+                            value={arrangePadding.left}
+                            onChange={(e) => updateArrangePadding("left", e.target.value)}
+                          />
+                        </div>
+                        <div className="tsm-input-group">
+                          <span className="tsm-input-label">Sağ</span>
+                          <input
+                            type="number"
+                            className="tsm-input"
+                            value={arrangePadding.right}
+                            onChange={(e) => updateArrangePadding("right", e.target.value)}
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     {/* Action Buttons */}

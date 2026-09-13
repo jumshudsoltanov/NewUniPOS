@@ -6,6 +6,22 @@ const LoginModel = require("../model/LoginModel");
 const db = require("../database/config");
 const { Op } = require("sequelize");
 
+// Şəkilli (img base64) sahələr olduğu üçün bütün sətirləri tək INSERT-də
+// göndərmək 'max_allowed_packet' limitini aşa bilir — kiçik qruplarla yazırıq
+const bulkCreateInChunks = async (Model, rows, options, chunkSize = 25) => {
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    try {
+      await Model.bulkCreate(chunk, options);
+    } catch (chunkErr) {
+      console.error(
+        `[bulkCreateInChunks] ${Model.name} chunk (${i}-${i + chunk.length}) uğursuz oldu, digər qruplarla davam edilir:`,
+        chunkErr.message,
+      );
+    }
+  }
+};
+
 const profileData = async () => {
   const profile = await LoginModel.findOne({ attributes: ["id"], raw: true });
   return profile ? profile.id : null;
@@ -15,7 +31,7 @@ const profileData = async () => {
 const fetchColorsFromV2 = async (endpoint) => {
   const colorMap = {};
   try {
-    const res = await axios.get(endpoint);
+    const res = await axios.get(endpoint, { timeout: 15000 });
     const items = res.data?.items || res.data?.data || [];
     items.forEach((item) => {
       if (item.id && item.color) colorMap[item.id] = item.color;
@@ -61,6 +77,7 @@ const getGeneralCategories = async (passedProfileId) => {
     try {
       const response = await axios.get(
         `http://46.224.8.157:35627/api/pos/general-categories/${profile_id}`,
+        { timeout: 15000 },
       );
       if (response.data && Array.isArray(response.data.data)) {
         rawData = response.data.data;
@@ -74,6 +91,7 @@ const getGeneralCategories = async (passedProfileId) => {
       try {
         const cloudResp = await axios.get(
           `https://api.unipos.tech/api/general-categories?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
+          { timeout: 15000 },
         );
         const cloudItems = cloudResp.data?.items || cloudResp.data?.data || [];
         if (Array.isArray(cloudItems) && cloudItems.length > 0) {
@@ -90,6 +108,7 @@ const getGeneralCategories = async (passedProfileId) => {
       try {
         const localResp = await axios.get(
           `http://localhost:8089/api/general-categories?profile_id=${profile_id}`,
+          { timeout: 5000 },
         );
         if (Array.isArray(localResp.data)) {
           rawData = localResp.data;
@@ -149,7 +168,7 @@ const getGeneralCategories = async (passedProfileId) => {
         const updateKeys = Object.keys(generalCategoriesWithOrder[0]).filter(
           (key) => GeneralCategoriesModel.rawAttributes[key] && key !== "ordering",
         );
-        await GeneralCategoriesModel.bulkCreate(generalCategoriesWithOrder, {
+        await bulkCreateInChunks(GeneralCategoriesModel, generalCategoriesWithOrder, {
           updateOnDuplicate: updateKeys,
         });
       }
@@ -172,6 +191,7 @@ const getCategories = async (passedProfileId) => {
     try {
       const response = await axios.get(
         `http://46.224.8.157:35627/api/pos/categories/${profile_id}`,
+        { timeout: 15000 },
       );
       categoriesData = response.data.categories || response.data.data;
     } catch (v1Err) {
@@ -183,6 +203,7 @@ const getCategories = async (passedProfileId) => {
       try {
         const cloudResp = await axios.get(
           `https://api.unipos.tech/api/categories?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
+          { timeout: 15000 },
         );
         const cloudItems = cloudResp.data?.items || cloudResp.data?.data || [];
         if (Array.isArray(cloudItems) && cloudItems.length > 0) {
@@ -199,6 +220,7 @@ const getCategories = async (passedProfileId) => {
       try {
         const localResp = await axios.get(
           `http://localhost:8089/api/categories?profile_id=${profile_id}&limit=10000&page=1`,
+          { timeout: 5000 },
         );
         if (localResp.data && Array.isArray(localResp.data.items)) {
           categoriesData = localResp.data.items;
@@ -258,7 +280,7 @@ const getCategories = async (passedProfileId) => {
         const updateKeys = Object.keys(categoriesWithOrder[0]).filter(
           (key) => CategoriesModel.rawAttributes[key] && key !== "ordering",
         );
-        await CategoriesModel.bulkCreate(categoriesWithOrder, {
+        await bulkCreateInChunks(CategoriesModel, categoriesWithOrder, {
           updateOnDuplicate: updateKeys,
         });
       }
@@ -299,16 +321,27 @@ const getProducts = async (passedProfileId) => {
     const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
-    // V1, V2, V3(local admin) və modifiers-i eyni anda paralel çək
+    // V1, V2, V3(local admin) və modifiers-i eyni anda paralel çək.
+    // Diqqət: timeout olmadan, şəkilləri böyük olan profillərdə bir mənbə
+    // yavaş cavab verəndə bütün sinxronizasiya qeyri-müəyyən müddət
+    // gözləyirdi ("data çox gec gəlir"). 25s-dən sonra həmin mənbə
+    // uğursuz sayılır, digərləri ilə davam edilir (Promise.allSettled).
+    const PRODUCTS_FETCH_TIMEOUT_MS = 25000;
     const [v1Result, v2Result, v3Result, modResult] = await Promise.allSettled([
-      axios.get(`http://46.224.8.157:35627/api/products/${profile_id}`),
+      axios.get(`http://46.224.8.157:35627/api/products/${profile_id}`, {
+        timeout: PRODUCTS_FETCH_TIMEOUT_MS,
+      }),
       axios.get(
         `https://api.unipos.tech/api/products?profile_id=${profile_id}&per_page=1000&limit=1000&page=1`,
+        { timeout: PRODUCTS_FETCH_TIMEOUT_MS },
       ),
       axios.get(
         `http://localhost:8089/api/products?profile_id=${profile_id}&limit=10000&per_page=10000&page=1`,
+        { timeout: 5000 }, // lokal admin panel — işləmirsə tez cavab gəlməlidir
       ),
-      axios.get(`http://46.224.8.157:35627/api/modifiers/${profile_id}`),
+      axios.get(`http://46.224.8.157:35627/api/modifiers/${profile_id}`, {
+        timeout: PRODUCTS_FETCH_TIMEOUT_MS,
+      }),
     ]);
 
     if (v1Result.status === "rejected") {
@@ -518,7 +551,7 @@ const getProducts = async (passedProfileId) => {
             key !== "modifier_groups" &&
             key !== "timer_intervals",
         );
-        await ProductsModel.bulkCreate(productsWithOrder, {
+        await bulkCreateInChunks(ProductsModel, productsWithOrder, {
           updateOnDuplicate: updateKeys,
         });
 
