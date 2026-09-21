@@ -835,6 +835,7 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
         closedTagOrders,
         returnedAgg,
         deletedAgg,
+        openAgg,
     ] = await Promise.all([
         LoginModel.findOne({ where: { id: profileId }, attributes: ['id', 'tax_percent'] }),
         getEmployeeReport(closedWhere),
@@ -909,6 +910,16 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
             where: deletedWhere,
             attributes: [[fn('SUM', col('total')), 'sum_total']],
             paranoid: false,
+            raw: true,
+        }),
+
+        // Hazırda açıq olan çeklər (yekun = bağlanmış + açıq)
+        OrdersModel.findAll({
+            where: { ...baseWhere, status: 1 },
+            attributes: [
+                [fn('SUM', col('total')), 'sum_total'],
+                [fn('COUNT', col('id')), 'cnt'],
+            ],
             raw: true,
         }),
     ]);
@@ -987,6 +998,8 @@ const getShiftSummaryForRange = async (profileId, terminalId, startStr, endStr) 
         total_deleted: parseFloat(deletedAgg[0]?.sum_total || 0),
         total_tax,
         net_total: parseFloat(aggRow.sum_total || 0),
+        open_total: parseFloat(openAgg[0]?.sum_total || 0),
+        open_count: parseInt(openAgg[0]?.cnt || 0),
         guest_count: parseInt(aggRow.sum_guests || 0),
         total_paid,
         total_unpaid,

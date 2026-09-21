@@ -1,46 +1,49 @@
 import React, { useEffect, useRef, useState } from "react";
-import DefaultLogo from "../../assets/images/unipos_logo.png";
+import logo from "../../assets/images/logo-build.png";
 import { t } from "../../utils/translations";
-import "./RefreshLoader.css";
+import "./RefreshSyncWindow.css";
 
 const SYNC_STEPS = [
-    { key: "products",          label: t("products"),         icon: "bi-box-seam" },
-    { key: "categories",        label: "Alt kateqoriyalar",  icon: "bi-tag" },
-    { key: "generalCategories", label: t("categories"),      icon: "bi-grid" },
-    { key: "tables",            label: t("tables"),            icon: "bi-table" },
-    { key: "tableGroups",       label: t("masa_qruplari"),      icon: "bi-diagram-3" },
-    { key: "waiters",           label: "Ofisiantlar",        icon: "bi-person-badge" },
-    { key: "paymentMethods",    label: t("odenis_usullari"),   icon: "bi-credit-card" },
+    { key: "products",          label: t("products") },
+    { key: "categories",        label: "Alt kateqoriyalar" },
+    { key: "generalCategories", label: t("categories") },
+    { key: "tables",            label: t("tables") },
+    { key: "tableGroups",       label: t("masa_qruplari") },
+    { key: "waiters",           label: "Ofisiantlar" },
+    { key: "paymentMethods",    label: t("odenis_usullari") },
 ];
 
-const STEP_STAGGER_MS = 90;
-const REMOVE_TRANSITION_MS = 300;
+const ROW_APPEAR_MS = 70;
+const EXIT_START_MS = 500;
+const EXIT_STEP_MS = 90;
+const EXIT_TRANSITION_MS = 300;
 const CLOSE_HOLD_MS = 350;
+const WATCHDOG_MS = 20000;
+
+const OFFLINE_COLOR = "#9a6a12";
+const fmt = (n) => Number(n || 0).toLocaleString("az-AZ");
 
 const RefreshSyncWindow = () => {
     const [phase, setPhase] = useState("loading"); // loading | done
     const [isOnline, setIsOnline] = useState(true);
     const [progress, setProgress] = useState(0);
-    const [visibleSteps, setVisibleSteps] = useState(0);
+    const [visibleRows, setVisibleRows] = useState(0);
     const [counts, setCounts] = useState(null);
     const [deltas, setDeltas] = useState({});
-    const [removingKeys, setRemovingKeys] = useState([]);
-    const [removedKeys, setRemovedKeys] = useState([]);
+    const [exitingKeys, setExitingKeys] = useState([]);
     const timersRef = useRef([]);
+    const watchdogRef = useRef(null);
 
     const clearTimers = () => {
         timersRef.current.forEach(clearTimeout);
         timersRef.current = [];
     };
 
-    // Watchdog: hər hansı səbəbdən "done" hadisəsi heç vaxt gəlməsə (itən IPC,
-    // uğursuz sorğu və s.), pəncərə əbədi açıq qalmasın deyə məcburi bağlanır
-    const watchdogRef = useRef(null);
     const armWatchdog = () => {
         if (watchdogRef.current) clearTimeout(watchdogRef.current);
         watchdogRef.current = setTimeout(() => {
             window.electronAPI?.closeRefreshWindow?.();
-        }, 20000);
+        }, WATCHDOG_MS);
     };
 
     useEffect(() => {
@@ -54,30 +57,30 @@ const RefreshSyncWindow = () => {
                 setPhase("loading");
                 setIsOnline(payload.isOnline !== false);
                 setProgress(0);
-                setVisibleSteps(0);
+                setVisibleRows(0);
                 setCounts(null);
                 setDeltas({});
-                setRemovingKeys([]);
-                setRemovedKeys([]);
+                setExitingKeys([]);
             } else if (payload.type === "done") {
                 if (watchdogRef.current) clearTimeout(watchdogRef.current);
                 setCounts(payload.counts || {});
                 setDeltas(payload.deltas || {});
                 setIsOnline(payload.isOnline !== false);
                 setProgress(100);
-                setVisibleSteps(SYNC_STEPS.length);
+                setVisibleRows(SYNC_STEPS.length);
                 setPhase("done");
             }
         });
 
         return () => {
             if (watchdogRef.current) clearTimeout(watchdogRef.current);
+            clearTimers();
         };
     }, []);
 
-    // Yüklənmə zamanı proqres/addım animasiyası
+    // Yüklənmə zamanı proqres və sətirlərin ardıcıl görünməsi
     useEffect(() => {
-        if (phase !== "loading") return;
+        if (phase !== "loading") return undefined;
         const duration = isOnline ? 1600 : 700;
         const intervalTime = 30;
         const totalTicks = duration / intervalTime;
@@ -88,125 +91,100 @@ const RefreshSyncWindow = () => {
             if (tick >= totalTicks) clearInterval(progInt);
         }, intervalTime);
 
-        let stepIdx = 0;
-        const stepInt = setInterval(() => {
-            stepIdx++;
-            setVisibleSteps(stepIdx);
-            if (stepIdx >= SYNC_STEPS.length) clearInterval(stepInt);
-        }, isOnline ? 130 : 60);
+        let rowIdx = 0;
+        const rowInt = setInterval(() => {
+            rowIdx++;
+            setVisibleRows(rowIdx);
+            if (rowIdx >= SYNC_STEPS.length) clearInterval(rowInt);
+        }, ROW_APPEAR_MS);
 
         return () => {
             clearInterval(progInt);
-            clearInterval(stepInt);
+            clearInterval(rowInt);
         };
     }, [phase, isOnline]);
 
-    // Bitəndə hər addımı növbə ilə kənara sürüşdürüb silir, sonda pəncərəni bağlayır
+    // Bitəndən sonra sətirlər növbə ilə sağa çıxır, sonda pəncərə bağlanır
     useEffect(() => {
-        if (phase !== "done") return;
+        if (phase !== "done") return undefined;
         clearTimers();
 
         SYNC_STEPS.forEach((step, i) => {
-            const removeAt = 300 + i * STEP_STAGGER_MS;
-            const unmountAt = removeAt + REMOVE_TRANSITION_MS;
             timersRef.current.push(
-                setTimeout(() => setRemovingKeys((prev) => [...prev, step.key]), removeAt),
-            );
-            timersRef.current.push(
-                setTimeout(() => setRemovedKeys((prev) => [...prev, step.key]), unmountAt),
+                setTimeout(
+                    () => setExitingKeys((prev) => [...prev, step.key]),
+                    EXIT_START_MS + i * EXIT_STEP_MS,
+                ),
             );
         });
 
         const closeDelay =
-            300 + SYNC_STEPS.length * STEP_STAGGER_MS + REMOVE_TRANSITION_MS + CLOSE_HOLD_MS;
+            EXIT_START_MS + SYNC_STEPS.length * EXIT_STEP_MS + EXIT_TRANSITION_MS + CLOSE_HOLD_MS;
         timersRef.current.push(
-            setTimeout(() => {
-                window.electronAPI?.closeRefreshWindow?.();
-            }, closeDelay),
+            setTimeout(() => window.electronAPI?.closeRefreshWindow?.(), closeDelay),
         );
 
         return clearTimers;
     }, [phase]);
 
-    const totalCount = counts
-        ? Object.values(counts).reduce((a, b) => a + (b || 0), 0)
+    const done = phase === "done";
+    const offline = !isOnline && done;
+    const total = counts
+        ? SYNC_STEPS.reduce((sum, s) => sum + (counts[s.key] || 0), 0)
         : null;
 
-    const remainingSteps = SYNC_STEPS.slice(0, visibleSteps).filter(
-        (s) => !removedKeys.includes(s.key),
-    );
+    const statusText = offline ? "OFLAYN REJİM" : done ? "TAMAMLANDI" : "YENİLƏNİR";
+    const statusColor = offline ? OFFLINE_COLOR : undefined;
 
     return (
-        <div className="rl-window">
-            <div className="rl-card rl-card-window">
-                <div className={`rl-logo-wrap ${phase === "done" ? "done" : "loading"}`}>
-                    <span className="rl-logo-ring" />
-                    <img src={DefaultLogo} alt="UniPOS" className="rl-logo" />
+        <div className="rs-root" style={statusColor ? { "--rs-status-color": statusColor } : undefined}>
+            <div className="rs-head">
+                <div className="rs-logo-tile">
+                    <img className="rs-logo" src={logo} alt="UniPOS" />
                 </div>
-
-                {!isOnline && (
-                    <div className="rl-offline-banner">
-                        <i className="bi bi-wifi-off" />{t("i̇nternet_yoxdur_lokal_melumatlar")}
-                    </div>
-                )}
-
-                <div className={`rl-status ${phase === "done" ? "done" : ""}`}>
-                    {phase === "done" ? (
-                        <>
-                            <span className="rl-check-icon">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                                    <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </span>
-                            {isOnline ? "Sinxronizasiya tamamlandı" : "Lokal məlumatlar yükləndi"}
-                            {totalCount !== null && (
-                                <span className="rl-total-badge">{totalCount} qeyd</span>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            <span className="rl-spinner" />
-                            {isOnline ? "Məlumatlar yenilənir..." : "Lokal məlumatlar yüklənir..."}
-                        </>
-                    )}
+                <div className="rs-titles">
+                    <div className="rs-title">Məlumatların yenilənməsi</div>
+                    <div className="rs-status">{statusText}</div>
                 </div>
-
-                <div className="rl-progress-row">
-                    <div className="rl-progress-track">
-                        <div className="rl-progress-fill" style={{ width: `${progress}%` }} />
-                    </div>
-                    <span className="rl-progress-pct">{Math.round(progress)}%</span>
+                <div className="rs-summary">
+                    <div className="rs-percent">{offline ? "—" : `${Math.round(progress)}%`}</div>
+                    <div className="rs-total">{total === null ? "— qeyd" : `${fmt(total)} qeyd`}</div>
                 </div>
+            </div>
 
-                <div className="rl-steps">
-                    {remainingSteps.map((step) => {
-                        const count = counts?.[step.key];
-                        const done = count !== undefined;
-                        const delta = deltas?.[step.key] || 0;
-                        const removing = removingKeys.includes(step.key);
-                        return (
-                            <div
-                                key={step.key}
-                                className={`rl-step ${done ? "done" : "loading"} ${removing ? "removing" : ""}`}
-                            >
-                                <span className="rl-step-icon">
-                                    {done ? (
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                            <path d="M5 13L9 17L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    ) : (
-                                        <i className={`bi ${step.icon}`} />
-                                    )}
-                                </span>
-                                <span className="rl-step-label">{step.label}</span>
-                                {delta > 0 && <span className="rl-new-badge">+{delta} YENİ</span>}
-                                <span className="rl-step-count">
-                                    {done ? count : <span className="rl-dots" />}
-                                </span>
+            <div className="rs-line">
+                <div className="rs-line-fill" style={{ width: `${progress}%` }} />
+            </div>
+
+            {offline && (
+                <div className="rs-offline">İnternet yoxdur — lokal məlumatlar göstərilir</div>
+            )}
+
+            <div className="rs-rows">
+                {SYNC_STEPS.map((step, i) => {
+                    const count = counts?.[step.key];
+                    const ready = count !== undefined;
+                    const delta = deltas?.[step.key] || 0;
+                    const hidden = i >= visibleRows;
+                    const exiting = exitingKeys.includes(step.key);
+                    const cls = `rs-row${exiting ? " rs-exiting" : hidden ? " rs-hidden" : ""}`;
+                    return (
+                        <div key={step.key} className={cls}>
+                            <div className={`rs-mark${ready && !offline ? "" : " rs-dot"}`}>
+                                {ready && !offline ? "✓" : ""}
                             </div>
-                        );
-                    })}
-                </div>
+                            <div className="rs-name">{step.label}</div>
+                            {ready && !offline && delta > 0 ? (
+                                <div className="rs-new">+{delta}</div>
+                            ) : (
+                                <div />
+                            )}
+                            <div className={`rs-count${ready ? "" : " rs-pending"}`}>
+                                {ready ? fmt(count) : "——"}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

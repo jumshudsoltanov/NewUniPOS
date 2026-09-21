@@ -389,7 +389,9 @@ function createSplashWindow() {
     if (splashWindow && !splashWindow.isDestroyed()) splashWindow.show();
   });
 
-  splashWindow.loadFile(path.join(__dirname, "splash.html"));
+  splashWindow.loadFile(path.join(__dirname, "splash.html"), {
+    query: { v: app.getVersion() },
+  });
 
   splashWindow.on("closed", () => {
     splashWindow = null;

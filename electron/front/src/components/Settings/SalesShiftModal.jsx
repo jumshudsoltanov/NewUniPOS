@@ -822,16 +822,16 @@ const SalesShiftModal = ({ show, onHide }) => {
                         <i className="bi bi-bar-chart-fill" aria-hidden />{t("novbe_xulasesi")}</div>
                     <div className="ssm-info-card">
                         <div className="ssm-info-row">
-                            <span className="ssm-info-label">{t("baglanmis_cek")}</span>
-                            <span className="ssm-info-value">{summary.checksCount ?? 0}</span>
+                            <span className="ssm-info-label">{t("baglanmis_cek")} ({summary.checksCount ?? 0})</span>
+                            <span className="ssm-info-value">{money(summary.grossTotal)} {getCurrencySymbol()}</span>
                         </div>
-                        <div className="ssm-info-row ssm-total-row">
-                            <span>{t("cem_mebleg")}</span>
-                            <span>{money(summary.grossTotal)} {getCurrencySymbol()}</span>
+                        <div className="ssm-info-row">
+                            <span className="ssm-info-label">{t("aciq_cekler")} ({summary.open_count ?? 0})</span>
+                            <span className="ssm-info-value">{money(summary.open_total)} {getCurrencySymbol()}</span>
                         </div>
                         <div className="ssm-info-row ssm-total-row" style={{ borderTop: '1px dashed #e2e8f0', marginTop: 4, paddingTop: 4 }}>
                             <span>{t("ceklerin_cemi_yekun")}</span>
-                            <span>{money(summary.net_total)} {getCurrencySymbol()}</span>
+                            <span>{money((Number(summary.grossTotal) || 0) + (Number(summary.open_total) || 0))} {getCurrencySymbol()}</span>
                         </div>
                     </div>
 
