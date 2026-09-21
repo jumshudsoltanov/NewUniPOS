@@ -264,11 +264,18 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
 };
 
 // Performans optimizasiyası: Yalnız masanın öz məlumatı və ya loginedWaiter dəyişəndə render et
+// Diqqət: Tables.jsx hər render zamanı customStyle üçün TƏZƏ obyekt yaradır
+// ({width, height, ...}) — reference (===) müqayisəsi buna görə HƏMİŞƏ fərqli
+// çıxır və memo faktiki heç vaxt işləmirdi. Masa sayı çoxaldıqca (məs. Check-dən
+// Tables-a qayıdanda hər dəfə YÜZLƏRLƏ masa lazımsız yenidən render olunurdu —
+// "donma" hissi məhz budur). Ona görə yalnız real fərqli olan sahələri (en/hünd.)
+// müqayisə edirik.
 const areEqual = (prevProps, nextProps) => {
   return (
     prevProps.table === nextProps.table &&
     prevProps.loginedWaiter === nextProps.loginedWaiter &&
-    prevProps.customStyle === nextProps.customStyle &&
+    prevProps.customStyle?.width === nextProps.customStyle?.width &&
+    prevProps.customStyle?.height === nextProps.customStyle?.height &&
     prevProps.rotation === nextProps.rotation
   );
 };

@@ -53,6 +53,7 @@ Menu.setApplicationMenu(null);
 const isDev = !app.isPackaged;
 let mainWindow = null;
 let customerWindow = null;
+let splashWindow = null;
 
 function getPreloadPath() {
   const appPath = app.getAppPath();
@@ -359,14 +360,72 @@ if (!gotTheLock) {
 }
 // ----------------------------
 
+// Splash animasiyası tam oynasın deyə minimum bu qədər ekranda qalır
+const SPLASH_MIN_DISPLAY_MS = 2500;
+let splashShownAt = 0;
+
+// Kiçik splash pəncərə — əsas pəncərə hazır olana qədər göstərilir
+function createSplashWindow() {
+  splashShownAt = Date.now();
+  splashWindow = new BrowserWindow({
+    width: 440,
+    height: 280,
+    frame: false,
+    resizable: false,
+    movable: false,
+    show: false,
+    backgroundColor: "#ffffff",
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    center: true,
+    ...browserWindowIconFields(),
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  splashWindow.once("ready-to-show", () => {
+    if (splashWindow && !splashWindow.isDestroyed()) splashWindow.show();
+  });
+
+  splashWindow.loadFile(path.join(__dirname, "splash.html"));
+
+  splashWindow.on("closed", () => {
+    splashWindow = null;
+  });
+}
+
+// Splash tam bağlanana qədər əsas pəncərə göstərilmir — ikisi üst-üstə
+// düşüb yanıb-sönmə (flicker) yaratmasın deyə ardıcıl işləyir
+function revealMainWindow() {
+  const elapsed = Date.now() - splashShownAt;
+  const wait = Math.max(0, SPLASH_MIN_DISPLAY_MS - elapsed);
+  setTimeout(() => {
+    const showMain = () => {
+      if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+        mainWindow.show();
+      }
+    };
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.once("closed", showMain);
+      splashWindow.close();
+    } else {
+      showMain();
+    }
+  }, wait);
+}
+
 function createWindow() {
   const preloadPath = getPreloadPath();
+
+  createSplashWindow();
 
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     fullscreen: true, // Start in fullscreen
-    show: false, // renderer hazır olmayana qədər ağ ekran göstərmə — aşağıda ready-to-show ilə açılır
+    show: false, // splash bağlanana/renderer hazır olana qədər göstərilmir
     backgroundColor: "#0a1e4d", // pəncərə açılan andan (renderer boyanmazdan əvvəl) belə ağ deyil, brend rənginə uyğun fon
     ...browserWindowIconFields(),
     webPreferences: {
@@ -377,18 +436,10 @@ function createWindow() {
     },
   });
 
-  // Zəif komplarda renderer (React bundle) yüklənib boyanana qədər pəncərəni
-  // gizli saxlayırıq ki, "ağ ekran" fləşi görünməsin — hazır olan kimi göstərilir
-  mainWindow.once("ready-to-show", () => {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.show();
-  });
-  // Ehtiyat: hansısa səbəbdən ready-to-show heç vaxt gəlməsə, pəncərə əbədi
-  // gizli qalmasın deyə maksimum 4s sonra məcburi göstər
+  // Ehtiyat: siqnal gəlməsə, 12s sonra məcburi göstər
   setTimeout(() => {
-    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
-      mainWindow.show();
-    }
-  }, 4000);
+    revealMainWindow();
+  }, 12000);
 
   attachDevToolsIcon(mainWindow);
   attachRendererRecovery(mainWindow, "cashier");
@@ -426,6 +477,10 @@ function createWindow() {
     if (kitchenWindow && !kitchenWindow.isDestroyed()) {
       kitchenWindow.close();
       kitchenWindow = null;
+    }
+    if (refreshWindow && !refreshWindow.isDestroyed()) {
+      refreshWindow.close();
+      refreshWindow = null;
     }
   });
 
@@ -551,6 +606,31 @@ function createWindow() {
     }
   }
 }
+
+ipcMain.on("app-ready-to-show", () => {
+  revealMainWindow();
+});
+
+ipcMain.handle("open-refresh-window", () => {
+  if (!refreshWindow || refreshWindow.isDestroyed()) {
+    createRefreshWindow();
+  } else {
+    refreshWindow.show();
+    refreshWindow.focus();
+  }
+});
+
+ipcMain.handle("close-refresh-window", () => {
+  if (refreshWindow && !refreshWindow.isDestroyed()) {
+    refreshWindow.close();
+  }
+});
+
+ipcMain.on("refresh-sync-event", (_event, payload) => {
+  if (refreshWindow && !refreshWindow.isDestroyed()) {
+    refreshWindow.webContents.send("refresh-sync-event", payload);
+  }
+});
 
 // IPC Handlers
 ipcMain.handle("toggle-fullscreen", () => {
@@ -1282,6 +1362,58 @@ function createCustomerWindow(screenId) {
 
   customerWindow.on("closed", () => {
     customerWindow = null;
+  });
+}
+
+// Kiçik "Yenilə" sinxronizasiya pəncərəsi — splash ilə eyni məntiqlə,
+// əsas pəncərə üzərində ayrıca kiçik pəncərə kimi açılır
+let refreshWindow = null;
+
+function createRefreshWindow() {
+  refreshWindow = new BrowserWindow({
+    width: 560,
+    height: 470,
+    frame: false,
+    resizable: false,
+    movable: true,
+    show: false,
+    backgroundColor: "#ffffff",
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    center: true,
+    ...browserWindowIconFields(),
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: getPreloadPath(),
+      webSecurity: false,
+    },
+  });
+
+  refreshWindow.once("ready-to-show", () => {
+    if (refreshWindow && !refreshWindow.isDestroyed()) refreshWindow.show();
+  });
+
+  // Ehtiyat: renderer heç vaxt "close-refresh-window" çağırmasa (məs. yüklənmə
+  // xətası, itən IPC), pəncərə əbədi açıq qalmasın deyə məcburi bağlanır
+  const openedWindow = refreshWindow;
+  setTimeout(() => {
+    if (openedWindow && !openedWindow.isDestroyed()) {
+      openedWindow.close();
+    }
+  }, 25000);
+
+  if (isDev) {
+    refreshWindow.loadURL("http://localhost:5173/#/refresh-sync");
+  } else {
+    refreshWindow.loadFile(
+      path.join(app.getAppPath(), "electron", "front", "dist", "index.html"),
+      { hash: "/refresh-sync" },
+    );
+  }
+
+  refreshWindow.on("closed", () => {
+    refreshWindow = null;
   });
 }
 

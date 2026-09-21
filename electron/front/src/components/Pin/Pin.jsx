@@ -195,6 +195,7 @@ const Pin = () => {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pinSyncCounts, setPinSyncCounts] = useState(null);
+  const hasRefreshWindowApi = typeof window !== "undefined" && !!window.electronAPI?.openRefreshWindow;
   const [isBrandsModalOpen, setIsBrandsModalOpen] = useState(false);
   const [appVersion, setAppVersion] = useState(null);
   const [isPinAdvancedSettingsOpen, setIsPinAdvancedSettingsOpen] = useState(false);
@@ -284,9 +285,32 @@ const Pin = () => {
       toast.error(t("no_profile_data"));
       return;
     }
+    // Üst-üstə iki dəfə basılanda (avtomatik + əl ilə və s.) "start" siqnalı yenilənmə
+    // pəncərəsini yenidən "loading" fazasına atır və bitmə hadisəsini itirə bilər —
+    // artıq davam edən yeniləmə varsa yenisini başlatma
+    if (isRefreshing) return;
 
     setIsRefreshing(true);
     setPinSyncCounts(null);
+
+    const profileIdForCache = activeProfileData.data.profile.id;
+    const prevCountsKey = `unipos_sync_prev_counts_${profileIdForCache}`;
+    let prevCounts = {};
+    try {
+      prevCounts = JSON.parse(localStorage.getItem(prevCountsKey)) || {};
+    } catch {
+      prevCounts = {};
+    }
+
+    const hasRefreshWindow = hasRefreshWindowApi;
+    if (hasRefreshWindow) {
+      window.electronAPI.openRefreshWindow();
+      window.electronAPI.sendRefreshSyncEvent({
+        type: "start",
+        isOnline: navigator.onLine,
+      });
+    }
+
     try {
       const profileId = activeProfileData.data.profile.id;
       // Əvvəl serverdən DB-yə yaz — sonra GET; əks halda Promise.all yarışında köhnə məlumat gəlirdi (2 dəfə basmaq lazım idi)
@@ -301,6 +325,31 @@ const Pin = () => {
 
       if (syncRes?.data?.counts) {
         setPinSyncCounts(syncRes.data.counts);
+      }
+
+      if (hasRefreshWindow && syncRes?.data?.counts) {
+        const newCounts = syncRes.data.counts;
+        const deltas = {};
+        Object.keys(newCounts).forEach((key) => {
+          const diff = (newCounts[key] || 0) - (prevCounts[key] || 0);
+          if (diff > 0) deltas[key] = diff;
+        });
+        window.electronAPI.sendRefreshSyncEvent({
+          type: "done",
+          counts: newCounts,
+          deltas,
+          isOnline: syncRes?.data?.isOnline !== false,
+        });
+        try {
+          localStorage.setItem(prevCountsKey, JSON.stringify(newCounts));
+        } catch {}
+      } else if (hasRefreshWindow) {
+        window.electronAPI.sendRefreshSyncEvent({
+          type: "done",
+          counts: {},
+          deltas: {},
+          isOnline: false,
+        });
       }
 
       if (syncRes?.data?.isOnline === false) {
@@ -328,7 +377,11 @@ const Pin = () => {
       }
 
       if (syncRes?.data?.counts) {
-        await new Promise(resolve => setTimeout(resolve, 1800));
+        // Ayrıca yenilənmə pəncərəsi özü-özünü bağlayır — burda süni gecikməyə ehtiyac yoxdur,
+        // köhnə səhifədaxili overlay istifadə olunanda isə animasiya üçün qısa gözləmə saxlanılır
+        if (!hasRefreshWindow) {
+          await new Promise(resolve => setTimeout(resolve, 1800));
+        }
       } else if (failed.length > 0) {
         toast.warn(`Yeniləmə qismən tamamlandı (${failed.length}/${results.length} sorğu uğursuz oldu)`);
       } else {
@@ -342,6 +395,14 @@ const Pin = () => {
     } catch (error) {
       console.error("Yeniləmə xətası:", error?.message || error);
       toast.error(t("data_update_error"));
+      if (hasRefreshWindow) {
+        window.electronAPI.sendRefreshSyncEvent({
+          type: "done",
+          counts: {},
+          deltas: {},
+          isOnline: navigator.onLine,
+        });
+      }
     } finally {
       setIsRefreshing(false);
       setPinSyncCounts(null);
@@ -881,7 +942,7 @@ const Pin = () => {
         profileId={activeProfileData?.data?.profile?.id}
       />
 
-      <RefreshLoader isOpen={isRefreshing} syncCounts={pinSyncCounts} />
+      <RefreshLoader isOpen={isRefreshing && !hasRefreshWindowApi} syncCounts={pinSyncCounts} />
 
       <BrandsModal
         show={isBrandsModalOpen}

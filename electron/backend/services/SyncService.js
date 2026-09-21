@@ -641,13 +641,18 @@ class SyncService {
      * Status modalı checkInternet ilə eyni ünvandan başla (Electron main.js).
      * Əvvəl yalnız discover + Google/Cloudflare idi — bəzən UI yaşıl, sync isə "offline" qalırdı.
      */
+    // Diqqət: əvvəllər 1000-1500ms idi — bu, bir qədər yavaş şəbəkədə
+    // (məs. VPN, zəif WiFi, yüklü router) belə HƏR 4 sorğunun paralel
+    // uğursuz olmasına səbəb olurdu, halbuki internet var idi. Nəticədə
+    // "Yenilə" xətası verirdi və wifi ikonu boş yerə narıncı görünürdü.
+    // main.js-dəki check-internet ilə uyğun olaraq 3000ms-ə qaldırıldı.
     const checks = [
-      { url: "https://1.1.1.1", timeout: 1000 },
-      { url: "http://1.1.1.1", timeout: 1000 },
-      { url: "http://46.224.8.157:35627/api/discover", timeout: 1500 },
+      { url: "https://1.1.1.1", timeout: 3000 },
+      { url: "http://1.1.1.1", timeout: 3000 },
+      { url: "http://46.224.8.157:35627/api/discover", timeout: 3000 },
       {
         url: "https://api.unipos.tech/",
-        timeout: 1500,
+        timeout: 3000,
         validateStatus: () => true,
       },
     ];

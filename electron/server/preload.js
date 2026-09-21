@@ -43,4 +43,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     clearPrintSpooler: () => ipcRenderer.invoke("clear-print-spooler"),
     installXprinterDriver: () => ipcRenderer.invoke("install-xprinter-driver"),
     customInstallXprinter: (config) => ipcRenderer.invoke("custom-install-xprinter", config),
+    notifyAppReadyToShow: () => ipcRenderer.send("app-ready-to-show"),
+    openRefreshWindow: () => ipcRenderer.invoke("open-refresh-window"),
+    closeRefreshWindow: () => ipcRenderer.invoke("close-refresh-window"),
+    sendRefreshSyncEvent: (payload) => ipcRenderer.send("refresh-sync-event", payload),
+    onRefreshSyncEvent: (callback) => ipcRenderer.on("refresh-sync-event", (event, payload) => callback(payload)),
 });

@@ -39,6 +39,7 @@ const Settings = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncCounts, setSyncCounts] = useState(null);
   const [refreshIsOnline, setRefreshIsOnline] = useState(true);
+  const hasRefreshWindowApi = typeof window !== "undefined" && !!window.electronAPI?.openRefreshWindow;
   const [anyDeskId, setAnyDeskId] = useState(null);
   const [showClock, setShowClock] = useState(() => {
     return localStorage.getItem("showHeaderClock") === "true";
@@ -110,10 +111,29 @@ const Settings = () => {
       toast.error(t("no_profile_data"));
       return;
     }
+    if (isRefreshing) return;
 
     setIsRefreshing(true);
     setSyncCounts(null);
     setRefreshIsOnline(true);
+
+    const profileIdForCache = loginedProfileData.data.profile.id;
+    const prevCountsKey = `unipos_sync_prev_counts_${profileIdForCache}`;
+    let prevCounts = {};
+    try {
+      prevCounts = JSON.parse(localStorage.getItem(prevCountsKey)) || {};
+    } catch {
+      prevCounts = {};
+    }
+
+    if (hasRefreshWindowApi) {
+      window.electronAPI.openRefreshWindow();
+      window.electronAPI.sendRefreshSyncEvent({
+        type: "start",
+        isOnline: navigator.onLine,
+      });
+    }
+
     const toastId = toast.loading(t("data_updating"));
     try {
       const profileId = loginedProfileData.data.profile.id;
@@ -121,6 +141,33 @@ const Settings = () => {
       const isOnline = syncRes?.data?.isOnline !== false;
       setRefreshIsOnline(isOnline);
       if (syncRes?.data?.counts) setSyncCounts(syncRes.data.counts);
+
+      if (hasRefreshWindowApi) {
+        const newCounts = syncRes?.data?.counts;
+        if (newCounts) {
+          const deltas = {};
+          Object.keys(newCounts).forEach((key) => {
+            const diff = (newCounts[key] || 0) - (prevCounts[key] || 0);
+            if (diff > 0) deltas[key] = diff;
+          });
+          window.electronAPI.sendRefreshSyncEvent({
+            type: "done",
+            counts: newCounts,
+            deltas,
+            isOnline,
+          });
+          try {
+            localStorage.setItem(prevCountsKey, JSON.stringify(newCounts));
+          } catch {}
+        } else {
+          window.electronAPI.sendRefreshSyncEvent({
+            type: "done",
+            counts: {},
+            deltas: {},
+            isOnline,
+          });
+        }
+      }
 
       await Promise.all([
         dispatch(getTableGroups(profileId)).unwrap(),
@@ -160,6 +207,15 @@ const Settings = () => {
       toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
     } catch (error) {
       console.error("Yeniləmə xətası:", error);
+
+      if (hasRefreshWindowApi) {
+        window.electronAPI.sendRefreshSyncEvent({
+          type: "done",
+          counts: {},
+          deltas: {},
+          isOnline: navigator.onLine,
+        });
+      }
 
       if (error?.data?.isBlocked) {
         toast.dismiss(toastId);
@@ -428,9 +484,9 @@ const Settings = () => {
         onHide={() => setShowDevicesModal(false)}
       />
 
-      {/* Refreshing Overlay */}
+      {/* Refreshing Overlay — yalnız ayrıca yenilənmə pəncərəsi mövcud olmayanda (fallback) */}
       <RefreshLoader
-        isOpen={isRefreshing}
+        isOpen={isRefreshing && !hasRefreshWindowApi}
         syncCounts={syncCounts}
         isOnline={refreshIsOnline}
       />

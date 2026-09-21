@@ -42,6 +42,7 @@ const Settings = lazy(() => import("./components/Settings/Settings"));
 const Rooms = lazy(() => import("./components/Rooms/Rooms"));
 const CustomerDisplay = lazy(() => import('./components/CustomerDisplay/CustomerDisplay'));
 const KitchenDisplay = lazy(() => import('./components/Kitchen/KitchenDisplay'));
+const RefreshSyncWindow = lazy(() => import('./components/RefreshLoader/RefreshSyncWindow'));
 import { initNetwork, getSocket, onSocketStatusChange } from "./utils/apiConfig";
 import { preloadCheck } from "./utils/preloadCheck";
 import { isPaymentExpired, isPosBlocked } from "./utils/dateHelpers";
@@ -57,7 +58,8 @@ function AppContent() {
 
   const isDisplayRoute = location.pathname.startsWith('/customer') ||
     location.pathname.startsWith('/kitchen') ||
-    location.pathname.startsWith('/kds');
+    location.pathname.startsWith('/kds') ||
+    location.pathname.startsWith('/refresh-sync');
 
   const authResultRedux = useSelector((state) => state.LoginSlice.loginedProfileData);
 
@@ -511,6 +513,13 @@ function AppContent() {
     initApp();
   }, [dispatch, navigate]);
 
+  // Splash bağlanıb əsas pəncərə göstərilsin
+  useEffect(() => {
+    if (isDisplayRoute) return;
+    if (showInitialLoading) return;
+    window.electronAPI?.notifyAppReadyToShow?.();
+  }, [showInitialLoading, isDisplayRoute]);
+
   // Preload Check komponenti — Pin/Tables/Checks açılanda arxa planda yüklə (yeni sifariş tez açılsın)
   useEffect(() => {
     if (showInitialLoading) return;
@@ -553,6 +562,7 @@ function AppContent() {
           <Route path="/pin" element={<Pin />} />
           <Route path="/blocked" element={<BlockPage />} />
           <Route path="/customer" element={<CustomerDisplay />} />
+          <Route path="/refresh-sync" element={<RefreshSyncWindow />} />
           <Route path="/kitchen-display" element={<KitchenDisplay />} />
           <Route path="/kds" element={<KitchenDisplay />} />
           <Route path="/kitchen" element={<KitchenDisplay />} />

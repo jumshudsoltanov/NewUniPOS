@@ -16,7 +16,7 @@ import { preloadCheck } from "../../utils/preloadCheck";
 import { t } from "../../utils/translations";
 
 const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
-  const [guestCount, setGuestCount] = useState("0");
+  const [guestCount, setGuestCount] = useState("1");
   const dispatch = useDispatch();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { currentHallId } = useSelector((state) => state.TablesSlice);
@@ -39,17 +39,19 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
 
   useEffect(() => {
     if (show) {
-      setGuestCount("0");
+      setGuestCount("1");
     }
   }, [show]);
 
   const handleCancel = useCallback(() => {
-    setGuestCount("0");
+    setGuestCount("1");
     onHide();
   }, [onHide]);
 
   const handleNumberClick = (num) => {
-    if (guestCount === "0") {
+    // Default dəyər (1) toxunulmamış qalıbsa, ilk rəqəm onu əvəz etsin
+    // (məs. "1" üzərinə "5" yazanda "15" yox, "5" olsun)
+    if (guestCount === "1" || guestCount === "0") {
       setGuestCount(num.toString());
     } else {
       setGuestCount((prev) => prev + num);
@@ -57,6 +59,8 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
   };
 
   const handleBackspace = () => {
+    // Default 1-dir, amma silə-silə 0-a qədər enə bilməlidir (1 kimi
+    // məcburi minimuma sıxışdırılmamalıdır)
     setGuestCount((prev) => {
       if (prev.length <= 1) return "0";
       return prev.slice(0, -1);
@@ -282,7 +286,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
 
         <div className="customers-modal-body">
           <div className="guest-count-display-box">
-            <span className="guest-count-value">{guestCount || "0"}</span>
+            <span className="guest-count-value">{guestCount || "1"}</span>
           </div>
 
           <div className="customers-keypad-grid">
