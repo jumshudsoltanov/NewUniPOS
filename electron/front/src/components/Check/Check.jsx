@@ -41,6 +41,7 @@ import { fetchRooms, sendBookingWhatsapp, updateFolioBalance } from "../../redux
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 
 import OrderLogsModal from "./OrderLogsModal"; // Import Modal
+import PayItemsOffcanvas from "./PayItemsOffcanvas";
 import { getSocket } from "../../utils/apiConfig";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import CustomersSourceModal from "../Customers-Modal/CustomersSourceModal";
@@ -798,6 +799,7 @@ const Check = () => {
 
   const [openDeleCheckModal, setOpenDeleteCheckModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false); // Add state
+  const [showPayItems, setShowPayItems] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showCourierModal, setShowCourierModal] = useState(false);
   const [showGuestCountModal, setShowGuestCountModal] = useState(false);
@@ -2216,6 +2218,29 @@ const Check = () => {
                     </svg>
                   </div>
                 )}
+                {import.meta.env.DEV && currentOrder?.uuid && Number(currentOrder?.status) === 1 && (
+                  <div
+                    className={`sidebar-icon ${showPayItems ? 'active-sidebar-icon' : ''}`}
+                    title="Məhsul üzrə ödəniş"
+                    onClick={() => setShowPayItems(true)}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#343434"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="2" y="6" width="20" height="12" rx="2" />
+                      <circle cx="12" cy="12" r="2.5" />
+                      <path d="M6 10v.01M18 14v.01" />
+                    </svg>
+                  </div>
+                )}
                 {Number(loginedWaiter?.data?.can_view_logs) === 1 && (
                   <div
                     className={`sidebar-icon history ${showHistoryModal ? 'active-sidebar-icon' : ''}`}
@@ -3373,6 +3398,16 @@ const Check = () => {
         onSelect={(type) => {
         }}
       />
+      {import.meta.env.DEV && (
+        <PayItemsOffcanvas
+          show={showPayItems}
+          onHide={() => setShowPayItems(false)}
+          order={currentOrder}
+          waiterId={currentOrder?.waiter_id || loginedWaiter?.data?.id}
+          waiterName={loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown")}
+          profileId={loginedProfileData?.data?.profile?.id}
+        />
+      )}
       <OrderLogsModal
         show={showHistoryModal}
         onHide={() => setShowHistoryModal(false)}

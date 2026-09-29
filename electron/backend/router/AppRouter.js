@@ -249,6 +249,12 @@ const OrderLogsController = require("../controller/OrderLogsController");
 router.post("/orders-items/:orderId/logs", OrderLogsController.addLog);
 router.get("/orders-items/:orderId/logs", OrderLogsController.getLogs);
 
+// Məhsul üzrə qismən ödənişlər
+const OrderItemPaymentsController = require("../controller/OrderItemPaymentsController");
+router.get("/orders-items/:orderId/item-payments", OrderItemPaymentsController.getItemPayments);
+router.post("/orders-items/:orderId/pay-items", OrderItemPaymentsController.payItems);
+router.delete("/orders-items/:orderId/item-payments/:batchUuid", OrderItemPaymentsController.cancelItemPayment);
+
 router.patch(
   "/orders-items/:orderId/update-price",
   OrdersItemsController.onUpdateItemPrice,

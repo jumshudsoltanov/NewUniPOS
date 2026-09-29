@@ -35,6 +35,7 @@ const getAllActiveOrders = async (req, res) => {
         order: [["id", "ASC"]],
         include: [{ model: require("../model/ProductsModel"), as: "product" }]
       },
+      { model: require("../model/OrderItemPaymentsModel"), as: "item_payments", required: false },
       {
         model: TablesModel,
         as: "table",
@@ -171,6 +172,7 @@ const getArchivedOrders = async (req, res) => {
           { model: require("../model/TagsModel"), as: "tag" }
         ]
       },
+      { model: require("../model/OrderItemPaymentsModel"), as: "item_payments", required: false },
       {
         model: TablesModel,
         as: "table",
@@ -240,6 +242,7 @@ const getOrderById = async (req, res) => {
             { model: require("../model/TagsModel"), as: "tag" }
           ]
         },
+        { model: require("../model/OrderItemPaymentsModel"), as: "item_payments", required: false },
         {
           model: TablesModel,
           as: "table",

@@ -22,6 +22,7 @@ import RoomChargeModal from "../RoomChargeModal/RoomChargeModal";
 import { updateFolioBalance, fetchRooms } from '../../redux/Slices/HotelSlice';
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
+import { getPartialPaidTotal, getItemPaymentsList, getItemPaymentShares } from "../../utils/itemPayments";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -202,12 +203,17 @@ const CheckOver = () => {
         const deliveryFee = normalizeMoney(Number(currentOrder.delivery_fee || 0));
         
         const baseTotal = normalizeMoney(total - discountAmount + serviceAmount);
-        let sumTotal = normalizeMoney(Math.max(baseTotal, depositAmount) + deliveryFee);
-        if (sumTotal < 0) sumTotal = 0;
+        let fullTotal = normalizeMoney(Math.max(baseTotal, depositAmount) + deliveryFee);
+        if (fullTotal < 0) fullTotal = 0;
+        // Məhsul üzrə əvvəlcədən ödənilənlər çıxılır — sumTotal artıq ÖDƏNİLMƏLİ qalıqdır
+        const partialPaid = Math.min(getPartialPaidTotal(currentOrder), fullTotal);
+        const sumTotal = normalizeMoney(Math.max(0, fullTotal - partialPaid));
 
         return {
             total: total.toFixed(2),
             sumTotal: sumTotal.toFixed(2),
+            fullTotal: fullTotal.toFixed(2),
+            partialPaid: partialPaid.toFixed(2),
             discountAmount: discountAmount.toFixed(2),
             serviceAmount: serviceAmount.toFixed(2),
             depositAmount: depositAmount.toFixed(2)
@@ -474,6 +480,27 @@ const CheckOver = () => {
             noteStr = `Ödənişsiz: ${unpaidReason}. ${comment}`;
         }
 
+        // Fiskal çek/qəbz bütün çek üçün kəsilir: əvvəlki qismən ödənişlər də daxil edilir
+        const partialPaymentsAll = [];
+        {
+            const grouped = new Map();
+            getItemPaymentsList(currentOrder).forEach((row) => {
+                getItemPaymentShares(row).forEach((p) => {
+                    const key = `${p.payment_method_id}|${p.name || ""}`;
+                    const cur = grouped.get(key) || {
+                        payment_method_id: p.payment_method_id,
+                        name: p.name,
+                        type: (paymentMethods || []).find((pm) => Number(pm.id) === Number(p.payment_method_id))?.type,
+                        amount: 0,
+                    };
+                    cur.amount += parseFloat(p.amount) || 0;
+                    grouped.set(key, cur);
+                });
+            });
+            grouped.forEach((g) => partialPaymentsAll.push({ ...g, amount: Math.round(g.amount * 100) / 100 }));
+        }
+        const paymentsAll = [...partialPaymentsAll, ...payments];
+
         let taxPercentageToSave = 0;
         if (viewMode === "PAYMENT" && taxPrint && Number(loginedWaiter?.data?.can_see_tax) === 1) {
             const allTaxConfigs = loginedProfileData?.data?.taxes || [];
@@ -562,7 +589,7 @@ const CheckOver = () => {
                             // Call tax sale API in the background (as requested: do not wait for fiscal device)
                             let paymentsForTax;
                             try {
-                                paymentsForTax = payments.map((m) =>
+                                paymentsForTax = paymentsAll.map((m) =>
                                     mapOrderPaymentForTax({
                                         payment_method_id: m?.payment_method_id,
                                         without_payment_method_id: m?.without_payment_method_id,
@@ -572,7 +599,7 @@ const CheckOver = () => {
                                 );
                             } catch (mapErr) {
                                 console.error('Fiskal ödəniş xəritəsi:', mapErr);
-                                paymentsForTax = payments;
+                                paymentsForTax = paymentsAll;
                             }
                             const isCardOrBankTaxPayment = paymentsForTax.some((p) => {
                                 const type = String(p?.type || '').toLowerCase();
@@ -583,7 +610,7 @@ const CheckOver = () => {
                                     type === 'bank'
                                 );
                             });
-                            const taxOrderTotal = Number(calcTotal.sumTotal) || 0;
+                            const taxOrderTotal = Number(calcTotal.fullTotal) || 0;
                             const minCardTaxAmount = 0; // DATAPAY üçün minimumu cihaz özü idarə etsin.
                             if (isCardOrBankTaxPayment && taxOrderTotal > 0 && taxOrderTotal < minCardTaxAmount) {
                                 const msg = 'DATAPAY kart/bank fiskal çeki üçün məbləğ çox kiçikdir. Minimum 0.10 AZN ilə test edin.';
@@ -676,8 +703,8 @@ const CheckOver = () => {
                     checkData: {
                         ...currentOrder,
                         orderId: currentOrder?.id,
-                        total: calcTotal.sumTotal,
-                        payments: payments,
+                        total: calcTotal.fullTotal,
+                        payments: paymentsAll,
                         paidAmount: paidValue,
                         change: changeValue,
                         customer_name: selectedCustomer?.name || currentOrder?.customer_name || "",
@@ -717,6 +744,11 @@ const CheckOver = () => {
                             <span className="currency-symbol">{getCurrencySymbol()}</span>
                         </div>
 
+                        {Number(calcTotal.partialPaid) > 0 && (
+                            <div className="mb-2 text-success" style={{ fontSize: 13, fontWeight: 600 }}>
+                                Məhsul üzrə əvvəl ödənilib: {calcTotal.partialPaid} {getCurrencySymbol()} (çekin cəmi {calcTotal.fullTotal} {getCurrencySymbol()})
+                            </div>
+                        )}
                         <div className="calc-info-grid mb-4">
                             <div className="calc-info-card">
                                 <span className="label">{t("odenilmeli")}</span>

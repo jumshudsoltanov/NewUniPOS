@@ -39,6 +39,7 @@ import {
 } from "../../utils/orderItemDisplayHelpers";
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
+import { getPartialPaidTotal } from "../../utils/itemPayments";
 import {
   getOrderItemLineTotal,
   sumOrderItemsLinesTotal,
@@ -509,9 +510,14 @@ const CheckBottom = ({
 
     const isDepositFloor = depositAmount > subtotalAfterDiscount;
 
+    const partialPaid = Math.min(getPartialPaidTotal(orders), sumTotal);
+    const dueTotal = normalizeMoney(Math.max(0, sumTotal - partialPaid));
+
     return {
       total: total.toFixed(2),
       sumTotal: sumTotal.toFixed(2),
+      partialPaid: partialPaid.toFixed(2),
+      dueTotal: dueTotal.toFixed(2),
       discountAmount: discountAmount.toFixed(2),
       discountType,
       discountValue,
@@ -534,6 +540,7 @@ const CheckBottom = ({
     orders?.service_charge,
     orders?.deposit,
     orders?.total,
+    orders?.item_payments,
     timerCharge,
     timerClock,
     liveTimerData,
@@ -622,6 +629,18 @@ const CheckBottom = ({
             <span>{calcTotal.isDepositFloor ? t("minimal_mebleg") : t("cem")}:</span>
             <span>{calcTotal.sumTotal} {getCurrencySymbol()}</span>
           </div>
+          {Number(calcTotal.partialPaid) > 0 && (
+            <>
+              <div className="summary-row" style={{ color: "#fff" }}>
+                <span>Ödənilib:</span>
+                <span>-{calcTotal.partialPaid} {getCurrencySymbol()}</span>
+              </div>
+              <div className="summary-row" style={{ fontWeight: 800 }}>
+                <span>Qalıq:</span>
+                <span>{calcTotal.dueTotal} {getCurrencySymbol()}</span>
+              </div>
+            </>
+          )}
           {Number(calcTotal.depositAmount) > 0 && (
             <div
               className="summary-row"
@@ -733,7 +752,7 @@ const CheckBottom = ({
           ) : canCloseCheck ? (
             <button className="btn-pay" onClick={goCloseCheck}>
               <i className="bi bi-check2-all"></i>
-              <span>{calcTotal.sumTotal} {getCurrencySymbol()}</span>
+              <span>{calcTotal.dueTotal} {getCurrencySymbol()}</span>
             </button>
           ) : null}
         </div>
@@ -842,7 +861,7 @@ const CheckBottom = ({
         ) : canCloseCheck ? (
           <button className="mobile-pay-btn" onClick={goCloseCheck}>
             <i className="bi bi-check2-all fs-4 text-white"></i>
-            <span className="pay-amount">{calcTotal.sumTotal} {getCurrencySymbol()}</span>
+            <span className="pay-amount">{calcTotal.dueTotal} {getCurrencySymbol()}</span>
           </button>
         ) : null}
       </div>

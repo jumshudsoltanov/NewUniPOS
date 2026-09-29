@@ -8,10 +8,39 @@ const TimerService = require("../services/TimerService");
 const SyncService = require("../services/SyncService");
 const MaxCheckService = require("../services/MaxCheckService");
 const OrderPaymentsModel = require("../model/OrderPaymentsModel");
+const OrderItemPaymentsModel = require("../model/OrderItemPaymentsModel");
 const ProductsModel = require("../model/ProductsModel");
 const { serviceableItemsSum } = require("../utils/orderServiceFeeBase");
 const { sumOrderItemsLineTotal } = require("../utils/orderItemLineTotal");
 const axios = require("axios");
+const ItemPay = require("./OrderItemPaymentsController");
+
+/** Məhsul üzrə ödənişi olan çekdə qadağan əməliyyatlar üçün qoruyucular */
+const blockIfOrderHasItemPayments = async (orderIds, res) => {
+  for (const id of [].concat(orderIds).filter(Boolean)) {
+    if (await ItemPay.hasItemPayments(id)) {
+      res.status(409).json({ message: ItemPay.NOT_ALLOWED_MSG });
+      return true;
+    }
+  }
+  return false;
+};
+/** Ödənilmiş sayın altına düşən dəyişikliyi bloklayır (newCount — sətirin yeni sayı) */
+const blockIfBelowPaid = async (orderId, itemId, getNewCount, res) => {
+  const paidMap = await ItemPay.getPaidQtyMap(orderId);
+  const paid = paidMap[Number(itemId)] || 0;
+  if (paid <= 0) return false;
+  const item = await OrdersItemsModel.findOne({
+    where: { order_id: orderId, id: itemId },
+    attributes: ["count"],
+  });
+  const newCount = getNewCount(parseFloat(item?.count) || 0);
+  if (newCount < paid - 0.0001) {
+    res.status(409).json({ message: ItemPay.NOT_ALLOWED_MSG });
+    return true;
+  }
+  return false;
+};
 
 const WASTE_API_URL = "https://api.unipos.tech/api/pos/write-off";
 const WASTE_API_FALLBACK = "http://46.224.8.157:35627/api/pos/write-off";
@@ -721,6 +750,7 @@ const onDeleteOrderItems = async (req, res) => {
   }
 
   try {
+    if (await blockIfOrderHasItemPayments(orderId, res)) return;
     const currentOrder = await OrdersModel.findOne({
       where: { uuid: orderId },
       attributes: ["status", "deposit", "delivery_fee"],
@@ -769,6 +799,8 @@ const onMergeChecks = async (req, res) => {
   if (!currentOrderId || !newOrderId) {
     return res.status(400).json({ message: "Missing required fields" });
   }
+
+  if (await blockIfOrderHasItemPayments([currentOrderId, newOrderId], res)) return;
 
   const transaction = await sequelize.transaction();
 
@@ -970,6 +1002,8 @@ const onUpdateWaiter = async (req, res) => {
 const onSplitOrder = async (req, res) => {
   const { profileId } = req.params;
   const { data, profile, hallData } = req.body;
+
+  if (await blockIfOrderHasItemPayments([data?.orderId], res)) return;
 
   const transaction = await sequelize.transaction();
 
@@ -1198,6 +1232,14 @@ const onGiftItem = async (req, res) => {
 
   if (!orderId || !itemId || !qty) {
     return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  {
+    const paidMap = await ItemPay.getPaidQtyMap(orderId);
+    const ids = Array.isArray(allIds) && allIds.length > 0 ? allIds : [itemId];
+    if (ids.some((id) => (paidMap[Number(id)] || 0) > 0)) {
+      return res.status(409).json({ message: ItemPay.NOT_ALLOWED_MSG });
+    }
   }
 
   const transaction = await sequelize.transaction();
@@ -1431,6 +1473,8 @@ const onUpdateItemDiscount = async (req, res) => {
   const { orderId } = req.params;
   const { itemId, discountValue, discountType } = req.body;
 
+  if (await blockIfBelowPaid(orderId, itemId, () => -1, res)) return;
+
   const transaction = await sequelize.transaction();
 
   try {
@@ -1589,6 +1633,7 @@ const onDeleteCheck = async (req, res) => {
   }
 
   try {
+    if (await blockIfOrderHasItemPayments(orderId, res)) return;
     const { getIo } = require("../socket/MasterServer");
 
     // Silinmədən əvvəl bütün items-i götür (anbar üçün)
@@ -1766,6 +1811,56 @@ const onCloseOrder = async (req, res) => {
       force: true,
       transaction,
     });
+
+    // 2.1 Məhsul üzrə əvvəlcədən edilmiş qismən ödənişləri hesabat üçün order_payments-ə köçür
+    const partialRows = await OrderItemPaymentsModel.findAll({
+      where: { order_id: orderId },
+      transaction,
+    });
+    if (partialRows.length > 0) {
+      const grouped = new Map();
+      partialRows.forEach((r) => {
+        let shares = null;
+        try {
+          shares = r.payment_splits ? JSON.parse(r.payment_splits) : null;
+        } catch (_) {
+          shares = null;
+        }
+        if (!Array.isArray(shares) || shares.length === 0) {
+          shares = [
+            {
+              payment_method_id: r.payment_method_id,
+              name: r.payment_name,
+              amount: parseFloat(r.amount) || 0,
+            },
+          ];
+        }
+        shares.forEach((sh) => {
+          const key = `${sh.payment_method_id}|${sh.name || ""}`;
+          const cur = grouped.get(key) || {
+            payment_method_id: sh.payment_method_id,
+            name: sh.name,
+            amount: 0,
+          };
+          cur.amount += parseFloat(sh.amount) || 0;
+          grouped.set(key, cur);
+        });
+      });
+      await OrderPaymentsModel.bulkCreate(
+        [...grouped.values()].map((g) => ({
+          profile_id: profileId,
+          order_id: orderId,
+          status: status.toString(),
+          operator_id: waiterId,
+          payment_method_id: g.payment_method_id || 0,
+          without_payment_method_id: 0,
+          paid: Math.round(g.amount * 100) / 100,
+          note: note || "",
+          name: g.name || null,
+        })),
+        { transaction },
+      );
+    }
 
     // 3. Insert Payments if provided
     if (payments && payments.length > 0) {
@@ -1972,6 +2067,16 @@ const onDeleteItemWithReason = async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
+  if (
+    await blockIfBelowPaid(
+      orderId,
+      itemId,
+      (count) => (qty ? count - Number(qty) : 0),
+      res,
+    )
+  )
+    return;
+
   const transaction = await sequelize.transaction();
 
   try {
@@ -2083,6 +2188,7 @@ const onUpdateItemPrice = async (req, res) => {
   const { itemId, newPrice } = req.body;
 
   try {
+    if (await blockIfBelowPaid(orderId, itemId, () => -1, res)) return;
     const item = await OrdersItemsModel.findOne({
       where: {
         order_id: orderId,
@@ -2223,6 +2329,7 @@ const onUpdateItemCount = async (req, res) => {
   }
 
   try {
+    if (await blockIfBelowPaid(orderId, itemId, () => Number(newCount), res)) return;
     const item = await OrdersItemsModel.findOne({
       where: {
         order_id: orderId,
@@ -2850,6 +2957,18 @@ module.exports = {
 
     if (!orderId || !items || !items.length) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    for (const it of items) {
+      if (
+        await blockIfBelowPaid(
+          orderId,
+          it.itemId,
+          (count) => (it.qty ? count - Number(it.qty) : 0),
+          res,
+        )
+      )
+        return;
     }
 
     const transaction = await sequelize.transaction();

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
+import { getPaidQtyMap } from "../../utils/itemPayments";
 import "./Check.css";
 import { useDispatch, useSelector } from "react-redux";
 import EditModal from "../EditModal/EditModal";
@@ -78,6 +79,7 @@ const normalizeModifiersKey = (modifiers) =>
     .join("|");
 
 const CheckMain = ({ orders, table }) => {
+  const itemPaidQtyMap = useMemo(() => getPaidQtyMap(orders), [orders]);
   const dispatch = useDispatch(); // Add dispatch
   const [editItemModal, setEditItemModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -983,6 +985,33 @@ const CheckMain = ({ orders, table }) => {
                       </div>
 
                       <div className="d-flex flex-column gap-1 mt-1">
+                        {(() => {
+                          const ids = (item.allIds && item.allIds.length > 0) ? item.allIds : [item.firstId];
+                          const paidQty = ids.reduce((sum, id) => sum + (itemPaidQtyMap[Number(id)] || 0), 0);
+                          if (!(paidQty > 0)) return null;
+                          const partial = paidQty < Number(item.count || 0);
+                          return (
+                            <div
+                              title="Bu məhsul üzrə ödəniş edilib"
+                              style={{
+                                alignSelf: 'flex-start',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                background: '#dcfce7',
+                                color: '#166534',
+                                borderRadius: 999,
+                                padding: '1px 9px 1px 6px',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              <i className="bi bi-check-circle-fill" style={{ fontSize: 11 }}></i>
+                              {partial ? `Ödənilib: ${Math.round(paidQty * 1000) / 1000} / ${item.count}` : 'Ödənilib'}
+                            </div>
+                          );
+                        })()}
                         {modifiers.length > 0 && (
                           <div className="check-item-modifiers-inline" style={{ display: 'block', fontSize: '0.8rem', color: '#4B5563', marginTop: '2px', lineHeight: '1.3', whiteSpace: 'normal' }}>
                             {modifiers.map((m, i) => (

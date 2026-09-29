@@ -19,6 +19,7 @@ const OrdersItemsModel = require("./model/OrdersItemsModel");
 const WaitersModel = require("./model/WaitersModel");
 const LoginModel = require("./model/LoginModel");
 const OrderPaymentsModel = require("./model/OrderPaymentsModel");
+const OrderItemPaymentsModel = require("./model/OrderItemPaymentsModel");
 const GeneralCategoriesModel = require("./model/GeneralCategoriesModel");
 const CategoriesModel = require("./model/CategoriesModel");
 const ProductsModel = require("./model/ProductsModel");
@@ -237,6 +238,13 @@ let creaedtToTabel = async () => {
       constraints: false,
     });
 
+    OrdersModel.hasMany(OrderItemPaymentsModel, {
+      foreignKey: "order_id",
+      sourceKey: "uuid",
+      as: "item_payments",
+      constraints: false,
+    });
+
     OrderPaymentsModel.belongsTo(OrdersModel, {
       foreignKey: "order_id",
       targetKey: "uuid",
@@ -297,6 +305,13 @@ let creaedtToTabel = async () => {
       as: "category",
       constraints: false,
     });
+
+    // Yeni cədvəl (CREATE TABLE IF NOT EXISTS) — versiya yoxlamasından asılı olmayaraq hər açılışda
+    try {
+      await OrderItemPaymentsModel.sync({ alter: true });
+    } catch (e) {
+      console.warn("[Schema] order_item_payments sync:", e?.message || e);
+    }
 
     if (!shouldRunSchemaMigration()) {
       console.log(
