@@ -9,6 +9,8 @@ import "../Customers-Modal/CustomersModal.css";
 import { getTagsList } from '../../redux/Slices/TagsSlice';
 import { getPaymentMethods } from '../../redux/Slices/PaymentMethodsSlice';
 import { closeOrder, saveLog } from '../../redux/Slices/OrdersSlice';
+import { removeOrderOptimisticFromTables } from '../../redux/Slices/TablesSlice';
+import { removeOrderOptimistic } from '../../redux/Slices/BooksSlice';
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import axios from "axios";
@@ -29,6 +31,7 @@ const CheckOver = () => {
     const dispatch = useDispatch();
     const { id } = useParams();
     const [calcValue, setCalcValue] = useState("");
+    const [isClosing, setIsClosing] = useState(false);
 
     // Payment State
     const [selectedMethods, setSelectedMethods] = useState([]); // [{id, name, amount, is_split}]
@@ -442,11 +445,13 @@ const CheckOver = () => {
     };
 
     const handleConfirmClose = async (selectedTaxForPrint = null) => {
+        if (isClosing) return; // Təkrar klik: eyni çeki paralel bağlama sorğuları göndərmənin qarşısını alır
         const profileId = loginedProfileData?.data?.profile?.id;
         const waiterId = currentOrder?.waiter_id || loginedWaiter?.data?.id;
         const waiterName = loginedWaiter?.data?.name || loginedWaiter?.name || loginedProfileData?.data?.profile?.name || currentOrder?.waiter?.name || t("unknown");
 
         if (!profileId || !waiterId || !id) return;
+        setIsClosing(true);
 
         let payments = [];
         let status = 2; // Closed
@@ -685,6 +690,11 @@ const CheckOver = () => {
                 }
             }
 
+            // Masa dərhal boş görünsün — socket/fon yeniləməsini gözləmədən lokal state-dən çıxar.
+            // Əks halda /tables-a keçəndə masa hələ "açıq" göstərilir, kassir təzədən girib bağlamağa çalışır.
+            dispatch(removeOrderOptimisticFromTables(currentOrder?.uuid || id));
+            dispatch(removeOrderOptimistic(currentOrder?.uuid || id));
+
             // Notify all other terminals that this order is closed
             const socket = getSocket();
             if (socket?.connected) {
@@ -723,6 +733,9 @@ const CheckOver = () => {
             }
         } catch (err) {
             console.error("Close order failed:", err);
+            const errMsg = err?.response?.data?.message || err?.message || t("namelum_xeta");
+            toast.error(`Çek bağlana bilmədi: ${errMsg}`);
+            setIsClosing(false);
         }
     };
 
@@ -931,7 +944,9 @@ const CheckOver = () => {
                                     <button
                                         className="confirm-close-btn green-btn"
                                         onClick={handleConfirmReady}
-                                    >{t("bagla")}</button>
+                                        disabled={isClosing}
+                                        style={{ opacity: isClosing ? 0.6 : 1, cursor: isClosing ? 'not-allowed' : 'pointer' }}
+                                    >{isClosing ? '...' : t("bagla")}</button>
                                 </div>
                             </>
                         ) : (
@@ -998,7 +1013,9 @@ const CheckOver = () => {
                                     <button
                                         className="confirm-close-btn maroon-btn"
                                         onClick={handleConfirmReady}
-                                    >{t("bagla")}</button>
+                                        disabled={isClosing}
+                                        style={{ opacity: isClosing ? 0.6 : 1, cursor: isClosing ? 'not-allowed' : 'pointer' }}
+                                    >{isClosing ? '...' : t("bagla")}</button>
                                 </div>
                             </>
                         )}

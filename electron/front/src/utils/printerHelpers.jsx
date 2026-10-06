@@ -241,29 +241,31 @@ export const processAndPrintOrders = async (
       continue;
     }
 
-    // items with repeated printers will go to separate print jobs
+    // items with repeated printers will go to separate print jobs.
+    // Batch key is the printer's real ID (not name) — the category/product's
+    // printer_details already point at an exact printer row, so routing should
+    // never depend on a name string matching again downstream.
     const itemPrinters = printers
       .map((p) => {
-        if (typeof p === "object") {
-           // Use the printer's routing name (name field = department name)
-           return p.name || p.local_name?.trim() || null;
+        if (typeof p === "object" && p.id != null) {
+          return { id: p.id, name: p.name || p.local_name?.trim() || String(p.id) };
         }
-        return p;
+        return null;
       })
       .filter(Boolean);
 
     const printerOccurrence = {};
-    itemPrinters.forEach((pName) => {
-      const count = printerOccurrence[pName] || 0;
-      printerOccurrence[pName] = count + 1;
+    itemPrinters.forEach(({ id: pId, name: pName }) => {
+      const count = printerOccurrence[pId] || 0;
+      printerOccurrence[pId] = count + 1;
 
       if (!printerBatches[count]) {
         printerBatches[count] = {};
       }
-      if (!printerBatches[count][pName]) {
-        printerBatches[count][pName] = [];
+      if (!printerBatches[count][pId]) {
+        printerBatches[count][pId] = { printerName: pName, items: [] };
       }
-      printerBatches[count][pName].push({ ...item, printerName: pName });
+      printerBatches[count][pId].items.push({ ...item, printerName: pName });
     });
   }
 
@@ -272,9 +274,9 @@ export const processAndPrintOrders = async (
     const batch = printerBatches[i];
     if (!batch) continue;
 
-    for (const printerName of Object.keys(batch)) {
+    for (const printerId of Object.keys(batch)) {
       try {
-        const groupItems = batch[printerName];
+        const { printerName, items: groupItems } = batch[printerId];
         if (!groupItems || groupItems.length === 0) continue;
 
         const container = document.createElement("div");
@@ -350,6 +352,7 @@ export const processAndPrintOrders = async (
             isRawDelegation: true,
             html,
             printerName,
+            printerId,
             rawPrinters: groupItems[0]?.printer_details,
             orderData
           };
@@ -369,13 +372,13 @@ export const processAndPrintOrders = async (
           continue; // Skip local print since it's mobile
         }
 
-        await resolveAndPrintKitchenReceiptLocally(html, printerName, groupItems[0]?.printer_details, orderData);
+        await resolveAndPrintKitchenReceiptLocally(html, printerName, groupItems[0]?.printer_details, orderData, false, printerId);
 
         // Minimal delay between print jobs for speed while maintaining stability
         await new Promise((r) => setTimeout(r, 50));
       } catch (loopError) {
         console.error(
-          `[PRINTER] Unexpected error in printing loop for ${printerName}:`,
+          `[PRINTER] Unexpected error in printing loop for ${batch[printerId]?.printerName || printerId}:`,
           loopError.message,
         );
         addNotification(
@@ -683,7 +686,7 @@ export const printCustomerReceipt = async (
   }
 };
 
-export const resolveAndPrintKitchenReceiptLocally = async (html, printerName, rawPrinters, orderData, isDelegated = false) => {
+export const resolveAndPrintKitchenReceiptLocally = async (html, printerName, rawPrinters, orderData, isDelegated = false, printerId = null) => {
     let profilePrinters = [];
     let authResultFallback = null;
     try { authResultFallback = JSON.parse(localStorage.getItem("authResult") || "{}"); } catch { }
@@ -706,19 +709,39 @@ export const resolveAndPrintKitchenReceiptLocally = async (html, printerName, ra
       }
     }
     
-    let printerObjs = findPhysicalPrinters(printerName, profilePrinters, rawPrinters);
-    
-    if (printerObjs.length === 0 && profilePrinters.length > 0) {
-      const fallbackKitchen = profilePrinters.find((p) => Number(p.is_cashier) === 0);
-      if (fallbackKitchen) printerObjs.push(fallbackKitchen);
+    // ID ilə dəqiq uyğunluq həmişə ad-uyğunluğundan üstündür — kateqoriya/məhsul
+    // artıq konkret printer sətrini (öz id-si ilə) göstərir, ad axtarışına ehtiyac yoxdur.
+    let printerObjs = [];
+    if (printerId != null) {
+      const byId = profilePrinters.find((p) => Number(p.id) === Number(printerId));
+      if (byId) printerObjs.push(byId);
+    }
+    if (printerObjs.length === 0) {
+      printerObjs = findPhysicalPrinters(printerName, profilePrinters, rawPrinters);
+    }
+
+    if (printerObjs.length === 0) {
+      // Heç bir printer bu şöbə adına uyğun gəlmədi — TƏSADÜFİ printerə göndərmək əvəzinə
+      // aydın xəta veririk ki, çek yanlış printerdən (məs. bar) çıxmasın.
+      const errMsg = `"${printerName}" adlı çap şöbəsi bu terminalda heç bir printerə bağlanmayıb`;
+      const displayId = orderData?.checkData?.id || orderData?.orderId;
+      addNotification("Printer Konfiqurasiyası Xətası", errMsg, {
+        orderId: displayId,
+        printerName,
+        category: "system",
+        type: "error",
+      });
+      await sendRemoteLog(orderData, "Mətbəx Çapı Xətası", errMsg);
+      return { success: false, error: errMsg };
     }
 
     for (const printerObj of printerObjs) {
       const _connType2 = printerObj?.connection_type;
       const isCom2 = _connType2 === "com";
-      const isNetwork =
-        _connType2 === "network" ||
-        (_connType2 !== "usb" && _connType2 !== "com" && !!printerObj?.ip);
+      // IP olmadan "network" sayılan printer (məs. usb_name="bar", ip=null) yanlışlıqla
+      // Windows sürücü adı sıfırlanıb boş printerName + boş IP ilə göndərilir, bu da
+      // Electron-da sistemin DEFAULT printerinə düşür. Ona görə IP mövcudluğu şərtdir.
+      const isNetwork = !isCom2 && !!printerObj?.ip;
       const hasUsbName =
         !isCom2 &&
         !!(

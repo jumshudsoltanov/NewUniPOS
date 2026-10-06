@@ -1003,18 +1003,23 @@ const Check = () => {
           }
           if (mods && Array.isArray(mods)) {
             mods.forEach(mod => {
-              const hasOwnPrinter = mod.printer_details && mod.printer_details.length > 0;
-              const hasCategoryPrinter = !!mod.category_id;
+              const { printers: resolvedPrinters, categoryId: resolvedCategoryId } = getAllPrintersForItem(mod);
+              const hasOwnPrinter = resolvedPrinters && resolvedPrinters.length > 0;
+              const hasCategoryPrinter = !!resolvedCategoryId;
               if (hasOwnPrinter || hasCategoryPrinter) {
                 // Approximate quantity for partial deletion
-                const modQty = d.type === 'partial' && d.originalQty > 0 
-                  ? Math.ceil((d.qty / d.originalQty) * (mod.count || 1)) 
+                const modQty = d.type === 'partial' && d.originalQty > 0
+                  ? Math.ceil((d.qty / d.originalQty) * (mod.count || 1))
                   : (mod.count || 1);
+                const modName = mod.name || mod.product_name || t("elave");
                 standaloneDeletedMods.push({
                   ...mod,
-                  product_name: mod.name || mod.product_name,
+                  name: modName,
+                  product_name: modName,
                   count: modQty,
                   quantity: modQty,
+                  printer_details: resolvedPrinters,
+                  category_id: resolvedCategoryId,
                   isModifierStandalone: true,
                   parentName: d.name,
                   changeType: 'decrease'
@@ -1129,19 +1134,28 @@ const Check = () => {
 
         const combinedForPrinting = [...productsWithComments];
 
-        // Scan for modifiers that have their own designated printers or category printers
+        // Scan for modifiers that have their own designated printers or category printers.
+        // Modifikator sətirləri əslində kataloqdakı real məhsullardır (məs. Kabab, Kola) —
+        // ona görə printer/kateqoriya məlumatını statik saxlanılan mod.printer_details/
+        // mod.category_id-dən deyil, həmişə CANLI kataloqdan (menu) mod.id ilə axtarıb götürürük,
+        // əks halda köhnə/boş snapshot səbəbindən modifikator öz printerinə getmir.
         const standaloneModifiers = [];
         productsWithComments.forEach(p => {
           if (p.modifiers && Array.isArray(p.modifiers)) {
             p.modifiers.forEach(mod => {
-              const hasOwnPrinter = mod.printer_details && mod.printer_details.length > 0;
-              const hasCategoryPrinter = !!mod.category_id;
+              const { printers: resolvedPrinters, categoryId: resolvedCategoryId } = getAllPrintersForItem(mod);
+              const hasOwnPrinter = resolvedPrinters && resolvedPrinters.length > 0;
+              const hasCategoryPrinter = !!resolvedCategoryId;
               if (hasOwnPrinter || hasCategoryPrinter) {
+                const modName = mod.name || mod.product_name || t("elave");
                 standaloneModifiers.push({
                   ...mod,
-                  product_name: mod.name,
+                  name: modName,
+                  product_name: modName,
                   count: mod.count,
                   quantity: mod.count,
+                  printer_details: resolvedPrinters,
+                  category_id: resolvedCategoryId,
                   isModifierStandalone: true,
                   parentName: p.name
                 });
@@ -1760,14 +1774,19 @@ const Check = () => {
             }
             if (mods && Array.isArray(mods)) {
               mods.forEach(mod => {
-                const hasOwnPrinter = mod.printer_details && mod.printer_details.length > 0;
-                const hasCategoryPrinter = !!mod.category_id;
+                const { printers: resolvedPrinters, categoryId: resolvedCategoryId } = getAllPrintersForItem(mod);
+                const hasOwnPrinter = resolvedPrinters && resolvedPrinters.length > 0;
+                const hasCategoryPrinter = !!resolvedCategoryId;
                 if (hasOwnPrinter || hasCategoryPrinter) {
+                  const modName = mod.name || mod.product_name || t("elave");
                   standaloneDeletedMods.push({
                     ...mod,
-                    product_name: mod.name || mod.product_name,
+                    name: modName,
+                    product_name: modName,
                     count: mod.count || 1,
                     quantity: mod.count || 1,
+                    printer_details: resolvedPrinters,
+                    category_id: resolvedCategoryId,
                     isModifierStandalone: true,
                     parentName: item.name,
                     changeType: 'decrease'

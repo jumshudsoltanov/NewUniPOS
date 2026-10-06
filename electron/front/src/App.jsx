@@ -279,7 +279,7 @@ function AppContent() {
         if (data.isRawDelegation) {
           console.warn("🖨️ Mərkəzi mətbəx çapı Master tərəfindən həll edilir:", data.printerName);
           try {
-            await resolveAndPrintKitchenReceiptLocally(data.html, data.printerName, data.rawPrinters, data.orderData, true);
+            await resolveAndPrintKitchenReceiptLocally(data.html, data.printerName, data.rawPrinters, data.orderData, true, data.printerId);
           } catch (e) {
             console.error("Master resolving delegated kitchen print failed:", e);
             setTimeout(() => toast.error("Slave-dən gələn mətbəx çapı uğursuz oldu"), 0);
@@ -445,9 +445,24 @@ function AppContent() {
                   if (cachedRaw) {
                     const cached = JSON.parse(cachedRaw);
                     if (String(cached.profileId) === String(data.data.profile.id) && Array.isArray(cached.printers)) {
+                      // Yalnız lokal parametrləri mənimsə — ad (name, local_name) həmişə serverdən gəlsin.
+                      // Əks halda printer adı admin paneldə dəyişəndə köhnə keş adı ilə uyğunluq
+                      // tapılmır və mətbəx çapı yanlış (təsadüfi) printerə düşür.
+                      const LOCAL_ONLY_FIELDS = [
+                        'usb_name', 'encoding', 'cut_mode', 'paper_size', 'font_family',
+                        'trailing_space', 'copies', 'darkness', 'receipt_header', 'receipt_footer',
+                        'bold_header', 'double_height_header', 'sound_notify', 'cash_drawer',
+                        'fast_print', 'print_logo', 'rotate_180', 'connection_type', 'com_port',
+                        'baud_rate', 'open_drawer_without_print',
+                      ];
                       mergedPrinters = mergedPrinters.map(serverPrinter => {
                         const localMatch = cached.printers.find(lp => Number(lp.id) === Number(serverPrinter.id));
-                        return localMatch ? { ...serverPrinter, ...localMatch, connection_status: serverPrinter.connection_status } : serverPrinter;
+                        if (!localMatch) return serverPrinter;
+                        const localOverrides = {};
+                        LOCAL_ONLY_FIELDS.forEach(f => {
+                          if (localMatch[f] !== undefined) localOverrides[f] = localMatch[f];
+                        });
+                        return { ...serverPrinter, ...localOverrides, connection_status: serverPrinter.connection_status };
                       });
                     }
                   }

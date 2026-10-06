@@ -106,6 +106,20 @@ const BooksSlice = createSlice({
       if (Array.isArray(state.books)) updateList(state.books);
       else if (state.books && Array.isArray(state.books.data)) updateList(state.books.data);
     },
+    // Məhsul ödənişi ləğvi: silmə sorğusu uğurlu olan kimi dərhal UI-dan çıxar —
+    // sonrakı fon yeniləməsi (silentRefresh) yarışa düşüb köhnə datanı geri qaytarsa belə görünməsin
+    removeItemPaymentBatchOptimistic: (state, action) => {
+      const { orderUuid, batchUuid } = action.payload || {};
+      if (!orderUuid || !batchUuid) return;
+      const updateList = (list) => {
+        const order = list.find(o => String(o.uuid) === String(orderUuid));
+        if (order && Array.isArray(order.item_payments)) {
+          order.item_payments = order.item_payments.filter(p => String(p.batch_uuid) !== String(batchUuid));
+        }
+      };
+      if (Array.isArray(state.books)) updateList(state.books);
+      else if (state.books && Array.isArray(state.books.data)) updateList(state.books.data);
+    },
     tickTimer: (state) => {
       // Diqqət: yalnız taymeri aktiv olan sifarişləri draft üzərində birbaşa
       // dəyişdiririk (yeni array/obyekt yaratmırıq) — əks halda hər saniyə
@@ -607,7 +621,7 @@ const BooksSlice = createSlice({
   },
 });
 
-export const { removeOrderOptimistic, addOrderOptimistic, updateOrderOptimisticId, tickTimer, clearDeletedOrderId: clearDeletedOrderIdBooks } = BooksSlice.actions;
+export const { removeOrderOptimistic, addOrderOptimistic, updateOrderOptimisticId, removeItemPaymentBatchOptimistic, tickTimer, clearDeletedOrderId: clearDeletedOrderIdBooks } = BooksSlice.actions;
 export default BooksSlice.reducer;
 
 

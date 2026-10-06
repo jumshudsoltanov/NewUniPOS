@@ -7,7 +7,7 @@ import { getOrderItemLineTotal } from "../../utils/orderItemLineTotal";
 import { getItemPaymentsList, getPaidQtyMap } from "../../utils/itemPayments";
 import { getCurrencySymbol } from "../../utils/formatPrice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
-import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, removeItemPaymentBatchOptimistic } from "../../redux/Slices/BooksSlice";
 import { getPaymentMethods } from "../../redux/Slices/PaymentMethodsSlice";
 import "./PayItemsOffcanvas.css";
 
@@ -214,6 +214,7 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
         setBusy(true);
         try {
             await apiConfig.delete(`/orders-items/${order.uuid}/item-payments/${b.batch}`);
+            dispatch(removeItemPaymentBatchOptimistic({ orderUuid: order.uuid, batchUuid: b.batch }));
             dispatch(
                 saveLog({
                     orderId: order.uuid,
