@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Modal } from "react-bootstrap";
-import { getSocket, initNetwork } from "../../utils/apiConfig";
+import apiConfig, { getSocket, initNetwork } from "../../utils/apiConfig";
 import { checkIsSlaveTerminal } from "../../utils/masterSlaveHelpers";
 import { useNavigate } from "react-router-dom";
 import { t } from "../../utils/translations";
@@ -19,17 +19,42 @@ const NetworkOverlay = () => {
     const [staticIpInput, setStaticIpInput] = useState("");
     const [isReconnecting, setIsReconnecting] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
+    const [isManualRefreshing, setIsManualRefreshing] = useState(false);
     const hasAutoScanned = useRef(false);
 
     useEffect(() => {
         let pollingInterval;
         let registeredSocket = null;
+        // Anlıq/keçici kəsilmələr (bir neçə saniyəlik Wi-Fi fasiləsi, socket-in yenidən
+        // qoşulması zamanı yaranan təbii gecikmə) tam ekranı bloklamasın — yalnız
+        // DISCONNECT_GRACE_MS müddətindən çox davam edən həqiqi kəsilmədə göstərilsin.
+        const DISCONNECT_GRACE_MS = 4000;
+        let disconnectTimer = null;
 
-        const onDisconnect = () => setIsDisconnected(true);
-        const onConnect = () => setIsDisconnected(false);
+        const clearDisconnectTimer = () => {
+            if (disconnectTimer) {
+                clearTimeout(disconnectTimer);
+                disconnectTimer = null;
+            }
+        };
+        const markConnected = () => {
+            clearDisconnectTimer();
+            setIsDisconnected(false);
+        };
+        const scheduleDisconnect = () => {
+            if (disconnectTimer) return;
+            disconnectTimer = setTimeout(() => {
+                disconnectTimer = null;
+                setIsDisconnected(true);
+            }, DISCONNECT_GRACE_MS);
+        };
+
+        const onDisconnect = () => scheduleDisconnect();
+        const onConnect = () => markConnected();
 
         const poll = () => {
             if (!checkIsSlaveTerminal()) {
+                clearDisconnectTimer();
                 setIsDisconnected(false);
                 return;
             }
@@ -47,7 +72,11 @@ const NetworkOverlay = () => {
                 }
                 registeredSocket = socket;
             }
-            setIsDisconnected(!socket || !socket.connected);
+            if (socket && socket.connected) {
+                markConnected();
+            } else {
+                scheduleDisconnect();
+            }
         };
 
         poll();
@@ -62,6 +91,7 @@ const NetworkOverlay = () => {
 
         return () => {
             clearInterval(pollingInterval);
+            clearDisconnectTimer();
             if (registeredSocket) {
                 registeredSocket.off("disconnect", onDisconnect);
                 registeredSocket.off("connect", onConnect);
@@ -70,7 +100,8 @@ const NetworkOverlay = () => {
     }, []);
 
     const isSlaveTerminal = checkIsSlaveTerminal();
-    const overlayActive = isSlaveTerminal && (isDisconnected || showIpConfigModal);
+    // Yenilənmə pəncərəsi açıq olduğu müddətdə arxa fondakı "əlaqə yoxdur" ekranı gizlənsin
+    const overlayActive = isSlaveTerminal && !isManualRefreshing && (isDisconnected || showIpConfigModal);
 
     useEffect(() => {
         if (!isSlaveTerminal) setShowIpConfigModal(false);
@@ -152,6 +183,43 @@ const NetworkOverlay = () => {
         setTimeout(() => { navigate("/"); }, 300);
     };
 
+    const hasRefreshWindowApi = typeof window !== "undefined" && !!window.electronAPI?.openRefreshWindow;
+
+    // Slave əlaqəsi "kəsilib" göstərildikdə də Master-dəki kimi "Məlumatların yenilənməsi"
+    // pəncərəsini göstərmək üçün — real sinxronizasiya uğursuz olsa belə pəncərə açılıb bağlanmalıdır
+    const handleManualRefresh = async () => {
+        if (isManualRefreshing || !hasRefreshWindowApi) return;
+        setIsManualRefreshing(true);
+        let profileId = null;
+        try {
+            const authResult = JSON.parse(localStorage.getItem("authResult") || "{}");
+            profileId = authResult?.data?.profile?.id || null;
+        } catch (e) {}
+
+        window.electronAPI.openRefreshWindow();
+        window.electronAPI.sendRefreshSyncEvent({ type: "start", isOnline: navigator.onLine });
+
+        try {
+            // Qısa timeout: bu düymə əlaqə olmayanda da göstərilir — əsl sinxronizasiyanın
+            // uğurlu olması vacib deyil, sadəcə pəncərə tez açılıb bağlanmalı və düymə
+            // "asılı" qalmadan növbəti klikə hazır olmalıdır.
+            const syncRes = profileId
+                ? await apiConfig.post(`/sync/refresh/${profileId}`, {}, { timeout: 6000 }).catch(() => null)
+                : null;
+            const counts = syncRes?.data?.counts || {};
+            window.electronAPI.sendRefreshSyncEvent({
+                type: "done",
+                counts,
+                deltas: {},
+                isOnline: syncRes?.data?.isOnline !== false,
+            });
+        } catch (e) {
+            window.electronAPI.sendRefreshSyncEvent({ type: "done", counts: {}, deltas: {}, isOnline: false });
+        } finally {
+            setIsManualRefreshing(false);
+        }
+    };
+
     const handleWifiIconTap = () => {
         if (wifiTapTimerRef.current) clearTimeout(wifiTapTimerRef.current);
         wifiTapCountRef.current += 1;
@@ -201,12 +269,26 @@ const NetworkOverlay = () => {
                             </div>
                             <h2 className="network-disconnect-title">{t("esas_terminala_qosulu_deyil")}</h2>
                             <p className="network-disconnect-lead">{t("sebeke_elcatan_deyil")}</p>
-                            {canQuit && (
-                                <button type="button" className="network-disconnect-quit-btn" onClick={handleQuit}>
-                                    <i className="bi bi-x-lg" aria-hidden />
-                                    <span>{t("proqrami_bagla")}</span>
-                                </button>
-                            )}
+                            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                                {hasRefreshWindowApi && (
+                                    <button
+                                        type="button"
+                                        className="network-disconnect-quit-btn"
+                                        onClick={handleManualRefresh}
+                                        disabled={isManualRefreshing}
+                                        style={{ background: "#053796" }}
+                                    >
+                                        <i className="bi bi-arrow-repeat" aria-hidden />
+                                        <span>{t("refresh")}</span>
+                                    </button>
+                                )}
+                                {canQuit && (
+                                    <button type="button" className="network-disconnect-quit-btn" onClick={handleQuit}>
+                                        <i className="bi bi-x-lg" aria-hidden />
+                                        <span>{t("proqrami_bagla")}</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </Modal>

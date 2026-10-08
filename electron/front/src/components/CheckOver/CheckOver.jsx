@@ -517,6 +517,21 @@ const CheckOver = () => {
             }
         }
 
+        // Müştərini gözlətməmək üçün UI-ı DƏRHAL (server cavabını gözləmədən) yeniləyib
+        // masalara qayıdırıq — çekin silinməsindəki eyni optimistik yanaşma. Əsl bağlama
+        // sorğusu, loglar və çap arxa planda davam edir; uğursuz olarsa aşağıdakı catch-də
+        // xəbərdarlıq göstərilir.
+        dispatch(removeOrderOptimisticFromTables(currentOrder?.uuid || id));
+        dispatch(removeOrderOptimistic(currentOrder?.uuid || id));
+        {
+            const socket = getSocket();
+            if (socket?.connected) {
+                socket.emit("order_closed", { orderId: currentOrder?.uuid || id });
+            }
+        }
+        const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
+        navigate(isPacksOnly ? "/checks" : "/tables");
+
         try {
             await dispatch(closeOrder({
                 orderId: id,
@@ -689,19 +704,6 @@ const CheckOver = () => {
                     }
                 }
             }
-
-            // Masa dərhal boş görünsün — socket/fon yeniləməsini gözləmədən lokal state-dən çıxar.
-            // Əks halda /tables-a keçəndə masa hələ "açıq" göstərilir, kassir təzədən girib bağlamağa çalışır.
-            dispatch(removeOrderOptimisticFromTables(currentOrder?.uuid || id));
-            dispatch(removeOrderOptimistic(currentOrder?.uuid || id));
-
-            // Notify all other terminals that this order is closed
-            const socket = getSocket();
-            if (socket?.connected) {
-                socket.emit("order_closed", { orderId: currentOrder?.uuid || id });
-            }
-            const isPacksOnly = isPacksOnlyWaiter(loginedWaiter?.data);
-            navigate(isPacksOnly ? "/checks" : "/tables");
 
             // Print in background after navigation (non-blocking)
             if (printCheck) {
