@@ -75,7 +75,7 @@ const CustomerDisplay = () => {
         const init = async () => {
             let masterIp = null;
             if (window.electronAPI?.getStaticMasterIp) {
-                try { masterIp = await window.electronAPI.getStaticMasterIp(); } catch (_) {}
+                try { masterIp = await window.electronAPI.getStaticMasterIp(); } catch { /* nəzərə alınmır */ }
             }
             const hostname = window.location.hostname || "localhost";
             const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";

@@ -22,6 +22,7 @@ import RefreshLoader from "../RefreshLoader/RefreshLoader";
 import "./Settings.css";
 import { checkIsSlaveTerminal } from "../../utils/masterSlaveHelpers";
 import { useTranslation } from "../../hooks/useTranslation";
+import { t as _t } from "../../utils/translations";
 
 const Settings = () => {
   const { t, lang, changeLanguage, languageOptions } = useTranslation();
@@ -35,7 +36,7 @@ const Settings = () => {
   const [showSalesShiftModal, setShowSalesShiftModal] = useState(false);
   const [showCustomersModal, setShowCustomersModal] = useState(false);
   const [showDevicesModal, setShowDevicesModal] = useState(false);
-  const [showMasterSlaveSettings, setShowMasterSlaveSettings] = useState(false);
+  const [_showMasterSlaveSettings, _setShowMasterSlaveSettings] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncCounts, setSyncCounts] = useState(null);
   const [refreshIsOnline, setRefreshIsOnline] = useState(true);
@@ -158,7 +159,7 @@ const Settings = () => {
           });
           try {
             localStorage.setItem(prevCountsKey, JSON.stringify(newCounts));
-          } catch {}
+          } catch { /* nəzərə alınmır */ }
         } else {
           window.electronAPI.sendRefreshSyncEvent({
             type: "done",
@@ -177,7 +178,7 @@ const Settings = () => {
       ]);
 
       if (!isOnline) {
-        toast.warning("İnternet yoxdur — lokal məlumatlar göstərilir", {
+        toast.warning(t("no_internet_local"), {
           id: toastId,
         });
         return;
@@ -204,7 +205,7 @@ const Settings = () => {
         }
       }
 
-      toast.success("Məlumatlar uğurla yeniləndi!", { id: toastId });
+      toast.success(t("data_updated"), { id: toastId });
     } catch (error) {
       console.error("Yeniləmə xətası:", error);
 
@@ -222,7 +223,7 @@ const Settings = () => {
         let prevSnapshot = null;
         try {
           prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
-        } catch {}
+        } catch { /* nəzərə alınmır */ }
         const merged = mergeBlockedLoginPayload(error.data, prevSnapshot);
         localStorage.setItem("authResult", JSON.stringify(merged));
         dispatch(setLoginData(merged));
@@ -238,11 +239,11 @@ const Settings = () => {
           dispatch(getTableGroups(profileId)).unwrap(),
           dispatch(getActiveOrders({ profileId })).unwrap(),
         ]);
-        toast.warning("İnternet yoxdur — lokal məlumatlar göstərilir", {
+        toast.warning(t("no_internet_local"), {
           id: toastId,
         });
       } catch {
-        toast.error("Yeniləmə zamanı xəta baş verdi.", { id: toastId });
+        toast.error(t("data_update_error"), { id: toastId });
       }
     } finally {
       setIsRefreshing(false);

@@ -22,7 +22,7 @@ export const savePrintersToStorage = (profileId, printers) => {
       PRINTERS_LS_KEY,
       JSON.stringify({ profileId, printers, savedAt: Date.now() }),
     );
-  } catch (e) {
+  } catch {
     /* ignore */
   }
 };
@@ -39,7 +39,7 @@ const loadPrintersFromStorage = (profileId) => {
     ) {
       return parsed.printers;
     }
-  } catch (e) {
+  } catch {
     /* ignore */
   }
   return null;
@@ -317,13 +317,13 @@ export const processAndPrintOrders = async (
         } finally {
           try {
             root.unmount();
-          } catch (_) {
+          } catch {
             /* ignore */
           }
           if (container.parentNode) {
             try {
               container.parentNode.removeChild(container);
-            } catch (_) {
+            } catch {
               /* ignore */
             }
           }
@@ -673,13 +673,13 @@ export const printCustomerReceipt = async (
   } finally {
     try {
       root.unmount();
-    } catch (_) {
+    } catch {
       /* ignore */
     }
     if (container.parentNode) {
       try {
         container.parentNode.removeChild(container);
-      } catch (_) {
+      } catch {
         /* ignore */
       }
     }
@@ -689,7 +689,7 @@ export const printCustomerReceipt = async (
 export const resolveAndPrintKitchenReceiptLocally = async (html, printerName, rawPrinters, orderData, isDelegated = false, printerId = null) => {
     let profilePrinters = [];
     let authResultFallback = null;
-    try { authResultFallback = JSON.parse(localStorage.getItem("authResult") || "{}"); } catch { }
+    try { authResultFallback = JSON.parse(localStorage.getItem("authResult") || "{}"); } catch { /* nəzərə alınmır */ }
     
     const profileId = isDelegated 
       ? authResultFallback?.data?.profile?.id 

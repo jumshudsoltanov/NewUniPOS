@@ -10,7 +10,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
 
-const ServiceFeeModal = ({ show, onClose, order, hall }) => {
+const ServiceFeeModal = ({ show, onClose, order, hall: _hall }) => {
   const [value, setValue] = useState("0");
   const [feeType, setFeeType] = useState("percent");
   const dispatch = useDispatch();

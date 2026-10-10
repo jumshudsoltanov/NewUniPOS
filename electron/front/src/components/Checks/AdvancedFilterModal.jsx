@@ -42,7 +42,7 @@ const defaultFilters = {
   filterDiscount: "", filterGuestMin: "", filterGuestMax: "", filterHasNote: "",
 };
 
-const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls }) => {
+const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear: _onClear, halls }) => {
   const dispatch = useDispatch();
   const { loginedProfileData } = useSelector((s) => s.LoginSlice);
   const { waitersLists } = useSelector((s) => s.WaitersSlice);
@@ -71,7 +71,7 @@ const AdvancedFilterModal = ({ show, onHide, filters, onApply, onClear, halls })
   }, [halls, f.filterHall]);
 
   const hasActive = Object.entries(f).some(([k, v]) => k !== "searchId" && v);
-  const activeCount = Object.entries(f).filter(([k, v]) => k !== "searchId" && v).length;
+  const _activeCount = Object.entries(f).filter(([k, v]) => k !== "searchId" && v).length;
 
   const tag = (label, onClick) => (
     <span className="af-tag" onClick={onClick}>{label}<i className="bi bi-x ms-1"></i></span>

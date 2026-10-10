@@ -7,6 +7,7 @@ import {
   updateProductModifierGroups,
 } from "./MenuSlice";
 import { hasTimerIntervals } from "../../utils/menuIndex";
+import { findMenuItemById } from "../../utils/menuIndex";
 
 export const sendOrdersItems = createAsyncThunk(
   "pos/orders",
@@ -1567,7 +1568,7 @@ export const OrderSlice = createSlice({
       let pIntervals = incomingProduct.timer_intervals || incomingProduct.product?.timer_intervals || [];
       
       if (state.menu && Array.isArray(state.menu)) {
-        const catItem = state.menu.find(m => Number(m.id) === Number(incomingProduct.product_id || incomingProduct.id));
+        const catItem = findMenuItemById(state.menu, incomingProduct.product_id || incomingProduct.id);
         if (catItem) {
           pHourly = pHourly || Number(catItem.hourly_price || 0);
           if (!pIntervals || (Array.isArray(pIntervals) && pIntervals.length === 0) || (typeof pIntervals === 'string' && pIntervals.length <= 2)) {
@@ -1644,7 +1645,7 @@ export const OrderSlice = createSlice({
       }));
     },
 
-    clearOrders: (state, action) => {
+    clearOrders: (state, _action) => {
       state.products = [];
       state.sentProducts = [];
       state.pendingDeletions = [];
@@ -1707,7 +1708,7 @@ export const OrderSlice = createSlice({
         state.products = [];
         state.loading = true;
       })
-      .addCase(sendOrdersItems.fulfilled, (state, action) => {
+      .addCase(sendOrdersItems.fulfilled, (state, _action) => {
         state.loading = false;
         state.products = [];
         state.sentProducts = [];
@@ -1718,13 +1719,13 @@ export const OrderSlice = createSlice({
         state.sentProducts = [];
         state.loading = false;
       })
-      .addCase(getTableGroups.fulfilled, (state, action) => {
+      .addCase(getTableGroups.fulfilled, (state, _action) => {
         state.sentProducts = [];
         // pendingDeletions saxlanılmalıdır: socket table_updated → getTableGroups işləyəndə
         // istifadəçi modifikatorlu məhsulu “silinəcək” işarələyib hələ Göndərməyibsə,
         // əks halda siyahı təmizlənir və çek API məlumatı ilə geri qayıdır (2 dəfə silmə).
       })
-      .addCase(getActiveOrders.fulfilled, (state, action) => {
+      .addCase(getActiveOrders.fulfilled, (state, _action) => {
         state.sentProducts = [];
         // pendingDeletions burada da təmizlənməsin — eyni yarış vəziyyəti.
       })
@@ -1754,14 +1755,14 @@ export const OrderSlice = createSlice({
           );
         }
       })
-      .addCase(batchDeleteOrderItems.fulfilled, (state, action) => {
+      .addCase(batchDeleteOrderItems.fulfilled, (_state, _action) => {
         // Do nothing here. We must keep pendingDeletions until getActiveOrders is fetched
         // to prevent UI flicker. Check.jsx explicitly clears it afterwards.
       })
-      .addCase(batchDeleteOrderItems.rejected, (state) => {
+      .addCase(batchDeleteOrderItems.rejected, (_state) => {
         // Keep pendingDeletions so user can retry
       })
-      .addCase(deleteOrderItems.fulfilled, (state, action) => {
+      .addCase(deleteOrderItems.fulfilled, (state, _action) => {
         state.products = [];
       })
       .addCase(mergeChecks.fulfilled, (state, action) => {
@@ -1776,10 +1777,10 @@ export const OrderSlice = createSlice({
       .addCase(splitOrder.fulfilled, (state, action) => {
         state.splitOrderData = action.payload;
       })
-      .addCase(giftItem.fulfilled, (state, action) => {
+      .addCase(giftItem.fulfilled, (_state, _action) => {
         // Optional: Update state if needed
       })
-      .addCase(updateDepositOnOrders.fulfilled, (state, action) => {
+      .addCase(updateDepositOnOrders.fulfilled, (_state, _action) => {
         // You can add state field for deposit if needed
       })
       .addCase(fetchLogs.fulfilled, (state, action) => {
@@ -1788,10 +1789,10 @@ export const OrderSlice = createSlice({
       .addCase(saveLog.fulfilled, (state, action) => {
         state.orderLogs.unshift(action.payload);
       })
-      .addCase(deleteCheck.fulfilled, (state, action) => {
+      .addCase(deleteCheck.fulfilled, (_state, _action) => {
         // No local log push - handled by thunk saveLog
       })
-      .addCase(closeOrder.fulfilled, (state, action) => {
+      .addCase(closeOrder.fulfilled, (_state, _action) => {
         // No local log push - handled by thunk saveLog
       })
       .addCase(incrementPrintCount.fulfilled, (state, action) => {

@@ -29,7 +29,7 @@ const CommentModal = React.memo(({ show, onClose, order }) => {
   const handleUpdateComment = async () => {
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || "Naməlum";
 
-    const result = await dispatch(
+    const _result = await dispatch(
       updateComments({ orderId: order?.uuid, comments: comment, waiterName }),
     ).unwrap();
 

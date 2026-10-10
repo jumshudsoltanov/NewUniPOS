@@ -42,18 +42,28 @@ export function setCurrentLanguage(lang) {
  *  - Açar tapılmasa AZ versiyası fallback olaraq göstərilir
  *  - {param} kimi yerləşdiriciləri dəyərlərlə əvəz edir
  */
-export function t(key, params = {}) {
+/**
+ * PERFORMANS: `t()` interfeysdə ən çox çağırılan funksiyadır — bir render-də
+ * yüzlərlə dəfə işləyir. Əvvəl hər çağırışda `params = {}` yeni obyekt,
+ * `Object.keys(...)` və `Object.entries(...)` yeni massivlər yaradır, hər
+ * əvəzləmə üçün yeni `RegExp` kompilyasiya olunurdu — parametrsiz adi
+ * çağırışlarda belə. İndi parametrsiz yol tamamilə allokasiyasızdır.
+ */
+export function t(key, params) {
   if (!key) return "";
   const lang = getCurrentLanguage();
-  let text = data[lang]?.[key] ?? data.az[key] ?? key;
+  const text = data[lang]?.[key] ?? data.az[key] ?? key;
 
-  if (params && Object.keys(params).length > 0) {
-    Object.entries(params).forEach(([k, v]) => {
-      text = text.replace(new RegExp(`\\{${k}\\}`, "g"), v);
-    });
+  // Əksər çağırışlar parametrsizdir — dərhal qayıdırıq
+  if (!params) return text;
+
+  let out = text;
+  for (const k in params) {
+    if (!Object.prototype.hasOwnProperty.call(params, k)) continue;
+    // split/join RegExp kompilyasiyasından ucuzdur
+    out = out.split("{" + k + "}").join(params[k]);
   }
-
-  return text;
+  return out;
 }
 
 export default data;

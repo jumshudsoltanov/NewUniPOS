@@ -44,7 +44,7 @@ export const compressImageFile = (file, { maxDim = 700, quality = 0.75 } = {}) =
           const compressed = canvas.toDataURL("image/jpeg", quality);
           // Sıxılmış nəticə orijinaldan böyükdürsə (kiçik/artıq sadə şəkil) orijinalı saxla
           resolve(compressed.length < reader.result.length ? compressed : reader.result);
-        } catch (err) {
+        } catch {
           resolve(reader.result); // canvas xətası — orijinal data URL ilə davam et
         }
       };

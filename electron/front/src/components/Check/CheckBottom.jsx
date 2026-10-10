@@ -1,30 +1,21 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback as _useCallback, useMemo } from "react";
 import { useDispatch, useSelector, shallowEqual } from "react-redux";
 import {
-  sendOrders,
   clearOrders,
-  sendOrdersItems,
   removeProduct,
-  deleteOrderItem,
-  clearPendingDeletions,
-  addLog,
   saveLog,
   stopTimer,
 } from "../../redux/Slices/OrdersSlice";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { getTableGroups } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders } from "../../redux/Slices/BooksSlice";
+import { getTableGroups as _getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders as _getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "react-toastify";
 import NewItemsModal from "../NewItemsModal/NewItemsModal";
-import {
-  processAndPrintOrders,
-  printCustomerReceipt,
-} from "../../utils/printerHelpers.jsx";
+;
 import { getSocket } from "../../utils/apiConfig";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import {
   getEffectiveHourlyPrice,
-  getProductHourlySum,
 } from "../../utils/orderHourlyPrice";
 import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
 import {
@@ -42,10 +33,11 @@ import { getCurrencySymbol } from "../../utils/formatPrice";
 import { getPartialPaidTotal } from "../../utils/itemPayments";
 import {
   getOrderItemLineTotal,
-  sumOrderItemsLinesTotal,
-  isTimerItem
+  isTimerItem,
 } from "../../utils/orderItemLineTotal";
 import { hasTimerIntervals } from "../../utils/menuIndex";
+import { findMenuItemById } from "../../utils/menuIndex";
+import { isNoServiceFeeItem } from "../../utils/serviceFeeRules";
 
 const CheckBottom = ({
   orders,
@@ -55,8 +47,8 @@ const CheckBottom = ({
   handleSendOrders,
   isSending,
   clearCheck,
-  printToKitchen,
-  setPrintToKitchen,
+  _printToKitchen,
+  _setPrintToKitchen,
   openDepositModal,
   handleDirectDeleteEmptyCheck,
 }) => {
@@ -105,7 +97,7 @@ const CheckBottom = ({
       let menuHourly = 0;
       let menuIntervalsValid = false;
       if (menu && menu.length > 0) {
-        const catItem = menu.find(m => Number(m.id) === Number(it.product_id || it.id));
+        const catItem = findMenuItemById(menu, it.product_id || it.id);
         if (catItem) {
           menuHourly = Number(catItem.hourly_price || 0);
           const mInt = catItem.timer_intervals || [];
@@ -299,7 +291,7 @@ const CheckBottom = ({
     let totalForDiscount = 0;
     let totalForService = 0;
     
-    let hasProductTimer = false;
+    let _hasProductTimer = false;
     let totalSeconds = 0;
     if (timerClock && String(timerClock).includes(":")) {
         const parts = timerClock.split(":").map(Number);
@@ -328,7 +320,7 @@ const CheckBottom = ({
               0,
             );
           }
-        } catch (e) {
+        } catch {
           /* ignore */
         }
 
@@ -336,7 +328,7 @@ const CheckBottom = ({
           (m) => Number(m.id) === Number(item.product_id || item.id),
         );
         const isTimer = isTimerItem(item, menu);
-        if (isTimer) hasProductTimer = true;
+        if (isTimer) _hasProductTimer = true;
 
         let liveItem = { ...item };
         if (liveTimerData?.orders_items) {
@@ -354,8 +346,7 @@ const CheckBottom = ({
         total += itemTotal;
         totalForDiscount += baseTotal;
 
-        const isNoService =
-          item.no_service_fee === 1 || productInfo?.no_service_fee === 1;
+        const isNoService = isNoServiceFeeItem(item, menu);
         if (!isNoService) {
           totalForService += baseTotal;
         }
@@ -383,14 +374,14 @@ const CheckBottom = ({
               0,
             );
           }
-        } catch (e) {
+        } catch {
           /* ignore */
         }
 
         const productInfo = menu?.find(
           (m) => Number(m.id) === Number(del.product_id || del.itemId || del.id),
         );
-        const isTimer = isTimerItem(del, menu);
+        const _isTimer = isTimerItem(del, menu);
         
         let delItemWithQty = {
           ...del,
@@ -411,8 +402,7 @@ const CheckBottom = ({
         total -= delTotal;
         totalForDiscount -= baseTotal;
 
-        const isNoService =
-          del.no_service_fee === 1 || productInfo?.no_service_fee === 1;
+        const isNoService = isNoServiceFeeItem(del, menu);
         if (!isNoService) {
           totalForService -= baseTotal;
         }
@@ -484,7 +474,7 @@ const CheckBottom = ({
 
     const deliveryFee = normalizeMoney(Number(orders?.delivery_fee || 0));
 
-    const hasPendingChanges =
+    const _hasPendingChanges =
       products?.length > 0 || pendingDeletions?.length > 0;
     let sumTotal =
       Math.max(subtotalAfterDiscount, depositAmount) +
@@ -633,11 +623,11 @@ const CheckBottom = ({
           {Number(calcTotal.partialPaid) > 0 && (
             <>
               <div className="summary-row" style={{ color: "#fff" }}>
-                <span>Ödənilib:</span>
+                <span>{t("odenilib")}</span>
                 <span>-{calcTotal.partialPaid} {getCurrencySymbol()}</span>
               </div>
               <div className="summary-row" style={{ fontWeight: 800 }}>
-                <span>Qalıq:</span>
+                <span>{t("qaliq_1")}</span>
                 <span>{calcTotal.dueTotal} {getCurrencySymbol()}</span>
               </div>
             </>
@@ -748,7 +738,7 @@ const CheckBottom = ({
           {isCheckEmpty ? (
             <button className="btn-pay" onClick={handleDirectDeleteEmptyCheck}>
               <i className="bi bi-trash-fill"></i>
-              <span>Çeki ləğv et</span>
+              <span>{t("ceki_legv_et")}</span>
             </button>
           ) : canCloseCheck ? (
             <button className="btn-pay" onClick={goCloseCheck}>
@@ -857,7 +847,7 @@ const CheckBottom = ({
         {isCheckEmpty ? (
           <button className="mobile-pay-btn" onClick={handleDirectDeleteEmptyCheck}>
             <i className="bi bi-trash-fill fs-4 text-white"></i>
-            <span className="pay-amount text-white">Çeki ləğv et</span>
+            <span className="pay-amount text-white">{t("ceki_legv_et")}</span>
           </button>
         ) : canCloseCheck ? (
           <button className="mobile-pay-btn" onClick={goCloseCheck}>

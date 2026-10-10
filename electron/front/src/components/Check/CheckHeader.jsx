@@ -14,7 +14,7 @@ import {
   updateOrderOptimisticId,
 } from "../../redux/Slices/BooksSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams as _useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 import { t } from "../../utils/translations";
@@ -22,8 +22,8 @@ const CheckHeader = ({
   orders,
   hall,
   table,
-  selectedCustomer,
-  activeTableCount = 0,
+  _selectedCustomer,
+  _activeTableCount = 0,
   onBeforeCreateOrder,
   isHotelMode,
   hotelRoom,

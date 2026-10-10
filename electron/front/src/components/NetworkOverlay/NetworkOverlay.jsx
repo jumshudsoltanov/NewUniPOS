@@ -101,7 +101,7 @@ const NetworkOverlay = () => {
 
     const isSlaveTerminal = checkIsSlaveTerminal();
     // Yenilənmə pəncərəsi açıq olduğu müddətdə arxa fondakı "əlaqə yoxdur" ekranı gizlənsin
-    const overlayActive = isSlaveTerminal && !isManualRefreshing && (isDisconnected || showIpConfigModal);
+    const _overlayActive = isSlaveTerminal && !isManualRefreshing && (isDisconnected || showIpConfigModal);
 
     useEffect(() => {
         if (!isSlaveTerminal) setShowIpConfigModal(false);
@@ -194,7 +194,7 @@ const NetworkOverlay = () => {
         try {
             const authResult = JSON.parse(localStorage.getItem("authResult") || "{}");
             profileId = authResult?.data?.profile?.id || null;
-        } catch (e) {}
+        } catch { /* nəzərə alınmır */ }
 
         window.electronAPI.openRefreshWindow();
         window.electronAPI.sendRefreshSyncEvent({ type: "start", isOnline: navigator.onLine });
@@ -213,7 +213,7 @@ const NetworkOverlay = () => {
                 deltas: {},
                 isOnline: syncRes?.data?.isOnline !== false,
             });
-        } catch (e) {
+        } catch {
             window.electronAPI.sendRefreshSyncEvent({ type: "done", counts: {}, deltas: {}, isOnline: false });
         } finally {
             setIsManualRefreshing(false);
@@ -258,7 +258,7 @@ const NetworkOverlay = () => {
                             type="button"
                             className="network-disconnect-wifi-trigger"
                             onClick={handleWifiIconTap}
-                            aria-label="WiFi ayarları"
+                            aria-label={t("wifi_ayarlari")}
                             title=""
                         >
                             <i className="bi bi-wifi-off" />
@@ -337,7 +337,7 @@ const NetworkOverlay = () => {
                                     <strong className="network-master-status-mono">{masterDisplay}</strong>
                                 </div>
                                 <div className="network-master-status-row">
-                                    <span className="network-master-status-label">Bu terminal (lokal IP)</span>
+                                    <span className="network-master-status-label">{t("bu_terminal_lokal_ip")}</span>
                                     <strong className="network-master-status-mono">{slaveIp || "—"}</strong>
                                 </div>
                             </div>
@@ -345,7 +345,7 @@ const NetworkOverlay = () => {
                             <p className="network-master-fs-hint">{t("statik_ip_yazin")}<strong>{t("qosul")}</strong>, <strong>Axtar</strong>{t("ve_ya")}<strong>{t("avto_qosul")}</strong>{t("ile_master_tapin")}</p>
 
                             <label className="network-master-field-label" htmlFor="network-master-ip-field">
-                                Statik Master IP
+                                {t("statik_master_ip")}
                             </label>
                             <input
                                 id="network-master-ip-field"

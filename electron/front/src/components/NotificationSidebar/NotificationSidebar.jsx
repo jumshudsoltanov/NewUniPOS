@@ -103,7 +103,7 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                 className={`notif-toggle-btn ${activeTab === "old" ? "active" : ""}`}
                 onClick={() => setActiveTab("old")}
               >
-                Köhnə
+                {t("kohne")}
               </button>
             </div>
 

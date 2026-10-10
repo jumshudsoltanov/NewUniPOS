@@ -2,34 +2,23 @@ import React, { useState, useEffect, useMemo } from "react";
 import Modal from "react-bootstrap/Modal";
 import "./EditModal.css";
 import {
-  changeSaleType,
-  deleteOrderItem,
   giftItem,
-  mergeChecks,
-  reopenOrder,
-  updateGuestCountOrder,
-  updateItemCount,
   updateItemDiscount,
   updateItemPrice,
-  updateTableOrders,
   removeAllProductsById,
   removeProductByIdAndPrice,
   removeLocalProductByFirstId,
   removeLocalProductByUuid,
   replaceProductQuantity,
-  updateCount,
   saveLog,
   splitOrder,
-  addPendingDeletion,
   startTimer,
   stopTimer,
   resetTimer,
   addProducts,
-  updateComments,
-  splitProductQuantity,
 } from "../../redux/Slices/OrdersSlice";
 import { updateProduct } from "../../redux/Slices/ProductSlice";
-import { useDispatch, useSelector, shallowEqual } from "react-redux";
+import { useDispatch, useSelector, shallowEqual as _shallowEqual } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import SplitTableSelect from "../SlpitOrderModa/SplitTableSelect";
@@ -67,7 +56,7 @@ const removeLocalProduct = (dispatch, product) => {
 
 const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialTab = "edit" }) => {
   const [activeTab, setActiveTab] = useState(initialTab || "edit");
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 576);
+  const [_isMobile, setIsMobile] = useState(window.innerWidth < 576);
   const [adminOverrideProps, setAdminOverrideProps] = useState(null);
 
   useEffect(() => {
@@ -79,9 +68,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
   const [isFirstKeypress, setIsFirstKeypress] = useState(true);
   const qty = parseFloat(qtyStr) || 0;
   const [numpadTarget, setNumpadTarget] = useState("qty"); // "qty" | "price"
-  const [price, setPrice] = useState(product?.price || 0);
+  const [_price, setPrice] = useState(product?.price || 0);
   const dispatch = useDispatch();
-  const { sentProducts, products, menu } = useSelector((state) => state.OrderSlice);
+  const { sentProducts: _sentProducts, products: _products, menu } = useSelector((state) => state.OrderSlice);
   const [inputValue, setInputValue] = useState(
     product?.price ? product.price.toString() : "0",
   );
@@ -177,7 +166,6 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
   const isNoDiscount = (product?.no_discount === 1 || product?.product?.no_discount === 1 || productInfo?.no_discount === 1);
   const catalogHourly = Number(productInfo?.hourly_price ?? product?.product?.hourly_price ?? 0);
 
-
   const orderIdLive = orders?.uuid || orderUuidFromUrl;
   
   const checkIntervals = (val) => {
@@ -189,7 +177,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
           try {
               const parsed = JSON.parse(trimmed);
               if (Array.isArray(parsed)) return parsed.length > 0;
-          } catch(e) {}
+          } catch { /* nəzərə alınmır */ }
       }
       return false;
   };
@@ -315,7 +303,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
     let modifiers = [];
     try {
       modifiers = typeof liveProduct?.modifiers === 'string' ? JSON.parse(liveProduct?.modifiers) : (liveProduct?.modifiers || []);
-    } catch (e) { }
+    } catch { /* nəzərə alınmır */ }
     const modsTotal = modifiers.reduce((acc, mod) => acc + Number(mod.price || 0) * Number(mod.count || 1), 0);
     const timerCharge = chargePerUnit - basePrice - modsTotal;
 
@@ -333,7 +321,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
         if (Array.isArray(parsed) && parsed.length > 0) {
           return { price: Number(parsed[0].price) || 0, duration: Number(parsed[0].duration) || 0 };
         }
-      } catch (e) {}
+      } catch { /* nəzərə alınmır */ }
     }
     return null;
   }, [liveProduct, productInfo]);
@@ -809,7 +797,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                     setIsSubmitting(true);
                     try {
                       if (qty === 0) {
-                        const productId = Number(product.product_id || product.id);
+                        const _productId = Number(product.product_id || product.id);
                         if (product.isNew && product.localQuantity > 0) {
                           removeLocalProduct(dispatch, product);
                           if (!product.savedQuantity || product.savedQuantity <= 0) {
@@ -1442,7 +1430,7 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
             type="button"
             className="btn-close-custom"
             onClick={() => setShowResetTimerConfirm(false)}
-            aria-label="Bağla"
+            aria-label={t("bagla")}
           >
             <i className="bi bi-x-lg"></i>
           </button>

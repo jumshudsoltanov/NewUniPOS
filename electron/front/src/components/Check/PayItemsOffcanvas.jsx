@@ -10,6 +10,7 @@ import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { getActiveOrders, removeItemPaymentBatchOptimistic } from "../../redux/Slices/BooksSlice";
 import { getPaymentMethods } from "../../redux/Slices/PaymentMethodsSlice";
 import "./PayItemsOffcanvas.css";
+import { t } from "../../utils/translations";
 
 const EPS = 0.0001;
 const money = (n) => (Math.round((Number(n) || 0) * 100) / 100).toFixed(2);
@@ -223,7 +224,7 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
                     details: `${b.lines.join(", ")} — ${money(b.amount)} ${cur} (${b.method || ""})`,
                 }),
             );
-            toast.success("Ödəniş ləğv edildi");
+            toast.success(t("odenis_legv_edildi"));
             refresh();
         } catch (e) {
             toast.error(e?.response?.data?.message || "Ləğv alınmadı");
@@ -236,12 +237,12 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
         <Offcanvas show={show} onHide={onHide} placement="end" className="pio-canvas">
             <div className="pio-head">
                 <div>
-                    <div className="pio-title">Məhsul üzrə ödəniş</div>
+                    <div className="pio-title">{t("mehsul_uzre_odenis")}</div>
                     <div className="pio-subtitle">
                         {order?.table?.name ? `${order.table.name} · ` : ""}#{order?.id}
                     </div>
                 </div>
-                <button type="button" className="pio-close" onClick={onHide} aria-label="Bağla">
+                <button type="button" className="pio-close" onClick={onHide} aria-label={t("bagla")}>
                     <i className="bi bi-x-lg" />
                 </button>
             </div>
@@ -249,13 +250,13 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
             <div className="pio-body">
                 <div className="pio-stats">
                     <div className="pio-stat">
-                        <span>Ödənilməmiş</span>
+                        <span>{t("odenilmemis")}</span>
                         <b>
                             {money(unpaidSum)} {cur}
                         </b>
                     </div>
                     <div className="pio-stat paid">
-                        <span>Ödənilib</span>
+                        <span>{t("odenilib")}</span>
                         <b>
                             {money(paidSum)} {cur}
                         </b>
@@ -263,10 +264,10 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
                 </div>
 
                 <div className="pio-section-head">
-                    <span>Məhsulları seçin</span>
+                    <span>{t("mehsullari_secin")}</span>
                     {rows.length > 0 && (
                         <button type="button" className="pio-link" onClick={selectAll}>
-                            Hamısını seç
+                            {t("hamisini_sec")}
                         </button>
                     )}
                 </div>
@@ -275,14 +276,14 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
                     {rows.length === 0 && (
                         <div className="pio-empty">
                             <i className="bi bi-check2-circle" />
-                            Bütün məhsullar ödənilib
+                            {t("butun_mehsullar_odenilib")}
                         </div>
                     )}
                     {rows.map((r) => {
                         const q = selected[r.it.id] || 0;
                         return (
                             <div key={r.it.id} className={`pio-row${q > 0 ? " selected" : ""}`}>
-                                <button type="button" className="pio-check" onClick={() => toggle(r)} aria-label="Seç">
+                                <button type="button" className="pio-check" onClick={() => toggle(r)} aria-label={t("sec")}>
                                     {q > 0 && <i className="bi bi-check-lg" />}
                                 </button>
                                 <div className="pio-row-main" onClick={() => toggle(r)}>
@@ -314,15 +315,15 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
                 </div>
 
                 <div className="pio-section-head">
-                    <span>Ödəniş üsulu</span>
-                    <label className="pio-switch" title="Məbləği bir neçə ödəniş üsuluna böl">
+                    <span>{t("odenis_usulu")}</span>
+                    <label className="pio-switch" title={t("meblegi_bir_nece_odenis_usuluna_bol")}>
                         <input type="checkbox" checked={split} onChange={toggleSplit} />
                         <span className="pio-switch-track" />
-                        <span className="pio-switch-label">Böl</span>
+                        <span className="pio-switch-label">{t("bol")}</span>
                     </label>
                 </div>
                 <div className="pio-methods">
-                    {!(paymentMethods?.length > 0) && <div className="pio-empty small">Yüklənir...</div>}
+                    {!(paymentMethods?.length > 0) && <div className="pio-empty small">{t("loading")}</div>}
                     {(paymentMethods || []).map((m) => (
                         <button
                             key={m.id}
@@ -360,14 +361,14 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
                         })}
                         {methodIds.length >= 2 && (
                             <div className={`pio-split-sum${Math.abs(diff) >= 0.006 ? " diff" : ""}`}>
-                                <span>Cəm</span>
+                                <span>{t("cem")}</span>
                                 <span>
                                     {money(paidByMethods)} / {money(totalR)} {cur}
                                 </span>
                             </div>
                         )}
                         {methodIds.length < 2 && (
-                            <div className="pio-split-hint">Bölmək üçün ən azı iki ödəniş üsulu seçin</div>
+                            <div className="pio-split-hint">{t("bolmek_ucun_en_azi_iki_odenis_usulu_secin")}</div>
                         )}
                         {methodIds.length >= 2 && Math.abs(diff) >= 0.006 && (
                             <div className="pio-split-hint error">
@@ -381,7 +382,7 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
                 {batches.length > 0 && (
                     <>
                         <div className="pio-section-head">
-                            <span>Əvvəlki ödənişlər</span>
+                            <span>{t("evvelki_odenisler")}</span>
                         </div>
                         <div className="pio-list">
                             {batches.map((b) => (
@@ -393,7 +394,7 @@ const PayItemsOffcanvas = ({ show, onHide, order, waiterId, waiterName, profileI
                                         <div className="pio-sub">{b.lines.join(", ")}</div>
                                     </div>
                                     <button type="button" className="pio-cancel" onClick={() => cancelBatch(b)} disabled={busy}>
-                                        Ləğv et
+                                        {t("cancel")}
                                     </button>
                                 </div>
                             ))}

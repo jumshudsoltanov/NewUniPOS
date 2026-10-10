@@ -5,20 +5,19 @@ import { setLoginData } from "../../redux/Slices/LoginSlice";
 import { toast } from "sonner";
 import QRCode from "react-qr-code";
 import apiConfig, { localApi, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
-import axios from "axios";
+import _axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 import { cashierPrinterPrefStorageKey, clearPrintersCache, savePrintersToStorage } from "../../utils/printerHelpers.jsx";
 import { usePrinterDiagnostics } from "../../hooks/usePrinterDiagnostics";
 import {
-    getPrinterDiagnosticClass,
-    getPrinterDiagnosticLabel,
-    getPrinterKey,
+  getPrinterDiagnosticClass,
+  getPrinterDiagnosticLabel,
+  getPrinterKey,
 } from "../../utils/printerDiagnostics";
 
 import CustomXprinterInstallModal from './CustomXprinterInstallModal';
 import { t } from "../../utils/translations";
 import "./DevicesModal.css";
-
 
 const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField, systemPrinters, systemPrintersLoading, onRefreshSystemPrinters, comPorts, networkScanResults, networkScanning, onBack, onSave, onTestPrint, onScan, profileLogo, allDepartments }) => {
     const ct = printer.connection_type || 'network';
@@ -54,7 +53,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                     <button className="btn-test" onClick={() => {
                         if (isNetwork && printer.ip) onTestPrint(null, printer.ip, printer.port || 9100);
                         else onTestPrint(printer.usb_name || printer.name);
-                    }}>Test çapı</button>
+                    }}>{t("test_capi_kicik")}</button>
                     <button className="btn-save-printer" onClick={onSave}>{t("save")}</button>
                 </div>
             </div>
@@ -96,7 +95,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
             ) : printerTab === "connection" ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div className="connection-toggle">
-                        <button className={`conn-btn ${isNetwork ? 'active' : ''}`} onClick={() => updatePrinterField('connection_type', 'network')}>Network (IP)</button>
+                        <button className={`conn-btn ${isNetwork ? 'active' : ''}`} onClick={() => updatePrinterField('connection_type', 'network')}>{t("network_ip")}</button>
                         <button className={`conn-btn ${ct === 'usb' ? 'active' : ''}`} onClick={() => updatePrinterField('connection_type', 'usb')}>USB / System</button>
                         <button className={`conn-btn ${ct === 'com' ? 'active' : ''}`} onClick={() => updatePrinterField('connection_type', 'com')}>COM Port</button>
                     </div>
@@ -169,7 +168,7 @@ const PrinterDetail = ({ printer, printerTab, setPrinterTab, updatePrinterField,
                         <>
                             <div className="ip-port-row">
                                 <div className="printer-form-group">
-                                    <label>IP Address</label>
+                                    <label>{t("ip_address")}</label>
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                         <input className="printer-input" placeholder="192.168.1.100" value={printer.ip || ""} onChange={e => { updatePrinterField('ip', e.target.value); setPingStatus(null); }} />
                                         <button className={`ping-btn ${pingStatus || ''}`} onClick={handlePing} disabled={!printer.ip || pingStatus === 'checking'} title={t("baglantini_yoxla")}>
@@ -495,10 +494,10 @@ const DevicesModal = ({ show, onHide }) => {
                 setShowSpoolerModal(true);
                 onHide();
             } else {
-                toast.error(t("xeta_bas_verdi", "Xəta baş verdi: ") + res.error);
+                toast.error(t("xeta_bas_verdi", (t("xeta_bas_verdi") + " ")) + res.error);
             }
         } catch (e) {
-            toast.error(t("xeta_bas_verdi", "Xəta baş verdi: ") + e.message);
+            toast.error(t("xeta_bas_verdi", (t("xeta_bas_verdi") + " ")) + e.message);
         } finally {
             setIsClearingSpooler(false);
         }
@@ -543,7 +542,7 @@ const DevicesModal = ({ show, onHide }) => {
     const [selectedTaxIndex, setSelectedTaxIndex] = useState(null);
     const [selectedPrinterIndex, setSelectedPrinterIndex] = useState(null);
     const [printerTab, setPrinterTab] = useState("connection");
-    const [taxDailyInfo, setTaxDailyInfo] = useState({});
+    const [_taxDailyInfo, _setTaxDailyInfo] = useState({});
     const {
         diagnostics: printerDiagnostics,
         isChecking: printerDiagnosticsChecking,
@@ -560,9 +559,9 @@ const DevicesModal = ({ show, onHide }) => {
 
     // Local Naming
     const [taxLocalNames, setTaxLocalNames] = useState({});
-    const [staticMasterIp, setStaticMasterIp] = useState("");
-    const [staticIpSaving, setStaticIpSaving] = useState(false);
-    const [staticIpScanning, setStaticIpScanning] = useState(false);
+    const [_staticMasterIp, setStaticMasterIp] = useState("");
+    const [_staticIpSaving, _setStaticIpSaving] = useState(false);
+    const [_staticIpScanning, _setStaticIpScanning] = useState(false);
     /** Bir neçə kassa printeri — hansına müştəri çeki çap olunacaq (terminal/instance üzrə) */
     const [cashierPrintPref, setCashierPrintPref] = useState("");
 
@@ -575,7 +574,7 @@ const DevicesModal = ({ show, onHide }) => {
     useEffect(() => {
         const stored = localStorage.getItem("tax_local_names");
         if (stored) {
-            try { setTaxLocalNames(JSON.parse(stored)); } catch (e) { }
+            try { setTaxLocalNames(JSON.parse(stored)); } catch { /* nəzərə alınmır */ }
         }
     }, []);
 
@@ -629,14 +628,14 @@ const DevicesModal = ({ show, onHide }) => {
     const handleToggleSkipGuestCount = () => {
         const next = !skipGuestCount;
         setSkipGuestCount(next);
-        try { localStorage.setItem("unipos_skip_guest_count", next ? "1" : "0"); } catch {}
+        try { localStorage.setItem("unipos_skip_guest_count", next ? "1" : "0"); } catch { /* nəzərə alınmır */ }
         toast.success(next ? "Qonaq sayı sorğusu DEAKTİV (birbaşa 0)" : "Qonaq sayı sorğusu AKTİV");
     };
 
     const handleToggleGuestCountBar = () => {
         const next = !showGuestCountBar;
         setShowGuestCountBar(next);
-        try { localStorage.setItem("pos_show_guest_count_bar", next ? "true" : "false"); } catch {}
+        try { localStorage.setItem("pos_show_guest_count_bar", next ? "true" : "false"); } catch { /* nəzərə alınmır */ }
         window.dispatchEvent(new CustomEvent("guestCountBarSettingChanged", { detail: next }));
         toast.success(next ? "Qonaq sayı zolağı AKTİV" : "Qonaq sayı zolağı DEAKTİV");
     };
@@ -794,7 +793,7 @@ const DevicesModal = ({ show, onHide }) => {
             if (results.length === 0) toast.info(t("sebekede_printer_tapilmadi"));
             else toast.success(`${results.length} printer tapıldı`);
         } catch (e) {
-            toast.error("Scan xətası: " + e.message);
+            toast.error((t("scan_xetasi") + " ") + e.message);
         }
         setNetworkScanning(false);
     };
@@ -815,7 +814,7 @@ const DevicesModal = ({ show, onHide }) => {
                         dispatch(setLoginData(auth));
                     }
                 }
-            } catch (e) { /* non-critical */ }
+            } catch { /* non-critical */ }
 
             await apiConfig.put(`/printers/${printer.id}`, printer);
             // Cache-i təmizlə ki növbəti çapdа yeni parametrlər götürülsün
@@ -823,7 +822,7 @@ const DevicesModal = ({ show, onHide }) => {
             
             toast.success(`${printer.local_name || printer.name} yadda saxlandı`);
         } catch (error) {
-            toast.error("Xəta baş verdi: " + (error?.response?.data?.message || error.message));
+            toast.error((t("xeta_bas_verdi") + " ") + (error?.response?.data?.message || error.message));
         }
     };
 
@@ -851,7 +850,7 @@ const DevicesModal = ({ show, onHide }) => {
                 toast.success(t("test_capi_gonderildi"));
             }
         } catch (error) {
-            toast.error("Çap xətası: " + error.message);
+            toast.error((t("cap_xetasi") + " ") + error.message);
         }
     };
 
@@ -911,7 +910,7 @@ const DevicesModal = ({ show, onHide }) => {
         } catch (error) {
             setCustomerReceiptAutoPrint(!nextStatus);
             console.error("Customer receipt auto print toggle error:", error);
-            toast.error("Xəta: " + (error?.response?.data?.message || error.message));
+            toast.error((t("xeta_1") + " ") + (error?.response?.data?.message || error.message));
         }
     };
 
@@ -941,7 +940,7 @@ const DevicesModal = ({ show, onHide }) => {
             toast.success(nextStatus ? "Növbə tələbi AKTİV" : "Növbə tələbi DEAKTİV");
         } catch (error) {
             setSalesShiftRequired(!nextStatus);
-            toast.error("Xəta: " + (error?.response?.data?.message || error.message));
+            toast.error((t("xeta_1") + " ") + (error?.response?.data?.message || error.message));
         }
     };
 
@@ -969,7 +968,7 @@ const DevicesModal = ({ show, onHide }) => {
                 toast.success(nextStatus ? "Mərkəzi çap AKTİV (lokal)" : "Mərkəzi çap DEAKTİV (lokal)");
             } else {
                 console.error("Toggle Error:", error?.response?.data || error.message);
-                toast.error("Xəta: " + (error?.response?.data?.message || error.message));
+                toast.error((t("xeta_1") + " ") + (error?.response?.data?.message || error.message));
             }
         }
     };
@@ -1004,48 +1003,8 @@ const DevicesModal = ({ show, onHide }) => {
         }
     };
 
-    const handleUpdateKitchenDisplay = async (active = null, screenId = null) => {
+    const _handleUpdateKitchenDisplay = async (active = null, screenId = null) => {
         return handleKitchenDisplayLocal(active, screenId);
-
-        const nextActive = active !== null ? active : kitchenDisplay.active;
-        const nextScreenId = screenId !== null ? screenId : kitchenDisplay.screenId;
-
-        // Update local state and UI immediately
-        setKitchenDisplay({ active: nextActive, screenId: nextScreenId });
-        if (window.electronAPI?.toggleKitchenDisplay) {
-            window.electronAPI
-                .toggleKitchenDisplay({ active: nextActive, screenId: nextScreenId })
-                .catch((error) => {
-                    console.error("Kitchen Display window error:", error);
-                    if (nextActive) handleOpenKitchenDisplayPreview();
-                });
-        } else if (nextActive) {
-            handleOpenKitchenDisplayPreview();
-        }
-
-        // Always persist to localStorage so slave auto-start works
-        const storedProfile2 = JSON.parse(localStorage.getItem("profile") || "{}");
-        storedProfile2.is_kitchen_display_active = nextActive ? 1 : 0;
-        storedProfile2.kitchen_display_screen_id = nextScreenId;
-        localStorage.setItem("profile", JSON.stringify(storedProfile2));
-
-        toast.success(nextActive ? "KDS ekranı açıldı" : "KDS ekranı bağlandı");
-        const shouldSyncKitchenDisplayApi = Boolean(window.__UNIPOS_ENABLE_KDS_API_SYNC__);
-        if (shouldSyncKitchenDisplayApi) {
-
-        try {
-            await localApi.patch("/profiles/kitchen-display", {
-                profileId,
-                isActive: nextActive,
-                screenId: nextScreenId
-            });
-            toast.success(t("metbex_ekrani_tenzimlemeleri_yadda_saxlanildi"));
-        } catch (error) {
-            // On slave, local DB may not have this endpoint — localStorage save is enough
-            console.warn("Kitchen Display API sync skipped (slave or offline):", error?.response?.status);
-            toast.success(t("metbex_ekrani_tenzimlemeleri_yadda_saxlanildi_lokal"));
-        }
-        }
     };
 
     const handleOpenKitchenDisplayPreview = () => {
@@ -1158,7 +1117,7 @@ const DevicesModal = ({ show, onHide }) => {
     const handleCloseShift = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
-            const result = await localApi.post('/tax/close-shift', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
+            const _result = await localApi.post('/tax/close-shift', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
             toast.success(t("n_u00f6vb_u0259_ba_u011fland_u0131_zreport"));
             setShiftStates(prev => ({ ...prev, [index]: { shiftStatus: false } }));
         } catch (err) {
@@ -1258,7 +1217,7 @@ const DevicesModal = ({ show, onHide }) => {
         }
     };
 
-    const handleTaxInfo = async (tax, index) => {
+    const _handleTaxInfo = async (tax, index) => {
         setTaxDeviceLoading(index, true);
         try {
             const result = await localApi.post('/tax/info', { taxConfig: tax }, { timeout: TAX_HTTP_TIMEOUT_MS });
@@ -1303,7 +1262,7 @@ const DevicesModal = ({ show, onHide }) => {
                             className={`devices-mobile-tab ${activeTab === "kitchen" ? "active" : ""}`}
                             onClick={() => setActiveTab("kitchen")}
                         >
-                            KDS Ekranı
+                            {t("kds_ekrani")}
                         </div>
                         <div
                             className={`devices-mobile-tab ${activeTab === "scales" ? "active" : ""}`}
@@ -1618,7 +1577,7 @@ const DevicesModal = ({ show, onHide }) => {
                                     <div className="settings-toggle-row">
                                         <div className="settings-toggle-icon"><i className="bi bi-shield-lock"></i></div>
                                         <div className="settings-toggle-text">
-                                            <span className="settings-toggle-label">Avto bloklama (PIN)</span>
+                                            <span className="settings-toggle-label">{t("avto_bloklama_pin")}</span>
                                             <span className="settings-toggle-desc">{t("muddet_erzinde_ekranda_emeliyyat_olmasa_avtomatik_pin_sehifesine_kecir_masa_check_tenzimlemeler")}</span>
                                         </div>
                                         <div
@@ -1693,8 +1652,8 @@ const DevicesModal = ({ show, onHide }) => {
                                     <div className="settings-toggle-row">
                                         <div className="settings-toggle-icon"><i className="bi bi-people-fill"></i></div>
                                         <div className="settings-toggle-text">
-                                            <span className="settings-toggle-label">Qonaq sayı zolağı</span>
-                                            <span className="settings-toggle-desc">Masalar ekranında, navbarın altında zalın qonaq sayını göstər</span>
+                                            <span className="settings-toggle-label">{t("qonaq_sayi_zolagi")}</span>
+                                            <span className="settings-toggle-desc">{t("masalar_ekraninda_navbarin_altinda_zalin_qonaq_sayini_goster")}</span>
                                         </div>
                                         <div
                                             className={`premium-switch ${showGuestCountBar ? "active" : ""}`}
@@ -1832,9 +1791,9 @@ const DevicesModal = ({ show, onHide }) => {
                                     (() => {
                                         const tax = taxes[selectedTaxIndex];
                                         const idx = selectedTaxIndex;
-                                        const shift = shiftStates[idx];
+                                        const _shift = shiftStates[idx];
 
-                                        const handleNotImplemented = () => {
+                                        const _handleNotImplemented = () => {
                                             toast.info(t("bu_funskiya_tezlikl_u0259__u0259lav_u0259_edil_u0259c_u0259k"));
                                         };
 
@@ -2019,8 +1978,8 @@ const DevicesModal = ({ show, onHide }) => {
                 <div style={{ width: '64px', height: '64px', background: '#dcfce7', color: '#22c55e', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', margin: '0 auto 16px' }}>
                     <i className="bi bi-check-lg"></i>
                 </div>
-                <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600, marginBottom: '8px' }}>Təmizləndi!</h4>
-                <p style={{ color: '#64748b', marginBottom: '24px' }}>Print spooler uğurla təmizləndi və yenidən başladıldı.</p>
+                <h4 style={{ margin: 0, color: '#1e293b', fontWeight: 600, marginBottom: '8px' }}>{t("temizlendi")}</h4>
+                <p style={{ color: '#64748b', marginBottom: '24px' }}>{t("print_spooler_ugurla_temizlendi_ve_yeniden_basladildi")}</p>
                 <button onClick={() => setShowSpoolerModal(false)} style={{ background: '#4F85F4', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px', width: '100%', fontWeight: 500 }}>
                     Tamam
                 </button>

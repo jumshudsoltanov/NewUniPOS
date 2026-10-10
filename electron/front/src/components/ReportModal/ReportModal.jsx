@@ -138,7 +138,7 @@ const ReportModal = ({ show, onClose }) => {
                 const list = resolveCashierPrintersForPrint(response.data.data);
                 setCashierPrinters(list);
             }
-        } catch (e) {}
+        } catch { /* nəzərə alınmır */ }
     };
 
     const handlePrint = async () => {
@@ -158,7 +158,7 @@ const ReportModal = ({ show, onClose }) => {
                 if (parsed.report) {
                     savedSettings = parsed.report;
                 }
-            } catch(e) {}
+            } catch { /* nəzərə alınmır */ }
             
             const baseFont = savedSettings.fontSizeOffset ?? Number(terminalInfo?.customer_receipt || profile?.customer_receipt || 0);
             const fs = (baseSize) => `${baseSize + baseFont * 2}px`;
@@ -400,21 +400,21 @@ const ReportModal = ({ show, onClose }) => {
                     </div>
                     {reportSummary.discrepancy.overpaid_count > 0 && (
                       <div className="receipt-row" style={{ fontSize: '0.85rem', marginBottom: 2, color: '#d97706' }}>
-                        <span><i className="bi bi-arrow-up-circle" style={{ marginRight: 4 }}></i>Artıq ödənilmiş çeklər</span>
+                        <span><i className="bi bi-arrow-up-circle" style={{ marginRight: 4 }}></i>{t("artiq_odenilmis_cekler")}</span>
                         <div className="dots"></div>
                         <span className="value" style={{ fontSize: '0.85rem', color: '#d97706' }}>{reportSummary.discrepancy.overpaid_count} çek / +{reportSummary.discrepancy.overpaid_total.toFixed(2)}</span>
                       </div>
                     )}
                     {reportSummary.discrepancy.underpaid_count > 0 && (
                       <div className="receipt-row" style={{ fontSize: '0.85rem', marginBottom: 2, color: '#dc2626' }}>
-                        <span><i className="bi bi-arrow-down-circle" style={{ marginRight: 4 }}></i>Əskik ödənilmiş çeklər</span>
+                        <span><i className="bi bi-arrow-down-circle" style={{ marginRight: 4 }}></i>{t("eskik_odenilmis_cekler")}</span>
                         <div className="dots"></div>
                         <span className="value" style={{ fontSize: '0.85rem', color: '#dc2626' }}>{reportSummary.discrepancy.underpaid_count} çek / -{reportSummary.discrepancy.underpaid_total.toFixed(2)}</span>
                       </div>
                     )}
                     {reportSummary.discrepancy.examples && reportSummary.discrepancy.examples.length > 0 && (
                       <div style={{ marginTop: 6, fontSize: '0.8rem', color: '#666', lineHeight: 1.6 }}>
-                        <div style={{ fontWeight: 500, marginBottom: 2 }}>Nümunələr:</div>
+                        <div style={{ fontWeight: 500, marginBottom: 2 }}>{t("numuneler_1")}</div>
                         {reportSummary.discrepancy.examples.map((ex, i) => (
                           <div key={i} style={{ fontFamily: 'monospace', paddingLeft: 4 }}>{ex}</div>
                         ))}

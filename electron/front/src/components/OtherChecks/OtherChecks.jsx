@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState as _useState, useMemo } from "react";
 import "./OtherChecks.css";
 import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
@@ -23,7 +23,7 @@ const OtherChecks = ({
     (state) => state.TablesSlice,
   );
 
-  const currentHallData = tableGroups?.data?.find(
+  const _currentHallData = tableGroups?.data?.find(
     (item) => item.id === currentHallId,
   );
 

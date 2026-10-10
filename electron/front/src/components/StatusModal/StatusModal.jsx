@@ -3,12 +3,12 @@ import { Modal, ProgressBar } from "react-bootstrap";
 import { useSelector } from "react-redux";
 import axios, { localApi } from "../../utils/apiConfig";
 import './StatusModal.css';
-import { toast } from 'sonner';
+import { toast } from "sonner";
 import { usePrinterDiagnostics } from "../../hooks/usePrinterDiagnostics";
 import {
-    getPrinterDiagnosticClass,
-    getPrinterDiagnosticLabel,
-    getPrinterKey,
+  getPrinterDiagnosticClass,
+  getPrinterDiagnosticLabel,
+  getPrinterKey,
 } from "../../utils/printerDiagnostics";
 import { t } from "../../utils/translations";
 
@@ -16,7 +16,7 @@ const StatusModal = ({ show, onHide }) => {
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const { isSocketConnected, hasInternet } = useSelector((state) => state.SyncSlice);
     const [localIp, setLocalIp] = useState("...");
-    const [memoryUsage, setMemoryUsage] = useState({ used: 0, total: 128 });
+    const [_memoryUsage, setMemoryUsage] = useState({ used: 0, total: 128 });
     const [diskUsage, setDiskUsage] = useState({ used: 0, total: 0 });
     const [syncStatus, setSyncStatus] = useState({ isSyncing: false, pendingCount: 0 });
     const [networkStatus, setNetworkStatus] = useState({
@@ -27,7 +27,7 @@ const StatusModal = ({ show, onHide }) => {
         pos: true
     });
     const [printers, setPrinters] = useState([]);
-    const [registers, setRegisters] = useState([]);
+    const [_registers, _setRegisters] = useState([]);
     const [appVersion, setAppVersion] = useState(null);
     const [pendingDetails, setPendingDetails] = useState(null);
     const [showPendingDetails, setShowPendingDetails] = useState(false);
@@ -346,7 +346,7 @@ const StatusModal = ({ show, onHide }) => {
             if (window.electronAPI?.getSyncStatus) {
                 window.electronAPI.getSyncStatus().then(setSyncStatus).catch(() => {});
             }
-        } catch (e) {
+        } catch {
             toast.error(t("temizleme_xetasi"));
         } finally {
             setIsClearing(false);
@@ -408,7 +408,7 @@ const StatusModal = ({ show, onHide }) => {
                             <div className="status-card system-info">
                                 <div className="card-header">
                                     <i className="bi bi-activity icon-main"></i>
-                                    <h6>System Information</h6>
+                                    <h6>{t("system_information")}</h6>
                                 </div>
                                 <div className="info-grid">
                                     <div className="info-item">
@@ -420,7 +420,7 @@ const StatusModal = ({ show, onHide }) => {
                                         <span className="value">{profile.branch_name || profile.name || "Main"}</span>
                                     </div>
                                     <div className="info-item">
-                                        <span className="label">IP Adress:</span>
+                                        <span className="label">{t("ip_address_1")}</span>
                                         <span className="value">{localIp}</span>
                                     </div>
                                     <div className="info-item">

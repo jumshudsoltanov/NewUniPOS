@@ -16,9 +16,9 @@ const ReturnCheckModal = ({ show, onClose }) => {
     const dispatch = useDispatch();
     const { loginedProfileData } = useSelector((state) => state.LoginSlice);
     const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-    const [taxLoading, setTaxLoading] = useState(false);
+    const [_taxLoading, setTaxLoading] = useState(false);
 
-    const getTaxConfigId = (config) => config?.id ?? config?.tax_cash_id ?? null;
+    const _getTaxConfigId = (config) => config?.id ?? config?.tax_cash_id ?? null;
 
     const [checkId, setCheckId] = useState("");
     const [order, setOrder] = useState(null);
@@ -218,7 +218,7 @@ const ReturnCheckModal = ({ show, onClose }) => {
                             className={`return-mobile-tab ${activeMobileTab === "keypad" ? "active" : ""}`}
                             onClick={() => setActiveMobileTab("keypad")}
                         >
-                            Axtarış
+                            {t("axtaris")}
                         </div>
                         <div
                             className={`return-mobile-tab ${activeMobileTab === "details" ? "active" : ""}`}

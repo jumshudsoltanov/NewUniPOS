@@ -143,7 +143,7 @@ const RefreshSyncWindow = () => {
                     <img className="rs-logo" src={logo} alt="UniPOS" />
                 </div>
                 <div className="rs-titles">
-                    <div className="rs-title">Məlumatların yenilənməsi</div>
+                    <div className="rs-title">{t("melumatlarin_yenilenmesi")}</div>
                     <div className="rs-status">{statusText}</div>
                 </div>
                 <div className="rs-summary">
@@ -157,7 +157,7 @@ const RefreshSyncWindow = () => {
             </div>
 
             {offline && (
-                <div className="rs-offline">İnternet yoxdur — lokal məlumatlar göstərilir</div>
+                <div className="rs-offline">{t("no_internet_local")}</div>
             )}
 
             <div className="rs-rows">

@@ -55,7 +55,7 @@ const BookingsModal = ({ show, onHide, profileId }) => {
           dispatch(fetchRooms(pid));
         }
       }
-    } catch (err) {
+    } catch {
       toast.error(type === "cancel" ? "Ləğv etmək mümkün olmadı" : "Silmək mümkün olmadı");
     } finally {
       setProcessingId(null);

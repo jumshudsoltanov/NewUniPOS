@@ -12,7 +12,7 @@ import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { hasTimerIntervals } from "../../utils/menuIndex";
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import apiConfig, { TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
-import axios from "axios";
+import _axios from "axios";
 import { addNotification } from "../../utils/notificationService";
 import { sumOrderItemsLinesTotal, getOrderItemLineTotal, buildFiscalLineItemsFromOrderItems, mapOrderPaymentForTax, computeFiscalCheckTotalsFromOrder, getTimerElapsedSeconds } from "../../utils/orderItemLineTotal";
 import { t } from "../../utils/translations";
@@ -49,7 +49,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         if (stored) {
             try {
                 setTaxLocalNames(JSON.parse(stored));
-            } catch (e) {
+            } catch {
                 /* ignore */
             }
         }
@@ -485,7 +485,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
         } catch (error) {
             console.error("Tax resend sale error:", error);
             const errMsg = error.response?.data?.message || error.message;
-            toast.error("Vergi təkrar satış xətası: " + errMsg);
+            toast.error((t("vergi_tekrar_satis_xetasi_1") + " ") + errMsg);
             addNotification("Fiskal Satış Xətası", errMsg, { category: "system", type: "error" });
             const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
             dispatch(

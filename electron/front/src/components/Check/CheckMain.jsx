@@ -18,8 +18,8 @@ import {
   saveLog,
 } from "../../redux/Slices/OrdersSlice"; // Import action
 import { toast } from "react-toastify"; // Import toast
-import { useParams, useSearchParams } from "react-router-dom";
-import { getProductHourlySum } from "../../utils/orderHourlyPrice";
+import { useParams, useSearchParams as _useSearchParams } from "react-router-dom";
+import { getProductHourlySum as _getProductHourlySum } from "../../utils/orderHourlyPrice";
 import { getTimerElapsedSeconds, computeTimerItemTotal } from "../../utils/orderItemLineTotal";
 import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
@@ -32,8 +32,9 @@ import {
   resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
 import { t } from "../../utils/translations";
-import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
+import { formatPrice as _formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 import { hasTimerIntervals } from "../../utils/menuIndex";
+import { findMenuItemById } from "../../utils/menuIndex";
 
 const SmoothTimerClock = ({ initialSeconds, isActive }) => {
   const [seconds, setSeconds] = useState(initialSeconds);
@@ -312,7 +313,7 @@ const CheckMain = ({ orders, table }) => {
                 try {
                     const parsed = JSON.parse(trimmed);
                     if (Array.isArray(parsed)) return parsed.length > 0;
-                } catch(e) {}
+                } catch { /* nəzərə alınmır */ }
             }
             return false;
         };
@@ -376,7 +377,7 @@ const CheckMain = ({ orders, table }) => {
       let modObj = [];
       try {
         modObj = typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : (item.modifiers || []);
-      } catch (e) { }
+      } catch { /* nəzərə alınmır */ }
       const sortedMods = [...modObj]
         .map(m => ({ id: m.id, count: m.count || m.quantity || 1 }))
         .sort((a, b) => a.id - b.id);
@@ -399,7 +400,7 @@ const CheckMain = ({ orders, table }) => {
               try {
                   const parsed = JSON.parse(trimmed);
                   if (Array.isArray(parsed)) return parsed.length > 0;
-              } catch(e) {}
+              } catch { /* nəzərə alınmır */ }
           }
           return false;
       };
@@ -510,7 +511,7 @@ const CheckMain = ({ orders, table }) => {
       let menuHourly = 0;
       let menuIntervalsValid = false;
       if (menu && menu.length > 0) {
-        const catItem = menu.find(m => Number(m.id) === Number(it.product_id || it.id));
+        const catItem = findMenuItemById(menu, it.product_id || it.id);
         if (catItem) {
           menuHourly = Number(catItem.hourly_price || 0);
           const mInt = catItem.timer_intervals || [];
@@ -521,7 +522,7 @@ const CheckMain = ({ orders, table }) => {
     });
   }, [orderForTimer, menu]);
 
-  const firstHourlyProductRowIndex = useMemo(() => {
+  const _firstHourlyProductRowIndex = useMemo(() => {
     if (!usesProductTimer) return -1;
     return allItems.findIndex((item) => {
       const pHourly = Number(item.product?.hourly_price || 0);
@@ -531,7 +532,7 @@ const CheckMain = ({ orders, table }) => {
       let menuHourly = 0;
       let menuIntervalsValid = false;
       if (menu && menu.length > 0) {
-        const catItem = menu.find(m => Number(m.id) === Number(item.product_id || item.id));
+        const catItem = findMenuItemById(menu, item.product_id || item.id);
         if (catItem) {
           menuHourly = Number(catItem.hourly_price || 0);
           const mInt = catItem.timer_intervals || [];
@@ -542,8 +543,8 @@ const CheckMain = ({ orders, table }) => {
     });
   }, [allItems, menu, usesProductTimer]);
 
-  const timerClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
-  const timerCharge = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
+  const _timerClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
+  const _timerCharge = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
 
   const stopTimerBubble = (e) => {
     e.stopPropagation();
@@ -841,7 +842,7 @@ const CheckMain = ({ orders, table }) => {
                 } else if (typeof item.modifiers === "string") {
                   modifiers = JSON.parse(item.modifiers || '[]');
                 }
-              } catch (e) { /* ignore */ }
+              } catch { /* ignore */ }
               modifiers = resolveModifiersForDisplay(modifiers, productInfo);
 
               const modifiersTotal = modifiers.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
@@ -861,7 +862,7 @@ const CheckMain = ({ orders, table }) => {
                       if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
                       try {
                           parsed = JSON.parse(trimmed);
-                      } catch(e) {
+                      } catch {
                           return false;
                       }
                   }
@@ -877,7 +878,7 @@ const CheckMain = ({ orders, table }) => {
                                      String(productInfo?.product_type || '').toLowerCase() === 'timer' || 
                                      hasIntervals || hourlyLine > 0;
 
-              let itemClockStr = "00:00:00";
+              let _itemClockStr = "00:00:00";
               let itemTimerCharge = 0;
               let itemDisplaySeconds = 0;
               let liveItemStatus = item.is_timer_status;
@@ -903,7 +904,7 @@ const CheckMain = ({ orders, table }) => {
                 const h = Math.floor(displaySeconds / 3600);
                 const m = Math.floor((displaySeconds % 3600) / 60);
                 const s = displaySeconds % 60;
-                itemClockStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                _itemClockStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
                 const lineTotal = computeTimerItemTotal(liveItem, orderWithLiveClockBase);
                 const chargePerUnit = Number(item.count) > 0 ? lineTotal / Number(item.count) : lineTotal;
@@ -912,7 +913,7 @@ const CheckMain = ({ orders, table }) => {
                 let modifiersList = [];
                 try {
                   modifiersList = typeof item?.modifiers === 'string' ? JSON.parse(item?.modifiers) : (item?.modifiers || []);
-                } catch (e) { }
+                } catch { /* nəzərə alınmır */ }
                 const modsTotal = (Array.isArray(modifiersList) ? modifiersList : []).reduce((acc, mod) => acc + Number(mod.price || 0) * Number(mod.count || 1), 0);
                 itemTimerCharge = Math.max(0, chargePerUnit - basePrice - modsTotal);
                 totalAmount += (itemTimerCharge * Number(item.count));
@@ -995,7 +996,7 @@ const CheckMain = ({ orders, table }) => {
                           const partial = paidQty < Number(item.count || 0);
                           return (
                             <div
-                              title="Bu məhsul üzrə ödəniş edilib"
+                              title={t("bu_mehsul_uzre_odenis_edilib")}
                               style={{
                                 alignSelf: 'flex-start',
                                 display: 'inline-flex',

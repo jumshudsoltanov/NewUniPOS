@@ -6,25 +6,26 @@ import Header from "../Header/Header";
 import "./CheckOver.css";
 import "../Checks/TaxCashPickerModal.css";
 import "../Customers-Modal/CustomersModal.css";
-import { getTagsList } from '../../redux/Slices/TagsSlice';
-import { getPaymentMethods } from '../../redux/Slices/PaymentMethodsSlice';
-import { closeOrder, saveLog } from '../../redux/Slices/OrdersSlice';
-import { removeOrderOptimisticFromTables } from '../../redux/Slices/TablesSlice';
-import { removeOrderOptimistic } from '../../redux/Slices/BooksSlice';
+import { getTagsList } from "../../redux/Slices/TagsSlice";
+import { getPaymentMethods } from "../../redux/Slices/PaymentMethodsSlice";
+import { closeOrder, saveLog } from "../../redux/Slices/OrdersSlice";
+import { removeOrderOptimisticFromTables } from "../../redux/Slices/TablesSlice";
+import { removeOrderOptimistic } from "../../redux/Slices/BooksSlice";
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
-import axios from "axios";
+import _axios from "axios";
 import apiConfig, { getSocket, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import { addNotification } from "../../utils/notificationService";
-import { getModifiersTotalPerUnit, mapOrderPaymentForTax, isTimerItem, getOrderItemLineTotal, computeTimerItemTotal, getTimerElapsedSeconds } from "../../utils/orderItemLineTotal";
+import { getModifiersTotalPerUnit, mapOrderPaymentForTax, isTimerItem, getOrderItemLineTotal, computeTimerItemTotal as _computeTimerItemTotal, getTimerElapsedSeconds as _getTimerElapsedSeconds } from "../../utils/orderItemLineTotal";
 import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { isPosBlocked, isPaymentExpired } from "../../utils/dateHelpers";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 import RoomChargeModal from "../RoomChargeModal/RoomChargeModal";
-import { updateFolioBalance, fetchRooms } from '../../redux/Slices/HotelSlice';
+import { updateFolioBalance, fetchRooms } from "../../redux/Slices/HotelSlice";
 import { t } from "../../utils/translations";
 import { getCurrencySymbol } from "../../utils/formatPrice";
 import { getPartialPaidTotal, getItemPaymentsList, getItemPaymentShares } from "../../utils/itemPayments";
+import { isNoServiceFeeItem } from "../../utils/serviceFeeRules";
 
 const CheckOver = () => {
     const navigate = useNavigate();
@@ -69,7 +70,7 @@ const CheckOver = () => {
     useEffect(() => {
         const stored = localStorage.getItem("tax_local_names");
         if (stored) {
-            try { setTaxLocalNames(JSON.parse(stored)); } catch (e) { }
+            try { setTaxLocalNames(JSON.parse(stored)); } catch { /* nəzərə alınmır */ }
         }
     }, []);
 
@@ -137,7 +138,7 @@ const CheckOver = () => {
 
         let total = 0;
         let totalForService = 0;
-        const hasProductTimer = (currentOrder.orders_items || []).some(it => isTimerItem(it, menuCatalog || []));
+        const _hasProductTimer = (currentOrder.orders_items || []).some(it => isTimerItem(it, menuCatalog || []));
 
         currentOrder.orders_items?.forEach((item) => {
             const count = Number(item.count || item.quantity || 0);
@@ -153,7 +154,10 @@ const CheckOver = () => {
             }
             total += itemTotal;
 
-            const isNoService = (item.no_service_fee === 1 || item.product?.no_service_fee === 1);
+            // Ortaq qayda — çek ekranı ilə eyni nəticə verir (bax: serviceFeeRules.js).
+            // Əvvəl burada yalnız `item.product` yoxlanılırdı və menyuda servis
+            // haqqından azad olan məhsullar ödəniş ekranında servisə daxil edilirdi.
+            const isNoService = isNoServiceFeeItem(item, menuCatalog);
             if (!isNoService) {
                 totalForService += itemTotal;
             }
@@ -222,7 +226,6 @@ const CheckOver = () => {
             depositAmount: depositAmount.toFixed(2)
         };
     }, [currentOrder, menuCatalog]);
-
 
     // Auto-select payment method (only when POS is blocked + auto mode)
     const autoSelectedRef = useRef(false);
@@ -1010,7 +1013,7 @@ const CheckOver = () => {
 
                                 <div className="action-buttons-section mt-auto">
                                     <button className="back-to-payment-btn" onClick={() => setViewMode("PAYMENT")}>
-                                        Ödənişə qayıt
+                                        {t("odenise_qayit")}
                                     </button>
                                     <button
                                         className="confirm-close-btn maroon-btn"
@@ -1045,7 +1048,7 @@ const CheckOver = () => {
                                 <div style={{ fontSize: "12px", fontWeight: 500, opacity: 0.92, marginTop: "2px" }}>{t("cek_baglanisi")}</div>
                             </div>
                         </div>
-                        <button type="button" className="btn-close-custom" onClick={() => setShowTaxSelectionModal(false)} aria-label="Bağla">
+                        <button type="button" className="btn-close-custom" onClick={() => setShowTaxSelectionModal(false)} aria-label={t("bagla")}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>

@@ -38,7 +38,7 @@ const buildShiftPrintHtml = ({
     footerNote,
     baseFontPx,
     fontFamily = "'Consolas', 'Courier New', monospace",
-    paperWidth = 80,
+    _paperWidth = 80,
 }) => {
     const fs = (baseSize) => `${baseSize + (Number(baseFontPx) || 0)}px`;
     const empRows = (summary?.byEmployee || [])
@@ -536,7 +536,7 @@ const SalesShiftModal = ({ show, onHide }) => {
         return () => clearInterval(t);
     }, [show, currentShift, fetchLive]);
 
-    const printToCashier = async (html, overrideSettings = {}) => {
+    const printToCashier = async (html, _overrideSettings = {}) => {
         if (!window.electronAPI?.printReceipt || !cashierPrinters.length) {
             toast.warning(t("kassa_printeri_tapilmadi_ve_ya_electron_capi_yoxdur"));
             return;
@@ -605,7 +605,7 @@ const SalesShiftModal = ({ show, onHide }) => {
             if (parsed.salesshift) {
                 savedSettings = parsed.salesshift;
             }
-        } catch(e) {}
+        } catch { /* nəzərə alınmır */ }
         
         const overrideFontPx = savedSettings.fontSizeOffset ?? baseReceiptFont;
         const actualPaperSize = String(cashierPrinters?.[0]?.paper_size || '80');
@@ -1133,7 +1133,7 @@ const SalesShiftModal = ({ show, onHide }) => {
                             {currentShift ? t("shift_aciq") : t("shift_bagli")}
                         </span>
                     </div>
-                    <button className="sales-shift-panel-close" onClick={onHide} aria-label="Bağla">
+                    <button className="sales-shift-panel-close" onClick={onHide} aria-label={t("bagla")}>
                         <i className="bi bi-x-lg"></i>
                     </button>
                 </div>

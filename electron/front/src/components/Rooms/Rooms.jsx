@@ -24,7 +24,7 @@ const Rooms = () => {
   const profileId = loginedProfileData?.data?.profile?.id;
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [preselectedRoom, setPreselectedRoom] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey, _setRefreshKey] = useState(0);
   const isVisibleRef = useRef(true);
 
   // Məlumatları yenilə

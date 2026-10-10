@@ -109,7 +109,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
      try {
        const saved = JSON.parse(localStorage.getItem("pos_receipt_settings"));
        return normalizePosReceiptSettings(saved || {});
-     } catch(e) {
+     } catch {
        return normalizePosReceiptSettings({});
      }
   });
@@ -166,7 +166,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
     () => localStorage.getItem("pos_ai_module_enabled") === "true"
   );
 
-  const [emptyCheckAutoDelete, setEmptyCheckAutoDelete] = useState(
+  const [_emptyCheckAutoDelete, setEmptyCheckAutoDelete] = useState(
     () => localStorage.getItem("pos_empty_check_auto_delete") !== "false"
   );
 
@@ -187,7 +187,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
      try {
        const { data } = await apiConfig.get("/sync/pending-details");
        setStuckOrders(data?.orders || []);
-     } catch (err) {
+     } catch {
        toast.error(t("geciken/xetali_cekler_yuklene_bilmedi"));
      } finally {
        setSyncTroubleshootLoading(false);
@@ -240,18 +240,18 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
            } else {
                toast.error(data.message || t("error_occurred"));
            }
-       } catch (e) {
+       } catch {
            toast.error(t("sebeke_xetasi"));
        }
    };
 
-  const handleForceRetryAll = async () => {
+  const _handleForceRetryAll = async () => {
        setSyncTroubleshootLoading(true);
        try {
            await apiConfig.post("/sync/force-now");
            toast.success(t("mecburi_sinxronizasiya_basladildi"));
            setTimeout(loadStuckOrders, 2000); // 2s saniyəlik gözləmə
-       } catch (err) {
+       } catch {
            toast.error(t("error_occurred"));
            setSyncTroubleshootLoading(false);
        }
@@ -296,7 +296,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       try {
         const saved = JSON.parse(localStorage.getItem("pos_operation_names") || "{}");
         setOperationNames({ ...DEFAULT_OPERATION_NAMES, ...saved });
-      } catch {}
+      } catch { /* nəzərə alınmır */ }
       // Reload category view settings when modal opens
       setCardsPerRow(parseInt(localStorage.getItem("pos_cards_per_row") || "5", 10));
       setCardFontSize(parseFloat(localStorage.getItem("pos_card_font_size") || "0.8"));
@@ -308,7 +308,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       try {
         const savedReceipt = JSON.parse(localStorage.getItem("pos_receipt_settings"));
         if (savedReceipt) setReceiptSettings(normalizePosReceiptSettings(savedReceipt));
-      } catch(e) {}
+      } catch { /* nəzərə alınmır */ }
       // Send WhatsApp verification code on open
       if (profileId) {
         setWaState("sending");
@@ -342,8 +342,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       setUpdateReady(true);
     });
     return () => {
-      try { removeProgress?.(); } catch {}
-      try { removeDownloaded?.(); } catch {}
+      try { removeProgress?.(); } catch { /* nəzərə alınmır */ }
+      try { removeDownloaded?.(); } catch { /* nəzərə alınmır */ }
     };
   }, [unlocked, view]);
 
@@ -356,7 +356,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       ]);
       setAutoUpdateEnabled(enabled !== false);
       setCurrentVersion(ver || null);
-    } catch {}
+    } catch { /* nəzərə alınmır */ }
   }, []);
 
   const handleToggleAutoUpdate = async (val) => {
@@ -458,11 +458,11 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
         setDenyPrefixes(data.denyPrefixes || []);
         setBlockEmptyCheckDelete(data.blockEmptyCheckDelete === true);
       } else {
-        toast.error("WhatsApp ayarları yüklənə bilmədi: " + (data?.message || t("namelum_xeta")));
+        toast.error((t("whatsapp_ayarlari_yuklene_bilmedi") + " ") + (data?.message || t("namelum_xeta")));
       }
     } catch (err) {
       console.error("[WhatsApp Load]", err);
-      toast.error("WhatsApp ayarları yüklənə bilmədi: " + (err?.response?.data?.message || err?.message || t("namelum_xeta")));
+      toast.error((t("whatsapp_ayarlari_yuklene_bilmedi") + " ") + (err?.response?.data?.message || err?.message || t("namelum_xeta")));
     } finally {
       setWaLoading(false);
     }
@@ -485,7 +485,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       else toast.error(data?.message || t("saxlama_xetasi"));
     } catch (err) {
       console.error("[WhatsApp Save]", err);
-      toast.error("WhatsApp ayarları saxlanıla bilmədi: " + (err?.response?.data?.message || err?.message || t("namelum_xeta")));
+      toast.error((t("whatsapp_ayarlari_saxlanila_bilmedi") + " ") + (err?.response?.data?.message || err?.message || t("namelum_xeta")));
     }
     finally { setWaSaving(false); }
   };
@@ -498,7 +498,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       if (data?.ok) setSystemUsers(data.data || []);
       else toast.error(data?.message || t("i̇stifadeciler_yuklenmedi"));
     } catch (err) {
-      toast.error("İstifadəçilər yüklənmədi: " + (err?.message || t("xeta")));
+      toast.error((t("i̇stifadeciler_yuklenmedi_1") + " ") + (err?.message || t("xeta")));
     } finally {
       setSuLoading(false);
     }
@@ -546,7 +546,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       const { data } = await apiConfig.delete(`/admin/system-users/${id}`);
       if (data?.ok) { toast.success("Silindi"); await loadSystemUsers(); }
       else toast.error(data?.message || t("xeta"));
-    } catch (err) {
+    } catch {
       toast.error(t("silme_xetasi"));
     } finally { setSuSaving(false); }
   };
@@ -568,7 +568,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
       const { data } = await apiConfig.post("/admin/reset-local-database");
       if (data?.ok) {
         toast.success(data.message || t("baza_sifirlandi"));
-        try { localStorage.removeItem("profile"); localStorage.removeItem("authResult"); localStorage.removeItem("authlogin"); } catch {}
+        try { localStorage.removeItem("profile"); localStorage.removeItem("authResult"); localStorage.removeItem("authlogin"); } catch { /* nəzərə alınmır */ }
         setView("main"); onClose(); window.location.reload();
       } else { toast.error(data?.message || t("sifirlama_alinmadi")); }
     } catch { toast.error(t("servere_qosula_bilmedi")); }
@@ -1196,8 +1196,8 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                        <div style={{ fontFamily: receiptSettings[receiptType]?.fontFamily || "'Consolas', 'Courier New', 'Lucida Console', monospace", fontSize: `${12 + (receiptSettings[receiptType]?.fontSizeOffset || 0)}px`, textAlign: 'center', padding: '10px' }}>
                           <h3 style={{ fontSize: `${14 + (receiptSettings[receiptType]?.fontSizeOffset || 0)}px` }}>{receiptType === "salesshift" ? "SATIŞ NÖVBƏSİ HESABATI" : "HESABAT"}</h3>
                           <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }}></div>
-                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Açılış:</span> <span>10:00</span></div>
-                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Bağlanma:</span> <span>22:00</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>{t("acilis")}</span> <span>10:00</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>{t("baglanma")}</span> <span>22:00</span></div>
                           <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }}></div>
                           <div>...</div>
                        </div>
@@ -1230,7 +1230,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                           <input
                             value={suEditPin}
                             onChange={e => setSuEditPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                            placeholder="Yeni PIN"
+                            placeholder={t("yeni_pin")}
                             style={{ width: "90px", padding: "6px 8px", borderRadius: "6px", border: "1px solid #ddd", fontSize: "13px", textAlign: "center" }}
                           />
                           <button type="button" onClick={() => handleUpdateUser(u.id)} disabled={suSaving}
@@ -1250,7 +1250,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                           </div>
                           <button type="button" onClick={() => { setSuEditingId(u.id); setSuEditName(u.name); setSuEditPin(""); }}
                             style={{ padding: "5px 10px", borderRadius: "6px", border: "none", background: "#f1f5f9", color: "#053796", fontSize: "12px", cursor: "pointer" }}>
-                            Düzəlt
+                            {t("duzelt")}
                           </button>
                           <button type="button" onClick={() => handleDeleteUser(u.id)} disabled={suSaving}
                             style={{ padding: "5px 10px", borderRadius: "6px", border: "none", background: "#fee2e2", color: "#dc2626", fontSize: "12px", cursor: "pointer" }}>
@@ -1390,7 +1390,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                                 onClick={() => handleRetrySync(o.uuid)}
                                 style={{ marginLeft: "10px", padding: "8px 12px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", color: "#053796" }}
                              >
-                                Yenidən göndər
+                                {t("yeniden_gonder")}
                              </button>
                         </div>
                      ))}
@@ -1427,7 +1427,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
                 style={{ width: "100%", padding: "14px", fontSize: "15px", fontWeight: "600", color: "#475569", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "8px", cursor: "pointer" }}
                 onClick={() => setView("main")}
               >
-                Geri qayıt
+                {t("geri_qayit")}
               </button>
             </div>
           </div>
@@ -1501,7 +1501,7 @@ const PinAdvancedSettingsModal = ({ show, onClose, onExitTerminal, profileId }) 
             <div className="pin-adv-catview-section" style={{ marginTop: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>AI Modulu</span>
+                  <span className="pin-adv-catview-label" style={{ marginBottom: 2 }}>{t("ai_modulu")}</span>
                   <div style={{ fontSize: "12px", color: "#888", marginTop: 2 }}>{t("sifaris_ekraninda_sesli_aygun_modulunu_aktiv_et")}</div>
                 </div>
                 <div

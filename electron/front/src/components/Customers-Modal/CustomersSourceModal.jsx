@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Modal } from 'react-bootstrap';
-import { useDispatch, useSelector } from 'react-redux';
+import { Modal } from "react-bootstrap";
+import { useDispatch, useSelector } from "react-redux";
 import './CustomersSourceModal.css';
 import AddressModal from './AddressModal';
 import {
-    fetchCustomersFromAdmin,
-    fetchCustomerGroupsFromAdmin,
-    createCustomerViaAdmin,
-    updateCustomerViaAdmin,
-} from '../../redux/Slices/CustomersSlice';
-import { getArchivedOrders } from '../../redux/Slices/BooksSlice';
+  fetchCustomersFromAdmin,
+  fetchCustomerGroupsFromAdmin,
+  createCustomerViaAdmin,
+  updateCustomerViaAdmin,
+} from "../../redux/Slices/CustomersSlice";
+import { getArchivedOrders } from "../../redux/Slices/BooksSlice";
 import CheckReceiptModal from '../Checks/CheckReceiptModal';
 import VirtualKeyboard from '../VirtualKeyboard/VirtualKeyboard';
 import { t } from "../../utils/translations";
@@ -730,7 +730,7 @@ const CustomersSourceModal = ({ show, onHide, onApply, selectedCustomer: propSel
                         </div>
                         <div className="details-header-actions">
                             {propSelectedCustomer && (
-                                <button className="remove-btn-styled" onClick={() => onApply && onApply(null)}>Müştərini çıxar</button>
+                                <button className="remove-btn-styled" onClick={() => onApply && onApply(null)}>{t("musterini_cixar")}</button>
                             )}
                             <button className="apply-btn-styled" onClick={() => {
                                 if (onApply) {

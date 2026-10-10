@@ -26,7 +26,7 @@ import SplitTableSelect from "./SplitTableSelect";
 import SplitWaiterSelect from "./SplitWaiterSelect";
 import { t } from "../../utils/translations";
 
-export const SplitOrderModal = ({ show, onClose, orderItems = [], order, onSplit, onCloseOtherModals }) => {
+export const SplitOrderModal = ({ show, onClose, _orderItems = [], order, onSplit, onCloseOtherModals }) => {
     const [splitQuantities, setSplitQuantities] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 

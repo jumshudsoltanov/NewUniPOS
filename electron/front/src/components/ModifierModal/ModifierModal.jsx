@@ -10,7 +10,7 @@ const ModifierModal = ({
     onHide,
     product,
     onConfirm,
-    onDelete,
+    _onDelete,
     onOpenEditAction,
     permissions = {},
 }) => {
@@ -178,7 +178,7 @@ const ModifierModal = ({
                 } else if (typeof product.modifiers === "string") {
                     existingModifiers = JSON.parse(product.modifiers || '[]');
                 }
-            } catch (e) { /* ignore */ }
+            } catch { /* ignore */ }
 
             // Initialize default selections
             const initialSelections = {};
@@ -220,7 +220,7 @@ const ModifierModal = ({
     }, [activeGroupId, selections]);
 
     // Sync quantity updates back to selections state
-    const updateQuantity = (itemId, value) => {
+    const _updateQuantity = (itemId, value) => {
         if (!activeGroupId) return;
         setSelections(prev => {
             const groupSel = { ...(prev[activeGroupId] || {}) };

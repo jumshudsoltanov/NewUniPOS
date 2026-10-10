@@ -159,9 +159,9 @@ const Checks = () => {
     return (hotelRooms || []).filter((r) => r.status === "occupied");
   }, [isHotelMode, hotelRooms]);
 
-  const [hotelSearch, setHotelSearch] = useState("");
+  const [hotelSearch, _setHotelSearch] = useState("");
 
-  const filteredOccupiedRooms = useMemo(() => {
+  const _filteredOccupiedRooms = useMemo(() => {
     if (!isHotelMode) return [];
     let list = occupiedRooms;
     if (hotelSearch.trim()) {
@@ -175,7 +175,7 @@ const Checks = () => {
     return list;
   }, [occupiedRooms, hotelSearch, isHotelMode]);
 
-  const handleHotelRoomClick = useCallback(
+  const _handleHotelRoomClick = useCallback(
     (room) => {
       if (!room) return;
       const waiterId = loginedWaiter?.data?.id;
@@ -279,7 +279,7 @@ const Checks = () => {
       try {
         const result = await dispatch(getActiveOrders({ profileId, silentRefresh: true })).unwrap();
         setOpenOrders(result.data || []);
-      } catch (e) { /* silent */ }
+      } catch { /* silent */ }
     };
 
     socket.on("order_deleted", refreshOpenOrders);
@@ -293,7 +293,7 @@ const Checks = () => {
     };
   }, [profileId, dispatch]);
 
-  const waiters = useMemo(() => waitersLists?.data || [], [waitersLists]);
+  const _waiters = useMemo(() => waitersLists?.data || [], [waitersLists]);
   const halls = useMemo(() => tableGroups?.data || [], [tableGroups]);
   const tables = useMemo(() => {
     if (!filterHall) return [];
@@ -398,7 +398,7 @@ const Checks = () => {
           console.warn(`[RECOVERY] ${uuid} berpa olunmadi:`, err?.message);
         }
       });
-    } catch (_) {}
+    } catch { /* nəzərə alınmır */ }
   }, [profileId, activeTab, openOrders, dispatch]);
 
   const currentDisplayOrders = useMemo(() => {
@@ -511,6 +511,35 @@ const Checks = () => {
     currentDisplayOrders, loginedWaiter?.data, activeTab, filterStatus,
     filterPaymentMethod, filterDifference, filterTaxSent, filterAmountMin, filterAmountMax, filterDiscount, filterHasNote, filterGuestMin, filterGuestMax, sortOrder,
   ]);
+
+  /**
+   * PERFORMANS: çek → otaq nömrəsi xəritəsi BİR DƏFƏ qurulur.
+   *
+   * Əvvəl hər çek üçün siyahının render-i zamanı BÜTÜN localStorage baştan-başa
+   * gəzilirdi (`localStorage.key(i)` + `getItem(...)`). 300 çek və 50 açarda bu,
+   * bir render-də 15 000 sinxron localStorage oxunuşu deməkdir — localStorage
+   * sinxron API-dir və bu, siyahını açarkən gözə görünən donma yaradırdı.
+   * İndi localStorage cəmi bir dəfə skan olunur, axtarış isə O(1)-dir.
+   */
+  const roomNumberByOrderUuid = useMemo(() => {
+    const map = new Map();
+    if (!isHotelMode) return map;
+    try {
+      const roomIdToNumber = new Map(
+        (occupiedRooms || []).map((r) => [String(r.id), r.room_number]),
+      );
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith("hotel_room_order_")) continue;
+        const orderUuid = localStorage.getItem(key);
+        if (!orderUuid) continue;
+        const roomId = key.replace("hotel_room_order_", "");
+        const num = roomIdToNumber.get(roomId);
+        if (num !== undefined) map.set(String(orderUuid), num);
+      }
+    } catch { /* localStorage elcatan deyil */ }
+    return map;
+  }, [isHotelMode, occupiedRooms]);
 
   const totalAmount = useMemo(
     () => filteredDisplayOrders.reduce((sum, o) => sum + computeOrderCardDisplayAmount(o), 0),
@@ -727,19 +756,10 @@ const Checks = () => {
           filteredDisplayOrders.map((check, index) => {
             const showDateHeader = index === 0 || formatDateKey(filteredDisplayOrders[index - 1]?.start_date) !== formatDateKey(check?.start_date);
             // Otaq nömrəsini tap: əvvəl check-dən, sonra localStorage-dan
+            // O(1) axtarış — localStorage skanı artıq yuxarıda bir dəfə edilib
             let roomNumber = check.room_number || null;
             if (!roomNumber && isHotelMode && check.uuid) {
-              try {
-                for (let i = 0; i < localStorage.length; i++) {
-                  const key = localStorage.key(i);
-                  if (key?.startsWith("hotel_room_order_") && localStorage.getItem(key) === String(check.uuid)) {
-                    const roomId = key.replace("hotel_room_order_", "");
-                    const room = occupiedRooms.find(r => String(r.id) === roomId);
-                    if (room) roomNumber = room.room_number;
-                    break;
-                  }
-                }
-              } catch (e) { /* ignore */ }
+              roomNumber = roomNumberByOrderUuid.get(String(check.uuid)) ?? null;
             }
             return (
               <div key={check.id}>

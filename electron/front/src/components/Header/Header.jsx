@@ -6,10 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   getTableGroups,
   currentTableList,
-  startEditMode,
-  cancelEditMode,
-  saveEditMode,
-  setTempHallOrder
+  setTempHallOrder,
 } from "../../redux/Slices/TablesSlice";
 import { SalesTypesModal } from "../SalesTypeModal/SalesTypesModal";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
@@ -22,7 +19,7 @@ import SalesShiftModal from "../Settings/SalesShiftModal";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 import { getNotifications } from "../../utils/notificationService";
 import { toast } from "sonner";
-import { setSelectedRoomGroupId, setSelectedFloor, setSelectedRoomType, setSearchText, clearFilters, fetchRoomGroups } from "../../redux/Slices/HotelSlice";
+import { setSelectedRoomGroupId, setSelectedFloor as _setSelectedFloor, setSelectedRoomType as _setSelectedRoomType, setSearchText as _setSearchText, clearFilters as _clearFilters, fetchRoomGroups } from "../../redux/Slices/HotelSlice";
 import BookingsModal from "../Rooms/BookingsModal";
 import { t } from "../../utils/translations";
 
@@ -45,7 +42,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
   const [showStatusModal, setShowStatusModal] = useState(false); // This was duplicated, keeping the one that's used
   const [showSalesShiftModal, setShowSalesShiftModal] = useState(false);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
-  const prevSyncedCountRef = useRef(0);
+  const _prevSyncedCountRef = useRef(0);
   const newOrderBtnRef = useRef(null);
 
   const _hProfileId = loginedProfileData?.data?.profile?.id;
@@ -115,7 +112,6 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
     touchRef.current.startIndex = index;
     setDraggedHallIndex(index);
   };
-
 
   const handleHallTouchMove = (e) => {
     if (!isTableEditMode || touchRef.current.startIndex === null) return;
@@ -196,7 +192,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
 
   const { books } = useSelector((state) => state.BooksSlice);
 
-  const isTablesPage = location.pathname === "/tables" || location.pathname.startsWith("/tables/");
+  const _isTablesPage = location.pathname === "/tables" || location.pathname.startsWith("/tables/");
 
   useEffect(() => {
     if (loginedProfileData?.data?.profile?.id) {
@@ -253,21 +249,20 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
     };
   }, []);
 
-
   // Compute filter options from rooms for hotel mode
-  const roomFloors = useMemo(() => {
+  const _roomFloors = useMemo(() => {
     const set = new Set();
     rooms.forEach((r) => { if (r.floor) set.add(r.floor); });
     return Array.from(set).sort((a, b) => a - b);
   }, [rooms]);
 
-  const roomTypeList = useMemo(() => {
+  const _roomTypeList = useMemo(() => {
     const set = new Set();
     rooms.forEach((r) => { if (r.room_type) set.add(r.room_type); });
     return Array.from(set);
   }, [rooms]);
 
-  const activeFilterCount = [selectedFloor, selectedRoomType, selectedRoomGroupId, searchText].filter(Boolean).length;
+  const _activeFilterCount = [selectedFloor, selectedRoomType, selectedRoomGroupId, searchText].filter(Boolean).length;
 
   // Format time as HH:MM:SS
   const formatTime = (date) => {
@@ -726,7 +721,6 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
         </Row>
       </Container>
 
-
       {/* MOBILE ROOM GROUP / HALL TABS (moved up from footer) */}
       {!showBack && (
         <div className="mobile-tabs-bar d-flex d-md-none">
@@ -781,12 +775,11 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
         </div>
       )}
 
-
       <SalesTypesModal
         show={onShowSalesTypeModal}
         target={newOrderBtnRef.current}
         onClose={() => setOnShowSalesTypeModal(false)}
-        onSelect={(type) => {
+        onSelect={(_type) => {
         }}
       />
 

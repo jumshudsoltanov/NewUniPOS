@@ -67,7 +67,7 @@ export function getTotalTimerHourlyRate(order) {
 
 export function getLiveTimerCharge(order, totalSeconds, effH, menuData = null) {
     let charge = 0;
-    let hasProductTimer = false;
+    let _hasProductTimer = false;
     let hasIntervalTimer = false;
     const tableH = Number(order?.table?.hourly_price || 0);
     
@@ -80,7 +80,7 @@ export function getLiveTimerCharge(order, totalSeconds, effH, menuData = null) {
         const hasIntervals = intervals !== null;
         
         if (pType === 'timer' || hasIntervals) {
-            hasProductTimer = true;
+            _hasProductTimer = true;
             if (hasIntervals) hasIntervalTimer = true;
 
             const count = Number(it.count || it.quantity || 1);

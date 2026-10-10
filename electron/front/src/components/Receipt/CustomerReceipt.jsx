@@ -1,9 +1,9 @@
 import React from "react";
 import QRCode from "react-qr-code";
 import {
-    findCatalogProduct,
-    getDisplayProductName,
-    resolveModifiersForDisplay,
+  findCatalogProduct,
+  getDisplayProductName,
+  resolveModifiersForDisplay,
 } from "../../utils/orderItemDisplayHelpers";
 import { getCustomerFacingServiceFeeLabel } from "../../utils/posOperationNames";
 import { t } from "../../utils/translations";
@@ -75,7 +75,7 @@ const CustomerReceipt = ({
     let localSettings = {};
     try {
         localSettings = JSON.parse(localStorage.getItem("pos_receipt_settings"))?.customer || {};
-    } catch (e) { }
+    } catch { /* nəzərə alınmır */ }
     const isReceiptPreview =
         previewSettings != null && typeof previewSettings === "object";
     if (isReceiptPreview) localSettings = previewSettings;
@@ -303,11 +303,11 @@ const CustomerReceipt = ({
             try {
                 const parsed = JSON.parse(trimmed);
                 if (Array.isArray(parsed)) return parsed.length > 0;
-            } catch(e) {}
+            } catch { /* nəzərə alınmır */ }
         }
         return false;
     };
-    const hasProductTimer = itemsToRender.some(item => {
+    const _hasProductTimer = itemsToRender.some(item => {
         const cat = findCatalogProduct(menuCatalog, item.product_id || item.id);
         return String(item.product_type || item.product?.product_type || '').toLowerCase() === 'timer' ||
             checkIntervals(item.timer_intervals) || checkIntervals(item.product?.timer_intervals) || checkIntervals(cat?.timer_intervals);
@@ -353,7 +353,7 @@ const CustomerReceipt = ({
                 if (Array.isArray(mods)) {
                     modifiersTotal = mods.reduce((mSum, m) => mSum + Number(m.price || 0) * Number(m.count || 1), 0);
                 }
-            } catch (e) { }
+            } catch { /* nəzərə alınmır */ }
             
             const baseTotal = isGift ? 0 : qty * (price + modifiersTotal);
             return sum + baseTotal;
@@ -401,7 +401,7 @@ const CustomerReceipt = ({
                 if (Array.isArray(mods)) {
                     modifiersTotal = mods.reduce((mSum, m) => mSum + Number(m.price || 0) * Number(m.count || 1), 0);
                 }
-            } catch (e) { }
+            } catch { /* nəzərə alınmır */ }
             
             const baseTotal = isGift ? 0 : qty * (price + modifiersTotal);
             return sum + baseTotal;
@@ -628,7 +628,7 @@ const CustomerReceipt = ({
                         const isGift = Number(item.is_gift || 0) === 1;
                         const comment = item.comment || '';
                         let mods = item.modifiers;
-                        if (typeof mods === 'string') { try { mods = JSON.parse(mods); } catch (e) { mods = []; } }
+                        if (typeof mods === 'string') { try { mods = JSON.parse(mods); } catch { mods = []; } }
                         if (!Array.isArray(mods)) mods = [];
                         mods = resolveModifiersForDisplay(mods, cat);
                         const modsKey = mods.map(m => `${m.name}:${m.price}:${m.count}`).sort().join('|');
@@ -743,8 +743,6 @@ const CustomerReceipt = ({
                 )}
             </div>
 
-
-
             {/* ÖDƏNİLMƏYİB STATUS */}
             {!isPaid && (
                 <div style={styles.statusBox}>
@@ -793,7 +791,6 @@ const CustomerReceipt = ({
             {payments.length > 0 && (
                 <div style={{ marginTop: "4px" }}>
 
-
                     <div
                         style={{
                             fontWeight: "900",
@@ -824,7 +821,7 @@ const CustomerReceipt = ({
 
                     {(checkData?.change !== undefined) && (
                         <div style={styles.summaryRow}>
-                            <span style={{ flex: 1 }}>QALIQ</span>
+                            <span style={{ flex: 1 }}>{t("qaliq_boyuk")}</span>
                             <span style={styles.colTotal}>{renderMoney(Math.max(0, parseFloat(checkData.change || 0)))}</span>
                         </div>
                     )}

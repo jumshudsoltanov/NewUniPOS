@@ -8,7 +8,7 @@ const ADMIN_API = "https://api.unipos.tech/api";
 
 export const loadLayoutsFromAdmin = createAsyncThunk(
   "tables/loadLayoutsFromAdmin",
-  async (profile_id, thunkAPI) => {
+  async (profile_id, _thunkAPI) => {
     try {
       // Send profile_id; backend falls back to all if not found
       const params = profile_id ? { profile_id } : {};
@@ -22,7 +22,7 @@ export const loadLayoutsFromAdmin = createAsyncThunk(
 
 export const loadLocalLayouts = createAsyncThunk(
   "tables/loadLocalLayouts",
-  async (_, thunkAPI) => {
+  async (_, _thunkAPI) => {
     try {
       const res = await axios.get("/tables-layouts/local");
       return res.data?.data || {};

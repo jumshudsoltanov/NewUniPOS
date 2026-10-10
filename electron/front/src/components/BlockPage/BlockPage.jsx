@@ -115,7 +115,7 @@ const BlockPage = () => {
                 let prevSnapshot = null;
                 try {
                     prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
-                } catch {}
+                } catch { /* nəzərə alınmır */ }
                 const merged = mergeBlockedLoginPayload(error.data, prevSnapshot);
                 localStorage.setItem("authResult", JSON.stringify(merged));
                 dispatch(setLoginData(merged));

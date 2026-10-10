@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Offcanvas } from 'react-bootstrap';
-import { toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
+import { Offcanvas } from "react-bootstrap";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { t as _t } from "../../utils/translations";
 
 const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
     const { t } = useTranslation();
@@ -46,7 +47,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
         <Offcanvas show={show} onHide={() => !isInstalling && onHide()} placement="end" style={{ width: '600px', borderLeft: 'none', boxShadow: '-10px 0 30px rgba(0,0,0,0.1)' }}>
             <Offcanvas.Header closeButton={!isInstalling} closeVariant="white" style={{ background: '#053796', padding: '24px 32px', borderBottom: 'none' }}>
                 <Offcanvas.Title style={{ fontSize: '20px', fontWeight: 600, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <i className="bi bi-printer"></i> Yeni Printer Quraşdır
+                    <i className="bi bi-printer"></i> {t("yeni_printer_qurasdir")}
                 </Offcanvas.Title>
             </Offcanvas.Header>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -73,7 +74,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
 
                         <div style={{ flex: 1 }}>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
-                                Bağlantı (Port)
+                                {t("baglanti_port")}
                             </label>
                             <select 
                                 className="form-select" 
@@ -82,8 +83,8 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                                 disabled={isInstalling}
                                 style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }}
                             >
-                                <option value="USB">USB Bağlantı</option>
-                                <option value="Network">Şəbəkə (LAN/WiFi)</option>
+                                <option value="USB">{t("usb_baglanti")}</option>
+                                <option value="Network">{t("sebeke_lan_wifi")}</option>
                                 <option value="COM">COM Port</option>
                             </select>
                         </div>
@@ -93,7 +94,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                     {connectionType === 'Network' && (
                         <div>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
-                                IP Ünvan
+                                {t("ip_unvan")}
                             </label>
                             <input 
                                 type="text" 
@@ -111,7 +112,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                     {connectionType === 'COM' && (
                         <div>
                             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
-                                COM Port Adı
+                                {t("com_port_adi")}
                             </label>
                             <input 
                                 type="text" 
@@ -128,7 +129,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
 
                     <div>
                         <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
-                            Sistemdə Görünəcək Ad
+                            {t("sistemde_gorunecek_ad")}
                         </label>
                         <input 
                             type="text" 
@@ -136,7 +137,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                             value={printerName}
                             onChange={(e) => setPrinterName(e.target.value)}
                             disabled={isInstalling}
-                            placeholder="Məsələn: Kassa Printeri"
+                            placeholder={t("meselen_kassa_printeri")}
                             required
                             style={{ height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }}
                         />
@@ -162,7 +163,7 @@ const CustomXprinterInstallModal = ({ show, onHide, onInstallSuccess }) => {
                         disabled={isInstalling}
                         className="btn-test"
                     >
-                        Ləğv et
+                        {t("cancel")}
                     </button>
                     <button 
                         type="submit" 

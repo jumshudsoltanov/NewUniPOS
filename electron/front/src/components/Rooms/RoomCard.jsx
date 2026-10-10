@@ -41,7 +41,7 @@ const RoomCard = ({ room, onRoomClick, checkTotal = 0 }) => {
       // Otaqları yenilə
       const pid = loginedProfileData?.data?.profile?.id;
       if (pid) dispatch(fetchRooms(pid));
-    } catch (err) {
+    } catch {
       toast.error(t("status_deyisdirilmedi"));
     }
   };

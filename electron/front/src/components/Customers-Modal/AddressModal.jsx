@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal } from 'react-bootstrap';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { Modal } from "react-bootstrap";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -22,7 +22,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 const PREDEFINED_CENTER = [40.4093, 49.8671];
 
 const LocationMarker = ({ setAddress, setPosition, position }) => {
-    const map = useMapEvents({
+    const _map = useMapEvents({
         click(e) {
             const { lat, lng } = e.latlng;
             setPosition([lat, lng]);

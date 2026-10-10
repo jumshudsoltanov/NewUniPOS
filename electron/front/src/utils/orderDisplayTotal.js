@@ -1,6 +1,7 @@
 import { getEffectiveHourlyPrice } from "./orderHourlyPrice";
-import { sumOrderItemsLinesTotal } from "./orderItemLineTotal";
+import { sumOrderItemsLinesTotal, getModifiersTotalPerUnit, getLineTotalMenuData } from "./orderItemLineTotal";
 import { hasTimerIntervals } from "./menuIndex";
+import { isNoServiceFeeItem } from "./serviceFeeRules";
 
 /** Məhsul sətirləri (modifikatorlar daxil) + taymer məbləği (endirim/xidmətdən əvvəl). */
 export function getOrderItemsAndTimerSubtotal(order, tableHourlyFallback) {
@@ -71,11 +72,9 @@ export function computeOrderCardMeta(order, tableHourlyFallback) {
       if (!isNoDiscount) {
         const count = Number(item.count || item.quantity || 0);
         const price = Number(item.price || item.amount || 0);
-        let modsTotal = 0;
-        try {
-          const mods = typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : (item.modifiers || []);
-          modsTotal = mods.reduce((s, m) => s + Number(m.price || 0) * Number(m.count || 1), 0);
-        } catch { /* ignore */ }
+        // Keşlənmiş hesablama — eyni modifikator mətni hər render-də
+        // yenidən parse olunmur (bax: orderItemLineTotal.js)
+        const modsTotal = getModifiersTotalPerUnit(item);
         totalForDiscount += count * (price + modsTotal);
       }
     });
@@ -111,7 +110,7 @@ export function computeOrderCardMeta(order, tableHourlyFallback) {
   // Service charge: CheckBottom ilə eyni məntiq (service_value % × base items)
   let serviceAmount = 0;
   const serviceValueRaw = order.service_value;
-  const hasExplicitServiceValue = serviceValueRaw !== null && serviceValueRaw !== undefined;
+  const _hasExplicitServiceValue = serviceValueRaw !== null && serviceValueRaw !== undefined;
   const serviceValue = Number(serviceValueRaw || 0);
   const serviceType = order.service_type || "percent";
 
@@ -119,15 +118,15 @@ export function computeOrderCardMeta(order, tableHourlyFallback) {
     // Servis yalnız base qiymətlərdən (taymer xarici, no_service_fee xarici) hesablanır
     let totalForService = 0;
     (order.orders_items || []).forEach(item => {
-      const isNoService = Number(item.no_service_fee) === 1 || Number(item.product?.no_service_fee) === 1;
+      // Ortaq qayda: menyu kataloqu da nəzərə alınır, əks halda masa kartındakı
+      // məbləğ çek ekranındakından fərqlənir (bax: serviceFeeRules.js)
+      const isNoService = isNoServiceFeeItem(item, getLineTotalMenuData());
       if (!isNoService) {
         const count = Number(item.count || item.quantity || 0);
         const price = Number(item.price || item.amount || 0);
-        let modsTotal = 0;
-        try {
-          const mods = typeof item.modifiers === 'string' ? JSON.parse(item.modifiers || '[]') : (item.modifiers || []);
-          modsTotal = mods.reduce((s, m) => s + Number(m.price || 0) * Number(m.count || 1), 0);
-        } catch { /* ignore */ }
+        // Keşlənmiş hesablama — eyni modifikator mətni hər render-də
+        // yenidən parse olunmur (bax: orderItemLineTotal.js)
+        const modsTotal = getModifiersTotalPerUnit(item);
         totalForService += count * (price + modsTotal);
       }
     });

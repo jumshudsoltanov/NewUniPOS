@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { updateTags } from "../../redux/Slices/OrdersSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { useCallback, useMemo } from "react";
+import { useCallback as _useCallback, useMemo } from "react";
 import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";

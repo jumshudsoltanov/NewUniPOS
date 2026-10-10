@@ -267,7 +267,7 @@ const RoomFolio = () => {
       toast.success(t("qebz_cap_edildi"));
     } catch (err) {
       console.error("Print error:", err);
-      toast.error("Çap xətası: " + (err.message || t("unknown_error")));
+      toast.error((t("cap_xetasi") + " ") + (err.message || t("unknown_error")));
     }
   };
 

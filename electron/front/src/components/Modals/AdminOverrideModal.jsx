@@ -43,7 +43,7 @@ const ClearIcon = () => (
 );
 
 const AdminOverrideModal = ({ show, onHide, onSuccess, requiredPermissionKey, operationName }) => {
-  const dispatch = useDispatch();
+  const _dispatch = useDispatch();
   const [pin, setPin] = useState("");
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

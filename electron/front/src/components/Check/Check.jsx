@@ -26,12 +26,12 @@ import ServiceFeeModal from "../ServiceFeeModal/ServiceFeeModal";
 import DepositModal from "../DepositModal/DepositModal";
 import WaitersModal from "../Waiters/WaitersModal";
 import { getTableGroups, removeOrderOptimisticFromTables, addOrderToTableOptimistic, clearDeletedOrderId } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders, removeOrderOptimistic, tickTimer, addOrderOptimistic, updateOrderOptimisticId, clearDeletedOrderIdBooks } from "../../redux/Slices/BooksSlice";
+import { getActiveOrders, removeOrderOptimistic, tickTimer as _tickTimer, addOrderOptimistic, updateOrderOptimisticId, clearDeletedOrderIdBooks } from "../../redux/Slices/BooksSlice";
 import OtherChecks from "../OtherChecks/OtherChecks";
 import VoiceOrderButton from "../VoiceOrderButton/VoiceOrderButton";
 import ChangeSaleTypeModal from "../ChangeSaleTypeModal/ChangeSaleTypeModal";
 import SplitOrderModal from "../SlpitOrderModa/SplitOrderModal";
-import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem, batchDeleteOrderItems, stopTimer, clearOrders, addProducts, clearPendingDeletions } from "../../redux/Slices/OrdersSlice";
+import { deleteCheck, splitOrder, saveLog, assignCustomerToOrder, updateDiscountOnOrders, incrementPrintCount, sendOrdersItems, deleteOrderItem as _deleteOrderItem, batchDeleteOrderItems, stopTimer, clearOrders, addProducts, clearPendingDeletions } from "../../redux/Slices/OrdersSlice";
 import { fetchCustomersFromAdmin, fetchCustomerGroupsFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { deleteProduct } from "../../redux/Slices/ProductSlice";
 import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
@@ -51,7 +51,6 @@ import { assignCourierToOrder } from "../../redux/Slices/CouriersSlice";
 import {
   getEffectiveHourlyPrice,
   getTableHourlyPrice,
-  getProductHourlySum,
 } from "../../utils/orderHourlyPrice";
 import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
@@ -104,6 +103,7 @@ import {
 import { t } from "../../utils/translations";
 import { formatPrice } from "../../utils/formatPrice";
 import { hasTimerIntervals } from "../../utils/menuIndex";
+import { findMenuItemById } from "../../utils/menuIndex";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -145,7 +145,7 @@ const Check = () => {
   const { products, menu, categories } = useSelector((state) => state.OrderSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
-  const { tableGroups, currentHallId } = useSelector(
+  const { tableGroups, currentHallId: _currentHallId } = useSelector(
     (state) => state.TablesSlice,
     (a, b) => {
       // Skip re-render if only timer fields changed in tableGroups
@@ -243,11 +243,11 @@ const Check = () => {
 
   // Hotel actions state
   const [depositValue, setDepositValue] = useState("0");
-  const [showDepositKeypad, setShowDepositKeypad] = useState(false);
-  const [isUpdatingDeposit, setIsUpdatingDeposit] = useState(false);
+  const [_showDepositKeypad, setShowDepositKeypad] = useState(false);
+  const [_isUpdatingDeposit, setIsUpdatingDeposit] = useState(false);
 
   // Print to kitchen toggle
-  const [printToKitchen, setPrintToKitchen] = useState(readKitchenPrintEnabled);
+  const [_printToKitchen, setPrintToKitchen] = useState(readKitchenPrintEnabled);
   const [showKitchenPrintToggle, setShowKitchenPrintToggle] = useState(
     readKitchenPrintBlockSetting
   );
@@ -293,7 +293,7 @@ const Check = () => {
     };
   }, []);
 
-  const handleKitchenPrintToggle = useCallback(() => {
+  const _handleKitchenPrintToggle = useCallback(() => {
     setPrintToKitchen((prev) => {
       const next = !prev;
       try {
@@ -388,7 +388,7 @@ const Check = () => {
   // Ref + localStorage sync
   useEffect(() => {
     customOrdersRef.current = customOrders;
-    try { localStorage.setItem("unipos_category_orders", JSON.stringify(customOrders)); } catch {}
+    try { localStorage.setItem("unipos_category_orders", JSON.stringify(customOrders)); } catch { /* nəzərə alınmır */ }
   }, [customOrders]);
 
   // ── Barkod skaner dinləyicisi ──
@@ -441,7 +441,7 @@ const Check = () => {
 
   const hotelProfileId = loginedProfileData?.data?.profile?.id;
 
-  const handleHotelOpenWhatsApp = () => {
+  const _handleHotelOpenWhatsApp = () => {
     if (!hotelRoom) return;
     if (!hotelRoom.guest_phone) { toast.error(t("no_phone")); return; }
     if (!hotelRoom.booking_id) { toast.error(t("no_booking_id")); return; }
@@ -528,13 +528,13 @@ const Check = () => {
     return () => clearInterval(iv);
   }, [isHotelMode, hotelRoom, waAutoRemind, waRemindHours, waReminderSent, hotelProfileId, dispatch]);
 
-  const handleDepositNum = (n) => {
+  const _handleDepositNum = (n) => {
     setDepositValue((p) => (p === "0" && n !== "." ? String(n) : n === "." && p.includes(".") ? p : p + String(n)));
   };
-  const handleDepositBs = () => setDepositValue((p) => (p.length > 1 ? p.slice(0, -1) : "0"));
-  const handleDepositClear = () => setDepositValue("0");
+  const _handleDepositBs = () => setDepositValue((p) => (p.length > 1 ? p.slice(0, -1) : "0"));
+  const _handleDepositClear = () => setDepositValue("0");
 
-  const handleDepositSave = async () => {
+  const _handleDepositSave = async () => {
     if (!hotelRoom) return;
     const val = parseFloat(depositValue) || 0;
     setIsUpdatingDeposit(true);
@@ -570,7 +570,7 @@ const Check = () => {
       ? `Çap et • ${printerDiagnosticSummary.label}`
       : "Çap et";
 
-  const handleHotelPrintReceipt = async () => {
+  const _handleHotelPrintReceipt = async () => {
     if (!hotelRoom) return;
     const printers = cashierPrinters;
     if (!printers.length) { toast.error(t("printer_not_found")); return; }
@@ -637,7 +637,7 @@ const Check = () => {
       }
       toast.success(t("qebz_cap_edildi"));
     } catch (err) {
-      toast.error("Çap xətası: " + (err.message || t("unknown_error")));
+      toast.error((t("cap_xetasi") + " ") + (err.message || t("unknown_error")));
     }
   };
 
@@ -662,7 +662,6 @@ const Check = () => {
   const [onShowSalesTypeModal, setOnShowSalesTypeModal] = useState(false);
   const newOrderBtnRef = useRef(null);
 
-
   const { currentOrder, currentHall, currentTable } = useMemo(() => {
     if (!id)
       return { currentOrder: null, currentHall: null, currentTable: null };
@@ -682,8 +681,6 @@ const Check = () => {
         }
       }
     }
-
-
 
     // Priority 1: books (full order data with orders_items)
     const booksList = Array.isArray(books) ? books : (Array.isArray(books?.data) ? books.data : []);
@@ -752,7 +749,7 @@ const Check = () => {
       },
     };
     const tableHourly = getTableHourlyPrice(merged);
-    const hasTimerProduct = (merged.orders_items || []).some((it) => {
+    const _hasTimerProduct = (merged.orders_items || []).some((it) => {
       const pHourly = Number(it.product?.hourly_price || 0);
       const pIntervals = it.product?.timer_intervals || [];
       const intervalsValid = hasTimerIntervals(pIntervals);
@@ -760,7 +757,7 @@ const Check = () => {
       let menuHourly = 0;
       let menuIntervalsValid = false;
       if (menu && menu.length > 0) {
-        const catItem = menu.find(m => Number(m.id) === Number(it.product_id || it.id));
+        const catItem = findMenuItemById(menu, it.product_id || it.id);
         if (catItem) {
           menuHourly = Number(catItem.hourly_price || 0);
           const mInt = catItem.timer_intervals || [];
@@ -813,14 +810,14 @@ const Check = () => {
   const [productToEdit, setProductToEdit] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [_showStatusModal, setShowStatusModal] = useState(false);
   const { pendingDeletions } = useSelector((state) => state.OrderSlice);
   const [isSending, setIsSending] = useState(false);
   const isSendingRef = useRef(false);
   const isExitingRef = useRef(false);
   const emptyCheckDataRef = useRef(null);
   const [showEmptyCheckConfirm, setShowEmptyCheckConfirm] = useState(false);
-  const [hadOrderItems, setHadOrderItems] = useState(false);
+  const [_hadOrderItems, setHadOrderItems] = useState(false);
   const {
     pendingCount: syncCount,
     lastSyncedDelta: syncedCount,
@@ -829,7 +826,7 @@ const Check = () => {
     hasInternet
   } = useSelector((state) => state.SyncSlice);
 
-  const [showClock, setShowClock] = useState(() => {
+  const [showClock, _setShowClock] = useState(() => {
     return localStorage.getItem("showHeaderClock") === "true";
   });
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -1092,7 +1089,7 @@ const Check = () => {
           }
           
           if (Array.isArray(commentVal) && commentVal.length > 1) {
-            return commentVal.map((c, i) => ({
+            return commentVal.map((c, _i) => ({
               ...p,
               price: safePrice,
               printer_details: printers,
@@ -1226,7 +1223,7 @@ const Check = () => {
     const resultingItemCount = currentItemSum - deleteSum + addSum;
     const profileHasTimer = Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1;
     const hasTimerOnTable = effectiveHourlyPrice > 0 && profileHasTimer;
-    const isTimerActiveOrHasBalance =
+    const _isTimerActiveOrHasBalance =
       hasTimerOnTable &&
       (currentOrder?.is_timer_status === 1 || currentOrder?.is_active_timer === 1 ||
         Number(currentOrder?.rate_per_minute || 0) > 0 ||
@@ -1238,9 +1235,7 @@ const Check = () => {
 
     // Əgər indicə məhsul göndərilibsə, orders_items hələ yenilənməyə bilər (slave race condition).
     // Bu halda silmə — server-də artıq məhsullar var.
-    const actualResultingItemCount = hadPendingProducts ? Math.max(resultingItemCount, 1) : resultingItemCount;
-
-
+    const _actualResultingItemCount = hadPendingProducts ? Math.max(resultingItemCount, 1) : resultingItemCount;
 
     if (targetPath === -1) {
       goTables();
@@ -1402,9 +1397,6 @@ const Check = () => {
     navigate(`/tables/${currentOrder?.uuid}`);
   }, [navigate, currentOrder, products, orderEditLocked]);
 
-
-
-
   // Master-Slave: çekə giriş qeyd et — hər iki terminal girə bilər, məhsullar table_updated ilə dinamik yenilənir
   useEffect(() => {
     const isMasterSlaveActive = loginedProfileData?.data?.terminal?.is_master_slave_active === 1 || loginedProfileData?.data?.profile?.is_master_slave_active === 1;
@@ -1500,12 +1492,9 @@ const Check = () => {
     };
   }, []);
 
-
   const [menuViewMode, setMenuViewMode] = useState("ROOT");
   const [selectedGenCat, setSelectedGenCat] = useState(null);
   const [selectedCat, setSelectedCat] = useState(null);
-
-
 
   const formatTime = (date) => {
     return date.toLocaleTimeString("az-AZ", {
@@ -1564,7 +1553,6 @@ const Check = () => {
     setShowProductModal(false);
     setOpenSplitModal(true);
   }, [currentOrder, products, orderEditLocked]);
-
 
   const openHistoryModalFunc = useCallback(() => {
     if (products?.length > 0) {
@@ -1712,7 +1700,6 @@ const Check = () => {
     setShowOperationsModal(false);
     setOpenDeleteCheckModal(true);
   }, [currentOrder, orderEditLocked]);
-
 
   const handleDeleteCheckFunction = async ({ reason, reasonName, orderId, waste, wasteComment }) => {
     const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
@@ -1894,7 +1881,6 @@ const Check = () => {
     }
   };
 
-
   const categoryOrderMemo = useMemo(() => {
     // customOrders-dan götür, yoxdursa birbaşa menu datasından ordering-ə görə qur
     if (menuViewMode === "ROOT") {
@@ -1934,8 +1920,6 @@ const Check = () => {
       setCustomOrders(updated);
     }
   }, [menuViewMode, selectedGenCat, selectedCat]);
-
-
 
   const handleEditProductMemo = useCallback((product) => {
     setProductToEdit(product);
@@ -2241,7 +2225,7 @@ const Check = () => {
                 {import.meta.env.DEV && currentOrder?.uuid && Number(currentOrder?.status) === 1 && (
                   <div
                     className={`sidebar-icon ${showPayItems ? 'active-sidebar-icon' : ''}`}
-                    title="Məhsul üzrə ödəniş"
+                    title={t("mehsul_uzre_odenis")}
                     onClick={() => setShowPayItems(true)}
                   >
                     <svg
@@ -2319,7 +2303,6 @@ const Check = () => {
               </div>
 
               <div className="sidebar-bottom d-flex flex-column align-items-center gap-4">
-
 
                 {Number(loginedWaiter?.data?.can_lock_check) === 1 && (
                   <div
@@ -2918,7 +2901,6 @@ const Check = () => {
                   </>
                 )}
 
-
                 {/* Porsiya Button */}
                 {/* <div className="btn bg-white border d-flex align-items-center gap-2 text-secondary">
                     <i className="bi bi-cup-hot"></i>
@@ -2926,7 +2908,6 @@ const Check = () => {
                   </div> */}
 
                 {/* History/Logs Toggle */}
-
 
                 {/* Settings */}
                 {/* <div className="header-icon bg-white border rounded p-2 text-secondary cursor-pointer">
@@ -3415,7 +3396,7 @@ const Check = () => {
         show={onShowSalesTypeModal}
         target={newOrderBtnRef.current}
         onClose={() => setOnShowSalesTypeModal(false)}
-        onSelect={(type) => {
+        onSelect={(_type) => {
         }}
       />
       {import.meta.env.DEV && (
@@ -3655,7 +3636,6 @@ const Check = () => {
         }}
         productToEdit={productToEdit}
       />
-
 
       {/* ── Hotel WhatsApp Modal ── */}
       <Modal show={showWhatsAppModal} onHide={() => setShowWhatsAppModal(false)} centered size="lg" dialogClassName="hc-wa-dialog">

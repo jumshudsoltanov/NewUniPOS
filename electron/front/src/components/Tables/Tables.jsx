@@ -15,7 +15,6 @@ import {
   setTempTableOrder,
   startEditMode,
   cancelEditMode,
-  saveEditMode,
   setTempTableLayout,
   clearHallLayout,
   loadLayoutsFromAdmin,
@@ -168,7 +167,7 @@ const Tables = () => {
     localStorage.setItem("unipos_theme_bg", themeBgColor);
     localStorage.setItem("unipos_theme_table", themeTableColor);
     localStorage.setItem("unipos_theme_fab", themeFabColor);
-    toast.success("Rənglər saxlanıldı!");
+    toast.success(t("rengler_saxlanildi"));
   };
 
   const handleResetTheme = () => {
@@ -185,7 +184,7 @@ const Tables = () => {
     root.style.setProperty("--unipos-bg-color", "#E2E5EB");
     root.style.setProperty("--unipos-table-surface", "#ffffff");
     root.style.setProperty("--unipos-fab-color", "#053796");
-    toast.success("Rənglər sıfırlandı!");
+    toast.success(t("rengler_sifirlandi"));
   };
 
   // Custom Layout Interaction State
@@ -608,7 +607,7 @@ const Tables = () => {
                     localStorage.setItem("pending_order_uuids", JSON.stringify(pending));
                     localStorage.setItem(`pending_payload_${generatedUuid}`, JSON.stringify(recoveryPayload));
                   }
-                } catch (_) {}
+                } catch { /* nəzərə alınmır */ }
 
                 const retryCreateOrder = async (attempt = 0) => {
                   try {
@@ -642,7 +641,7 @@ const Tables = () => {
                         localStorage.setItem("pending_order_uuids", JSON.stringify(pending));
                         localStorage.removeItem(`pending_payload_${generatedUuid}`);
                       }
-                    } catch (_) {}
+                    } catch { /* nəzərə alınmır */ }
                   } catch (err) {
                     console.error(`API Create Error (attempt ${attempt + 1}):`, err);
                     // 3 dəfəyə qədər retry (1s, 2s, 4s gözlə)
@@ -1361,7 +1360,7 @@ const Tables = () => {
             <button
               className="tsm-settings-fab"
               onClick={() => setShowSettingsModal(true)}
-              title="Tənzimləmələr"
+              title={t("tenzimlemeler")}
               style={{ background: themeFabColor }}
             >
               <i className="bi bi-sliders"></i>
@@ -1382,7 +1381,7 @@ const Tables = () => {
                       <div className="tsm-modal-header-icon">
                         <i className="bi bi-sliders"></i>
                       </div>
-                      <span className="tsm-modal-title">Masa Tənzimləmələri</span>
+                      <span className="tsm-modal-title">{t("masa_tenzimlemeleri")}</span>
                     </div>
                     <button
                       className="tsm-modal-close"
@@ -1398,7 +1397,7 @@ const Tables = () => {
                     <div className="tsm-section">
                       <div className="tsm-section-title">
                         <i className="bi bi-cursor-fill"></i>
-                        Seçilmiş masa
+                        {t("selected_table")}
                       </div>
 
                       {selectedEditTableId ? (
@@ -1434,7 +1433,7 @@ const Tables = () => {
                           {/* Size Inputs */}
                           <div className="tsm-input-grid" style={{ marginTop: "10px" }}>
                             <div className="tsm-input-group">
-                              <span className="tsm-input-label">En (px)</span>
+                              <span className="tsm-input-label">{t("width_px")}</span>
                               <input
                                 type="number"
                                 className="tsm-input"
@@ -1445,7 +1444,7 @@ const Tables = () => {
                               />
                             </div>
                             <div className="tsm-input-group">
-                              <span className="tsm-input-label">Hünd. (px)</span>
+                              <span className="tsm-input-label">{t("height_px_short")}</span>
                               <input
                                 type="number"
                                 className="tsm-input"
@@ -1459,7 +1458,7 @@ const Tables = () => {
 
                           {/* Rotation */}
                           <div style={{ marginTop: "10px" }}>
-                            <span className="tsm-input-label">Fırlanma</span>
+                            <span className="tsm-input-label">{t("firlanma")}</span>
                             <div className="tsm-rotation-row">
                               <button
                                 className="tsm-rotation-btn"
@@ -1483,13 +1482,13 @@ const Tables = () => {
                             style={{ marginTop: "12px" }}
                           >
                             <i className="bi bi-check-lg"></i>
-                            Tətbiq et
+                            {t("apply")}
                           </button>
                         </>
                       ) : (
                         <div className="tsm-empty-state">
                           <i className="bi bi-hand-index-thumb"></i>
-                          Masa seçin
+                          {t("masa_secin")}
                         </div>
                       )}
                     </div>
@@ -1500,12 +1499,12 @@ const Tables = () => {
                     <div className="tsm-section">
                       <div className="tsm-section-title">
                         <i className="bi bi-grid-3x3-gap-fill"></i>
-                        Toplu tənzimləmə
+                        {t("bulk_adjust")}
                       </div>
 
                       <div className="tsm-input-grid">
                         <div className="tsm-input-group">
-                          <span className="tsm-input-label">En (px)</span>
+                          <span className="tsm-input-label">{t("width_px")}</span>
                           <input
                             type="number"
                             className="tsm-input"
@@ -1514,7 +1513,7 @@ const Tables = () => {
                           />
                         </div>
                         <div className="tsm-input-group">
-                          <span className="tsm-input-label">Hünd. (px)</span>
+                          <span className="tsm-input-label">{t("height_px_short")}</span>
                           <input
                             type="number"
                             className="tsm-input"
@@ -1530,7 +1529,7 @@ const Tables = () => {
                         style={{ marginTop: "10px" }}
                       >
                         <i className="bi bi-arrows-fullscreen"></i>
-                        Hamısına tətbiq et
+                        {t("apply_all")}
                       </button>
                     </div>
 
@@ -1538,14 +1537,14 @@ const Tables = () => {
                     <div className="tsm-section">
                       <div className="tsm-section-title">
                         <i className="bi bi-align-center"></i>
-                        Mövqe (Avtomatik düzülüş)
+                        {t("movqe_avtomatik_duzulus")}
                       </div>
 
                       <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
                         {[
-                          { key: "top", label: "Yuxarı" },
-                          { key: "center", label: "Ortada" },
-                          { key: "bottom", label: "Aşağı" },
+                          { key: "top", label: t("yuxari") },
+                          { key: "center", label: t("ortada") },
+                          { key: "bottom", label: t("asagi") },
                         ].map((opt) => (
                           <button
                             key={opt.key}
@@ -1559,11 +1558,11 @@ const Tables = () => {
                       </div>
 
                       <div className="tsm-input-label" style={{ marginBottom: "6px" }}>
-                        Kənarlardan boşluq (px)
+                        {t("kenarlardan_bosluq_px")}
                       </div>
                       <div className="tsm-input-grid">
                         <div className="tsm-input-group">
-                          <span className="tsm-input-label">Yuxarı</span>
+                          <span className="tsm-input-label">{t("yuxari")}</span>
                           <input
                             type="number"
                             className="tsm-input"
@@ -1572,7 +1571,7 @@ const Tables = () => {
                           />
                         </div>
                         <div className="tsm-input-group">
-                          <span className="tsm-input-label">Aşağı</span>
+                          <span className="tsm-input-label">{t("asagi")}</span>
                           <input
                             type="number"
                             className="tsm-input"
@@ -1581,7 +1580,7 @@ const Tables = () => {
                           />
                         </div>
                         <div className="tsm-input-group">
-                          <span className="tsm-input-label">Sol</span>
+                          <span className="tsm-input-label">{t("sol")}</span>
                           <input
                             type="number"
                             className="tsm-input"
@@ -1590,7 +1589,7 @@ const Tables = () => {
                           />
                         </div>
                         <div className="tsm-input-group">
-                          <span className="tsm-input-label">Sağ</span>
+                          <span className="tsm-input-label">{t("sag")}</span>
                           <input
                             type="number"
                             className="tsm-input"
@@ -1608,14 +1607,14 @@ const Tables = () => {
                         onClick={handleAutoArrange}
                       >
                         <i className="bi bi-layout-wtf"></i>
-                        Avtomatik düzülüş
+                        {t("avtomatik_duzulus")}
                       </button>
                       <button
                         className="tsm-btn tsm-btn-red"
                         onClick={() => dispatch(clearHallLayout(currentHallId))}
                       >
                         <i className="bi bi-arrow-counterclockwise"></i>
-                        Sıfırla
+                        {t("sifirla")}
                       </button>
                     </div>
 
@@ -1625,13 +1624,13 @@ const Tables = () => {
                     <div className="tsm-section">
                       <div className="tsm-section-title">
                         <i className="bi bi-palette-fill"></i>
-                        Rəng tənzimləmə
+                        {t("reng_tenzimleme")}
                       </div>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                         {/* Header Color */}
                         <div className="tsm-color-row">
-                          <span className="tsm-input-label">Header rəngi</span>
+                          <span className="tsm-input-label">{t("header_rengi")}</span>
                           <div className="tsm-color-picker-wrap">
                             <input
                               type="color"
@@ -1645,7 +1644,7 @@ const Tables = () => {
 
                         {/* Background Color */}
                         <div className="tsm-color-row">
-                          <span className="tsm-input-label">Arxa plan rəngi</span>
+                          <span className="tsm-input-label">{t("arxa_plan_rengi")}</span>
                           <div className="tsm-color-picker-wrap">
                             <input
                               type="color"
@@ -1659,7 +1658,7 @@ const Tables = () => {
 
                         {/* Table Surface Color */}
                         <div className="tsm-color-row">
-                          <span className="tsm-input-label">Masa rəngi</span>
+                          <span className="tsm-input-label">{t("masa_rengi")}</span>
                           <div className="tsm-color-picker-wrap">
                             <input
                               type="color"
@@ -1673,7 +1672,7 @@ const Tables = () => {
 
                         {/* FAB Button Color */}
                         <div className="tsm-color-row">
-                          <span className="tsm-input-label">Düymə rəngi</span>
+                          <span className="tsm-input-label">{t("duyme_rengi")}</span>
                           <div className="tsm-color-picker-wrap">
                             <input
                               type="color"

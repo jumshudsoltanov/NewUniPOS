@@ -53,7 +53,7 @@ export const fetchCouriersFromAdmin = createAsyncThunk(
 
 export const assignCourierToOrder = createAsyncThunk(
     "orders/assign-courier",
-    async ({ orderId, courierId, courierName, deliveryFee, waiterName: passedWaiterName }, thunkAPI) => {
+    async ({ orderId, courierId, courierName: _courierName, deliveryFee, waiterName: _passedWaiterName }, thunkAPI) => {
         try {
             const response = await apiConfig.patch(
                 `/orders-items/${orderId}/assign-courier`,

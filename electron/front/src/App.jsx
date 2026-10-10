@@ -157,7 +157,7 @@ function AppContent() {
           let prevSnapshot = null;
           try {
             prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
-          } catch {}
+          } catch { /* nəzərə alınmır */ }
           const merged = mergeBlockedLoginPayload(err.data, prevSnapshot);
           localStorage.setItem("authResult", JSON.stringify(merged));
           dispatch(setLoginData(merged));
@@ -272,7 +272,7 @@ function AppContent() {
   // Mərkəzi printer Master-dadır: Master print_delegated dinləyib özündə çap edir (Slave göndərir)
   const isMasterTerminal = authResultRedux?.data?.terminal?.is_master === 1 || authResultRedux?.data?.profile?.is_master === 1;
 
-  const isSocketConnected = useSelector((state) => state.SyncSlice.isSocketConnected);
+  const _isSocketConnected = useSelector((state) => state.SyncSlice.isSocketConnected);
 
   useEffect(() => {
     if (isDisplayRoute) return;
@@ -397,7 +397,7 @@ function AppContent() {
           if (window.electronAPI?.getStaticMasterIp) {
             try {
               directIp = await window.electronAPI.getStaticMasterIp();
-            } catch (e) {}
+            } catch { /* nəzərə alınmır */ }
           }
           await initNetwork(false, false, directIp || undefined);
         } else {
@@ -475,7 +475,7 @@ function AppContent() {
                       });
                     }
                   }
-                } catch(e) {}
+                } catch { /* nəzərə alınmır */ }
                 savePrintersToStorage(data.data.profile.id, mergedPrinters);
               }
 
@@ -513,7 +513,7 @@ function AppContent() {
                 let prevSnapshot = null;
                 try {
                   prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
-                } catch {}
+                } catch { /* nəzərə alınmır */ }
                 const merged = mergeBlockedLoginPayload(err.data, prevSnapshot);
                 localStorage.setItem("authResult", JSON.stringify(merged));
                 dispatch(setLoginData(merged));

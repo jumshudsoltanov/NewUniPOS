@@ -150,7 +150,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
         });
     };
 
-    const getCommentForPortion = (item, portionIndex) => {
+    const _getCommentForPortion = (item, portionIndex) => {
         const val = comments[item.mergedIndex];
         const groups = getGroups(val, item.count || item.quantity || item.portion || 1);
         return groups[portionIndex]?.comment ?? "";
@@ -180,7 +180,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
             if (prev[mergedIndex]?.qty !== undefined || (Array.isArray(prev[mergedIndex]) && prev[mergedIndex][0]?.qty !== undefined)) return prev;
             const arr = Array.isArray(prev[mergedIndex]) ? prev[mergedIndex] : [];
             if (arr.length > 0 && typeof arr[0] === 'string') {
-                return { ...prev, [mergedIndex]: arr.map((c, i) => ({ qty: 1, comment: c })) };
+                return { ...prev, [mergedIndex]: arr.map((c, _i) => ({ qty: 1, comment: c })) };
             }
             return { ...prev, [mergedIndex]: [{ qty: qty, comment: "" }] };
         });
@@ -204,7 +204,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
         setTagsModalItem(null);
     };
 
-    const groupsToCommentsArray = (groups, total) => {
+    const groupsToCommentsArray = (groups, _total) => {
         if (!Array.isArray(groups) || groups.length === 0) return [];
         if (groups[0]?.qty !== undefined) {
             return groups.flatMap(g => Array(g.qty || 1).fill(g.comment || ""));
@@ -370,7 +370,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                                 {mods.map((mod, modIdx) => {
                                                     const modKey = `${item.mergedIndex}-mod-${mod.id || modIdx}`;
                                                     const modComment = modComments[modKey] || "";
-                                                    const isModEditing = openModComments[modKey];
+                                                    const _isModEditing = openModComments[modKey];
                                                     const hasModComment = modComment !== "";
                                                     return (
                                                         <div key={modKey} className="modifier-sub-row">
@@ -448,7 +448,7 @@ const NewItemsModal = ({ show, onClose, items, onDeleteItem, onSend, pendingDele
                                             <div className="portion-groups">
                                                 {groups.map((g, gIdx) => {
                                                     const editKey = `${item.mergedIndex}-${gIdx}`;
-                                                    const isEditing = openComments[editKey];
+                                                    const _isEditing = openComments[editKey];
                                                     const dispVal = g.comment ?? "";
                                                     const hasComment = dispVal !== "" && dispVal != null;
                                                     return (

@@ -161,7 +161,7 @@ const CustomersSlice = createSlice({
                 state.customerGroups = action.payload.items || [];
                 state.isOnline = true;
             })
-            .addCase(fetchCustomerGroupsFromAdmin.rejected, (state, action) => {
+            .addCase(fetchCustomerGroupsFromAdmin.rejected, (state, _action) => {
                 state.groupsLoading = false;
             });
 

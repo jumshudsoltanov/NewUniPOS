@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 import { t } from "../../utils/translations";
 
 const SettingsMenu = ({ isOpen, onClose, onRefresh, onBrandList, onDownloadData, onExit, onQuitApp }) => {
-    const { loginedProfileData } = useSelector((state) => state.LoginSlice);
+    const { loginedProfileData: _loginedProfileData } = useSelector((state) => state.LoginSlice);
 
     if (!isOpen) return null;
 

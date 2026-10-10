@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify';
-import { useDispatch, useSelector } from 'react-redux';
-import { addProducts } from '../../redux/Slices/OrdersSlice';
+import { toast } from "react-toastify";
+import { useDispatch, useSelector } from "react-redux";
+import { addProducts } from "../../redux/Slices/OrdersSlice";
 import './VoiceOrderButton.css';
 import apiConfig from '../../utils/apiConfig';
 import { t } from "../../utils/translations";
@@ -131,7 +131,7 @@ const VoiceOrderButton = () => {
             if (m.modifier_groups) {
                 let groups = m.modifier_groups;
                 if (typeof groups === 'string') {
-                    try { groups = JSON.parse(groups); } catch (e) { groups = []; }
+                    try { groups = JSON.parse(groups); } catch { groups = []; }
                 }
                 if (typeof groups === 'object' && groups !== null && !Array.isArray(groups)) {
                     groups = Object.values(groups);
@@ -167,7 +167,7 @@ const VoiceOrderButton = () => {
                     if (item.modifiers && Array.isArray(item.modifiers)) {
                         let groups = product.modifier_groups;
                         if (typeof groups === 'string') {
-                            try { groups = JSON.parse(groups); } catch (e) { groups = []; }
+                            try { groups = JSON.parse(groups); } catch { groups = []; }
                         }
                         if (typeof groups === 'object' && groups !== null && !Array.isArray(groups)) groups = Object.values(groups);
                         if (!Array.isArray(groups)) groups = [];
@@ -239,59 +239,6 @@ const VoiceOrderButton = () => {
             const response = await axios.post(`${apiConfig.defaults.baseURL}/voice-order`, formData, { timeout: 45000 });
             await handleVoiceOrderResponse(response.data);
             return;
-
-            if (response.data?.success) {
-                const items = response.data.items || [];
-                const currentMenu = menuRef.current || [];
-
-                if (items.length > 0) {
-                    items.forEach(item => {
-                        const product = currentMenu.find(m => m.id === item.product_id);
-                        if (!product) return;
-
-                        const formattedModifiers = [];
-                        if (item.modifiers && Array.isArray(item.modifiers)) {
-                            let groups = product.modifier_groups;
-                            if (typeof groups === 'string') {
-                                try { groups = JSON.parse(groups); } catch (e) { groups = []; }
-                            }
-                            if (typeof groups === 'object' && groups !== null && !Array.isArray(groups)) groups = Object.values(groups);
-                            if (!Array.isArray(groups)) groups = [];
-                            groups.forEach(g => {
-                                (g.items || []).forEach(modItem => {
-                                    if (item.modifiers.includes(modItem.id)) {
-                                        formattedModifiers.push({
-                                            id: modItem.id, name: modItem.name,
-                                            price: parseFloat(modItem.price || 0), count: 1,
-                                            printer_id: modItem.printer_id,
-                                            category_id: modItem.category_id,
-                                            printer_details: modItem.printer_details || []
-                                        });
-                                    }
-                                });
-                            });
-                        }
-
-                        dispatch(addProducts({
-                            ...product, count: item.count || 1, quantity: item.count || 1,
-                            comment: item.comment || null, modifiers: formattedModifiers
-                        }));
-                    });
-
-                    const nameList = items.map(i => {
-                        const p = currentMenu.find(m => m.id === i.product_id);
-                        return `${i.count || 1} ${p?.name || ''}`;
-                    }).join(', ');
-
-                    toast.success(t("sifaris_elave_edildi"));
-                    await speak(`${nameList} əlavə edildi.`, BASE_URL);
-                } else {
-                    toast.warning(t("mehsul_tapilmadi"));
-                    await speak('Üzr istəyirəm, başa düşmədim. Yenidən cəhd edin.', BASE_URL);
-                }
-            } else {
-                await speak('Xəta baş verdi.', BASE_URL);
-            }
         } catch (err) {
             console.error('Voice order error:', err);
             toast.error(err.response?.data?.message || 'Xəta baş verdi');
@@ -363,7 +310,7 @@ const VoiceOrderButton = () => {
 
                 const checkSilence = () => {
                     if (statusRef.current !== 'recording') {
-                        try { silenceCtx.close(); } catch(e) {}
+                        try { silenceCtx.close(); } catch { /* nəzərə alınmır */ }
                         return;
                     }
                     analyser.getByteFrequencyData(data);
@@ -377,7 +324,7 @@ const VoiceOrderButton = () => {
                         if (!silenceStart) silenceStart = Date.now();
                         if (Date.now() - silenceStart > SILENCE_DELAY) {
                             clearTimeout(hardStop);
-                            try { silenceCtx.close(); } catch(e) {}
+                            try { silenceCtx.close(); } catch { /* nəzərə alınmır */ }
                             stopOrderRecording();
                             return;
                         }
@@ -398,7 +345,7 @@ const VoiceOrderButton = () => {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) return;
         if (recognitionRef.current) {
-            try { recognitionRef.current.abort(); } catch (e) { /* ignore */ }
+            try { recognitionRef.current.abort(); } catch { /* ignore */ }
         }
 
         const rec = new SR();
@@ -420,7 +367,7 @@ const VoiceOrderButton = () => {
                         const inlineCommand = extractInlineCommand(transcript);
                         setStatusBoth('awake');
                         // Pause recognition during order
-                        try { rec.stop(); } catch (e) { /* ignore */ }
+                        try { rec.stop(); } catch { /* ignore */ }
                         if (hasLikelyOrderContent(inlineCommand)) {
                             await processTextCommand(inlineCommand);
                             return;
@@ -430,7 +377,7 @@ const VoiceOrderButton = () => {
                         return;
                     }
                     if (hasLikelyOrderContent(transcript)) {
-                        try { rec.stop(); } catch (e) { /* ignore */ }
+                        try { rec.stop(); } catch { /* ignore */ }
                         await processTextCommand(transcript);
                         return;
                     }
@@ -458,7 +405,7 @@ const VoiceOrderButton = () => {
             }
         };
 
-        try { rec.start(); } catch (e) { /* ignore double-start */ }
+        try { rec.start(); } catch { /* ignore double-start */ }
     }, [processTextCommand, startOrderRecording]);
 
     // Resume wake-word listening after order is done
@@ -469,11 +416,13 @@ const VoiceOrderButton = () => {
     }, [enabled, status]); // eslint-disable-line
 
     // ── Toggle AiGün on / off ─────────────────────────────────────────────
-    const toggleAiGun = useCallback(async () => {
+    // Qeyd: komponent "avtomatik" rejimdədir (oyatma sözü ilə işləyir), düymə
+// göstərilmir. Bu funksiya düymə geri qaytarılarsa lazım olacaq.
+    const _toggleAiGun = useCallback(async () => {
         if (enabledRef.current && statusRef.current === 'listening') {
             if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
             if (recognitionRef.current) {
-                try { recognitionRef.current.abort(); } catch (e) { /* ignore */ }
+                try { recognitionRef.current.abort(); } catch { /* ignore */ }
                 recognitionRef.current = null;
             }
             setStatusBoth('awake');
@@ -490,7 +439,7 @@ const VoiceOrderButton = () => {
             if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
             stopOrderRecording();
             if (recognitionRef.current) {
-                try { recognitionRef.current.abort(); } catch (e) { /* ignore */ }
+                try { recognitionRef.current.abort(); } catch { /* ignore */ }
                 recognitionRef.current = null;
             }
             setStatusBoth('idle');
@@ -504,9 +453,6 @@ const VoiceOrderButton = () => {
             await startOrderRecording();
             toast.success(t("aigun_dinleyir_sifarisinizi_deyin"));
             return;
-            await speak('Salam! Mən AiGün. Hazıram, buyurun!', BASE_URL);
-            startRecognition();
-            toast.success(t("aigun_aktiv_aigun_deyerek_sifarisinizi_bildirin"));
         }
     }, [stopOrderRecording, startOrderRecording]);
 
@@ -522,7 +468,7 @@ const VoiceOrderButton = () => {
             if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
             if (autoStopRef.current) clearTimeout(autoStopRef.current);
             if (recognitionRef.current) {
-                try { recognitionRef.current.abort(); } catch (e) { /* ignore */ }
+                try { recognitionRef.current.abort(); } catch { /* ignore */ }
             }
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(t => t.stop());
@@ -542,7 +488,7 @@ const VoiceOrderButton = () => {
 
     const isActive = enabled && status !== 'idle';
     const isRecordingOrder = status === 'recording' || status === 'awake';
-    const isProc = status === 'processing';
+    const _isProc = status === 'processing';
 
     return (
         <div className="aigun-container aigun-auto">
@@ -552,38 +498,6 @@ const VoiceOrderButton = () => {
                     <span className="aigun-status-text">{labels[status]}</span>
                 </div>
             )}
-        </div>
-    );
-
-    return (
-        <div className="aigun-container">
-            {isActive && (
-                <div className={`aigun-status ${isRecordingOrder ? 'awake' : status === 'listening' ? 'listening' : ''}`}>
-                    <span className="aigun-status-dot"></span>
-                    <span className="aigun-status-text">{labels[status]}</span>
-                </div>
-            )}
-
-            <button
-                className={`voice-order-btn ${isRecordingOrder ? 'recording' : ''} ${isProc ? 'processing' : ''} ${enabled && !isRecordingOrder && !isProc ? 'aigun-on' : ''}`}
-                onClick={toggleAiGun}
-                disabled={isProc}
-                title={enabled ? '"AiGün" deyərək sifarişinizi bildirin' : 'AiGün-ü aktivləşdirmək üçün klikləyin'}
-            >
-                {isProc ? (
-                    <div className="spinner-border spinner-border-sm text-white" role="status"></div>
-                ) : isRecordingOrder ? (
-                    <span className="recording-waves">
-                        <span className="wave"></span>
-                        <span className="wave"></span>
-                        <span className="wave"></span>
-                    </span>
-                ) : enabled ? (
-                    <span className="aigun-logo">AI</span>
-                ) : (
-                    <i className="bi bi-mic"></i>
-                )}
-            </button>
         </div>
     );
 };

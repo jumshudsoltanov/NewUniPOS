@@ -222,7 +222,7 @@ const Pin = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
+  const { loginedWaiter: _loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
 
   const {
@@ -342,7 +342,7 @@ const Pin = () => {
         });
         try {
           localStorage.setItem(prevCountsKey, JSON.stringify(newCounts));
-        } catch {}
+        } catch { /* nəzərə alınmır */ }
       } else if (hasRefreshWindow) {
         window.electronAPI.sendRefreshSyncEvent({
           type: "done",
@@ -499,7 +499,7 @@ const Pin = () => {
           resolveWaiter({ profileId, pin: submittedPin }),
         ).unwrap();
         await completeWaiterLogin(waiterResult);
-      } catch (error) {
+      } catch {
         setIsError(true);
         setTimeout(() => {
           setIsError(false);
@@ -531,7 +531,7 @@ const Pin = () => {
           resolveWaiter({ profileId, cardId: normalizedCardId }),
         ).unwrap();
         await completeWaiterLogin(waiterResult);
-      } catch (error) {
+      } catch {
         setIsError(true);
         setTimeout(() => {
           setIsError(false);

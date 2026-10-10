@@ -41,7 +41,7 @@ const KitchenPrintBlockModal = React.memo(({ show, onClose }) => {
         } else {
           setBlockedPrinters([]);
         }
-      } catch (e) {
+      } catch {
         setBlockedPrinters([]);
       }
     }

@@ -1,8 +1,8 @@
 import React, { useMemo, useEffect } from 'react';
-import { Modal } from 'react-bootstrap';
-import { useSelector, useDispatch } from 'react-redux';
-import { useParams } from 'react-router-dom';
-import { fetchLogs } from '../../redux/Slices/OrdersSlice';
+import { Modal } from "react-bootstrap";
+import { useSelector, useDispatch } from "react-redux";
+import { useParams } from "react-router-dom";
+import { fetchLogs } from "../../redux/Slices/OrdersSlice";
 import { t } from "../../utils/translations";
 
 const OrderLogsModal = ({ show, onHide, order }) => {

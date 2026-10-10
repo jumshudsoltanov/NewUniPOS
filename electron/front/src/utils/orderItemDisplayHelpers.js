@@ -1,3 +1,4 @@
+import { findMenuItemById } from "./menuIndex";
 /** Sifariş sətirində saxlanılmış adlar köhnə ola bilər — kataloq (menyu) üstünlükdə */
 
 export function getCatalogModifierGroups(product) {
@@ -84,5 +85,5 @@ export function resolveModifiersForDisplay(savedModifiers, catalogProduct) {
 export function findCatalogProduct(menuList, productId) {
   if (!Array.isArray(menuList) || productId == null) return undefined;
   const pid = Number(productId);
-  return menuList.find((m) => Number(m.id) === pid);
+  return findMenuItemById(menuList, pid);
 }

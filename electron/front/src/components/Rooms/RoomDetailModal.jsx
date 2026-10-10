@@ -89,7 +89,7 @@ const RoomDetailModal = ({ show, onHide, room }) => {
       toast.success(t("deposit_updated"));
       setShowDepositKeypad(false);
       dispatch(fetchRooms(profileId));
-    } catch (err) {
+    } catch {
       toast.error(t("deposit_update_error"));
     } finally {
       setIsUpdatingDeposit(false);

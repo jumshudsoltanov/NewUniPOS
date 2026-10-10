@@ -3,7 +3,7 @@ import axios from "../../utils/apiConfig";
 
 export const getActiveOrders = createAsyncThunk(
   "pos/active-orders",
-  async ({ profileId, id, sale_type, waiter_id, hall_id, table_id, courier_id, silentRefresh }, thunkAPI) => {
+  async ({ profileId, id, sale_type, waiter_id, hall_id, table_id, courier_id, silentRefresh: _silentRefresh }, thunkAPI) => {
     try {
       let effectiveWaiterId = waiter_id;
       const loginedWaiter = thunkAPI.getState()?.WaitersSlice?.loginedWaiter;

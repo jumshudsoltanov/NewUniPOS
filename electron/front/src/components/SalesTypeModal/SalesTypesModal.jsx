@@ -8,20 +8,20 @@ import {
   saleNewOtherOrders,
 } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
-import { getTableGroups } from "../../redux/Slices/TablesSlice";
-import { getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
+import { getTableGroups as _getTableGroups } from "../../redux/Slices/TablesSlice";
+import { getActiveOrders as _getActiveOrders, addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { useNavigate } from "react-router-dom";
 
 import { getSalesTypes } from "../../redux/Slices/SalesTypesSlice";
 import { t } from "../../utils/translations";
 
-export const SalesTypesModal = ({ show, onClose, onSelect, target }) => {
+export const SalesTypesModal = ({ show, onClose, onSelect: _onSelect, target: _target }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { salesTypes: fetchedSalesTypes } = useSelector((state) => state.SalesTypesSlice);
-  const [saleType, setSaleType] = useState(null);
+  const [_saleType, setSaleType] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [creatingType, setCreatingType] = useState(null);
 

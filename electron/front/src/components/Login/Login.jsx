@@ -5,7 +5,7 @@ import RightBoxContainerImg2 from "../../assets/images/PinContainerImagesDefault
 import DefaultLogo from "../../assets/images/unipos_logo.png";
 import SupportModal from "../SupportModal/SupportModal";
 import SettingsMenu from "../SettingsMenu/SettingsMenu";
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback as _useCallback, useEffect, useRef as _useRef } from "react";
 
 
 import { useDispatch, useSelector } from "react-redux";
@@ -77,7 +77,7 @@ const ImageSection = React.memo(({ backgroundImg }) => {
 });
 
 const Login = () => {
-  const [isError, setIsError] = useState(false);
+  const [_isError, setIsError] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -250,7 +250,7 @@ const Login = () => {
         let prevSnapshot = null;
         try {
           prevSnapshot = JSON.parse(localStorage.getItem("authResult"));
-        } catch {}
+        } catch { /* nəzərə alınmır */ }
         const merged = mergeBlockedLoginPayload(err.data, prevSnapshot);
         localStorage.setItem("profile", JSON.stringify(profileData));
         localStorage.setItem("authResult", JSON.stringify(merged));

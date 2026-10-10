@@ -1,8 +1,8 @@
 import React from "react";
 import { t } from "../../utils/translations";
 import {
-    findCatalogProduct,
-    getDisplayProductName,
+  findCatalogProduct,
+  getDisplayProductName,
 } from "../../utils/orderItemDisplayHelpers";
 
 const KitchenReceipt = ({
@@ -10,7 +10,7 @@ const KitchenReceipt = ({
     table = "",
     waiter = "",
     hallName,
-    orderId,
+    _orderId,
     terminalInfo,
     typeName,
     checkData,
@@ -45,7 +45,7 @@ const KitchenReceipt = ({
                     const parsed = JSON.parse(item.modifiers);
                     if (Array.isArray(parsed)) mods = parsed;
                 }
-            } catch (e) {
+            } catch {
                 mods = [];
             }
             // Sort modifiers by ID or name to ensure consistent key
@@ -87,7 +87,7 @@ const KitchenReceipt = ({
     let localSettings = {};
     try {
         localSettings = JSON.parse(localStorage.getItem("pos_receipt_settings"))?.kitchen || {};
-    } catch(e) {}
+    } catch { /* nəzərə alınmır */ }
     const isReceiptPreview =
         previewSettings != null && typeof previewSettings === "object";
     if (isReceiptPreview) localSettings = previewSettings;

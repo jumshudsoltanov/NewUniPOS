@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { Modal } from 'react-bootstrap';
-import { useDispatch, useSelector } from 'react-redux';
-import { startTimer, stopTimer, resetTimer } from '../../redux/Slices/OrdersSlice';
-import { toast } from 'sonner';
-import { getEffectiveHourlyPrice, getProductHourlySum } from '../../utils/orderHourlyPrice';
+import { Modal } from "react-bootstrap";
+import { useDispatch, useSelector } from "react-redux";
+import { startTimer, stopTimer, resetTimer } from "../../redux/Slices/OrdersSlice";
+import { toast } from "sonner";
+import { getEffectiveHourlyPrice, getProductHourlySum } from "../../utils/orderHourlyPrice";
 import { t } from "../../utils/translations";
 import { formatPrice } from "../../utils/formatPrice";
 

@@ -25,6 +25,27 @@ import { t } from "../../utils/translations";
 import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 import "./Menu.css";
 
+/**
+ * PERFORMANS: axtarış üçün adların normallaşdırılması.
+ * Komponentdən KƏNARDA saxlanılır — heç bir props/state-dən asılı deyil, ona
+ * görə hər render-də yenidən yaradılmasına ehtiyac yoxdur.
+ *
+ * Əvvəl hər hərf yazılanda hər məhsulun adı 7 ardıcıl regex ilə yenidən emal
+ * olunurdu: 2000 məhsulda bu, hər klaviatura vuruşunda 14 000 regex əməliyyatı
+ * deməkdir və yazmaq gözə görünən dərəcədə ləngiyirdi.
+ */
+const normalizeForSearch = (sv) =>
+  String(sv || "")
+    .toLocaleLowerCase("az")
+    .replace(/i/g, "ı")
+    .replace(/e/g, "ə")
+    .replace(/o/g, "ö")
+    .replace(/u/g, "ü")
+    .replace(/g/g, "ğ")
+    .replace(/c/g, "ç")
+    .replace(/s/g, "ş");
+
+
 const Menu = ({
   order,
   searchText = "",
@@ -127,7 +148,7 @@ const Menu = ({
   const [portionProduct, setPortionProduct] = useState(null);
   const longPressTimer = useRef(null);
   const longPressTriggered = useRef(false);
-  const lastProductClickTime = useRef(0); // ikili məhsul əlavəsinin qarşısını alır
+  const _lastProductClickTime = useRef(0); // ikili məhsul əlavəsinin qarşısını alır
 
   // Fetch Data - Only if not already present (çek ekranında yeniləmə Check.jsx-də id dəyişəndə edilir)
   useEffect(() => {
@@ -151,21 +172,27 @@ const Menu = ({
   ]);
 
   // Determine if we have General Categories
-  const hasGeneralCategories =
+  const _hasGeneralCategories =
     Array.isArray(menuDataWithGeneralCategories?.data) &&
     menuDataWithGeneralCategories.data.length > 0;
 
   // Flatten all products for Global Search
+  // PERFORMANS: əvvəl hər kateqoriyada `products = [...products, ...cat.products]`
+  // yazılırdı — bu, hər dəfə BÜTÜN massivi yenidən kopyalayır (O(n²)).
+  // 2000 məhsul və 50 kateqoriyada bu, on minlərlə lüzumsuz kopyalama deməkdir.
   const allProducts = useMemo(() => {
-    let products = [];
+    const products = [];
     const categories = menuDataWithCategories?.data || [];
-    categories.forEach((cat) => {
-      if (cat.products) {
-        products = [...products, ...cat.products];
-      }
-    });
+    for (const cat of categories) {
+      if (cat.products) products.push(...cat.products);
+    }
     return products;
   }, [menuDataWithCategories]);
+
+  const searchIndex = useMemo(
+    () => allProducts.map((p) => normalizeForSearch(p.name)),
+    [allProducts],
+  );
 
   useEffect(() => {
     if (allProducts.length > 0) {
@@ -175,19 +202,15 @@ const Menu = ({
 
   const filteredProducts = useMemo(() => {
     if (!searchText) return [];
-    const normalize = (s) =>
-      s
-        .toLocaleLowerCase("az")
-        .replace(/i/g, "ı") // i → ı  (qatıq → qatiq yazanda)
-        .replace(/e/g, "ə") // e → ə  (pətənə → petene yazanda)
-        .replace(/o/g, "ö") // o → ö  (göy → goy yazanda)
-        .replace(/u/g, "ü") // u → ü  (üzüm → uzum yazanda)
-        .replace(/g/g, "ğ") // g → ğ  (ağ → ag yazanda)
-        .replace(/c/g, "ç") // c → ç  (çay → cay yazanda)
-        .replace(/s/g, "ş"); // s → ş  (şəkər → seker yazanda)
-    const q = normalize(searchText);
-    return allProducts.filter((p) => normalize(p.name || "").includes(q));
-  }, [searchText, allProducts]);
+    // Yalnız axtarış mətni normallaşdırılır; məhsul adları artıq keşdədir
+    const q = normalizeForSearch(searchText);
+    if (!q) return [];
+    const out = [];
+    for (let i = 0; i < allProducts.length; i++) {
+      if (searchIndex[i].includes(q)) out.push(allProducts[i]);
+    }
+    return out;
+  }, [searchText, allProducts, searchIndex]);
 
   const handleItemClick = (item) => {
     if (searchText) return;
@@ -650,7 +673,7 @@ const Menu = ({
               if (String(item.product_type || '').toLowerCase() === 'timer') {
                 let intervals = item.timer_intervals;
                 while (typeof intervals === 'string') {
-                  try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
+                  try { intervals = JSON.parse(intervals); } catch { intervals = null; break; }
                 }
                 if (intervals && Array.isArray(intervals) && intervals.length > 0) {
                   const sorted = [...intervals].sort((a, b) => (Number(a.after) || 0) - (Number(b.after) || 0));
@@ -705,7 +728,7 @@ const Menu = ({
                     };
                     handleProductClick(itemWithEffectivePrice);
                   }}
-                  onMouseDown={(e) => {
+                  onMouseDown={(_e) => {
                     if (isDragMode) return;
                     handleLongPressStart(item);
                   }}
@@ -796,7 +819,7 @@ const Menu = ({
               if (String(item.product_type || '').toLowerCase() === 'timer') {
                 let intervals = item.timer_intervals;
                 while (typeof intervals === 'string') {
-                  try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
+                  try { intervals = JSON.parse(intervals); } catch { intervals = null; break; }
                 }
                 if (intervals && Array.isArray(intervals) && intervals.length > 0) {
                   const sorted = [...intervals].sort((a, b) => (Number(a.after) || 0) - (Number(b.after) || 0));
@@ -851,7 +874,7 @@ const Menu = ({
                       isDragMode ? (e) => handleDrop(e, index) : undefined
                     }
                     onDragEnd={isDragMode ? handleDragEnd : undefined}
-                    onTouchStart={(e) => {
+                    onTouchStart={(_e) => {
                       if (isDragMode) {
                         handleTouchStart(index);
                         return;
@@ -863,7 +886,7 @@ const Menu = ({
                         return;
                       }
                     }}
-                    onTouchEnd={(e) => {
+                    onTouchEnd={(_e) => {
                       if (isDragMode) {
                         handleTouchEnd();
                         return;

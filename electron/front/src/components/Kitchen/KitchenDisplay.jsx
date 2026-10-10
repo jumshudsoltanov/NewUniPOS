@@ -33,7 +33,7 @@ const KitchenDisplay = () => {
         effectiveAuthData?.data?.profile?.id ||
         storedProfileData?.id ||
         storedProfileData?.profile_id;
-    const terminalName =
+    const _terminalName =
         effectiveAuthData?.data?.terminal?.name ||
         storedProfileData?.terminal?.name ||
         "KDS";
@@ -64,7 +64,7 @@ const KitchenDisplay = () => {
             gain.connect(ctx.destination);
             osc.start();
             osc.stop(ctx.currentTime + 0.5);
-        } catch (e) { }
+        } catch { /* nəzərə alınmır */ }
     };
 
     const fetchOrders = useCallback(async () => {
@@ -115,7 +115,7 @@ const KitchenDisplay = () => {
                 fetchOrders();
                 if (nextStatus === 2) toast.success(t("mehsul_hazirdir"));
             }
-        } catch (error) {
+        } catch {
             toast.error(t("error_occurred"));
         }
     };
@@ -128,7 +128,7 @@ const KitchenDisplay = () => {
             }
             fetchOrders();
             toast.success(t("butun_masa_tamamlandi"));
-        } catch (error) {
+        } catch {
             toast.error(t("error_occurred"));
         }
     };
@@ -322,14 +322,14 @@ const KitchenDisplay = () => {
                                     {order.orders_items?.every(i => i.kds_status === 2) ? (
                                         <button className="kds-complete-btn done">
                                             <i className="bi bi-check2-all"></i>
-                                            HAZIRDIR
+                                            {t("hazirdir_boyuk")}
                                         </button>
                                     ) : (
                                         <button
                                             className="kds-complete-btn"
                                             onClick={() => handleAllDone(order.orders_items)}
                                         >
-                                            HAMISINI QƏBUL ET
+                                            {t("hamisini_qebul_et")}
                                         </button>
                                     )}
                                     <span className={`kds-elapsed ${elapsed > 20 ? 'danger' : elapsed > 12 ? 'warning' : ''}`}>

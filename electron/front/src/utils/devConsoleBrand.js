@@ -64,7 +64,7 @@ export async function printDevConsoleBrand() {
     if (href && !href.startsWith("data:")) {
       bgUrl = await logoToDataUrl(href);
     }
-  } catch (_) {
+  } catch {
     /* data URL alınmasa köhnə üsulla bir cəhd */
     bgUrl = href;
   }
@@ -79,7 +79,7 @@ export async function printDevConsoleBrand() {
           "\") center / contain no-repeat; font-size: 1px; line-height: 56px; border-radius: 8px;",
       );
     }
-  } catch (_) {
+  } catch {
     /* konsol stil limiti */
   }
 

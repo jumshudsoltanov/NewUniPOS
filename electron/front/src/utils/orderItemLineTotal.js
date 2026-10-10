@@ -1,28 +1,59 @@
+import { findMenuItemById } from "./menuIndex";
+import { isNoServiceFeeItem } from "./serviceFeeRules";
 /**
  * CheckBottom.jsx ilə eyni: kombo/modifikator qiymətləri sətir cəminə daxil edilir.
  * Masa kartı və çek modalları bu util ilə çek içi cəmlə uyğunlaşır.
  */
 
 let globalMenuDataLineTotal = [];
+/** Digər modullar eyni menyu kataloqundan istifadə etsin deyə */
+export const getLineTotalMenuData = () => globalMenuDataLineTotal;
+
 export const setMenuDataForLineTotals = (data) => {
     if (data && Array.isArray(data)) globalMenuDataLineTotal = data;
 };
 
-export function getModifiersTotalPerUnit(item) {
-  let modifiersTotal = 0;
-  try {
-    let mods = item?.modifiers;
-    if (typeof mods === "string") mods = JSON.parse(mods);
-    if (Array.isArray(mods)) {
-      modifiersTotal = mods.reduce(
-        (sum, mod) => sum + Number(mod.price || 0) * Number(mod.count || 1),
-        0,
-      );
-    }
-  } catch {
-    /* ignore */
+/**
+ * PERFORMANS: modifikator məbləği mətn açarına görə keşlənir.
+ *
+ * `item.modifiers` bazadan JSON MƏTNİ kimi gəlir və bu funksiya çek ekranının
+ * hər sətri, masa lövhəsinin hər kartı üçün HƏR RENDER-də çağırılırdı — yəni
+ * eyni mətn saniyədə dəfələrlə yenidən parse olunurdu.
+ *
+ * Keşdə massiv yox, HESABLANMIŞ ƏDƏD saxlanılır: beləliklə paylaşılan massivin
+ * təsadüfən dəyişdirilməsi riski ümumiyyətlə yoxdur.
+ */
+const modifiersTotalCache = new Map();
+const MODS_CACHE_LIMIT = 2000;
+
+function sumModifiers(mods) {
+  if (!Array.isArray(mods)) return 0;
+  let s = 0;
+  for (let i = 0; i < mods.length; i++) {
+    const m = mods[i];
+    s += Number(m?.price || 0) * Number(m?.count || 1);
   }
-  return modifiersTotal;
+  return s;
+}
+
+export function getModifiersTotalPerUnit(item) {
+  const mods = item?.modifiers;
+  if (!mods) return 0;
+
+  if (typeof mods !== "string") return sumModifiers(mods);
+
+  const cached = modifiersTotalCache.get(mods);
+  if (cached !== undefined) return cached;
+
+  let total = 0;
+  try {
+    total = sumModifiers(JSON.parse(mods));
+  } catch {
+    total = 0;
+  }
+  if (modifiersTotalCache.size >= MODS_CACHE_LIMIT) modifiersTotalCache.clear();
+  modifiersTotalCache.set(mods, total);
+  return total;
 }
 
 /**
@@ -41,7 +72,7 @@ export function getTimerElapsedSeconds(item, order) {
           try {
               const parsed = JSON.parse(trimmed);
               if (Array.isArray(parsed)) return parsed.length > 0;
-          } catch(e) {}
+          } catch { /* nəzərə alınmır */ }
       }
       return false;
   };
@@ -49,7 +80,7 @@ export function getTimerElapsedSeconds(item, order) {
   let hasHourly = Number(item.hourly_price || item.product?.hourly_price || 0) > 0;
 
   if ((!isTimerItem || !hasInt) && globalMenuDataLineTotal.length > 0) {
-      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+      const catItem = findMenuItemById(globalMenuDataLineTotal, item.product_id || item.id);
       if (catItem) {
           if (!isTimerItem) isTimerItem = String(catItem.product_type || '').toLowerCase() === 'timer';
           // `!!` yoxlaması boş `"[]"` mətnini də doğru sayırdı — yuxarıdakı
@@ -169,7 +200,7 @@ export function computeTimerItemTotal(item, order) {
   let intervals = item.timer_intervals || item.product?.timer_intervals;
   
   if (!intervals && globalMenuDataLineTotal.length > 0) {
-      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+      const catItem = findMenuItemById(globalMenuDataLineTotal, item.product_id || item.id);
       if (catItem) {
           intervals = catItem.timer_intervals;
       }
@@ -178,7 +209,7 @@ export function computeTimerItemTotal(item, order) {
   while (typeof intervals === 'string') {
     try {
       intervals = JSON.parse(intervals);
-    } catch (e) {
+    } catch {
       intervals = null;
       break;
     }
@@ -192,7 +223,7 @@ export function computeTimerItemTotal(item, order) {
     // interval yoxdursa saatlıq qiymətlə hesabla
     let hp = Number(item.product?.hourly_price || item.hourly_price || 0);
     if (hp === 0 && globalMenuDataLineTotal.length > 0) {
-      const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+      const catItem = findMenuItemById(globalMenuDataLineTotal, item.product_id || item.id);
       if (catItem) {
         hp = Number(catItem.hourly_price || 0);
       }
@@ -205,7 +236,7 @@ export function computeTimerItemTotal(item, order) {
   // hourly_price - intervalın özündəki 'price' orijinal məhsul qiymətidir, ödəniş deyil!
   let intervalHourlyPrice = Number(item.product?.hourly_price || item.hourly_price || 0);
   if (intervalHourlyPrice === 0 && globalMenuDataLineTotal.length > 0) {
-    const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
+    const catItem = findMenuItemById(globalMenuDataLineTotal, item.product_id || item.id);
     if (catItem) {
       intervalHourlyPrice = Number(catItem.hourly_price || 0);
     }
@@ -245,7 +276,7 @@ export const checkIntervals = (val) => {
         if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
         try {
             parsed = JSON.parse(trimmed);
-        } catch(e) {
+        } catch {
             return false;
         }
     }
@@ -265,7 +296,7 @@ export function isTimerItem(item, menuData = []) {
     let hasIntervals = checkIntervals(item.timer_intervals) || checkIntervals(item.product?.timer_intervals);
     
     if (!hasIntervals && menuData.length > 0) {
-        const catItem = menuData.find(m => Number(m.id) === Number(item.product_id || item.id));
+        const catItem = findMenuItemById(menuData, item.product_id || item.id);
         if (catItem) {
             hasIntervals = !!catItem.timer_intervals;
             if (Number(catItem.hourly_price || 0) > 0) {
@@ -277,7 +308,7 @@ export function isTimerItem(item, menuData = []) {
     let isTimer = String(item.product_type || '').toLowerCase() === 'timer' || String(item.product?.product_type || '').toLowerCase() === 'timer' || hasIntervals || isHourly;
     
     if (!isTimer && menuData.length > 0) {
-        const catItem = menuData.find(m => Number(m.id) === Number(item.product_id || item.id));
+        const catItem = findMenuItemById(menuData, item.product_id || item.id);
         if (catItem) {
             isTimer = String(catItem.product_type || '').toLowerCase() === 'timer' || !!catItem.timer_intervals || Number(catItem.hourly_price || 0) > 0;
         }
@@ -414,7 +445,8 @@ export function computeFiscalCheckTotalsFromOrder(order) {
     }
 
     total += itemTotal;
-    const isNoService = item.no_service_fee === 1 || item.product?.no_service_fee === 1;
+    // Ortaq qayda (bax: serviceFeeRules.js) — menyu kataloqu da yoxlanılır
+    const isNoService = isNoServiceFeeItem(item, globalMenuDataLineTotal);
     if (!isNoService && (!areOrdersFree || isTimer)) {
       totalForService += itemTotal;
     }

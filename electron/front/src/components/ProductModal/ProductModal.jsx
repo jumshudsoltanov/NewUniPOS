@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Form, Row, Col } from 'react-bootstrap';
-import { useDispatch, useSelector } from 'react-redux';
-import { addProduct, updateProduct } from '../../redux/Slices/ProductSlice';
-import { toast } from 'sonner';
+import { Modal, Form, Row, Col } from "react-bootstrap";
+import { useDispatch, useSelector } from "react-redux";
+import { addProduct, updateProduct } from "../../redux/Slices/ProductSlice";
+import { toast } from "sonner";
 import './ProductModal.css';
 
-import { addNotification } from '../../utils/notificationService';
-import { compressImageFile } from '../../utils/imageCompress';
+import { addNotification } from "../../utils/notificationService";
+import { compressImageFile } from "../../utils/imageCompress";
 import VirtualKeyboard from "../VirtualKeyboard/VirtualKeyboard";
 import { t } from "../../utils/translations";
 
@@ -98,7 +98,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
             const compressed = await compressImageFile(file);
             setPreview(compressed);
             setFormData(prev => ({ ...prev, img: compressed }));
-        } catch (err) {
+        } catch {
             toast.error(t("sekil_yuklenmedi") || "Şəkil yüklənmədi");
         }
     };
@@ -138,7 +138,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
             onHide();
         } catch (error) {
             console.error(error);
-            toast.error("Xəta baş verdi: " + (error.message || t("unknown_error")));
+            toast.error((t("xeta_bas_verdi") + " ") + (error.message || t("unknown_error")));
         } finally {
             setIsLoading(false);
         }
@@ -173,7 +173,7 @@ const ProductModal = ({ show, onHide, productToEdit = null }) => {
                     className={`tab-btn ${activeTab === 'main' ? 'active' : ''}`}
                     onClick={() => setActiveTab('main')}
                 >
-                    Əsas Məlumatlar
+                    {t("esas_melumatlar")}
                 </button>
                 <button 
                     type="button" 

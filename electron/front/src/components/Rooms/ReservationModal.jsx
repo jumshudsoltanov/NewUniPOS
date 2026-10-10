@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "sonner";
-import { createReservation, fetchRooms } from "../../redux/Slices/HotelSlice";
+import { createReservation, fetchRooms as _fetchRooms } from "../../redux/Slices/HotelSlice";
 import { createCustomerViaAdmin, fetchCustomersFromAdmin } from "../../redux/Slices/CustomersSlice";
 import { t } from "../../utils/translations";
 import { formatPrice } from "../../utils/formatPrice";

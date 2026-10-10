@@ -6,11 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getNextOrderId, saleNewOrders } from "../../redux/Slices/SaleSlice";
 import {
-  getTableGroups,
-  currentTableList,
   addOrderToTableOptimistic,
 } from "../../redux/Slices/TablesSlice";
-import { saveLog, deleteCheck, updateGuestCountOrder } from "../../redux/Slices/OrdersSlice";
+import { saveLog, deleteCheck as _deleteCheck, updateGuestCountOrder as _updateGuestCountOrder } from "../../redux/Slices/OrdersSlice";
 import { addOrderOptimistic, updateOrderOptimisticId } from "../../redux/Slices/BooksSlice";
 import { preloadCheck } from "../../utils/preloadCheck";
 import { t } from "../../utils/translations";
@@ -21,7 +19,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { currentHallId } = useSelector((state) => state.TablesSlice);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
-  const [serviceValue, setServiceValue] = useState(0);
+  const [_serviceValue, setServiceValue] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -67,7 +65,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
     });
   };
 
-  const handleClear = () => {
+  const _handleClear = () => {
     setGuestCount("0");
   };
 
@@ -172,7 +170,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
           localStorage.setItem("pending_order_uuids", JSON.stringify(pending));
           localStorage.setItem(`pending_payload_${generatedUuid}`, JSON.stringify(recoveryPayload));
         }
-      } catch (_) {}
+      } catch { /* nəzərə alınmır */ }
 
       const retryCreateOrder = async (attempt = 0) => {
         try {
@@ -206,7 +204,7 @@ const CustomersModal = ({ show, onHide, table, selectedHall, autoCreate }) => {
               localStorage.setItem("pending_order_uuids", JSON.stringify(pending));
               localStorage.removeItem(`pending_payload_${generatedUuid}`);
             }
-          } catch (_) {}
+          } catch { /* nəzərə alınmır */ }
         } catch (err) {
           console.error(`API Create Error (attempt ${attempt + 1}):`, err);
           // 3 dəfəyə qədər retry (1s, 2s, 4s gözlə)

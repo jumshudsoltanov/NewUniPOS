@@ -23,7 +23,22 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      /**
+       * `_` prefiksi "bilərəkdən istifadə olunmur" deməkdir.
+       * Əvvəl bu qayda yalnız DƏYİŞƏNLƏRƏ tətbiq olunurdu; funksiya
+       * parametrləri, tutulan xətalar və massiv destrukturlaşdırması əhatə
+       * olunmurdu, ona görə `(e) => {}` kimi məcburi, lakin istifadə edilməyən
+       * parametrlər xəta kimi görünürdü. İndi konvensiya hər yerdə eynidir.
+       */
+      'no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^[A-Z_]',
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
     },
   },
 ])
