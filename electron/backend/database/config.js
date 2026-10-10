@@ -2,14 +2,30 @@ const { Sequelize } = require("sequelize");
 
 let db = {};
 
+/**
+ * TƏHLÜKƏSİZLİK QEYDİ
+ * Baza adı/istifadəçi/parol burada açıq yazılıb və git tarixçəsinə düşüb.
+ * Davranışı dəyişməmək üçün mövcud dəyərlər DEFOLT olaraq saxlanılır, lakin
+ * artıq mühit dəyişənləri ilə əvəz oluna bilir. Tövsiyə: istehsalatda
+ * UNIPOS_DB_PASS (və lazımsa digərlərini) mühit dəyişəni kimi verin və
+ * aşağıdakı defolt paroldan imtina edin.
+ */
+const DB_NAME = process.env.UNIPOS_DB_NAME || "unipos-new";
+const DB_USER = process.env.UNIPOS_DB_USER || "root";
+const DB_PASS =
+  process.env.UNIPOS_DB_PASS ||
+  "$2a$12$9IuwxtJ27i1RGqV/3m/OB.Lr2tilbrHvVPHUv06MmTMwDSwHTExW.";
+const DB_HOST = process.env.UNIPOS_DB_HOST || "localhost";
+const DB_PORT = Number(process.env.UNIPOS_DB_PORT) || 3306;
+
 const sequelize = new Sequelize(
-  "unipos-new",
-  "root",
-  "$2a$12$9IuwxtJ27i1RGqV/3m/OB.Lr2tilbrHvVPHUv06MmTMwDSwHTExW.",
+  DB_NAME,
+  DB_USER,
+  DB_PASS,
   {
-    host: "localhost",
+    host: DB_HOST,
     dialect: "mariadb",
-    port: 3306,
+    port: DB_PORT,
     pool: {
       max: 20,
       min: 5,

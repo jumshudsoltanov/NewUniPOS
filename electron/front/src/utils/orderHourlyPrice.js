@@ -1,4 +1,5 @@
 import { getTimerElapsedSeconds } from "./orderItemLineTotal";
+import { resolveItemIntervals } from "./menuIndex";
 
 /**
  * Masa timeri: yalniz table.hourly_price
@@ -25,20 +26,9 @@ export function getEffectiveHourlyPrice(order, menuData = null) {
 
     (order?.orders_items || []).forEach((it) => {
         const pType = String(it.product_type || it?.product?.product_type || '').toLowerCase();
-        let intervals = it.timer_intervals || it?.product?.timer_intervals;
-        
-        if (!intervals && dataToUse.length > 0) {
-            const catItem = dataToUse.find(m => Number(m.id) === Number(it.product_id || it.id));
-            if (catItem) {
-                intervals = catItem.timer_intervals;
-            }
-        }
-
-        while (typeof intervals === 'string') {
-            try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
-        }
-        
-        const hasIntervals = !!(intervals && Array.isArray(intervals) && intervals.length > 0);
+        // O(1) menyu axtarışı + keşlənmiş JSON parse (əvvəl hər tick-də tam menyu skan olunurdu)
+        const intervals = resolveItemIntervals(it, dataToUse);
+        const hasIntervals = intervals !== null;
         
         if (pType === 'timer' || hasIntervals) {
             const hp = Number(it.product?.hourly_price || it.hourly_price || 0);
@@ -57,20 +47,9 @@ export function getProductHourlySum(order, menuData = null) {
 
     (order?.orders_items || []).forEach((it) => {
         const pType = String(it.product_type || it?.product?.product_type || '').toLowerCase();
-        let intervals = it.timer_intervals || it?.product?.timer_intervals;
-        
-        if (!intervals && dataToUse.length > 0) {
-            const catItem = dataToUse.find(m => Number(m.id) === Number(it.product_id || it.id));
-            if (catItem) {
-                intervals = catItem.timer_intervals;
-            }
-        }
-
-        while (typeof intervals === 'string') {
-            try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
-        }
-        
-        const hasIntervals = !!(intervals && Array.isArray(intervals) && intervals.length > 0);
+        // O(1) menyu axtarışı + keşlənmiş JSON parse (əvvəl hər tick-də tam menyu skan olunurdu)
+        const intervals = resolveItemIntervals(it, dataToUse);
+        const hasIntervals = intervals !== null;
         
         if (pType === 'timer' || hasIntervals) {
             const hp = Number(it.product?.hourly_price || it.hourly_price || 0);
@@ -96,20 +75,9 @@ export function getLiveTimerCharge(order, totalSeconds, effH, menuData = null) {
 
     (order?.orders_items || []).forEach((it) => {
         const pType = String(it.product_type || it?.product?.product_type || '').toLowerCase();
-        let intervals = it.timer_intervals || it?.product?.timer_intervals;
-        
-        if (!intervals && dataToUse.length > 0) {
-            const catItem = dataToUse.find(m => Number(m.id) === Number(it.product_id || it.id));
-            if (catItem) {
-                intervals = catItem.timer_intervals;
-            }
-        }
-
-        while (typeof intervals === 'string') {
-            try { intervals = JSON.parse(intervals); } catch (e) { intervals = null; break; }
-        }
-        
-        const hasIntervals = !!(intervals && Array.isArray(intervals) && intervals.length > 0);
+        // O(1) menyu axtarışı + keşlənmiş JSON parse (əvvəl hər tick-də tam menyu skan olunurdu)
+        const intervals = resolveItemIntervals(it, dataToUse);
+        const hasIntervals = intervals !== null;
         
         if (pType === 'timer' || hasIntervals) {
             hasProductTimer = true;

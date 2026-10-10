@@ -1,4 +1,16 @@
 const { contextBridge, ipcRenderer } = require("electron");
+
+/**
+ * GPU vəziyyəti main.js-dən `additionalArguments` ilə gəlir, yəni IPC
+ * gözləmədən SİNXRON oxunur. Frontend "performans rejimi"ni ilk render-dən
+ * əvvəl qərarlaşdırmalıdır, ona görə async IPC burada yaramır.
+ */
+const gpuArg = process.argv.find((a) => a.startsWith("--unipos-gpu="));
+const gpuEnabled = gpuArg ? gpuArg.split("=")[1] === "on" : false;
+contextBridge.exposeInMainWorld("uniposRuntime", {
+    gpuEnabled,
+});
+
 contextBridge.exposeInMainWorld("electronAPI", {
     toggleFullscreen: () => ipcRenderer.invoke("toggle-fullscreen"),
     getFullscreenState: () => ipcRenderer.invoke("get-fullscreen-state"),

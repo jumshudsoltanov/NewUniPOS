@@ -4,7 +4,7 @@ import "./App.css";
 import Pin from "./components/Pin/Pin";
 import Header from "./components/Header/Header";
 import CustomerModal from "./components/Customers-Modal/CustomersModal";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, useStore } from "react-redux";
 import { useEffect, useRef, useState } from "react";
 import { authPos, setLoginData } from "./redux/Slices/LoginSlice";
 import { savePrintersToStorage, resolveAndPrintKitchenReceiptLocally } from "./utils/printerHelpers.jsx";
@@ -50,9 +50,11 @@ import { mergeBlockedLoginPayload } from "./utils/authResultMerge";
 import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
 import { usePosIdleToPin } from "./hooks/usePosIdleToPin";
+import { hasAnyLiveTimer } from "./utils/liveOrderTimerData";
 
 function AppContent() {
   const dispatch = useDispatch();
+  const store = useStore();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -245,7 +247,14 @@ function AppContent() {
     const connInt = setInterval(handleConnectivity, 10000);
     const syncInt = setInterval(fetchSyncCount, 8000);
     const socketInt = setInterval(checkSocket, 5000);
+    // PERFORMANS: əvvəl bu iki action şərtsiz olaraq hər saniyə dispatch olunurdu.
+    // Redux-da hər dispatch mount olunmuş BÜTÜN komponentlərin bütün selektorlarını
+    // yenidən işlədir, yəni saatlıq hesablaşma işlənməyən obyektdə belə POS boş
+    // yerə saniyədə iki tam yenidən qiymətləndirmə dövrü keçirirdi.
+    // İndi yalnız real işləyən taymer olduqda dispatch edilir; yoxdursa yoxlama
+    // keşlənmiş olduğu üçün praktiki olaraq sıfır xərclidir.
     const timerInt = setInterval(() => {
+      if (!hasAnyLiveTimer(store.getState())) return;
       dispatch(tickBooks());
       dispatch(tickTables());
     }, 1000);
@@ -258,7 +267,7 @@ function AppContent() {
       clearInterval(socketInt);
       clearInterval(timerInt);
     };
-  }, [dispatch]);
+  }, [dispatch, store]);
 
   // Mərkəzi printer Master-dadır: Master print_delegated dinləyib özündə çap edir (Slave göndərir)
   const isMasterTerminal = authResultRedux?.data?.terminal?.is_master === 1 || authResultRedux?.data?.profile?.is_master === 1;

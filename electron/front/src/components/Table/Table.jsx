@@ -7,7 +7,7 @@ import { computeOrderCardMeta } from "../../utils/orderDisplayTotal";
 import { normalizeTableShape } from "../../utils/tableShape";
 import { t } from "../../utils/translations";
 import { formatPrice } from "../../utils/formatPrice";
-import { selectLiveTimerData } from "../../utils/liveOrderTimerData";
+import { selectLiveTimerData, selectBookOrder } from "../../utils/liveOrderTimerData";
 
 const LiveTableTimerBadge = ({ initialClock, isTimerRunning }) => {
   const [localSeconds, setLocalSeconds] = React.useState(0);
@@ -39,14 +39,16 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
   const { name, orders } = table || {};
   const shape_type = normalizeTableShape(table?.shape_type);
 
-  const { books } = useSelector((state) => state.BooksSlice || {});
-
-  const liveOrder = React.useMemo(() => {
-    const o = orders?.[0];
-    if (!o) return null;
-    const list = Array.isArray(books) ? books : books?.data;
-    return list?.find(b => b.id === o.id || String(b.uuid) === String(o.uuid));
-  }, [books, orders]);
+  // PERFORMANS: bütün BooksSlice-a abunə olmaq əvəzinə yalnız bu masanın
+  // sifarişini indeksdən O(1) götürürük — başqa çeklər dəyişəndə bu masa
+  // yenidən render olunmur
+  const firstOrderUuid = orders?.[0]?.uuid;
+  const firstOrderId = orders?.[0]?.id;
+  const liveOrder = useSelector((state) =>
+    firstOrderUuid == null && firstOrderId == null
+      ? null
+      : selectBookOrder(state, firstOrderUuid, firstOrderId)
+  );
 
   const orderUuid = orders?.[0]?.uuid;
   const liveTimerData = useSelector((state) => selectLiveTimerData(state, orderUuid));

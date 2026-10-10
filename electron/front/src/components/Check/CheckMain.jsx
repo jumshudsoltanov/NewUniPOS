@@ -33,6 +33,7 @@ import {
 } from "../../utils/orderItemDisplayHelpers";
 import { t } from "../../utils/translations";
 import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
+import { hasTimerIntervals } from "../../utils/menuIndex";
 
 const SmoothTimerClock = ({ initialSeconds, isActive }) => {
   const [seconds, setSeconds] = useState(initialSeconds);
@@ -132,10 +133,12 @@ const CheckMain = ({ orders, table }) => {
 
   const removeLocalSwipeItem = (item) => {
     const productId = getSwipeItemProductId(item);
-    if (item.uuid) {
-      dispatch(removeLocalProductByUuid({ 
-        uuid: item.uuid, 
-        productId 
+    if (item.uuid || (item.allUuids && item.allUuids.length > 0)) {
+      // Qrupun BÜTÜN uuid-ləri — bir sətirdə birləşən qeydlərin hamısı silinsin
+      dispatch(removeLocalProductByUuid({
+        uuid: item.uuid,
+        uuids: item.allUuids,
+        productId
       }));
     } else if (isTimerSwipeItem(item)) {
       dispatch(removeAllProductsById(productId));
@@ -502,7 +505,7 @@ const CheckMain = ({ orders, table }) => {
     return (orderForTimer.orders_items || []).some((it) => {
       const pHourly = Number(it.product?.hourly_price || 0);
       const pIntervals = it.product?.timer_intervals || [];
-      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      const intervalsValid = hasTimerIntervals(pIntervals);
       
       let menuHourly = 0;
       let menuIntervalsValid = false;
@@ -511,7 +514,7 @@ const CheckMain = ({ orders, table }) => {
         if (catItem) {
           menuHourly = Number(catItem.hourly_price || 0);
           const mInt = catItem.timer_intervals || [];
-          menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+          menuIntervalsValid = hasTimerIntervals(mInt);
         }
       }
       return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
@@ -523,7 +526,7 @@ const CheckMain = ({ orders, table }) => {
     return allItems.findIndex((item) => {
       const pHourly = Number(item.product?.hourly_price || 0);
       const pIntervals = item.product?.timer_intervals || [];
-      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      const intervalsValid = hasTimerIntervals(pIntervals);
       
       let menuHourly = 0;
       let menuIntervalsValid = false;
@@ -532,7 +535,7 @@ const CheckMain = ({ orders, table }) => {
         if (catItem) {
           menuHourly = Number(catItem.hourly_price || 0);
           const mInt = catItem.timer_intervals || [];
-          menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+          menuIntervalsValid = hasTimerIntervals(mInt);
         }
       }
       return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
@@ -1180,9 +1183,11 @@ const CheckMain = ({ orders, table }) => {
               const isOwnPrice = product.product?.own_set_price === 1 || product.own_set_price === 1;
               const isTimer = product.isTimerProduct;
 
-              if (product.uuid) {
-                dispatch(removeLocalProductByUuid({ 
-                  uuid: product.uuid, 
+              if (product.uuid || (product.allUuids && product.allUuids.length > 0)) {
+                // Qrupun BÜTÜN uuid-ləri
+                dispatch(removeLocalProductByUuid({
+                  uuid: product.uuid,
+                  uuids: product.allUuids,
                   productId: pId
                 }));
               } else if (isTimer) {

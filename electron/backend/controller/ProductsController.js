@@ -1,5 +1,6 @@
 const ProductsModel = require("../model/ProductsModel");
 const axios = require("axios");
+const hostBridge = require("../hostBridge");
 
 const API_URL = "https://api.unipos.tech/api/products";
 const API_URL_FALLBACK = "http://46.224.8.157:35627/api/products";
@@ -79,7 +80,9 @@ exports.updateModifierGroups = async (req, res) => {
         console.log(`[MODIFIER] Product ${id} updated, rows: ${rowsUpdated}, value length: ${value.length}`);
         try {
             const parsed = JSON.parse(value);
-            global.mainWindow?.webContents?.send('modifier-groups-updated', { productId: Number(id), modifier_groups: parsed });
+            // Backend ayrı prosesdə işlədiyi üçün `global.mainWindow` burada yoxdur;
+            // hostBridge mesajı main.js-ə ötürür, o da pəncərəyə göndərir.
+            hostBridge.sendToRenderer('modifier-groups-updated', { productId: Number(id), modifier_groups: parsed });
         } catch (_) {}
         res.status(200).json({ message: "ok", rowsUpdated });
     } catch (error) {

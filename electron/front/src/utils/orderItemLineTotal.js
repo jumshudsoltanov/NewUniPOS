@@ -52,7 +52,9 @@ export function getTimerElapsedSeconds(item, order) {
       const catItem = globalMenuDataLineTotal.find(m => Number(m.id) === Number(item.product_id || item.id));
       if (catItem) {
           if (!isTimerItem) isTimerItem = String(catItem.product_type || '').toLowerCase() === 'timer';
-          if (!hasInt) hasInt = !!catItem.timer_intervals;
+          // `!!` yoxlaması boş `"[]"` mətnini də doğru sayırdı — yuxarıdakı
+          // düzgün parse edən `checkIntervals` işlədilir
+          if (!hasInt) hasInt = checkIntervals(catItem.timer_intervals);
           if (!hasHourly) hasHourly = Number(catItem.hourly_price || 0) > 0;
       }
   }

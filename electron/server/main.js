@@ -31,20 +31,82 @@ log.info("UniPOS Desktop Application is starting...");
  * maşınlarda bəs edir; bəzi hallarda ortam dəyişəni `UNIPOS_NO_SANDBOX=1` və ya işəsalma
  * arqumenti `--unipos-no-sandbox` (tam `no-sandbox` — yalnız zərurətdə).
  */
-app.disableHardwareAcceleration();
+/**
+ * PERFORMANS: main prosesdə səs-küylü `console.*` çağırışları istehsalatda
+ * boş funksiyaya çevrilir. `console.error` qalır — çökmə səbəbini tapmaq üçün.
+ * UNIPOS_DEBUG=1 ilə hamısı geri qaytarıla bilər.
+ */
+require("../shared/consoleControl").applyConsolePolicy({
+  isProduction: app.isPackaged,
+});
+
+const backendBridge = require("./backendBridge");
+
+/**
+ * Backend artıq ayrı prosesdə işlədiyi üçün main proses onun modellərini
+ * birbaşa `require` edə bilməz (edərsə ikinci DB bağlantısı açılır və main
+ * proses yenidən bloklanır). Bu köməkçi backend-dən RPC ilə istəyir;
+ * in-process fallback rejimində isə köhnə birbaşa yolu işlədir.
+ */
+async function getLatestProfile() {
+  return await backendBridge.call("get-latest-profile", [], () => {
+    const LoginModel = require(
+      path.join(__dirname, "..", "backend", "model", "LoginModel"),
+    );
+    return LoginModel.findOne({ order: [["id", "DESC"]] });
+  });
+}
+
+/**
+ * GPU sürətləndirməsi.
+ * Əvvəl şərtsiz söndürülürdü və bütün render işi CPU-ya düşürdü (skroll,
+ * animasiya, kölgə, blur — hamısı yavaş). İndi defolt olaraq AÇIQDIR, lakin
+ * özünü bərpa edən mexanizm var: iki uğursuz açılışdan sonra proqram özü
+ * köhnə stabil (GPU-suz) rejimə qayıdır. Bax: server/gpuMode.js
+ */
+const gpuMode = require("./gpuMode");
+const gpuDecision = gpuMode.decide({
+  userDataPath: app.getPath("userData"),
+  log,
+});
+if (!gpuDecision.enabled) {
+  app.disableHardwareAcceleration();
+}
+log.warn(
+  `[STARTUP] GPU sürətləndirməsi: ${gpuDecision.enabled ? "AÇIQ" : "SÖNÜLÜ"} (${gpuDecision.reason})`,
+);
+
+/** GPU prosesi çökərsə qeyd edirik — iki dəfədən sonra avtomatik söndürülür */
+app.on("child-process-gone", (_event, details) => {
+  if (details?.type === "GPU" && details?.reason !== "clean-exit") {
+    log.warn("[GPU] GPU prosesi dayandı:", details?.reason);
+    try {
+      gpuMode.markGpuCrash();
+    } catch { /* qeyd edilə bilmədi */ }
+  }
+});
 
 if (process.platform === "win32") {
   // Set app user model id so Windows taskbar groups & icons match the desktop shortcut
   app.setAppUserModelId("com.unipos.desktop");
   app.commandLine.appendSwitch("no-sandbox");
-  app.commandLine.appendSwitch("disable-gpu");
+  if (!gpuDecision.enabled) {
+    // Yalnız GPU söndürüləndə lazımdır
+    app.commandLine.appendSwitch("disable-gpu");
+    app.commandLine.appendSwitch("disable-software-rasterizer");
+  }
   app.commandLine.appendSwitch("disable-gpu-sandbox");
-  app.commandLine.appendSwitch("disable-software-rasterizer");
-  app.commandLine.appendSwitch("js-flags", "--max-old-space-size=1024");
+  // PERFORMANS: 1024 MB heap böyük menyu + çoxlu açıq çeklə tez dolurdu və tam GC
+  // pauzaları POS-u donmuş kimi göstərirdi. 64-bit-də 3 GB, 32-bit-də 1.5 GB.
+  // İstənilsə UNIPOS_HEAP_MB ilə dəyişdirilə bilər.
+  const _heapMb = Number(process.env.UNIPOS_HEAP_MB) > 0
+    ? Number(process.env.UNIPOS_HEAP_MB)
+    : (process.arch === "x64" || process.arch === "arm64" ? 3072 : 1536);
+  app.commandLine.appendSwitch("js-flags", `--max-old-space-size=${_heapMb}`);
   app.commandLine.appendSwitch("renderer-process-limit", "3");
   app.commandLine.appendSwitch("disable-features", "NetworkServiceSandbox,NetworkServiceInProcess");
   app.commandLine.appendSwitch("disable-http-cache");
-  log.warn("[STARTUP] Stabillik rejimi aktiv: no-sandbox, no-GPU, NetworkServiceSandbox disabled");
+  log.warn("[STARTUP] Stabillik rejimi aktiv: no-sandbox, NetworkServiceSandbox disabled");
 }
 
 Menu.setApplicationMenu(null);
@@ -435,6 +497,15 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: false, // file:// → http://localhost sorğularına icazə ver
+      /**
+       * Renderer-ə GPU vəziyyətini SİNXRON çatdırırıq (IPC gözləməsiz).
+       * Frontend buna əsasən "performans rejimi"ni qərarlaşdırır: GPU açıqdırsa
+       * blur/kölgə effektləri ucuzdur və saxlanılır, GPU sönülüdürsə onlar
+       * söndürülür. Bax: front/src/main.jsx və front/src/perf-mode.css
+       */
+      additionalArguments: [
+        `--unipos-gpu=${gpuDecision.enabled ? "on" : "off"}`,
+      ],
     },
   });
 
@@ -445,6 +516,45 @@ function createWindow() {
 
   attachDevToolsIcon(mainWindow);
   attachRendererRecovery(mainWindow, "cashier");
+
+  /**
+   * GPU sınağının uğurlu bitməsi.
+   * Pəncərə məzmunu həqiqətən yükləndikdə GPU rejimi "sağlam" sayılır və
+   * uğursuzluq sayğacı sıfırlanır. Yüklənmə baş tutmasa (ağ ekran, çökmə,
+   * donma) bayraq diskdə qalır və proqram növbəti açılışlarda özünü köhnə
+   * stabil GPU-suz rejimə qaytarır. Bax: server/gpuMode.js
+   */
+  /**
+   * DİQQƏT: əvvəl burada `did-finish-load` istifadə olunurdu və bu, SƏHV idi.
+   * Həmin hadisə səhifənin BÜTÜN alt-resursları (şəkillər, loqo) bitənə qədər
+   * gözləyir. POS oflayn olanda uzaq serverdəki loqo şəkli ilişir və hadisə
+   * ümumiyyətlə gəlmirdi — nəticədə sınaq bayrağı diskdə qalır və proqram
+   * səhvən "GPU xarabdır" qərarına gəlib özünü yavaş rejimə salırdı.
+   *
+   * `dom-ready` isə DOM qurulan kimi işə düşür: GPU yığını sağlam olmasa
+   * buraya ümumiyyətlə çatmazdıq. Əlavə olaraq vaxt əsaslı ehtiyat var —
+   * proqram 20 saniyə çökmədən işləyibsə, GPU sağlam sayılır.
+   */
+  const markGpuTrialHealthy = (() => {
+    let done = false;
+    return (source) => {
+      if (done) return;
+      done = true;
+      try {
+        gpuMode.markHealthy();
+        log.info(`[GPU] Sınaq uğurlu (${source}) — rejim sağlam qeyd olundu`);
+      } catch (e) {
+        log.warn("[GPU] markHealthy xətası:", e?.message);
+      }
+    };
+  })();
+
+  mainWindow.webContents.once("dom-ready", () => markGpuTrialHealthy("dom-ready"));
+  // Ehtiyat: dom-ready hər hansı səbəbdən gəlməsə də, sağ qalmış proses
+  // GPU-nun işlədiyini sübut edir
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed()) markGpuTrialHealthy("20s sağ qaldı");
+  }, 20000);
 
   if (isDev) {
     mainWindow.loadURL("http://localhost:5173/");
@@ -494,10 +604,7 @@ function createWindow() {
 
   async function checkKitchenDisplayAutoStart() {
     try {
-      const LoginModel = require(
-        path.join(__dirname, "..", "backend", "model", "LoginModel"),
-      );
-      const profile = await LoginModel.findOne({ order: [["id", "DESC"]] });
+      const profile = await getLatestProfile();
 
       if (
         profile &&
@@ -535,12 +642,7 @@ function createWindow() {
 
           // Primary: try local DB (works on master)
           try {
-            const LoginModel = require(
-              path.join(__dirname, "..", "backend", "model", "LoginModel"),
-            );
-            const profile = await LoginModel.findOne({
-              order: [["id", "DESC"]],
-            });
+            const profile = await getLatestProfile();
             if (profile) {
               isActive = profile.is_customer_display_active === 1;
               screenId = profile.customer_display_screen_id;
@@ -2540,10 +2642,12 @@ ipcMain.handle("get-disk-info", async () => {
 
 ipcMain.handle("get-sync-status", async () => {
   try {
-    const SyncService = require(
-      path.join(__dirname, "..", "backend", "services", "SyncService"),
-    );
-    return await SyncService.getSyncStatus();
+    return await backendBridge.call("get-sync-status", [], () => {
+      const SyncService = require(
+        path.join(__dirname, "..", "backend", "services", "SyncService"),
+      );
+      return SyncService.getSyncStatus();
+    });
   } catch (error) {
     console.error("IPC get-sync-status error:", error);
     return {
@@ -3073,17 +3177,66 @@ ipcMain.handle("scan-master", async () => {
 
 
 
-// Start backend server with error handling
+/**
+ * Backend-i AYRI prosesdə başladırıq.
+ *
+ * Əvvəl burada sadəcə `require(backendPath)` idi, yəni Express + MariaDB +
+ * Sequelize + socket.io + sinxron dövrü UI-ni idarə edən main thread-də
+ * işləyirdi və ağır sorğularda pəncərə donurdu. Renderer onsuz da
+ * localhost:55667-ə HTTP ilə müraciət edir, ona görə frontend-də heç nə
+ * dəyişmir — o trafik artıq main prosesdən keçmir.
+ *
+ * Ayrı proses alınmazsa körpü avtomatik köhnə in-process rejimə qayıdır
+ * (bax: server/backendBridge.js), yəni geriyə getmə riski yoxdur.
+ * Məcburi köhnə rejim üçün: UNIPOS_BACKEND_IN_PROCESS=1
+ */
 try {
   const appPath = app.getAppPath();
   const backendPath = isDev
     ? path.join(__dirname, "..", "backend", "app.js")
     : path.join(appPath, "electron", "backend", "app.js");
-  if (fs.existsSync(backendPath)) {
-    require(backendPath);
-  } else {
-    console.error("Backend file not found:", backendPath);
-  }
+
+  const result = backendBridge.start({
+    backendPath,
+    log,
+    forceInProcess: process.env.UNIPOS_BACKEND_IN_PROCESS === "1",
+    // Backend ayrı prosesdə Electron API-lərinə çata bilmir — lazım olan
+    // dəyərləri env ilə ötürürük (hostBridge onları oxuyur)
+    env: {
+      UNIPOS_USER_DATA: app.getPath("userData"),
+      UNIPOS_APP_VERSION: app.getVersion(),
+      UNIPOS_APP_PATH: appPath,
+      // Backend prosesi Electron API-sinə çatmır — paketlənmiş olub-olmadığını
+      // buradan bilir (konsol susdurma qərarı üçün)
+      UNIPOS_IS_PACKAGED: app.isPackaged ? "1" : "0",
+    },
+    // Backend-dən gələn hadisələri pəncərəyə ötürürük
+    onEvent: (channel, payload) => {
+      try {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(channel, payload);
+        }
+      } catch (e) {
+        log.warn("[BACKEND_EVENT] Ötürülə bilmədi:", channel, e?.message);
+      }
+    },
+  });
+  log.warn("[STARTUP] Backend rejimi:", result.mode);
+
+  /**
+   * `re-evaluate-role` IPC kanalını indi HƏR İKİ rejimdə main proses qeyd edir.
+   * Backend artıq `ipcMain`-ə birbaşa bağlanmır, ona görə ikiqat qeydiyyat
+   * (Electron-da xəta verən hal) mümkün deyil. Körpü çağırışı ayrı prosesdə
+   * IPC ilə, in-process rejimdə isə birbaşa funksiya çağırışı ilə həll edir.
+   */
+  ipcMain.handle("re-evaluate-role", async () => {
+    try {
+      return await backendBridge.call("re-evaluate-role", []);
+    } catch (e) {
+      log.error("[RE_EVAL_ROLE] Xəta:", e?.message);
+      return false;
+    }
+  });
 } catch (err) {
   log.error(
     "Failed to start backend:",
@@ -3293,7 +3446,31 @@ app.on("before-quit", () => {
   try {
     globalShortcut.unregister("CommandOrControl+Shift+N");
   } catch (e) {}
+  // KRİTİK: backend prosesi dayandırılmasa orfan olaraq 55667 portunu tutub
+  // qalır və proqram növbəti dəfə açılanda backend start götürə bilmir
+  try {
+    backendBridge.stop();
+  } catch (e) {
+    log.warn("[SHUTDOWN] Backend dayandırıla bilmədi:", e?.message);
+  }
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy();
   if (customerWindow && !customerWindow.isDestroyed()) customerWindow.destroy();
   if (kitchenWindow && !kitchenWindow.isDestroyed()) kitchenWindow.destroy();
+});
+
+/**
+ * Əlavə təhlükəsizlik: `before-quit` bəzi hallarda (məcburi bağlanma, çökmə)
+ * işləməyə bilər. `will-quit` və proses səviyyəsində siqnallarda da backend
+ * prosesini dayandırırıq ki, port heç vaxt orfan qalmasın.
+ */
+app.on("will-quit", () => {
+  try {
+    backendBridge.stop();
+  } catch { /* artıq dayanıb */ }
+});
+
+process.on("exit", () => {
+  try {
+    backendBridge.stop();
+  } catch { /* artıq dayanıb */ }
 });

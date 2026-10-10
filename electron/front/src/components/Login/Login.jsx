@@ -99,9 +99,6 @@ const Login = () => {
   })();
   const profileForBlock = authResultForBlock?.data?.profile;
   const isBlocked = profileForBlock && (isPosBlocked(profileForBlock?.is_pos_block) || (profileForBlock?.next_payment_date && isPaymentExpired(profileForBlock.next_payment_date)));
-  if (storageProfile && isBlocked) return <Navigate to="/blocked" replace />;
-  if (storageProfile) return <Navigate to="/pin" replace />;
-
   let fallbackProfileData = null;
   try {
     const authResultStr = localStorage.getItem("authResult");
@@ -131,6 +128,17 @@ const Login = () => {
       return () => window.visualViewport.removeEventListener('resize', handler);
     }
   }, []);
+
+  /**
+   * DİQQƏT: bu iki yönləndirmə əvvəl YUXARIDA, hook-lardan ƏVVƏL idi.
+   * React komponentdə hook sayı hər render-də eyni olmalıdır. Erkən `return`
+   * olduqda aşağıdakı `useSelector` və `useEffect` çağırılmırdı, yəni istifadəçi
+   * giriş edən anda (profil localStorage-a yazılan kimi) hook sayı dəyişir və
+   * React "Rendered fewer hooks than expected" xətası ilə çökürdü.
+   * İndi yönləndirmə bütün hook-lardan SONRA edilir — davranış eynidir, çökmə yoxdur.
+   */
+  if (storageProfile && isBlocked) return <Navigate to="/blocked" replace />;
+  if (storageProfile) return <Navigate to="/pin" replace />;
 
   const activeProfileData = loginedProfileData || fallbackProfileData;
   const terminalInfo = activeProfileData?.data?.terminal || {};

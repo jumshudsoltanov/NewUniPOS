@@ -1,6 +1,12 @@
 const axios = require('axios');
 const net = require('net');
 const { v4: uuidv4 } = require('uuid');
+let log;
+try {
+    log = require('electron-log');
+} catch (e) {
+    log = console;
+}
 
 const DEFAULT_TIMEOUT_MS = 180000; // 3 dəqiqə — vergi kassası çapı yavaş ola bilər, timeout verməsin
 
@@ -139,24 +145,24 @@ class SunmiService {
         const timeout = this.timeoutMs;
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
-                console.log(`[SUNMI REQUEST] ${body.operation} (attempt ${attempt}/${maxAttempts}):`, JSON.stringify(body.data || {}));
+                log.info(`[SUNMI REQUEST] ${body.operation} (attempt ${attempt}/${maxAttempts}):`, JSON.stringify(body.data || {}));
                 const response = await axios.post(this.baseUrl, body, {
                     headers: { 'Content-Type': 'application/json; charset=utf-8' },
                     timeout
                 });
                 const data = response.data;
                 if (String(data.code) === '0') {
-                    console.log(`[SUNMI RESPONSE] ${body.operation}:`, JSON.stringify(data));
+                    log.info(`[SUNMI RESPONSE] ${body.operation}:`, JSON.stringify(data));
                     return data;
                 }
                 const msg = data.message || '';
                 if (this._isHttpQueueBusyError(data.code, msg) && attempt < maxAttempts) {
                     const delayMs = Math.min(15000, 1800 + attempt * 600);
-                    console.warn(`[SUNMI] Cihaz növbəsi dolu (${data.code}: ${msg}). ${delayMs}ms sonra yenidən cəhd...`);
+                    log.warn(`[SUNMI] Cihaz növbəsi dolu (${data.code}: ${msg}). ${delayMs}ms sonra yenidən cəhd...`);
                     await new Promise((r) => setTimeout(r, delayMs));
                     continue;
                 }
-                console.log(`[SUNMI RESPONSE] ${body.operation}:`, JSON.stringify(data));
+                log.info(`[SUNMI RESPONSE] ${body.operation}:`, JSON.stringify(data));
                 throw new Error(`[SUNMI] API error ${data.code}: ${msg}`);
             } catch (error) {
                 const isTimeout = error.code === 'ECONNABORTED' || (error.message && error.message.includes('timeout'));
@@ -166,7 +172,7 @@ class SunmiService {
                         ? Math.min(10000, 1500 + attempt * 800)
                         : 2500;
                     const label = isTransientNet && !isTimeout ? `Şəbəkə (${error.code || 'retry'})` : 'Timeout';
-                    console.warn(`[SUNMI] ${label}, ${delayMs}ms sonra yenidən cəhd ${attempt}/${maxAttempts}...`);
+                    log.warn(`[SUNMI] ${label}, ${delayMs}ms sonra yenidən cəhd ${attempt}/${maxAttempts}...`);
                     await new Promise((r) => setTimeout(r, delayMs));
                     continue;
                 }
@@ -189,6 +195,61 @@ class SunmiService {
             body.data = data;
         }
         return body;
+    }
+
+    /**
+     * Kapital/Pasha Bank "Tap to Phone" terminal inteqrasiyası — kartı faktiki çəkən sorğular.
+     * Sənəddə bu bölmənin cavab nümunəsi göstərilməyib; "code":"0" = uğurlu konvensiyası
+     * sənədin digər bütün əməliyyatları ilə eynidir, ona görə həmin konvensiya istifadə olunur.
+     */
+    async _tapXPhoneRequest(operation, data, timeoutMs) {
+        const body = { data, operation, version: 1 };
+        log.info(`[SUNMI TAPXPHONE REQUEST] ${operation}:`, JSON.stringify(data));
+        const response = await axios.post(this.baseUrl, body, {
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            timeout: timeoutMs || this.timeoutMs,
+        });
+        const result = response.data;
+        log.info(`[SUNMI TAPXPHONE RESPONSE] ${operation}:`, JSON.stringify(result));
+        return result;
+    }
+
+    /**
+     * Kartı terminalda faktiki çəkir (müştəri kartı/telefonu terminala yaxınlaşdırana qədər gözləyir).
+     * Təhlükəsizlik: ikiqat çəkmə riskinə görə avtomatik təkrar GÖNDƏRİLMİR — uğursuz/timeout
+     * olarsa çağıran tərəf checkCardTerminalStatus ilə həqiqi nəticəni yoxlamalıdır.
+     * @param {{documentUUID: string, amount: number, operationType?: number, rrn?: string}} params
+     */
+    async chargeCardTerminal({ documentUUID, amount, operationType = 0, rrn }) {
+        const data = {
+            documentUUID: String(documentUUID),
+            operationType,
+            amount: this._round2(amount),
+        };
+        if (rrn) data.rrn = String(rrn);
+        // Terminal əməliyyatı müştərinin kartı/telefonu yaxınlaşdırmasını gözləyir — uzun timeout.
+        const result = await this._tapXPhoneRequest('transactionTapXPhone', data, Math.max(this.timeoutMs, 120000));
+        if (String(result.code) !== '0') {
+            const err = new Error(`[SUNMI] Kart terminalı əməliyyatı rədd edildi: ${result.message || 'naməlum xəta'} (kod: ${result.code})`);
+            err.sunmiTapXPhone = result;
+            throw err;
+        }
+        const rd = result.data || {};
+        return {
+            rrn: rd.rrn || rd.RRN || '',
+            approvalCode: rd.approval_code || rd.approvalCode || '',
+            raw: result,
+        };
+    }
+
+    /** documentUUID ilə göndərilmiş bir transactionTapXPhone əməliyyatının son statusunu yoxlayır (bərpa üçün). */
+    async checkCardTerminalStatus(documentUUID) {
+        return this._tapXPhoneRequest('transactionTapXphoneCheck', { documentUUID: String(documentUUID) });
+    }
+
+    /** Ödəniş terminalının əməliyyat gününü bağlayır. */
+    async closeCardTerminalDay() {
+        return this._tapXPhoneRequest('transactionTapXphoneCloseDay', {});
     }
 
     async login() {
@@ -562,6 +623,7 @@ class SunmiService {
             creditPayment: 0.0,
             depositPayment: 0.0,
             bonusPayment: 0.0,
+            isSendCardPayment: cardRounded > 0,
             items: saleItems,
             cashierName: (cashierName || 'Cashier').substring(0, 64),
             currency: 'AZN'
@@ -645,6 +707,9 @@ class SunmiService {
             creditPayment: 0.0,
             depositPayment: 0.0,
             bonusPayment: 0.0,
+            // Qaytarmada kartı terminal vasitəsilə geri qaytarmaq üçün orijinal RRN lazımdır
+            // (transactionTapXPhone operationType:2) — hazırda saxlanılmır, ona görə false.
+            isSendCardPayment: false,
             items: returnItems,
             isManual: isManual,
             moneyBackType: 0, // 0 - Sale, 6 - Advance, 7 - Credit Payment

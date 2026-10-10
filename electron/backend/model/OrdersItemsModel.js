@@ -109,6 +109,13 @@ const OrdersItemsModel = db.sequelize.define(
     timestamps: true,
     paranoid: true,
     underscored: true,
+    /**
+     * Performans indeksləri burada DEYİL — `backend/ensureIndexes.js`-dədir.
+     * Səbəb: modelin `indexes:` bölməsini yalnız `sequelize.sync({ alter })`
+     * tətbiq edir, o da proqramın versiyası dəyişməyincə işləmir, yəni
+     * indekslər praktikada heç vaxt yaranmırdı. İndi onlar hər açılışda
+     * ayrıca və idempotent şəkildə təmin edilir.
+     */
   },
 );
 

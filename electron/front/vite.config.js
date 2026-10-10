@@ -10,6 +10,24 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
   },
+  esbuild: {
+    /**
+     * PERFORMANS: bütün `console.*` və `debugger` ifadələri BURAXILIŞ paketindən
+     * tamamilə çıxarılır.
+     *
+     * Niyə mənbədən silmək əvəzinə belə:
+     *   • Layihədə 1100-dən çox console çağırışı var; onların onlarcası
+     *     mötərizəsiz `if`, `else` və ox funksiyalarının gövdəsindədir
+     *     (`.catch(err => console.error(...))`). Mexaniki silinmə kodu sındırardı.
+     *   • esbuild çağırışı ARQUMENTLƏRİ İLƏ BİRLİKDƏ atır, yəni şablon sətirləri
+     *     və `JSON.stringify(...)` kimi ağır ifadələr ümumiyyətlə hesablanmır.
+     *     Sətri sadəcə silməklə eyni nəticədir, amma risksizdir.
+     *   • `npm run dev`-də loglar olduğu kimi qalır, nasazlıq axtarışı pozulmur.
+     *
+     * Qeyd: `drop` yalnız build-ə təsir edir, dev serverə yox.
+     */
+    drop: ['console', 'debugger'],
+  },
   build: {
     sourcemap: true
   }

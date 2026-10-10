@@ -544,7 +544,9 @@ const ReportModal = ({ show, onClose }) => {
                         </tbody>
                     </Table>
                 );
-            case "tables":
+            case "tables": {
+                // `case` daxilində `const` blok olmadan elan olunurdu — digər
+                // case-lərdə TDZ xətası riski yaradır; blok içinə alındı
                 const tablesRows = Array.isArray(data) ? data : (data?.rows || []);
                 const tablesTotalTimer = data?.totalTimer ?? 0;
                 return (
@@ -577,6 +579,7 @@ const ReportModal = ({ show, onClose }) => {
                         )}
                     </>
                 );
+            }
             case "employee":
                 return (
                     <Table responsive className="custom-report-table">

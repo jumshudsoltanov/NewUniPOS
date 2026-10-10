@@ -518,8 +518,10 @@ const DevicesModal = ({ show, onHide }) => {
     const [skipGuestCount, setSkipGuestCount] = useState(() => {
         try { return localStorage.getItem("unipos_skip_guest_count") === "1"; } catch { return false; }
     });
+    // Defolt SÖNÜLÜ: yalnız istifadəçi açıq seçibsə ("true") aktiv olur.
+    // Əvvəl `!== "false"` idi, yəni heç vaxt toxunulmayıbsa zolaq özü açıq gəlirdi.
     const [showGuestCountBar, setShowGuestCountBar] = useState(() => {
-        try { return localStorage.getItem("pos_show_guest_count_bar") !== "false"; } catch { return true; }
+        try { return localStorage.getItem("pos_show_guest_count_bar") === "true"; } catch { return false; }
     });
     const [posAutoLockSeconds, setPosAutoLockSeconds] = useState(() => {
         try {

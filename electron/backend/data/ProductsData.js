@@ -5,6 +5,7 @@ const ProductsModel = require("../model/ProductsModel");
 const LoginModel = require("../model/LoginModel");
 const db = require("../database/config");
 const { Op } = require("sequelize");
+const { normalizeTimerIntervalsForStorage } = require("../utils/timerIntervals");
 
 // Şəkilli (img base64) sahələr olduğu üçün bütün sətirləri tək INSERT-də
 // göndərmək 'max_allowed_packet' limitini aşa bilir — kiçik qruplarla yazırıq
@@ -570,13 +571,19 @@ const getProducts = async (passedProfileId) => {
         }
 
         // timer_intervals JSON
+        //
+        // ƏVVƏLKİ QÜSUR: burada dəyər `JSON.stringify(...)` ilə mətnə çevrilib
+        // JSON tipli sütuna verilirdi. Sequelize JSON sütununu ÖZÜ kodladığı
+        // üçün nəticə ikiqat kodlanırdı: boş massiv `[]` bazada `"[]"` mətni
+        // kimi qalırdı. Sonra oxuyan tərəf `!!timer_intervals` yoxladığı üçün
+        // adi məhsullar da "taymerli" sayılır və taymer özü başlayırdı.
+        //
+        // İndi dəyər normal massivə açılır və Sequelize-ə massiv kimi verilir
+        // (boşdursa null). Bu, həm yeni zibilin qarşısını alır, həm də növbəti
+        // məhsul sinxronunda mövcud pozuq sətirləri avtomatik təmizləyir.
         for (const p of productsWithOrder) {
           if (p.timer_intervals === undefined) continue;
-          let timerVal = null;
-          const ti = p.timer_intervals;
-          if (ti !== null && ti !== "") {
-            timerVal = typeof ti === "string" ? ti : JSON.stringify(ti);
-          }
+          const timerVal = normalizeTimerIntervalsForStorage(p.timer_intervals);
           await ProductsModel.update(
             { timer_intervals: timerVal },
             { where: { id: p.id, profile_id } },

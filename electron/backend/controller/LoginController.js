@@ -41,8 +41,17 @@ let token =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9maWxlX2lkIjoxNCwidGVybWluYWxfaWQiOjYwMTUyNzM1LCJ0ZXJtaW5hbF9ncm91cF9pZCI6MjExLCJpc19tYXN0ZXIiOjEsInVzZXJuYW1lIjoidW5pcG9zIiwicmVzdGF1cmFudF9uYW1lIjoiVW5pUE9TIFRlY2hub2xvZ2llcyBSZXN0b3JhbiAiLCJpYXQiOjE3Njk0NDYwMDMsImV4cCI6MTgwMDk4MjAwM30.5xADfX7YasOcKKC9oP-w-949SAxbM_fUq_p13zSf4_8";
 
 const getLogin = async (req, res) => {
+  /**
+   * DİQQƏT: bu sətir əvvəl `try` blokunun İÇİNDƏ idi.
+   * `const` blok-skopludur, ona görə aşağıdakı `catch` blokunda `terminalId`
+   * görünmürdü və orada ReferenceError baş verirdi. Həmin xəta daxili
+   * `try/catch` tərəfindən udulurdu, nəticədə OFLAYN BLOK YOXLAMASI HEÇ VAXT
+   * İŞLƏMİRDİ: internet kəsiləndə abunəliyi bitmiş/bloklanmış müəssisə
+   * normal giriş edə bilirdi. Loglarda belə görünürdü:
+   *   [LOGIN] Offline block check error: terminalId is not defined
+   */
+  const { username, terminalId, password } = req.body || {};
   try {
-    const { username, terminalId, password } = req.body;
 
     let response;
     let attempts = 0;

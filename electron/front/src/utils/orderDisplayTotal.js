@@ -1,5 +1,6 @@
 import { getEffectiveHourlyPrice } from "./orderHourlyPrice";
 import { sumOrderItemsLinesTotal } from "./orderItemLineTotal";
+import { hasTimerIntervals } from "./menuIndex";
 
 /** Məhsul sətirləri (modifikatorlar daxil) + taymer məbləği (endirim/xidmətdən əvvəl). */
 export function getOrderItemsAndTimerSubtotal(order, tableHourlyFallback) {
@@ -24,9 +25,12 @@ export function getOrderItemsAndTimerSubtotal(order, tableHourlyFallback) {
 
   // Məhsul taymerləri (product_type==='timer') varsa, onların ödənişi artıq sumOrderItemsLinesTotal içindədir.
   // rate_per_minute isə masa saatlığıdır — yalnız product timer yoxdursa əlavə olunur.
+  // Diqqət: əvvəl burada `!!(...)` vardı. Boş `"[]"` mətni saxlayan adi məhsullar
+  // (Coca Cola və s.) "taymerli" sayılır, nəticədə SAATLIQ MASANIN vaxt haqqı
+  // (`rate_per_minute`) cəmə əlavə olunmurdu — yəni məbləğ əskik görünürdü.
   const hasProductTimer = (order.orders_items || []).some(it => {
     const pt = String(it.product_type || it.product?.product_type || '').toLowerCase();
-    return pt === 'timer' || !!(it.timer_intervals || it.product?.timer_intervals);
+    return pt === 'timer' || hasTimerIntervals(it.timer_intervals) || hasTimerIntervals(it.product?.timer_intervals);
   });
 
   let timerCharge = hasProductTimer ? 0 : Number(order.rate_per_minute || 0);

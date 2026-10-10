@@ -42,9 +42,13 @@ const CustomerReceipt = ({
             : `http://46.224.8.157:35627/${profileData.data.profile.logo}`;
     }
 
-    const qrCodeValue =
-        `https://menu.unipos.tech/?r=${terminalInfo?.username}` ||
-        "https://unipos.tech";
+    // Diqqət: əvvəl burada `` `...${username}` || "https://unipos.tech" `` yazılmışdı.
+    // Şablon sətri HƏMİŞƏ doğrudur, ona görə ehtiyat ünvan heç vaxt işləmirdi:
+    // username boş olanda müştəri çekinə `?r=undefined` olan YANLIŞ QR çap olunurdu.
+    const menuUsername = terminalInfo?.username;
+    const qrCodeValue = menuUsername
+        ? `https://menu.unipos.tech/?r=${encodeURIComponent(menuUsername)}`
+        : "https://unipos.tech";
 
     if (!checkData || !orderedItems)
         return <div style={{ padding: "16px", fontFamily: "sans-serif" }}>{t("loading")}</div>;

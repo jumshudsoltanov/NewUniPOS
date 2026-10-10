@@ -1,0 +1,57 @@
+/**
+ * PERFORMANS REJİMİ
+ * =================
+ * Bu rejim GPU sürətləndirməsi SÖNÜLÜ olduqda avtomatik aktivləşir (qərarı
+ * main.js verir və preload ilə ötürür — bax: front/src/main.jsx). GPU sönülü
+ * olduqda bütün render işi CPU-nun üzərinə düşür və iki şey POS-u yavaşladır:
+ *
+ *  1. `backdrop-filter: blur(...)` — GPU olmadan arxa fon hər kadrda CPU-da
+ *     yenidən bulanıqlaşdırılır. Overlay açıq olduqca CPU heç vaxt boşalmır.
+ *  2. Sonsuz `box-shadow` animasiyaları (pulsasiya edən halqalar) — kölgə
+ *     GPU-da layer kimi keşlənmədiyi üçün hər kadrda element və ətrafı yenidən
+ *     boyanır. Ekranda bir neçə belə element olduqda POS daimi 60 kadr/san
+ *     boyama dövrünə düşür.
+ *
+ * Bu fayl həmin iki effekti söndürür. Pulsasiya edən halqaların STATİK
+ * `box-shadow`-u baza selektorlarda qaldığı üçün halqa görünür — sadəcə
+ * titrəmir. Blur itir, lakin bütün overlay-lərin öz yarı-şəffaf fonu var,
+ * ona görə oxunaqlılıq pozulmur.
+ *
+ * Əl ilə idarə (developer konsolunda, sonra restart):
+ *   localStorage.setItem("pos_perf_mode", "true")   → həmişə sürət
+ *   localStorage.setItem("pos_perf_mode", "false")  → həmişə görünüş
+ *   localStorage.removeItem("pos_perf_mode")        → avtomatik (GPU-ya görə)
+ */
+
+/* 1. CPU-da ən bahalı effekt — arxa fon bulanıqlığı */
+body.perf-mode *,
+body.perf-mode *::before,
+body.perf-mode *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/*
+ * 2. Sonsuz box-shadow pulsasiyaları.
+ * Yalnız bunlar hədəflənir — qalan animasiyalar (spinnerlər, transform/opacity
+ * keçidləri) ucuzdur və olduğu kimi qalır ki, proqram donmuş görünməsin.
+ */
+body.perf-mode .settings-action-btn.active-mode,
+body.perf-mode .settings-action-btn.active-mode.delete-mode,
+body.perf-mode .pulse-dot.active,
+body.perf-mode .voice-order-btn.aigun-on,
+body.perf-mode .voice-order-btn.awake,
+body.perf-mode .voice-order-btn.recording {
+  animation: none !important;
+}
+
+/*
+ * 3. `transition: all` layihədə 155 yerdə işlənir — bu, brauzeri hər dəyişiklikdə
+ * bütün xassələri (o cümlədən layout tələb edən width/height/box-shadow)
+ * izləməyə məcbur edir. Toxunma POS-unda yalnız ucuz xassələr və qısa müddət
+ * kifayətdir; nəticədə kliklər daha cəld cavab verir.
+ */
+body.perf-mode * {
+  transition-property: opacity, background-color, border-color, color, transform, box-shadow !important;
+  transition-duration: 120ms !important;
+}

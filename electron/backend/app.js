@@ -1,9 +1,23 @@
+/**
+ * PERFORMANS: səs-küylü konsol çıxışı istehsalat rejimində söndürülür.
+ * Backend ayrı prosesdədir və onun çıxışı main prosesə ötürülüb DİSKƏ yazılır,
+ * yəni hər loq sətri UI thread-ində disk yazması deməkdir. Detallar:
+ * electron/shared/consoleControl.js
+ */
+require("../shared/consoleControl").applyConsolePolicy({
+  // Paketlənmiş rejimi main proses env ilə bildirir
+  isProduction: process.env.UNIPOS_IS_PACKAGED === "1",
+});
+
 const express = require("express");
 const path = require("path");
 const app = express();
 const AppRouter = require("./router/AppRouter");
 const cors = require("cors");
 const db = require("./database/config");
+// Backend həm ayrı prosesdə, həm də köhnə in-process rejimində işləyə bilir;
+// hostBridge fərqi gizlədir (bax: hostBridge.js)
+const hostBridge = require("./hostBridge");
 
 // Node.js v24+ defaults to TLS 1.2 minimum, but api.unipos.tech uses older TLS.
 // Set global axios defaults so ALL HTTPS requests use compatible TLS settings.
@@ -422,8 +436,8 @@ let creaedtToTabel = async () => {
 // gec açılır" hiss olunmasın.
 const getSchemaVersionFilePath = () => {
   try {
-    const electron = require("electron");
-    const userDataPath = electron?.app?.getPath?.("userData");
+    // hostBridge: ayrı prosesdə env-dən, in-process rejimdə Electron-dan
+    const userDataPath = hostBridge.getUserDataPath();
     if (!userDataPath) return null;
     return path.join(userDataPath, "schema-migration-version.json");
   } catch {
@@ -433,8 +447,7 @@ const getSchemaVersionFilePath = () => {
 
 const getCurrentAppVersion = () => {
   try {
-    const electron = require("electron");
-    return electron?.app?.getVersion?.() || null;
+    return hostBridge.getAppVersion();
   } catch {
     return null;
   }
@@ -497,16 +510,7 @@ const InsertData = async (profileId) => {
 };
 
 // Production: frontend dist qovluğunu servis et
-const getDistPath = () => {
-  try {
-    const electron = require('electron');
-    if (electron?.app?.getAppPath()) {
-      return path.join(electron.app.getAppPath(), "electron", "front", "dist");
-    }
-  } catch {}
-  return path.join(__dirname, "..", "front", "dist");
-};
-const frontendDist = getDistPath();
+const frontendDist = hostBridge.getFrontendDistPath();
 app.use(express.static(frontendDist));
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
@@ -516,9 +520,15 @@ app.get("*", (req, res, next) => {
 
 const server = app.listen(55667, () => {
   console.log("Express Server Is Running on port 55667");
+  // Ayrı proses rejimində main.js-ə "hazıram" siqnalı
+  hostBridge.notifyReady({ listening: true, port: 55667 });
 });
 
 server.on("error", (e) => {
+  // Port tutulub və ya başqa xəta olsa da proses işləməyə davam edir (Slave rejimi),
+  // ona görə main.js-i boş yerə gözlətməyib "hazıram" deyirik — əks halda körpü
+  // timeout-a düşüb lüzumsuz olaraq in-process rejimə qayıdardı.
+  hostBridge.notifyReady({ listening: false, error: e && e.code });
   if (e.code === "EADDRINUSE") {
     console.log(
       "Port 55667 is already in use. Running as a Slave instance on the same machine without a local API port.",
@@ -595,8 +605,12 @@ const checkTerminalRole = async (targetServer) => {
   }
 };
 
-const ipcMain = require("electron").ipcMain;
-ipcMain.handle("re-evaluate-role", async () => {
+/**
+ * Terminal rolunun yenidən qiymətləndirilməsi.
+ * `ipcMain` kanalını main.js qeyd edir və bu funksiyaya ötürür (aşağıda
+ * `registerRpc` ilə açılır) — backend özü `ipcMain`-ə bağlanmır.
+ */
+const reEvaluateRole = async () => {
   console.log("IPC: Re-evaluating terminal role requested...");
   await checkTerminalRole(server);
   if (global.isMasterNode) {
@@ -606,6 +620,25 @@ ipcMain.handle("re-evaluate-role", async () => {
     );
   }
   return true;
+};
+
+/**
+ * Qeydiyyat HƏR İKİ rejimdə eynidir: `ipcMain`-ə birbaşa bağlanmırıq.
+ * `re-evaluate-role` IPC kanalını main.js qeyd edir və bu funksiyaya ötürür
+ * (ayrı prosesdə IPC ilə, in-process rejimdə `global.__uniposBackendRpc` ilə).
+ * Beləliklə kanal heç bir halda iki dəfə qeyd olunmur.
+ */
+hostBridge.registerRpc("re-evaluate-role", reEvaluateRole);
+
+/** main.js-in ehtiyac duyduğu dəyərlər — əvvəl birbaşa `require` ilə alınırdı */
+hostBridge.registerRpc("get-sync-status", async () => {
+  const SyncService = require("./services/SyncService");
+  return await SyncService.getSyncStatus();
+});
+hostBridge.registerRpc("get-latest-profile", async () => {
+  const profile = await LoginModel.findOne({ order: [["id", "DESC"]] });
+  // Sequelize instansı proses sərhədindən keçə bilmir — sadə obyekt qaytarırıq
+  return profile ? JSON.parse(JSON.stringify(profile)) : null;
 });
 
 // Initialize and start
@@ -613,6 +646,16 @@ ipcMain.handle("re-evaluate-role", async () => {
   await connectToDatabase();
   await creaedtToTabel();
   await ensureSchemaColumns();
+
+  /**
+   * Performans indeksləri — versiyadan asılı olmadan hər açılışda təmin edilir.
+   * Modellərin `indexes:` bölməsi yalnız `sync({alter})` ilə tətbiq olunur, o da
+   * versiya dəyişməyincə işləmir; ona görə burada ayrıca çağırılır.
+   * Serveri bloklamamaq üçün `await` edilmir — arxa planda işləyir.
+   */
+  require("./ensureIndexes")
+    .ensurePerformanceIndexes()
+    .catch((e) => console.warn("[INDEX]", e?.message));
 
   // SyncService həmişə başlasın — master/slave-dən asılı deyil
   require("./services/SyncService");

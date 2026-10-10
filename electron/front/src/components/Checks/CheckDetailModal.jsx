@@ -9,6 +9,7 @@ import { getTableGroups } from "../../redux/Slices/TablesSlice";
 import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
+import { hasTimerIntervals } from "../../utils/menuIndex";
 import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
 import apiConfig, { TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import axios from "axios";
@@ -98,7 +99,9 @@ const CheckDetailModal = ({ show, onClose, order }) => {
             const price = Number(item.price || 0);
             const modifiers = parseMods(item);
             const modKey = JSON.stringify(modifiers);
-            const isTimer = String(item.product_type || item.product?.product_type || '').toLowerCase() === 'timer' || !!(item.timer_intervals || item.product?.timer_intervals);
+            // `!!` yoxlaması boş `"[]"` saxlayan adi məhsulları da taymer sayırdı
+            const isTimer = String(item.product_type || item.product?.product_type || '').toLowerCase() === 'timer'
+                || hasTimerIntervals(item.timer_intervals) || hasTimerIntervals(item.product?.timer_intervals);
             const key = isTimer ? `${name}__${price}__${modKey}__${item.id}` : `${name}__${price}__${modKey}`;
             const cnt = Number(item.count || 0);
             const lineTotal = getOrderItemLineTotal(item, order);

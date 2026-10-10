@@ -12,6 +12,7 @@ const OrderItemPaymentsModel = require("../model/OrderItemPaymentsModel");
 const ProductsModel = require("../model/ProductsModel");
 const { serviceableItemsSum } = require("../utils/orderServiceFeeBase");
 const { sumOrderItemsLineTotal } = require("../utils/orderItemLineTotal");
+const { hasTimerIntervals } = require("../utils/timerIntervals");
 const axios = require("axios");
 const ItemPay = require("./OrderItemPaymentsController");
 
@@ -309,20 +310,29 @@ const sendOrdersItemsToDb = async (req, res) => {
 
     // Məhsul səviyyəsində yeni əlavə olunan taymerləri avtomatik başlat
     const newItemsIds = savedItems.map((si) => si.id);
-    console.log("[TIMER AUTO-START DEBUG] savedItems IDs:", newItemsIds);
-    
     const newTimerItemsPlain = orderPlainForAuto.orders_items.filter((item) => {
       if (!newItemsIds.includes(item.id)) return false;
       const product_type = item.product?.product_type || "";
-      const hasIntervals = !!item.product?.timer_intervals;
+      /**
+       * DİQQƏT: əvvəl burada `!!item.product?.timer_intervals` vardı.
+       * Sütun JSON tipindədir və bəzi məhsullarda BOŞ massiv ikiqat kodlanmış
+       * `"[]"` mətni kimi saxlanılıb. Boş olmayan mətn isə həmişə doğrudur, ona
+       * görə Coca Cola, kabab kimi adi məhsullar da "taymerli" sayılır və masaya
+       * göndəriləndə taymer ÖZÜ BAŞLAYIRDI. İndi dəyər həqiqətən parse olunur və
+       * yalnız boş olmayan massiv taymer sayılır.
+       */
+      const hasIntervals = hasTimerIntervals(item.product?.timer_intervals);
       const hourlyPrice = parseFloat(item.product?.hourly_price || 0);
-      
-      console.log(`[TIMER AUTO-START DEBUG] Checking plain item id ${item.id} - product_type: ${product_type}, hasIntervals: ${hasIntervals}, hourlyPrice: ${hourlyPrice}`);
-      
+
       return String(product_type).toLowerCase() === "timer" || hasIntervals || hourlyPrice > 0;
     });
 
-    console.log("[TIMER AUTO-START DEBUG] newTimerItems found:", newTimerItemsPlain.map(i => i.id));
+    if (newTimerItemsPlain.length > 0) {
+      console.log(
+        "[TIMER AUTO-START] Avtomatik başladılan taymerli sətirlər:",
+        newTimerItemsPlain.map((i) => i.id),
+      );
+    }
 
     if (newTimerItemsPlain.length > 0) {
       await OrdersItemsModel.update(

@@ -63,6 +63,83 @@ const RoomFolio = () => {
     navigate("/tables");
   }, [navigate]);
 
+  /**
+   * DİQQƏT: bu iki hook əvvəl AŞAĞIDA, `if (!room) return ...` erkən
+   * yönləndirməsindən SONRA idi. Otaqlar serverdən asinxron gəldiyi üçün ilk
+   * render-də `room` boş olur (erkən return, az hook), məlumat gələndən sonra
+   * isə tam render olur (çox hook). React hook sayının dəyişməsinə dözmür və
+   * "Rendered more hooks than during the previous render" xətası ilə çökürdü.
+   * İndi hər iki hook erkən return-dən ƏVVƏLdir — hook sayı həmişə eynidir.
+   */
+  const cashierPrinters = useMemo(() => {
+    return resolveCashierPrintersForPrint(loginedProfileData?.data?.printers || []);
+  }, [loginedProfileData]);
+
+  const handlePlaceOrder = useCallback(() => {
+    if (!room) return;
+    const waiterId = loginedWaiter?.data?.id;
+    const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
+    const profileIdVal = loginedProfileData?.data?.profile?.id;
+    if (!waiterId || !terminalId || !profileIdVal) {
+      toast.error(t("i̇stifadeci_melumatlari_tapilmadi"));
+      return;
+    }
+
+    const generatedUuid = crypto.randomUUID();
+    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
+
+    const optimisticOrder = {
+      uuid: generatedUuid,
+      id: null,
+      waiter_id: waiterId,
+      profile_id: profileIdVal,
+      terminal_id: terminalId,
+      sale_type: "dine_in",
+      sale_type_name: t("dine_in"),
+      guest_count: 1,
+      status: 1,
+      is_selected: 1,
+      orders_items: [],
+      room_id: room.id,
+      room_number: room.room_number,
+      guest_name: room.guest_name,
+      folio_balance: room.folio_balance,
+      amount: 0,
+      total: 0,
+      start_date: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      discount: 0,
+      service_value: 0,
+      waiter: { id: waiterId, name: waiterName },
+    };
+
+    dispatch(addOrderOptimistic(optimisticOrder));
+    navigate(`/check/${generatedUuid}?hotel=${room.id}`);
+
+    dispatch(saveLog({
+      orderId: generatedUuid,
+      action: "Yeni otaq sifarişi yaradıldı",
+      waiterName,
+      details: `Otaq: ${room.room_number || ""}, Qonaq: ${room.guest_name || "—"}`,
+    }));
+
+    (async () => {
+      try {
+        await dispatch(saleNewOtherOrders({
+          waiterId,
+          terminalId,
+          profileId: profileIdVal,
+          sale_type: "dine_in",
+          status: 1,
+          is_selected: 1,
+          uuid: generatedUuid,
+        })).unwrap();
+      } catch (err) {
+        console.error("Hotel order create error:", err);
+      }
+    })();
+  }, [room, loginedWaiter, loginedProfileData, dispatch, navigate]);
+
   if (!room) {
     return (
       <Container fluid className="rf-root p-0">
@@ -124,10 +201,6 @@ const RoomFolio = () => {
     } catch { toast.error(t("deposit_update_error")); }
     finally { setIsUpdatingDeposit(false); }
   };
-
-  const cashierPrinters = useMemo(() => {
-    return resolveCashierPrintersForPrint(loginedProfileData?.data?.printers || []);
-  }, [loginedProfileData]);
 
   const handlePrintReceipt = async () => {
     const printers = cashierPrinters;
@@ -198,69 +271,6 @@ const RoomFolio = () => {
     }
   };
 
-  const handlePlaceOrder = useCallback(() => {
-    const waiterId = loginedWaiter?.data?.id;
-    const terminalId = loginedProfileData?.data?.terminal?.terminal_id;
-    const profileIdVal = loginedProfileData?.data?.profile?.id;
-    if (!waiterId || !terminalId || !profileIdVal) {
-      toast.error(t("i̇stifadeci_melumatlari_tapilmadi"));
-      return;
-    }
-
-    const generatedUuid = crypto.randomUUID();
-    const waiterName = loginedWaiter?.data?.name || loginedProfileData?.data?.profile?.name || t("unknown");
-
-    const optimisticOrder = {
-      uuid: generatedUuid,
-      id: null,
-      waiter_id: waiterId,
-      profile_id: profileIdVal,
-      terminal_id: terminalId,
-      sale_type: "dine_in",
-      sale_type_name: t("dine_in"),
-      guest_count: 1,
-      status: 1,
-      is_selected: 1,
-      orders_items: [],
-      room_id: room.id,
-      room_number: room.room_number,
-      guest_name: room.guest_name,
-      folio_balance: room.folio_balance,
-      amount: 0,
-      total: 0,
-      start_date: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      discount: 0,
-      service_value: 0,
-      waiter: { id: waiterId, name: waiterName },
-    };
-
-    dispatch(addOrderOptimistic(optimisticOrder));
-    navigate(`/check/${generatedUuid}?hotel=${room.id}`);
-
-    dispatch(saveLog({
-      orderId: generatedUuid,
-      action: "Yeni otaq sifarişi yaradıldı",
-      waiterName,
-      details: `Otaq: ${room.room_number || ""}, Qonaq: ${room.guest_name || "—"}`,
-    }));
-
-    (async () => {
-      try {
-        await dispatch(saleNewOtherOrders({
-          waiterId,
-          terminalId,
-          profileId: profileIdVal,
-          sale_type: "dine_in",
-          status: 1,
-          is_selected: 1,
-          uuid: generatedUuid,
-        })).unwrap();
-      } catch (err) {
-        console.error("Hotel order create error:", err);
-      }
-    })();
-  }, [room, loginedWaiter, loginedProfileData, dispatch, navigate]);
 
   return (
     <Container fluid className="rf-root p-0">

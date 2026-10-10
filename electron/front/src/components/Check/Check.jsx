@@ -103,6 +103,7 @@ import {
 } from "../../redux/Slices/MenuSlice";
 import { t } from "../../utils/translations";
 import { formatPrice } from "../../utils/formatPrice";
+import { hasTimerIntervals } from "../../utils/menuIndex";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -754,7 +755,7 @@ const Check = () => {
     const hasTimerProduct = (merged.orders_items || []).some((it) => {
       const pHourly = Number(it.product?.hourly_price || 0);
       const pIntervals = it.product?.timer_intervals || [];
-      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      const intervalsValid = hasTimerIntervals(pIntervals);
       
       let menuHourly = 0;
       let menuIntervalsValid = false;
@@ -763,7 +764,7 @@ const Check = () => {
         if (catItem) {
           menuHourly = Number(catItem.hourly_price || 0);
           const mInt = catItem.timer_intervals || [];
-          menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+          menuIntervalsValid = hasTimerIntervals(mInt);
         }
       }
       return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;

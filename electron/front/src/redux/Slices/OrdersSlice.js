@@ -6,6 +6,7 @@ import {
   menuWithCategories,
   updateProductModifierGroups,
 } from "./MenuSlice";
+import { hasTimerIntervals } from "../../utils/menuIndex";
 
 export const sendOrdersItems = createAsyncThunk(
   "pos/orders",
@@ -1498,27 +1499,47 @@ export const OrderSlice = createSlice({
         }
       }
     },
+    /**
+     * Lokal (hələ göndərilməmiş) məhsulu silir.
+     *
+     * DİQQƏT: çek siyahısı eyni məhsulun bir neçə ayrı qeydini BİR sətirdə
+     * birləşdirir və onların hamısının uuid-ini `allUuids`-də saxlayır
+     * (bax: CheckMain.jsx qruplaşdırma). Əvvəl bura yalnız BİRİNCİ uuid
+     * ötürülürdü, ona görə zibil qabına basanda 6 ədəddən yalnız biri silinir,
+     * istifadəçi isə düyməni altı dəfə basmalı olurdu.
+     * İndi `uuids` massivi qəbul edilir və qrupun hamısı bir dəfəyə silinir.
+     */
     removeLocalProductByUuid: (state, action) => {
       const payload = action.payload;
       if (!payload) return;
-      const uuid = typeof payload === 'object' ? payload.uuid : payload;
-      const productId = typeof payload === 'object' ? payload.productId : null;
-      
+      const isObj = typeof payload === 'object';
+      const uuid = isObj ? payload.uuid : payload;
+      const productId = isObj ? payload.productId : null;
+      const list = isObj ? (payload.uuids || payload.allUuids) : null;
+
+      const targets = new Set();
+      if (uuid) targets.add(uuid);
+      if (Array.isArray(list)) list.forEach((u) => { if (u) targets.add(u); });
+
       let deleted = false;
-      if (uuid) {
+      if (targets.size > 0) {
         const initialLen = state.products.length;
-        state.products = state.products.filter(p => p.uuid !== uuid && p.id !== uuid);
+        state.products = state.products.filter(
+          (p) => !targets.has(p.uuid) && !targets.has(p.id),
+        );
         if (state.products.length < initialLen) deleted = true;
       }
-      
+
       if (!deleted && productId) {
         // Fallback: delete exactly ONE item with this productId
         const idx = state.products.findIndex(p => Number(p.product_id || p.id) === Number(productId));
         if (idx !== -1) state.products.splice(idx, 1);
       }
-      
-      if (state.sentProducts && uuid) {
-        state.sentProducts = state.sentProducts.filter(p => p.uuid !== uuid && p.id !== uuid);
+
+      if (state.sentProducts && targets.size > 0) {
+        state.sentProducts = state.sentProducts.filter(
+          (p) => !targets.has(p.uuid) && !targets.has(p.id),
+        );
       }
     },
     addProducts: (state, action) => {
@@ -1556,7 +1577,7 @@ export const OrderSlice = createSlice({
       }
 
       // Fallback: check existing products in state (already-added items carry the info)
-      if (pHourly === 0 && !(Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]"))) {
+      if (pHourly === 0 && !hasTimerIntervals(pIntervals)) {
         const existingInState = [...(state.products || []), ...(state.sentProducts || [])].find(
           p => Number(p.product_id || p.id) === Number(incomingProduct.product_id || incomingProduct.id)
         );
@@ -1568,7 +1589,7 @@ export const OrderSlice = createSlice({
         }
       }
 
-      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      const intervalsValid = hasTimerIntervals(pIntervals);
       const isTimerProduct = pHourly > 0 || intervalsValid || String(incomingProduct.product_type || '').toLowerCase() === 'timer' || String(incomingProduct.product?.product_type || '').toLowerCase() === 'timer';
       
       // Timer məhsulları HEÇ VAXT qruplaşmaz - hər biri ayrı saatı olan ayrı sətirdir

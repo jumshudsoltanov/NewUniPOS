@@ -14,7 +14,7 @@ import { isPacksOnlyWaiter } from "../../utils/waiterPermissions";
 import { computeOrderCardDisplayAmount } from "../../utils/orderDisplayTotal";
 import { getSocket } from "../../utils/apiConfig";
 import { fetchRooms } from "../../redux/Slices/HotelSlice";
-import { saleNewOrders, saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
+import { getNextOrderId, saleNewOrders, saleNewOtherOrders } from "../../redux/Slices/SaleSlice";
 import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { t } from "../../utils/translations";
 import { formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
@@ -373,7 +373,10 @@ const Checks = () => {
           try {
             const nextIdRes = await dispatch(getNextOrderId(profileId)).unwrap();
             nextId = nextIdRes?.data?.nextId;
-          } catch (_) {}
+          } catch (e) {
+            // Növbəti çek nömrəsi alınmasa backend özü nömrə verir
+            console.warn("[RECOVERY] getNextOrderId alınmadı:", e?.message);
+          }
 
           const payload = { ...recoveryPayload, uuid, ...(nextId && { id: nextId }) };
           const res = await dispatch(saleNewOrders(payload)).unwrap();

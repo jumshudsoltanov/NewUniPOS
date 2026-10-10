@@ -40,6 +40,7 @@
     ],
     "files": [
       "electron/server/**/*",
+      "electron/shared/**/*",
       "electron/backend/**/*",
       "electron/front/dist/**/*",
       "electron/static/**/*",
@@ -51,7 +52,11 @@
       "!**/node_modules/.bin",
       "!electron/front/src/**/*",
       "!electron/front/node_modules/**/*",
-      "!electron/mobile/**/*"
+      "!electron/mobile/**/*",
+      "!electron/server/main_original.js",
+      "!electron/backend/{check_cols,check_columns,check_sync,fix,fix_db_schema,patch}.js",
+      "!electron/backend/{test,test_db,test_orders,test_v3,test-voice,verify_printers}.js",
+      "!electron/backend/dummy.webm"
     ],
     "extraResources": [
       ".env",

@@ -47,10 +47,12 @@ import { getCurrencySymbol } from "../../utils/formatPrice";
 
 const removeLocalProduct = (dispatch, product) => {
   const productId = Number(product.product_id || product.id);
-  if (product.uuid) {
-    dispatch(removeLocalProductByUuid({ 
-      uuid: product.uuid, 
-      productId 
+  if (product.uuid || (product.allUuids && product.allUuids.length > 0)) {
+    // Qrupun BÜTÜN uuid-ləri göndərilir — əks halda 6 ədəddən yalnız biri silinir
+    dispatch(removeLocalProductByUuid({
+      uuid: product.uuid,
+      uuids: product.allUuids,
+      productId
     }));
   } else if (product.isTimerProduct || String(product.product_type || '').toLowerCase() === 'timer' || String(product.product?.product_type || '').toLowerCase() === 'timer') {
     if (product.firstId) {

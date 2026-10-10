@@ -71,10 +71,11 @@ const Tables = () => {
 
   const _tProfileId = loginedProfileData?.data?.profile?.id;
 
-  // Qonaq sayı xülasə zolağı — DevicesModal-dakı checkbox ilə aç/bağla
-  const [showGuestCountBar, setShowGuestCountBar] = useState(
-    () => localStorage.getItem("pos_show_guest_count_bar") !== "false",
-  );
+  // Qonaq sayı xülasə zolağı — DevicesModal-dakı açar ilə aç/bağla.
+  // Defolt SÖNÜLÜDÜR: yalnız açıq seçilibsə ("true") görünür.
+  const [showGuestCountBar, setShowGuestCountBar] = useState(() => {
+    try { return localStorage.getItem("pos_show_guest_count_bar") === "true"; } catch { return false; }
+  });
   useEffect(() => {
     const handleGuestBarSetting = (e) => setShowGuestCountBar(!!e.detail);
     window.addEventListener("guestCountBarSettingChanged", handleGuestBarSetting);
@@ -386,28 +387,38 @@ const Tables = () => {
   }, [tableGroups]);
 
   // Handle Socket.IO Real-Time Table Synchronization
-  const lastSyncRef = useRef(0);
+  /**
+   * `table_updated` hadisələrini birləşdirmək üçün taymer.
+   *
+   * Əvvəl burada "leading throttle" vardı: 400 ms içində gələn hadisələr
+   * ATILIRDI. Çox terminallı quruluşda bir-birinin ardınca gələn dəyişikliklərdə
+   * SON hadisə atıla bilirdi və masa lövhəsi növbəti hadisəyə qədər köhnə
+   * məlumatla qalırdı. İndi "trailing debounce" işləyir: hadisə seli bitdikdən
+   * sonra BİR dəfə sorğu gedir — nə sorğu sayı artır, nə də son vəziyyət itir.
+   */
+  const refreshTimerRef = useRef(null);
   useEffect(() => {
     const socket = getSocket();
     if (!socket) return;
 
-    const handleTableUpdated = (data) => {
-      const now = Date.now();
-      if (now - lastSyncRef.current < 400) return;
+    const handleTableUpdated = () => {
+      const profileId = loginedProfileData?.data?.profile?.id;
+      if (!profileId) return;
 
-      if (loginedProfileData?.data?.profile?.id) {
-        lastSyncRef.current = now;
-        // Kiçik gecikmə — DB yazma əməliyyatı tamamlansın (Master-Slave: print_count, status dəyişikliyi)
-        setTimeout(() => {
-          dispatch(getTableGroups(loginedProfileData.data.profile.id));
-          dispatch(
-            getActiveOrders({
-              profileId: loginedProfileData.data.profile.id,
-              silentRefresh: true,
-            }),
-          );
-        }, 150);
-      }
+      // Sel davam edirsə gözləməni yenidən başlat — yalnız sonuncudan sonra sorğu gedir.
+      // Gecikmə həm hadisələri birləşdirir, həm də DB yazmasının tamamlanmasını
+      // gözləyir (Master-Slave: print_count, status dəyişikliyi).
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = setTimeout(() => {
+        refreshTimerRef.current = null;
+        dispatch(getTableGroups(profileId));
+        dispatch(
+          getActiveOrders({
+            profileId,
+            silentRefresh: true,
+          }),
+        );
+      }, 300);
     };
 
     const handleLocalLayoutsUpdated = (layouts) => {
@@ -420,6 +431,11 @@ const Tables = () => {
     return () => {
       socket.off("table_updated", handleTableUpdated);
       socket.off("local_layouts_updated", handleLocalLayoutsUpdated);
+      // Komponent sökülürsə gözləyən sorğunu da ləğv edirik
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
     };
   }, [dispatch, loginedProfileData]);
 

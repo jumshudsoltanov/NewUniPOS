@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../utils/apiConfig";
 import axiosRaw from "axios";
 import { getEffectiveHourlyPrice, getLiveTimerCharge } from "../../utils/orderHourlyPrice";
+import { findMenuItemById, parseTimerIntervals } from "../../utils/menuIndex";
 
 const ADMIN_API = "https://api.unipos.tech/api";
 
@@ -224,35 +225,38 @@ const TablesSlice = createSlice({
           if (!table.orders || table.orders.length === 0) return table;
 
           const newOrders = table.orders.map((order) => {
+            // PERFORMANS: əvvəl ucuz yoxlama — taymer yoxdursa heç nə allokasiya etmirik.
+            // Köhnə kod hər saniyə hər sifariş üçün obyekt kopyalayır və tam menyunu
+            // skan edirdi; menyu minlərlə məhsuldan ibarət olduqda POS donurdu.
+            const timerIsOn = Number(order.is_timer_status) === 1;
+            let hasTimerProduct = false;
+            if (!timerIsOn) {
+              const items = order.orders_items;
+              if (items && items.length > 0) {
+                for (let i = 0; i < items.length; i++) {
+                  const it = items[i];
+                  if (Number(it.product?.hourly_price || 0) > 0) { hasTimerProduct = true; break; }
+                  if (parseTimerIntervals(it.product?.timer_intervals) !== null) { hasTimerProduct = true; break; }
+                  const catItem = findMenuItemById(action.payload, it.product_id || it.id);
+                  if (catItem) {
+                    if (Number(catItem.hourly_price || 0) > 0) { hasTimerProduct = true; break; }
+                    if (parseTimerIntervals(catItem.timer_intervals) !== null) { hasTimerProduct = true; break; }
+                  }
+                }
+              }
+            }
+
+            // Tick if the table timer is active OR if the order contains a timer product
+            if (!timerIsOn && !hasTimerProduct) {
+              return order;
+            }
+
             const orderForEff = {
               ...order,
               table: { ...(order.table || {}), hourly_price: table.hourly_price },
               orders_items: order.orders_items || [],
             };
             const effH = getEffectiveHourlyPrice(orderForEff);
-            
-            const hasTimerProduct = (orderForEff.orders_items || []).some(it => {
-              const pHourly = Number(it.product?.hourly_price || 0);
-              const pIntervals = it.product?.timer_intervals || [];
-              const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
-              
-              let menuHourly = 0;
-              let menuIntervalsValid = false;
-              if (action.payload && action.payload.length > 0) {
-                const catItem = action.payload.find(m => Number(m.id) === Number(it.product_id || it.id));
-                if (catItem) {
-                  menuHourly = Number(catItem.hourly_price || 0);
-                  const mInt = catItem.timer_intervals || [];
-                  menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
-                }
-              }
-              return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
-            });
-
-            // Tick if the table timer is active OR if the order contains a timer product
-            if (Number(order.is_timer_status) !== 1 && !hasTimerProduct) {
-              return order;
-            }
 
             let totalSeconds = 0;
             if (order.is_timer_clock && String(order.is_timer_clock).includes(":")) {

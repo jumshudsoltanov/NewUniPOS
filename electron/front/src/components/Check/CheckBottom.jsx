@@ -45,6 +45,7 @@ import {
   sumOrderItemsLinesTotal,
   isTimerItem
 } from "../../utils/orderItemLineTotal";
+import { hasTimerIntervals } from "../../utils/menuIndex";
 
 const CheckBottom = ({
   orders,
@@ -99,7 +100,7 @@ const CheckBottom = ({
     const hasHourlyProducts = (orderForTimer.orders_items || []).some((it) => {
       const pHourly = Number(it.product?.hourly_price || 0);
       const pIntervals = it.product?.timer_intervals || [];
-      const intervalsValid = Array.isArray(pIntervals) ? pIntervals.length > 0 : (typeof pIntervals === 'string' && pIntervals.length > 2 && pIntervals !== "[]");
+      const intervalsValid = hasTimerIntervals(pIntervals);
       
       let menuHourly = 0;
       let menuIntervalsValid = false;
@@ -108,7 +109,7 @@ const CheckBottom = ({
         if (catItem) {
           menuHourly = Number(catItem.hourly_price || 0);
           const mInt = catItem.timer_intervals || [];
-          menuIntervalsValid = Array.isArray(mInt) ? mInt.length > 0 : (typeof mInt === 'string' && mInt.length > 2 && mInt !== "[]");
+          menuIntervalsValid = hasTimerIntervals(mInt);
         }
       }
       return pHourly > 0 || intervalsValid || menuHourly > 0 || menuIntervalsValid;
