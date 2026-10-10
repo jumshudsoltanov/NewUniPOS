@@ -777,7 +777,6 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
 
       <SalesTypesModal
         show={onShowSalesTypeModal}
-        target={newOrderBtnRef.current}
         onClose={() => setOnShowSalesTypeModal(false)}
         onSelect={(_type) => {
         }}

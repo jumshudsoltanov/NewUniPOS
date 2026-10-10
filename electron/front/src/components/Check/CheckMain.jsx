@@ -35,6 +35,7 @@ import { t } from "../../utils/translations";
 import { formatPrice as _formatPrice, getCurrencySymbol } from "../../utils/formatPrice";
 import { hasTimerIntervals } from "../../utils/menuIndex";
 import { findMenuItemById } from "../../utils/menuIndex";
+import { useEventCallback } from "../../hooks/useEventCallback";
 
 const SmoothTimerClock = ({ initialSeconds, isActive }) => {
   const [seconds, setSeconds] = useState(initialSeconds);
@@ -80,6 +81,301 @@ const normalizeModifiersKey = (modifiers) =>
     .map((modifier) => `${modifier.id}:${modifier.count}:${modifier.price}`)
     .join("|");
 
+/**
+ * PERFORMANS: çek sətri ayrıca MEMOIZASİYALI komponentdir.
+ *
+ * Əvvəl bütün sətirlər valideynin JSX-i içində inline render olunurdu, yəni
+ * çek ekranı hər yeniləndikdə (taymer tiki, swipe, modal açılışı) BÜTÜN
+ * sətirlər yenidən qurulurdu. İndi sətir yalnız öz məlumatı dəyişəndə
+ * yenilənir.
+ *
+ * İşləyicilər `useEventCallback` ilə sabit kimlik aldığı üçün memo həqiqətən
+ * işləyir (bax: hooks/useEventCallback.js).
+ */
+const CheckOrderRow = React.memo(function CheckOrderRow({
+  item,
+  index,
+  menu,
+  orders,
+  liveTimerData,
+  profileInfo,
+  itemPaidQtyMap,
+  swipeOffset,
+  isDragging,
+  handleItemClick,
+  handleSwipeAction,
+  handleTouchStart,
+  handleTouchMove,
+  handleTouchEnd,
+  handleMouseLeave,
+  stopTimerBubble,
+}) {
+              const productInfo = findCatalogProduct(menu, item.product_id);
+              const isNoDiscount = (item.no_discount === 1 || productInfo?.no_discount === 1);
+              const originalPrice = Number(productInfo?.price || item.price || 0);
+              const currentPrice = Number(item.price || 0);
+              const displayProductName = getDisplayProductName(item, productInfo);
+
+              // Modifiers
+              let modifiers = [];
+              try {
+                if (Array.isArray(item.modifiers)) {
+                  modifiers = item.modifiers;
+                } else if (typeof item.modifiers === "string") {
+                  modifiers = JSON.parse(item.modifiers || '[]');
+                }
+              } catch { /* ignore */ }
+              modifiers = resolveModifiersForDisplay(modifiers, productInfo);
+
+              const modifiersTotal = modifiers.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
+              let totalAmount = ((currentPrice + modifiersTotal) * Number(item.count));
+
+              const isDiscounted = item.discount_value > 0 && !isNoDiscount;
+              const isGift = item.is_gift === 1;
+              const rowStyle = item.isDeleted ? { opacity: 0.6 } : {};
+              const hourlyLine = Number(productInfo?.hourly_price ?? item.product?.hourly_price ?? 0);
+              const checkIntervals = (val) => {
+                  if (!val) return false;
+                  if (Array.isArray(val)) return val.length > 0;
+                  
+                  let parsed = val;
+                  while (typeof parsed === 'string') {
+                      const trimmed = parsed.trim();
+                      if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
+                      try {
+                          parsed = JSON.parse(trimmed);
+                      } catch {
+                          return false;
+                      }
+                  }
+                  
+                  if (Array.isArray(parsed)) return parsed.length > 0;
+                  if (parsed && typeof parsed === 'object') return Object.keys(parsed).length > 0;
+                  
+                  return false;
+              };
+              const hasIntervals = checkIntervals(item?.timer_intervals) || checkIntervals(item?.product?.timer_intervals) || checkIntervals(productInfo?.timer_intervals);
+              const isTimerProduct = String(item?.product_type || '').toLowerCase() === 'timer' || 
+                                     String(item?.product?.product_type || '').toLowerCase() === 'timer' || 
+                                     String(productInfo?.product_type || '').toLowerCase() === 'timer' || 
+                                     hasIntervals || hourlyLine > 0;
+
+              let _itemClockStr = "00:00:00";
+              let itemTimerCharge = 0;
+              let itemDisplaySeconds = 0;
+              let liveItemStatus = item.is_timer_status;
+
+              if (isTimerProduct && orders) {
+                const rawOrderClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
+                const orderWithLiveClockBase = { ...orders, is_timer_clock: rawOrderClock };
+                
+                let liveItem = item;
+                if (liveTimerData?.orders_items) {
+                   const found = liveTimerData.orders_items.find(i => 
+                     (i.id && item.id && i.id === item.id) ||
+                     (i.uuid && item.uuid && i.uuid === item.uuid) ||
+                     (i.id && item.firstId && Number(i.id) === Number(item.firstId))
+                   );
+                   if (found) liveItem = { ...item, ...found }; // Merge to keep allItems properties but override with live ones
+                }
+
+                const displaySeconds = getTimerElapsedSeconds(liveItem, orderWithLiveClockBase);
+                itemDisplaySeconds = displaySeconds;
+                liveItemStatus = liveItem.is_timer_status;
+                
+                const h = Math.floor(displaySeconds / 3600);
+                const m = Math.floor((displaySeconds % 3600) / 60);
+                const s = displaySeconds % 60;
+                _itemClockStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+                const lineTotal = computeTimerItemTotal(liveItem, orderWithLiveClockBase);
+                const chargePerUnit = Number(item.count) > 0 ? lineTotal / Number(item.count) : lineTotal;
+
+                const basePrice = Number(item.price || 0);
+                let modifiersList = [];
+                try {
+                  modifiersList = typeof item?.modifiers === 'string' ? JSON.parse(item?.modifiers) : (item?.modifiers || []);
+                } catch { /* nəzərə alınmır */ }
+                const modsTotal = (Array.isArray(modifiersList) ? modifiersList : []).reduce((acc, mod) => acc + Number(mod.price || 0) * Number(mod.count || 1), 0);
+                itemTimerCharge = Math.max(0, chargePerUnit - basePrice - modsTotal);
+                totalAmount += (itemTimerCharge * Number(item.count));
+              }
+
+              totalAmount = totalAmount.toFixed(2);
+
+              const showInlineProductTimer =
+                Number(profileInfo?.is_timer || 0) === 1 &&
+                isTimerProduct &&
+                !!orders?.uuid;
+
+              const itemKey = `${item.product_id}-${item.is_gift}-${index}`;
+
+              return (
+                <div
+                  className={`order-item-swipe-wrapper ${item.isNew ? "new-order-swipe-wrapper" : ""}`}
+                  key={itemKey}
+                  style={{ position: 'relative', overflow: 'hidden' }}
+                >
+                  <div className={`swipe-background swipe-left ${swipeOffset < 0 ? 'active' : ''}`}>
+                    <button className="swipe-btn minus" onClick={(e) => handleSwipeAction(e, itemKey, 'delete_one', item)}>
+                      -1
+                    </button>
+                    <button className="swipe-btn delete" onClick={(e) => handleSwipeAction(e, itemKey, 'delete_all', item)}>
+                      <i className="bi bi-trash3-fill"></i>
+                    </button>
+                  </div>
+
+                  <div className={`swipe-background swipe-right ${swipeOffset > 0 ? 'active' : ''}`}>
+                    <div className="swipe-action-indicator">
+                      <i className="bi bi-plus-lg"></i>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => handleItemClick(item)}
+                    className={`order-item ${item.isNew ? "new-order-highlight" : ""}`}
+                    style={{ 
+                      ...rowStyle, 
+                      transform: `translateX(${swipeOffset || 0}px)`, 
+                      transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+                      position: 'relative',
+                      zIndex: 2,
+                      background: item.isNew ? '#ebf2fe' : '#fff', // required to hide the background buttons
+                      userSelect: 'none'
+                    }}
+                    onTouchStart={(e) => handleTouchStart(e, itemKey)}
+                    onTouchMove={(e) => handleTouchMove(e, itemKey)}
+                    onTouchEnd={() => handleTouchEnd(itemKey, item)}
+                    onMouseDown={(e) => handleTouchStart(e, itemKey)}
+                    onMouseMove={(e) => handleTouchMove(e, itemKey)}
+                    onMouseUp={() => handleTouchEnd(itemKey, item)}
+                    onMouseLeave={() => handleMouseLeave(itemKey, item)}
+                  >
+                    <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <div className="d-flex align-items-center flex-wrap gap-1">
+                        <span className={`fw-semibold ${item.isDeleted ? 'text-danger' : ''}`} style={item.isDeleted ? { textDecoration: 'line-through' } : {}}>
+                          {displayProductName}
+                        </span>
+                        {item.isDeleted && (
+                          <span className="pending-delete-badge full ms-2" title={t("silinecek")}>
+                            {t("silinecek")}
+                          </span>
+                        )}
+                        {item.partialDelete > 0 && !item.isDeleted && (
+                          <span className="pending-delete-badge partial ms-2" title={`−${item.partialDelete} silinəcək`}>
+                            −{item.partialDelete}
+                          </span>
+                        )}
+
+                        {isGift && <i className="bi bi-gift-fill text-danger" title={t("i̇kram")}></i>}
+                      </div>
+
+                      <div className="d-flex flex-column gap-1 mt-1">
+                        {(() => {
+                          const ids = (item.allIds && item.allIds.length > 0) ? item.allIds : [item.firstId];
+                          const paidQty = ids.reduce((sum, id) => sum + (itemPaidQtyMap[Number(id)] || 0), 0);
+                          if (!(paidQty > 0)) return null;
+                          const partial = paidQty < Number(item.count || 0);
+                          return (
+                            <div
+                              title={t("bu_mehsul_uzre_odenis_edilib")}
+                              style={{
+                                alignSelf: 'flex-start',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                color: '#053796',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              <i className="bi bi-check-circle-fill" style={{ fontSize: 11 }}></i>
+                              {partial ? `Ödənilib: ${Math.round(paidQty * 1000) / 1000} / ${item.count}` : 'Ödənilib'}
+                            </div>
+                          );
+                        })()}
+                        {modifiers.length > 0 && (
+                          <div className="check-item-modifiers-inline" style={{ display: 'block', fontSize: '0.8rem', color: '#4B5563', marginTop: '2px', lineHeight: '1.3', whiteSpace: 'normal' }}>
+                            {modifiers.map((m, i) => (
+                              <span key={i}>
+                                {m.name} {m.count > 0 ? `x${m.count}` : ""}{i < modifiers.length - 1 ? ", " : ""}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {item.comment && item.isNew && (
+                          <div style={{ fontSize: "0.75rem", color: "#856404", fontStyle: "italic", lineHeight: "1.2" }}>
+                            <i className="fa-solid fa-comment-dots me-1"></i>
+                            {item.comment}
+                          </div>
+                        )}
+
+                        {isDiscounted && !isGift && (
+                          <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
+                            {t("endirim")}: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
+                          </span>
+                        )}
+
+                        {!hasIntervals && hourlyLine > 0 ? (
+                          <div style={{ fontSize: "0.75rem", color: "#003b7a", fontWeight: "600", marginTop: "1px" }}>
+                            {t("saatliq")}: {hourlyLine.toFixed(2)} {getCurrencySymbol()}/{t("saat")}
+                          </div>
+                        ) : null}
+
+                        {showInlineProductTimer && (
+                          <div
+                            className="check-item-product-timer-lite"
+                            onClick={stopTimerBubble}
+                            title={t("taymer_idare_mehsula_toxun_ve_saatliq_tabi")}
+                          >
+                            <span className="check-item-timer-lite-sep">
+                              <i className="bi bi-stopwatch" aria-hidden />
+                              <span className="check-item-timer-lite-mono">
+                                <SmoothTimerClock initialSeconds={itemDisplaySeconds} isActive={Number(liveItemStatus) === 1} />
+                              </span>
+                            </span>
+                            <span className="check-item-timer-lite-sep">
+                              <i className="bi bi-plus-circle" aria-hidden />
+                              <span className="check-item-timer-lite-mono">{Number(itemTimerCharge).toFixed(2)} {getCurrencySymbol()}</span>
+                            </span>
+                          </div>
+                        )}
+
+                      </div>
+                    </div>
+
+                    <div className="col-qty d-flex justify-content-center align-items-center">
+                      <div className="d-flex align-items-center gap-1">
+                        <span className="fw-bold">{Number(item.count).toFixed(2)}</span>
+                        <span className="text-muted" style={{ fontSize: '0.8rem' }}>x</span>
+
+                        {isGift ? (
+                          <div className="d-flex align-items-center gap-1">
+                            <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
+                            <span className="fw-bold text-danger">0.00</span>
+                          </div>
+                        ) : (currentPrice !== originalPrice) ? (
+                          <div className="d-flex align-items-center gap-1">
+                            <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
+                            <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
+                          </div>
+                        ) : (
+                          <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="col-total d-flex align-items-center justify-content-end fw-bold">
+                      {totalAmount} {getCurrencySymbol()}
+                    </div>
+                  </div>
+                </div>
+              )
+});
+
+
 const CheckMain = ({ orders, table }) => {
   const itemPaidQtyMap = useMemo(() => getPaidQtyMap(orders), [orders]);
   const dispatch = useDispatch(); // Add dispatch
@@ -110,6 +406,15 @@ const CheckMain = ({ orders, table }) => {
   );
   const [swipeOffsets, setSwipeOffsets] = useState({});
   const touchStartRef = useRef({});
+  /**
+   * Hansı sətrin üstündə barmaq/siçan basılı qalıb.
+   * Əvvəl bu, render zamanı birbaşa `touchStartRef.current[...]` oxunaraq
+   * təyin olunurdu — React-də ref-i render zamanı oxumaq düzgün deyil və
+   * gələcək versiyalarda səhv nəticə verə bilər. İndi adi state işlədilir;
+   * dəyər yalnız sürüşdürmə başlayanda və bitəndə dəyişir, yəni əlavə render
+   * yükü praktiki olaraq yoxdur.
+   */
+  const [draggingKey, setDraggingKey] = useState(null);
   const lastSwipeTimeRef = useRef(0);
 
   const orderEditLocked = useMemo(
@@ -194,12 +499,13 @@ const CheckMain = ({ orders, table }) => {
     setOpenDeleteProductModal(true);
   };
 
-  const handleTouchStart = (e, itemKey) => {
+  const handleTouchStart = useEventCallback((e, itemKey) => {
     if (!swipeGesturesEnabled || orderEditLocked) return;
     touchStartRef.current[itemKey] = e.touches ? e.touches[0].clientX : e.clientX;
-  };
+    setDraggingKey(itemKey);
+  });
 
-  const handleTouchMove = (e, itemKey) => {
+  const handleTouchMove = useEventCallback((e, itemKey) => {
     if (!swipeGesturesEnabled || orderEditLocked || touchStartRef.current[itemKey] == null) return;
     const currentX = e.touches ? e.touches[0].clientX : e.clientX;
     const diff = currentX - touchStartRef.current[itemKey];
@@ -208,12 +514,13 @@ const CheckMain = ({ orders, table }) => {
     if (diff > 100) setSwipeOffsets(prev => ({ ...prev, [itemKey]: 100 }));
     else if (diff < -150) setSwipeOffsets(prev => ({ ...prev, [itemKey]: -150 }));
     else setSwipeOffsets(prev => ({ ...prev, [itemKey]: diff }));
-  };
+  });
 
-  const handleTouchEnd = (itemKey, item) => {
+  const handleTouchEnd = useEventCallback((itemKey, item) => {
     if (!swipeGesturesEnabled || orderEditLocked || touchStartRef.current[itemKey] == null) return;
     const diff = swipeOffsets[itemKey] || 0;
     touchStartRef.current[itemKey] = null;
+    setDraggingKey((k) => (k === itemKey ? null : k));
 
     if (Math.abs(diff) > 5) {
       lastSwipeTimeRef.current = Date.now();
@@ -245,20 +552,20 @@ const CheckMain = ({ orders, table }) => {
 
     // Reset offset if not opened
     setSwipeOffsets(prev => ({ ...prev, [itemKey]: 0 }));
-  };
+  });
 
-  const handleMouseLeave = (itemKey, item) => {
+  const handleMouseLeave = useEventCallback((itemKey, item) => {
     if (touchStartRef.current[itemKey] != null) {
       handleTouchEnd(itemKey, item);
     }
-  };
+  });
 
-  const handleSwipeAction = (e, itemKey, action, item) => {
+  const handleSwipeAction = useEventCallback((e, itemKey, action, item) => {
     e.preventDefault();
     e.stopPropagation();
     setSwipeOffsets(prev => ({ ...prev, [itemKey]: 0 }));
     runSwipeDeleteAction(action, item);
-  };
+  });
   // -------------------------
 
   const allItems = useMemo(() => {
@@ -546,11 +853,11 @@ const CheckMain = ({ orders, table }) => {
   const _timerClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
   const _timerCharge = liveTimerData?.rate_per_minute ?? orders?.rate_per_minute ?? 0;
 
-  const stopTimerBubble = (e) => {
+  const stopTimerBubble = useEventCallback((e) => {
     e.stopPropagation();
-  };
+  });
 
-  const handleItemClick = (item) => {
+  const handleItemClick = useEventCallback((item) => {
     if (Date.now() - lastSwipeTimeRef.current < 200) {
       return; // Ignore click if a swipe gesture just occurred
     }
@@ -608,7 +915,7 @@ const CheckMain = ({ orders, table }) => {
       setSelectedProduct(item);
       setEditItemModal(true);
     }
-  };
+  });
 
   const handleModifierConfirm = async (productWithModifiers) => {
     if (orderEditLocked) {
@@ -828,269 +1135,28 @@ const CheckMain = ({ orders, table }) => {
         <div className="order-list-container">
           {allItems.length > 0 &&
             allItems.map((item, index) => {
-              const productInfo = findCatalogProduct(menu, item.product_id);
-              const isNoDiscount = (item.no_discount === 1 || productInfo?.no_discount === 1);
-              const originalPrice = Number(productInfo?.price || item.price || 0);
-              const currentPrice = Number(item.price || 0);
-              const displayProductName = getDisplayProductName(item, productInfo);
-
-              // Modifiers
-              let modifiers = [];
-              try {
-                if (Array.isArray(item.modifiers)) {
-                  modifiers = item.modifiers;
-                } else if (typeof item.modifiers === "string") {
-                  modifiers = JSON.parse(item.modifiers || '[]');
-                }
-              } catch { /* ignore */ }
-              modifiers = resolveModifiersForDisplay(modifiers, productInfo);
-
-              const modifiersTotal = modifiers.reduce((sum, mod) => sum + (Number(mod.price || 0) * Number(mod.count || 1)), 0);
-              let totalAmount = ((currentPrice + modifiersTotal) * Number(item.count));
-
-              const isDiscounted = item.discount_value > 0 && !isNoDiscount;
-              const isGift = item.is_gift === 1;
-              const rowStyle = item.isDeleted ? { opacity: 0.6 } : {};
-              const hourlyLine = Number(productInfo?.hourly_price ?? item.product?.hourly_price ?? 0);
-              const checkIntervals = (val) => {
-                  if (!val) return false;
-                  if (Array.isArray(val)) return val.length > 0;
-                  
-                  let parsed = val;
-                  while (typeof parsed === 'string') {
-                      const trimmed = parsed.trim();
-                      if (trimmed === "" || trimmed === "[]" || trimmed === "null" || trimmed === "undefined" || trimmed === "0") return false;
-                      try {
-                          parsed = JSON.parse(trimmed);
-                      } catch {
-                          return false;
-                      }
-                  }
-                  
-                  if (Array.isArray(parsed)) return parsed.length > 0;
-                  if (parsed && typeof parsed === 'object') return Object.keys(parsed).length > 0;
-                  
-                  return false;
-              };
-              const hasIntervals = checkIntervals(item?.timer_intervals) || checkIntervals(item?.product?.timer_intervals) || checkIntervals(productInfo?.timer_intervals);
-              const isTimerProduct = String(item?.product_type || '').toLowerCase() === 'timer' || 
-                                     String(item?.product?.product_type || '').toLowerCase() === 'timer' || 
-                                     String(productInfo?.product_type || '').toLowerCase() === 'timer' || 
-                                     hasIntervals || hourlyLine > 0;
-
-              let _itemClockStr = "00:00:00";
-              let itemTimerCharge = 0;
-              let itemDisplaySeconds = 0;
-              let liveItemStatus = item.is_timer_status;
-
-              if (isTimerProduct && orders) {
-                const rawOrderClock = liveTimerData?.is_timer_clock || orders?.is_timer_clock || "00:00:00";
-                const orderWithLiveClockBase = { ...orders, is_timer_clock: rawOrderClock };
-                
-                let liveItem = item;
-                if (liveTimerData?.orders_items) {
-                   const found = liveTimerData.orders_items.find(i => 
-                     (i.id && item.id && i.id === item.id) ||
-                     (i.uuid && item.uuid && i.uuid === item.uuid) ||
-                     (i.id && item.firstId && Number(i.id) === Number(item.firstId))
-                   );
-                   if (found) liveItem = { ...item, ...found }; // Merge to keep allItems properties but override with live ones
-                }
-
-                const displaySeconds = getTimerElapsedSeconds(liveItem, orderWithLiveClockBase);
-                itemDisplaySeconds = displaySeconds;
-                liveItemStatus = liveItem.is_timer_status;
-                
-                const h = Math.floor(displaySeconds / 3600);
-                const m = Math.floor((displaySeconds % 3600) / 60);
-                const s = displaySeconds % 60;
-                _itemClockStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-
-                const lineTotal = computeTimerItemTotal(liveItem, orderWithLiveClockBase);
-                const chargePerUnit = Number(item.count) > 0 ? lineTotal / Number(item.count) : lineTotal;
-
-                const basePrice = Number(item.price || 0);
-                let modifiersList = [];
-                try {
-                  modifiersList = typeof item?.modifiers === 'string' ? JSON.parse(item?.modifiers) : (item?.modifiers || []);
-                } catch { /* nəzərə alınmır */ }
-                const modsTotal = (Array.isArray(modifiersList) ? modifiersList : []).reduce((acc, mod) => acc + Number(mod.price || 0) * Number(mod.count || 1), 0);
-                itemTimerCharge = Math.max(0, chargePerUnit - basePrice - modsTotal);
-                totalAmount += (itemTimerCharge * Number(item.count));
-              }
-
-              totalAmount = totalAmount.toFixed(2);
-
-              const showInlineProductTimer =
-                Number(profileInfo?.is_timer || 0) === 1 &&
-                isTimerProduct &&
-                !!orders?.uuid;
-
               const itemKey = `${item.product_id}-${item.is_gift}-${index}`;
-
               return (
-                <div
-                  className={`order-item-swipe-wrapper ${item.isNew ? "new-order-swipe-wrapper" : ""}`}
+                <CheckOrderRow
                   key={itemKey}
-                  style={{ position: 'relative', overflow: 'hidden' }}
-                >
-                  <div className={`swipe-background swipe-left ${swipeOffsets[itemKey] < 0 ? 'active' : ''}`}>
-                    <button className="swipe-btn minus" onClick={(e) => handleSwipeAction(e, itemKey, 'delete_one', item)}>
-                      -1
-                    </button>
-                    <button className="swipe-btn delete" onClick={(e) => handleSwipeAction(e, itemKey, 'delete_all', item)}>
-                      <i className="bi bi-trash3-fill"></i>
-                    </button>
-                  </div>
-
-                  <div className={`swipe-background swipe-right ${swipeOffsets[itemKey] > 0 ? 'active' : ''}`}>
-                    <div className="swipe-action-indicator">
-                      <i className="bi bi-plus-lg"></i>
-                    </div>
-                  </div>
-
-                  <div
-                    onClick={() => handleItemClick(item)}
-                    className={`order-item ${item.isNew ? "new-order-highlight" : ""}`}
-                    style={{ 
-                      ...rowStyle, 
-                      transform: `translateX(${swipeOffsets[itemKey] || 0}px)`, 
-                      transition: touchStartRef.current[itemKey] != null ? 'none' : 'transform 0.2s ease-out',
-                      position: 'relative',
-                      zIndex: 2,
-                      background: item.isNew ? '#ebf2fe' : '#fff', // required to hide the background buttons
-                      userSelect: 'none'
-                    }}
-                    onTouchStart={(e) => handleTouchStart(e, itemKey)}
-                    onTouchMove={(e) => handleTouchMove(e, itemKey)}
-                    onTouchEnd={() => handleTouchEnd(itemKey, item)}
-                    onMouseDown={(e) => handleTouchStart(e, itemKey)}
-                    onMouseMove={(e) => handleTouchMove(e, itemKey)}
-                    onMouseUp={() => handleTouchEnd(itemKey, item)}
-                    onMouseLeave={() => handleMouseLeave(itemKey, item)}
-                  >
-                    <div className="col-name" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                      <div className="d-flex align-items-center flex-wrap gap-1">
-                        <span className={`fw-semibold ${item.isDeleted ? 'text-danger' : ''}`} style={item.isDeleted ? { textDecoration: 'line-through' } : {}}>
-                          {displayProductName}
-                        </span>
-                        {item.isDeleted && (
-                          <span className="pending-delete-badge full ms-2" title={t("silinecek")}>
-                            {t("silinecek")}
-                          </span>
-                        )}
-                        {item.partialDelete > 0 && !item.isDeleted && (
-                          <span className="pending-delete-badge partial ms-2" title={`−${item.partialDelete} silinəcək`}>
-                            −{item.partialDelete}
-                          </span>
-                        )}
-
-                        {isGift && <i className="bi bi-gift-fill text-danger" title={t("i̇kram")}></i>}
-                      </div>
-
-                      <div className="d-flex flex-column gap-1 mt-1">
-                        {(() => {
-                          const ids = (item.allIds && item.allIds.length > 0) ? item.allIds : [item.firstId];
-                          const paidQty = ids.reduce((sum, id) => sum + (itemPaidQtyMap[Number(id)] || 0), 0);
-                          if (!(paidQty > 0)) return null;
-                          const partial = paidQty < Number(item.count || 0);
-                          return (
-                            <div
-                              title={t("bu_mehsul_uzre_odenis_edilib")}
-                              style={{
-                                alignSelf: 'flex-start',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 4,
-                                color: '#053796',
-                                fontSize: 11,
-                                fontWeight: 700,
-                                lineHeight: 1.5,
-                              }}
-                            >
-                              <i className="bi bi-check-circle-fill" style={{ fontSize: 11 }}></i>
-                              {partial ? `Ödənilib: ${Math.round(paidQty * 1000) / 1000} / ${item.count}` : 'Ödənilib'}
-                            </div>
-                          );
-                        })()}
-                        {modifiers.length > 0 && (
-                          <div className="check-item-modifiers-inline" style={{ display: 'block', fontSize: '0.8rem', color: '#4B5563', marginTop: '2px', lineHeight: '1.3', whiteSpace: 'normal' }}>
-                            {modifiers.map((m, i) => (
-                              <span key={i}>
-                                {m.name} {m.count > 0 ? `x${m.count}` : ""}{i < modifiers.length - 1 ? ", " : ""}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {item.comment && item.isNew && (
-                          <div style={{ fontSize: "0.75rem", color: "#856404", fontStyle: "italic", lineHeight: "1.2" }}>
-                            <i className="fa-solid fa-comment-dots me-1"></i>
-                            {item.comment}
-                          </div>
-                        )}
-
-                        {isDiscounted && !isGift && (
-                          <span className="text-success" style={{ fontSize: "0.75rem", fontWeight: "600" }}>
-                            {t("endirim")}: {(item.discount_type === 'percent' || item.discount_type === 1) ? `-${Math.round(item.discount_value)}%` : `-${Number(item.discount_value).toFixed(2)}₼`}
-                          </span>
-                        )}
-
-                        {!hasIntervals && hourlyLine > 0 ? (
-                          <div style={{ fontSize: "0.75rem", color: "#003b7a", fontWeight: "600", marginTop: "1px" }}>
-                            {t("saatliq")}: {hourlyLine.toFixed(2)} {getCurrencySymbol()}/{t("saat")}
-                          </div>
-                        ) : null}
-
-                        {showInlineProductTimer && (
-                          <div
-                            className="check-item-product-timer-lite"
-                            onClick={stopTimerBubble}
-                            title={t("taymer_idare_mehsula_toxun_ve_saatliq_tabi")}
-                          >
-                            <span className="check-item-timer-lite-sep">
-                              <i className="bi bi-stopwatch" aria-hidden />
-                              <span className="check-item-timer-lite-mono">
-                                <SmoothTimerClock initialSeconds={itemDisplaySeconds} isActive={Number(liveItemStatus) === 1} />
-                              </span>
-                            </span>
-                            <span className="check-item-timer-lite-sep">
-                              <i className="bi bi-plus-circle" aria-hidden />
-                              <span className="check-item-timer-lite-mono">{Number(itemTimerCharge).toFixed(2)} {getCurrencySymbol()}</span>
-                            </span>
-                          </div>
-                        )}
-
-                      </div>
-                    </div>
-
-                    <div className="col-qty d-flex justify-content-center align-items-center">
-                      <div className="d-flex align-items-center gap-1">
-                        <span className="fw-bold">{Number(item.count).toFixed(2)}</span>
-                        <span className="text-muted" style={{ fontSize: '0.8rem' }}>x</span>
-
-                        {isGift ? (
-                          <div className="d-flex align-items-center gap-1">
-                            <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
-                            <span className="fw-bold text-danger">0.00</span>
-                          </div>
-                        ) : (currentPrice !== originalPrice) ? (
-                          <div className="d-flex align-items-center gap-1">
-                            <span className="text-decoration-line-through text-muted" style={{ fontSize: "0.8rem" }}>{originalPrice.toFixed(2)}</span>
-                            <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
-                          </div>
-                        ) : (
-                          <span className="fw-bold">{(currentPrice + modifiersTotal).toFixed(2)}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="col-total d-flex align-items-center justify-content-end fw-bold">
-                      {totalAmount} {getCurrencySymbol()}
-                    </div>
-                  </div>
-                </div>
-              )
+                  item={item}
+                  index={index}
+                  menu={menu}
+                  orders={orders}
+                  liveTimerData={liveTimerData}
+                  profileInfo={profileInfo}
+                  itemPaidQtyMap={itemPaidQtyMap}
+                  swipeOffset={swipeOffsets[itemKey] || 0}
+                  isDragging={draggingKey === itemKey}
+                  handleItemClick={handleItemClick}
+                  handleSwipeAction={handleSwipeAction}
+                  handleTouchStart={handleTouchStart}
+                  handleTouchMove={handleTouchMove}
+                  handleTouchEnd={handleTouchEnd}
+                  handleMouseLeave={handleMouseLeave}
+                  stopTimerBubble={stopTimerBubble}
+                />
+              );
             })}
         </div>
       </div>

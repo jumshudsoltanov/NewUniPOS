@@ -521,6 +521,21 @@ const Checks = () => {
    * sinxron API-dir və bu, siyahını açarkən gözə görünən donma yaradırdı.
    * İndi localStorage cəmi bir dəfə skan olunur, axtarış isə O(1)-dir.
    */
+  /**
+   * PERFORMANS: arxiv siyahısı ARTIMLI render olunur.
+   *
+   * Əvvəl `filteredDisplayOrders` massivinin HAMISI birdən render olunurdu.
+   * Gündə 300+ çek olan obyektdə bu, siyahı açılanda yüzlərlə kart komponentinin
+   * eyni anda qurulması deməkdir və ekran bir neçə saniyə donurdu.
+   *
+   * İndi əvvəlcə bir ekranlıq hissə göstərilir, istifadəçi aşağı sürüşdürdükcə
+   * növbəti hissə əlavə olunur. Sürüşdürmə təcrübəsi EYNİ qalır — nə səhifələmə
+   * düymələri, nə də "daha çox yüklə" düyməsi yoxdur, istifadəçi fərqi görmür.
+   */
+  const CHECKS_PAGE_SIZE = 60;
+  const [visibleChecksCount, setVisibleChecksCount] = useState(CHECKS_PAGE_SIZE);
+  const loadMoreRef = useRef(null);
+
   const roomNumberByOrderUuid = useMemo(() => {
     const map = new Map();
     if (!isHotelMode) return map;
@@ -540,6 +555,29 @@ const Checks = () => {
     } catch { /* localStorage elcatan deyil */ }
     return map;
   }, [isHotelMode, occupiedRooms]);
+
+  // Filtr və ya tarix dəyişəndə siyahı yenidən başdan göstərilir
+  useEffect(() => {
+    setVisibleChecksCount(CHECKS_PAGE_SIZE);
+  }, [filteredDisplayOrders]);
+
+  // Siyahının sonuna çatanda növbəti hissəni əlavə et
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisibleChecksCount((c) =>
+            c >= filteredDisplayOrders.length ? c : c + CHECKS_PAGE_SIZE,
+          );
+        }
+      },
+      { rootMargin: "400px" },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [filteredDisplayOrders.length, visibleChecksCount]);
 
   const totalAmount = useMemo(
     () => filteredDisplayOrders.reduce((sum, o) => sum + computeOrderCardDisplayAmount(o), 0),
@@ -753,7 +791,7 @@ const Checks = () => {
         {filteredDisplayOrders.length === 0 ? (
           <div className="checks-empty-state"><p>{t("hec_bir_cek_tapilmadi")}</p></div>
         ) : (
-          filteredDisplayOrders.map((check, index) => {
+          filteredDisplayOrders.slice(0, visibleChecksCount).map((check, index) => {
             const showDateHeader = index === 0 || formatDateKey(filteredDisplayOrders[index - 1]?.start_date) !== formatDateKey(check?.start_date);
             // Otaq nömrəsini tap: əvvəl check-dən, sonra localStorage-dan
             // O(1) axtarış — localStorage skanı artıq yuxarıda bir dəfə edilib
@@ -768,6 +806,10 @@ const Checks = () => {
               </div>
             );
           })
+        )}
+        {/* Sonrakı hissəni yükləmək üçün görünməz nişan */}
+        {visibleChecksCount < filteredDisplayOrders.length && (
+          <div ref={loadMoreRef} style={{ height: 1 }} aria-hidden="true" />
         )}
       </div>
 

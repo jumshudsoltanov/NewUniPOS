@@ -324,9 +324,6 @@ const CheckBottom = ({
           /* ignore */
         }
 
-        const productInfo = menu?.find(
-          (m) => Number(m.id) === Number(item.product_id || item.id),
-        );
         const isTimer = isTimerItem(item, menu);
         if (isTimer) _hasProductTimer = true;
 
@@ -378,9 +375,6 @@ const CheckBottom = ({
           /* ignore */
         }
 
-        const productInfo = menu?.find(
-          (m) => Number(m.id) === Number(del.product_id || del.itemId || del.id),
-        );
         const _isTimer = isTimerItem(del, menu);
         
         let delItemWithQty = {
@@ -539,6 +533,13 @@ const CheckBottom = ({
     pendingDeletions,
     menu,
     hall?.service_fee,
+    // QÜSUR DÜZƏLİŞİ: `calcTotal` masanın saatlıq qiymətini işlədir
+    // (`const effH = Number(orders?.table?.hourly_price || 0)`), lakin bu dəyər
+    // asılılıq siyahısında yox idi. Nəticədə masaya saatlıq qiymət təyin
+    // ediləndə və ya dəyişdiriləndə çekdəki CƏM yenilənmirdi — kassir köhnə
+    // məbləği görürdü.
+    orders?.table?.hourly_price,
+    table?.hourly_price,
   ]);
 
   const totalChanges = products.length + (pendingDeletions?.length || 0);
