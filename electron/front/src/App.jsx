@@ -51,6 +51,12 @@ import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
 import { usePosIdleToPin } from "./hooks/usePosIdleToPin";
 import { hasAnyLiveTimer } from "./utils/liveOrderTimerData";
+import SplitTableSelect from "./components/SlpitOrderModa/SplitTableSelect";
+import {
+  configureQrOrderManager,
+  startQrOrders,
+} from "./utils/qrOrderManager";
+import { disconnectQrSocket } from "./utils/qrSocket";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -107,6 +113,7 @@ function AppContent() {
   }, []);
   
   const menuData = useSelector((state) => state.OrderSlice?.menu || state.MenuSlice?.data);
+
   useEffect(() => {
     setTimerMenuData(menuData);
     setMenuDataForLineTotals(menuData);
@@ -117,6 +124,76 @@ function AppContent() {
   const [showInitialLoading, setShowInitialLoading] = useState(!isDisplayRoute);
 
   usePosIdleToPin({ disabled: isDisplayRoute || showInitialLoading });
+
+  /* ───────────────── QR SİFARİŞLƏRİ ─────────────────
+     Socket buluda qoşulur, gələn sifariş profilin rejiminə görə ya birbaşa
+     masaya yazılır (direct), ya da bildirişlər bölməsinə düşür (manual).
+     Bax: QR_ORDER_POS_PLAN.md */
+  const { menuDataWithCategories } = useSelector((state) => state.MenuSlice);
+  const booksForQr = useSelector((state) => state.BooksSlice?.books);
+  const loginedWaiterForQr = useSelector((state) => state.WaitersSlice?.loginedWaiter);
+  const [qrTablePicker, setQrTablePicker] = useState(null); // { resolve } | null
+
+  // Redux dəyərlərini ref-də saxlayırıq ki, socket işləyicisi həmişə ƏN SON
+  // vəziyyəti görsün və effekt hər dəyişiklikdə yenidən qoşulmasın
+  const qrStateRef = useRef({});
+  qrStateRef.current = {
+    profile: authResultRedux?.data?.profile,
+    books: booksForQr,
+    loginedWaiter: loginedWaiterForQr,
+    menu: menuData,
+    menuWithCategories: menuDataWithCategories,
+  };
+
+  useEffect(() => {
+    if (isDisplayRoute || showInitialLoading) return;
+    const profile = authResultRedux?.data?.profile;
+    if (!profile?.id) return;
+
+    // Hər iki rejim sönülüdürsə heç nə qurulmur: nə kontekst, nə socket.
+    // Buluda boş-boşuna qoşulmağın mənası yoxdur — gələn sifariş onsuz da
+    // rədd edilərdi, qoşulma isə hər 2-30 saniyədə yenidən cəhd edir.
+    const qrEnabled =
+      Number(profile.is_qr_order_direct) === 1 ||
+      Number(profile.is_qr_order_manual) === 1;
+    if (!qrEnabled) return;
+
+    configureQrOrderManager({
+      getProfile: () => qrStateRef.current.profile || {},
+      getActiveOrders: () => {
+        const b = qrStateRef.current.books;
+        return Array.isArray(b) ? b : b?.data || [];
+      },
+      // `manual` rejimdə çek təsdiqləyən ofisiantın adına yazılır
+      getLoginedWaiter: () => {
+        const w = qrStateRef.current.loginedWaiter;
+        const d = w?.data || w;
+        return d?.id ? { id: Number(d.id), name: d.name || "" } : null;
+      },
+      getMenuCatalog: () => qrStateRef.current.menu || [],
+      getMenuWithCategories: () => qrStateRef.current.menuWithCategories || null,
+      requestTable: (order) =>
+        new Promise((resolve) => setQrTablePicker({ order, resolve })),
+      onOrdersChanged: () => {
+        const pid = qrStateRef.current.profile?.id;
+        if (!pid) return;
+        dispatch(getTableGroups(pid));
+        dispatch(getActiveOrders({ profileId: pid, silentRefresh: true }));
+      },
+    });
+
+    startQrOrders();
+    return () => disconnectQrSocket();
+    // Rejim bayraqları da asılılıqdadır: tənzimləmələrdən QR qəbulu açılanda
+    // socket proqramı yenidən başlatmadan qoşulsun (və söndürüləndə kəsilsin)
+  }, [
+    isDisplayRoute,
+    showInitialLoading,
+    authResultRedux?.data?.profile?.id,
+    authResultRedux?.data?.profile?.is_qr_order_direct,
+    authResultRedux?.data?.profile?.is_qr_order_manual,
+    dispatch,
+  ]);
 
   // Arxa planda blok yoxlaması — POS-u yormadan periodik olaraq serverdən yoxlayır
   // Yalnız is_pos_block dəyişəndə və ya abunəlik bitəndə /blocked-ə yönləndirir
@@ -580,6 +657,18 @@ function AppContent() {
       <Toastify />
       <ToastContainer position="bottom-right" autoClose={2000} hideProgressBar={false} newestOnTop closeOnClick theme="light" style={{ zIndex: 99998 }} />
       <NetworkOverlay />
+      {/* QR sifarişi üçün masa seçimi (manual rejim) */}
+      <SplitTableSelect
+        show={!!qrTablePicker}
+        onClose={() => {
+          qrTablePicker?.resolve?.(null);
+          setQrTablePicker(null);
+        }}
+        onSelect={(table) => {
+          qrTablePicker?.resolve?.(table);
+          setQrTablePicker(null);
+        }}
+      />
       <Suspense fallback={<div className="d-flex justify-content-center align-items-center min-vh-100"><div className="spinner-border text-primary" /></div>}>
         <Routes>
           <Route path="/" element={<Login />} />

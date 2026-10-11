@@ -12,14 +12,16 @@ const WaitersModel = require("../model/WaitersModel");
 const LoginModel = require("../model/LoginModel");
 
 /**
- * Çek sync ünvanları — IP serverdə çox vaxt /api/pos/... prefiksi olur; köhnə /api/sync 404 qaytarır.
- * Cloud-da da marşrut dəyişəndə əlavə varianta keçirik.
+ * Çek sync ünvanları — cloud-da marşrut dəyişəndə əlavə varianta keçirik.
+ *
+ * `46.224.8.157:35627` (qrapi) ünvanları siyahıdan ÇIXARILDI: orada nə
+ * `/api/sync`, nə də `/api/pos/sync` var, hər ikisi 404 qaytarırdı. Yəni əsas
+ * server düşəndə POS iki ölü ünvana da sorğu göndərib gözləyirdi — sync
+ * sadəcə daha gec uğursuz olurdu. Mənbə: QR_ORDER_SOCKET_PLAN.md, 8-ci bənd.
  */
 const ADMIN_SYNC_URLS = [
   "https://api.unipos.tech/api/sync",
   "https://api.unipos.tech/api/pos/sync",
-  "http://46.224.8.157:35627/api/pos/sync",
-  "http://46.224.8.157:35627/api/sync",
 ];
 
 // Fresh connection for each sync request — avoids stale/dead socket reuse
@@ -649,7 +651,8 @@ class SyncService {
     const checks = [
       { url: "https://1.1.1.1", timeout: 3000 },
       { url: "http://1.1.1.1", timeout: 3000 },
-      { url: "http://46.224.8.157:35627/api/discover", timeout: 3000 },
+      // `/api/discover` qrapi-də yoxdur (404) — `/api/health` var və 200 qaytarır
+      { url: "http://46.224.8.157:35627/api/health", timeout: 3000 },
       {
         url: "https://api.unipos.tech/",
         timeout: 3000,

@@ -76,6 +76,32 @@ router.patch(
 router.get("/kitchen/:profileId/orders", KitchenController.getKitchenOrders);
 router.patch("/kitchen/item/:itemId/status", KitchenController.updateKdsStatus);
 router.get("/waiters/:profileId/list", WaitersController.getWaiterLists);
+
+/**
+ * QR sifarişləri üçün ofisiant (yalnız `direct` rejim).
+ *
+ * Admin panelində `is_qr_user = 1` seçilmiş ofisiant qaytarılır; seçim
+ * yoxdursa "QR Sifariş" adlı lokal ofisiant yaradılıb qaytarılır.
+ * `source` sahəsi hansı halın baş verdiyini bildirir ("panel" | "local").
+ *
+ * Frontend hər sifarişdən əvvəl çağırır — panelde seçim dəyişəndə POS-u
+ * yenidən başlatmaq lazım gəlməsin (bax: QR_ORDER_POS_PLAN.md).
+ */
+router.get("/qr/waiter-id/:profileId", async (req, res) => {
+  try {
+    const { resolveQrWaiter } = require("../services/QrWaiterService");
+    const waiter = await resolveQrWaiter(req.params.profileId);
+    if (!waiter) {
+      return res.status(500).json({ message: "false", data: "QR ofisiantı yaradıla bilmədi" });
+    }
+    res.status(200).json({
+      message: "success",
+      data: { waiterId: waiter.id, waiterName: waiter.name, source: waiter.source },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "false", data: error.message });
+  }
+});
 router.get("/tags/:profileId/list", TagsController.getTagsList);
 router.get(
   "/payment-methods/:profileId/list",

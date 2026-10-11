@@ -36,6 +36,10 @@ export const addNotification = (title, message, options = {}) => {
     type = "info",
     dedupeKey = null,
     dedupeTtlMs = 180000,
+    // Kartın struktur məlumatı (məs. QR sifarişində masa, məhsul sayı, məbləğ).
+    // Mətnin içinə yığmaq əvəzinə ayrıca saxlanılır ki, panel onu çip kimi
+    // göstərə bilsin və tərcümə mətni pozulmasın.
+    meta = null,
   } = options;
   if (isSuppressedNotification({ title, dedupeKey })) {
     return;
@@ -76,6 +80,7 @@ export const addNotification = (title, message, options = {}) => {
     status: "new", // new, old
     type, // error, info, success, warning
     ...(dedupeKey != null && dedupeKey !== "" ? { dedupeKey } : {}),
+    ...(meta && typeof meta === "object" ? { meta } : {}),
   };
   notifications.unshift(newNotif);
   if (notifications.length > MAX_STORED_NOTIFICATIONS) {

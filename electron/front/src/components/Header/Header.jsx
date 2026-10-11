@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { setSelectedRoomGroupId, setSelectedFloor as _setSelectedFloor, setSelectedRoomType as _setSelectedRoomType, setSearchText as _setSearchText, clearFilters as _clearFilters, fetchRoomGroups } from "../../redux/Slices/HotelSlice";
 import BookingsModal from "../Rooms/BookingsModal";
 import { t } from "../../utils/translations";
+import { acceptQrOrder, rejectQrOrder } from "../../utils/qrOrderManager";
 
 const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNewOrder }) => {
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
@@ -783,6 +784,8 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
       />
 
       <NotificationSidebar
+        onAcceptQrOrder={acceptQrOrder}
+        onRejectQrOrder={rejectQrOrder}
         show={showNotifications}
         onClose={() => setShowNotifications(false)}
       />

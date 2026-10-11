@@ -43,8 +43,14 @@ const blockIfBelowPaid = async (orderId, itemId, getNewCount, res) => {
   return false;
 };
 
+/**
+ * Tullantı yalnız `api.unipos.tech`-ə göndərilir.
+ *
+ * `http://46.224.8.157:35627/api/pos/write-off` ehtiyat ünvanı silindi —
+ * qrapi-də belə route yoxdur, hər dəfə 404 alıb 10 saniyə gözləyirdi.
+ * Mənbə: QR_ORDER_SOCKET_PLAN.md, 8-ci bənd.
+ */
 const WASTE_API_URL = "https://api.unipos.tech/api/pos/write-off";
-const WASTE_API_FALLBACK = "http://46.224.8.157:35627/api/pos/write-off";
 
 /**
  * Admin anbar API-yə tullantı məlumatı göndər.
@@ -54,7 +60,7 @@ const WASTE_API_FALLBACK = "http://46.224.8.157:35627/api/pos/write-off";
 const sendWasteToAdmin = async (profileId, wasteItems) => {
   if (!wasteItems || !wasteItems.length) return;
   const payload = { profile_id: profileId, items: wasteItems };
-  for (const url of [WASTE_API_URL, WASTE_API_FALLBACK]) {
+  for (const url of [WASTE_API_URL]) {
     try {
       await axios.post(url, payload, { timeout: 10000 });
       console.log(

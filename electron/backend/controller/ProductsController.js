@@ -3,10 +3,18 @@ const axios = require("axios");
 const hostBridge = require("../hostBridge");
 
 const API_URL = "https://api.unipos.tech/api/products";
-const API_URL_FALLBACK = "http://46.224.8.157:35627/api/products";
 
-const apiPost = (url, data) => axios.post(url, data).catch(() => axios.post(url.replace("https://api.unipos.tech", "http://46.224.8.157:35627"), data));
-const apiPut = (url, data) => axios.put(url, data).catch(() => axios.put(url.replace("https://api.unipos.tech", "http://46.224.8.157:35627"), data));
+/**
+ * Məhsul yaratma/dəyişmə yalnız `api.unipos.tech`-dədir.
+ *
+ * Əvvəl `.catch()` ilə `http://46.224.8.157:35627/api/products`-a keçilirdi,
+ * amma qrapi-də məhsul YALNIZ OXUNUR — POST/PUT orada yoxdur. Yəni ehtiyat
+ * cəhd həmişə uğursuz olurdu və əsl xətanı gizlədirdi: `.catch()` ikinci
+ * sorğunun xətasını atırdı, ona görə loqda "products 404" görünürdü, halbuki
+ * problem əsas serverdə idi. Mənbə: QR_ORDER_SOCKET_PLAN.md, 8-ci bənd.
+ */
+const apiPost = (url, data) => axios.post(url, data);
+const apiPut = (url, data) => axios.put(url, data);
 
 exports.createProduct = async (req, res) => {
     try {

@@ -104,6 +104,7 @@ import { t } from "../../utils/translations";
 import { formatPrice } from "../../utils/formatPrice";
 import { hasTimerIntervals } from "../../utils/menuIndex";
 import { findMenuItemById } from "../../utils/menuIndex";
+import { acceptQrOrder, rejectQrOrder } from "../../utils/qrOrderManager";
 
 const Check = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
@@ -3506,6 +3507,8 @@ const Check = () => {
       />
       )}
       <NotificationSidebar
+        onAcceptQrOrder={acceptQrOrder}
+        onRejectQrOrder={rejectQrOrder}
         show={showNotifications}
         onClose={() => setShowNotifications(false)}
       />

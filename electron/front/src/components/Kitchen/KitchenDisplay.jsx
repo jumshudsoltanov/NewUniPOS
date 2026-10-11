@@ -4,6 +4,7 @@ import { getSocket, localApi } from "../../utils/apiConfig";
 import { toast } from "sonner";
 import { t } from "../../utils/translations";
 import "./KitchenDisplay.css";
+import { playNotificationSound } from "../../utils/notificationSound";
 
 const TABS = [
     { key: "all", label: t("butun_cekler") },
@@ -50,22 +51,6 @@ const KitchenDisplay = () => {
         return () => clearInterval(timer);
     }, []);
 
-    const playNotificationSound = () => {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = "sine";
-            osc.frequency.setValueAtTime(880, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
-            gain.gain.setValueAtTime(0.1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.5);
-        } catch { /* nəzərə alınmır */ }
-    };
 
     const fetchOrders = useCallback(async () => {
         if (!profileId) {

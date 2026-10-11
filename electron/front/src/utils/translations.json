@@ -1513,7 +1513,19 @@
     "network_ip": "Network (IP)",
     "kds_ekrani": "KDS Ekranı",
     "avto_bloklama_pin": "Avto bloklama (PIN)",
-    "ortada": "Ortada"
+    "ortada": "Ortada",
+    "qr_sifarisi_cap_olunmadi": "QR sifarişi çap olunmadı",
+    "yeni_qr_sifarisi": "Yeni QR sifarişi",
+    "qr_sifarisi_qebul_edildi": "QR sifarişi qəbul edildi",
+    "qr_sifarisi_redd_edildi": "QR sifarişi rədd edildi",
+    "qr_sifarisi_yazila_bilmedi": "QR sifarişi yazıla bilmədi",
+    "qebul_et": "Qəbul et",
+    "redd_et": "Rədd et",
+    "masa_secilmeyib": "Masa seçilməyib",
+    "qiymet_ferqi_var": "Bəzi məhsulların qiyməti dəyişib",
+    "movcud_ceke_elave_olundu": "Mövcud çekə əlavə olundu",
+    "mehsul": "məhsul",
+    "bu_kateqoriyada_bildiris_yoxdur": "Bu kateqoriyada bildiriş yoxdur"
   },
   "en": {
     "/*_──_esas_menyu_──_*/": ") : (\n          /* ── Main menu ── */",
@@ -3029,7 +3041,19 @@
     "network_ip": "Network (IP)",
     "kds_ekrani": "KDS screen",
     "avto_bloklama_pin": "Auto lock (PIN)",
-    "ortada": "Centre"
+    "ortada": "Centre",
+    "qr_sifarisi_cap_olunmadi": "QR order was not printed",
+    "yeni_qr_sifarisi": "New QR order",
+    "qr_sifarisi_qebul_edildi": "QR order accepted",
+    "qr_sifarisi_redd_edildi": "QR order rejected",
+    "qr_sifarisi_yazila_bilmedi": "The QR order could not be saved",
+    "qebul_et": "Accept",
+    "redd_et": "Reject",
+    "masa_secilmeyib": "No table selected",
+    "qiymet_ferqi_var": "Some item prices have changed",
+    "movcud_ceke_elave_olundu": "Added to the existing receipt",
+    "mehsul": "item",
+    "bu_kateqoriyada_bildiris_yoxdur": "No notifications in this category"
   },
   "ru": {
     "/*_──_esas_menyu_──_*/": ") : (\n          /* ── Главное меню ── */",
@@ -4545,7 +4569,19 @@
     "network_ip": "Сеть (IP)",
     "kds_ekrani": "Экран KDS",
     "avto_bloklama_pin": "Автоблокировка (PIN)",
-    "ortada": "По центру"
+    "ortada": "По центру",
+    "qr_sifarisi_cap_olunmadi": "QR-заказ не распечатан",
+    "yeni_qr_sifarisi": "Новый QR-заказ",
+    "qr_sifarisi_qebul_edildi": "QR-заказ принят",
+    "qr_sifarisi_redd_edildi": "QR-заказ отклонён",
+    "qr_sifarisi_yazila_bilmedi": "Не удалось сохранить QR-заказ",
+    "qebul_et": "Принять",
+    "redd_et": "Отклонить",
+    "masa_secilmeyib": "Стол не выбран",
+    "qiymet_ferqi_var": "Цены некоторых позиций изменились",
+    "movcud_ceke_elave_olundu": "Добавлено в существующий чек",
+    "mehsul": "позиция",
+    "bu_kateqoriyada_bildiris_yoxdur": "В этой категории нет уведомлений"
   },
   "tr": {
     "/*_──_esas_menyu_──_*/": ") : (\n          /* ── Ana menü ── */",
@@ -6061,6 +6097,18 @@
     "network_ip": "Ağ (IP)",
     "kds_ekrani": "KDS ekranı",
     "avto_bloklama_pin": "Otomatik kilit (PIN)",
-    "ortada": "Ortada"
+    "ortada": "Ortada",
+    "qr_sifarisi_cap_olunmadi": "QR siparişi yazdırılmadı",
+    "yeni_qr_sifarisi": "Yeni QR siparişi",
+    "qr_sifarisi_qebul_edildi": "QR siparişi kabul edildi",
+    "qr_sifarisi_redd_edildi": "QR siparişi reddedildi",
+    "qr_sifarisi_yazila_bilmedi": "QR siparişi kaydedilemedi",
+    "qebul_et": "Kabul et",
+    "redd_et": "Reddet",
+    "masa_secilmeyib": "Masa seçilmedi",
+    "qiymet_ferqi_var": "Bazı ürünlerin fiyatı değişti",
+    "movcud_ceke_elave_olundu": "Mevcut fişe eklendi",
+    "mehsul": "ürün",
+    "bu_kateqoriyada_bildiris_yoxdur": "Bu kategoride bildirim yok"
   }
 }

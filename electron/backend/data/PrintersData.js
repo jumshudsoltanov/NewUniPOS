@@ -17,7 +17,6 @@ const getPrinters = async (passedProfileId) => {
             `http://46.224.8.157:35627/api/pos/printers/${profile_id}`,
         );
 
-        console.log("[PrintersData] Admin API raw response:", JSON.stringify(response.data, null, 2));
 
         if (response.data && Array.isArray(response.data.data)) {
             const apiPrinters = response.data.data.map((p) => {
@@ -90,7 +89,6 @@ const getPrinters = async (passedProfileId) => {
                 await PrintersModel.bulkCreate(merged, {
                     updateOnDuplicate: updateKeys,
                 });
-                console.log("[PrintersData] DB-yə yazılan merged printers:", JSON.stringify(merged, null, 2));
             }
 
             console.log("Printers DB sync olundu: insert/update + silindi");
@@ -103,7 +101,6 @@ const getPrinters = async (passedProfileId) => {
                 { timeout: 3000 }
             );
             const v3Printers = Array.isArray(v3Res.data) ? v3Res.data : (v3Res.data?.data || []);
-            console.log(`[PrintersData] V3 local admin printers (${v3Printers.length}):`, v3Printers.map(p => `#${p.id} ${p.name}`));
 
             if (v3Printers.length > 0) {
                 const existing = await PrintersModel.findAll({ where: { profile_id }, raw: true });
@@ -139,7 +136,6 @@ const getPrinters = async (passedProfileId) => {
                     };
                     const updateKeys = Object.keys(record).filter(k => PrintersModel.rawAttributes[k] && k !== 'id');
                     await PrintersModel.upsert(record, { fields: ['id', ...updateKeys] });
-                    console.log(`[PrintersData] V3 printer upsert: #${p.id} "${p.name}"`);
                 }
             }
         } catch (v3Err) {

@@ -21,6 +21,20 @@ autoUpdater.autoInstallOnAppQuit = true;
 // Proqram günlərlə açıq qaldığı üçün log faylı limitsiz böyüməsin — 5MB-dan
 // sonra köhnə fayl arxivlənir (electron-log bunu avtomatik edir)
 log.transports.file.maxSize = 5 * 1024 * 1024;
+
+/**
+ * TERMİNAL SAKİTLİYİ
+ *
+ * `electron-log` konsol transport-u ayrıca işləyir və `consoleControl`-un
+ * susdurduğu `console.*`-dan yan keçir. Nəticədə `npm start` hələ də onlarla
+ * sətir yazırdı. Konsola yalnız XƏTA buraxılır.
+ *
+ * FAYLA yazma toxunulmur: diaqnostika itmir, sadəcə terminalda görünmür.
+ * Hamısını görmək üçün UNIPOS_DEBUG=1.
+ */
+if (process.env.UNIPOS_DEBUG !== "1") {
+  log.transports.console.level = "error";
+}
 log.info("UniPOS Desktop Application is starting...");
 
 /**
@@ -342,6 +356,19 @@ function attachRendererRecovery(browserWindow, label) {
   if (!browserWindow || browserWindow.webContents?.isDestroyed?.()) return;
   const wc = browserWindow.webContents;
   let reloadBurst = [];
+
+  /**
+   * Renderer xətalarını əsas prosesin loguna çıxarır.
+   *
+   * Bu olmadan React-in atdığı xəta yalnız DevTools-da görünür: proqram ağ
+   * ekranda qalır, konsolda isə heç nə yazılmır. Yalnız `error` səviyyəsi
+   * götürülür ki, normal log axını çirklənməsin.
+   */
+  wc.on("console-message", (_e, level, message, line, sourceId) => {
+    if (level < 3) return; // 0=verbose 1=info 2=warning 3=error
+    const where = sourceId ? ` (${String(sourceId).split("/").pop()}:${line})` : "";
+    log.warn(`[RENDERER_ERROR][${label}] ${message}${where}`);
+  });
 
   wc.on("render-process-gone", (_event, details) => {
     const msg = `[${label}] reason=${details?.reason ?? "?"} exitCode=${details?.exitCode ?? "n/a"}`;

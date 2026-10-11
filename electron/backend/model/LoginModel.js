@@ -128,6 +128,15 @@ const LoginModel = db.sequelize.define(
     },
     kitchen_display_screen_id: DataTypes.TEXT,
     mobile_token: DataTypes.TEXT,
+    /** QR sifariş rejimləri — ikisi bir-birini istisna edir */
+    is_qr_order_direct: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
+    is_qr_order_manual: {
+      type: DataTypes.TINYINT,
+      defaultValue: 0,
+    },
     is_hotel_mode: {
       type: DataTypes.TINYINT,
       defaultValue: 0,

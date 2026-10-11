@@ -88,6 +88,28 @@ const ensureSchemaColumns = async () => {
       });
       console.log("[SCHEMA] Added profiles.is_customer_receipt_auto_print");
     }
+    // QR sifariş rejimləri (bax: QR_ORDER_POS_PLAN.md)
+    //   is_qr_order_direct — QR-dan gələn sifariş birbaşa masada yaranır və
+    //                        mətbəxə avtomatik çap olunur
+    //   is_qr_order_manual — sifariş bildirişlər bölməsinə düşür, ofisiant
+    //                        masa seçib təsdiqləyir
+    if (!tableDesc.is_qr_order_direct) {
+      await qi.addColumn("profiles", "is_qr_order_direct", {
+        type: db.Sequelize.DataTypes.TINYINT,
+        defaultValue: 0,
+        allowNull: true,
+      });
+      console.log("[SCHEMA] Added profiles.is_qr_order_direct");
+    }
+    if (!tableDesc.is_qr_order_manual) {
+      await qi.addColumn("profiles", "is_qr_order_manual", {
+        type: db.Sequelize.DataTypes.TINYINT,
+        defaultValue: 0,
+        allowNull: true,
+      });
+      console.log("[SCHEMA] Added profiles.is_qr_order_manual");
+    }
+
     if (!tableDesc.is_sales_shift_required) {
       await qi.addColumn("profiles", "is_sales_shift_required", {
         type: db.Sequelize.DataTypes.TINYINT,
@@ -95,6 +117,17 @@ const ensureSchemaColumns = async () => {
         allowNull: true,
       });
       console.log("[SCHEMA] Added profiles.is_sales_shift_required");
+    }
+
+    // QR ofisiantı bayrağı — admin paneldən seçilir, API-dən sinxronlaşır
+    const waitersDesc = await qi.describeTable("waiters").catch(() => null);
+    if (waitersDesc && !waitersDesc.is_qr_user) {
+      await qi.addColumn("waiters", "is_qr_user", {
+        type: db.Sequelize.DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: true,
+      });
+      console.log("[SCHEMA] Added waiters.is_qr_user");
     }
 
     const ordersItemsDesc = await qi.describeTable("orders_items").catch(() => null);
@@ -644,8 +677,18 @@ hostBridge.registerRpc("get-latest-profile", async () => {
 // Initialize and start
 (async () => {
   await connectToDatabase();
-  await creaedtToTabel();
+  /**
+   * SIRALAMA VACİBDİR: `ensureSchemaColumns` `creaedtToTabel`-dən ƏVVƏL işləyir.
+   *
+   * Səbəb: Sequelize modelləri yeni sütunları elan edir, lakin bazada həmin
+   * sütunlar hələ yoxdursa HƏR sorğu "Unknown column" xətası verir. Express
+   * serveri isə bu init-dən əvvəl dinləməyə başlayır, yəni main proses
+   * (mətbəx/müştəri ekranının avtomatik açılışı) bu aralıqda sorğu göndərə bilir.
+   * `creaedtToTabel` uzun sürdüyü üçün sütunları ondan əvvəl əlavə ediriksə,
+   * həmin aralıq praktiki olaraq sıfıra enir.
+   */
   await ensureSchemaColumns();
+  await creaedtToTabel();
 
   /**
    * Performans indeksləri — versiyadan asılı olmadan hər açılışda təmin edilir.

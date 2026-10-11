@@ -15,25 +15,38 @@ const getRooms = async (passedProfileId) => {
     const profile_id = passedProfileId || (await profileData());
     if (!profile_id) throw new Error("Profile ID tapılmadı");
 
-    // Əvvəlcə V2 API-dən (api.unipos.tech) otaqları çək
+    /**
+     * Otel otaqları yalnız `api.unipos.tech`-dədir.
+     *
+     * Əvvəl burada `http://46.224.8.157:35627/api/rooms/:profile_id` ehtiyat
+     * ünvanı vardı — qrapi-də belə route yoxdur və həmişə 404 qaytarırdı
+     * (admin backend-dəki `/rooms/:id` isə OTAĞIN id-sini gözləyir, restoranın
+     * deyil). Silindi. Mənbə: QR_ORDER_SOCKET_PLAN.md, 8-ci bənd.
+     */
     let apiRooms = [];
+    let fetchOk = false;
     try {
-      const v2resp = await axios.get(`${API_BASE}/rooms`, {
+      const resp = await axios.get(`${API_BASE}/rooms`, {
         params: { profile_id },
         timeout: 10000,
       });
-      apiRooms = v2resp.data;
+      apiRooms = resp.data;
       if (!Array.isArray(apiRooms)) apiRooms = apiRooms?.data || [];
+      fetchOk = true;
     } catch (e) {
-      console.warn("[RoomsData] V2 API xətası:", e.message);
-      // Fallback: V1 sync server
-      try {
-        const v1resp = await axios.get(`http://46.224.8.157:35627/api/rooms/${profile_id}`, { timeout: 10000 });
-        apiRooms = v1resp.data;
-        if (!Array.isArray(apiRooms)) apiRooms = apiRooms?.data || [];
-      } catch (e2) {
-        console.warn("[RoomsData] V1 API xətası:", e2.message);
-      }
+      console.warn("[RoomsData] API xətası:", e.message);
+    }
+
+    /**
+     * DİQQƏT: sorğu alınmayanda HEÇ NƏ silinmir.
+     *
+     * Əvvəl belə deyildi: sorğu uğursuz olanda `apiRooms` boş qalırdı və aşağıdakı
+     * `else` budağı restoranın BÜTÜN otaqlarını `force: true` ilə lokal bazadan
+     * silirdi. Yəni internet bir anlıq kəsiləndə otel otaqları yox olurdu.
+     */
+    if (!fetchOk) {
+      console.warn("[RoomsData] Server əlçatmazdır — lokal otaqlar olduğu kimi saxlanılır");
+      return;
     }
 
     if (Array.isArray(apiRooms) && apiRooms.length > 0) {

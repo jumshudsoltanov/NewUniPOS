@@ -71,6 +71,11 @@ const getWaitersList = async (passedProfileId) => {
         });
       }
 
+      // Panelde `is_qr_user` dəyişə bilər — QR ofisiantı keşi köhnə qalmasın
+      try {
+        require("../services/QrWaiterService").clearQrWaiterCache();
+      } catch { /* servis yüklənməyib */ }
+
       console.log("Waiters DB sync olundu: insert/update + silindi");
     }
   } catch (err) {

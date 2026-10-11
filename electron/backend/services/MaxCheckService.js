@@ -3,8 +3,39 @@ const https = require("https");
 const OrdersModel = require("../model/OrdersModel");
 const LoginModel = require("../model/LoginModel");
 
-const ADMIN_API_URL = "https://api.unipos.tech/api/max-checks";
-const ADMIN_API_FALLBACK_URL = "http://46.224.8.157:35627/api/max-checks";
+/**
+ * Maksimum çek nömrəsinin serverləri.
+ *
+ * İki serverin YOLU VƏ SAHƏ ADLARI FƏRQLİDİR, ona görə hər biri ayrıca təsvir
+ * olunur. Əvvəl ehtiyat ünvan da `/api/max-checks` + `profile_id` / `max_id`
+ * kimi çağırılırdı, qrapi-də isə belə bir route yoxdur — həmişə 404 qaytarırdı.
+ * Əsas server işlədiyi üçün problem görünmürdü, amma o düşəndə ehtiyat da
+ * işləməzdi. Mənbə: QR_ORDER_SOCKET_PLAN.md, 8-ci bənd.
+ */
+const MAX_CHECK_ENDPOINTS = [
+    {
+        name: "api.unipos.tech",
+        get: (profileId) => ({
+            url: "https://api.unipos.tech/api/max-checks",
+            params: { profile_id: profileId },
+        }),
+        post: (profileId, maxId) => ({
+            url: "https://api.unipos.tech/api/max-checks",
+            body: { profile_id: profileId, max_id: maxId },
+        }),
+    },
+    {
+        name: "qrapi",
+        get: (profileId) => ({
+            url: `http://46.224.8.157:35627/api/pos/max-checks/${profileId}`,
+            params: undefined,
+        }),
+        post: (profileId, maxId) => ({
+            url: "http://46.224.8.157:35627/api/pos/max-checks",
+            body: { profileId, maxId },
+        }),
+    },
+];
 
 // Node.js v24+ defaults to TLS 1.2 minimum, but server uses older TLS
 const tlsAgent = new https.Agent({ rejectUnauthorized: false, minVersion: 'TLSv1' });
@@ -67,11 +98,11 @@ class MaxCheckService {
             return this.cachedServerMaxId;
         }
 
-        const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
-        for (const url of urls) {
+        for (const ep of MAX_CHECK_ENDPOINTS) {
+            const { url, params } = ep.get(profileId);
             try {
                 const response = await axios.get(url, {
-                    params: { profile_id: profileId },
+                    params,
                     timeout: 2000,  // 5s → 2s: offline olanda tez cavab ver
                     httpsAgent: tlsAgent,
                 });
@@ -82,6 +113,7 @@ class MaxCheckService {
                         d?.data?.max_id ??
                         d?.data?.[0]?.max_id ??
                         d?.maxId ??
+                        d?.data?.maxId ??
                         0
                     ) || 0;
                     this.cachedServerMaxId = serverMax;
@@ -100,13 +132,13 @@ class MaxCheckService {
     }
 
     async syncMaxIdToServer(profileId, maxId) {
-        const urls = [ADMIN_API_URL, ADMIN_API_FALLBACK_URL];
-        const payload = { profile_id: profileId, max_id: maxId };
-        for (const url of urls) {
+        for (const ep of MAX_CHECK_ENDPOINTS) {
+            const { url, body } = ep.post(profileId, maxId);
             try {
-                const response = await axios.post(url, payload, { timeout: 5000, httpsAgent: tlsAgent });
+                const response = await axios.post(url, body, { timeout: 5000, httpsAgent: tlsAgent });
                 if (response.data?.success || response.status === 200) {
-                    const returnedMax = Number(response.data?.max_id) || maxId;
+                    const returnedMax =
+                        Number(response.data?.max_id ?? response.data?.maxId) || maxId;
                     this.cachedServerMaxId = returnedMax;
                     console.log(`[MAX_CHECK] Synced maxId=${returnedMax} to server (profile: ${profileId}), status: ${response.status}, url: ${url}`);
                     return true;

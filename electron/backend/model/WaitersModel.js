@@ -270,6 +270,17 @@ const WaitersModel = db.sequelize.define(
       allowNull: true,
       defaultValue: 0,
     },
+    /**
+     * QR sifarişləri üçün ofisiant. Admin paneldən seçilir və API-dən gəlir.
+     * `direct` rejimdə QR-dan gələn sifariş avtomatik bu ofisiantın adına
+     * yazılır. `manual` rejimdə isə sifarişi kim təsdiqləyirsə o düşür.
+     * Bax: QR_ORDER_POS_PLAN.md
+     */
+    is_qr_user: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+    },
   },
   {
     tableName: "waiters",

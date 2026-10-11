@@ -6,8 +6,9 @@ import {
   clearNotifications,
 } from "../../utils/notificationService";
 import { t } from "../../utils/translations";
+import { isQrOrderPending } from "../../utils/qrOrderIntake";
 
-const NotificationSidebarComponent = ({ show, onClose }) => {
+const NotificationSidebarComponent = ({ show, onClose, onAcceptQrOrder, onRejectQrOrder }) => {
   const [activeTab, setActiveTab] = useState("new"); // "new" or "old"
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [notifications, setNotifications] = useState([]);
@@ -47,7 +48,7 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
 
   const categories = [
     { id: "all", icon: "bi-house-door" },
-    { id: "qr", icon: "bi-qr-code-scan" },
+    { id: "qr_order", icon: "bi-qr-code-scan" },
     { id: "telephone", icon: "bi-telephone" },
     { id: "delivery", icon: "bi-bicycle" },
     { id: "courier", icon: "bi-truck" },
@@ -124,18 +125,23 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                   const isError =
                     n.type === "error" ||
                     n.title?.toLowerCase().includes("xəta");
+                  // QR sifarişi — gözləyən sifariş kartı, qəbul/rədd düymələri ilə
+                  // Panel bağlananda bütün bildirişlər `old` olur; buna görə
+                  // düymələr statusa deyil, sifarişin hələ gözləməsinə baxır
+                  const isQrOrder =
+                    n.category === "qr_order" && isQrOrderPending(n.orderId);
                   return (
                     <div
                       key={`${n.id}-${idx}`}
-                      className={`notif-item card-style ${isError ? "notif-error" : ""}`}
+                      className={`notif-item card-style ${isError ? "notif-error" : ""} ${isQrOrder ? "notif-qr-order" : ""}`}
                     >
                       <div className="notif-card-main">
                         <div className="notif-card-icon-col">
                           <div
-                            className={`notif-type-icon-circle ${isError ? "error" : "info"}`}
+                            className={`notif-type-icon-circle ${isQrOrder ? "qr" : isError ? "error" : "info"}`}
                           >
                             <i
-                              className={`bi ${isError ? "bi-exclamation-octagon-fill" : "bi-info-circle-fill"}`}
+                              className={`bi ${isQrOrder ? "bi-qr-code" : isError ? "bi-exclamation-octagon-fill" : "bi-info-circle-fill"}`}
                             ></i>
                           </div>
                         </div>
@@ -144,10 +150,34 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                             <span className="notif-item-title">{n.title}</span>
                             <span className="notif-item-time">{n.time}</span>
                           </div>
-                          <div className="notif-item-body">{n.message}</div>
+                          {n.message && (
+                            <div className="notif-item-body">{n.message}</div>
+                          )}
+
+                          {/* QR sifarişi: masa / məhsul / məbləğ ayrıca çiplərdə */}
+                          {isQrOrder && n.meta && (
+                            <div className="notif-qr-facts">
+                              <span className="notif-qr-fact table">
+                                <i className="bi bi-grid-3x3-gap-fill"></i>
+                                {n.meta.tableName}
+                                {n.meta.hallName ? ` · ${n.meta.hallName}` : ""}
+                              </span>
+                              <span className="notif-qr-fact">
+                                <i className="bi bi-bag"></i>
+                                {n.meta.itemCount} {t("mehsul")}
+                              </span>
+                              <span className="notif-qr-fact total">
+                                <i className="bi bi-cash"></i>
+                                {Number(n.meta.total || 0).toFixed(2)} ₼
+                              </span>
+                            </div>
+                          )}
+
                           <div className="notif-item-meta">
                             <div className="notif-meta-row">
-                              {n.orderId && (
+                              {/* QR sifarişinin orderId-si UUID-dir — kartda yer tutur,
+                                  heç nə demir. Qalan bildirişlərdə çek nömrəsidir. */}
+                              {n.orderId && !isQrOrder && (
                                 <div className="meta-badge order">
                                   <i className="bi bi-receipt"></i>
                                   <span>#{n.orderId}</span>
@@ -160,12 +190,31 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                                 </div>
                               )}
                             </div>
-                            {n.fullDate && (
+                            {/* QR kartında saat onsuz da başlıqdadır — tam tarix
+                                təkrar olur və kartı uzadır */}
+                            {n.fullDate && !isQrOrder && (
                               <div className="notif-full-date">
                                 {n.fullDate}
                               </div>
                             )}
                           </div>
+
+                          {isQrOrder && (
+                            <div className="notif-qr-actions">
+                              <button
+                                className="notif-qr-btn accept"
+                                onClick={() => onAcceptQrOrder?.(n.orderId)}
+                              >
+                                <i className="bi bi-check-lg"></i> {t("qebul_et")}
+                              </button>
+                              <button
+                                className="notif-qr-btn reject"
+                                onClick={() => onRejectQrOrder?.(n.orderId)}
+                              >
+                                <i className="bi bi-x-lg"></i> {t("redd_et")}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -176,8 +225,8 @@ const NotificationSidebarComponent = ({ show, onClose }) => {
                   <i className="bi bi-bell-slash notif-empty-state-large-icon"></i>
                   <p>
                     {selectedCategory === "all"
-                      ? "Hələ ki, bildiriş yoxdur"
-                      : `Bu kateqoriyada bildiriş yoxdur`}
+                      ? t("hele_ki_bildiris_yoxdur")
+                      : t("bu_kateqoriyada_bildiris_yoxdur")}
                   </p>
                 </div>
               )}

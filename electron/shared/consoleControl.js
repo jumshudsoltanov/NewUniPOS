@@ -26,7 +26,14 @@
  * İDARƏETMƏ:
  *   UNIPOS_DEBUG=1   → bütün loglar geri qayıdır (nasazlıq axtarışı üçün)
  *   UNIPOS_SILENT=1  → `console.error` də susdurulur (tam sükut)
- * Dev rejimində (paketlənməmiş) heç nə susdurulmur.
+ *
+ * DEV REJİMİ DƏ SAKİTDİR. Əvvəl dev-də hər şey görünürdü, amma sinxronizasiya
+ * hər açılışda yüzlərlə sətir yazırdı və terminalda həqiqətən lazım olan şeyi
+ * (xəta, öz `console.error`-un) tapmaq mümkün olmurdu. İndi `npm start` təmiz
+ * açılır; loglara baxmaq lazım olanda:
+ *
+ *   PowerShell:  $env:UNIPOS_DEBUG=1; npm start
+ *   Git Bash:    UNIPOS_DEBUG=1 npm start
  */
 
 const NOISY_METHODS = [
@@ -68,9 +75,6 @@ function applyConsolePolicy(opts = {}) {
   if (debugOn) {
     return { silenced: false, reason: "UNIPOS_DEBUG=1" };
   }
-  if (!isProduction) {
-    return { silenced: false, reason: "dev rejimi" };
-  }
 
   for (const m of NOISY_METHODS) {
     if (typeof console[m] === "function") console[m] = noop;
@@ -81,6 +85,7 @@ function applyConsolePolicy(opts = {}) {
 
   return {
     silenced: true,
+    mode: isProduction ? "istehsalat" : "dev",
     reason: fullSilence ? "tam sükut (UNIPOS_SILENT=1)" : "yalnız console.error aktiv",
   };
 }
