@@ -1,0 +1,211 @@
+/**
+ * `?inline` — fayl ayrıca yazılmır, `data:` URI kimi paketə hopdurulur.
+ *
+ * VACİBDİR: paketlənmiş proqram səhifəni `file://` ilə yükləyir, `fetch()` isə
+ * `file:` sxemini qəbul etmir ("URL scheme must be http or https"). Yəni adi
+ * import ilə səs dev-də işləyər, quraşdırılmış proqramda SƏSSİZ uğursuz olardı.
+ * `data:` URI hər iki rejimdə oxunur. Fayl 34 KB-dır, paketə təsiri cüzidir.
+ */
+import clickSoundUrl from "../assets/sounds/click.mp3?inline";
+
+/**
+ * DÜYMƏ SƏSİ
+ * ==========
+ *
+ * Proqramda basılan hər düymə qısa klik səsi verir. Səs komponentlərə
+ * əlavə edilmir — sənədə BİR dinləyici qoşulur və hansı elementə basıldığını
+ * özü müəyyən edir. Belə olanda yüzlərlə `onClick`-ə toxunmaq lazım gəlmir
+ * və yeni əlavə olunan düymələr də avtomatik səs verir.
+ *
+ * NİYƏ `<audio>` DEYİL, Web Audio:
+ * `new Audio(...).play()` hər dəfə yeni element yaradır, faylı yenidən
+ * dekodlayır və əvvəlki səs bitməyibsə üst-üstə düşmür. Kassada düymələrə
+ * sürətlə basılır, ona görə fayl BİR DƏFƏ dekod olunub yaddaşda saxlanılır;
+ * hər klik yalnız hazır buferi oxudur (praktiki olaraq pulsuz).
+ *
+ * İDARƏETMƏ (localStorage):
+ *   pos_click_sound   "0" → səs söndürülür (default: açıq)
+ *   pos_click_volume  0–1 arası ədəd (default: 0.35)
+ */
+
+/** Brauzer istifadəçi toxunmayana qədər səsə icazə vermir */
+let audioCtx = null;
+let buffer = null;
+let decoding = false;
+let lastPlayedAt = 0;
+
+/** Eyni toxunuşdan iki səs çıxmasın (pointerdown + sintetik click) */
+const MIN_GAP_MS = 60;
+
+/** Səs açıqdırmı (default: açıq) */
+export function isClickSoundEnabled() {
+  try {
+    return localStorage.getItem("pos_click_sound") !== "0";
+  } catch {
+    return true;
+  }
+}
+
+const isEnabled = isClickSoundEnabled;
+
+function getVolume() {
+  try {
+    const v = Number(localStorage.getItem("pos_click_volume"));
+    if (Number.isFinite(v) && v >= 0 && v <= 1) return v;
+  } catch {
+    /* localStorage əlçatmazdır */
+  }
+  return 0.35;
+}
+
+export function setClickSoundEnabled(on) {
+  try {
+    localStorage.setItem("pos_click_sound", on ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function setClickSoundVolume(v) {
+  try {
+    localStorage.setItem("pos_click_volume", String(v));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Faylı bir dəfə yükləyib dekod edir */
+async function ensureBuffer() {
+  if (buffer || decoding) return;
+  decoding = true;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    if (!audioCtx) audioCtx = new Ctx();
+    const res = await fetch(clickSoundUrl);
+    const bytes = await res.arrayBuffer();
+    buffer = await audioCtx.decodeAudioData(bytes);
+  } catch {
+    /* səs yüklənmədi — kritik deyil, proqram səssiz işləyir */
+  } finally {
+    decoding = false;
+  }
+}
+
+/** Klik səsini çalır */
+export function playClickSound() {
+  if (!isEnabled()) return;
+
+  const now = Date.now();
+  if (now - lastPlayedAt < MIN_GAP_MS) return;
+  lastPlayedAt = now;
+
+  if (!buffer) {
+    // Hələ hazır deyil (çox erkən klik və ya dekod uğursuz) — növbəti dəfəyə
+    ensureBuffer();
+    return;
+  }
+
+  try {
+    // Brauzer kontekstı dayandıra bilər (arxa fon, enerji qənaəti)
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    const src = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    src.buffer = buffer;
+    gain.gain.value = getVolume();
+    src.connect(gain);
+    gain.connect(audioCtx.destination);
+    src.start();
+  } catch {
+    /* səs çıxmadı — kritik deyil */
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ *  Qlobal dinləyici
+ * ------------------------------------------------------------------ */
+
+/** Səs verən elementlər */
+const CLICKABLE_SELECTOR = [
+  "button",
+  "a[href]",
+  '[role="button"]',
+  '[role="tab"]',
+  '[role="menuitem"]',
+  "summary",
+  "label",
+  "select",
+  'input[type="button"]',
+  'input[type="submit"]',
+  'input[type="reset"]',
+  'input[type="checkbox"]',
+  'input[type="radio"]',
+  ".btn",
+  ".nav-link",
+  // Layihənin öz "basıla bilən" sinifləri — `cursor: pointer` yoxlamasına
+  // etibar etmək azdır, sinif CSS-də təsadüfən təyin olunmaya bilər
+  ".cursor-pointer",
+  ".operation-item",
+  "[data-click-sound]",
+].join(",");
+
+/**
+ * Elementin "basıla bilən" olub-olmadığı.
+ *
+ * Yalnız selektora baxmaq azdır: POS-da masa kartı, menyu məhsulu və bir çox
+ * başqa şey `onClick`-li `div`-dir, DOM-da isə bunu görmək mümkün deyil.
+ * Ona görə `cursor: pointer` də yoxlanılır — belə elementlər praktiki olaraq
+ * həmişə basıla biləndir.
+ */
+function isClickable(el) {
+  if (!el || el.nodeType !== 1) return false;
+  if (el.closest("[data-no-click-sound]")) return false;
+  if (el.closest(CLICKABLE_SELECTOR)) return true;
+  try {
+    return window.getComputedStyle(el).cursor === "pointer";
+  } catch {
+    return false;
+  }
+}
+
+let installed = false;
+
+/**
+ * Sənədə bir dəfə qoşulur. `App.jsx` çağırır.
+ * @returns {() => void} dinləyicini söndürən funksiya
+ */
+export function installGlobalClickSound() {
+  if (installed || typeof document === "undefined") return () => {};
+  installed = true;
+
+  const onPointerDown = (e) => {
+    // Yalnız əsas düymə / toxunuş; sağ klik və orta klik səs verməsin
+    if (e.button != null && e.button !== 0) return;
+    if (!isClickable(e.target)) return;
+    playClickSound();
+  };
+
+  // `click` yox, `pointerdown`: səs barmaq qalxmadan çıxsın, cavab ani hiss olunsun.
+  // `capture` — komponent `stopPropagation()` etsə belə səs itməsin.
+  document.addEventListener("pointerdown", onPointerDown, { capture: true });
+
+  /**
+   * Faylı DƏRHAL hazırla, ilk toxunuşu gözləmədən.
+   *
+   * Əvvəl `ensureBuffer()` yalnız ilk `pointerdown`-da çağırılırdı, ona görə
+   * proqram açılandan sonra basılan BİRİNCİ düymə həmişə səssiz qalırdı —
+   * dekod hələ bitməmiş olurdu. Brauzerin avtomatik səs qadağası yalnız səsin
+   * ÇALINMASINA aiddir; `decodeAudioData` dayandırılmış kontekstdə də işləyir,
+   * `resume()` isə onsuz da ilk toxunuşda baş verir (bax: playClickSound).
+   */
+  ensureBuffer();
+
+  installed = true;
+  return () => {
+    document.removeEventListener("pointerdown", onPointerDown, { capture: true });
+    installed = false;
+  };
+}
+
+export default playClickSound;

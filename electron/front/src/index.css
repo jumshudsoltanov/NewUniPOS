@@ -63,3 +63,12 @@ body.touch-scroll-active ::-webkit-scrollbar-thumb:active {
 body.touch-scroll-active * {
   -webkit-overflow-scrolling: touch !important;
 }
+
+/**
+ * Bootstrap-da `.cursor-pointer` utiliti YOXDUR, lakin layihədə bir neçə yerdə
+ * işlənir (məs. əməliyyatlar modalının sətirləri). Nəticədə həmin elementlərin
+ * üstündə kursor əl şəklinə düşmürdü və basıla bilən olduqları bilinmirdi.
+ */
+.cursor-pointer {
+  cursor: pointer;
+}

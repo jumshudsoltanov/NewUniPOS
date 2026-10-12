@@ -12,6 +12,11 @@ import { toast } from "sonner";
 import apiConfig from "../../utils/apiConfig";
 import { isPaymentExpired, isPosBlocked } from "../../utils/dateHelpers";
 import { mergeBlockedLoginPayload } from "../../utils/authResultMerge";
+import {
+  isClickSoundEnabled,
+  setClickSoundEnabled,
+  playClickSound,
+} from "../../utils/clickSound";
 import ReturnCheckModal from "../ReturnCheckModal/ReturnCheckModal";
 import SupportModal from "../SupportModal/SupportModal";
 import ReportModal from "../ReportModal/ReportModal";
@@ -45,6 +50,10 @@ const Settings = () => {
   const [showClock, setShowClock] = useState(() => {
     return localStorage.getItem("showHeaderClock") === "true";
   });
+  // Düymə klik səsi — default açıqdır (bax: utils/clickSound.js)
+  const [clickSoundOn, setClickSoundOn] = useState(
+    () => isClickSoundEnabled(),
+  );
   const [appVersion, setAppVersion] = useState(null);
   const [isDev, setIsDev] = useState(false);
 
@@ -82,6 +91,15 @@ const Settings = () => {
     localStorage.setItem("showHeaderClock", newValue.toString());
     // Dispatch custom event for Header to listen
     window.dispatchEvent(new CustomEvent("clockToggle", { detail: newValue }));
+  };
+
+  // Düymə səsini aç / bağla
+  const handleSoundToggle = () => {
+    const next = !clickSoundOn;
+    setClickSoundOn(next);
+    setClickSoundEnabled(next);
+    // Açılan kimi eşidilsin ki, istifadəçi nəticəni dərhal bilsin
+    if (next) playClickSound();
   };
 
   // Toggle fullscreen via Electron API
@@ -342,12 +360,15 @@ const Settings = () => {
     },
     {
       id: "sound",
-      label: t("sound"),
-      icon: <i className="bi bi-volume-up"></i>,
+      label: clickSoundOn ? t("sesi_bagla") : t("sesi_ac"),
+      icon: (
+        <i className={`bi ${clickSoundOn ? "bi-volume-up" : "bi-volume-mute"}`}></i>
+      ),
+      onClick: handleSoundToggle,
     },
     {
       id: "clock",
-      label: showClock ? "Saatı gizlət" : "Saatı göstər",
+      label: showClock ? t("saati_gizlet") : t("saati_goster"),
       icon: <i className="bi bi-clock"></i>,
       onClick: handleClockToggle,
     },

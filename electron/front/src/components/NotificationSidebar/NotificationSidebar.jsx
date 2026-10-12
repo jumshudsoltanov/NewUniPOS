@@ -23,10 +23,21 @@ const NotificationSidebarComponent = ({ show, onClose, onAcceptQrOrder, onReject
   }, []);
 
   // Filter by tab AND category
+  /**
+   * "Hamısı" bölməsindən KƏNARDA saxlanılan kateqoriyalar.
+   *
+   * QR sifarişləri öz bölməsində emal olunur (qəbul / rədd düymələri ilə) və
+   * əsas siyahıda adi bildirişlərin arasına qarışanda itirdi. Ona görə yalnız
+   * QR bölməsində görünür.
+   */
+  const OWN_SECTION_ONLY = ["qr_order"];
+
   const filteredNotifs = notifications.filter((n) => {
     const matchesTab = n.status === activeTab;
     const matchesCategory =
-      selectedCategory === "all" || n.category === selectedCategory;
+      selectedCategory === "all"
+        ? !OWN_SECTION_ONLY.includes(n.category)
+        : n.category === selectedCategory;
     return matchesTab && matchesCategory;
   });
 
@@ -45,6 +56,16 @@ const NotificationSidebarComponent = ({ show, onClose, onAcceptQrOrder, onReject
   const handleClearAll = () => {
     clearNotifications(activeTab);
   };
+
+  /** Hər bölmədə neçə YENİ bildiriş var — ikonun üstündəki sayğac üçün */
+  const newCountFor = (categoryId) =>
+    notifications.filter(
+      (n) =>
+        n.status === "new" &&
+        (categoryId === "all"
+          ? !OWN_SECTION_ONLY.includes(n.category)
+          : n.category === categoryId),
+    ).length;
 
   const categories = [
     { id: "all", icon: "bi-house-door" },
@@ -65,26 +86,30 @@ const NotificationSidebarComponent = ({ show, onClose, onAcceptQrOrder, onReject
       >
         {/* Left thin sidebar icons */}
         <div className="notif-left-bar">
-          {categories.map((cat) => (
-            <div
-              key={cat.id}
-              className={`notif-icon-item ${selectedCategory === cat.id ? "active" : ""}`}
-              onClick={() => setSelectedCategory(cat.id)}
-              title={cat.id}
-            >
-              <i className={`bi ${cat.icon}`}></i>
-            </div>
-          ))}
+          {categories.map((cat) => {
+            const count = newCountFor(cat.id);
+            return (
+              <div
+                key={cat.id}
+                className={`notif-icon-item ${selectedCategory === cat.id ? "active" : ""}`}
+                onClick={() => setSelectedCategory(cat.id)}
+              >
+                <i className={`bi ${cat.icon}`}></i>
+                {count > 0 && (
+                  <span className="notif-icon-badge">
+                    {count > 99 ? "99+" : count}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Main Notification Panel */}
         <div className="notif-main-panel">
           <div className="notif-header">
             <div className="notif-header-left">
-              <span>
-                Bildirişlər{" "}
-                {selectedCategory !== "all" ? `(${selectedCategory})` : ""}
-              </span>
+              <span>{t("bildirisler")}</span>
             </div>
             <button className="notif-close-btn" onClick={handleClose}>
               <i className="bi bi-x-lg"></i>
@@ -154,23 +179,20 @@ const NotificationSidebarComponent = ({ show, onClose, onAcceptQrOrder, onReject
                             <div className="notif-item-body">{n.message}</div>
                           )}
 
-                          {/* QR sifarişi: masa / məhsul / məbləğ ayrıca çiplərdə */}
+                          {/* QR sifarişi: masa · zal · məhsul · məbləğ — tək sətir */}
                           {isQrOrder && n.meta && (
-                            <div className="notif-qr-facts">
-                              <span className="notif-qr-fact table">
-                                <i className="bi bi-grid-3x3-gap-fill"></i>
+                            <span className="notif-qr-line">
+                              <span className="place">
                                 {n.meta.tableName}
                                 {n.meta.hallName ? ` · ${n.meta.hallName}` : ""}
                               </span>
-                              <span className="notif-qr-fact">
-                                <i className="bi bi-bag"></i>
-                                {n.meta.itemCount} {t("mehsul")}
-                              </span>
-                              <span className="notif-qr-fact total">
-                                <i className="bi bi-cash"></i>
+                              <span className="sep">•</span>
+                              {n.meta.itemCount} {t("mehsul")}
+                              <span className="sep">•</span>
+                              <span className="total">
                                 {Number(n.meta.total || 0).toFixed(2)} ₼
                               </span>
-                            </div>
+                            </span>
                           )}
 
                           <div className="notif-item-meta">

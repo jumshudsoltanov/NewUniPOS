@@ -57,6 +57,7 @@ import {
   startQrOrders,
 } from "./utils/qrOrderManager";
 import { disconnectQrSocket } from "./utils/qrSocket";
+import { installGlobalClickSound } from "./utils/clickSound";
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -124,6 +125,13 @@ function AppContent() {
   const [showInitialLoading, setShowInitialLoading] = useState(!isDisplayRoute);
 
   usePosIdleToPin({ disabled: isDisplayRoute || showInitialLoading });
+
+  /* Düymə səsi — sənədə bir dinləyici qoşulur, komponentlərə toxunulmur.
+     Müştəri/mətbəx ekranlarında lazım deyil. Bax: utils/clickSound.js */
+  useEffect(() => {
+    if (isDisplayRoute) return;
+    return installGlobalClickSound();
+  }, [isDisplayRoute]);
 
   /* ───────────────── QR SİFARİŞLƏRİ ─────────────────
      Socket buluda qoşulur, gələn sifariş profilin rejiminə görə ya birbaşa
@@ -423,14 +431,30 @@ function AppContent() {
       try { return JSON.parse(localStorage.getItem("authResult")); } catch { return null; }
     })();
     const myProfileId = authResult?.data?.profile?.id;
+    /**
+     * Açılışdan dərhal sonra gələn `pin_refresh` atılır.
+     *
+     * Backend öz sinxronizasiyasını bitirəndə bu hadisəni yayımlayır, amma
+     * Pin səhifəsi həmin dörd sorğunu (masalar, açıq çeklər, menyu, ümumi
+     * menyu) onsuz da bir neçə saniyə əvvəl göndərmiş olur. Ölçdüm: eyni
+     * 141 KB-lıq dəst 2.3 saniyə ara ilə İKİ DƏFƏ çəkilir, hər dəfə JSON
+     * analizi və React yenidən render-i ilə birlikdə — açılışın ən yüklü
+     * anında. İlk 8 saniyədə gələn təkrar nəzərə alınmır; sonrakılar
+     * (real dəyişiklik bildirişləri) həmişəki kimi işləyir.
+     */
+    const BASLANGIC_SUSDURMA_MS = 8000;
+    const acilisVaxti = Date.now();
     const handlePinRefresh = (data) => {
       const profileId = data?.profileId;
-      if (profileId && profileId === myProfileId) {
-        dispatch(getTableGroups(profileId));
-        dispatch(getActiveOrders({ profileId }));
-        dispatch(menuWithCategories(profileId));
-        dispatch(menuWithGeneralCategories(profileId));
+      if (!profileId || profileId !== myProfileId) return;
+      if (Date.now() - acilisVaxti < BASLANGIC_SUSDURMA_MS) {
+        console.warn("[BOOT] pin_refresh atıldı — məlumat indicə yükləndi");
+        return;
       }
+      dispatch(getTableGroups(profileId));
+      dispatch(getActiveOrders({ profileId }));
+      dispatch(menuWithCategories(profileId));
+      dispatch(menuWithGeneralCategories(profileId));
     };
     socket.on("pin_refresh", handlePinRefresh);
     return () => socket.off("pin_refresh", handlePinRefresh);
@@ -605,9 +629,25 @@ function AppContent() {
       } catch (globalErr) {
         console.error("Critical boot error:", globalErr);
       } finally {
-        setTimeout(() => {
-          setShowInitialLoading(false);
-        }, 1500);
+        /**
+         * Açılış ekranı init bitən kimi götürülür.
+         *
+         * Burada 1500 ms-lik SABİT gözləmə var idi. Backend 1.4 saniyəyə hazır
+         * olurdu, init ondan da tez bitirdi, amma POS daha 1.5 saniyə boş
+         * spinner göstərirdi — ölçdüm, ilk pikselin 3.4 saniyəyə düşməsinin
+         * əsas səbəbi məhz bu idi (CPU profili 14 saniyənin 12.4-nün BOŞ
+         * keçdiyini göstərdi, yəni gözləmə hesablamadan deyil, taymerdən idi).
+         *
+         * DİQQƏT — burada `requestAnimationFrame` İŞLƏTMƏK OLMAZ. Pəncərə
+         * gizli və ya arxa planda olanda (Windows-da proqram açılarkən tez-tez
+         * belə olur) brauzer kadrları dayandırır və rAF HEÇ VAXT çağırılmır —
+         * POS "Sistem yüklənir..." ekranında əbədi ilişib qalır. Yoxlayarkən
+         * məhz bu baş verdi. `setTimeout` pəncərə görünməsə də işləyir.
+         *
+         * 0 ms gecikmə yalnız bir mikro-tsikl üçündür: `navigate()` ilə eyni
+         * anda spinnerin götürülməsi bir anlıq yanlış ekran göstərə bilərdi.
+         */
+        setTimeout(() => setShowInitialLoading(false), 0);
       }
     };
 

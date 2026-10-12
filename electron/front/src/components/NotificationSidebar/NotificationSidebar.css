@@ -59,6 +59,7 @@
 }
 
 .notif-icon-item {
+    position: relative;
     font-size: 24px;
     color: #94a3b8;
     cursor: pointer;
@@ -80,6 +81,30 @@
     background-color: #053796;
     color: #ffffff;
     box-shadow: 0 4px 10px rgba(5, 55, 150, 0.3);
+}
+
+/* Bölmədəki yeni bildirişlərin sayı.
+   QR sifarişləri "Hamısı"nda görünmədiyi üçün bu sayğac olmasa kassir panelı
+   açıb "bildiriş yoxdur" görür və gözləyən sifarişi tapa bilmir. */
+.notif-icon-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 17px;
+    text-align: center;
+    box-shadow: 0 0 0 2px #fff;
+}
+
+.notif-icon-item.active .notif-icon-badge {
+    box-shadow: 0 0 0 2px #053796;
 }
 
 /* Main Panel */
@@ -430,10 +455,12 @@
 }
 /* ── QR sifarişi kartı ─────────────────────────────────────────────
    Dizayn qalan bildirişlərlə eynidir: ağ kart, 4px sol zolaq, yumşaq
-   fonlu ikon plitəsi. Fərq yalnız vurğu rəngindədir — panelin başlığı ilə
-   eyni mavi (#729bfc) ailəsindən. Bax: QR_ORDER_POS_PLAN.md */
+   fonlu ikon plitəsi. Vurğu rəngi proqramın brend mavisidir (#053796).
+
+   Məlumat sətri qəsdən SADƏ mətndir: əvvəl hər dəyər ayrıca rəngli çip idi,
+   üç çip kiçik kartda həddən artıq ağır görünürdü. Bax: QR_ORDER_POS_PLAN.md */
 .notif-item.notif-qr-order {
-  border-left-color: #4f74e3;
+  border-left-color: #053796;
   background: #ffffff;
 }
 
@@ -443,87 +470,79 @@
 
 .notif-type-icon-circle.qr {
   background: #eef2ff;
-  color: #4f74e3;
+  color: #053796;
 }
 
-/* Masa / məhsul / məbləğ — mətn sətri yerinə oxunaqlı çipler */
-.notif-qr-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+/* Masa · zal · məhsul sayı · məbləğ — bir sətir, nöqtə ayırıcı ilə */
+.notif-qr-line {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #64748b;
 }
 
-.notif-qr-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+.notif-qr-line .sep {
+  margin: 0 5px;
+  color: #cbd5e1;
+}
+
+.notif-qr-line .place {
+  color: #334155;
   font-weight: 600;
-  background: #f1f5f9;
-  color: #475569;
-  line-height: 1.4;
 }
 
-.notif-qr-fact i {
-  font-size: 0.75rem;
-  opacity: 0.8;
-}
-
-.notif-qr-fact.table {
-  background: #eef2ff;
-  color: #4338ca;
-}
-
-.notif-qr-fact.total {
-  background: #ecfdf5;
-  color: #047857;
+.notif-qr-line .total {
+  color: #053796;
+  font-weight: 700;
 }
 
 .notif-qr-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .notif-qr-btn {
-  flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 5px;
+  padding: 6px 14px;
   border: 1px solid transparent;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  line-height: 1.4;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.notif-qr-btn i {
+  font-size: 0.75rem;
 }
 
 .notif-qr-btn.accept {
-  background: #4f74e3;
-  border-color: #4f74e3;
+  background: #053796;
+  border-color: #053796;
   color: #fff;
 }
 
 .notif-qr-btn.accept:hover {
-  background: #3f61cc;
-  border-color: #3f61cc;
+  background: #042a73;
+  border-color: #042a73;
 }
 
-/* Rədd ikinci dərəcəli əməliyyatdır — qırmızı dolu düymə kartı ağırlaşdırırdı */
+/* Rədd ikinci dərəcəli əməliyyatdır — dolu qırmızı düymə kartı ağırlaşdırırdı */
 .notif-qr-btn.reject {
-  background: #fff;
-  border-color: #e2e8f0;
-  color: #64748b;
+  background: transparent;
+  border-color: transparent;
+  color: #94a3b8;
 }
 
 .notif-qr-btn.reject:hover {
   background: #fef2f2;
-  border-color: #fecaca;
   color: #dc2626;
 }
 

@@ -1724,18 +1724,42 @@ const Tables = () => {
         >
           {isTableEditMode ? (
             <>
+              {/* Rənglər proqramın öz palitrasındandır: əsas əməliyyat brend
+                  mavisi (#053796 — "Redaktə et" düyməsi ilə eyni), ləğv isə
+                  ikinci dərəcəli ağ düymədir. Əvvəl qırmızı/yaşıl idi və
+                  başlıqla, masa kartları ilə uyuşmurdu.
+
+                  `key` MƏCBURİDİR: açarsız React "Düzəliş et" düyməsinin DOM
+                  elementini təkrar işlədir və yalnız rəngini dəyişir. Bootstrap
+                  `.btn`-də 0.15s `background-color` keçidi olduğu üçün düymə
+                  mavidən ağa "axırdı". Ayrı açar → köhnə element silinir,
+                  yenisi yaranır, keçid baş vermir. */}
               <button
-                className="btn btn-danger d-flex align-items-center gap-2 shadow-lg"
+                key="table-design-cancel"
+                className="btn d-flex align-items-center gap-2 shadow-lg"
                 onClick={() => dispatch(cancelEditMode())}
-                style={{ borderRadius: "50px", padding: "10px 20px" }}
+                style={{
+                  backgroundColor: "#ffffff",
+                  color: "#475569",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "50px",
+                  padding: "10px 20px",
+                }}
               >
                 <i className="bi bi-x-lg"></i>
                 <span className="d-none d-md-inline">{t("cancel")}</span>
               </button>
               <button
-                className="btn btn-success d-flex align-items-center gap-2 shadow-lg"
+                key="table-design-save"
+                className="btn d-flex align-items-center gap-2 shadow-lg"
                 onClick={() => dispatch(saveTableLayouts())}
-                style={{ borderRadius: "50px", padding: "10px 20px" }}
+                style={{
+                  backgroundColor: "#053796",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "50px",
+                  padding: "10px 20px",
+                }}
               >
                 <i className="bi bi-check-lg"></i>
                 <span className="d-none d-md-inline">{t("save")}</span>
@@ -1744,6 +1768,7 @@ const Tables = () => {
           ) : (
             Number(loginedWaiter?.data?.can_edit_table_design) === 1 && (
               <button
+                key="table-design-edit"
                 className="btn btn-primary d-flex align-items-center gap-2 shadow-lg"
                 onClick={() => dispatch(startEditMode())}
                 style={{

@@ -352,14 +352,32 @@
     color: white;
 }
 
+/* Panelin rəngləri proqramın palitrasından götürülüb: əsas əməliyyat brend
+   mavisi (#053796), dağıdıcı əməliyyat isə neytral — qırmızı yalnız kursor
+   üstünə gələndə görünür. Əvvəl yaşıl/qırmızı dolu düymələr idi və nə başlıqla,
+   nə də masa kartları ilə uyuşmurdu. */
 .tsm-btn-green {
-    background: #059669;
+    background: #053796;
     color: white;
+    transition: background-color 0.15s ease;
+}
+
+.tsm-btn-green:hover {
+    background: #042a73;
 }
 
 .tsm-btn-red {
-    background: #dc2626;
-    color: white;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    color: #64748b;
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.tsm-btn-red:hover {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
 }
 
 .tsm-btn-outline {
