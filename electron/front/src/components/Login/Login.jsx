@@ -155,12 +155,23 @@ const Login = () => {
     try {
       const profileId = loginedProfileData.data.profile.id;
       await apiConfig.post(`/sync/refresh/${profileId}`);
-      await Promise.all([
+      // `allSettled` — TƏK bir sorğu (məs. anlıq şəbəkə gecikməsi) uğursuz
+      // olanda bütün yeniləmə "xəta" görünürdü, halbuki qalanları alınmışdı.
+      // Yalnız HAMISI uğursuz olanda əsl xəta göstərilir. (Pin.jsx ilə eyni qayda.)
+      const neticeler = await Promise.allSettled([
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
         dispatch(menuWithCategories(profileId)).unwrap(),
         dispatch(menuWithGeneralCategories(profileId)).unwrap(),
       ]);
+      // `ConditionError` = açılışda birləşdirilmiş sorğu, xəta deyil
+      const ugursuz = neticeler.filter(
+        (r) => r.status === "rejected" && r.reason?.name !== "ConditionError",
+      );
+      ugursuz.forEach((r) => console.error("[Yenilə] Qismən uğursuz:", r.reason));
+      if (ugursuz.length > 0 && ugursuz.length === neticeler.length) {
+        throw ugursuz[0]?.reason || new Error("Yeniləmə alınmadı");
+      }
       toast.success(t("data_updated"), { id: toastId });
     } catch (error) {
       console.error("Yeniləmə xətası:", error);

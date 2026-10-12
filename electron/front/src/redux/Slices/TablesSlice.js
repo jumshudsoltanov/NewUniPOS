@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { bootDedupeAllows } from "../../utils/bootDedupe";
 import axios from "../../utils/apiConfig";
 import axiosRaw from "axios";
 import { getEffectiveHourlyPrice, getLiveTimerCharge } from "../../utils/orderHourlyPrice";
@@ -60,6 +61,10 @@ export const getTableGroups = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response.data);
     }
+  },
+  {
+    // Açılışda 4 dəfə çağırılırdı — bax: utils/bootDedupe.js
+    condition: (profileId) => bootDedupeAllows("tables:" + profileId),
   },
 );
 
@@ -365,6 +370,17 @@ const TablesSlice = createSlice({
       if (!state.tableGroups?.data || state.tableGroups.data.length === 0) {
         state.isTablesLoading = true;
       }
+    });
+    /**
+     * Çek geri qaytarılanda masa siyahısındakı süzgəcdən də çıxarılmalıdır —
+     * əks halda `getTableGroups` çeki hər dəfə atır və masa boş görünür.
+     * Bax: BooksSlice-dakı eyni işləyici.
+     */
+    builder.addCase("orders/reopen/fulfilled", (state, action) => {
+      const reopenedOrderId = String(action.meta.arg.orderId);
+      state.deletedOrderIds = (state.deletedOrderIds || []).filter(
+        (id) => String(id) !== reopenedOrderId,
+      );
     });
     builder.addCase(getTableGroups.fulfilled, (state, action) => {
       state.isTablesLoading = false;

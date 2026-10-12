@@ -10,6 +10,20 @@ try {
 
 const DEFAULT_TIMEOUT_MS = 180000; // 3 dəqiqə — vergi kassası çapı yavaş ola bilər, timeout verməsin
 
+/**
+ * Terminaldan uğurla keçmiş, amma fiskal çeki hələ kəsilməmiş kart ödənişləri (documentUUID → {rrn, amount, at}).
+ * Çek təkrar göndəriləndə terminal yenidən çağırılmır (ikiqat çəkmə olmasın), saxlanılmış RRN ilə birbaşa "sale" gedir.
+ */
+const _pendingCardTx = new Map();
+const PENDING_CARD_TX_TTL_MS = 24 * 60 * 60 * 1000;
+
+function _prunePendingCardTx() {
+    const now = Date.now();
+    for (const [k, v] of _pendingCardTx) {
+        if (now - v.at > PENDING_CARD_TX_TTL_MS) _pendingCardTx.delete(k);
+    }
+}
+
 class SunmiService {
     constructor(config) {
         this.ip = config.ip_addr;
@@ -210,8 +224,27 @@ class SunmiService {
             timeout: timeoutMs || this.timeoutMs,
         });
         const result = response.data;
-        log.info(`[SUNMI TAPXPHONE RESPONSE] ${operation}:`, JSON.stringify(result));
+        // warn: quraşdırılmış tətbiqdə yalnız warn/error səviyyəsi main.log-a düşür
+        console.warn(`[SUNMI TAPXPHONE RESPONSE] ${operation}:`, JSON.stringify(result));
         return result;
+    }
+
+    /** Cavabın istənilən dərinliyində adı regex-ə uyğun gələn ilk boş olmayan sətir dəyərini tapır */
+    _findDeepValue(obj, keyRegex, depth = 0) {
+        if (obj == null || typeof obj !== 'object' || depth > 4) return '';
+        for (const [k, v] of Object.entries(obj)) {
+            if (keyRegex.test(k) && v != null && typeof v !== 'object') {
+                const s = String(v).trim();
+                if (s && s.toLowerCase() !== 'null') return s;
+            }
+        }
+        for (const v of Object.values(obj)) {
+            if (v && typeof v === 'object') {
+                const found = this._findDeepValue(v, keyRegex, depth + 1);
+                if (found) return found;
+            }
+        }
+        return '';
     }
 
     /**
@@ -225,26 +258,105 @@ class SunmiService {
             documentUUID: String(documentUUID),
             operationType,
             amount: this._round2(amount),
+            rrn: rrn ? String(rrn) : '',
         };
-        if (rrn) data.rrn = String(rrn);
-        // Terminal əməliyyatı müştərinin kartı/telefonu yaxınlaşdırmasını gözləyir — uzun timeout.
-        const result = await this._tapXPhoneRequest('transactionTapXPhone', data, Math.max(this.timeoutMs, 120000));
-        if (String(result.code) !== '0') {
-            const err = new Error(`[SUNMI] Kart terminalı əməliyyatı rədd edildi: ${result.message || 'naməlum xəta'} (kod: ${result.code})`);
+        const start = await this._tapXPhoneRequest('transactionTapXPhone', data, Math.max(this.timeoutMs, 120000));
+        if (String(start.code) !== '0') {
+            const err = new Error(`[SUNMI] Kart terminalı əməliyyatı rədd edildi: ${start.message || 'naməlum xəta'} (kod: ${start.code})`);
+            err.sunmiTapXPhone = start;
+            throw err;
+        }
+
+        // transactionTapXPhone asinxrondur: terminal açılan kimi {"code":"0","message":"İcra olunur"}
+        // qaytarır, ödəniş arxada davam edir. Nəticə transactionTapXphoneCheck ilə eyni documentUUID
+        // üzrə sorğulanır — RRN gələnə, rədd olunana və ya vaxt bitənə qədər.
+        let result = start;
+        // Real cavab formatı (Kapital Bank TapXphone, 2026-10-12 sınağı):
+        // data: { status:"APPROVED", rrn, auth_code, trxid, amt, card_mask, applbl, bank_owner,
+        //         pmt_terminal, stan, batch, date_time, host_resp_code:"00" }
+        // Ödəniş bitməyənə qədər data.status/rrn boş gəlir, code:"0" "Success operation".
+        const extract = (r) => {
+            const d = (r && r.data) || {};
+            return {
+                status: String(d.status || '').trim().toUpperCase(),
+                rrn: String(d.rrn || this._findDeepValue(r, /^rrn$/i) || '').trim(),
+                approvalCode: String(d.auth_code || d.approval_code || d.approvalCode || '').trim(),
+                tx: String(d.trxid || d.transaction_id || d.transactionId || '').trim(),
+                hostResp: String(d.host_resp_code || '').trim(),
+                bank: d,
+            };
+        };
+        const isApproved = (g) => g.status === 'APPROVED' || (!!g.rrn && (!g.hostResp || g.hostResp === '00'));
+        const isFinalFailure = (g) => !!g.status && g.status !== 'APPROVED';
+        let got = extract(result);
+        const isPending = (r) => /icra\s*olunur|in\s*progress|pending|gözl/i.test(String(r?.message || ''));
+
+        if (!isApproved(got)) {
+            const POLL_MS = 2000;
+            const MAX_WAIT_MS = Math.max(this.timeoutMs, 120000);
+            const deadline = Date.now() + MAX_WAIT_MS;
+            while (Date.now() < deadline) {
+                await new Promise((r) => setTimeout(r, POLL_MS));
+                let st;
+                try {
+                    st = await this.checkCardTerminalStatus(documentUUID);
+                } catch (e) {
+                    console.warn('[SUNMI TAPXPHONE] status yoxlama xətası, davam edilir:', e.message);
+                    continue;
+                }
+                result = st;
+                got = extract(st);
+                if (isApproved(got)) break;
+                // Terminal rədd/ləğv etdi (status DECLINED/CANCELLED və s.) — dərhal dayan
+                if (isFinalFailure(got)) {
+                    const err = new Error(`[SUNMI] Kart ödənişi terminalda tamamlanmadı: ${got.status}${got.hostResp ? ` (bank kodu ${got.hostResp})` : ''} — fiskal çek kəsilmədi`);
+                    err.sunmiTapXPhone = st;
+                    throw err;
+                }
+                // Başlanğıcda qeyd hələ yaranmamış ola bilər — ilk 15 saniyə "tapılmadı" cavabını gözləmə sayırıq
+                const notFoundYet = /tapıla bilmədi|tapilmadi|not found/i.test(String(st?.message || ''))
+                    && (Date.now() - (deadline - MAX_WAIT_MS)) < 15000;
+                if (String(st.code) !== '0' && !isPending(st) && !notFoundYet) {
+                    const err = new Error(`[SUNMI] Kart ödənişi terminalda tamamlanmadı: ${st.message || 'rədd edildi'} (kod: ${st.code})`);
+                    err.sunmiTapXPhone = st;
+                    throw err;
+                }
+            }
+        }
+
+        if (!isApproved(got)) {
+            const raw = JSON.stringify(result).slice(0, 300);
+            const err = new Error(`[SUNMI] Kart ödənişi terminalda tamamlanmadı (təsdiq alınmadı) — fiskal çek kəsilmədi. Son cavab: ${raw}`);
             err.sunmiTapXPhone = result;
             throw err;
         }
-        const rd = result.data || {};
         return {
-            rrn: rd.rrn || rd.RRN || '',
-            approvalCode: rd.approval_code || rd.approvalCode || '',
+            rrn: got.rrn,
+            approvalCode: got.approvalCode,
+            transactionId: got.tx,
+            bank: {
+                status: got.status,
+                rrn: got.rrn,
+                authCode: got.approvalCode,
+                trxId: got.tx,
+                amount: got.bank.amt,
+                cardMask: got.bank.card_mask,
+                cardLabel: got.bank.applbl,
+                bankOwner: got.bank.bank_owner,
+                terminal: got.bank.pmt_terminal,
+                stan: got.bank.stan,
+                batch: got.bank.batch,
+                dateTime: got.bank.date_time,
+                merchant: got.bank.pmt_dest,
+                hostRespCode: got.hostResp,
+            },
             raw: result,
         };
     }
 
     /** documentUUID ilə göndərilmiş bir transactionTapXPhone əməliyyatının son statusunu yoxlayır (bərpa üçün). */
     async checkCardTerminalStatus(documentUUID) {
-        return this._tapXPhoneRequest('transactionTapXphoneCheck', { documentUUID: String(documentUUID) });
+        return this._tapXPhoneRequest('transactionTapXphoneCheck', { documentUUID: String(documentUUID) }, 15000);
     }
 
     /** Ödəniş terminalının əməliyyat gününü bağlayır. */
@@ -616,22 +728,60 @@ class SunmiService {
         cashRounded = resolvedPayments.cashPayment;
         cardRounded = resolvedPayments.cardPayment;
 
+        const documentUUID = String(orderId || uuidv4());
+
+        let bankTx = null;
+        if (cardRounded > 0) {
+            _prunePendingCardTx();
+            const pending = _pendingCardTx.get(documentUUID);
+            if (pending && Math.abs(pending.amount - cardRounded) < 0.005) {
+                // Ödəniş artıq terminaldan keçib, yalnız fiskal çek kəsilməmişdi — terminalı təkrar çağırma
+                log.warn(`[SUNMI] ${documentUUID}: kart ödənişi artıq keçib (rrn=${pending.rrn || '-'}), terminal təkrar çağırılmır`);
+                bankTx = pending;
+            } else {
+                // Terminal eyni documentUUID-ni ikinci dəfə qəbul etmir ("Uuid təkrardır", kod 999):
+                // ləğv/uğursuz cəhddən sonra təkrar göndərmə mümkün olsun deyə hər cəhdə unikal UUID verilir.
+                const terminalUuid = `${documentUUID}-${Date.now()}`;
+                const charge = await this.chargeCardTerminal({ documentUUID: terminalUuid, amount: cardRounded });
+                bankTx = {
+                    rrn: charge.rrn || '',
+                    approvalCode: charge.approvalCode || '',
+                    transactionId: charge.transactionId || '',
+                    bank: charge.bank || null,
+                    terminalUuid,
+                    amount: cardRounded,
+                    at: Date.now(),
+                };
+                _pendingCardTx.set(documentUUID, bankTx);
+            }
+        }
+
+        // Caspos-un rəsmi nümunəsi: kart ödənişində sale-ə rrn + approval_code + transaction_id
+        // birlikdə göndərilir, isSendCardPayment göndərilmir.
         const data = {
-            documentUUID: String(orderId || uuidv4()),
+            documentUUID,
             cashPayment: cashRounded,
             cardPayment: cardRounded,
             creditPayment: 0.0,
             depositPayment: 0.0,
             bonusPayment: 0.0,
-            isSendCardPayment: cardRounded > 0,
             items: saleItems,
             cashierName: (cashierName || 'Cashier').substring(0, 64),
+            ...(bankTx ? {
+                rrn: bankTx.rrn,
+                approval_code: bankTx.approvalCode,
+                transaction_id: bankTx.transactionId,
+            } : {}),
             currency: 'AZN'
         };
 
         const result = await this._request(this._base('sale', data));
+        // Fiskal çek kəsildi — gözləyən kart ödənişi qeydini sil
+        _pendingCardTx.delete(documentUUID);
         // Normalize response so CheckOver.jsx can save fiscal IDs
         const rd = result.data || {};
+        // Bank qəbzi POS kassa printerindən çap olunur (TapXphone inteqrasiya rejimində qəbz çap etmir)
+        if (bankTx && bankTx.bank) result.bank_receipt = bankTx.bank;
         result.long_id = rd.document_id || rd.documentId || '';
         result.short_id = rd.short_id || rd.shortId || rd.fiscal_id || '';
         result.document_number = String(rd.document_number || rd.documentNumber || '');

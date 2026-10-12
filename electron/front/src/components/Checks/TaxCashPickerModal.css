@@ -9,6 +9,11 @@
     margin-right: auto !important;
 }
 
+.customers-modal.tax-kassa-picker-modal .modal-dialog.tax-kassa-confirm-dialog {
+    max-width: min(94vw, 460px) !important;
+    width: min(94vw, 460px) !important;
+}
+
 .tax-kassa-picker-modal .customers-modal-header {
     height: auto;
     min-height: 66px;

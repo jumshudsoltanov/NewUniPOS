@@ -449,8 +449,19 @@ if (!gotTheLock) {
 }
 // ----------------------------
 
-// Splash animasiyası tam oynasın deyə minimum bu qədər ekranda qalır
-const SPLASH_MIN_DISPLAY_MS = 2500;
+/**
+ * Splash ekranda qalan MİNİMUM müddət.
+ *
+ * Əvvəl 2500 ms idi və bu, açılışın ən böyük gecikməsi olmuşdu: backend
+ * ~1.4 saniyəyə, interfeys isə ~0.3 saniyəyə hazır olurdu, amma proqram
+ * splash-ın saxta animasiyasını gözləyirdi. Ölçdüm — istifadəçi hazır
+ * proqramı 2 saniyədən çox gözləyirdi.
+ *
+ * İndi yalnız yanıb-sönməni (splash bir anlıq görünüb yox olmasını)
+ * əngəlləyəcək qədər saxlanılır. Splash-dakı zolaq artıq faiz göstərmir,
+ * ona görə erkən bağlanmaq onu "yarımçıq" göstərmir.
+ */
+const SPLASH_MIN_DISPLAY_MS = 600;
 let splashShownAt = 0;
 
 // Kiçik splash pəncərə — əsas pəncərə hazır olana qədər göstərilir
@@ -2462,6 +2473,9 @@ async function executePrintReceipt(
         }
       }
 
+      // Çap "uğurlu" sayılsa da problemli olduqda doldurulur (aşağıya bax)
+      let printWarning = null;
+
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error("Printing timed out (10s)"));
@@ -2498,15 +2512,25 @@ async function executePrintReceipt(
                   printWindow.webContents.print(
                     { silent: true, deviceName: printerName, margins: { marginType: "none" } },
                     (success2, errorType2) => {
-                      // success2 === false ola bilər amma çap getmiş ola bilər (Electron bug).
-                      // Bu yüzündən: əgər errorType2 açıq xəta deyilsə, uğurlu say.
+                      /**
+                       * `success2 === false` olsa da çap fiziki olaraq getmiş
+                       * ola bilər (Electron-un Windows-dakı bilinən qüsuru), ona
+                       * görə `reject` etmirik — əks halda normal çaplarda yalançı
+                       * xəta çıxardı.
+                       *
+                       * LAKİN əvvəl hər iki budaq sadəcə `resolve()` edirdi və
+                       * HƏQİQİ uğursuzluq da (printer sönülü, ad səhv) uğur kimi
+                       * qaytarılırdı — mətbəx çeki çıxmırdı, heç kim bilmirdi.
+                       * İndi nəticə `printWarning` ilə geri ötürülür ki, kassirə
+                       * bildiriş göstərilə bilsin.
+                       */
                       if (!success2 && errorType2 && errorType2 !== 'success') {
-                        log.warn(`[PRINT] Fallback da uğursuz: ${errorType2}. Ancaq çap gəlmiş ola bilər.`);
-                        // Çap fiziki olaraq getmiş ola bilər, reject etmə — resolve et
-                        resolve();
-                      } else {
-                        resolve();
+                        const mesaj = `Printer "${printerName}" cavab vermədi (${errorType2}). Çap getməmiş ola bilər.`;
+                        log.error(`[PRINT] ${mesaj}`);
+                        logErrorToFile("print-fallback-failed", mesaj);
+                        printWarning = mesaj;
                       }
+                      resolve();
                     }
                   );
                 } catch (e2) { reject(e2); }
@@ -2561,7 +2585,7 @@ async function executePrintReceipt(
         }
       }
 
-      return { success: true };
+      return printWarning ? { success: true, warning: printWarning } : { success: true };
     } catch (error) {
       console.error("Receipt printing failed:", error);
       if (!printWindow.isDestroyed()) printWindow.close();

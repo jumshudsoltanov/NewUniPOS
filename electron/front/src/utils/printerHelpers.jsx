@@ -4,6 +4,7 @@ import KitchenReceipt from "../components/Receipt/KitchenReceipt";
 import { addNotification } from "./notificationService";
 import axios, { getSocket } from "./apiConfig";
 import CustomerReceipt from "../components/Receipt/CustomerReceipt";
+import BankReceipt from "../components/Receipt/BankReceipt";
 import {
   maybeBlockCustomerOnCustomerReceipt,
   maybeLockCheckAfterCustomerReceiptPrint,
@@ -394,6 +395,24 @@ export const processAndPrintOrders = async (
 /**
  * @param {object} [options] — { dispatch, loginedWaiter, autoLockCheckAfterPrint } — aktiv çek ekranında ön çekdən sonra DB kilidi
  */
+/**
+ * Bank (kart) qəbzi — TapXphone inteqrasiya rejimində qəbz çap etmədiyi üçün
+ * fiskal çekdən sonra POS-un kassa printerindən çıxarılır.
+ * @param {object} bank  backend-dən gələn `bank_receipt` (rrn, authCode, cardMask, amount, ...)
+ */
+export const printBankReceipt = async (bank, { orderId, restaurantName } = {}, profileData) => {
+  if (!bank) return { success: false, error: "Bank qəbzi məlumatı yoxdur" };
+  const name = restaurantName || profileData?.data?.profile?.restaurant_name || "";
+  return printCustomerReceipt(
+    { items: [], checkData: { id: orderId } },
+    profileData,
+    {
+      element: <BankReceipt bank={bank} orderId={orderId} restaurantName={name} />,
+      skipPostPrint: true,
+    },
+  );
+};
+
 export const printCustomerReceipt = async (
   orderData,
   profileData,
@@ -477,10 +496,11 @@ export const printCustomerReceipt = async (
 
   try {
     flushSync(() => {
-      root.render(<CustomerReceipt {...receiptProps} />);
+      root.render(options?.element || <CustomerReceipt {...receiptProps} />);
     });
 
     const html = container.innerHTML;
+    const skipPostPrint = !!options?.skipPostPrint;
 
     const profile = getProfileForPrinting(
       profileData,
@@ -577,6 +597,7 @@ export const printCustomerReceipt = async (
         const delegatePayload = buildCashierPrintPayload(printer);
         socket.emit("delegate_print", delegatePayload);
       }
+      if (skipPostPrint) return { success: true, delegated: true };
       // Post-print operations in background — don't block UI
       maybeBlockCustomerOnCustomerReceipt(
         options?.dispatch,
@@ -604,7 +625,26 @@ export const printCustomerReceipt = async (
           const nm = printPayload.printerName || printPayload.printerIp;
           if (!nm) throw new Error("Printer adı və ya IP yoxdur");
           const result = await window.electronAPI.printReceipt(printPayload);
-          if (result && result.success) return true;
+          if (result && result.success) {
+            /**
+             * Çap "uğurlu"dur, amma əsas proses xəbərdarlıq qaytarıbsa (printer
+             * cavab verməyib) kassir bundan XƏBƏRDAR OLMALIDIR. Əvvəl belə hal
+             * sadəcə uğur sayılırdı və mətbəx çeki səssizcə itirdi.
+             */
+            if (result.warning) {
+              addNotification(
+                "Çap xəbərdarlığı",
+                `${printer?.local_name || printer?.name || "Printer"}: ${result.warning}`,
+                {
+                  orderId: orderData.checkData?.id,
+                  printerName: printer?.local_name || printer?.name,
+                  category: "printer",
+                  type: "warning",
+                },
+              );
+            }
+            return true;
+          }
           const pLabel =
             printer?.local_name || printer?.name || printPayload.printerIp;
           addNotification(
@@ -630,6 +670,7 @@ export const printCustomerReceipt = async (
         lastErr = failed?.reason?.message || "Çap uğursuz";
       }
       if (anyOk) {
+        if (skipPostPrint) return { success: true };
         // Post-print operations in background — don't block UI
         maybeBlockCustomerOnCustomerReceipt(
           options?.dispatch,

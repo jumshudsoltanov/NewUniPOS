@@ -510,3 +510,11 @@
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
+
+/* Keçidin altındakı izah sətri */
+.tsm-hint {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #8b96b4;
+    line-height: 1.4;
+}

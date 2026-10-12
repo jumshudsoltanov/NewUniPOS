@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "../../utils/apiConfig";
+import { bootDedupeAllows } from "../../utils/bootDedupe";
 
 export const getActiveOrders = createAsyncThunk(
   "pos/active-orders",
@@ -25,6 +26,18 @@ export const getActiveOrders = createAsyncThunk(
     } catch (error) {
       thunkAPI.rejectWithValue(error?.response.data);
     }
+  },
+  {
+    /**
+     * Açılışda 3 dəfə çağırılırdı. Açar bütün süzgəcləri daxil edir —
+     * fərqli süzgəclə gələn sorğu heç vaxt udulmur. Bax: utils/bootDedupe.js
+     */
+    condition: (arg) =>
+      bootDedupeAllows(
+        "active-orders:" +
+          [arg?.profileId, arg?.id, arg?.sale_type, arg?.waiter_id,
+           arg?.hall_id, arg?.table_id, arg?.courier_id].join("|"),
+      ),
   },
 );
 
@@ -438,10 +451,24 @@ const BooksSlice = createSlice({
       }
     });
 
-    // Remove from archive when reopened
+    /**
+     * Çek geri qaytarılanda arxivdən çıxarılır VƏ "silinmişlər" siyahısından
+     * da silinir.
+     *
+     * Bu ikincisi kritikdir: çek silinəndə `removeOrderOptimistic` onun id-sini
+     * `deletedOrderIds`-ə yazır, `getActiveOrders` isə HƏR dəfə həmin id-ləri
+     * cavabdan süzüb atır. Geri qaytaranda id siyahıda qaldığı üçün çek
+     * serverdən məhsulları ilə birlikdə gəlsə də Redux-a düşmürdü — kassir
+     * çeki açanda boş görürdü.
+     */
     builder.addCase("orders/reopen/fulfilled", (state, action) => {
-      const reopenedOrderId = action.meta.arg.orderId;
-      state.archivedBooks = state.archivedBooks.filter(o => o.uuid !== reopenedOrderId);
+      const reopenedOrderId = String(action.meta.arg.orderId);
+      state.archivedBooks = state.archivedBooks.filter(
+        (o) => String(o.uuid) !== reopenedOrderId,
+      );
+      state.deletedOrderIds = (state.deletedOrderIds || []).filter(
+        (id) => String(id) !== reopenedOrderId,
+      );
     });
 
     // Handle delete-item specifically: optimistically remove from orders_items

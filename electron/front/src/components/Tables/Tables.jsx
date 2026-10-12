@@ -258,6 +258,27 @@ const Tables = () => {
     initialHeight: 0,
   });
 
+  /* ─────────── EKRANA SIĞDIRMA ───────────
+     Düzülüş MÜTLƏQ piksellərlə saxlanılır və bütün terminallar eynisini alır
+     (`local_layouts_updated` socket hadisəsi). Master böyük ekranda düzəndə
+     kiçik ekranlı slave-də masalar sığmırdı; konteynerdə `overflow-x: hidden`
+     olduğu üçün onlar sadəcə İTİRDİ — nə görünürdü, nə basıla bilirdi.
+
+     Həll: düzülüşə toxunmuruq, render zamanı bütün masa qatını kiçildirik.
+     Miqyas saxlanılmış koordinatların sərhədindən hesablanır, ona görə
+     mövcud məlumat olduğu kimi işləyir — migrasiya lazım deyil. */
+  const FIT_KEY = "pos_tables_fit_to_screen";
+  /** Bundan kiçildəndə mətn oxunmur — bu həddən sonra sürüşdürmə açılır */
+  const MIN_FIT_SCALE = 0.55;
+  /** Böyütmənin həddi — master kiçik ekranda düzübsə, böyük ekranda en doldurulur,
+      amma masalar gülünc dərəcədə şişməsin deyə hədd qoyulub */
+  const MAX_FIT_SCALE = 1.5;
+
+  const [fitToScreen, setFitToScreen] = useState(() => {
+    try { return localStorage.getItem(FIT_KEY) !== "0"; } catch { return true; }
+  });
+  const [viewport, setViewport] = useState({ w: 0, h: 0 });
+
   const activeLayouts = isTableEditMode
     ? tempTableLayouts[String(currentHallId)]
     : tableLayouts[String(currentHallId)];
@@ -759,13 +780,20 @@ const Tables = () => {
         ? e.touches[0].clientY
         : e.clientY;
 
-      if (interactionState.type === "drag") {
-        const dx = clientX - interactionState.startX;
-        const dy = clientY - interactionState.startY;
+      // Masa qatı kiçildilibsə siçanın ekrandakı hərəkəti masanın öz koordinat
+      // sistemində daha böyükdür — bax: fitScaleRef
+      const miqyas = fitScaleRef.current || 1;
+      // "Həqiqətən sürüşdürdü, yoxsa sadəcə basdı" həddi EKRAN piksellərində
+      // ölçülür — miqyasa bölsək kiçik ekranda təsadüfi sürüşdürmə artardı
+      const ekranDx = clientX - interactionState.startX;
+      const ekranDy = clientY - interactionState.startY;
+      if (Math.abs(ekranDx) > 4 || Math.abs(ekranDy) > 4) {
+        dragMoveRef.current = true;
+      }
 
-        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-          dragMoveRef.current = true;
-        }
+      if (interactionState.type === "drag") {
+        const dx = ekranDx / miqyas;
+        const dy = ekranDy / miqyas;
 
         const newX = interactionState.initialLeft + dx;
         const newY = interactionState.initialTop + dy;
@@ -785,12 +813,8 @@ const Tables = () => {
           }),
         );
       } else if (interactionState.type === "resize") {
-        const dx = clientX - interactionState.startX;
-        const dy = clientY - interactionState.startY;
-
-        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-          dragMoveRef.current = true;
-        }
+        const dx = ekranDx / miqyas;
+        const dy = ekranDy / miqyas;
 
         const newW = Math.max(100, interactionState.initialWidth + dx);
         const newH = Math.max(100, interactionState.initialHeight + dy);
@@ -945,6 +969,110 @@ const Tables = () => {
     dispatch(setTempTableLayout({ hallId: currentHallId, layout: layoutUpdates }));
   };
 
+  /* Konteynerin ölçüsünü izləyirik — pəncərə böyüyüb-kiçiləndə miqyas yenilənsin */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return undefined;
+
+    /**
+     * Ölçü dəyişməyibsə ƏVVƏLKİ obyekt qaytarılır — yeni obyekt qaytarsaq
+     * React hər dəfə yenidən render edir, miqyas dəyişir, konteynerin
+     * sürüşdürmə sahəsi dəyişir, ResizeObserver yenidən işə düşür və dövrə
+     * qapanır. Chromium belə dövrəni aşkar edib bildirişləri DAYANDIRIR —
+     * ilk ölçmədən sonra miqyas daha yenilənmirdi, test bunu göstərdi.
+     * 2 px-lik hədd kiçik dalğalanmaları (sürüşdürmə zolağının yaranması)
+     * da süzür.
+     */
+    const olc = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      setViewport((prev) =>
+        Math.abs(prev.w - w) > 2 || Math.abs(prev.h - h) > 2 ? { w, h } : prev,
+      );
+    };
+    olc();
+
+    // Pəncərə hadisəsi ehtiyatdır: ResizeObserver dayandırılsa belə işləyir
+    window.addEventListener("resize", olc);
+    let ro = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(olc);
+      ro.observe(el);
+    }
+    return () => {
+      window.removeEventListener("resize", olc);
+      if (ro) ro.disconnect();
+    };
+  }, [useCanvasMode]);
+
+  /** Masaların tutduğu ümumi sahə (saxlanılmış koordinatlardan hesablanır) */
+  const contentSize = useMemo(() => {
+    let maxX = 0;
+    let maxY = 0;
+    currentTables.forEach((tbl) => {
+      // DİQQƏT: render ilə EYNİ məntiq olmalıdır. Masanın saxlanılmış düzülüşü
+      // yoxdursa `generatedLayout` işlədilir — bunu nəzərə almasaq, həmin zalda
+      // sərhəd sıfır çıxır və miqyas heç vaxt tətbiq olunmur (ilk versiyada
+      // məhz belə oldu: masalar sığmırdı, amma kiçilmirdi).
+      const l =
+        activeLayouts?.[String(tbl.id)] ||
+        generatedLayout[tbl.id] ||
+        { x: 0, y: 0 };
+      const { w: dW, h: dH } = defaultSizeForTableShape(tbl.shape_type);
+      const w = l.w && l.w >= MIN_VALID_TABLE_SIZE ? l.w : dW;
+      const h = l.h && l.h >= MIN_VALID_TABLE_SIZE ? l.h : dH;
+      maxX = Math.max(maxX, (l.x || 0) + w);
+      maxY = Math.max(maxY, (l.y || 0) + h);
+    });
+    // Sağ və alt kənarda nəfəs payı
+    return { w: maxX + 24, h: maxY + 24 };
+  }, [currentTables, activeLayouts, generatedLayout]);
+
+  /**
+   * Tətbiq olunan miqyas.
+   *
+   * `min(1, ...)` — master-dən BÖYÜK ekranda masalar şişmir, nisbət qorunur.
+   * Aşağı hədd `MIN_FIT_SCALE`: ondan kiçik olsa mətn oxunmaz olardı, ona görə
+   * daha kiçiltmir, əvəzinə aşağıda sürüşdürmə açılır — masa yenə itmir.
+   */
+  /**
+   * Miqyas YALNIZ ENƏ görə hesablanır, hündürlüyə görə yox.
+   *
+   * Əvvəl `min(sx, sy)` idi və nəticə pis olurdu: 6 sütun × 8 sıralıq zalda
+   * hündürlük məhdudiyyəti miqyası kəskin aşağı salırdı, masalar oxunmaz
+   * dərəcədə kiçilir, SAĞ TƏRƏF isə boş qalırdı — çünki kiçildilmiş məzmunun
+   * eni ekrandan xeyli az olurdu.
+   *
+   * Şaquli sürüşdürmə onsuz da var (`overflow-y: auto`) və kassada aşağı
+   * sürüşdürmək normal hərəkətdir. Ona görə en tam doldurulur, artıq sıralar
+   * sürüşdürmə ilə görünür.
+   *
+   * Həm kiçildir, həm BÖYÜDÜR: master kiçik ekranda düzübsə, böyük ekranlı
+   * terminalda sağ tərəf boş qalmır. `MAX_FIT_SCALE` şişməyin qarşısını alır.
+   */
+  const fitScale = useMemo(() => {
+    if (!fitToScreen || !useCanvasMode) return 1;
+    if (!viewport.w || !contentSize.w) return 1;
+    const xam = viewport.w / contentSize.w;
+    if (!Number.isFinite(xam) || xam <= 0) return 1;
+    return Math.min(MAX_FIT_SCALE, Math.max(MIN_FIT_SCALE, xam));
+  }, [fitToScreen, useCanvasMode, viewport.w, contentSize.w]);
+
+  /**
+   * Sürüşdürmə riyaziyyatı miqyası BİLMƏLİDİR.
+   * Miqyas 0.6 olanda siçan 100 px gedirsə, masa öz koordinat sistemində
+   * 100/0.6 ≈ 167 px getməlidir. Əks halda masa barmağın ardınca gəlmir.
+   * `ref` işlədilir ki, hadisə işləyicisi köhnə dəyəri tutmasın.
+   */
+  const fitScaleRef = useRef(1);
+  fitScaleRef.current = fitScale;
+
+  const toggleFitToScreen = () => {
+    const next = !fitToScreen;
+    setFitToScreen(next);
+    try { localStorage.setItem(FIT_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+  };
+
   const handleAutoArrange = () => {
     const containerW = containerRef.current?.offsetWidth || window.innerWidth;
     const containerH = containerRef.current?.offsetHeight || window.innerHeight;
@@ -1047,17 +1175,58 @@ const Tables = () => {
       <Container
         fluid
         className="tables-scroll-container position-relative"
-        style={useCanvasMode ? { paddingLeft: 0, paddingRight: 0 } : {}}
+        style={
+          useCanvasMode
+            ? {
+                paddingLeft: 0,
+                paddingRight: 0,
+                // Alt həddə çatıbsa daha kiçilmir — masa ekrandan kənarda qala
+                // bilər, ona görə üfüqi sürüşdürmə açılır (CSS-də `hidden`-dir)
+                overflowX: fitScale <= MIN_FIT_SCALE ? "auto" : "hidden",
+              }
+            : {}
+        }
         ref={containerRef}
       >
         {useCanvasMode && currentTables.length > 0 ? (
+          /**
+           * İKİ QAT:
+           *  1. Ölçüləndirici — sürüşdürmə sahəsini düzgün göstərir. `transform`
+           *     elementin düzülüş ölçüsünü DƏYİŞMİR, ona görə tək qatla kiçildəndə
+           *     brauzer yenə tam ölçüdə yer ayırır və sağda uydurma boşluq qalır.
+           *  2. Miqyaslanan — masalar və məsafə xətləri burada, öz həqiqi
+           *     piksellərində. Yalnız bu qat kiçilir.
+           */
           <div
-            style={{
-              position: "relative",
-              width: "100%",
-              height: "100%",
-              minHeight: "80vh",
-            }}
+            style={
+              fitScale !== 1
+                ? {
+                    position: "relative",
+                    width: Math.ceil(contentSize.w * fitScale),
+                    height: Math.ceil(contentSize.h * fitScale),
+                  }
+                : { position: "relative", width: "100%", height: "100%", minHeight: "80vh" }
+            }
+          >
+          <div
+            style={
+              fitScale !== 1
+                ? {
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: contentSize.w,
+                    height: contentSize.h,
+                    transform: `scale(${fitScale})`,
+                    transformOrigin: "top left",
+                  }
+                : {
+                    position: "relative",
+                    width: "100%",
+                    height: "100%",
+                    minHeight: "80vh",
+                  }
+            }
           >
             {/* Distance Lines SVG Overlay */}
             {isTableEditMode && selectedEditTableId && (() => {
@@ -1291,6 +1460,7 @@ const Tables = () => {
                 </div>
               );
             })}
+          </div>
           </div>
         ) : (
           <Row className="g-3">
@@ -1531,6 +1701,28 @@ const Tables = () => {
                         <i className="bi bi-arrows-fullscreen"></i>
                         {t("apply_all")}
                       </button>
+                    </div>
+
+                    {/* Ekrana sığdırma — HƏR TERMİNALDA AYRIDIR.
+                        Bazaya yazılmır, yalnız bu kassanın localStorage-ində
+                        saxlanılır; master-in seçimi slave-ə keçmir. */}
+                    <div className="tsm-section">
+                      <div className="tsm-section-title">
+                        <i className="bi bi-aspect-ratio"></i>
+                        {t("ekrana_sigdir")}
+                      </div>
+                      <button
+                        className={`tsm-btn ${fitToScreen ? "tsm-btn-primary" : "tsm-btn-outline"}`}
+                        onClick={toggleFitToScreen}
+                      >
+                        <i className={`bi ${fitToScreen ? "bi-check-lg" : "bi-x-lg"}`}></i>
+                        {fitToScreen ? t("acıqdır") : t("sonuludur")}
+                      </button>
+                      <div className="tsm-hint">
+                        {fitToScreen
+                          ? `${t("cari_miqyas")}: ${Math.round(fitScale * 100)}%`
+                          : t("ekrana_sigdir_izah")}
+                      </div>
                     </div>
 
                     {/* Auto-arrange: position + edge padding */}

@@ -10,7 +10,7 @@ import { getActiveOrders } from "../../redux/Slices/BooksSlice";
 import { toast } from "sonner";
 import CheckDeleteModal from "../CheckDeleteModal/CheckDeleteModal";
 import { hasTimerIntervals } from "../../utils/menuIndex";
-import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
+import { printCustomerReceipt, printBankReceipt } from "../../utils/printerHelpers.jsx";
 import apiConfig, { TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
 import _axios from "axios";
 import { addNotification } from "../../utils/notificationService";
@@ -41,6 +41,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     const [isPrinting, setIsPrinting] = useState(false);
     const [taxLoading, setTaxLoading] = useState(false);
     const [showTaxResendModal, setShowTaxResendModal] = useState(false);
+    const [pendingResendConfig, setPendingResendConfig] = useState(null);
     const [taxLocalNames, setTaxLocalNames] = useState({});
     const { orderLogs = [], menu: menuCatalog } = useSelector((state) => state.OrderSlice);
 
@@ -408,18 +409,16 @@ const CheckDetailModal = ({ show, onClose, order }) => {
     };
 
     /** Bağlanmış çek üçün fiskal satışı təkrar göndər (/tax/sale) — CheckOver ilə eyni payload */
-    const executeTaxResendSale = async (targetConfig) => {
+    const executeTaxResendSale = async (targetConfig, confirmed = false) => {
         if (taxLoading || !order || !targetConfig) return;
 
         const data = getResendSaleItemsAndPayments();
         if (!data) return;
         const { items, payments, serviceFee, discountAmount, deliveryFee, orderTotal } = data;
 
-        if (order.fiscal_id) {
-            const ok = window.confirm(
-                "Bu çekdə artıq fiskal qeydiyyatı var. Təkrar göndərsəniz, cihazda yeni satış əməliyyatı və yeni fiskal məlumat yaradılacaq. Davam edilsin?"
-            );
-            if (!ok) return;
+        if (order.fiscal_id && !confirmed) {
+            setPendingResendConfig(targetConfig);
+            return;
         }
 
         setTaxLoading(true);
@@ -468,6 +467,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                             tax_cash_id: taxId,
                         })
                         .catch((err) => console.error("Save fiscal data error:", err));
+                    if (fd.bank_receipt) {
+                        printBankReceipt(fd.bank_receipt, { orderId: order.id }, loginedProfileData)
+                            .catch((err) => console.error("Bank receipt print error:", err));
+                    }
                 }
                 dispatch(
                     saveLog({
@@ -1091,6 +1094,62 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                 disabled={taxLoading}
                                 onClick={() => setShowTaxResendModal(false)}
                             >{t("i̇mtina")}</button>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                show={!!pendingResendConfig}
+                onHide={() => setPendingResendConfig(null)}
+                centered
+                className="customers-modal tax-kassa-picker-modal"
+                dialogClassName="tax-kassa-picker-dialog tax-kassa-confirm-dialog"
+                backdrop="static"
+                animation={false}
+            >
+                <div className="modal-content-wrapper" style={{ borderRadius: "8px", overflow: "hidden" }}>
+                    <div className="customers-modal-header" style={{ background: "#053796", borderTopLeftRadius: "8px", borderTopRightRadius: "8px" }}>
+                        <div className="customers-header-content">
+                            <div className="customers-icon-circle" style={{ borderRadius: "8px" }}>
+                                <i className="bi bi-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <div className="customers-modal-title">{t("tekrar_vergi_satisi")}</div>
+                                <div style={{ fontSize: "12px", fontWeight: 500, opacity: 0.92, marginTop: "2px" }}>{`#${order?.id ?? ""}`}</div>
+                            </div>
+                        </div>
+                        <button type="button" className="btn-close-custom" onClick={() => setPendingResendConfig(null)} aria-label={t("bagla")}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div className="tax-kassa-modal-body-inner">
+                        <div className="tax-kassa-modal-intro">
+                            <p className="tax-kassa-modal-intro-title">Bu çekdə artıq fiskal qeydiyyatı var</p>
+                            <p className="tax-kassa-modal-intro-sub">
+                                Təkrar göndərsəniz, cihazda yeni satış əməliyyatı və yeni fiskal məlumat yaradılacaq. Davam edilsin?
+                            </p>
+                        </div>
+                        <div className="tax-kassa-modal-footer" style={{ display: "flex", gap: 10, paddingTop: 18 }}>
+                            <button
+                                type="button"
+                                className="btn-imtina"
+                                onClick={() => setPendingResendConfig(null)}
+                            >{t("i̇mtina")}</button>
+                            <button
+                                type="button"
+                                className="btn-imtina"
+                                style={{ background: "#053796", borderColor: "#053796", color: "#fff" }}
+                                onClick={() => {
+                                    const cfg = pendingResendConfig;
+                                    setPendingResendConfig(null);
+                                    executeTaxResendSale(cfg, true);
+                                }}
+                            >Davam et</button>
                         </div>
                     </div>
                 </div>

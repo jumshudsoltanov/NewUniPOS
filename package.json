@@ -1,6 +1,6 @@
 {
   "name": "unipos-desktop-app",
-  "version": "2.3.33",
+  "version": "2.3.35",
   "description": "UniPOS Desktop Application",
   "author": "UniPOS MMC (UniPOS LLC)",
   "main": "electron/server/main.js",
@@ -52,11 +52,7 @@
       "!**/node_modules/.bin",
       "!electron/front/src/**/*",
       "!electron/front/node_modules/**/*",
-      "!electron/mobile/**/*",
-      "!electron/server/main_original.js",
-      "!electron/backend/{check_cols,check_columns,check_sync,fix,fix_db_schema,patch}.js",
-      "!electron/backend/{test,test_db,test_orders,test_v3,test-voice,verify_printers}.js",
-      "!electron/backend/dummy.webm"
+      "!electron/mobile/**/*"
     ],
     "extraResources": [
       ".env",

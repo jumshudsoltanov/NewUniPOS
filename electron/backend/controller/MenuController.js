@@ -20,6 +20,8 @@ const getMenuWithGeneralCategories = async (req, res) => {
         include: {
           model: ProductsModel,
           as: "products",
+          // Şəkil (base64) və tərkib POS-da bu endpoint-dən oxunmur — payload-u dəfələrlə kiçildir
+          attributes: { exclude: ["img", "ingredient"] },
           where: { is_hidden_pos: { [Op.or]: [0, null] } },
           required: false,
         },
@@ -83,6 +85,7 @@ const getMenuWithCategories = async (req, res) => {
       include: {
         model: ProductsModel,
         as: "products",
+        attributes: { exclude: ["ingredient"] },
         where: { is_hidden_pos: { [Op.or]: [0, null] } },
         required: false,
       },

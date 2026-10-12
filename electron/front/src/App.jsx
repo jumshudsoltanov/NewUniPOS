@@ -434,15 +434,19 @@ function AppContent() {
     /**
      * Açılışdan dərhal sonra gələn `pin_refresh` atılır.
      *
-     * Backend öz sinxronizasiyasını bitirəndə bu hadisəni yayımlayır, amma
-     * Pin səhifəsi həmin dörd sorğunu (masalar, açıq çeklər, menyu, ümumi
-     * menyu) onsuz da bir neçə saniyə əvvəl göndərmiş olur. Ölçdüm: eyni
-     * 141 KB-lıq dəst 2.3 saniyə ara ilə İKİ DƏFƏ çəkilir, hər dəfə JSON
-     * analizi və React yenidən render-i ilə birlikdə — açılışın ən yüklü
-     * anında. İlk 8 saniyədə gələn təkrar nəzərə alınmır; sonrakılar
-     * (real dəyişiklik bildirişləri) həmişəki kimi işləyir.
+     * Backend öz sinxronizasiyasını bitirəndə bu hadisəni yayımlayır. Pin
+     * səhifəsi həmin dörd sorğunu (masalar, açıq çeklər, menyu, ümumi menyu —
+     * cəmi 141 KB) onsuz da göndərir; ikisi üst-üstə düşəndə eyni dəst İKİ
+     * DƏFƏ çəkilir, hər dəfə JSON analizi və React yenidən render-i ilə.
+     *
+     * Pəncərə QƏSDƏN QISADIR. Yalnız yarış halını tutur: `pin_refresh` ilk
+     * yükləmə ilə eyni anda gələndə. Uzun pəncərə (əvvəl 8 saniyə idi) real
+     * yeniləməni udardı — backend sinxronizasiyanı tez bitirsə, gecə admin
+     * paneldə dəyişən qiymətlər səhər POS-da görünməzdi. Ölçmə: ilk yükləmə
+     * ~0.3 s, sinxronizasiyanın `pin_refresh`-i ~9 s, yəni normalda toqquşma
+     * onsuz da olmur.
      */
-    const BASLANGIC_SUSDURMA_MS = 8000;
+    const BASLANGIC_SUSDURMA_MS = 3000;
     const acilisVaxti = Date.now();
     const handlePinRefresh = (data) => {
       const profileId = data?.profileId;
@@ -536,11 +540,18 @@ function AppContent() {
             navigate("/pin");
           }
 
-          // Arxa planda müştəri datasını yüklə
-          requestAnimationFrame(() => {
+          /**
+           * Arxa planda müştəri datasını yüklə.
+           *
+           * `requestAnimationFrame` İŞLƏMİR: proqram açılarkən pəncərə çox vaxt
+           * hələ gizlidir, brauzer isə gizli pəncərədə kadrları dayandırır və
+           * callback heç vaxt çağırılmır — müştəri siyahısı boş qalırdı.
+           * (Eyni səbəbdən açılış ekranında da rAF-dan imtina olunub, aşağıya bax.)
+           */
+          setTimeout(() => {
             dispatch(fetchCustomersFromAdmin());
             dispatch(fetchCustomerGroupsFromAdmin());
-          });
+          }, 0);
 
           // ── authPos arxa planda (non-blocking) — POS-u gözlətmir ──
           (async () => {

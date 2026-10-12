@@ -11,7 +11,7 @@ import { getPaymentMethods } from "../../redux/Slices/PaymentMethodsSlice";
 import { closeOrder, saveLog } from "../../redux/Slices/OrdersSlice";
 import { removeOrderOptimisticFromTables } from "../../redux/Slices/TablesSlice";
 import { removeOrderOptimistic } from "../../redux/Slices/BooksSlice";
-import { printCustomerReceipt } from "../../utils/printerHelpers.jsx";
+import { printCustomerReceipt, printBankReceipt } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import _axios from "axios";
 import apiConfig, { getSocket, TAX_HTTP_TIMEOUT_MS } from "../../utils/apiConfig";
@@ -674,6 +674,10 @@ const CheckOver = () => {
                                             fiscal_short_id: fd.short_id || '',
                                             tax_cash_id: taxId
                                         }).catch(err => console.error('Save fiscal data error:', err));
+                                        if (fd.bank_receipt) {
+                                            printBankReceipt(fd.bank_receipt, { orderId: currentOrder?.id || id }, loginedProfileData)
+                                                .catch(err => console.error('Bank receipt print error:', err));
+                                        }
                                     }
                                 } else {
                                     const errDetails = results.map(r => r.error).filter(Boolean).join('; ') || 'Vergi çeki kəsilə bilmədi';

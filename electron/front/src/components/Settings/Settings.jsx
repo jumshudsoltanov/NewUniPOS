@@ -188,12 +188,22 @@ const Settings = () => {
         }
       }
 
-      await Promise.all([
+      // Tək bir sorğunun uğursuzluğu bütün yeniləməni "xəta" göstərməsin
+      // (Pin.jsx və Login.jsx ilə eyni qayda)
+      const neticeler = await Promise.allSettled([
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
         dispatch(menuWithCategories(profileId)).unwrap(),
         dispatch(menuWithGeneralCategories(profileId)).unwrap(),
       ]);
+      // `ConditionError` = açılışda birləşdirilmiş sorğu, xəta deyil
+      const ugursuz = neticeler.filter(
+        (r) => r.status === "rejected" && r.reason?.name !== "ConditionError",
+      );
+      ugursuz.forEach((r) => console.error("[Yenilə] Qismən uğursuz:", r.reason));
+      if (ugursuz.length > 0 && ugursuz.length === neticeler.length) {
+        throw ugursuz[0]?.reason || new Error("Yeniləmə alınmadı");
+      }
 
       if (!isOnline) {
         toast.warning(t("no_internet_local"), {
@@ -253,10 +263,18 @@ const Settings = () => {
       try {
         setRefreshIsOnline(false);
         const profileId = loginedProfileData.data.profile.id;
-        await Promise.all([
+        // Oflayn rejimdə lokal yükləmə — biri alınmasa da digəri işləsin
+        const lokal = await Promise.allSettled([
           dispatch(getTableGroups(profileId)).unwrap(),
           dispatch(getActiveOrders({ profileId })).unwrap(),
         ]);
+        if (
+          lokal.every(
+            (r) => r.status === "rejected" && r.reason?.name !== "ConditionError",
+          )
+        ) {
+          throw lokal[0]?.reason || new Error("Lokal məlumat yüklənmədi");
+        }
         toast.warning(t("no_internet_local"), {
           id: toastId,
         });

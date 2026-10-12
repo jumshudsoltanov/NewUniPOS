@@ -5,6 +5,7 @@ import { getActiveOrders } from "./BooksSlice";
 import {
   menuWithCategories,
   updateProductModifierGroups,
+  menuCacheLoaded,
 } from "./MenuSlice";
 import { hasTimerIntervals } from "../../utils/menuIndex";
 import { findMenuItemById } from "../../utils/menuIndex";
@@ -1808,6 +1809,16 @@ export const OrderSlice = createSlice({
         let products = [];
         categories.forEach((cat) => {
           if (cat.products) products = products.concat(cat.products);
+        });
+        state.menu = products;
+      })
+      // Keşdən yüklənən menyu — şəbəkə cavabı gələnə qədər məhsul siyahısı boş qalmasın
+      .addCase(menuCacheLoaded, (state, action) => {
+        const { kind, payload } = action.payload || {};
+        if (kind !== "categories" || (Array.isArray(state.menu) && state.menu.length > 0)) return;
+        const products = [];
+        (payload?.data || []).forEach((cat) => {
+          if (cat.products) products.push(...cat.products);
         });
         state.menu = products;
       })

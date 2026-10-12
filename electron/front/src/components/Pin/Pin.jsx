@@ -367,7 +367,11 @@ const Pin = () => {
         dispatch(menuWithGeneralCategories(profileId)).unwrap(),
       ]);
 
-      const failed = results.filter((r) => r.status === "rejected");
+      // `ConditionError` həqiqi xəta deyil: açılışda eyni sorğu birləşdirilib
+      // (bax: utils/bootDedupe.js). Onu uğursuz saymaq yanlış xəta göstərərdi.
+      const failed = results.filter(
+        (r) => r.status === "rejected" && r.reason?.name !== "ConditionError",
+      );
       if (failed.length > 0) {
         failed.forEach((r) => console.error("[Yenilə] Qismən uğursuz sorğu:", r.reason));
       }
