@@ -556,6 +556,13 @@ function createWindow() {
   }, 12000);
 
   attachDevToolsIcon(mainWindow);
+
+  // Renderer səs diaqnostikası (düymə səsi) main.log-a düşsün — paketlənmiş proqramda konsol görünmür
+  mainWindow.webContents.on("console-message", (_e, _level, message) => {
+    if (typeof message === "string" && message.includes("[CLICK-SOUND]")) {
+      log.warn("[RENDERER]", message.slice(0, 300));
+    }
+  });
   attachRendererRecovery(mainWindow, "cashier");
 
   /**

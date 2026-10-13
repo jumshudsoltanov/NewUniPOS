@@ -110,6 +110,11 @@ function playFallbackAudio() {
 }
 
 let decodeFailed = false;
+let diagPlays = 0;
+/** Diaqnostika — paketlənmiş proqramda main.log-a düşür (bax: main.js console-message) */
+function diag(msg) {
+  try { console.warn("[CLICK-SOUND] " + msg); } catch { /* yox */ }
+}
 
 /** Faylı bir dəfə yükləyib dekod edir */
 async function ensureBuffer() {
@@ -132,6 +137,7 @@ async function ensureBuffer() {
       const r = audioCtx.decodeAudioData(bytes, resolve, reject);
       if (r && typeof r.then === "function") r.then(resolve, reject);
     });
+    diag(`hazır: ${buffer.duration.toFixed(3)}s, ctx=${audioCtx.state}, sampleRate=${audioCtx.sampleRate}, enabled=${isEnabled()}, volume=${getVolume()}`);
   } catch (e) {
     decodeFailed = true;
     console.warn("[CLICK-SOUND] Web Audio dekod alınmadı, <audio> ehtiyatına keçilir:", e?.message || e);
@@ -172,6 +178,7 @@ export function playClickSound() {
     src.connect(gain);
     gain.connect(audioCtx.destination);
     src.start();
+    if (diagPlays < 3) { diagPlays++; diag(`çalındı (WebAudio) ctx=${audioCtx.state} vol=${getVolume()}`); }
   } catch (e) {
     console.warn("[CLICK-SOUND] Web Audio çalınmadı, <audio> ehtiyatı:", e?.message || e);
     playFallbackAudio();
@@ -238,7 +245,10 @@ export function installGlobalClickSound() {
   const onPointerDown = (e) => {
     // Yalnız əsas düymə / toxunuş; sağ klik və orta klik səs verməsin
     if (e.button != null && e.button !== 0) return;
-    if (!isClickable(e.target)) return;
+    if (!isClickable(e.target)) {
+      if (diagPlays < 3) diag(`toxunuş basıla bilən element deyil: <${e.target?.tagName?.toLowerCase()} class="${String(e.target?.className || "").slice(0, 40)}">`);
+      return;
+    }
     playClickSound();
   };
 
@@ -255,6 +265,7 @@ export function installGlobalClickSound() {
    * ÇALINMASINA aiddir; `decodeAudioData` dayandırılmış kontekstdə də işləyir,
    * `resume()` isə onsuz da ilk toxunuşda baş verir (bax: playClickSound).
    */
+  diag(`quraşdırıldı: enabled=${isEnabled()}, url=${String(clickSoundUrl).slice(0, 30)}…, len=${String(clickSoundUrl).length}`);
   ensureBuffer();
 
   installed = true;

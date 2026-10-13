@@ -183,6 +183,12 @@ async function renderIconAtSize(sharp, innerPngBuffer, size) {
 }
 
 async function run() {
+  // Git-də hazır, yüksək keyfiyyətli logo-build.ico var (sharp + klassik BMP ICO ilə yaradılıb).
+  // Hər build-də onu logo.png-dən yenidən yaratmaq keyfiyyəti aşağı salırdı. Yalnız FORCE_ICON=1 ilə yenidən yarat.
+  if (fs.existsSync(outputIco) && fs.existsSync(outputPng) && process.env.FORCE_ICON !== "1") {
+    console.log("[prepare-build-icon] mövcud logo-build.ico saxlanılır (yenidən yaratmaq üçün FORCE_ICON=1)");
+    return;
+  }
   // İkon artıq mövcuddursa yenidən hazırlamağa ehtiyac yoxdur
   if (fs.existsSync(outputIco) && fs.existsSync(outputPng)) {
     console.log(
