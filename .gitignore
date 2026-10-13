@@ -10,8 +10,6 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-electron/static/images/logo-build.png
-electron/static/images/logo-build.ico
 *.local
 
 # Editor directories and files
