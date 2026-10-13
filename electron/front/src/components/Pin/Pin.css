@@ -338,6 +338,21 @@
 /* Terminal Info Footer */
 /* ==================== */
 
+/* Login.css eyni sinif adlarına (.terminalInfo, .logoContainer) fərqli margin verir və bundle-da
+   bu qaydaları əzə bilir — PİN bloku ekranın aşağısına düşürdü. .pin-screen ilə üstünlük artırılır:
+   boş yer loqonun üstü və footer-in üstü arasında bərabər bölünür, PİN ortada qalır. */
+@media (min-width: 768px) and (min-height: 500.01px) {
+  .pin-screen .logoContainer {
+    margin-top: auto;
+  }
+
+  .pin-screen .terminalInfo {
+    margin-top: auto;
+    margin-bottom: 0;
+    position: static;
+  }
+}
+
 .terminalInfo {
   display: flex;
   align-items: center;

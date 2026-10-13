@@ -716,7 +716,7 @@ const Pin = () => {
           />
 
           <Col xs={12} md={6} lg={5} xl={4} className="p-0 h-100">
-            <div className="LeftBoxContainer">
+            <div className="LeftBoxContainer pin-screen">
               <div className="infoHeader">
                 <button
                   className="supportBtn"
