@@ -548,10 +548,12 @@ function AppContent() {
            * callback heç vaxt çağırılmır — müştəri siyahısı boş qalırdı.
            * (Eyni səbəbdən açılış ekranında da rAF-dan imtina olunub, aşağıya bax.)
            */
+          // PERFORMANS: müştəri siyahısı Pin ekranında lazım deyil — PİN yazılarkən
+          // əsas thread-i tutmasın deyə bir neçə saniyə gecikdirilir.
           setTimeout(() => {
             dispatch(fetchCustomersFromAdmin());
             dispatch(fetchCustomerGroupsFromAdmin());
-          }, 0);
+          }, 2500);
 
           // ── authPos arxa planda (non-blocking) — POS-u gözlətmir ──
           (async () => {
@@ -676,8 +678,19 @@ function AppContent() {
   useEffect(() => {
     if (showInitialLoading) return;
     if (isDisplayRoute) return;
-    const t = setTimeout(preloadCheck, 800);
-    return () => clearTimeout(t);
+    // 246 KB-lıq Check chunk-ının kompilyasiyası PİN yazılan anda deyil, boş vaxtda getsin
+    let idleId = null;
+    const t = setTimeout(() => {
+      if (typeof window.requestIdleCallback === "function") {
+        idleId = window.requestIdleCallback(preloadCheck, { timeout: 8000 });
+      } else {
+        preloadCheck();
+      }
+    }, 3000);
+    return () => {
+      clearTimeout(t);
+      if (idleId != null && typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idleId);
+    };
   }, [showInitialLoading]);
 
   if (showInitialLoading) {

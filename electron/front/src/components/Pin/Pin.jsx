@@ -191,6 +191,9 @@ const ImageSection = React.memo(({ backgroundImg }) => {
 const Pin = () => {
   const [pin, setPin] = useState("");
   const [isError, setIsError] = useState(false);
+  // PİN serverdə yoxlanılarkən: düymələr qəbul edilmir, ekranda "Yoxlanılır…" görünür
+  const [isVerifying, setIsVerifying] = useState(false);
+  const verifyingRef = useRef(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -460,14 +463,34 @@ const Pin = () => {
     }
   };
 
+  // PERFORMANS: bu 4 sorğu əvvəl Pin mount olan anda dərhal gedirdi — cavabları
+  // (JSON parse + reducer + render) məhz kassirin PİN yazdığı saniyələrə düşürdü və
+  // zəif cihazlarda düymə basışları "tutulmurdu". İndi ilk render və ilk toxunuş
+  // keçəndən sonra, boş vaxtda başladılır (menyu onsuz da keşdən dərhal göstərilir).
   useEffect(() => {
     const profileId = loginedProfileData?.data?.profile?.id;
-    if (profileId) {
+    if (!profileId) return;
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
       dispatch(menuWithCategories(profileId));
       dispatch(menuWithGeneralCategories(profileId));
       dispatch(getTableGroups(profileId));
       dispatch(getActiveOrders({ profileId }));
-    }
+    };
+    let idleId = null;
+    const timer = setTimeout(() => {
+      if (typeof window.requestIdleCallback === "function") {
+        idleId = window.requestIdleCallback(run, { timeout: 1500 });
+      } else {
+        run();
+      }
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (idleId != null && typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idleId);
+    };
   }, [loginedProfileData?.data?.profile?.id, dispatch]);
 
   const completeWaiterLogin = useCallback(
@@ -493,6 +516,9 @@ const Pin = () => {
 
   const handlePinSubmit = useCallback(
     async (submittedPin) => {
+      if (verifyingRef.current) return;
+      verifyingRef.current = true;
+      setIsVerifying(true);
       try {
         const profileId = activeProfileData?.data?.profile?.id;
         if (!profileId) {
@@ -509,6 +535,9 @@ const Pin = () => {
           setIsError(false);
           setPin("");
         }, 500);
+      } finally {
+        verifyingRef.current = false;
+        setIsVerifying(false);
       }
     },
     [activeProfileData, dispatch, completeWaiterLogin],
@@ -548,6 +577,7 @@ const Pin = () => {
 
   const handleNumberClick = useCallback(
     (num) => {
+      if (verifyingRef.current) return;
       clearKeyboardCapture();
       setPin((prev) => {
         if (prev.length < PIN_LENGTH) {
@@ -845,7 +875,7 @@ const Pin = () => {
 
               <div className="pinContainer">
                 <div className="pinHeader">
-                  <span className="pinText">{t("pin_kodu_daxil_edin")}</span>
+                  <span className="pinText">{isVerifying ? "Yoxlanılır…" : t("pin_kodu_daxil_edin")}</span>
                 </div>
 
                 <div className="pinDots">

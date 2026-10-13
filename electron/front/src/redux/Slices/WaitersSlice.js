@@ -27,7 +27,9 @@ export const resolveWaiter = createAsyncThunk(
       } else {
         return thunkAPI.rejectWithValue({ message: "pin or cardId required" });
       }
-      const response = await axios.get(`/waiters/resolve?${params.toString()}`);
+      // PİN yoxlaması 30 saniyəlik ümumi timeout ilə gözləyəndə ekran "ilişmiş" görünürdü
+      // (xüsusən Slave → Master yolunda). 6 saniyədə cavab yoxdursa dərhal xəta göstər.
+      const response = await axios.get(`/waiters/resolve?${params.toString()}`, { timeout: 6000 });
       return response.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(error.response?.data || error.message);
