@@ -102,7 +102,8 @@ app.on("child-process-gone", (_event, details) => {
 
 if (process.platform === "win32") {
   // Set app user model id so Windows taskbar groups & icons match the desktop shortcut
-  app.setAppUserModelId("com.unipos.desktop");
+  // electron-builder appId ilə EYNİ olmalıdır — əks halda Windows taskbar qrupu/ikonu qısayolla uyğun gəlmir
+  app.setAppUserModelId("com.unipos.tech");
   app.commandLine.appendSwitch("no-sandbox");
   if (!gpuDecision.enabled) {
     // Yalnız GPU söndürüləndə lazımdır
@@ -219,6 +220,7 @@ setInterval(() => {
   processPrintQueue().catch(() => {});
 }, 30000);
 let kitchenWindow = null;
+const APP_WINDOW_TITLE = "UniPOS Desktop Application";
 let updateState = { status: null, version: null, progress: 0 };
 let isCustomerDisplayManuallyClosed = false; // Global flag
 
@@ -527,6 +529,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     fullscreen: true, // Start in fullscreen
+    title: APP_WINDOW_TITLE,
     show: false, // splash bağlanana/renderer hazır olana qədər göstərilmir
     backgroundColor: "#0a1e4d", // pəncərə açılan andan (renderer boyanmazdan əvvəl) belə ağ deyil, brend rənginə uyğun fon
     ...browserWindowIconFields(),
@@ -648,6 +651,12 @@ function createWindow() {
   screen.on("display-added", scheduleFit);
   screen.on("display-removed", scheduleFit);
   mainWindow.once("show", () => setTimeout(fitMainWindowToDisplay, 300));
+
+  // Səhifə başlığı (document.title) pəncərə başlığını əzməsin — taskbar həmişə tam adı göstərsin
+  mainWindow.on("page-title-updated", (e) => {
+    e.preventDefault();
+    try { mainWindow.setTitle(APP_WINDOW_TITLE); } catch (_) { /* nəzərə alınmır */ }
+  });
 
   global.mainWindow = mainWindow;
 
