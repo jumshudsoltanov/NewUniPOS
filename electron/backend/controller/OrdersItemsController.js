@@ -16,6 +16,53 @@ const { hasTimerIntervals } = require("../utils/timerIntervals");
 const axios = require("axios");
 const ItemPay = require("./OrderItemPaymentsController");
 
+/** Məhsul taymerli sayılır: product_type=timer, saatlıq qiymət və ya intervallar */
+const isTimerProductRow = (p) =>
+  !!p &&
+  (String(p.product_type || "").toLowerCase() === "timer" ||
+    Number(p.hourly_price || 0) > 0 ||
+    hasTimerIntervals(p.timer_intervals));
+
+/**
+ * Qonaq sayını taymerli məhsulların ümumi sayına bərabərləşdirir
+ * (məs. 3 ədəd "Timer" məhsulu → guest_count = 3). Taymerli məhsul yoxdursa toxunmur.
+ */
+const syncGuestCountWithTimerItems = async (orderId, transaction = null) => {
+  try {
+    const rows = await OrdersItemsModel.findAll({
+      where: { order_id: orderId },
+      attributes: ["count"],
+      include: [
+        {
+          model: ProductsModel,
+          as: "product",
+          attributes: ["product_type", "hourly_price", "timer_intervals"],
+        },
+      ],
+      transaction,
+    });
+    let timerQty = 0;
+    rows.forEach((r) => {
+      if (isTimerProductRow(r.product)) timerQty += Number(r.count || 0);
+    });
+    if (!(timerQty > 0)) return;
+    const guestCount = Math.max(1, Math.round(timerQty));
+    const ord = await OrdersModel.findOne({
+      where: { uuid: orderId },
+      attributes: ["guest_count"],
+      transaction,
+    });
+    if (!ord || Number(ord.guest_count || 0) === guestCount) return;
+    await OrdersModel.update(
+      { guest_count: guestCount, is_synced: 0 },
+      { where: { uuid: orderId }, transaction },
+    );
+  } catch (e) {
+    console.warn("[GUEST-SYNC] qonaq sayı yenilənmədi:", e.message);
+  }
+};
+
+
 /** Məhsul üzrə ödənişi olan çekdə qadağan əməliyyatlar üçün qoruyucular */
 const blockIfOrderHasItemPayments = async (orderIds, res) => {
   for (const id of [].concat(orderIds).filter(Boolean)) {
@@ -456,6 +503,9 @@ const sendOrdersItemsToDb = async (req, res) => {
       },
       { where: { uuid: orderId } },
     );
+
+    // Taymerli məhsul sayı qədər qonaq sayı
+    await syncGuestCountWithTimerItems(orderId);
 
     // Sync trigger
     SyncService.queueSync(orderId);
@@ -2175,6 +2225,7 @@ const onDeleteItemWithReason = async (req, res) => {
       },
       { where: { uuid: orderId }, transaction },
     );
+    await syncGuestCountWithTimerItems(orderId, transaction);
     await transaction.commit();
 
     // Respond immediately — frontend will refresh via getActiveOrders after all deletions
@@ -2435,6 +2486,7 @@ const onUpdateItemCount = async (req, res) => {
       },
       { where: { uuid: orderId } },
     );
+    await syncGuestCountWithTimerItems(orderId);
     SyncService.queueSync(orderId);
     const { getIo } = require("../socket/MasterServer");
     if (getIo()) {
@@ -3090,6 +3142,7 @@ module.exports = {
         { where: { uuid: orderId }, transaction },
       );
 
+      await syncGuestCountWithTimerItems(orderId, transaction);
       await transaction.commit();
 
       res.status(200).json({
