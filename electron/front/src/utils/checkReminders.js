@@ -80,7 +80,7 @@ function fire(reminder) {
     category: "clock",
     type: "reminder",
   });
-  playNotificationSound({ times: 2, gapMs: 700, volume: 0.15 });
+  playNotificationSound({ times: 2, gapMs: 1100, volume: 0.2 });
   window.dispatchEvent(new CustomEvent(REMINDER_FIRED_EVENT, { detail: reminder }));
 }
 
