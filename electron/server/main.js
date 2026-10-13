@@ -615,9 +615,46 @@ function createWindow() {
     mainWindow.setKiosk(true);
   }
 
+  /**
+   * Windows miqyası (DPI) dəyişəndə — məs. 125% → 100% — Electron 22-də kiosk/fullscreen
+   * pəncərə köhnə ölçüdə qalır və ekranın yuxarısında qara zolaq görünür.
+   * Həlli: ekran ölçüləri dəyişəndə pəncərəni yenidən displeyə sığdır.
+   */
+  const fitMainWindowToDisplay = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    try {
+      const display = screen.getDisplayMatching(mainWindow.getBounds());
+      const b = display.bounds;
+      const cur = mainWindow.getBounds();
+      if (cur.x === b.x && cur.y === b.y && cur.width === b.width && cur.height === b.height) return;
+      const wasKiosk = mainWindow.isKiosk();
+      const wasFull = mainWindow.isFullScreen();
+      if (wasKiosk) mainWindow.setKiosk(false);
+      if (wasFull) mainWindow.setFullScreen(false);
+      mainWindow.setBounds(b);
+      if (wasFull) mainWindow.setFullScreen(true);
+      if (wasKiosk) mainWindow.setKiosk(true);
+      console.log("[WINDOW] Ekran ölçüsünə uyğunlaşdırıldı:", b);
+    } catch (e) {
+      console.warn("[WINDOW] fitMainWindowToDisplay:", e.message);
+    }
+  };
+  let fitTimer = null;
+  const scheduleFit = () => {
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fitMainWindowToDisplay, 400);
+  };
+  screen.on("display-metrics-changed", scheduleFit);
+  screen.on("display-added", scheduleFit);
+  screen.on("display-removed", scheduleFit);
+  mainWindow.once("show", () => setTimeout(fitMainWindowToDisplay, 300));
+
   global.mainWindow = mainWindow;
 
   mainWindow.on("closed", () => {
+    screen.removeListener("display-metrics-changed", scheduleFit);
+    screen.removeListener("display-added", scheduleFit);
+    screen.removeListener("display-removed", scheduleFit);
     global.mainWindow = null;
     mainWindow = null;
     if (customerWindow && !customerWindow.isDestroyed()) {
