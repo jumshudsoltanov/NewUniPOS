@@ -2750,69 +2750,14 @@
   color: #2d3748;
 }
 
-/* Məhsul taymeri — çek sətrində: vaxt | tarif | taymer məbləği (idarə Edit modal «Saatlıq») */
-.check-item-timer {
-  margin-top: 3px;
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.check-item-timer-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 6px;
-  border-radius: 6px;
-  flex-shrink: 0;
-  background: #eef3fb;
-  color: #053796;
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-
-.check-item-timer-chip > i {
-  font-size: 0.75rem;
-  opacity: 0.9;
-}
-
-.check-item-timer-chip--time {
-  background: #053796;
-  color: #fff;
-}
-
-.check-item-timer-chip--charge {
-  border: 1px solid #c9d8f0;
-  background: #fff;
-  font-weight: 700;
-}
-
-.check-item-timer-mono {
+/* Məhsul taymeri — məhsul adının yanında sadə sayğac (idarə Edit modal «Saatlıq») */
+.check-item-timer-inline {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: #4b5563;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.03em;
-}
-
-.check-item-timer-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
-  flex-shrink: 0;
-}
-
-.check-item-timer.is-running .check-item-timer-dot {
-  background: #fff;
-  animation: checkItemTimerPulse 1.2s ease-in-out infinite;
-}
-
-@keyframes checkItemTimerPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.25; }
+  letter-spacing: 0.02em;
+  margin-left: 4px;
 }
 
 /* Köhnə sinif — digər yerlərdə istifadə üçün saxlanılır */
