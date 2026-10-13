@@ -138,6 +138,7 @@ const CheckOver = () => {
 
         let total = 0;
         let totalForService = 0;
+        let totalForDiscount = 0;
         const _hasProductTimer = (currentOrder.orders_items || []).some(it => isTimerItem(it, menuCatalog || []));
 
         currentOrder.orders_items?.forEach((item) => {
@@ -146,20 +147,18 @@ const CheckOver = () => {
             const modifiersPerUnit = getModifiersTotalPerUnit(item);
             const isTimer = isTimerItem(item, menuCatalog || []);
 
-            let itemTotal;
-            if (isTimer) {
-                itemTotal = getOrderItemLineTotal(item, currentOrder);
-            } else {
-                itemTotal = count * (price + modifiersPerUnit);
-            }
+            // Baza məbləğ (taymersiz) — endirim və xidmət haqqı yalnız bundan hesablanır.
+            // Çek ekranı (CheckBottom) və masa kartı ilə eyni qayda; əvvəl burada taymer
+            // məbləği də servisə daxil edilirdi və ödəniş ekranı çekdən fərqli cəm göstərirdi.
+            const baseTotal = count * (price + modifiersPerUnit);
+            const itemTotal = isTimer ? getOrderItemLineTotal(item, currentOrder) : baseTotal;
             total += itemTotal;
+            totalForDiscount += baseTotal;
 
             // Ortaq qayda — çek ekranı ilə eyni nəticə verir (bax: serviceFeeRules.js).
-            // Əvvəl burada yalnız `item.product` yoxlanılırdı və menyuda servis
-            // haqqından azad olan məhsullar ödəniş ekranında servisə daxil edilirdi.
             const isNoService = isNoServiceFeeItem(item, menuCatalog);
             if (!isNoService) {
-                totalForService += itemTotal;
+                totalForService += baseTotal;
             }
         });
 
@@ -175,21 +174,25 @@ const CheckOver = () => {
             total += (effH / 3600) * totalSeconds;
         }
         total = normalizeMoney(total);
+        totalForDiscount = normalizeMoney(Math.max(0, totalForDiscount));
+        totalForService = normalizeMoney(Math.max(0, totalForService));
 
-        const discountValue = Number(currentOrder.discount_value || 0);
+        const discountValueRaw = currentOrder.discount_value;
+        const hasExplicitDiscountValue = discountValueRaw !== null && discountValueRaw !== undefined;
+        const discountValue = Number(discountValueRaw || 0);
         const discountType = currentOrder.discount_type || "percent";
         let discountAmount = 0;
 
         if (discountValue > 0) {
             if (discountType === "percent") {
-                discountAmount = (total * discountValue) / 100;
+                discountAmount = (totalForDiscount * discountValue) / 100;
             } else {
                 discountAmount = discountValue;
             }
-        } else if (currentOrder.discount) {
+        } else if (!hasExplicitDiscountValue && Number(currentOrder.discount) > 0) {
             discountAmount = Number(currentOrder.discount);
         }
-        discountAmount = normalizeMoney(discountAmount);
+        discountAmount = normalizeMoney(Math.min(discountAmount, total));
 
         let serviceValue = Number(currentOrder.service_value || 0);
         let serviceType = currentOrder.service_type || "percent";
