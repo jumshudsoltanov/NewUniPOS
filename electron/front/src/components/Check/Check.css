@@ -2815,16 +2815,6 @@
   50% { opacity: 0.25; }
 }
 
-.check-item-total-breakdown {
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: #6b7a90;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-  margin-top: 2px;
-  white-space: nowrap;
-}
-
 /* Köhnə sinif — digər yerlərdə istifadə üçün saxlanılır */
 .check-item-product-timer-lite {
   margin-top: 4px;
