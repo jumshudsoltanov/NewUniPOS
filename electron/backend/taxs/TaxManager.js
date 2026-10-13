@@ -2,6 +2,7 @@ const OmnitechService = require('./OmnitechService');
 const SunmiService = require('./SunmiService');
 const OneClickService = require('./OneClickService');
 const DataPayService = require('./DataPayService');
+const AzSmartService = require('./AzSmartService');
 
 const serviceInstances = {};
 
@@ -43,6 +44,8 @@ function getTaxService(taxConfig) {
         service = new OneClickService(taxConfig);
     } else if (type.includes('datapay')) {
         service = new DataPayService(taxConfig);
+    } else if (type.includes('azsmart') || type.includes('smartone') || type.includes('az smart') || type.includes('smart one')) {
+        service = new AzSmartService(taxConfig);
     } else {
         console.warn(`[TAX] Unknown tax device type: ${taxConfig.tax_cash_type}`);
         return null;
@@ -98,9 +101,11 @@ function formatTaxConnectionError(message, config) {
     if (!/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ENETUNREACH|EHOSTUNREACH|ECONNRESET|socket hang up|ECONNABORTED/i.test(msg)) {
         return msg;
     }
-    const port = config && config.port_addr != null && String(config.port_addr) !== '' ? String(config.port_addr) : '2222';
+    const type = String(config?.tax_cash_type || '').toLowerCase();
+    const defPort = /azsmart|smartone/.test(type) ? '8008' : '2222';
+    const port = config && config.port_addr != null && String(config.port_addr) !== '' ? String(config.port_addr) : defPort;
     const host = config && config.ip_addr ? `${config.ip_addr}:${port}` : 'vergi cihazı';
-    return `${msg} — “${host}” ünvanına qoşulmaq mümkün olmadı (port açıq deyil, səhv IP və ya cihazda servis deaktiv ola bilər; DATAPAY üçün adətən 2222). Ödəniş üsulu (nağd/nağdsız) bu xətanı yaratmır.`;
+    return `${msg} — “${host}” ünvanına qoşulmaq mümkün olmadı (port açıq deyil, səhv IP və ya cihazda servis deaktiv ola bilər; DATAPAY üçün adətən 2222, AzSmart/SmartOne üçün 8008). Ödəniş üsulu (nağd/nağdsız) bu xətanı yaratmır.`;
 }
 
 function normalizePaymentLabel(s) {

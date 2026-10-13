@@ -475,7 +475,7 @@ router.post("/tax/login", async (req, res) => {
     );
     if (
       !isNetworkish &&
-      /^\[(DATAPAY|SUNMI|OMNITECH|ONECLICK)\]/i.test(msg)
+      /^\[(DATAPAY|SUNMI|OMNITECH|ONECLICK|AZSMART)\]/i.test(msg)
     ) {
       return res.status(400).json({ message: msg });
     }
@@ -615,6 +615,35 @@ router.post("/tax/reprint-error", async (req, res) => {
     res.status(500).json({ message: e.message });
   }
 });
+
+// ─── Ümumi kassa əməliyyatları (deposit / withdraw / rollback / nəzarət lenti / son sənəd / korreksiya) ───
+
+function taxServiceMethodRoute(path, methodName, buildArgs, label) {
+  router.post(path, async (req, res) => {
+    try {
+      const { taxConfig } = req.body;
+      const service = TaxManager.getTaxService(taxConfig);
+      if (!service)
+        return res.status(400).json({ message: "Tax device not supported" });
+      if (typeof service[methodName] !== "function")
+        return res.status(400).json({ message: `Bu cihaz "${label}" əməliyyatını dəstəkləmir` });
+      const args = buildArgs(req.body);
+      const result = await service[methodName](...args);
+      res.json({ success: true, data: result, ...(result && typeof result === "object" ? result : {}) });
+    } catch (e) {
+      console.error(`[TAX] ${label} error:`, e.message);
+      res.status(500).json({ success: false, message: e.message });
+    }
+  });
+}
+
+taxServiceMethodRoute("/tax/deposit", "deposit", (b) => [b.amount, b.cashierName, b.docNumber], "Kassaya mədaxil");
+taxServiceMethodRoute("/tax/withdraw", "withdraw", (b) => [b.amount, b.cashierName, b.docNumber], "İnkassasiya");
+taxServiceMethodRoute("/tax/rollback", "rollback", (b) => [b.params || b], "Sənədin ləğvi");
+taxServiceMethodRoute("/tax/check-status", "checkStatus", (b) => [b.documentId], "Sənəd statusu");
+taxServiceMethodRoute("/tax/last-document", "getLastDocument", (b) => [b.cashierName], "Son sənəd");
+taxServiceMethodRoute("/tax/control-tape", "getControlTape", (b) => [b.cashierName], "Nəzarət lenti");
+taxServiceMethodRoute("/tax/correction", "correction", (b) => [b.params || b], "Dövrün korreksiyası");
 
 // ─── Bank kart əməliyyatları (DATAPAY) ───────────────────────────────────────
 
