@@ -12,7 +12,7 @@
 }
 
 .crm-header {
-  background: #053796;
+  background: #4F85F4;
   color: #fff;
   height: 60px;
   padding: 0 16px 0 18px;
@@ -77,7 +77,7 @@
   padding: 8px 12px;
   border-radius: 6px;
   background: #eef3fb;
-  color: #053796;
+  color: #4F85F4;
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -86,7 +86,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #053796;
+  background: #4F85F4;
   animation: crmPulse 1.2s ease-in-out infinite;
 }
 
@@ -130,7 +130,7 @@
   display: inline-flex;
   align-items: center;
   background: #eef3fb;
-  color: #053796;
+  color: #4F85F4;
   font-weight: 600;
   border-left: 1px solid #c9d8f0;
 }
@@ -146,7 +146,7 @@
   border-radius: 6px;
   border: 1px solid #c9d8f0;
   background: #fff;
-  color: #053796;
+  color: #4F85F4;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -154,8 +154,8 @@
 
 .crm-quick-btn.is-active,
 .crm-quick-btn:active {
-  background: #053796;
-  border-color: #053796;
+  background: #4F85F4;
+  border-color: #4F85F4;
   color: #fff;
 }
 
@@ -170,7 +170,7 @@
   border-radius: 6px;
   border: none;
   background: #f1f5fb;
-  color: #053796;
+  color: #4F85F4;
   font-size: 1.4rem;
   font-weight: 600;
   cursor: pointer;
@@ -180,7 +180,7 @@
 }
 
 .crm-key:active {
-  background: #dfe8f8;
+  background: #dbe6fb;
   transform: translateY(1px);
 }
 
@@ -211,7 +211,7 @@
 
 .crm-btn-secondary {
   background: #eef3fb;
-  color: #053796;
+  color: #4F85F4;
 }
 
 .crm-btn-secondary:disabled {
@@ -221,12 +221,12 @@
 }
 
 .crm-btn-primary {
-  background: #053796;
+  background: #4F85F4;
   color: #fff;
 }
 
 .crm-btn-primary:hover {
-  background: #042c78;
+  background: #3a70d9;
 }
 
 /* Başlıqdakı saat nişanı — klik olunan, aktiv xatırlatmada alarm ikonu */
