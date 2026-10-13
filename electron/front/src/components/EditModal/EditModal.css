@@ -677,10 +677,22 @@
 }
 
 .edit-hourly-live-panel {
-    padding: 14px 16px 16px;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 18px 18px;
     border: 1px solid #e3e9f3;
     border-radius: 8px;
     background: #fff;
+}
+
+.edit-hourly-live-clock-area {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 110px;
 }
 
 .edit-hourly-live-head {
@@ -723,27 +735,27 @@
 }
 
 .edit-hourly-live-clock {
-    font-size: 2.4rem;
+    font-size: 3.6rem;
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1;
     color: #0f172a;
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0.02em;
-    margin: 4px 0 12px;
+    letter-spacing: 0.03em;
+    text-align: center;
 }
 
 .edit-hourly-live-rows {
     border-top: 1px solid #eef2f7;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
 }
 
 .edit-hourly-live-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 9px 0;
+    padding: 12px 0;
     border-bottom: 1px solid #eef2f7;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     color: #475569;
 }
 
@@ -760,12 +772,12 @@
 }
 
 .edit-hourly-action {
-    height: 44px;
+    height: 56px;
     border-radius: 6px;
     border: 1px solid #c9d8f0;
     background: #fff;
     color: #053796;
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
 }

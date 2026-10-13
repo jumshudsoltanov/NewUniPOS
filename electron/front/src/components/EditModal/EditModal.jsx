@@ -1288,7 +1288,9 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                           {isTimerRunning ? "İşləyir" : "Dayandırılıb"}
                         </span>
                       </div>
-                      <div className="edit-hourly-live-clock">{timerClockLive}</div>
+                      <div className="edit-hourly-live-clock-area">
+                        <div className="edit-hourly-live-clock">{timerClockLive}</div>
+                      </div>
                       <div className="edit-hourly-live-rows">
                         <div className="edit-hourly-live-row">
                           <span>{t("qazanc")}</span>
