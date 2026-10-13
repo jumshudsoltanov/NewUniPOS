@@ -677,175 +677,112 @@
 }
 
 .edit-hourly-live-panel {
-    border-radius: 6px;
+    padding: 14px 16px 16px;
+    border: 1px solid #e3e9f3;
+    border-radius: 8px;
     background: #fff;
-    border: 1px solid #E9ECEF;
-    padding: 12px 14px 14px;
 }
 
 .edit-hourly-live-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
 }
 
-.edit-hourly-live-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.65rem;
-    font-weight: 700;
+.edit-hourly-live-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #fff;
-    background: #4F85F4;
-    padding: 4px 10px;
-    border-radius: 6px;
 }
 
-.edit-hourly-live-sub {
-    font-size: 0.75rem;
-    color: #6B7280;
-    font-weight: 500;
-}
-
-.edit-hourly-live-clock-wrap {
-    display: flex;
+.edit-hourly-live-status {
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
 }
 
-.edit-hourly-live-clock-ico {
-    font-size: 1.45rem;
-    color: #4F85F4;
+.edit-hourly-live-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #cbd5e1;
+}
+
+.edit-hourly-live-status.is-running {
+    color: #053796;
+}
+
+.edit-hourly-live-status.is-running .edit-hourly-live-status-dot {
+    background: #053796;
 }
 
 .edit-hourly-live-clock {
-    font-size: 1.75rem;
+    font-size: 2.4rem;
     font-weight: 700;
-    color: #1F2937;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.03em;
     line-height: 1.1;
+    color: #0f172a;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    margin: 4px 0 12px;
 }
 
-.edit-hourly-live-metrics {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 12px;
+.edit-hourly-live-rows {
+    border-top: 1px solid #eef2f7;
+    margin-bottom: 14px;
 }
 
-.edit-hourly-metric {
-    background: #F8F9FA;
-    border-radius: 6px;
-    padding: 8px 10px 8px 34px;
-    border: 1px solid #E9ECEF;
+.edit-hourly-live-row {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
-    position: relative;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 0.9rem;
+    color: #475569;
 }
 
-.edit-hourly-metric > i {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.95rem;
-    color: #4F85F4;
-}
-
-.edit-hourly-metric-label {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: #6B7280;
-    font-weight: 600;
-}
-
-.edit-hourly-metric-val {
-    font-size: 0.85rem;
+.edit-hourly-live-row strong {
+    color: #0f172a;
     font-weight: 700;
-    color: #1F2937;
     font-variant-numeric: tabular-nums;
 }
 
-.edit-hourly-tile-grid {
+.edit-hourly-actions {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
 }
 
-.edit-hourly-tile {
+.edit-hourly-action {
+    height: 44px;
     border-radius: 6px;
-    padding: 10px 6px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    cursor: pointer;
-    transition: none;
-    font-size: 0.72rem;
+    border: 1px solid #c9d8f0;
+    background: #fff;
+    color: #053796;
+    font-size: 0.9rem;
     font-weight: 600;
-    min-height: 58px;
+    cursor: pointer;
 }
 
-.edit-hourly-tile i {
-    font-size: 1.2rem;
+.edit-hourly-action.is-primary {
+    background: #053796;
+    border-color: #053796;
+    color: #fff;
 }
 
-.edit-hourly-tile:disabled {
-    opacity: 0.42;
+.edit-hourly-action:disabled {
+    opacity: 0.45;
     cursor: not-allowed;
 }
 
-.edit-hourly-tile:not(:disabled):active {
-    transform: none;
-}
-
-/* Başlat — stepper btn-plus / sidebar ilə eyni mavi */
-.edit-hourly-tile-brand {
-    background: #4F85F4;
-    color: #fff;
-    border: none;
-}
-
-.edit-hourly-tile-brand:hover,
-.edit-hourly-tile-brand:focus-visible {
-    background: #4F85F4;
-    color: #fff;
-}
-
-/* Dayandır — edit-timer-action-btn ilə eyni tünd mavi */
-.edit-hourly-tile-primary {
-    background: #053796;
-    color: #fff;
-    border: none;
-}
-
-.edit-hourly-tile-primary:hover,
-.edit-hourly-tile-primary:focus-visible {
-    background: #053796;
-    color: #fff;
-}
-
-/* Sıfırla — outline */
-.edit-hourly-tile-outline {
-    background: #fff;
-    color: #053796;
-    border: 2px solid #053796;
-}
-
-.edit-hourly-tile-outline:hover,
-.edit-hourly-tile-outline:focus-visible {
-    background: #fff;
-    color: #053796;
-    border: 2px solid #053796;
+.edit-hourly-action:not(:disabled):active {
+    transform: translateY(1px);
 }
 
 .edit-hourly-price-card {

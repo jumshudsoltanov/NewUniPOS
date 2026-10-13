@@ -1282,58 +1282,52 @@ const EditModal = ({ show, onClose, product, orders, onOpenDeleteModal, initialT
                   {Number(loginedProfileData?.data?.profile?.is_timer || 0) === 1 && orders?.uuid && (
                     <div className="edit-hourly-live-panel">
                       <div className="edit-hourly-live-head">
-                        <span className="edit-hourly-live-badge">
-                          <i className="bi bi-broadcast-pin" aria-hidden />{t("canli")}</span>
-                        <span className="edit-hourly-live-sub">{t("taymer_veziyyeti")}</span>
+                        <span className="edit-hourly-live-title">{t("taymer_veziyyeti")}</span>
+                        <span className={`edit-hourly-live-status ${isTimerRunning ? "is-running" : ""}`}>
+                          <span className="edit-hourly-live-status-dot" aria-hidden />
+                          {isTimerRunning ? "İşləyir" : "Dayandırılıb"}
+                        </span>
                       </div>
-                      <div className="edit-hourly-live-clock-wrap">
-                        <i className="bi bi-stopwatch edit-hourly-live-clock-ico" aria-hidden />
-                        <span className="edit-hourly-live-clock">{timerClockLive}</span>
-                      </div>
-                      <div className="edit-hourly-live-metrics">
-                        <div className="edit-hourly-metric">
-                          <i className="bi bi-cash-stack" aria-hidden />
-                          <span className="edit-hourly-metric-label">{t("qazanc")}</span>
-                          <span className="edit-hourly-metric-val">{Number(timerChargeLive).toFixed(2)} {getCurrencySymbol()}</span>
+                      <div className="edit-hourly-live-clock">{timerClockLive}</div>
+                      <div className="edit-hourly-live-rows">
+                        <div className="edit-hourly-live-row">
+                          <span>{t("qazanc")}</span>
+                          <strong>{Number(timerChargeLive).toFixed(2)} {getCurrencySymbol()}</strong>
                         </div>
-                        <div className="edit-hourly-metric">
-                          <i className="bi bi-tag" aria-hidden />
-                          <span className="edit-hourly-metric-label">{t("tarif")}</span>
-                          <span className="edit-hourly-metric-val">
-                            {Number(displayTariffRate).toFixed(2)} {timerIntervalInfo ? `₼ / ${timerIntervalInfo.duration} dəq` : '₼/saat'}
-                          </span>
+                        <div className="edit-hourly-live-row">
+                          <span>{t("tarif")}</span>
+                          <strong>
+                            {Number(displayTariffRate).toFixed(2)} {getCurrencySymbol()} / {timerIntervalInfo ? `${timerIntervalInfo.duration} dəq` : t("saat")}
+                          </strong>
                         </div>
                       </div>
-                      <div className="edit-hourly-tile-grid">
+                      <div className="edit-hourly-actions">
                         <button
                           type="button"
-                          className="edit-hourly-tile edit-hourly-tile-brand"
+                          className={`edit-hourly-action ${isTimerRunning ? "" : "is-primary"}`}
                           onClick={handleStartOrderTimer}
                           disabled={isTimerRunning || isUnsavedTimer}
                           title={isUnsavedTimer ? t("evvelce_mehsulu_gonderin") : (isTimerRunning ? "Artıq işləyir" : "Başlat")}
                         >
-                          <i className="bi bi-play-fill" />
-                          <span>{t("baslat")}</span>
+                          {t("baslat")}
                         </button>
                         <button
                           type="button"
-                          className="edit-hourly-tile edit-hourly-tile-primary"
+                          className={`edit-hourly-action ${isTimerRunning ? "is-primary" : ""}`}
                           onClick={handleStopOrderTimer}
                           disabled={!isTimerRunning || isUnsavedTimer}
                           title={isUnsavedTimer ? t("evvelce_mehsulu_gonderin") : t("dayandir")}
                         >
-                          <i className="bi bi-pause-fill" />
-                          <span>{t("dayandir")}</span>
+                          {t("dayandir")}
                         </button>
                         <button
                           type="button"
-                          className="edit-hourly-tile edit-hourly-tile-outline"
+                          className="edit-hourly-action"
                           onClick={handleResetOrderTimer}
                           disabled={isUnsavedTimer}
                           title={isUnsavedTimer ? t("evvelce_mehsulu_gonderin") : t("sifirla")}
                         >
-                          <i className="bi bi-arrow-counterclockwise" />
-                          <span>{t("sifirla")}</span>
+                          {t("sifirla")}
                         </button>
                       </div>
                     </div>
