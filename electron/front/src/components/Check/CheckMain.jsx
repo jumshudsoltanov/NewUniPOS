@@ -318,29 +318,34 @@ const CheckOrderRow = React.memo(function CheckOrderRow({
                           </span>
                         )}
 
-                        {!hasIntervals && hourlyLine > 0 ? (
-                          <div style={{ fontSize: "0.75rem", color: "#003b7a", fontWeight: "600", marginTop: "1px" }}>
-                            {t("saatliq")}: {hourlyLine.toFixed(2)} {getCurrencySymbol()}/{t("saat")}
-                          </div>
-                        ) : null}
-
-                        {showInlineProductTimer && (
+                        {showInlineProductTimer ? (
                           <div
-                            className="check-item-product-timer-lite"
+                            className={`check-item-timer ${Number(liveItemStatus) === 1 ? "is-running" : ""}`}
                             onClick={stopTimerBubble}
                             title={t("taymer_idare_mehsula_toxun_ve_saatliq_tabi")}
                           >
-                            <span className="check-item-timer-lite-sep">
+                            <span className="check-item-timer-chip check-item-timer-chip--time">
+                              <span className="check-item-timer-dot" aria-hidden />
                               <i className="bi bi-stopwatch" aria-hidden />
-                              <span className="check-item-timer-lite-mono">
+                              <span className="check-item-timer-mono">
                                 <SmoothTimerClock initialSeconds={itemDisplaySeconds} isActive={Number(liveItemStatus) === 1} />
                               </span>
                             </span>
-                            <span className="check-item-timer-lite-sep">
-                              <i className="bi bi-plus-circle" aria-hidden />
-                              <span className="check-item-timer-lite-mono">{Number(itemTimerCharge).toFixed(2)} {getCurrencySymbol()}</span>
+                            {!hasIntervals && hourlyLine > 0 && (
+                              <span className="check-item-timer-chip">
+                                {hourlyLine.toFixed(2)} {getCurrencySymbol()}/{t("saat")}
+                              </span>
+                            )}
+                            <span className="check-item-timer-chip check-item-timer-chip--charge">
+                              +{Number(itemTimerCharge).toFixed(2)} {getCurrencySymbol()}
                             </span>
                           </div>
+                        ) : (
+                          !hasIntervals && hourlyLine > 0 && (
+                            <div style={{ fontSize: "0.75rem", color: "#003b7a", fontWeight: "600", marginTop: "1px" }}>
+                              {t("saatliq")}: {hourlyLine.toFixed(2)} {getCurrencySymbol()}/{t("saat")}
+                            </div>
+                          )
                         )}
 
                       </div>
@@ -367,8 +372,13 @@ const CheckOrderRow = React.memo(function CheckOrderRow({
                       </div>
                     </div>
 
-                    <div className="col-total d-flex align-items-center justify-content-end fw-bold">
-                      {totalAmount} {getCurrencySymbol()}
+                    <div className="col-total d-flex flex-column align-items-end justify-content-center fw-bold">
+                      <span>{totalAmount} {getCurrencySymbol()}</span>
+                      {showInlineProductTimer && Number(itemTimerCharge) > 0 && (
+                        <span className="check-item-total-breakdown">
+                          {((currentPrice + modifiersTotal) * Number(item.count)).toFixed(2)} + {(Number(itemTimerCharge) * Number(item.count)).toFixed(2)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
