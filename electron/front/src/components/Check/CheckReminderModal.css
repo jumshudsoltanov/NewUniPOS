@@ -1,0 +1,245 @@
+/* Çek bildiriş (xatırlatma) modalı — brend rənglər, yastı, 6-8px künclər */
+.check-reminder-modal .modal-dialog {
+  max-width: 360px;
+  margin: 1.75rem auto;
+}
+
+.check-reminder-modal .modal-content {
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.18);
+}
+
+.crm-header {
+  background: #053796;
+  color: #fff;
+  height: 60px;
+  padding: 0 16px 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.crm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.crm-header-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+
+.crm-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.crm-close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.crm-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.crm-body {
+  padding: 16px 18px 18px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.crm-active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #eef3fb;
+  color: #053796;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.crm-active-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #053796;
+  animation: crmPulse 1.2s ease-in-out infinite;
+}
+
+.crm-active-time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+@keyframes crmPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.crm-display {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #c9d8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.crm-display-value {
+  flex: 1;
+  padding: 0 16px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.crm-display-value.is-empty {
+  color: #a3aebd;
+}
+
+.crm-display-unit {
+  height: 100%;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  background: #eef3fb;
+  color: #053796;
+  font-weight: 600;
+  border-left: 1px solid #c9d8f0;
+}
+
+.crm-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.crm-quick-btn {
+  height: 38px;
+  border-radius: 6px;
+  border: 1px solid #c9d8f0;
+  background: #fff;
+  color: #053796;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.crm-quick-btn.is-active,
+.crm-quick-btn:active {
+  background: #053796;
+  border-color: #053796;
+  color: #fff;
+}
+
+.crm-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.crm-key {
+  height: 56px;
+  border-radius: 6px;
+  border: none;
+  background: #f1f5fb;
+  color: #053796;
+  font-size: 1.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crm-key:active {
+  background: #dfe8f8;
+  transform: translateY(1px);
+}
+
+.crm-key-muted {
+  color: #64748b;
+  font-size: 1.2rem;
+}
+
+.crm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.crm-btn {
+  height: 52px;
+  border-radius: 6px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.crm-btn-secondary {
+  background: #eef3fb;
+  color: #053796;
+}
+
+.crm-btn-secondary:disabled {
+  background: #f1f5f9;
+  color: #a3aebd;
+  cursor: not-allowed;
+}
+
+.crm-btn-primary {
+  background: #053796;
+  color: #fff;
+}
+
+.crm-btn-primary:hover {
+  background: #042c78;
+}
+
+/* Başlıqdakı saat nişanı — klik olunan, aktiv xatırlatmada alarm ikonu */
+.header-time.header-time-clickable {
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-time .header-time-alarm {
+  font-size: 0.85em;
+  opacity: 0.95;
+  animation: crmPulse 1.6s ease-in-out infinite;
+}

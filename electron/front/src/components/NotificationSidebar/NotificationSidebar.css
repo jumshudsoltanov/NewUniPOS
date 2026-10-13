@@ -338,6 +338,20 @@
     color: #ef4444;
 }
 
+/* Çek xatırlatması — brend mavisi */
+.notif-type-icon-circle.reminder {
+    background: #eef3fb;
+    color: #053796;
+}
+
+.notif-item.notif-reminder {
+    border-left: 3px solid #053796;
+}
+
+.notif-item.notif-reminder .notif-item-title {
+    color: #053796;
+}
+
 .notif-card-content-col {
     flex-grow: 1;
     min-width: 0;

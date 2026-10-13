@@ -54,6 +54,7 @@ import {
 } from "../../utils/orderHourlyPrice";
 import { isOrderEditLocked, orderEditLockedToast } from "../../utils/checkEditLock";
 import NotificationSidebar from "../NotificationSidebar/NotificationSidebar";
+import { REMINDER_FIRED_EVENT } from "../../utils/checkReminders";
 import ProductModal from "../ProductModal/ProductModal";
 import UpdateGuestCountModal from "../Customers-Modal/UpdateGuestCountModal";
 import apiConfig from "../../utils/apiConfig";
@@ -804,6 +805,22 @@ const Check = () => {
   const [showGuestCountModal, setShowGuestCountModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
+  // Çek xatırlatması gələndə zəng ikonu titrəyir
+  const [bellShake, setBellShake] = useState(false);
+  useEffect(() => {
+    let tmr = null;
+    const onFired = () => {
+      setBellShake(false);
+      requestAnimationFrame(() => setBellShake(true));
+      clearTimeout(tmr);
+      tmr = setTimeout(() => setBellShake(false), 2600);
+    };
+    window.addEventListener(REMINDER_FIRED_EVENT, onFired);
+    return () => {
+      window.removeEventListener(REMINDER_FIRED_EVENT, onFired);
+      clearTimeout(tmr);
+    };
+  }, []);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showKitchenBlockModal, setShowKitchenBlockModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -2731,7 +2748,7 @@ const Check = () => {
                   <div className="tools-divider"></div>
                   {/* Notification Bell */}
                   <button
-                    className="header-icon-btn small-icon-btn position-relative"
+                    className={`header-icon-btn small-icon-btn position-relative ${bellShake ? "bell-shake" : ""}`}
                     onClick={() => setShowNotifications(true)}
                   >
                     <svg

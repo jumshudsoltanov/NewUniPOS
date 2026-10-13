@@ -286,3 +286,27 @@ body,
   50% { opacity: 1; }
   100% { opacity: 0.5; }
 }
+
+/* Zəng ikonu — xatırlatma gələndə titrəyir */
+@keyframes bellShake {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(14deg); }
+  30% { transform: rotate(-12deg); }
+  45% { transform: rotate(10deg); }
+  60% { transform: rotate(-8deg); }
+  75% { transform: rotate(5deg); }
+}
+
+.bell-shake svg {
+  transform-origin: 50% 10%;
+  animation: bellShake 0.8s ease-in-out 3;
+}
+
+.bell-shake .notif-badge {
+  animation: bellBadgePulse 0.8s ease-in-out 3;
+}
+
+@keyframes bellBadgePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}

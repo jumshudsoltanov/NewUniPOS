@@ -155,18 +155,19 @@ const NotificationSidebarComponent = ({ show, onClose, onAcceptQrOrder, onReject
                   // düymələr statusa deyil, sifarişin hələ gözləməsinə baxır
                   const isQrOrder =
                     n.category === "qr_order" && isQrOrderPending(n.orderId);
+                  const isReminder = n.type === "reminder" || n.category === "clock";
                   return (
                     <div
                       key={`${n.id}-${idx}`}
-                      className={`notif-item card-style ${isError ? "notif-error" : ""} ${isQrOrder ? "notif-qr-order" : ""}`}
+                      className={`notif-item card-style ${isError ? "notif-error" : ""} ${isQrOrder ? "notif-qr-order" : ""} ${isReminder ? "notif-reminder" : ""}`}
                     >
                       <div className="notif-card-main">
                         <div className="notif-card-icon-col">
                           <div
-                            className={`notif-type-icon-circle ${isQrOrder ? "qr" : isError ? "error" : "info"}`}
+                            className={`notif-type-icon-circle ${isQrOrder ? "qr" : isError ? "error" : isReminder ? "reminder" : "info"}`}
                           >
                             <i
-                              className={`bi ${isQrOrder ? "bi-qr-code" : isError ? "bi-exclamation-octagon-fill" : "bi-info-circle-fill"}`}
+                              className={`bi ${isQrOrder ? "bi-qr-code" : isError ? "bi-exclamation-octagon-fill" : isReminder ? "bi-alarm-fill" : "bi-info-circle-fill"}`}
                             ></i>
                           </div>
                         </div>

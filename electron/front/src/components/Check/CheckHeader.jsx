@@ -17,6 +17,8 @@ import { saveLog } from "../../redux/Slices/OrdersSlice";
 import { useNavigate, useParams, useSearchParams as _useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { checkShiftGuard } from "../../utils/shiftGuard";
+import CheckReminderModal from "./CheckReminderModal";
+import { REMINDER_CHANGED_EVENT, getCheckReminder } from "../../utils/checkReminders";
 import { t } from "../../utils/translations";
 const CheckHeader = ({
   orders,
@@ -30,6 +32,9 @@ const CheckHeader = ({
 }) => {
   const [openTagModal, setOpenTagModal] = useState(false);
   const [openOtherCheckModal, setOpenOtherCheckModal] = useState(false);
+  // Çek xatırlatması — başlıqdakı saata basanda dəqiqə yazılır
+  const [openReminderModal, setOpenReminderModal] = useState(false);
+  const [hasReminder, setHasReminder] = useState(false);
   const { loginedProfileData } = useSelector((state) => state.LoginSlice);
   const { loginedWaiter } = useSelector((state) => state.WaitersSlice);
   const { id: currentId } = useParams();
@@ -48,6 +53,13 @@ const CheckHeader = ({
   const navigate = useNavigate();
 
   const _profileId = loginedProfileData?.data?.profile?.id;
+
+  useEffect(() => {
+    const refresh = () => setHasReminder(!!getCheckReminder(currentId));
+    refresh();
+    window.addEventListener(REMINDER_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(REMINDER_CHANGED_EVENT, refresh);
+  }, [currentId]);
 
   useEffect(() => {
     // Only fetch if data is missing
@@ -249,7 +261,13 @@ const CheckHeader = ({
         </div>
 
         <div className="header-center-section">
-          <span className="header-time">
+          <span
+            className={`header-time header-time-clickable ${hasReminder ? "has-reminder" : ""}`}
+            onClick={() => setOpenReminderModal(true)}
+            title="Çek bildirişi (dəqiqə ilə xatırlatma)"
+            role="button"
+          >
+            {hasReminder && <i className="bi bi-alarm-fill header-time-alarm" aria-hidden></i>}
             {`${getTimeDifference(orders?.start_date).hours ?? "00"}:${getTimeDifference(orders?.start_date).minutes ?? "00"}`}
           </span>
         </div>
@@ -271,6 +289,20 @@ const CheckHeader = ({
           </div>
         </div>
       </div>
+      <CheckReminderModal
+        show={openReminderModal}
+        onClose={() => setOpenReminderModal(false)}
+        orderUuid={orders?.uuid || currentId}
+        orderId={orders?.id}
+        label={(() => {
+          const tn = liveTableName || table?.name || orders?.table_name || orders?.table?.name;
+          if (tn) return tn;
+          const st = liveSaleType ?? orders?.sale_type;
+          if (st === "delivery") return t("delivery");
+          if (st === "takeaway") return t("takeaway");
+          return "";
+        })()}
+      />
       <TagModal
         show={openTagModal}
         onClose={() => setOpenTagModal(false)}

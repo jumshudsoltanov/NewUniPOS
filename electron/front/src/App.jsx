@@ -51,6 +51,7 @@ import { addNotification } from "./utils/notificationService";
 import { toast } from "react-toastify";
 import { usePosIdleToPin } from "./hooks/usePosIdleToPin";
 import { hasAnyLiveTimer } from "./utils/liveOrderTimerData";
+import { startCheckReminderTicker } from "./utils/checkReminders";
 import SplitTableSelect from "./components/SlpitOrderModa/SplitTableSelect";
 import {
   configureQrOrderManager,
@@ -343,6 +344,8 @@ function AppContent() {
       dispatch(tickBooks());
       dispatch(tickTables());
     }, 1000);
+    // Çek xatırlatmaları (başlıqdakı saat → dəqiqə) — vaxtı bitəni bildirişə salır
+    const stopReminderTicker = startCheckReminderTicker();
  
     return () => {
       window.removeEventListener("online", handleConnectivity);
@@ -351,6 +354,7 @@ function AppContent() {
       clearInterval(syncInt);
       clearInterval(socketInt);
       clearInterval(timerInt);
+      stopReminderTicker();
     };
   }, [dispatch, store]);
 

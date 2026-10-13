@@ -18,6 +18,7 @@ import SalesShiftStatusPill from "../common/SalesShiftStatusPill";
 import SalesShiftModal from "../Settings/SalesShiftModal";
 import { checkShiftGuard } from "../../utils/shiftGuard";
 import { getNotifications } from "../../utils/notificationService";
+import { REMINDER_FIRED_EVENT } from "../../utils/checkReminders";
 import { toast } from "sonner";
 import { setSelectedRoomGroupId, setSelectedFloor as _setSelectedFloor, setSelectedRoomType as _setSelectedRoomType, setSearchText as _setSearchText, clearFilters as _clearFilters, fetchRoomGroups } from "../../redux/Slices/HotelSlice";
 import BookingsModal from "../Rooms/BookingsModal";
@@ -221,6 +222,22 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
 
   // Notification count
   const [notifCount, setNotifCount] = useState(0);
+  // Çek xatırlatması gələndə zəng ikonu titrəyir
+  const [bellShake, setBellShake] = useState(false);
+  useEffect(() => {
+    let tmr = null;
+    const onFired = () => {
+      setBellShake(false);
+      requestAnimationFrame(() => setBellShake(true));
+      clearTimeout(tmr);
+      tmr = setTimeout(() => setBellShake(false), 2600);
+    };
+    window.addEventListener(REMINDER_FIRED_EVENT, onFired);
+    return () => {
+      window.removeEventListener(REMINDER_FIRED_EVENT, onFired);
+      clearTimeout(tmr);
+    };
+  }, []);
 
   const updateCount = () => {
     const all = getNotifications();
@@ -646,7 +663,7 @@ const Header = ({ showBack, backPath, onBack, hideWaiterName = false, onBeforeNe
                   <div className="tools-divider"></div>
                   {/* Notification Bell */}
                   <button
-                    className="header-icon-btn small-icon-btn position-relative"
+                    className={`header-icon-btn small-icon-btn position-relative ${bellShake ? "bell-shake" : ""}`}
                     onClick={() => setShowNotifications(true)}
                   >
                     <svg
