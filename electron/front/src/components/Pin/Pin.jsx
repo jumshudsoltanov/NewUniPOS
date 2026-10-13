@@ -191,8 +191,7 @@ const ImageSection = React.memo(({ backgroundImg }) => {
 const Pin = () => {
   const [pin, setPin] = useState("");
   const [isError, setIsError] = useState(false);
-  // PİN serverdə yoxlanılarkən: düymələr qəbul edilmir, ekranda "Yoxlanılır…" görünür
-  const [isVerifying, setIsVerifying] = useState(false);
+  // PİN serverdə yoxlanılarkən düymələr qəbul edilmir (ref ilə — state dəyişməsin ki, ekran yenidən render olunmasın)
   const verifyingRef = useRef(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
@@ -518,7 +517,6 @@ const Pin = () => {
     async (submittedPin) => {
       if (verifyingRef.current) return;
       verifyingRef.current = true;
-      setIsVerifying(true);
       try {
         const profileId = activeProfileData?.data?.profile?.id;
         if (!profileId) {
@@ -537,7 +535,6 @@ const Pin = () => {
         }, 500);
       } finally {
         verifyingRef.current = false;
-        setIsVerifying(false);
       }
     },
     [activeProfileData, dispatch, completeWaiterLogin],
@@ -875,7 +872,7 @@ const Pin = () => {
 
               <div className="pinContainer">
                 <div className="pinHeader">
-                  <span className="pinText">{isVerifying ? "Yoxlanılır…" : t("pin_kodu_daxil_edin")}</span>
+                  <span className="pinText">{t("pin_kodu_daxil_edin")}</span>
                 </div>
 
                 <div className="pinDots">
