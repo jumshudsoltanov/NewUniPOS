@@ -181,8 +181,21 @@ const Table = ({ table, onTableClick, loginedWaiter, customStyle, rotation = 0 }
             <div
               className={`table-waiter-info ${statusClass}`}
             >
-              <i className="bi bi-people"></i>
+              <i className="bi bi-person"></i>
               <span>{orders?.[0]?.waiter?.name || "—"}</span>
+              {(() => {
+                const guestCount = (orders || []).reduce(
+                  (sum, o) => sum + (Number(o?.guest_count) || 0),
+                  0,
+                );
+                if (!(guestCount > 0)) return null;
+                return (
+                  <span className="table-guest-count" title={t("qonaq")}>
+                    <i className="bi bi-people-fill"></i>
+                    {guestCount}
+                  </span>
+                );
+              })()}
             </div>
 
             {tagText && (

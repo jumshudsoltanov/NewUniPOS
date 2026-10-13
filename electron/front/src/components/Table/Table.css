@@ -415,6 +415,18 @@
   font-weight: 600;
 }
 
+/* Qonaq sayı — ofisiant adının yanında, incə ayırıcı ilə */
+.table-guest-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 2px;
+  padding-left: 6px;
+  border-left: 1px solid currentColor;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.9;
+}
+
 /* Ofisiant adı — fon rənginə görə tünd mətn (gözlə seçilir) */
 .table-surface.occupied .table-waiter-info {
   color: #1d4ed8;
