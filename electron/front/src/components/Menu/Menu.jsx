@@ -34,6 +34,15 @@ import "./Menu.css";
  * olunurdu: 2000 məhsulda bu, hər klaviatura vuruşunda 14 000 regex əməliyyatı
  * deməkdir və yazmaq gözə görünən dərəcədə ləngiyirdi.
  */
+/** Backend kateqoriyasız məhsulları bu id-li virtual kateqoriyada qaytarır (MenuController) */
+const UNCATEGORIZED_CATEGORY_ID = -1;
+
+/** Plitə məhsuldur (kateqoriya/ümumi kateqoriya deyil) */
+const isProductItem = (item) =>
+  !!item &&
+  !Array.isArray(item.categories) &&
+  !Array.isArray(item.products);
+
 const normalizeForSearch = (sv) =>
   String(sv || "")
     .toLocaleLowerCase("az")
@@ -486,12 +495,19 @@ const Menu = ({
 
     if (menuViewMode === "ROOT") {
       const genCats = menuDataWithGeneralCategories?.data || [];
-      const cats = (menuDataWithCategories?.data || []).filter(
-        (c) => !c.general_categorie_id || c.general_categorie_id === 0,
+      const allCats = menuDataWithCategories?.data || [];
+      const cats = allCats.filter(
+        (c) =>
+          c.id !== UNCATEGORIZED_CATEGORY_ID &&
+          (!c.general_categorie_id || c.general_categorie_id === 0),
       );
-      let items = [...genCats, ...cats];
-      // Apply custom ordering for ROOT view
-      return applyOrder(items, categoryOrder);
+      // Kateqoriyasız məhsullar (backend-dən id=-1 virtual kateqoriya) ana menyuda
+      // kateqoriya plitələrinin yanında birbaşa məhsul kimi göstərilir
+      const uncategorized = (
+        allCats.find((c) => c.id === UNCATEGORIZED_CATEGORY_ID)?.products || []
+      ).filter((p) => p && p.name);
+      let items = [...applyOrder([...genCats, ...cats], categoryOrder), ...uncategorized];
+      return items;
     }
 
     if (menuViewMode === "CATEGORIES") {
@@ -903,7 +919,7 @@ const Menu = ({
                       if (searchText?.length > 0) {
                         handleProductClick(itemWithEffectivePrice);
                       } else {
-                        if (menuViewMode === "PRODUCTS") {
+                        if (menuViewMode === "PRODUCTS" || isProductItem(item)) {
                           handleProductClick(itemWithEffectivePrice);
                         } else {
                           handleItemClick(item);
@@ -920,7 +936,8 @@ const Menu = ({
                     )}
 
                     {(menuViewMode === "PRODUCTS" ||
-                      searchText?.length > 0) && (
+                      searchText?.length > 0 ||
+                      isProductItem(item)) && (
                       <div className="menu-card-price">
                         <div>{effectivePrice} {getCurrencySymbol()}</div>
                       </div>
