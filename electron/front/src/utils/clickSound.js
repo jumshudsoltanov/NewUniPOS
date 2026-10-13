@@ -74,19 +74,67 @@ export function setClickSoundVolume(v) {
   }
 }
 
+/** data: URI-dən baytlar — fetch istifadə etmirik (paketlənmiş proqramda file:// altında etibarsızdır) */
+function dataUriToArrayBuffer(uri) {
+  const comma = uri.indexOf(",");
+  if (comma < 0) return null;
+  const meta = uri.slice(0, comma);
+  const payload = uri.slice(comma + 1);
+  if (/;base64/i.test(meta)) {
+    const bin = atob(payload);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out.buffer;
+  }
+  const dec = decodeURIComponent(payload);
+  const out = new Uint8Array(dec.length);
+  for (let i = 0; i < dec.length; i++) out[i] = dec.charCodeAt(i);
+  return out.buffer;
+}
+
+/** Ehtiyat: Web Audio alınmayanda adi <audio> elementi */
+let fallbackAudio = null;
+function playFallbackAudio() {
+  try {
+    if (!fallbackAudio) {
+      fallbackAudio = new Audio(clickSoundUrl);
+      fallbackAudio.preload = "auto";
+    }
+    const a = fallbackAudio.cloneNode(true);
+    a.volume = getVolume();
+    const p = a.play();
+    if (p && typeof p.catch === "function") p.catch((e) => console.warn("[CLICK-SOUND] <audio> çalınmadı:", e?.message || e));
+  } catch (e) {
+    console.warn("[CLICK-SOUND] <audio> ehtiyatı alınmadı:", e?.message || e);
+  }
+}
+
+let decodeFailed = false;
+
 /** Faylı bir dəfə yükləyib dekod edir */
 async function ensureBuffer() {
-  if (buffer || decoding) return;
+  if (buffer || decoding || decodeFailed) return;
   decoding = true;
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
+    if (!Ctx) { decodeFailed = true; return; }
     if (!audioCtx) audioCtx = new Ctx();
-    const res = await fetch(clickSoundUrl);
-    const bytes = await res.arrayBuffer();
-    buffer = await audioCtx.decodeAudioData(bytes);
-  } catch {
-    /* səs yüklənmədi — kritik deyil, proqram səssiz işləyir */
+    let bytes = null;
+    if (typeof clickSoundUrl === "string" && clickSoundUrl.startsWith("data:")) {
+      bytes = dataUriToArrayBuffer(clickSoundUrl);
+    } else {
+      const res = await fetch(clickSoundUrl);
+      bytes = await res.arrayBuffer();
+    }
+    if (!bytes) throw new Error("səs məlumatı boşdur");
+    // Safari/köhnə Chromium callback formasını da dəstəkləyir
+    buffer = await new Promise((resolve, reject) => {
+      const r = audioCtx.decodeAudioData(bytes, resolve, reject);
+      if (r && typeof r.then === "function") r.then(resolve, reject);
+    });
+  } catch (e) {
+    decodeFailed = true;
+    console.warn("[CLICK-SOUND] Web Audio dekod alınmadı, <audio> ehtiyatına keçilir:", e?.message || e);
   } finally {
     decoding = false;
   }
@@ -100,16 +148,23 @@ export function playClickSound() {
   if (now - lastPlayedAt < MIN_GAP_MS) return;
   lastPlayedAt = now;
 
+  if (decodeFailed) {
+    playFallbackAudio();
+    return;
+  }
+
   if (!buffer) {
-    // Hələ hazır deyil (çox erkən klik və ya dekod uğursuz) — növbəti dəfəyə
+    // Hələ hazır deyil — ilk toxunuşda yüklə; bu dəfə ehtiyat ilə çal
     ensureBuffer();
+    playFallbackAudio();
     return;
   }
 
   try {
-    // Brauzer kontekstı dayandıra bilər (arxa fon, enerji qənaəti)
-    if (audioCtx.state === "suspended") audioCtx.resume();
-
+    // Brauzer kontekstı dayandıra bilər (arxa fon, enerji qənaəti, istifadəçi jesti gözləmə)
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
     const src = audioCtx.createBufferSource();
     const gain = audioCtx.createGain();
     src.buffer = buffer;
@@ -117,8 +172,9 @@ export function playClickSound() {
     src.connect(gain);
     gain.connect(audioCtx.destination);
     src.start();
-  } catch {
-    /* səs çıxmadı — kritik deyil */
+  } catch (e) {
+    console.warn("[CLICK-SOUND] Web Audio çalınmadı, <audio> ehtiyatı:", e?.message || e);
+    playFallbackAudio();
   }
 }
 
