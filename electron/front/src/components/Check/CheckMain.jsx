@@ -275,6 +275,7 @@ const CheckOrderRow = React.memo(function CheckOrderRow({
                             onClick={stopTimerBubble}
                             title={t("taymer_idare_mehsula_toxun_ve_saatliq_tabi")}
                           >
+                            <i className="bi bi-stopwatch" aria-hidden />
                             <SmoothTimerClock initialSeconds={itemDisplaySeconds} isActive={Number(liveItemStatus) === 1} />
                           </span>
                         )}
@@ -358,8 +359,13 @@ const CheckOrderRow = React.memo(function CheckOrderRow({
                       </div>
                     </div>
 
-                    <div className="col-total d-flex align-items-center justify-content-end fw-bold">
-                      {totalAmount} {getCurrencySymbol()}
+                    <div className="col-total d-flex flex-column align-items-end justify-content-center fw-bold">
+                      <span>{totalAmount} {getCurrencySymbol()}</span>
+                      {showInlineProductTimer && Number(itemTimerCharge) > 0 && (
+                        <span className="check-item-timer-amount">
+                          <i className="bi bi-stopwatch" aria-hidden /> +{(Number(itemTimerCharge) * Number(item.count)).toFixed(2)} {getCurrencySymbol()}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

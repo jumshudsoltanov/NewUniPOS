@@ -2752,12 +2752,36 @@
 
 /* Məhsul taymeri — məhsul adının yanında sadə sayğac (idarə Edit modal «Saatlıq») */
 .check-item-timer-inline {
-  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
   font-size: 0.85rem;
-  color: #4b5563;
+  color: #053796;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-  margin-left: 4px;
+  margin-left: 6px;
+}
+
+.check-item-timer-inline > i {
+  font-size: 0.85rem;
+}
+
+.check-item-timer-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #053796;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.check-item-timer-amount > i {
+  font-size: 0.72rem;
 }
 
 /* Köhnə sinif — digər yerlərdə istifadə üçün saxlanılır */
