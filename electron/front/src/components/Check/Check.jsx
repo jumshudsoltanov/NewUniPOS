@@ -3079,8 +3079,8 @@ const Check = () => {
                                     orderedIds: orderedItems.map(i => i.id),
                                   }));
                                 } else {
-                                  dispatch(menuWithGeneralCategories(profileId));
-                                  dispatch(menuWithCategories(profileId));
+                                  dispatch(menuWithGeneralCategories({ profileId, force: true }));
+                                  dispatch(menuWithCategories({ profileId, force: true }));
                                 }
                                 setIsDragMode(false);
                                 setTempCustomOrders(null);

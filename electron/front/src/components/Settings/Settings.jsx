@@ -193,8 +193,8 @@ const Settings = () => {
       const neticeler = await Promise.allSettled([
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
-        dispatch(menuWithCategories(profileId)).unwrap(),
-        dispatch(menuWithGeneralCategories(profileId)).unwrap(),
+        dispatch(menuWithCategories({ profileId, force: true })).unwrap(),
+        dispatch(menuWithGeneralCategories({ profileId, force: true })).unwrap(),
       ]);
       // `ConditionError` = açılışda birləşdirilmiş sorğu, xəta deyil
       const ugursuz = neticeler.filter(

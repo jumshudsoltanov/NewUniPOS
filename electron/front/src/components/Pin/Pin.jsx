@@ -365,8 +365,8 @@ const Pin = () => {
       const results = await Promise.allSettled([
         dispatch(getTableGroups(profileId)).unwrap(),
         dispatch(getActiveOrders({ profileId })).unwrap(),
-        dispatch(menuWithCategories(profileId)).unwrap(),
-        dispatch(menuWithGeneralCategories(profileId)).unwrap(),
+        dispatch(menuWithCategories({ profileId, force: true })).unwrap(),
+        dispatch(menuWithGeneralCategories({ profileId, force: true })).unwrap(),
       ]);
 
       // `ConditionError` həqiqi xəta deyil: açılışda eyni sorğu birləşdirilib

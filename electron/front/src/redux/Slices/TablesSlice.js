@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { pickPendingOptimisticOrders } from "./BooksSlice";
 import { bootDedupeAllows } from "../../utils/bootDedupe";
 import axios from "../../utils/apiConfig";
 import axiosRaw from "axios";
@@ -386,6 +387,9 @@ const TablesSlice = createSlice({
       state.isTablesLoading = false;
       const payload = action.payload;
       const deletedIds = state.deletedOrderIds || [];
+      // Optimistik (hələ serverə yazılmamış) sifarişlər masada qalsın — bax: BooksSlice.pickPendingOptimisticOrders
+      const prevTablesById = new Map();
+      (state.tableGroups?.data || []).forEach((hall) => (hall.tables || []).forEach((tb) => prevTablesById.set(String(tb.id), tb)));
       if (payload?.data) {
         state.tableGroups = {
           ...payload,
@@ -393,7 +397,7 @@ const TablesSlice = createSlice({
             ...hall,
             tables: hall.tables ? hall.tables.map(table => ({
               ...table,
-              orders: table.orders ? table.orders.filter(o => {
+              orders: [...pickPendingOptimisticOrders(prevTablesById.get(String(table.id))?.orders, table.orders || []), ...(table.orders ? table.orders.filter(o => {
                 if (o.status === 3) return false;
                 // Filter out optimistically deleted orders
                 if (deletedIds.length > 0) {
@@ -401,7 +405,7 @@ const TablesSlice = createSlice({
                   if (deletedIds.includes(oId)) return false;
                 }
                 return true;
-              }) : []
+              }) : [])]
             })) : []
           }))
         };

@@ -12,7 +12,7 @@ const cacheKey = (kind, profileId) => `${CACHE_PREFIX}:${kind}:${profileId}`;
 
 const stripImages = (payload) => {
   const strip = (products) =>
-    Array.isArray(products) ? products.map(({ img, ...rest }) => rest) : products;
+    Array.isArray(products) ? products.map(({ img: _img, ...rest }) => rest) : products;
   const data = (payload?.data || []).map((node) => {
     const n = { ...node };
     if (Array.isArray(n.products)) n.products = strip(n.products);
@@ -53,15 +53,32 @@ const hydrateFromCache = (kind, profileId, thunkAPI, currentData) => {
   if (cached) thunkAPI.dispatch(menuCacheLoaded({ kind, payload: cached }));
 };
 
+/**
+ * PERFORMANS: hər çek açılanda bütün menyu yenidən çəkilirdi (böyük JSON, state
+ * dəyişməsi, bütün menyunun yenidən render olunması). Menyu son MENU_FRESH_MS ərzində
+ * çəkilibsə və `force` verilməyibsə şəbəkəyə getmirik, mövcud state qaytarılır.
+ * Çağırış: thunk(profileId) və ya thunk({ profileId, force: true }).
+ */
+const MENU_FRESH_MS = 120000;
+const lastMenuFetchAt = { general: 0, categories: 0 };
+const parseMenuArg = (arg) =>
+  arg && typeof arg === "object" ? { profileId: arg.profileId, force: !!arg.force } : { profileId: arg, force: false };
+
 export const menuWithGeneralCategories = createAsyncThunk(
   "orders/all-menu",
-  async (profileId, thunkAPI) => {
-    hydrateFromCache("general", profileId, thunkAPI, thunkAPI.getState()?.MenuSlice?.menuDataWithGeneralCategories?.data);
+  async (arg, thunkAPI) => {
+    const { profileId, force } = parseMenuArg(arg);
+    const current = thunkAPI.getState()?.MenuSlice?.menuDataWithGeneralCategories;
+    if (!force && current?.data?.length > 0 && Date.now() - lastMenuFetchAt.general < MENU_FRESH_MS) {
+      return current;
+    }
+    hydrateFromCache("general", profileId, thunkAPI, current?.data);
     try {
       const response = await apiConfig.get(
         `/menu/${profileId}/all-menu`,
         {},
       );
+      lastMenuFetchAt.general = Date.now();
       writeMenuCache("general", profileId, response.data);
       return response.data;
     } catch (error) {
@@ -71,19 +88,25 @@ export const menuWithGeneralCategories = createAsyncThunk(
   {
     // Açılışda eyni sorğunun bir neçə komponentdən təkrar göndərilməsini
     // birləşdirir. Yalnız ilk saniyələrdə işləyir — bax: utils/bootDedupe.js
-    condition: (profileId) => bootDedupeAllows("all-menu:" + profileId),
+    condition: (arg) => bootDedupeAllows("all-menu:" + parseMenuArg(arg).profileId),
   },
 );
 
 export const menuWithCategories = createAsyncThunk(
   "orders/men-categories",
-  async (profileId, thunkAPI) => {
-    hydrateFromCache("categories", profileId, thunkAPI, thunkAPI.getState()?.MenuSlice?.menuDataWithCategories?.data);
+  async (arg, thunkAPI) => {
+    const { profileId, force } = parseMenuArg(arg);
+    const current = thunkAPI.getState()?.MenuSlice?.menuDataWithCategories;
+    if (!force && current?.data?.length > 0 && Date.now() - lastMenuFetchAt.categories < MENU_FRESH_MS) {
+      return current;
+    }
+    hydrateFromCache("categories", profileId, thunkAPI, current?.data);
     try {
       const response = await apiConfig.get(
         `/menu/${profileId}/menu-with-categories`,
         {},
       );
+      lastMenuFetchAt.categories = Date.now();
       writeMenuCache("categories", profileId, response.data);
       return response.data;
     } catch (error) {
@@ -93,7 +116,7 @@ export const menuWithCategories = createAsyncThunk(
   {
     // Açılışda eyni sorğunun bir neçə komponentdən təkrar göndərilməsini
     // birləşdirir. Yalnız ilk saniyələrdə işləyir — bax: utils/bootDedupe.js
-    condition: (profileId) => bootDedupeAllows("menu-with-categories:" + profileId),
+    condition: (arg) => bootDedupeAllows("menu-with-categories:" + parseMenuArg(arg).profileId),
   },
 );
 
@@ -150,10 +173,10 @@ const MenuSlice = createSlice({
         }
       })
       .addCase(menuWithGeneralCategories.fulfilled, (state, action) => {
-        state.menuDataWithGeneralCategories = action.payload;
+        if (action.payload !== state.menuDataWithGeneralCategories) state.menuDataWithGeneralCategories = action.payload;
       })
       .addCase(menuWithCategories.fulfilled, (state, action) => {
-        state.menuDataWithCategories = action.payload;
+        if (action.payload !== state.menuDataWithCategories) state.menuDataWithCategories = action.payload;
       })
       // Instant Update for Products
       .addMatcher(

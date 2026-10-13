@@ -67,6 +67,22 @@ export const getArchivedOrders = createAsyncThunk(
   },
 );
 
+
+/** Serverə hələ yazılmamış (id=null), 90 saniyədən gənc optimistik sifarişlər — payload-da yoxdursa saxlanılır */
+export function pickPendingOptimisticOrders(prevList, payload) {
+  if (!Array.isArray(prevList) || prevList.length === 0) return [];
+  const nextList = Array.isArray(payload) ? payload : payload?.data;
+  if (!Array.isArray(nextList)) return [];
+  const present = new Set(nextList.map((o) => String(o.uuid)));
+  const now = Date.now();
+  return prevList.filter((o) => {
+    if (!o || o.id != null || !o.uuid) return false;
+    if (present.has(String(o.uuid))) return false;
+    const t = new Date(o.created_at || o.start_date || 0).getTime();
+    return !Number.isNaN(t) && now - t < 90000;
+  });
+}
+
 const BooksSlice = createSlice({
   name: "books",
   initialState: {
@@ -189,6 +205,16 @@ const BooksSlice = createSlice({
     builder.addCase(getActiveOrders.fulfilled, (state, action) => {
       state.status = 'succeeded';
       const deletedIds = state.deletedOrderIds || [];
+      // Yeni yaradılan sifariş əvvəlcə optimistik (id=null) əlavə olunur, server yazısı fonda gəlir.
+      // Bu arada fon yeniləməsi gəlsə, siyahı tam əvəz olunur və sifariş ekrandan itirdi —
+      // çek açılanda gözləmə/boşluq yaranırdı. Hələ serverə çatmamış gənc optimistik sifarişləri saxlayırıq.
+      const prevList = Array.isArray(state.books) ? state.books : state.books?.data;
+      const keepOptimistic = pickPendingOptimisticOrders(prevList, action.payload);
+      if (keepOptimistic.length > 0) {
+        const pl = action.payload;
+        if (Array.isArray(pl)) action.payload = [...keepOptimistic, ...pl];
+        else if (pl && Array.isArray(pl.data)) action.payload = { ...pl, data: [...keepOptimistic, ...pl.data] };
+      }
       if (deletedIds.length > 0) {
         const filterOrders = (list) => list.filter(o => {
           const oId = String(o.uuid || o.id);
