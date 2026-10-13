@@ -773,23 +773,33 @@
 
 .edit-hourly-action {
     height: 56px;
-    border-radius: 6px;
-    border: 1px solid #c9d8f0;
-    background: #fff;
+    border-radius: 8px;
+    border: none;
+    background: #eef3fb;
     color: #053796;
     font-size: 1rem;
     font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.05s ease;
+}
+
+.edit-hourly-action:not(:disabled):hover {
+    background: #e2eaf8;
 }
 
 .edit-hourly-action.is-primary {
     background: #053796;
-    border-color: #053796;
     color: #fff;
 }
 
+.edit-hourly-action.is-primary:not(:disabled):hover {
+    background: #042c78;
+}
+
 .edit-hourly-action:disabled {
-    opacity: 0.45;
+    background: #f1f5f9;
+    color: #a3aebd;
     cursor: not-allowed;
 }
 
