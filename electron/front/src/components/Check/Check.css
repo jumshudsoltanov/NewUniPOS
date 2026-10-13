@@ -2752,19 +2752,22 @@
 
 /* Məhsul taymeri — çek sətrində: vaxt | tarif | taymer məbləği (idarə Edit modal «Saatlıq») */
 .check-item-timer {
-  margin-top: 4px;
-  display: inline-flex;
-  flex-wrap: wrap;
+  margin-top: 3px;
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .check-item-timer-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
+  gap: 4px;
+  padding: 1px 6px;
   border-radius: 6px;
+  flex-shrink: 0;
   background: #eef3fb;
   color: #053796;
   font-size: 0.72rem;
@@ -2774,7 +2777,7 @@
 }
 
 .check-item-timer-chip > i {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   opacity: 0.9;
 }
 

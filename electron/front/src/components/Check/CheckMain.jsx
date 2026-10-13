@@ -372,13 +372,8 @@ const CheckOrderRow = React.memo(function CheckOrderRow({
                       </div>
                     </div>
 
-                    <div className="col-total d-flex flex-column align-items-end justify-content-center fw-bold">
-                      <span>{totalAmount} {getCurrencySymbol()}</span>
-                      {showInlineProductTimer && Number(itemTimerCharge) > 0 && (
-                        <span className="check-item-total-breakdown">
-                          {((currentPrice + modifiersTotal) * Number(item.count)).toFixed(2)} + {(Number(itemTimerCharge) * Number(item.count)).toFixed(2)}
-                        </span>
-                      )}
+                    <div className="col-total d-flex align-items-center justify-content-end fw-bold">
+                      {totalAmount} {getCurrencySymbol()}
                     </div>
                   </div>
                 </div>
