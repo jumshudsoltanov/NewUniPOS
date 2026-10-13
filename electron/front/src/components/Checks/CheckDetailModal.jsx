@@ -640,7 +640,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                     <div className="meta-items-container p-4">
                                         <div className="meta-item-box">
                                             <div className="meta-icon-col">
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="2.5">
                                                     <path d="M5 12h14m-7-7 7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
                                                 </svg>
                                             </div>
@@ -653,7 +653,7 @@ const CheckDetailModal = ({ show, onClose, order }) => {
 
                                         <div className="meta-item-box">
                                             <div className="meta-icon-col">
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4F85F4" strokeWidth="2.5">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="2.5">
                                                     <path d="M20 6L9 17L4 12" strokeLinecap="round" strokeLinejoin="round" />
                                                 </svg>
                                             </div>
@@ -754,14 +754,14 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                         {hasTax && (
                                             <div className="meta-item-box">
                                                 <div className="meta-icon-col">
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#053796" strokeWidth="2">
                                                         <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l4.58-4.58c.94-.94.94-2.48 0-3.42L9 5z" strokeLinecap="round" strokeLinejoin="round" />
                                                         <path d="M6 9h.01" strokeLinecap="round" strokeLinejoin="round" />
                                                     </svg>
                                                 </div>
                                                 <div className="meta-content-col">
-                                                    <div className="meta-label" style={{ color: '#10b981' }}>{t("vergi̇_ceki̇")}</div>
-                                                    <div className="meta-value" style={{ color: '#10b981' }}>{t("fiskal_cek_kesilib")}</div>
+                                                    <div className="meta-label" style={{ color: '#053796' }}>{t("vergi̇_ceki̇")}</div>
+                                                    <div className="meta-value" style={{ color: '#053796' }}>{t("fiskal_cek_kesilib")}</div>
                                                     {order.fiscal_id && (
                                                         <div className="meta-sub text-muted" style={{ fontSize: '11px', wordBreak: 'break-all' }}>
                                                             ID: {order.fiscal_short_id || order.fiscal_id}
@@ -843,10 +843,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                     <table className="table table-borderless table-sm order-items-table">
                                         <thead>
                                             <tr>
-                                                <th className="text-muted fw-normal">{t("ad_name")}</th>
-                                                <th className="text-muted fw-normal">{t("miq")}</th>
-                                                <th className="text-muted fw-normal">{t("qiymet")}</th>
-                                                <th className="text-muted fw-normal text-end">{t("cem")}</th>
+                                                <th>{t("ad_name")}</th>
+                                                <th className="col-num">{t("miq")}</th>
+                                                <th className="col-money">{t("qiymet")}</th>
+                                                <th className="col-money">{t("cem")}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -859,10 +859,10 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                 return (
                                                 <tr key={i}>
                                                     <td>
-                                                        <div style={{ fontWeight: item.isTimer ? 600 : 400 }}>{item.name}</div>
+                                                        <div style={{ fontWeight: 600 }}>{item.name}</div>
                                                         {item.isTimer && (
-                                                            <div className="text-muted" style={{ fontSize: '12px', marginTop: '2px' }}>
-                                                                <i className="bi bi-clock me-1"></i>
+                                                            <div className="item-timer-line">
+                                                                <i className="bi bi-stopwatch"></i>
                                                                 {(() => {
                                                                     const secs = getTimerElapsedSeconds(item, order);
                                                                     const h = Math.floor(secs / 3600);
@@ -888,9 +888,9 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                                             </div>
                                                         )}
                                                     </td>
-                                                    <td>{item.count}</td>
-                                                    <td>{unitWithMods.toFixed(2)}</td>
-                                                    <td className="text-end">{Number(item.lineTotal || 0).toFixed(2)}</td>
+                                                    <td className="col-num">{item.count}</td>
+                                                    <td className="col-money">{unitWithMods.toFixed(2)}</td>
+                                                    <td className="col-money col-total">{Number(item.lineTotal || 0).toFixed(2)}</td>
                                                 </tr>
                                                 );
                                             })}
@@ -941,11 +941,11 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                                         </div>
                                     )}
 
-                                    <div className="summary-row d-flex justify-content-between align-items-center pt-2 border-top mt-2">
-                                        <span className="summary-label fw-bold" style={{ fontSize: '18px' }}>
+                                    <div className="summary-row summary-total-row d-flex justify-content-between align-items-center">
+                                        <span className="summary-label summary-total-label fw-bold">
                                             {Number(order.deposit || 0) > (subtotal - Number(order.discount || 0)) ? t("minimal_mebleg_2") : t("yekun_2")}
                                         </span>
-                                        <span className="summary-value fw-bold text-primary" style={{ fontSize: '24px' }}>
+                                        <span className="summary-value summary-total-value fw-bold">
                                             {(Math.max(subtotal - Number(order.discount || 0), Number(order.deposit || 0)) + Number(order.service_charge || 0) + Number(order.delivery_fee || 0) + (Number(order.table?.hourly_price || 0) > 0 ? Number(order.rate_per_minute || 0) : 0)).toFixed(2)} {getCurrencySymbol()}
                                         </span>
                                     </div>
@@ -957,12 +957,12 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                 {/* Custom Flush Footer - Hidden on Mobile if we use Bottom Tabs or refined actions */}
                 <div className="w-100 d-flex gap-0 mt-auto footer-action-bar" style={{ background: "#f8f9fa", borderTop: "1px solid #dee2e6", flexShrink: 0 }}>
                     {!isMobileSize && (
-                        <div className="footer-left" style={{ width: "280px", borderRight: "1px solid #dee2e6", flexShrink: 0 }}>
+                        <div className="footer-left" style={{ flexShrink: 0 }}>
                             <Button
                                 variant="light"
                                 className="w-100 h-100 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
                                 onClick={() => setCurrentView(currentView === "details" ? "history" : "details")}
-                                style={{ color: "#0d6efd", background: "transparent", fontWeight: 500 }}
+                                style={{ background: "transparent" }}
                             >
                                 <i className={`bi ${currentView === "details" ? "bi-clock-history" : "bi-info-circle"} me-2 fs-5`}></i>
                                 {currentView === "details" ? t("tarixce_uc") : t("cek_melumatlari_uc")}
@@ -973,20 +973,19 @@ const CheckDetailModal = ({ show, onClose, order }) => {
                     <div className={`footer-right d-flex ${isMobileSize ? 'w-100' : 'flex-grow-1'}`}>
                         <Button
                             variant="warning"
-                            className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
+                            className="btn-return-check flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0"
                             onClick={() => {
                                 if (Number(loginedWaiter?.data?.can_return_receipt) !== 1) return;
                                 setShowReasonModal(true);
                             }}
-                            style={{ backgroundColor: "#f39c12", color: "#fff" }}
                         >
                             <i className="bi bi-arrow-counterclockwise me-2 fs-5"></i>{t("ceki̇_qaytar")}</Button>
                         <Button
                             variant="primary"
-                            className="flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0 py-3"
+                            className="btn-print-check flex-grow-1 d-flex align-items-center justify-content-center border-0 rounded-0"
                             onClick={handlePrint}
                             disabled={isPrinting}
-                            style={{ backgroundColor: "#0d6efd", opacity: isPrinting ? 0.7 : 1 }}
+                            style={{ opacity: isPrinting ? 0.7 : 1 }}
                         >
                             {isPrinting ? (
                                 <>

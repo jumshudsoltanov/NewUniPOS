@@ -1,5 +1,5 @@
 .check-detail-offcanvas-custom {
-    width: 1000px !important;
+    width: 860px !important;
     max-width: 100vw;
     font-family: "Inter", -apple-system, sans-serif;
     border: none;
@@ -83,9 +83,9 @@
 
 /* Sidebar Section (Left) */
 .check-detail-offcanvas-custom .sidebar-section {
-    width: 280px;
-    background-color: #fafafa;
-    border-right: 1px solid #f1f5f9;
+    width: 250px;
+    background-color: #f8fafc;
+    border-right: 1px solid #e9eef5;
     overflow-y: hidden;
     display: flex;
     flex-direction: column;
@@ -95,28 +95,37 @@
 .check-detail-offcanvas-custom .meta-items-container {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
     overflow-y: auto;
     flex-grow: 1;
 }
 
 .check-detail-offcanvas-custom .meta-item-box {
     display: flex;
-    align-items: center;
-    gap: 16px;
+    align-items: flex-start;
+    gap: 12px;
 }
 
 .check-detail-offcanvas-custom .meta-icon-col {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
     background: #fff;
     border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
-    border: 1px solid #f1f5f9;
+    border: 1px solid #e3e9f3;
+}
+
+.check-detail-offcanvas-custom .meta-icon-col svg {
+    width: 18px;
+    height: 18px;
+}
+
+.check-detail-offcanvas-custom .meta-content-col {
+    min-width: 0;
+    flex: 1;
 }
 
 .check-detail-offcanvas-custom .meta-label {
@@ -128,10 +137,11 @@
 }
 
 .check-detail-offcanvas-custom .meta-value {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 600;
-    color: #1e293b;
+    color: #0f172a;
     line-height: 1.3;
+    font-variant-numeric: tabular-nums;
 }
 
 .check-detail-offcanvas-custom .meta-sub {
@@ -143,33 +153,95 @@
 /* Items Section (Right) */
 .check-detail-offcanvas-custom .items-section {
     flex-grow: 1;
-    padding: 1.5rem;
+    padding: 1rem 1.25rem !important;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     min-height: 0;
+    background: #fff;
 }
 
+/* Cədvəl yalnız lazım olan qədər yer tutur, uzun olanda özü sürüşür — Yekun bloku dərhal altında qalır */
 .check-detail-offcanvas-custom .items-section .table-responsive {
-    flex: 1;
+    flex: 0 1 auto;
+    min-height: 0;
     overflow-y: auto;
+    border: 1px solid #e9eef5;
+    border-radius: 8px;
+}
+
+.check-detail-offcanvas-custom .order-items-table {
+    margin-bottom: 0;
+}
+
+.check-detail-offcanvas-custom .order-items-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    z-index: 1;
+}
+
+.check-detail-offcanvas-custom .order-items-table th:first-child,
+.check-detail-offcanvas-custom .order-items-table td:first-child {
+    padding-left: 14px;
+}
+
+.check-detail-offcanvas-custom .order-items-table th:last-child,
+.check-detail-offcanvas-custom .order-items-table td:last-child {
+    padding-right: 14px;
+}
+
+.check-detail-offcanvas-custom .order-items-table th.col-num,
+.check-detail-offcanvas-custom .order-items-table td.col-num {
+    text-align: center;
+    width: 72px;
+    font-variant-numeric: tabular-nums;
+}
+
+.check-detail-offcanvas-custom .order-items-table th.col-money,
+.check-detail-offcanvas-custom .order-items-table td.col-money {
+    text-align: right;
+    width: 96px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.check-detail-offcanvas-custom .order-items-table td.col-total {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.check-detail-offcanvas-custom .order-items-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.check-detail-offcanvas-custom .item-timer-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #053796;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
 }
 
 .check-detail-offcanvas-custom .order-items-table th {
     font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 12px 8px;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 10px 8px;
+    border-bottom: 1px solid #e9eef5;
 }
 
 .check-detail-offcanvas-custom .order-items-table td {
-    padding: 12px 8px;
-    font-size: 13px;
-    color: #334155;
-    border-bottom: 1px solid #f8fafc;
+    padding: 10px 8px;
+    font-size: 13.5px;
+    color: #1e293b;
+    border-bottom: 1px solid #eef2f7;
+    vertical-align: top;
 }
 
 /* Çek detalı cədvəli — modifikatorlar (Check ekranına uyğun rəng/ölçü) */
@@ -194,11 +266,77 @@
 }
 
 .check-detail-offcanvas-custom .summary-section {
-    margin-top: auto;
-    padding: 1.25rem;
+    margin-top: 12px !important;
+    padding: 12px 14px;
     background: #f8fafc;
-    border-radius: 6px;
-    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    border: 1px solid #e9eef5;
+    flex-shrink: 0;
+}
+
+.check-detail-offcanvas-custom .summary-row {
+    margin-bottom: 6px !important;
+}
+
+.check-detail-offcanvas-custom .summary-total-row {
+    margin-top: 8px !important;
+    padding-top: 10px !important;
+    border-top: 1px solid #dfe6f0 !important;
+}
+
+.check-detail-offcanvas-custom .summary-total-label {
+    font-size: 15px !important;
+    color: #0f172a;
+}
+
+.check-detail-offcanvas-custom .summary-total-value {
+    font-size: 22px !important;
+    color: #053796 !important;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Alt düymələr — brend rənglər, yastı */
+.check-detail-offcanvas-custom .footer-action-bar {
+    background: #fff !important;
+    border-top: 1px solid #e9eef5 !important;
+}
+
+.check-detail-offcanvas-custom .footer-action-bar .btn {
+    height: 56px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+}
+
+.check-detail-offcanvas-custom .footer-left {
+    width: 250px !important;
+    border-right: 1px solid #e9eef5 !important;
+}
+
+.check-detail-offcanvas-custom .footer-left .btn {
+    color: #053796 !important;
+}
+
+.check-detail-offcanvas-custom .footer-left .btn:hover {
+    background: #eef3fb !important;
+}
+
+.check-detail-offcanvas-custom .btn-return-check {
+    background: #e67e22 !important;
+    color: #fff !important;
+}
+
+.check-detail-offcanvas-custom .btn-return-check:hover {
+    background: #d35400 !important;
+}
+
+.check-detail-offcanvas-custom .btn-print-check {
+    background: #053796 !important;
+    color: #fff !important;
+}
+
+.check-detail-offcanvas-custom .btn-print-check:hover {
+    background: #042c78 !important;
 }
 
 .summary-row {
