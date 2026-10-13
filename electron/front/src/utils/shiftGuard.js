@@ -5,6 +5,16 @@ import apiConfig from "./apiConfig";
  * is_sales_shift_required aktiv isə API-yə soruşur.
  * @returns {Promise<{blocked: boolean, reason?: string}>}
  */
+const SHIFT_CACHE_MS = 30000;
+const shiftOpenCache = { profileId: null, isOpen: false, at: 0 };
+
+/** Növbə bağlananda/açılanda keşi sıfırla (SalesShiftModal çağırır) */
+export function resetShiftGuardCache() {
+    shiftOpenCache.profileId = null;
+    shiftOpenCache.isOpen = false;
+    shiftOpenCache.at = 0;
+}
+
 export async function checkShiftGuard(profileData) {
     try {
         // is_sales_shift_required dəyərini çox mənbədən oxu
@@ -30,8 +40,19 @@ export async function checkShiftGuard(profileData) {
         const profileId = profileData?.data?.profile?.id;
         if (!profileId) return { blocked: false };
 
-        const res = await apiConfig.get(`/sales-shifts/${profileId}/current`);
-        const isOpen = !!res.data?.data;
+        // PERFORMANS: masaya hər vuranda bu sorğu gözlənilirdi (slave-də master-ə gedir).
+        // Açıq növbə nəticəsi 30 saniyə keşlənir — masa dərhal açılır.
+        const now = Date.now();
+        let isOpen;
+        if (shiftOpenCache.profileId === profileId && shiftOpenCache.isOpen && now - shiftOpenCache.at < SHIFT_CACHE_MS) {
+            isOpen = true;
+        } else {
+            const res = await apiConfig.get(`/sales-shifts/${profileId}/current`, { timeout: 4000 });
+            isOpen = !!res.data?.data;
+            shiftOpenCache.profileId = profileId;
+            shiftOpenCache.isOpen = isOpen;
+            shiftOpenCache.at = now;
+        }
 
         if (!isOpen) {
             return { blocked: true, reason: "Növbə açılmayıb. Əvvəlcə növbəni açın." };

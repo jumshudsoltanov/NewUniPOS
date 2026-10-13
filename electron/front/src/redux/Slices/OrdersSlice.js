@@ -1283,6 +1283,9 @@ export const resetTimer = createAsyncThunk(
   },
 );
 
+/** Artıq state.menu-ya çevrilmiş menyu cavabları (referans üzrə) — bax: menuWithCategories.fulfilled */
+const processedMenuPayloads = new WeakSet();
+
 export const OrderSlice = createSlice({
   name: "orders",
   initialState: {
@@ -1647,9 +1650,10 @@ export const OrderSlice = createSlice({
     },
 
     clearOrders: (state, _action) => {
-      state.products = [];
-      state.sentProducts = [];
-      state.pendingDeletions = [];
+      // Onsuz da boşdursa state-ə toxunma — çek açılanda lüzumsuz render olmasın
+      if (state.products.length > 0) state.products = [];
+      if (state.sentProducts.length > 0) state.sentProducts = [];
+      if (state.pendingDeletions.length > 0) state.pendingDeletions = [];
     },
 
     updateCount: (state, action) => {
@@ -1805,12 +1809,17 @@ export const OrderSlice = createSlice({
         }
       })
       .addCase(menuWithCategories.fulfilled, (state, action) => {
+        // PERFORMANS: menyu təzə olanda thunk eyni payload obyektini qaytarır (bax: MenuSlice).
+        // Həmin halda state.menu-nu yenidən qurmuruq — yeni massiv referansı menyu indeksini,
+        // taymer keşini və sətir hesablamalarını boş yerə sıfırlayırdı (hər çek açılışında).
+        if (action.payload && processedMenuPayloads.has(action.payload)) return;
         const categories = action.payload?.data || [];
         let products = [];
         categories.forEach((cat) => {
           if (cat.products) products = products.concat(cat.products);
         });
         state.menu = products;
+        if (action.payload && typeof action.payload === "object") processedMenuPayloads.add(action.payload);
       })
       // Keşdən yüklənən menyu — şəbəkə cavabı gələnə qədər məhsul siyahısı boş qalmasın
       .addCase(menuCacheLoaded, (state, action) => {

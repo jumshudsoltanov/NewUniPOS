@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Modal, Button, Spinner } from "react-bootstrap";
 import { useSelector } from "react-redux";
 import apiConfig, { getSocket } from "../../utils/apiConfig";
+import { resetShiftGuardCache } from "../../utils/shiftGuard";
 import { resolveCashierPrintersForPrint } from "../../utils/printerHelpers.jsx";
 import { toast } from "sonner";
 import { t } from "../../utils/translations";
@@ -632,6 +633,7 @@ const SalesShiftModal = ({ show, onHide }) => {
         if (!profileId) return;
         setLoading(true);
         try {
+            resetShiftGuardCache();
             const res = await apiConfig.post(`/sales-shifts/${profileId}/open`, {
                 terminalId,
                 waiterId: waiter?.id,
@@ -661,6 +663,7 @@ const SalesShiftModal = ({ show, onHide }) => {
         setShowClosePrompt(false);
         setLoading(true);
         try {
+            resetShiftGuardCache();
             const res = await apiConfig.post(`/sales-shifts/${profileId}/${currentShift.uuid}/close`, {
                 waiterId: waiter?.id,
                 waiterName: waiter?.name,
