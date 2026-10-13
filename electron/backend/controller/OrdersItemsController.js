@@ -15,6 +15,7 @@ const { sumOrderItemsLineTotal } = require("../utils/orderItemLineTotal");
 const { hasTimerIntervals } = require("../utils/timerIntervals");
 const axios = require("axios");
 const ItemPay = require("./OrderItemPaymentsController");
+const PreDeletedOrders = require("../services/PreDeletedOrders");
 
 /** Məhsul taymerli sayılır: product_type=timer, saatlıq qiymət və ya intervallar */
 const isTimerProductRow = (p) =>
@@ -1712,6 +1713,15 @@ const onDeleteCheck = async (req, res) => {
       where: { uuid: orderId },
       raw: true,
     });
+
+    // Çek hələ serverə yazılmayıb (masa indicə açılıb, yaratma fonda gedir):
+    // uuid-ni qeyd et — yaratma sorğusu gələndə çek birbaşa silinmiş yazılacaq
+    if (!ord) {
+      PreDeletedOrders.mark(orderId, reason);
+      console.log(`[DELETE_CHECK] çek hələ yoxdur, əvvəlcədən silinmiş kimi qeyd edildi: ${orderId}`);
+      if (getIo()) getIo().emit("table_updated", { orderId });
+      return res.status(200).json({ message: "success", preDeleted: true });
+    }
 
     if (forceDestroy) {
       const serverItemCount = orderItems.length;

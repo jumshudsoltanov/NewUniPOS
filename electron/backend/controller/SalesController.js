@@ -1,6 +1,7 @@
 const OrdersModel = require("../model/OrdersModel");
 const SyncService = require("../services/SyncService");
 const MaxCheckService = require("../services/MaxCheckService");
+const PreDeletedOrders = require("../services/PreDeletedOrders");
 
 const getNextOrderId = async (req, res) => {
   try {
@@ -57,6 +58,12 @@ const CreateNewOrders = async (req, res) => {
     // Auto-start timer on order creation if table has hourly_price
     const tableHasHourlyPrice = parseFloat(table?.hourly_price) > 0;
 
+    // Kassir yaratma bitməmiş "Çeki ləğv et" basıbsa — çek dərhal silinmiş (status 3) yazılır
+    const preDeleted = uuid ? PreDeletedOrders.consume(uuid) : null;
+    if (preDeleted) {
+      console.log(`[CREATE_ORDER] uuid əvvəlcədən silinib, status=3 ilə yazılır: ${uuid}`);
+    }
+
     let newSale = await OrdersModel.create({
       id: newId,
       table_id: tableId ?? 0,
@@ -66,15 +73,16 @@ const CreateNewOrders = async (req, res) => {
       terminal_id: terminalId,
       sale_type: sale_type,
       hall_id: hallId ?? 0,
-      status: status ?? 1,
+      status: preDeleted ? 3 : (status ?? 1),
+      ...(preDeleted ? { end_date: new Date(), is_delete_reason_id: preDeleted.reason ?? 0 } : {}),
       is_selected: is_selected ?? 1,
       service_type: serviceType,
       service_value: serviceValue,
       deposit: table?.deposit || 0,
-      is_synced: 1,
-      is_timer_status: tableHasHourlyPrice ? 1 : 0,
-      timer_last_started_at: tableHasHourlyPrice ? new Date() : null,
-      is_active_timer: tableHasHourlyPrice ? 1 : 0,
+      is_synced: preDeleted ? 0 : 1,
+      is_timer_status: !preDeleted && tableHasHourlyPrice ? 1 : 0,
+      timer_last_started_at: !preDeleted && tableHasHourlyPrice ? new Date() : null,
+      is_active_timer: !preDeleted && tableHasHourlyPrice ? 1 : 0,
       is_timer_clock: "00:00:00",
       rate_per_minute: 0,
       uuid: uuid || undefined,
@@ -83,6 +91,9 @@ const CreateNewOrders = async (req, res) => {
     if (newSale.uuid) {
       const { getIo } = require("../socket/MasterServer");
       if (getIo()) getIo().emit("table_updated", { orderId: newSale.uuid });
+    }
+    if (preDeleted && newSale.uuid) {
+      SyncService.queueSync(newSale.uuid);
     }
 
     const updatedOrder = await OrdersModel.findOne({
