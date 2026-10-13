@@ -299,13 +299,43 @@
 .check-detail-offcanvas-custom .footer-action-bar {
     background: #fff !important;
     border-top: 1px solid #e9eef5 !important;
+    height: 60px;
+    min-height: 60px;
+    display: flex;
+    align-items: stretch;
+    flex-shrink: 0;
+}
+
+.check-detail-offcanvas-custom .footer-action-bar .footer-left,
+.check-detail-offcanvas-custom .footer-action-bar .footer-right {
+    height: 100%;
+    display: flex;
+    align-items: stretch;
 }
 
 .check-detail-offcanvas-custom .footer-action-bar .btn {
-    height: 56px;
+    height: 100%;
+    padding: 0 16px !important;
+    line-height: 1;
     font-weight: 600;
     font-size: 0.95rem;
     letter-spacing: 0.01em;
+}
+
+.check-detail-offcanvas-custom .footer-action-bar .btn i {
+    line-height: 1;
+}
+
+/* Panelin dibi: düymələrdən sonra boşluq qalmasın */
+.check-detail-offcanvas-custom.offcanvas {
+    height: 100%;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.check-detail-offcanvas-custom .offcanvas-body {
+    padding-bottom: 0 !important;
 }
 
 .check-detail-offcanvas-custom .footer-left {
