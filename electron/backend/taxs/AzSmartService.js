@@ -12,34 +12,7 @@ const crypto = require('crypto');
 const DEFAULT_PORT = 8008;
 const REQUEST_TIMEOUT_MS = 120000;
 
-/**
- * Dövr üzrə hesabatda (/dates_report) tarix formatı.
- * Sənəddə "yyyy-MM-dd hh:mm:ss" yazılıb, lakin kassa proqramının versiyasına görə
- * ParseExact şablonu fərqlidir — bəzi buildlər 'T' ayırıcısı, bəziləri nöqtəli tarix,
- * bəziləri yalnız tarix (saatsız) və ya ISO-8601/UNIX vaxt gözləyir. Format uyğun
- * gəlmədikdə kassa HTTP 400 + "code: 14 — Invalid dates format" qaytarır.
- * Ona görə birinci variant rədd edilsə, qalanları ardıcıl sınanır və işləyəni yadda saxlanılır.
- * Diqqət: bütün variantlar 24 saatlıq vaxtı saxlayır — dövrün sərhədləri təhrif olunmur.
- */
-const DATE_VARIANTS = ['H24', 'ISO_T', 'DOT', 'H24_NO_SEC', 'DATE_ONLY', 'ISO_Z', 'EPOCH_SEC'];
-
-/**
- * Tarix sahələrinin adları.
- * SmartOne sənədi (2023) "date_start"/"date_stop" deyir, lakin eyni ailədən olan
- * Omnisoft/Omnitech API-ləri "date_start"/"date_end" işlədir. Kassa sahəni tapmayanda
- * boş dəyəri parse edib eyni "Invalid dates format (kod 14)" xətasını qaytarır — yəni
- * xəta formatdan yox, addan da ola bilər. ALIASES bütün məlum adları eyni anda göndərir:
- * belə API-lər tanımadığı sahələri adətən nəzərə almır, lazım olanı isə tapır.
- */
-const DATE_FIELD_SETS = [
-    { name: 'CANONICAL', start: ['date_start'], stop: ['date_stop'] },
-    {
-        name: 'ALIASES',
-        start: ['date_start', 'dateStart', 'startDate', 'beginDate', 'date_from'],
-        stop: ['date_stop', 'date_end', 'dateStop', 'dateEnd', 'endDate', 'date_to']
-    }
-];
-
+/** Xəta kodları — SmartOne Cashbox Fiskal API v3.9 (15.05.2025) */
 const ERROR_MESSAGES = {
     1: 'Avtorizasiya xətası (merchantID / imza səhvdir)',
     2: 'Yanlış JSON formatı',
@@ -49,12 +22,41 @@ const ERROR_MESSAGES = {
     6: 'Növbə açılmayıb (və ya növbə vəziyyəti uyğun deyil)',
     7: 'Ödəniş növü dəstəklənmir',
     8: 'Sənəd tam ödənilməyib',
-    9: 'Sənəd tapılmadı (və ya kassada kifayət qədər nağd pul yoxdur)',
+    9: 'Sənəd tapılmadı (və ya inkassasiya üçün kassada kifayət qədər nağd pul yoxdur)',
     10: 'Sənəd fiskallaşmayıb',
     11: 'Qalıq yalnız nağd ödənişlə verilə bilər',
     12: 'Yolverilməz vergi faiz dərəcəsi',
-    14: 'Yanlış tarix formatı (date_start / date_stop)'
+    13: 'Kreditin ödənilməsi yalnız bir ödəniş növü ilə qəbul edilir',
+    14: 'Yanlış tarix formatı',
+    15: 'Kreditin bir ödənişi yalnız bir növ ödənişlə həyata keçirilə bilər',
+    16: 'Vergilər üçün yanlış faiz',
+    18: 'Geri qaytarılan məhsul satış çekində tapılmadı',
+    19: 'Geri qaytarılan məhsulun miqdarı satışdakından çoxdur',
+    20: 'Əvvəlcədən ödəniş sənədinin nömrəsi göstərilməyib',
+    21: 'Əvvəlcədən ödəniş çeki tapılmadı',
+    22: 'Növbə müəyyən edilmiş saat limitini keçib',
+    23: 'Kartla ödəniş üçün bank terminalı qoşulmayıb',
+    24: 'Növbədə bağlanmamış hesablar qalıb',
+    25: 'Ödəniş üçün xüsusi tətbiqetmə qoşulmayıb',
+    26: 'Növbədə heç bir hərəkət yoxdur',
+    27: 'Kassada nağd pul qalıb — inkassasiya etmək lazımdır'
 };
+
+/**
+ * Rəsmi vergi cədvəli (v3.9, səh. 4). Vergi artıq faizlə yox, TİP (taxCode) ilə təyin edilir:
+ * sorğuda taxCode, taxName, fullName, taxPrc və calcType birlikdə göndərilməlidir.
+ * calcType: 1 – daxil olmaqla, 2 – sabit, 3 – sadələşdirilmiş.
+ */
+const TAX_TYPES = {
+    4: { taxCode: '4', taxName: 'ƏDV', fullName: 'ƏDV 18%', percent: 18, calcType: 1 },
+    6: { taxCode: '6', taxName: 'ƏDV-dən Azad', fullName: 'ƏDV-dən Azad 0%', percent: 0, calcType: 1 },
+    1: { taxCode: '1', taxName: 'Sadələşdirilmiş Vergi', fullName: 'Sadə. Vergi 2%', percent: 2, calcType: 3 },
+    3: { taxCode: '3', taxName: 'Sadələşdirilmiş Vergi', fullName: 'Sadə. Vergi 8%', percent: 8, calcType: 3 },
+    7: { taxCode: '7', taxName: 'Ticarət əlavəsi', fullName: 'Ticarət əlavəsi 18%', percent: 18, calcType: 3 }
+};
+
+/** Köhnə konfiqlərdəki tax_type dəyərlərinin rəsmi taxCode-a uyğunluğu. */
+const LEGACY_TAX_TYPE_MAP = { 0: 6, 1: 6, 2: 4, 3: 1 };
 
 class AzSmartService {
     constructor(config) {
@@ -75,6 +77,8 @@ class AzSmartService {
         if (config.tax_percent != null && config.tax_percent !== '') this.taxPercent = Number(config.tax_percent);
         if (this.taxPercent == null || Number.isNaN(this.taxPercent)) this.taxPercent = 18;
         this.taxType = config.tax_type != null && config.tax_type !== '' ? Number(config.tax_type) : (this.taxType ?? null);
+        // Rəsmi vergi kodu (1, 3, 4, 6, 7) — verilibsə, köhnə tax_type-dan üstündür
+        if (config.tax_code != null && config.tax_code !== '') this.taxCode = Number(config.tax_code);
 
         this.departmentName = String(config.department_name || config.tax_department_name || config.company_name || this.departmentName || '').trim();
         this.departmentCode = String(config.department_code || config.tax_department_code || this.departmentCode || '').trim();
@@ -82,9 +86,6 @@ class AzSmartService {
         this.printFooter = String(config.print_footer || this.printFooter || '').trim();
         this.shiftPincode = String(config.shift_pincode || config.pincode || this.shiftPincode || '').trim();
         this.defaultCashier = String(config.cashier_name || this.defaultCashier || 'Kassir').trim();
-
-        const df = String(config.date_format || config.tax_date_format || '').trim().toUpperCase();
-        if (DATE_VARIANTS.includes(df)) this.dateFormat = df;
     }
 
     static _normalizeHost(raw) {
@@ -247,20 +248,44 @@ class AzSmartService {
         return out;
     }
 
+    /**
+     * Mövqe üzrə vergi tipini tapır (v3.9 — faiz yox, taxCode əsasdır).
+     * Prioritet: açıq taxCode → köhnə vatType/tax_type → faizə görə uyğunlaşdırma → konfiq.
+     */
     _resolveItemVat(item) {
-        if (item?.tax_percent != null && !Number.isNaN(Number(item.tax_percent))) {
-            return { percent: Number(item.tax_percent), calcType: 1 };
+        // Açıq taxCode — rəsmi cədvəldəki kod (1, 3, 4, 6, 7)
+        const explicit = item?.taxCode ?? item?.tax_code ?? item?.product?.taxCode ?? this.taxCode;
+        if (explicit != null && explicit !== '' && TAX_TYPES[Number(explicit)]) {
+            return TAX_TYPES[Number(explicit)];
         }
-        const vt = item?.vatType != null && item.vatType !== '' ? Number(item.vatType) : this.taxType;
-        if (vt === 0 || vt === 1) return { percent: 0, calcType: 1 };
-        if (vt === 2) return { percent: 18, calcType: 1 };
-        if (vt === 3) return { percent: 2, calcType: 3 };
-        return { percent: Number(this.taxPercent) || 0, calcType: 1 };
+
+        // Köhnə tax_type/vatType (0–3). DİQQƏT: bu dəyərlər rəsmi taxCode ilə eyni deyil —
+        // məs. köhnə tax_type=3 "Sadə 2%" deməkdir, rəsmi taxCode=3 isə "Sadə 8%".
+        // Ona görə 0–3 aralığı həmişə əvvəlcə LEGACY_TAX_TYPE_MAP-dan keçir.
+        const rawType = item?.vatType != null && item.vatType !== '' ? item.vatType : this.taxType;
+        if (rawType != null && rawType !== '') {
+            const code = Number(rawType);
+            if (LEGACY_TAX_TYPE_MAP[code] != null) return TAX_TYPES[LEGACY_TAX_TYPE_MAP[code]];
+            if (TAX_TYPES[code]) return TAX_TYPES[code];
+        }
+
+        // Yalnız faiz məlumdursa, rəsmi cədvəldən eyni faizli tipi seçirik
+        const percent = item?.tax_percent != null && item.tax_percent !== ''
+            ? Number(item.tax_percent)
+            : Number(this.taxPercent);
+        if (!Number.isNaN(percent)) {
+            const match = Object.values(TAX_TYPES).find((t) => t.percent === percent && t.calcType === 1)
+                || Object.values(TAX_TYPES).find((t) => t.percent === percent);
+            if (match) return match;
+        }
+        return TAX_TYPES[6]; // ƏDV-dən azad
     }
 
     _taxEntry(vat) {
         return {
-            taxName: vat.percent > 0 ? (vat.calcType === 3 ? 'Sadələşdirilmiş' : 'ƏDV') : 'ƏDV 0%',
+            taxName: vat.taxName,
+            fullName: vat.fullName,
+            taxCode: vat.taxCode,
             taxPrc: Math.round(vat.percent * 100),
             calcType: vat.calcType
         };
@@ -398,7 +423,9 @@ class AzSmartService {
         const payload = { employeeName: this._cashier(cashierName) };
         if (this.departmentCode) payload.departmentCode = this.departmentCode;
         const result = await this._request('/check_shift', payload);
-        const open = result.shiftIsOpen === true || String(result.shiftIsOpen).toLowerCase() === 'true';
+        // v3.9-da cavab sahəsi "isShiftOpen"-dir (əvvəl "shiftIsOpen") — hər ikisi qəbul edilir
+        const rawOpen = result.isShiftOpen != null ? result.isShiftOpen : result.shiftIsOpen;
+        const open = rawOpen === true || String(rawOpen).toLowerCase() === 'true';
         return { ...result, shiftStatus: open, data: { ...result, shiftStatus: open, shift_open: open } };
     }
 
@@ -518,14 +545,42 @@ class AzSmartService {
         return this._extractFiscalIds(result);
     }
 
-    async checkStatus(documentId) {
+    /** v3.9: /check_status həm documentID, həm də documentExtID gözləyir. */
+    async checkStatus(documentId, documentExtId) {
         if (documentId == null || documentId === '') {
             throw new Error('[AZSMART] check_status üçün documentID lazımdır.');
         }
-        const numeric = Number(documentId);
-        return this._request('/check_status', { documentID: Number.isNaN(numeric) ? documentId : numeric });
+        const payload = { documentID: AzSmartService._numeric(documentId) };
+        if (documentExtId != null && documentExtId !== '') {
+            payload.documentExtID = AzSmartService._numeric(documentExtId);
+        }
+        return this._request('/check_status', payload);
     }
 
+    /**
+     * Çekin surətinin çap edilməsi — v3.9-da əlavə edilmiş /check_copy (səh. 24).
+     * Əvvəlki versiyada belə əmr yox idi, ona görə sənədi yenidən göndərmək lazım gəlirdi.
+     */
+    async checkCopy(documentId, documentExtId) {
+        if ((documentId == null || documentId === '') && (documentExtId == null || documentExtId === '')) {
+            throw new Error('[AZSMART] Çek surəti üçün documentID və ya documentExtID lazımdır.');
+        }
+        const payload = {};
+        if (documentId != null && documentId !== '') payload.documentID = AzSmartService._numeric(documentId);
+        if (documentExtId != null && documentExtId !== '') payload.documentExtID = AzSmartService._numeric(documentExtId);
+        return this._extractFiscalIds(await this._request('/check_copy', payload));
+    }
+
+    static _numeric(value) {
+        const n = Number(value);
+        return Number.isNaN(n) ? value : n;
+    }
+
+    /**
+     * DİQQƏT: /last_document, /control_tape və /correction əmrləri v3.9 sənədində YOXDUR.
+     * Köhnə firmware üçün saxlanılır; yeni cihazlarda "tapılmadı" cavabı verə bilər.
+     * Çek surəti üçün artıq checkCopy() (/check_copy) istifadə olunmalıdır.
+     */
     async getLastDocument(cashierName) {
         return this._request('/last_document', { employeeName: this._cashier(cashierName) });
     }
@@ -538,8 +593,8 @@ class AzSmartService {
         const totalQ = this._qepik(amount);
         const body = {
             employeeName: this._cashier(cashierName),
-            date_start: this._formatDate(startDate, this._periodVariant()) || this._now(),
-            date_stop: this._formatDate(endDate, this._periodVariant()) || this._now(),
+            date_start: this._formatDate(startDate, 'H24') || this._now(),
+            date_stop: this._formatDate(endDate, 'H24') || this._now(),
             amount: totalQ,
             cashAmount: this._qepik(cashAmount),
             cashlessAmount: this._qepik(cashlessAmount),
@@ -551,17 +606,6 @@ class AzSmartService {
         return this._extractFiscalIds(await this._request('/correction', body));
     }
 
-    /** date_start/date_stop sahəsinin dəyəri — EPOCH_SEC variantında rəqəm göndərilir. */
-    _periodField(date, variant) {
-        const value = this._formatDate(date, variant);
-        return variant === 'EPOCH_SEC' ? Number(value) : value;
-    }
-
-    /** Dövr sorğuları (date_start/date_stop) üçün cari tarix formatı. */
-    _periodVariant() {
-        return this._periodDateFormat || this.dateFormat || 'H24';
-    }
-
     /** Kassanın cavabı tarix formatı / JSON formatı ilə bağlıdırsa true qaytarır. */
     static _isDateFormatError(error) {
         const code = Number(error?.azsmartCode);
@@ -570,6 +614,13 @@ class AzSmartService {
         return /format|формат|date|дат|tarix|parse|invalid/.test(msg);
     }
 
+    /**
+     * Dövr üzrə hesabat — 15.05.2025 sənədi (səh. 21):
+     *   { "employeeName": string, "dateFrom": "yyyy-MM-dd", "dateFor": "yyyy-MM-dd" }
+     * Diqqət: cari API yalnız TARİX qəbul edir, saat hissəsi yoxdur — interfeysdəki
+     * vaxt seçimi bu cihaz üçün nəzərə alınmır. Sahə adları da dəyişib
+     * (əvvəl date_start/date_stop), köhnə firmware üçün ehtiyat variant saxlanılır.
+     */
     async getPeriodicReport(startDate, endDate, cashierName) {
         let start = new Date(startDate);
         let end = new Date(endDate);
@@ -577,61 +628,62 @@ class AzSmartService {
         if (Number.isNaN(end.getTime()) || end > now) end = now;
         if (Number.isNaN(start.getTime()) || start > end) start = end;
 
-        // Konfiqdə/əvvəlki uğurlu sorğuda müəyyən olunmuş kombinasiya birinci sınanır.
-        const preferred = this._periodDateFormat || this.dateFormat;
-        const variants = preferred
-            ? [preferred, ...DATE_VARIANTS.filter((v) => v !== preferred)]
-            : [...DATE_VARIANTS];
-        const fieldSets = this._periodFieldSet
-            ? [
-                DATE_FIELD_SETS.find((f) => f.name === this._periodFieldSet),
-                ...DATE_FIELD_SETS.filter((f) => f.name !== this._periodFieldSet)
-            ].filter(Boolean)
-            : [...DATE_FIELD_SETS];
+        const dateFrom = this._formatDate(start, 'DATE_ONLY');
+        const dateFor = this._formatDate(end, 'DATE_ONLY');
+        const employeeName = this._cashier(cashierName);
 
-        let lastError = null;
-        const tried = [];
-        for (const fieldSet of fieldSets) {
-            for (const variant of variants) {
-                const payload = { employeeName: this._cashier(cashierName) };
-                for (const key of fieldSet.start) payload[key] = this._periodField(start, variant);
-                for (const key of fieldSet.stop) payload[key] = this._periodField(end, variant);
-                try {
-                    const result = await this._request('/dates_report', payload);
-                    this._periodDateFormat = variant;
-                    this._periodFieldSet = fieldSet.name;
-                    console.log(`[AZSMART] /dates_report qəbul edildi — sahələr: ${fieldSet.name}, format: ${variant}`);
-                    return { ...result, error_code: 0 };
-                } catch (error) {
-                    lastError = error;
-                    if (!AzSmartService._isDateFormatError(error)) throw error;
-                    tried.push(`${fieldSet.name}/${variant}`);
-                    console.warn(`[AZSMART] /dates_report rədd edildi — sahələr: ${fieldSet.name}, format: ${variant} (${payload[fieldSet.start[0]]}): ${error.message}`);
+        const attempts = [
+            { name: '2025 (dateFrom/dateFor)', payload: { employeeName, dateFrom, dateFor } },
+            // Köhnə firmware (2023 sənədi): date_start/date_stop + saatlı format
+            {
+                name: '2023 (date_start/date_stop)',
+                payload: {
+                    employeeName,
+                    date_start: this._formatDate(start, 'H24'),
+                    date_stop: this._formatDate(end, 'H24')
                 }
             }
-        }
+        ];
 
-        this._periodDateFormat = null;
-        this._periodFieldSet = null;
-        console.error('[AZSMART] /dates_report — son uğursuz sorğu:', JSON.stringify(lastError?.azsmartResult || {}));
-        throw new Error(
-            `[AZSMART] Dövr üzrə hesabat: kassa heç bir variantı qəbul etmədi (${tried.length} cəhd: ${tried.join(', ')}). `
-            + `Son xəta: ${lastError?.message || 'bilinmir'}. `
-            + `Kassa JSON-u oxuyur, lakin tarixləri qəbul etmir — AzSmart-dan /dates_report üçün cari parametr siyahısını tələb etmək lazımdır (kod 14 2023 sənədində yoxdur).`
-        );
+        let lastError = null;
+        for (const attempt of attempts) {
+            try {
+                const result = await this._request('/dates_report', attempt.payload);
+                return { ...result, error_code: 0 };
+            } catch (error) {
+                lastError = error;
+                if (!AzSmartService._isDateFormatError(error)) throw error;
+                console.warn(`[AZSMART] /dates_report — "${attempt.name}" variantı qəbul edilmədi: ${error.message}`);
+            }
+        }
+        throw lastError;
     }
 
     async getOperationHistory(startDate, endDate, cashierName) {
         return this.getPeriodicReport(startDate, endDate, cashierName);
     }
 
-    async receiptCopy(fiscalId) {
+    /**
+     * Çekin təkrar çapı. v3.9-da bunun üçün /check_copy əmri var — əvvəlki versiyada
+     * yox idi, ona görə köhnə kod yalnız son sənədi oxuyurdu. Sənəd kodu varsa,
+     * birbaşa surət çap edilir; yoxdursa köhnə davranışa qayıdılır.
+     */
+    async receiptCopy(fiscalId, documentId, documentExtId) {
+        const docId = documentId != null && documentId !== '' ? documentId : fiscalId;
+        if ((docId != null && docId !== '') || (documentExtId != null && documentExtId !== '')) {
+            try {
+                return await this.checkCopy(docId, documentExtId);
+            } catch (error) {
+                console.warn(`[AZSMART] /check_copy alınmadı, son sənədə baxılır: ${error.message}`);
+            }
+        }
+
         const last = await this.getLastDocument();
         const lastFiscal = String(last.fiscalID || '').trim();
         if (fiscalId && lastFiscal && lastFiscal !== String(fiscalId).trim()) {
-            throw new Error('[AZSMART] Bu kassa təkrar çapı yalnız eyni sənədi (docTime+docNumber+amount) yenidən göndərməklə dəstəkləyir. Çeki "Yenidən göndər" ilə göndərin.');
+            throw new Error('[AZSMART] Çek surəti üçün sənədin documentID-si lazımdır (/check_copy). Son sənəd fərqlidir.');
         }
-        return { ...last, code: 0, message: 'Son sənəd məlumatı alındı (AzSmart ayrıca təkrar çap əmri vermir)' };
+        return { ...last, code: 0, message: 'Son sənəd məlumatı alındı' };
     }
 
     async reprintAfterError() {
