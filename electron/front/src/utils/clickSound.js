@@ -48,14 +48,21 @@ export function isClickSoundEnabled() {
 
 const isEnabled = isClickSoundEnabled;
 
+const DEFAULT_VOLUME = 0.35;
+
 function getVolume() {
   try {
-    const v = Number(localStorage.getItem("pos_click_volume"));
-    if (Number.isFinite(v) && v >= 0 && v <= 1) return v;
+    const raw = localStorage.getItem("pos_click_volume");
+    // DİQQƏT: açar yoxdursa Number(null) = 0 olur və səs 0 səviyyəsində "çalınırdı" —
+    // paketlənmiş proqramda düymə səsinin çıxmamasının səbəbi bu idi
+    if (raw == null || String(raw).trim() === "") return DEFAULT_VOLUME;
+    const v = Number(raw);
+    if (Number.isFinite(v) && v > 0 && v <= 1) return v;
+    if (v === 0) return 0;
   } catch {
     /* localStorage əlçatmazdır */
   }
-  return 0.35;
+  return DEFAULT_VOLUME;
 }
 
 export function setClickSoundEnabled(on) {
