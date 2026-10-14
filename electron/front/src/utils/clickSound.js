@@ -103,9 +103,10 @@ function playFallbackAudio() {
     const a = fallbackAudio.cloneNode(true);
     a.volume = getVolume();
     const p = a.play();
-    if (p && typeof p.catch === "function") p.catch((e) => console.warn("[CLICK-SOUND] <audio> çalınmadı:", e?.message || e));
+    if (p && typeof p.catch === "function") p.catch((e) => diag("<audio> çalınmadı: " + (e?.message || e)));
+    if (diagPlays < 3) { diagPlays++; diag("çalındı (<audio>) vol=" + getVolume()); }
   } catch (e) {
-    console.warn("[CLICK-SOUND] <audio> ehtiyatı alınmadı:", e?.message || e);
+    diag("<audio> ehtiyatı alınmadı: " + (e?.message || e));
   }
 }
 
@@ -113,7 +114,9 @@ let decodeFailed = false;
 let diagPlays = 0;
 /** Diaqnostika — paketlənmiş proqramda main.log-a düşür (bax: main.js console-message) */
 function diag(msg) {
-  try { console.warn("[CLICK-SOUND] " + msg); } catch { /* yox */ }
+  const line = "[CLICK-SOUND] " + msg;
+  try { console.warn(line); } catch { /* yox */ }
+  try { window.electronAPI?.logToMain?.(line); } catch { /* yox */ }
 }
 
 /** Faylı bir dəfə yükləyib dekod edir */
@@ -140,7 +143,7 @@ async function ensureBuffer() {
     diag(`hazır: ${buffer.duration.toFixed(3)}s, ctx=${audioCtx.state}, sampleRate=${audioCtx.sampleRate}, enabled=${isEnabled()}, volume=${getVolume()}`);
   } catch (e) {
     decodeFailed = true;
-    console.warn("[CLICK-SOUND] Web Audio dekod alınmadı, <audio> ehtiyatına keçilir:", e?.message || e);
+    diag("Web Audio dekod alınmadı, <audio> ehtiyatına keçilir: " + (e?.message || e));
   } finally {
     decoding = false;
   }
@@ -148,7 +151,10 @@ async function ensureBuffer() {
 
 /** Klik səsini çalır */
 export function playClickSound() {
-  if (!isEnabled()) return;
+  if (!isEnabled()) {
+    if (diagPlays < 3) { diagPlays++; diag("səs ayarı bağlıdır (pos_click_sound=0)"); }
+    return;
+  }
 
   const now = Date.now();
   if (now - lastPlayedAt < MIN_GAP_MS) return;
@@ -180,7 +186,7 @@ export function playClickSound() {
     src.start();
     if (diagPlays < 3) { diagPlays++; diag(`çalındı (WebAudio) ctx=${audioCtx.state} vol=${getVolume()}`); }
   } catch (e) {
-    console.warn("[CLICK-SOUND] Web Audio çalınmadı, <audio> ehtiyatı:", e?.message || e);
+    diag("Web Audio çalınmadı, <audio> ehtiyatı: " + (e?.message || e));
     playFallbackAudio();
   }
 }

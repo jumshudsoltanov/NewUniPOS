@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld("uniposRuntime", {
 });
 
 contextBridge.exposeInMainWorld("electronAPI", {
+    // Renderer diaqnostikası main.log-a (build-də console.* silinir — bax: vite.config drop)
+    logToMain: (msg) => ipcRenderer.send("renderer-log", String(msg)),
     toggleFullscreen: () => ipcRenderer.invoke("toggle-fullscreen"),
     getFullscreenState: () => ipcRenderer.invoke("get-fullscreen-state"),
     openAnyDesk: () => ipcRenderer.invoke("open-anydesk"),

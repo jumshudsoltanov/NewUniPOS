@@ -821,6 +821,11 @@ ipcMain.handle("close-refresh-window", () => {
   }
 });
 
+// Renderer diaqnostikası (düymə səsi və s.) — build-də console.* silindiyi üçün IPC ilə gəlir
+ipcMain.on("renderer-log", (_event, msg) => {
+  log.warn("[RENDERER]", String(msg).slice(0, 300));
+});
+
 ipcMain.on("refresh-sync-event", (_event, payload) => {
   if (refreshWindow && !refreshWindow.isDestroyed()) {
     refreshWindow.webContents.send("refresh-sync-event", payload);
