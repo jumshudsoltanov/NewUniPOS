@@ -23,6 +23,23 @@ const REQUEST_TIMEOUT_MS = 120000;
  */
 const DATE_VARIANTS = ['H24', 'ISO_T', 'DOT', 'H24_NO_SEC', 'DATE_ONLY', 'ISO_Z', 'EPOCH_SEC'];
 
+/**
+ * Tarix sahələrinin adları.
+ * SmartOne sənədi (2023) "date_start"/"date_stop" deyir, lakin eyni ailədən olan
+ * Omnisoft/Omnitech API-ləri "date_start"/"date_end" işlədir. Kassa sahəni tapmayanda
+ * boş dəyəri parse edib eyni "Invalid dates format (kod 14)" xətasını qaytarır — yəni
+ * xəta formatdan yox, addan da ola bilər. ALIASES bütün məlum adları eyni anda göndərir:
+ * belə API-lər tanımadığı sahələri adətən nəzərə almır, lazım olanı isə tapır.
+ */
+const DATE_FIELD_SETS = [
+    { name: 'CANONICAL', start: ['date_start'], stop: ['date_stop'] },
+    {
+        name: 'ALIASES',
+        start: ['date_start', 'dateStart', 'startDate', 'beginDate', 'date_from'],
+        stop: ['date_stop', 'date_end', 'dateStop', 'dateEnd', 'endDate', 'date_to']
+    }
+];
+
 const ERROR_MESSAGES = {
     1: 'Avtorizasiya xətası (merchantID / imza səhvdir)',
     2: 'Yanlış JSON formatı',
@@ -560,34 +577,47 @@ class AzSmartService {
         if (Number.isNaN(end.getTime()) || end > now) end = now;
         if (Number.isNaN(start.getTime()) || start > end) start = end;
 
-        // Konfiqdə/əvvəlki uğurlu sorğuda müəyyən olunmuş format birinci sınanır.
+        // Konfiqdə/əvvəlki uğurlu sorğuda müəyyən olunmuş kombinasiya birinci sınanır.
         const preferred = this._periodDateFormat || this.dateFormat;
         const variants = preferred
             ? [preferred, ...DATE_VARIANTS.filter((v) => v !== preferred)]
             : [...DATE_VARIANTS];
+        const fieldSets = this._periodFieldSet
+            ? [
+                DATE_FIELD_SETS.find((f) => f.name === this._periodFieldSet),
+                ...DATE_FIELD_SETS.filter((f) => f.name !== this._periodFieldSet)
+            ].filter(Boolean)
+            : [...DATE_FIELD_SETS];
 
         let lastError = null;
-        for (const variant of variants) {
-            const payload = {
-                employeeName: this._cashier(cashierName),
-                date_start: this._periodField(start, variant),
-                date_stop: this._periodField(end, variant)
-            };
-            try {
-                const result = await this._request('/dates_report', payload);
-                this._periodDateFormat = variant;
-                return { ...result, error_code: 0 };
-            } catch (error) {
-                lastError = error;
-                if (!AzSmartService._isDateFormatError(error)) throw error;
-                console.warn(`[AZSMART] /dates_report tarix formatı "${variant}" (${payload.date_start}) qəbul edilmədi: ${error.message}`);
+        const tried = [];
+        for (const fieldSet of fieldSets) {
+            for (const variant of variants) {
+                const payload = { employeeName: this._cashier(cashierName) };
+                for (const key of fieldSet.start) payload[key] = this._periodField(start, variant);
+                for (const key of fieldSet.stop) payload[key] = this._periodField(end, variant);
+                try {
+                    const result = await this._request('/dates_report', payload);
+                    this._periodDateFormat = variant;
+                    this._periodFieldSet = fieldSet.name;
+                    console.log(`[AZSMART] /dates_report qəbul edildi — sahələr: ${fieldSet.name}, format: ${variant}`);
+                    return { ...result, error_code: 0 };
+                } catch (error) {
+                    lastError = error;
+                    if (!AzSmartService._isDateFormatError(error)) throw error;
+                    tried.push(`${fieldSet.name}/${variant}`);
+                    console.warn(`[AZSMART] /dates_report rədd edildi — sahələr: ${fieldSet.name}, format: ${variant} (${payload[fieldSet.start[0]]}): ${error.message}`);
+                }
             }
         }
 
         this._periodDateFormat = null;
+        this._periodFieldSet = null;
+        console.error('[AZSMART] /dates_report — son uğursuz sorğu:', JSON.stringify(lastError?.azsmartResult || {}));
         throw new Error(
-            `[AZSMART] Dövr üzrə hesabat: kassa heç bir tarix formatını qəbul etmədi `
-            + `(sınanan formatlar: ${variants.join(', ')}). Son xəta: ${lastError?.message || 'bilinmir'}`
+            `[AZSMART] Dövr üzrə hesabat: kassa heç bir variantı qəbul etmədi (${tried.length} cəhd: ${tried.join(', ')}). `
+            + `Son xəta: ${lastError?.message || 'bilinmir'}. `
+            + `Kassa JSON-u oxuyur, lakin tarixləri qəbul etmir — AzSmart-dan /dates_report üçün cari parametr siyahısını tələb etmək lazımdır (kod 14 2023 sənədində yoxdur).`
         );
     }
 
