@@ -12,6 +12,17 @@ const crypto = require('crypto');
 const DEFAULT_PORT = 8008;
 const REQUEST_TIMEOUT_MS = 120000;
 
+/**
+ * Dövr üzrə hesabatda (/dates_report) tarix formatı.
+ * Sənəddə "yyyy-MM-dd hh:mm:ss" yazılıb, lakin kassa proqramının versiyasına görə
+ * ParseExact şablonu fərqlidir — bəzi buildlər 'T' ayırıcısı, bəziləri nöqtəli tarix,
+ * bəziləri yalnız tarix (saatsız) və ya ISO-8601/UNIX vaxt gözləyir. Format uyğun
+ * gəlmədikdə kassa HTTP 400 + "code: 14 — Invalid dates format" qaytarır.
+ * Ona görə birinci variant rədd edilsə, qalanları ardıcıl sınanır və işləyəni yadda saxlanılır.
+ * Diqqət: bütün variantlar 24 saatlıq vaxtı saxlayır — dövrün sərhədləri təhrif olunmur.
+ */
+const DATE_VARIANTS = ['H24', 'ISO_T', 'DOT', 'H24_NO_SEC', 'DATE_ONLY', 'ISO_Z', 'EPOCH_SEC'];
+
 const ERROR_MESSAGES = {
     1: 'Avtorizasiya xətası (merchantID / imza səhvdir)',
     2: 'Yanlış JSON formatı',
@@ -24,7 +35,8 @@ const ERROR_MESSAGES = {
     9: 'Sənəd tapılmadı (və ya kassada kifayət qədər nağd pul yoxdur)',
     10: 'Sənəd fiskallaşmayıb',
     11: 'Qalıq yalnız nağd ödənişlə verilə bilər',
-    12: 'Yolverilməz vergi faiz dərəcəsi'
+    12: 'Yolverilməz vergi faiz dərəcəsi',
+    14: 'Yanlış tarix formatı (date_start / date_stop)'
 };
 
 class AzSmartService {
@@ -53,6 +65,9 @@ class AzSmartService {
         this.printFooter = String(config.print_footer || this.printFooter || '').trim();
         this.shiftPincode = String(config.shift_pincode || config.pincode || this.shiftPincode || '').trim();
         this.defaultCashier = String(config.cashier_name || this.defaultCashier || 'Kassir').trim();
+
+        const df = String(config.date_format || config.tax_date_format || '').trim().toUpperCase();
+        if (DATE_VARIANTS.includes(df)) this.dateFormat = df;
     }
 
     static _normalizeHost(raw) {
@@ -96,6 +111,15 @@ class AzSmartService {
         }
     }
 
+    /** Kassadan gələn xəta kodunu/cavabını Error obyektinə hopdurur (yuxarı qatda analiz üçün). */
+    static _deviceError(message, result) {
+        const err = new Error(message);
+        const code = Number(result?.code);
+        if (!Number.isNaN(code)) err.azsmartCode = code;
+        err.azsmartResult = result;
+        return err;
+    }
+
     _errorText(result) {
         const code = Number(result?.code);
         const known = ERROR_MESSAGES[code];
@@ -134,13 +158,13 @@ class AzSmartService {
         console.log(`[AZSMART RESPONSE] ${path} (HTTP ${response.status}):`, JSON.stringify(result));
 
         if (response.status >= 400 && result.status !== 'success') {
-            throw new Error(`[AZSMART] HTTP ${response.status}: ${this._errorText(result)}`);
+            throw AzSmartService._deviceError(`[AZSMART] HTTP ${response.status}: ${this._errorText(result)}`, result);
         }
 
         const code = Number(result.code);
         const isError = result.status === 'error' || (!Number.isNaN(code) && code !== 0);
         if (isError && !okCodes.includes(code)) {
-            throw new Error(`[AZSMART] ${this._errorText(result)}`);
+            throw AzSmartService._deviceError(`[AZSMART] ${this._errorText(result)}`, result);
         }
         if (result.printError != null && Number(result.printError) !== 0) {
             console.warn(`[AZSMART] Çap xətası kodu: ${result.printError} (${path})`);
@@ -169,11 +193,33 @@ class AzSmartService {
         return this._formatDate(new Date());
     }
 
-    _formatDate(input) {
+    _formatDate(input, variant = 'H24') {
         const date = input instanceof Date ? input : new Date(input);
         if (Number.isNaN(date.getTime())) return '';
         const pad = (n) => String(n).padStart(2, '0');
-        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        const Y = date.getFullYear();
+        const M = pad(date.getMonth() + 1);
+        const D = pad(date.getDate());
+        const h = pad(date.getHours());
+        const mi = pad(date.getMinutes());
+        const s = pad(date.getSeconds());
+        switch (variant) {
+            case 'ISO_T':
+                return `${Y}-${M}-${D}T${h}:${mi}:${s}`;
+            case 'DOT':
+                return `${D}.${M}.${Y} ${h}:${mi}:${s}`;
+            case 'H24_NO_SEC':
+                return `${Y}-${M}-${D} ${h}:${mi}`;
+            case 'DATE_ONLY':
+                return `${Y}-${M}-${D}`;
+            case 'ISO_Z':
+                return date.toISOString();
+            case 'EPOCH_SEC':
+                return String(Math.floor(date.getTime() / 1000));
+            case 'H24':
+            default:
+                return `${Y}-${M}-${D} ${h}:${mi}:${s}`;
+        }
     }
 
     _commonDocFields(cashierName) {
@@ -475,8 +521,8 @@ class AzSmartService {
         const totalQ = this._qepik(amount);
         const body = {
             employeeName: this._cashier(cashierName),
-            date_start: this._formatDate(startDate) || this._now(),
-            date_stop: this._formatDate(endDate) || this._now(),
+            date_start: this._formatDate(startDate, this._periodVariant()) || this._now(),
+            date_stop: this._formatDate(endDate, this._periodVariant()) || this._now(),
             amount: totalQ,
             cashAmount: this._qepik(cashAmount),
             cashlessAmount: this._qepik(cashlessAmount),
@@ -488,18 +534,61 @@ class AzSmartService {
         return this._extractFiscalIds(await this._request('/correction', body));
     }
 
+    /** date_start/date_stop sahəsinin dəyəri — EPOCH_SEC variantında rəqəm göndərilir. */
+    _periodField(date, variant) {
+        const value = this._formatDate(date, variant);
+        return variant === 'EPOCH_SEC' ? Number(value) : value;
+    }
+
+    /** Dövr sorğuları (date_start/date_stop) üçün cari tarix formatı. */
+    _periodVariant() {
+        return this._periodDateFormat || this.dateFormat || 'H24';
+    }
+
+    /** Kassanın cavabı tarix formatı / JSON formatı ilə bağlıdırsa true qaytarır. */
+    static _isDateFormatError(error) {
+        const code = Number(error?.azsmartCode);
+        if (code === 2 || code === 3) return true;
+        const msg = String(error?.message || '').toLowerCase();
+        return /format|формат|date|дат|tarix|parse|invalid/.test(msg);
+    }
+
     async getPeriodicReport(startDate, endDate, cashierName) {
         let start = new Date(startDate);
         let end = new Date(endDate);
         const now = new Date();
         if (Number.isNaN(end.getTime()) || end > now) end = now;
         if (Number.isNaN(start.getTime()) || start > end) start = end;
-        const result = await this._request('/dates_report', {
-            employeeName: this._cashier(cashierName),
-            date_start: this._formatDate(start),
-            date_stop: this._formatDate(end)
-        });
-        return { ...result, error_code: 0 };
+
+        // Konfiqdə/əvvəlki uğurlu sorğuda müəyyən olunmuş format birinci sınanır.
+        const preferred = this._periodDateFormat || this.dateFormat;
+        const variants = preferred
+            ? [preferred, ...DATE_VARIANTS.filter((v) => v !== preferred)]
+            : [...DATE_VARIANTS];
+
+        let lastError = null;
+        for (const variant of variants) {
+            const payload = {
+                employeeName: this._cashier(cashierName),
+                date_start: this._periodField(start, variant),
+                date_stop: this._periodField(end, variant)
+            };
+            try {
+                const result = await this._request('/dates_report', payload);
+                this._periodDateFormat = variant;
+                return { ...result, error_code: 0 };
+            } catch (error) {
+                lastError = error;
+                if (!AzSmartService._isDateFormatError(error)) throw error;
+                console.warn(`[AZSMART] /dates_report tarix formatı "${variant}" (${payload.date_start}) qəbul edilmədi: ${error.message}`);
+            }
+        }
+
+        this._periodDateFormat = null;
+        throw new Error(
+            `[AZSMART] Dövr üzrə hesabat: kassa heç bir tarix formatını qəbul etmədi `
+            + `(sınanan formatlar: ${variants.join(', ')}). Son xəta: ${lastError?.message || 'bilinmir'}`
+        );
     }
 
     async getOperationHistory(startDate, endDate, cashierName) {
